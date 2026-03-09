@@ -105,7 +105,7 @@ export default function TelegramPage() {
     >
       <div className="space-y-6">
         {/* Daily Digest Channel */}
-        <Card className="rounded-xl border-l-[3px] border-l-sky-500">
+        <Card className="rounded-xl border-l-[3px] border-l-sky-500" id="channel">
           <CardHeader>
             <CardTitle as="h2" className="flex items-center gap-2">
               <Send className="h-5 w-5 text-sky-700 dark:text-sky-400" />

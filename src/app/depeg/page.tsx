@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,14 +81,12 @@ export default function DepegPage() {
     >
       <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
         Get instant Telegram alerts for depeg events and DEWS threat level changes.{" "}
-        <a
-          href="https://t.me/PharosDigestBot"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href="/telegram#bot"
           className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
         >
-          Subscribe via @PharosDigestBot&nbsp;&rarr;
-        </a>
+          Set up alerts&nbsp;&rarr;
+        </Link>
       </CalloutBanner>
 
       <DepegClient />

@@ -63,14 +63,12 @@ export default function ReportCardsPage() {
     >
       <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
         Get notified when a safety grade changes.{" "}
-        <a
-          href="https://t.me/PharosDigestBot"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href="/telegram#bot"
           className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
         >
-          Subscribe via @PharosDigestBot&nbsp;&rarr;
-        </a>
+          Set up alerts&nbsp;&rarr;
+        </Link>
       </CalloutBanner>
 
       <section className="space-y-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-4">

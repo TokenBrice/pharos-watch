@@ -11,6 +11,7 @@ import {
   ArrowLeftRight,
   ArrowUpDown,
   Newspaper,
+  Send,
   Wallet,
   Network,
   TrendingUp,
@@ -64,6 +65,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/portfolio", label: "Portfolio Audit", icon: Wallet, description: "Personal stablecoin risk view" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
       { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Stablecoin collateral dependency graph" },
+      { href: "/telegram", label: "Telegram Alerts", icon: Send, description: "Bot commands & digest channel" },
     ],
   },
   {
