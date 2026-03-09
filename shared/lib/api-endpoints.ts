@@ -1,4 +1,4 @@
-export type EndpointMethod = "GET" | "POST";
+type EndpointMethod = "GET" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
 
 interface EndpointStatusPageActionConfig {
@@ -9,7 +9,7 @@ interface EndpointStatusPageActionConfig {
   path?: string;
 }
 
-export interface EndpointDefinition {
+interface EndpointDefinition {
   path: string;
   methods: readonly EndpointMethod[];
   adminRequired: boolean;
@@ -29,7 +29,7 @@ export interface StatusPageAction {
   method: EndpointMethod;
 }
 
-export interface EndpointMethodValidationError {
+interface EndpointMethodValidationError {
   message: string;
   allowedMethods: readonly EndpointMethod[];
 }
@@ -462,7 +462,7 @@ export function getEndpointDefinition(path: string): EndpointDefinition | undefi
   return ENDPOINT_DEFINITION_BY_PATH.get(path);
 }
 
-export function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
+function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
   const definition = getEndpointDefinition(url.pathname);
   if (definition) {
     if (url.pathname === AUDIT_DEPEG_HISTORY_PATH && url.searchParams.get("dry-run") !== "true") {

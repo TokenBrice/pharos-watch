@@ -1,4 +1,4 @@
-import { withErrorHandler, jsonResponse } from "../lib/api-utils";
+import { parseIntParam, withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import {
   buildDiscrepancy,
@@ -37,7 +37,10 @@ export const handleStatusHistory = withErrorHandler(
       const limitParam = url.searchParams.get("limit");
       const from = parseTimeParam(url.searchParams.get("from"));
       const to = parseTimeParam(url.searchParams.get("to"));
-      const limit = limitParam ? Math.max(1, Math.min(200, parseInt(limitParam, 10) || 50)) : 50;
+      const limit = parseIntParam(limitParam, 50, 1, 200, "limit");
+      if (limit instanceof Response) {
+        return limit;
+      }
 
       const [{ state, staleness }, probe, streak, transitions] = await Promise.all([
         getStatusStateSnapshot(db, now),

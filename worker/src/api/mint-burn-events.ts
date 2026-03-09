@@ -11,7 +11,6 @@ import {
 import { CACHE_PROFILES } from "../lib/constants";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
-const VALID_CHAIN_IDS = new Set([ETHEREUM_CHAIN_ID]);
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
 const VALID_BURN_TYPES = new Set(["effective_burn", "bridge_burn", "review_required"]);
 const VALID_SCOPES = new Set(["all", "counted"]);
@@ -57,7 +56,7 @@ export const handleMintBurnEvents = withErrorHandler(
       return errorResponse(400, "Invalid direction parameter");
     }
     const chain = params.get("chain");
-    if (chain && !VALID_CHAIN_IDS.has(chain)) {
+    if (chain && chain !== ETHEREUM_CHAIN_ID) {
       return errorResponse(400, "Invalid chain parameter");
     }
     const burnType = params.get("burnType");
@@ -87,10 +86,6 @@ export const handleMintBurnEvents = withErrorHandler(
     if (direction) {
       conditions.push("direction = ?");
       filterBindings.push(direction);
-    }
-    if (chain) {
-      conditions.push("chain_id = ?");
-      filterBindings.push(chain);
     }
     if (burnType) {
       conditions.push("burn_type = ?");
