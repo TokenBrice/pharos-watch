@@ -80,7 +80,7 @@ function findClosestMatch(lowerTicker: string): ResolvedCoin | null {
  * Order-independent.
  */
 export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
-  const tokens = argsText.trim().split(/\s+/).filter(Boolean);
+  const tokens = argsText.trim().split(/[\s,]+/).filter(Boolean);
   const alertTypes = new Set<string>();
   const tickers: string[] = [];
   const invalidTypes: string[] = [];

@@ -69,6 +69,13 @@ describe("parseSubscribeArgs", () => {
     expect(result.tickers).toEqual(["USDC"]);
     expect(result.invalidTypes).toEqual(["foo"]);
   });
+
+  it("handles comma-separated alert types", () => {
+    const result = parseSubscribeArgs("dews,depeg USDC");
+    expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
+    expect(result.tickers).toEqual(["USDC"]);
+    expect(result.invalidTypes).toEqual([]);
+  });
 });
 
 describe("validateSubscribeArgs", () => {
