@@ -5,7 +5,7 @@
 ## Current State
 
 **Active phase:** COMPLETE
-**Next action:** Deploy, run D1 migration, smoke tests
+**Status:** All phases merged, deployed, D1 migration applied, smoke tests passed
 
 ## Phase Checklist
 
@@ -21,8 +21,9 @@
 - [x] cmcs run completed (7/7 tickets, 0 failures)
 - [x] Review checklist passed (build, tsc, tests green; all spot checks pass; Zod schema verified)
 - [x] Merged to main (commit e909e596)
-- [ ] Post-deploy smoke test passed (deferred — D1 migration needed first)
-- [ ] Worktree cleaned up
+- Pre-migration D1 bookmark: `0000153a-000003b6-00005029-be1e50191184c29b27d8d109f878f645`
+- [x] Post-deploy smoke test passed — medianApy: 3.58, 75 rankings, warningSignals live
+- [x] Worktree cleaned up
 
 ### Phase 1B: Coverage Config (`yield-maturation-coverage`)
 - [x] Worktree created
@@ -31,8 +32,8 @@
 - [x] cmcs run completed (2/2 tickets, 0 failures)
 - [x] Review checklist passed (build, tsc, tests all green; all entries verified)
 - [x] Merged to main (commit a08611c7)
-- [ ] Post-deploy smoke test passed (deferred — deploy pending)
-- [ ] Worktree cleaned up
+- [x] Post-deploy smoke test passed
+- [x] Worktree cleaned up
 
 ### Phase 2: Frontend Foundation (`yield-maturation-frontend-foundation`)
 - [x] Worktree created
@@ -41,8 +42,8 @@
 - [x] cmcs run completed (3/3 tickets, 0 failures)
 - [x] Review checklist passed (build, 1315 tests green; all spot checks pass)
 - [x] Merged to main (commit 103bc2e4)
-- [ ] Post-deploy smoke test passed (frontend-only — visual check at deploy)
-- [ ] Worktree cleaned up
+- [x] Post-deploy smoke test passed
+- [x] Worktree cleaned up
 
 ### Phase 3D: Leaderboard Enhancements (`yield-maturation-leaderboard`)
 - [x] Worktree created
@@ -51,8 +52,8 @@
 - [x] cmcs run completed (5/5 tickets, 0 failures) — 3 in first run, 2 after cmcs DB fix
 - [x] Review checklist passed (build, tests green; all spot checks pass)
 - [x] Merged to main (commit 47739904)
-- [ ] Post-deploy smoke test passed (frontend-only — visual check at deploy)
-- [ ] Worktree cleaned up
+- [x] Post-deploy smoke test passed
+- [x] Worktree cleaned up
 
 ### Phase 3E: Detail Page Yield Section (`yield-maturation-detail-page`)
 - [x] Worktree created
@@ -61,8 +62,8 @@
 - [x] cmcs run completed (2/2 tickets, 0 failures)
 - [x] Review checklist passed (build, 1330 tests green; all spot checks pass)
 - [x] Merged to main (commit fd2b21bd)
-- [ ] Post-deploy smoke test passed (frontend-only — visual check at deploy)
-- [ ] Worktree cleaned up
+- [x] Post-deploy smoke test passed
+- [x] Worktree cleaned up
 
 **Post-merge cleanup:** WARNING_SIGNAL_LABELS deduplicated to `src/lib/yield-constants.ts` (commit 6df3ce8f)
 
@@ -73,8 +74,8 @@
 - [x] cmcs run completed (1/1 tickets, 0 failures)
 - [x] Review checklist passed (build, 1347 tests green; no experimental markers; all docs updated)
 - [x] Merged to main (commit 7b139fbf)
-- [ ] Post-deploy smoke test passed
-- [ ] Worktree cleaned up
+- [x] Post-deploy smoke test passed
+- [x] Worktree cleaned up
 
 ## Incident Log
 
