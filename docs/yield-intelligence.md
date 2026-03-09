@@ -84,7 +84,7 @@ apr                  = remainingLqtyRewards * dailyIssuanceFactor * lqtyPriceUsd
 
 Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers). Each unique pool found becomes a separate row in `yield_data`. The row with the highest `currentApy` per coin is marked `is_best = 1`; others are `is_best = 0`.
 
-**Layer 1 — Static map:** `YIELD_POOL_MAP` maps Pharos ID to a DL pool UUID. Filters for `exposure === "single"`. Finds the native/primary yield source.
+**Layer 1 — Static map:** `YIELD_POOL_MAP` maps Pharos ID to a DL pool UUID. Filters for `exposure === "single"`. Finds the native/primary yield source. If a mapped UUID is missing from the DL payload, the sync logs `[yield-sync] Pool UUID ... not found in DL response, falling through` and continues to Layer 2/3 fallback matching.
 
 **Layer 2 — Variant map:** `YIELD_VARIANT_MAP` maps to a wrapper/savings pool symbol. Filters for `exposure === "single"` only (stablecoin flag intentionally relaxed, since savings wrappers like fxSAVE are not flagged `stablecoin = true` in DeFiLlama). Picks highest TVL.
 
@@ -218,6 +218,10 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 | `reward-heavy`     | `apyReward / apy > 0.8`          | 80%+ from incentives, not base yield |
 | `tvl-outflow`      | TVL dropped > 20% from prev week | Capital leaving the protocol         |
 
+At rankings cache-build time, `sync-yield-data` also decorates rows with a read-time-only `data-stale` signal when `updated_at` is older than 90 minutes (`STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
+
+The sync also performs an operational cross-source check after metric computation: if a coin has both native yield (`onchain` / `defillama` / `price-derived`) and auto-discovered lending yield (`defillama-auto`), and the APYs diverge by more than 50% (relative to the larger APY), it emits a `[yield-sync] APY divergence ...` `console.warn` log. This is observability-only and does not affect persisted data or ranking behavior.
+
 ---
 
 ## Database Schema
@@ -275,6 +279,7 @@ CREATE TABLE yield_history (
   exchange_rate   REAL,
   source_tvl_usd  REAL,
   data_source     TEXT NOT NULL,
+  warning_signals TEXT,              -- JSON array of active signal keys (best-source snapshot)
   PRIMARY KEY (stablecoin_id, recorded_at)
 );
 ```
@@ -308,7 +313,7 @@ CREATE TABLE yield_history (
 10. Batch upsert `yield_data` (all sources) + insert `yield_history` point (best source only)
 11. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together
 12. Prune `yield_history` older than 365 days
-13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, then cache rankings JSON only when safety input is healthy and schema validation succeeds (with safe `warning_signals` JSON parsing on read paths)
+13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, then cache rankings JSON only when safety input is healthy and schema validation succeeds (with safe `warning_signals` JSON parsing on read paths)
 
 **Degraded semantics:** If safety coverage is degraded or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"` and skips `yield-rankings` cache overwrite. Safety-degraded runs also skip `report_card_cache` writes to preserve last-known-good snapshots.
 
@@ -375,11 +380,12 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
   ],
   "riskFreeRate": 3.76,
   "scalingFactor": 5,
+  "medianApy": 4.21,
   "updatedAt": 1772000000
 }
 ```
 
-Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source.
+Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics.
 
 ### `GET /api/yield-history?stablecoin=<id>&days=<n>`
 

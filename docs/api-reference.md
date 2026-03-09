@@ -1080,6 +1080,7 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
   "rankings": [YieldRanking, ...],
   "riskFreeRate": 3.76,
   "scalingFactor": 5,
+  "medianApy": 4.21,
   "updatedAt": 1772000000
 }
 ```
@@ -1089,6 +1090,7 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 | `rankings` | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending |
 | `riskFreeRate` | `number` | Current 3-month Treasury yield proxy (%) from FRED `DGS3MO`, used as the risk-free benchmark |
 | `scalingFactor` | `number` | Scaling factor applied in yield score computation |
+| `medianApy` | `number` | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics |
 | `updatedAt` | `number` | Unix seconds when the rankings were last computed |
 
 **`YieldRanking`**

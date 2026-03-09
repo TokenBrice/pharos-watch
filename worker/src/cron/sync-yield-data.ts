@@ -16,6 +16,7 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getChainRpc } from "../lib/chain-registry";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import {
+  STALE_THRESHOLD_MS,
   computeApyFromRate,
   computeApyFromPrice,
   computePYS,
@@ -780,15 +781,51 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       historyStmts.push(
         db
           .prepare(
-            `INSERT OR IGNORE INTO yield_history (stablecoin_id, recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, data_source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT OR IGNORE INTO yield_history (stablecoin_id, recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, data_source, warning_signals)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
-          .bind(id, startSec, y.currentApy, y.apyBase, y.apyReward, y.exchangeRate, y.sourceTvlUsd, y.dataSource),
+          .bind(
+            id,
+            startSec,
+            y.currentApy,
+            y.apyBase,
+            y.apyReward,
+            y.exchangeRate,
+            y.sourceTvlUsd,
+            y.dataSource,
+            warningSignalsJson,
+          ),
       );
       historyWrittenForCoin.add(id);
     }
 
     updatedCount++;
+  }
+
+  // Cross-source APY validation: flag >50% divergence between native and lending
+  {
+    const nativeApyByCoin = new Map<string, number>();
+    const lendingApyByCoin = new Map<string, number>();
+    for (const r of resolved) {
+      if (!r.yield) continue;
+      const ds = r.yield.dataSource;
+      if (ds === "defillama" || ds === "onchain" || ds === "price-derived") {
+        nativeApyByCoin.set(r.id, r.yield.currentApy);
+      } else if (ds === "defillama-auto") {
+        lendingApyByCoin.set(r.id, r.yield.currentApy);
+      }
+    }
+    for (const [coinId, nativeApy] of nativeApyByCoin) {
+      const lendingApy = lendingApyByCoin.get(coinId);
+      if (lendingApy != null && nativeApy > 0 && lendingApy > 0) {
+        const maxApy = Math.max(nativeApy, lendingApy);
+        if (Math.abs(nativeApy - lendingApy) / maxApy > 0.5) {
+          console.warn(
+            `[yield-sync] APY divergence for ${coinId}: native=${nativeApy.toFixed(1)}% vs lending=${lendingApy.toFixed(1)}%`,
+          );
+        }
+      }
+    }
   }
 
   // 7. Batch write
@@ -847,13 +884,28 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     altSourcesByCoin.set(row.stablecoin_id, alts);
   }
 
+  const now = Date.now();
+  const tvlWeightedMedian = computeTvlWeightedMedianApy(
+    (rankingsData.results ?? []) as Array<{ apy_30d: number; source_tvl_usd: number | null }>,
+  );
   const rankingsPayload = {
-    rankings: dedupeLatestBestRows(rankingsData.results ?? []).map((row) => ({
-      ...rowToRanking(row),
-      altSources: altSourcesByCoin.get(row.stablecoin_id as string) ?? [],
-    })),
+    rankings: dedupeLatestBestRows(rankingsData.results ?? []).map((row) => {
+      const ranking = {
+        ...rowToRanking(row),
+        altSources: altSourcesByCoin.get(row.stablecoin_id as string) ?? [],
+      };
+      // Decorate with data-stale signal at read time (not persisted to yield_data).
+      const updatedAtMs = typeof row.updated_at === "number" ? row.updated_at * 1000 : 0;
+      if (updatedAtMs > 0 && updatedAtMs < now - STALE_THRESHOLD_MS) {
+        if (!ranking.warningSignals.includes("data-stale")) {
+          ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
+        }
+      }
+      return ranking;
+    }),
     riskFreeRate,
     scalingFactor: PYS_SCALING_FACTOR,
+    medianApy: tvlWeightedMedian,
     updatedAt: startSec,
   };
   const validation = validatePayloadWithSchema(
@@ -968,4 +1020,20 @@ function parseWarningSignals(raw: unknown): string[] {
   } catch {
     return [];
   }
+}
+
+function computeTvlWeightedMedianApy(rows: Array<{ apy_30d: number; source_tvl_usd: number | null }>): number {
+  const valid = rows.filter((r) => r.source_tvl_usd && r.source_tvl_usd > 0 && r.apy_30d > 0);
+  if (valid.length === 0) return 0;
+
+  valid.sort((a, b) => a.apy_30d - b.apy_30d);
+  const totalTvl = valid.reduce((s, r) => s + r.source_tvl_usd!, 0);
+  let cumulativeTvl = 0;
+
+  for (const row of valid) {
+    cumulativeTvl += row.source_tvl_usd!;
+    if (cumulativeTvl >= totalTvl / 2) return row.apy_30d;
+  }
+
+  return valid[valid.length - 1].apy_30d;
 }

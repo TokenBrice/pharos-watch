@@ -1,13 +1,22 @@
 import { describe, it, expect } from "vitest";
 import {
+  STALE_THRESHOLD_MS,
   computeApyFromRate,
   computeApyFromPrice,
   computePYS,
   computeYieldStability,
   computeApyVarianceScore,
   detectWarningSignals,
+  matchAllDlPools,
   findBestLendingPool,
 } from "../yield-helpers";
+
+// computeTvlWeightedMedianApy is internal to sync-yield-data.ts - tested via integration
+describe("STALE_THRESHOLD_MS", () => {
+  it("equals 90 minutes in milliseconds", () => {
+    expect(STALE_THRESHOLD_MS).toBe(5_400_000);
+  });
+});
 
 describe("computeApyFromRate", () => {
   it("returns 0 for identical rates", () => {
@@ -149,6 +158,28 @@ describe("detectWarningSignals", () => {
       prevTvlUsd: 100_000_000,
     });
     expect(signals.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("matchAllDlPools", () => {
+  it("falls through to symbol match when static map UUID is missing from DL pools", () => {
+    const poolMap = { "test-coin": "missing-uuid-123" };
+    const dlPools = [
+      {
+        pool: "other-uuid",
+        symbol: "TEST",
+        stablecoin: true,
+        exposure: "single",
+        tvlUsd: 1_000_000,
+        apy: 5.0,
+        apyBase: 5.0,
+        apyReward: null,
+      },
+    ];
+
+    const result = matchAllDlPools("test-coin", "TEST", dlPools, poolMap, {});
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].pool).toBe("other-uuid");
   });
 });
 

@@ -8,6 +8,7 @@ interface YieldHistoryRow {
   apy_reward: number | null;
   exchange_rate: number | null;
   source_tvl_usd: number | null;
+  warning_signals: string | null;
 }
 
 /**
@@ -28,7 +29,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
       const result = await database
         .prepare(
-          `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd
+          `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals
            FROM yield_history
            WHERE stablecoin_id = ? AND recorded_at >= ?
            ORDER BY recorded_at ASC`
@@ -44,6 +45,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
       apyReward: row.apy_reward,
       exchangeRate: row.exchange_rate,
       sourceTvlUsd: row.source_tvl_usd,
+      warningSignals: row.warning_signals ? JSON.parse(row.warning_signals as string) : [],
     }),
   });
 });

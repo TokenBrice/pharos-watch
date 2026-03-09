@@ -1285,6 +1285,7 @@ export interface YieldRankingsResponse {
   rankings: YieldRanking[];
   riskFreeRate: number;
   scalingFactor: number;
+  medianApy: number;
   updatedAt: number;
 }
 
@@ -1292,6 +1293,7 @@ export const YieldRankingsResponseSchema = z.object({
   rankings: z.array(YieldRankingSchema),
   riskFreeRate: z.number(),
   scalingFactor: z.number(),
+  medianApy: z.number(),
   updatedAt: z.number(),
 });
 

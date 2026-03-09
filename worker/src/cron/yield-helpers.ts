@@ -1,6 +1,8 @@
 // worker/src/cron/yield-helpers.ts
 // Pure computation functions for yield intelligence. No I/O.
 
+export const STALE_THRESHOLD_MS = 90 * 60 * 1000; // 3 sync cycles
+
 export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
   if (ratePrev <= 0 || rateNow <= 0 || days <= 0) return 0;
   const ratio = rateNow / ratePrev;
@@ -99,6 +101,8 @@ export function matchAllDlPools(
     if (p) {
       found.push({ pool: p.pool, apy: p.apy, apyBase: p.apyBase, apyReward: p.apyReward, tvlUsd: p.tvlUsd });
       seenUuids.add(p.pool);
+    } else if (!dlPools.find(p => p.pool === nativeId)) {
+      console.warn(`[yield-sync] Pool UUID ${nativeId} for ${stablecoinId} not found in DL response, falling through`);
     }
   }
 

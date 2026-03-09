@@ -55,6 +55,7 @@ describe("critical invariants", () => {
       ],
       riskFreeRate: 4.25,
       scalingFactor: 1,
+      medianApy: 4.8,
       updatedAt: 1700000000,
     };
 
@@ -72,6 +73,12 @@ describe("critical invariants", () => {
       rankings: [{ ...base.rankings[0], apy7d: Number.POSITIVE_INFINITY }],
     });
     expect(infBad.success).toBe(false);
+
+    const medianNanBad = YieldRankingsResponseSchema.safeParse({
+      ...base,
+      medianApy: Number.NaN,
+    });
+    expect(medianNanBad.success).toBe(false);
   });
 
   it("rejects non-finite stress and flow numbers", () => {
