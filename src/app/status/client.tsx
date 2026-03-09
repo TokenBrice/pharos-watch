@@ -18,6 +18,7 @@ import { StatusBanner } from "@/components/status/status-banner";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
+import { getStatusCronDisplay, STATUS_CRON_GROUPS } from "@/components/status/cron-config";
 
 const SESSION_KEY = "pharos-admin-key";
 
@@ -116,6 +117,12 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
 
   if (!data) return <div className="p-8 text-center text-muted-foreground">Loading status data...</div>;
 
+  const cronEntries = Object.entries(data.crons);
+  const cronGroups = STATUS_CRON_GROUPS.map((group) => ({
+    ...group,
+    entries: cronEntries.filter(([job]) => getStatusCronDisplay(job).group === group.key),
+  })).filter((group) => group.entries.length > 0);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -189,9 +196,24 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Cron Jobs</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {Object.entries(data.crons).map(([job, cron]) => (
-            <CronCard key={job} job={job} cron={cron} nowSeconds={data.timestamp} />
+        <div className="space-y-6">
+          {cronGroups.map((group) => (
+            <div key={group.key} className="space-y-3">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-semibold">{group.title}</h3>
+                  <span className="rounded-full border border-border/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    {group.badge}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">{group.description}</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {group.entries.map(([job, cron]) => (
+                  <CronCard key={job} job={job} cron={cron} nowSeconds={data.timestamp} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </section>

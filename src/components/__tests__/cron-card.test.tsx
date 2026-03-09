@@ -50,4 +50,81 @@ describe("CronCard", () => {
     expect(html).toContain("History:");
     expect(html).toContain("2 runs");
   });
+
+  it("renders discovery-cron summaries for the split DEX pipeline", () => {
+    const html = renderToStaticMarkup(
+      <CronCard
+        job="sync-dex-discovery"
+        nowSeconds={1_772_100_000}
+        cron={{
+          lastRun: {
+            startedAt: 1_772_099_100,
+            durationMs: 48_000,
+            status: "degraded",
+            itemCount: 18,
+            metadata: {
+              coinsCrawled: 18,
+              poolsDiscovered: 57,
+              runSeq: 42,
+              budgetExhausted: true,
+              tierBreakdown: { t1: 7, t2: 8, t3: 3, dormant: 1, skipped: 137 },
+              failedCoins: ["usdx", "euri"],
+            },
+          },
+          recentRuns: [{ startedAt: 1_772_099_100, durationMs: 48_000, status: "degraded" }],
+          expectedIntervalSec: 1200,
+          healthy: true,
+        }}
+      />,
+    );
+
+    expect(html).toContain("DEX pool discovery");
+    expect(html).toContain("sync-dex-discovery");
+    expect(html).toContain("crawled 18 coins, discovered 57 pools (run #42)");
+    expect(html).toContain("eligible tiers t1 7, t2 8, t3 3, dormant 1");
+    expect(html).toContain("budget exhausted before the full discovery queue finished");
+    expect(html).toContain("coin crawl failures 2");
+  });
+
+  it("renders scoring-cron summaries for staged-pool merge health", () => {
+    const html = renderToStaticMarkup(
+      <CronCard
+        job="sync-dex-liquidity"
+        nowSeconds={1_772_100_000}
+        cron={{
+          lastRun: {
+            startedAt: 1_772_099_100,
+            durationMs: 33_000,
+            status: "degraded",
+            itemCount: 126,
+            metadata: {
+              stagedPoolsMerged: 41,
+              stagedPoolsSkipped: 9,
+              failedSources: ["defillama-yields"],
+              fallbackMode: ["dl-yields-unavailable"],
+              sourceCoverage: {
+                currentCoverage: 126,
+                previousCoverage: 131,
+                minExpectedCoverage: 78,
+                nearCoverageGuard: true,
+                priceObservationCoins: 93,
+              },
+            },
+          },
+          recentRuns: [{ startedAt: 1_772_099_100, durationMs: 33_000, status: "degraded" }],
+          expectedIntervalSec: 1800,
+          healthy: true,
+        }}
+      />,
+    );
+
+    expect(html).toContain("DEX liquidity scoring");
+    expect(html).toContain("sync-dex-liquidity");
+    expect(html).toContain("staged pools merged 41, skipped 9");
+    expect(html).toContain("coverage 126 vs 131 previous, floor 78");
+    expect(html).toContain("dex price observations 93 coins");
+    expect(html).toContain("failed sources defillama-yields");
+    expect(html).toContain("fallback mode dl-yields-unavailable");
+    expect(html).toContain("coverage near guardrail band");
+  });
 });

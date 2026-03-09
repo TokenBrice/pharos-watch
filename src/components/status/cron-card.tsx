@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getStatusCronDisplay } from "./cron-config";
 import { formatAge, formatDuration, formatInterval } from "./format";
 
 interface CronCardProps {
@@ -37,6 +38,15 @@ function readArray(value: unknown): unknown[] | null {
   return Array.isArray(value) ? value : null;
 }
 
+function readBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+  }
+  return null;
+}
+
 function formatApiErrorClasses(value: unknown): string | null {
   const record = readRecord(value);
   if (!record) return null;
@@ -66,6 +76,27 @@ function formatSlowestProbes(value: unknown): string | null {
     .slice(0, 2);
 
   return parts.length > 0 ? `slowest ${parts.join(", ")}` : null;
+}
+
+function formatStringList(value: unknown): string | null {
+  const items = readArray(value)
+    ?.filter((item): item is string => typeof item === "string" && item.length > 0);
+  return items && items.length > 0 ? items.join(", ") : null;
+}
+
+function formatTierBreakdown(value: unknown): string | null {
+  const record = readRecord(value);
+  if (!record) return null;
+
+  const orderedKeys = ["t1", "t2", "t3", "dormant"] as const;
+  const parts = orderedKeys
+    .map((key) => {
+      const count = readNumber(record[key]);
+      return count != null && count > 0 ? `${key} ${count}` : null;
+    })
+    .filter((item): item is string => item != null);
+
+  return parts.length > 0 ? `eligible tiers ${parts.join(", ")}` : null;
 }
 
 function summarizeMetadata(job: string, metadata: Record<string, unknown> | undefined): string[] {
@@ -102,6 +133,51 @@ function summarizeMetadata(job: string, metadata: Record<string, unknown> | unde
     return lines.filter((line): line is string => line != null);
   }
 
+  if (job === "sync-dex-discovery") {
+    const coinsCrawled = readNumber(metadata.coinsCrawled);
+    const poolsDiscovered = readNumber(metadata.poolsDiscovered);
+    const runSeq = readNumber(metadata.runSeq);
+    const budgetExhausted = readBoolean(metadata.budgetExhausted);
+    const failedCoins = readArray(metadata.failedCoins)?.filter((coin): coin is string => typeof coin === "string");
+
+    const lines = [
+      coinsCrawled != null && poolsDiscovered != null
+        ? `crawled ${coinsCrawled} coins, discovered ${poolsDiscovered} pools${runSeq != null ? ` (run #${runSeq})` : ""}`
+        : null,
+      formatTierBreakdown(metadata.tierBreakdown),
+      budgetExhausted ? "budget exhausted before the full discovery queue finished" : null,
+      failedCoins && failedCoins.length > 0 ? `coin crawl failures ${failedCoins.length}` : null,
+    ];
+    return lines.filter((line): line is string => line != null);
+  }
+
+  if (job === "sync-dex-liquidity") {
+    const stagedPoolsMerged = readNumber(metadata.stagedPoolsMerged);
+    const stagedPoolsSkipped = readNumber(metadata.stagedPoolsSkipped);
+    const failedSources = formatStringList(metadata.failedSources);
+    const fallbackMode = formatStringList(metadata.fallbackMode);
+    const sourceCoverage = readRecord(metadata.sourceCoverage);
+    const currentCoverage = readNumber(sourceCoverage?.currentCoverage);
+    const previousCoverage = readNumber(sourceCoverage?.previousCoverage);
+    const minExpectedCoverage = readNumber(sourceCoverage?.minExpectedCoverage);
+    const priceObservationCoins = readNumber(sourceCoverage?.priceObservationCoins);
+    const nearCoverageGuard = readBoolean(sourceCoverage?.nearCoverageGuard);
+
+    const lines = [
+      stagedPoolsMerged != null
+        ? `staged pools merged ${stagedPoolsMerged}${stagedPoolsSkipped != null ? `, skipped ${stagedPoolsSkipped}` : ""}`
+        : null,
+      currentCoverage != null
+        ? `coverage ${currentCoverage}${previousCoverage != null ? ` vs ${previousCoverage} previous` : ""}${minExpectedCoverage != null ? `, floor ${minExpectedCoverage}` : ""}`
+        : null,
+      priceObservationCoins != null ? `dex price observations ${priceObservationCoins} coins` : null,
+      failedSources ? `failed sources ${failedSources}` : null,
+      fallbackMode ? `fallback mode ${fallbackMode}` : null,
+      nearCoverageGuard ? "coverage near guardrail band" : null,
+    ];
+    return lines.filter((line): line is string => line != null);
+  }
+
   if (job === "sync-blacklist") {
     const apiErrors = readNumber(metadata.apiErrors);
     const contractsSkipped = readNumber(metadata.contractsSkipped);
@@ -124,6 +200,7 @@ function summarizeMetadata(job: string, metadata: Record<string, unknown> | unde
 }
 
 export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
+  const display = getStatusCronDisplay(job);
   const latestStatus = cron.lastRun?.status;
   const metadataSummary = summarizeMetadata(job, cron.lastRun?.metadata);
   const borderColor = !cron.healthy
@@ -143,7 +220,10 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
     <Card className={`border-2 ${borderColor}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-mono">{job}</CardTitle>
+          <div className="space-y-1">
+            <CardTitle className="text-sm">{display.label}</CardTitle>
+            {display.label !== job && <CardDescription className="font-mono text-xs">{job}</CardDescription>}
+          </div>
           <span className="text-xs text-muted-foreground">every {formatInterval(cron.expectedIntervalSec)}</span>
         </div>
       </CardHeader>

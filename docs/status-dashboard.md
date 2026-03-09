@@ -40,6 +40,12 @@ This page is **admin-only in practice** because all status/probe calls require `
   - Manual/admin mutation actions are listed but intentionally not auto-probed
 - `src/components/status/telegram-bot-stats.tsx`
   - Renders Telegram subscriber adoption metrics, top subscribed coins, and the latest `dispatch-telegram-alerts` delivery summary
+- Cron cards are grouped by trigger slot on the page:
+  - 15-minute core ingestion / score recompute
+  - 20-minute intake + `sync-dex-discovery`
+  - 30-minute scoring + downstream `sync-yield-data`
+  - daily snapshot / digest jobs
+  - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup
 
 ### Endpoint groups
 
@@ -69,7 +75,10 @@ Source: `worker/src/api/status.ts`
 - Last run status is `degraded` (warning-only fallback mode), or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window
 
-For `sync-dex-liquidity`, `degraded` now explicitly captures non-fatal upstream degradation (critical source-family failures or near-guard coverage drops), with machine-readable metadata (`failedSources`, `fallbackMode`, `sourceCoverage`).
+For the split DEX pipeline:
+
+- `sync-dex-discovery` surfaces crawl-progress metadata (`coinsCrawled`, `poolsDiscovered`, `tierBreakdown`, `budgetExhausted`, `failedCoins`) so operators can tell whether the staging crawl is still feeding the scorer.
+- `sync-dex-liquidity` `degraded` explicitly captures non-fatal upstream degradation (critical source-family failures or near-guard coverage drops), with machine-readable metadata (`failedSources`, `fallbackMode`, `sourceCoverage`, staged-pool merge counters).
 
 ### Availability status
 
@@ -234,7 +243,7 @@ Mutating admin paths are protected by method guardrails:
 | File                                           | Role                                                                                                                                                                                                                  |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/status/client.tsx`                    | Auth gate + status dashboard orchestration shell                                                                                                                                                                      |
-| `src/components/status/*`                      | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards surface structured metadata for warning/error runs, show textual recent-run counts alongside history dots, and expose full raw metadata in a collapsible panel. |
+| `src/components/status/*`                      | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards are grouped by trigger slot, surface structured metadata for warning/error runs, show textual recent-run counts alongside history dots, and expose full raw metadata in a collapsible panel. |
 | `src/components/status/telegram-bot-stats.tsx` | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                         |
 | `src/hooks/use-status.ts`                      | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                 |
 | `src/hooks/use-endpoint-probes.ts`             | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                               |
