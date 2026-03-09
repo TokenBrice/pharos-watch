@@ -151,11 +151,11 @@ export function DepegClient() {
       />
 
       {/* DEWS radar + stat boxes — 2-column on desktop */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
         <SectionErrorBoundary name="dews">
           <DEWSSummary logos={logos} />
         </SectionErrorBoundary>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 xl:self-stretch">
           {pegData?.summary && (
             <SectionErrorBoundary name="depeg-stats">
               <DepegTrackerStats stats={pegData.summary} />

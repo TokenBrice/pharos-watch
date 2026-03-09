@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,8 +27,11 @@ interface AlertCoin {
   band: ThreatBand;
 }
 
+const PAGE_SIZE = 3;
+
 export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAlertFeedProps) {
   const prefetch = usePrefetchStablecoin();
+  const [page, setPage] = useState(0);
 
   const alertCoins = useMemo((): AlertCoin[] => {
     if (!signals) return [];
@@ -59,6 +62,10 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
     return result;
   }, [signals, allowedIds]);
 
+  const totalPages = Math.max(1, Math.ceil(alertCoins.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageCoins = alertCoins.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
   if (!signals) {
     return (
       <Card className={["rounded-xl flex flex-col", className].filter(Boolean).join(" ")}>
@@ -88,13 +95,13 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
           </span>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 gap-y-1.5" aria-live="polite">
+      <CardContent className="grid grid-cols-1 gap-y-1.5" aria-live="polite">
         {alertCoins.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border/70 px-3 py-3 text-sm text-muted-foreground">
             All tracked stablecoins are below ALERT right now.
           </p>
         ) : (
-          alertCoins.map((coin) => (
+          pageCoins.map((coin) => (
             <Link
               key={coin.id}
               href={buildStablecoinUrl(coin.id)}
@@ -119,6 +126,29 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
           ))
         )}
       </CardContent>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-border/60 px-4 py-2">
+          <button
+            type="button"
+            disabled={safePage === 0}
+            onClick={() => setPage(safePage - 1)}
+            className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
+          >
+            ← Prev
+          </button>
+          <span className="text-xs font-mono tabular-nums text-muted-foreground">
+            {safePage + 1} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={safePage >= totalPages - 1}
+            onClick={() => setPage(safePage + 1)}
+            className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </Card>
   );
 }
