@@ -1,1 +1,0 @@
-../../../cmcs/docs/cmcs-base.md

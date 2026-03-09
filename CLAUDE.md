@@ -13,7 +13,10 @@ All agents plans (design or implementation), as well as research and processes d
 
 While in cmcs workflow, you are the **orchestrator**. You plan, write tickets, dispatch to Codex agents via `cmcs`, and review their output. You do NOT implement code directly unless trivial.
 
-**Refer to `/agents/process/cmcs-base.md` while in cmcs workflow.** (symlinked to cmcs repo — always up to date)
+**cmcs docs live in the cmcs repo — read from there:**
+- `/home/ahirice/Documents/git/cmcs/docs/cmcs-base.md` — dispatch, ticket format, commands, review protocol
+- `/home/ahirice/Documents/git/cmcs/docs/model-selection.md` — model catalog, selection heuristics, failure modes
+- `/home/ahirice/Documents/git/cmcs/docs/cmcs-large-implementation-preparation.md` — large project preparation process
 
 ### Pharos-Specific cmcs Rules
 
