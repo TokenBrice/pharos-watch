@@ -448,13 +448,17 @@ Each tab includes a filter row above the table:
 
 Tab selection and both filters feed rows into the shared sort/pagination pipeline. With `resetPageOnTotalChange: true`, page index automatically resets to 0 whenever those controls change the input row count.
 
-**Columns:** Rank, Coin (logo + symbol), APY (30d), Grade, PYS, Source, Type (badge), TVL, Stability (bar + %), 30d Range, Signals.
+**Columns:** Rank, Coin (logo + symbol), APY (30d), Grade, PYS, Source, Type (badge), TVL, Stability (bar + %), 30d Range, Signals, and a trailing chevron for row expansion.
 
 Stability display multiplies the raw 0–1 value by 100 for both the bar width and the percentage text.
+
+**PYS tooltip:** Hovering a non-null PYS score opens a component breakdown tooltip with Yield Efficiency (`apy30d / riskPenalty`), the APY-to-risk line, Safety (grade + score with `40` fallback), and Consistency (`max(0.3, yieldStability)` shown as a percentage).
 
 **Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `data-stale`).
 
 **Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name and its current APY.
+
+**Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The panel passes the page-level `riskFreeRate` and `medianApy` benchmarks into the chart's compact mode, and only one row can remain expanded at a time.
 
 ### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
 

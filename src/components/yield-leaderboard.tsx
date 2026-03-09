@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, ChevronDown } from "lucide-react";
+import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -27,6 +28,7 @@ const WARNING_SIGNAL_LABELS: Record<string, string> = {
 };
 
 const PAGE_SIZE = 25;
+const COLUMN_COUNT = 12;
 
 type SortKey = "pys" | "apy30d" | "safetyScore" | "tvl" | "yieldStability" | "yieldType";
 
@@ -91,16 +93,18 @@ function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
 
 interface YieldLeaderboardProps {
   rankings: YieldRanking[];
-  logos: Record<string, string> | undefined;
-  onRowClick: (id: string) => void;
+  logos: Record<string, string>;
+  riskFreeRate: number;
+  medianApy: number;
 }
 
-export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboardProps) {
+export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: YieldLeaderboardProps) {
   const [activeTab, setActiveTab] = useState<"native" | "lending">("native");
   const [activeYieldTypes, setActiveYieldTypes] = useState<Set<string>>(
     () => new Set(Object.keys(YIELD_TYPE_LABELS)),
   );
   const [hideWarnings, setHideWarnings] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const nativeRankings = rankings.filter((ranking) => ranking.dataSource !== "defillama-auto");
   const lendingRankings = rankings.filter((ranking) => ranking.dataSource === "defillama-auto");
@@ -170,6 +174,12 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
     resetPageOnTotalChange: true,
   });
   const prefetch = usePrefetchStablecoin();
+
+  useEffect(() => {
+    if (expandedId !== null && !paginated.some((row) => row.id === expandedId)) {
+      setExpandedId(null);
+    }
+  }, [expandedId, paginated]);
 
   return (
     <TooltipProvider>
@@ -300,6 +310,9 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                 />
                 <TableHead className="hidden xl:table-cell text-right">30d Range</TableHead>
                 <TableHead className="hidden md:table-cell text-center">Signals</TableHead>
+                <TableHead className="w-[44px] text-right">
+                  <span className="sr-only">Expand row</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -307,127 +320,192 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                 const grade = row.safetyGrade;
                 const safetyScore = row.safetyScore;
                 const warningSignalCount = row.warningSignals.length;
+                const pysColor = getPysColor(row.pharosYieldScore);
+                const riskPenalty = Math.max(0.5, (101 - (safetyScore ?? 40)) / 20);
+                const yieldEfficiency = row.apy30d / riskPenalty;
+                const sustainabilityMult = Math.max(0.3, row.yieldStability ?? 1.0);
                 return (
-                  <InteractiveTableRow
-                    key={row.id}
-                    onActivate={() => onRowClick(row.id)}
-                    onHover={() => prefetch(row.id)}
-                    className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50" : ""}
-                  >
-                    <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
-                      {pageStartIndex + index + 1}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <StablecoinLogo src={logos?.[row.id]} name={row.name} size={24} />
-                        <span className="font-medium">{row.symbol}</span>
-                        <span className="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline">
-                          {row.name}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">{formatApy(row.apy30d)}</TableCell>
-                    <TableCell className="hidden md:table-cell text-center">
-                      {grade && grade !== "NR" ? (
-                        <Badge
-                          variant="outline"
-                          className={`text-xs font-mono px-1 py-0 ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
-                          title={safetyScore !== null ? `${grade} (${Math.round(safetyScore)}/100)` : grade}
-                        >
-                          {grade}
-                        </Badge>
-                      ) : safetyScore !== null ? (
-                        <Badge
-                          variant="outline"
-                          className="text-xs font-mono px-1 py-0 text-muted-foreground"
-                          title={`Safety score: ${Math.round(safetyScore)}/100 (grade unavailable)`}
-                        >
-                          {Math.round(safetyScore)}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">--</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      <span className={getPysColor(row.pharosYieldScore)}>
-                        {row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "--"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
-                      <div className="flex items-center gap-1">
-                        <span className="truncate">{row.yieldSource}</span>
-                        {(row.altSources?.length ?? 0) > 0 && <AltSourcesPopover altSources={row.altSources} />}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-center">
-                      <Badge variant="outline" className={`text-xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
-                        {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums">
-                      {row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "--"}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-right">
-                      {row.yieldStability !== null ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <div
-                            className="w-16 h-1.5 rounded-full bg-muted overflow-hidden"
-                            role="progressbar"
-                            aria-label={`Yield stability: ${Math.round(row.yieldStability * 100)}%`}
-                            aria-valuenow={Math.round(row.yieldStability * 100)}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                          >
-                            <div
-                              className="h-full rounded-full bg-emerald-500"
-                              style={{ width: `${Math.min(100, Math.max(0, row.yieldStability * 100))}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                            {Math.round(row.yieldStability * 100)}%
+                  <Fragment key={row.id}>
+                    <InteractiveTableRow
+                      onActivate={() => setExpandedId(expandedId === row.id ? null : row.id)}
+                      onHover={() => prefetch(row.id)}
+                      className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50" : ""}
+                    >
+                      <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
+                        {pageStartIndex + index + 1}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <StablecoinLogo src={logos[row.id]} name={row.name} size={24} />
+                          <span className="font-medium">{row.symbol}</span>
+                          <span className="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline">
+                            {row.name}
                           </span>
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground">--</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums text-xs text-muted-foreground">
-                      {row.apyMin30d !== null && row.apyMax30d !== null
-                        ? `${row.apyMin30d.toFixed(1)}% – ${row.apyMax30d.toFixed(1)}%`
-                        : "--"}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-center">
-                      {warningSignalCount === 0 ? (
-                        <span className="text-muted-foreground">&mdash;</span>
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={(event) => event.stopPropagation()}
-                              className="mx-auto inline-flex pharos-focus-ring"
-                              aria-label={`${warningSignalCount} warning signal${warningSignalCount > 1 ? "s" : ""}`}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">{formatApy(row.apy30d)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-center">
+                        {grade && grade !== "NR" ? (
+                          <Badge
+                            variant="outline"
+                            className={`text-xs font-mono px-1 py-0 ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
+                            title={safetyScore !== null ? `${grade} (${Math.round(safetyScore)}/100)` : grade}
+                          >
+                            {grade}
+                          </Badge>
+                        ) : safetyScore !== null ? (
+                          <Badge
+                            variant="outline"
+                            className="text-xs font-mono px-1 py-0 text-muted-foreground"
+                            title={`Safety score: ${Math.round(safetyScore)}/100 (grade unavailable)`}
+                          >
+                            {Math.round(safetyScore)}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">--</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        {row.pharosYieldScore !== null ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className={`cursor-help ${pysColor}`}>{formatScore(row.pharosYieldScore)}</span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[220px]">
+                              <div className="space-y-1.5 text-xs">
+                                <div>
+                                  <span className="text-muted-foreground">Yield Efficiency: </span>
+                                  <span className="font-mono tabular-nums">{yieldEfficiency.toFixed(1)}</span>
+                                </div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  <span className="font-mono tabular-nums">{row.apy30d.toFixed(1)}%</span> APY /{" "}
+                                  <span className="font-mono tabular-nums">{riskPenalty.toFixed(1)}x</span> risk
+                                  penalty
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Safety: </span>
+                                  <span className="font-mono tabular-nums">{grade ?? "?"}</span>
+                                  <span className="text-muted-foreground">
+                                    {" "}
+                                    (
+                                    <span className="font-mono tabular-nums">{safetyScore ?? 40}</span>
+                                    )
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Consistency: </span>
+                                  <span className="font-mono tabular-nums">
+                                    {(sustainabilityMult * 100).toFixed(0)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span className={pysColor}>--</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
+                        <div className="flex items-center gap-1">
+                          <span className="truncate">{row.yieldSource}</span>
+                          {(row.altSources?.length ?? 0) > 0 && <AltSourcesPopover altSources={row.altSources} />}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-center">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}
+                        >
+                          {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums">
+                        {row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "--"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-right">
+                        {row.yieldStability !== null ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <div
+                              className="w-16 h-1.5 rounded-full bg-muted overflow-hidden"
+                              role="progressbar"
+                              aria-label={`Yield stability: ${Math.round(row.yieldStability * 100)}%`}
+                              aria-valuenow={Math.round(row.yieldStability * 100)}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
                             >
-                              <AlertTriangle
-                                className={
-                                  warningSignalCount >= 2
-                                    ? "h-4 w-4 text-amber-500 fill-amber-500/20"
-                                    : "h-4 w-4 text-amber-500"
-                                }
+                              <div
+                                className="h-full rounded-full bg-emerald-500"
+                                style={{ width: `${Math.min(100, Math.max(0, row.yieldStability * 100))}%` }}
                               />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <ul className="space-y-1 text-xs">
-                              {row.warningSignals.map((signal) => (
-                                <li key={signal}>{WARNING_SIGNAL_LABELS[signal] ?? signal}</li>
-                              ))}
-                            </ul>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </TableCell>
-                  </InteractiveTableRow>
+                            </div>
+                            <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                              {Math.round(row.yieldStability * 100)}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">--</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums text-xs text-muted-foreground">
+                        {row.apyMin30d !== null && row.apyMax30d !== null
+                          ? `${row.apyMin30d.toFixed(1)}% – ${row.apyMax30d.toFixed(1)}%`
+                          : "--"}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-center">
+                        {warningSignalCount === 0 ? (
+                          <span className="text-muted-foreground">&mdash;</span>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={(event) => event.stopPropagation()}
+                                onKeyDown={(event) => event.stopPropagation()}
+                                className="mx-auto inline-flex pharos-focus-ring"
+                                aria-label={`${warningSignalCount} warning signal${warningSignalCount > 1 ? "s" : ""}`}
+                              >
+                                <AlertTriangle
+                                  className={
+                                    warningSignalCount >= 2
+                                      ? "h-4 w-4 text-amber-500 fill-amber-500/20"
+                                      : "h-4 w-4 text-amber-500"
+                                  }
+                                />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <ul className="space-y-1 text-xs">
+                                {row.warningSignals.map((signal) => (
+                                  <li key={signal}>{WARNING_SIGNAL_LABELS[signal] ?? signal}</li>
+                                ))}
+                              </ul>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-2 py-2 text-right">
+                        <ChevronDown
+                          className={
+                            expandedId === row.id
+                              ? "h-4 w-4 text-muted-foreground rotate-180 transition-transform"
+                              : "h-4 w-4 text-muted-foreground transition-transform"
+                          }
+                        />
+                      </TableCell>
+                    </InteractiveTableRow>
+                    {expandedId === row.id && (
+                      <TableRow>
+                        <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4">
+                          <YieldHistoryChart
+                            stablecoinId={row.id}
+                            riskFreeRate={riskFreeRate}
+                            medianApy={medianApy}
+                            compact
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
                 );
               })}
               {sorted.length === 0 && (
