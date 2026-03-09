@@ -35,11 +35,14 @@ export function getDepreciationFactor(ageDays: number): number {
   return Math.max(DEPRECIATION_FLOOR, 1.0 - (ageDays - GRACE_DAYS) / DECAY_DAYS);
 }
 
-export function computeStabilityIndex(input: StabilityInput): StabilityResult {
+export function computeStabilityIndex(input: StabilityInput): StabilityResult | null {
   const { depegs, totalMcapUsd, mcap7dChangePct } = input;
+  if (!totalMcapUsd || totalMcapUsd <= 0) {
+    return null;
+  }
 
   const severityRaw = depegs.reduce((sum, d) => {
-    const share = totalMcapUsd > 0 ? d.mcapUsd / totalMcapUsd : 0;
+    const share = d.mcapUsd / totalMcapUsd;
     const amplifier = Math.log2(1 + d.mcapUsd / 1e9);
     const factor = getDepreciationFactor(d.depegAgeDays ?? 0);
     return sum + (Math.abs(d.bps) / 100) * share * amplifier * K * factor;

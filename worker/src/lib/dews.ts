@@ -582,7 +582,7 @@ function computeYieldSignal(input: DEWSInput): SignalResult {
 // Main compute
 // ---------------------------------------------------------------------------
 
-export function computeDEWS(input: DEWSInput): DEWSResult {
+export function computeDEWS(input: DEWSInput): DEWSResult | null {
   const signals: Record<string, SignalResult> = {
     supply: computeSupplySignal(input),
     pool: computePoolSignal(input),
@@ -607,7 +607,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult {
 
   // Require at least 2 available signals (weight >= 0.30) for a score
   if (totalWeight < 0.3) {
-    return { score: 0, band: "CALM", signals };
+    return null;
   }
 
   // Systemic backdrop: amplify individual stress when market is under pressure

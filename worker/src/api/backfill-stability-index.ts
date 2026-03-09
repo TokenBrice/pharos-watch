@@ -57,6 +57,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       // Iterate day by day — build all statements first, then atomically swap
       const stmts: D1PreparedStatement[] = [];
       let count = 0;
+      let skippedInsufficientData = 0;
 
       for (let day = startDay; day <= endDay; day += DAY) {
         const input = buildStabilityInputForDay(day, now, depegEvents, supplyByCoin);
@@ -65,6 +66,10 @@ export const handleBackfillStabilityIndex = withErrorHandler(
           totalMcapUsd: input.totalMcapUsd,
           mcap7dChangePct: input.mcap7dChangePct,
         });
+        if (!result) {
+          skippedInsufficientData++;
+          continue;
+        }
         const methodologyVersion = getPsiMethodologyVersionAt(day);
 
         stmts.push(
@@ -105,7 +110,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         await db.exec("DROP TABLE IF EXISTS stability_index_rebuild").catch(() => {});
       }
 
-      return jsonResponse({ ok: true, daysBackfilled: count });
+      return jsonResponse({ ok: true, daysBackfilled: count, skippedInsufficientData });
     });
   }
 );

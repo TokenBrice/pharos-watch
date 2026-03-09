@@ -259,9 +259,12 @@ export default function MethodologyPage() {
             <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
             <MethodologyFacts
               facts={[
-                { label: "Minimum data", value: "No minimum; scorer accepts empty depeg sets" },
+                { label: "Minimum data", value: "Scorer accepts empty depeg sets, but requires total market cap > 0" },
                 { label: "Required sources", value: "Market-cap totals + active depeg inputs (DEWS breadth optional)" },
-                { label: "Failure behavior", value: "Never null; output is clamped to [0,100] and rounded to 0.1" },
+                {
+                  label: "Failure behavior",
+                  value: "Returns null when market-cap input is missing/<=0; cron skips that sample and API serves last valid value",
+                },
               ]}
             />
           </div>
@@ -1821,7 +1824,7 @@ export default function MethodologyPage() {
                 },
                 {
                   label: "Failure behavior",
-                  value: "PegScore can be null; DEWS returns 0 (CALM) when signal coverage is below threshold",
+                  value: "PegScore can be null; DEWS also returns null when signal coverage is below threshold",
                 },
               ]}
             />
@@ -2117,9 +2120,7 @@ export default function MethodologyPage() {
               <p className="font-mono text-xs bg-muted rounded px-3 py-2">
                 DEWS = round(clamp(0, 100, sum(W_i &times; S_i) / sum(W_i)))
               </p>
-              <p>
-                At least 2 available signal sources (total weight &ge; 0.30) are required to produce a non-zero score.
-              </p>
+              <p>At least 2 available signal sources (total weight &ge; 0.30) are required; otherwise DEWS returns null.</p>
             </div>
 
             {/* Sub-signals */}

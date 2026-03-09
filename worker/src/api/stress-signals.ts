@@ -37,7 +37,9 @@ export const handleStressSignals = withErrorHandler(
       if (!TRACKED_IDS.has(canonicalId)) {
         return errorResponse(404, "Stablecoin not tracked");
       }
-      // Single coin: latest + daily history
+      // Single coin: latest valid row + daily history.
+      // computeDEWS() can return null for insufficient data; those runs skip writes,
+      // so this query naturally serves the last valid cached value.
       const latest = await db
         .prepare(
           `SELECT score, band, signals_json, computed_at
@@ -117,7 +119,7 @@ export const handleStressSignals = withErrorHandler(
       }, computedAt, 900));
     }
 
-    // All coins: latest only (subquery for most recent per coin)
+    // All coins: latest valid row per coin.
     const rows = await db
       .prepare(
         `SELECT s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
