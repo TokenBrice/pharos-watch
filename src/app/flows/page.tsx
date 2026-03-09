@@ -69,7 +69,7 @@ function FlowsPageInner() {
             Mint/Burn Flows
           </h1>
           <FeatureStatusBadge
-            status="experimental"
+            status="mature"
             version={MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
           />
         </div>
