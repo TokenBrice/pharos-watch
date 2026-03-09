@@ -18,7 +18,7 @@ routes = [
 [limits]
 # cpu_ms = total CPU milliseconds per invocation (not wall-clock time).
 # logCronRun() timeouts are wall-clock and independent from this CPU budget.
-cpu_ms = 5000
+cpu_ms = 30000
 
 [observability]
 enabled = true
@@ -32,6 +32,9 @@ invocation_logs = true
 crons = [
   "*/15 * * * *",
   "3,23,43 * * * *",
+  "4,24,44 * * * *",
+  "5,35 * * * *",
+  "6,26,46 * * * *",
   "13,33,53 * * * *",
   "10,40 * * * *",
   "0 8 * * *",

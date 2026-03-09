@@ -198,7 +198,6 @@ export async function handleScheduledEvent(
           await runQuarterHourlyJob("snapshot-supply", (signal) => snapshotSupply(db, signal));
         }
 
-        await runQuarterHourlyJob("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal));
         await runQuarterHourlyJob("sync-fx-rates", (signal) => syncFxRates(db, signal));
 
         let dewsResult: CronResult | null = null;
@@ -249,10 +248,8 @@ export async function handleScheduledEvent(
       })());
       break;
     }
-    // Blacklist + mint/burn on a 20-min cycle (offset at :03/:23/:43 to avoid colliding with the 15-min trigger)
-    // Blacklist uses Etherscan; mint/burn uses Alchemy (independent providers, independent circuit breakers).
+    // Blacklist on dedicated 20-min trigger (:03/:23/:43)
     case CRON_SCHEDULES.twentyMinuteOffset: {
-      // Blacklist — gated by Etherscan circuit breaker
       const etherscanAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN);
       if (etherscanAllowed) {
         const etherscanRL = createRateLimiter(4);
@@ -276,8 +273,10 @@ export async function handleScheduledEvent(
       } else {
         console.warn("[cron] Etherscan circuit open — skipping blacklist sync");
       }
-
-      // Mint/burn — gated by Alchemy circuit breaker
+      break;
+    }
+    // Mint/burn critical lane on dedicated 20-min trigger (:04/:24/:44)
+    case CRON_SCHEDULES.twentyMinuteMintBurn: {
       const alchemyAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ALCHEMY);
       if (alchemyAllowed) {
         const mintBurnJob = runLeasedCron("sync-mint-burn", (signal, reportProgress) =>
@@ -346,8 +345,15 @@ export async function handleScheduledEvent(
       } else {
         console.warn("[cron] Alchemy circuit open - skipping mint/burn sync");
       }
-
-      // DEX pool discovery — no circuit breaker, sequential fetches (1 connection)
+      break;
+    }
+    // Stablecoin charts on dedicated 30-min trigger (:05/:35)
+    case CRON_SCHEDULES.halfHourlyCharts: {
+      ctx.waitUntil(runLeasedCron("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal)));
+      break;
+    }
+    // DEX pool discovery on dedicated 20-min trigger (:06/:26/:46)
+    case CRON_SCHEDULES.twentyMinuteDexDiscovery: {
       ctx.waitUntil(runLeasedCron("sync-dex-discovery", (signal, reportProgress) =>
         syncDexDiscovery(db, env.COINGECKO_API_KEY ?? null, signal, reportProgress)
       ));

@@ -68,7 +68,7 @@ export const CACHE_PROFILES = {
 /** Maximum cache age (in seconds) per cache key — used by both /health and /status endpoints */
 export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   stablecoins: 600,
-  "stablecoin-charts": 600,
+  "stablecoin-charts": 3600,
   "usds-status": SECONDS.ONE_DAY,
   "fx-rates": SECONDS.THIRTY_MINUTES,
   "bluechip-ratings": SECONDS.ONE_DAY,

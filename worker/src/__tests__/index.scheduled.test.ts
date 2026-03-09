@@ -118,7 +118,7 @@ describe("worker.scheduled", () => {
     vi.clearAllMocks();
   });
 
-  it("runs 15-min cron fan-out and chained jobs", async () => {
+  it("runs 15-min cron fan-out and chained jobs (charts excluded)", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -135,12 +135,13 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
     expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
+    // Charts now on its own dedicated trigger
+    expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });
 
   it("skips downstream-safe dependent jobs when sync-stablecoins finishes degraded without safe cache write", async () => {
@@ -172,7 +173,6 @@ describe("worker.scheduled", () => {
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
-    expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
   });
@@ -233,12 +233,11 @@ describe("worker.scheduled", () => {
     );
   });
 
-  it("runs blacklist, critical mint/burn, and dex discovery on the primary 20-min slot", async () => {
+  it("runs only blacklist on the dedicated :03/:23/:43 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
-      ALCHEMY_API_KEY: "alchemy-key",
     } as const;
 
     await worker.scheduled(
@@ -249,13 +248,71 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.syncBlacklist).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncMintBurn).not.toHaveBeenCalled();
+    expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
+  });
+
+  it("runs only critical mint/burn on the dedicated :04/:24/:44 trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      ALCHEMY_API_KEY: "alchemy-key",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "4,24,44 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
     expect(cronMocks.syncMintBurn).toHaveBeenCalledTimes(1);
     const criticalCall = cronMocks.syncMintBurn.mock.calls[0] as unknown[] | undefined;
     expect(criticalCall?.[2]).toMatchObject({
       lane: "critical",
       jobName: "sync-mint-burn",
     });
+    expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
+    expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
+  });
+
+  it("runs only stablecoin charts on the dedicated :05/:35 trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "5,35 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
+  });
+
+  it("runs only DEX discovery on the dedicated :06/:26/:46 trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      COINGECKO_API_KEY: "cg-key",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "6,26,46 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
     expect(cronMocks.syncDexDiscovery).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
+    expect(cronMocks.syncMintBurn).not.toHaveBeenCalled();
   });
 
   it("runs the extended mint/burn lane on the offset 20-min slot", async () => {

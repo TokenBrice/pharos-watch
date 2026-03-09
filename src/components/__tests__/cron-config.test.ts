@@ -13,9 +13,16 @@ describe("status cron config", () => {
     });
   });
 
-  it("keeps the 20-minute slot description aligned with DEX discovery staging", () => {
+  it("maps stablecoin charts to the half-hourly group after cadence reduction", () => {
+    expect(getStatusCronDisplay("sync-stablecoin-charts")).toEqual({
+      group: "half-hourly",
+      label: "Stablecoin charts",
+    });
+  });
+
+  it("keeps the 20-minute slot description aligned with isolated on-chain triggers", () => {
     expect(STATUS_CRON_GROUPS.find((group) => group.key === "twenty-minute")?.description).toContain(
-      "DEX discovery crawler",
+      "On-chain intake",
     );
   });
 });

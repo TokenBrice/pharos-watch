@@ -22,19 +22,19 @@ export const STATUS_CRON_GROUPS: readonly StatusCronGroupDefinition[] = [
     key: "quarter-hourly",
     title: "15-minute slot",
     badge: "*/15",
-    description: "Core ingestion, derived score recompute, operator self-checks, and alert fan-out.",
+    description: "Core ingestion, FX rates, derived score recompute, operator self-checks, and alert fan-out.",
   },
   {
     key: "twenty-minute",
     title: "20-minute slot",
     badge: ":03 / :23 / :43",
-    description: "On-chain intake jobs plus the new DEX discovery crawler that stages pools for later scoring.",
+    description: "On-chain intake jobs (blacklist, mint/burn, DEX discovery) on isolated triggers for connection pool separation.",
   },
   {
     key: "half-hourly",
     title: "30-minute slot",
     badge: ":10 / :40",
-    description: "DEX liquidity scoring consumes staged discovery pools here, then yield refresh runs downstream.",
+    description: "Stablecoin charts, DEX liquidity scoring, and yield refresh.",
   },
   {
     key: "daily",
@@ -52,7 +52,7 @@ export const STATUS_CRON_GROUPS: readonly StatusCronGroupDefinition[] = [
 
 const STATUS_CRON_DISPLAY: Record<string, StatusCronDisplayMeta> = {
   "sync-stablecoins": { group: "quarter-hourly", label: "Stablecoin sync" },
-  "sync-stablecoin-charts": { group: "quarter-hourly", label: "Stablecoin charts" },
+  "sync-stablecoin-charts": { group: "half-hourly", label: "Stablecoin charts" },
   "sync-fx-rates": { group: "quarter-hourly", label: "FX rates" },
   "stability-index": { group: "quarter-hourly", label: "PSI compute" },
   "compute-dews": { group: "quarter-hourly", label: "DEWS compute" },

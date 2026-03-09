@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 21 named runtime jobs across 5 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 21 named runtime jobs across 8 trigger slots.
 
 Execution note: `dispatch-telegram-alerts-daily` runs on the `0 8 * * *` (08:00 UTC) trigger, while the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -14,7 +14,7 @@ Worker runtime safety and telemetry controls are declared in `worker/wrangler.to
 
 ```toml
 [limits]
-cpu_ms = 5000
+cpu_ms = 30000
 
 [observability]
 enabled = true
@@ -25,7 +25,7 @@ enabled = true
 invocation_logs = true
 ```
 
-- `cpu_ms = 5000`: hard cap on CPU time per invocation (not wall-clock runtime). This is independent from in-app wall-clock cron timeouts in `logCronRun()`.
+- `cpu_ms = 30000`: hard cap on CPU time per invocation (not wall-clock runtime). This is independent from in-app wall-clock cron timeouts in `logCronRun()`. Raised from 5000 to give isolated cron triggers comfortable headroom (paid plan allows up to 300,000ms).
 - `observability.enabled`: enables Worker traces.
 - `head_sampling_rate = 0.1`: samples 10% of traces.
 - `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
@@ -194,7 +194,7 @@ Current consumers:
 
 ## Cron Scheduling
 
-This worker currently declares 5 cron expressions in `worker/wrangler.toml`. Cloudflare's old per-worker cron-trigger cap has been removed; add new schedules deliberately, but prefer piggybacking an existing slot unless a distinct cadence is actually required.
+This worker declares 8 cron expressions in `worker/wrangler.toml`. The paid Workers plan allows up to 250 cron triggers. Fetch-heavy jobs (blacklist, mint/burn, DEX discovery, stablecoin charts) each run on dedicated triggers to get independent 6-connection pools and CPU budgets.
 
 ### wrangler.toml Triggers
 
@@ -203,6 +203,9 @@ This worker currently declares 5 cron expressions in `worker/wrangler.toml`. Clo
 crons = [
   "*/15 * * * *",
   "3,23,43 * * * *",
+  "4,24,44 * * * *",
+  "5,35 * * * *",
+  "6,26,46 * * * *",
   "13,33,53 * * * *",
   "10,40 * * * *",
   "0 8 * * *",
@@ -215,7 +218,6 @@ crons = [
 |-----|----------|------|---------------|
 | `sync-stablecoins` | `syncStablecoins()` | `worker/src/cron/sync-stablecoins.ts` | `docs/data-pipeline.md`, `docs/depeg-detection.md` |
 | `snapshot-supply` *(retry path)* | `snapshotSupply()` (chained after `sync-stablecoins`) | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
-| `sync-stablecoin-charts` | `syncStablecoinCharts()` | `worker/src/cron/sync-stablecoin-charts.ts` | This doc (below) |
 | `sync-fx-rates` | `syncFxRates()` | `worker/src/cron/sync-fx-rates.ts` | `docs/data-pipeline.md`, `docs/classification.md` |
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
 | `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
@@ -232,29 +234,47 @@ crons = [
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
-### Trigger 2: `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
+### Trigger 2: `3,23,43 * * * *` (blacklist — dedicated)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | `docs/blacklist-tracker.md` |
+
+Dedicated trigger for blacklist sync. Uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC, dRPC for historical L2 balance reads, and TronGrid for Tron. Gets its own 6-connection pool and CPU budget.
+
+### Trigger 3: `4,24,44 * * * *` (mint/burn critical — dedicated)
+
+| Job | Function | File | Documentation |
+|-----|----------|------|---------------|
 | `sync-mint-burn` | `syncMintBurn()` critical lane | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
-| `sync-dex-discovery` | `syncDexDiscovery()` | `worker/src/cron/dex-discovery/orchestrator.ts` | `docs/dex-liquidity.md`, `intervalSec: 1200` |
 
-3 jobs now run on the primary 20-minute slot: `sync-blacklist`, `sync-mint-burn`, `sync-dex-discovery`.
+Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus the Alchemy circuit breaker. Offset by 1 minute from blacklist to stagger Worker cold starts.
 
-**Provider split + independent controls:** `sync-blacklist` uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC where Etherscan free-tier `getLogs` is unavailable, dRPC for historical L2 balance reads, and TronGrid for Tron. `sync-mint-burn` is now the critical mint/burn lane and uses Alchemy JSON-RPC plus the Alchemy circuit breaker. `sync-dex-discovery` runs independently in the same slot (no circuit-breaker gate) and stages pools from CoinGecko/GeckoTerminal/DexScreener/CoinGecko tickers for later merge by `sync-dex-liquidity`.
+### Trigger 4: `5,35 * * * *` (stablecoin charts — dedicated, 30-min cadence)
 
-Discovery uses strictly sequential fetches (1 connection at a time). Shared Alchemy `eth_getLogs` range splitting is also depth-first/sequential, so blacklist and mint/burn do not recursively fan out into dozens of concurrent subrequests inside the same 20-minute trigger.
+| Job | Function | File | Documentation |
+|-----|----------|------|---------------|
+| `sync-stablecoin-charts` | `syncStablecoinCharts()` | `worker/src/cron/sync-stablecoin-charts.ts` | This doc (below) |
 
-### Trigger 3: `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
+Dedicated trigger for chart sync at 30-minute cadence (reduced from 15-minute; chart data changes slowly). Gets its own connection pool for the DefiLlama aggregate charts fetch.
+
+### Trigger 5: `6,26,46 * * * *` (DEX discovery — dedicated)
+
+| Job | Function | File | Documentation |
+|-----|----------|------|---------------|
+| `sync-dex-discovery` | `syncDexDiscovery()` | `worker/src/cron/dex-discovery/orchestrator.ts` | `docs/dex-liquidity.md` |
+
+Dedicated trigger for DEX pool discovery. Uses strictly sequential fetches (1 connection at a time) from CoinGecko/GeckoTerminal/DexScreener. Stages pools for later merge by `sync-dex-liquidity`.
+
+### Trigger 6: `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-mint-burn-extended` | `syncMintBurn()` extended lane | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
 
-This offset schedule exists so long-tail mint/burn backfill pressure cannot starve the critical lane or contend with blacklist/discovery inside the same invocation. It uses a separate `mint_burn_run_state.job` key (`sync-mint-burn-extended`) and warning-only coverage semantics.
+This offset schedule exists so long-tail mint/burn backfill pressure cannot starve the critical lane. It uses a separate `mint_burn_run_state.job` key (`sync-mint-burn-extended`) and warning-only coverage semantics.
 
-### Trigger 4: `10,40 * * * *` (every 30 minutes, at :10/:40)
+### Trigger 7: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -263,7 +283,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Connection budget:** `sync-yield-data` is chained after `sync-dex-liquidity` in the same trigger. The slot still shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. Current steady overhead for the LUSD B.Protocol source is small: 2 Ethereum `eth_call`s plus 1 CoinGecko price fetch per 30-minute run.
 
-### Trigger 5: `0 8 * * *` (daily at 08:00 UTC)
+### Trigger 8: `0 8 * * *` (daily at 08:00 UTC)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -362,9 +382,10 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 |-----|---------|--------|
 | Default | 5 min | Standard jobs complete in <60s |
 | `sync-dex-liquidity` | 13 min | 150+ pool crawl, with headroom below the platform wall-clock limit |
-| `sync-blacklist` | 8 min | Multi-chain scan + balance enrichment |
-| `sync-mint-burn` | 8 min | Multi-contract EVM log scan |
-| `sync-mint-burn-extended` | 8 min | Long-tail mint/burn lane with its own run-state |
+| `sync-dex-discovery` | 16 min | Multi-source pool staging; isolated trigger allows extended runtime |
+| `sync-blacklist` | 12 min | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime |
+| `sync-mint-burn` | 10 min | Multi-contract EVM log scan; isolated trigger allows extended runtime |
+| `sync-mint-burn-extended` | 10 min | Long-tail mint/burn lane with its own run-state |
 | `daily-digest` | 8 min | LLM generation + distribution |
 
 Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/db.ts`.
@@ -522,7 +543,7 @@ The three crons below were previously only listed by filename in `docs/architect
 ### sync-stablecoin-charts
 
 **File:** `worker/src/cron/sync-stablecoin-charts.ts`
-**Schedule:** `*/15 * * * *` (every 15 min)
+**Schedule:** `5,35 * * * *` (every 30 min, dedicated trigger)
 **Data source:** `https://stablecoins.llama.fi/stablecoincharts/all`
 
 **Algorithm:**
@@ -617,7 +638,7 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 | Cache Key | Stale threshold |
 |-----------|----------------|
 | `stablecoins` | 600s (10 min) |
-| `stablecoin-charts` | 600s (10 min) |
+| `stablecoin-charts` | 3,600s (1h) |
 | `usds-status` | 86,400s (24h) |
 | `fx-rates` | 1,800s (30 min) |
 | `bluechip-ratings` | 86,400s (24h) |
@@ -629,20 +650,20 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 21 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 21 cron jobs across 8 triggers via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
 | `sync-stablecoins` | 900s (15min) | `*/15 * * * *` |
-| `sync-stablecoin-charts` | 900s (15min) | `*/15 * * * *` |
+| `sync-stablecoin-charts` | 1,800s (30min) | `5,35 * * * *` |
 | `sync-fx-rates` | 900s (15min) | `*/15 * * * *` |
 | `stability-index` | 900s (15min) | `*/15 * * * *` |
 | `compute-dews` | 900s (15min) | `*/15 * * * *` |
 | `status-self-check` | 900s (15min) | `*/15 * * * *` |
 | `dispatch-telegram-alerts` | 900s (15min) | `*/15 * * * *` |
 | `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
-| `sync-mint-burn` | 1,200s (20min) | `3,23,43 * * * *` |
-| `sync-dex-discovery` | 1,200s (20min) | `3,23,43 * * * *` |
+| `sync-mint-burn` | 1,200s (20min) | `4,24,44 * * * *` |
+| `sync-dex-discovery` | 1,200s (20min) | `6,26,46 * * * *` |
 | `sync-mint-burn-extended` | 1,200s (20min) | `13,33,53 * * * *` |
 | `sync-dex-liquidity` | 1,800s (30min) | `10,40 * * * *` |
 | `sync-yield-data` | 1,800s (30min) | `10,40 * * * *` |
