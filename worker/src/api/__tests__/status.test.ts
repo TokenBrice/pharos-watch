@@ -345,6 +345,7 @@ describe("handleStatus", () => {
       "sync-stablecoin-charts",
       "sync-blacklist",
       "sync-mint-burn",
+      "sync-dex-discovery",
       "sync-dex-liquidity",
       "sync-usds-status",
       "sync-bluechip",

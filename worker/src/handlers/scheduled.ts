@@ -3,6 +3,7 @@ import { syncStablecoins } from "../cron/sync-stablecoins";
 import { syncStablecoinCharts } from "../cron/sync-stablecoin-charts";
 import { syncBlacklist } from "../cron/sync-blacklist";
 import { syncMintBurn } from "../cron/sync-mint-burn";
+import { syncDexDiscovery } from "../cron/dex-discovery";
 import { createRateLimiter } from "../lib/evm-logs";
 import { syncUsdsStatus } from "../cron/sync-usds-status";
 import { syncBluechip } from "../cron/sync-bluechip";
@@ -274,6 +275,11 @@ export async function handleScheduledEvent(
       } else {
         console.warn("[cron] Alchemy circuit open - skipping mint/burn sync");
       }
+
+      // DEX pool discovery — no circuit breaker, sequential fetches (1 connection)
+      ctx.waitUntil(runLeasedCron("sync-dex-discovery", (signal) =>
+        syncDexDiscovery(db, env.COINGECKO_API_KEY ?? null, signal)
+      ));
       break;
     }
     // DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)

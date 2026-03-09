@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "3.2",
+  currentVersion: "3.3",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "3.3",
+    title: "Separated discovery pipeline with staged pool confidence decay",
+    date: "2026-03-09",
+    effectiveAt: 1773045555,
+    summary:
+      "Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on an independent 20-minute cron with 3x more budget. Staged pools merged into scoring with freshness confidence decay and explicit defaults contract.",
+    impact: [
+      "Discovery cron runs independently on 20-min trigger with ~15 min budget (was 5 min shared)",
+      "Staged pools receive confidence decay: max(0.5, 1 - ageHours/48), excluded after 24h",
+      "Chain-aware source routing reduces wasted API calls by skipping irrelevant chains",
+      "Tiered priority with exponential backoff prevents looping on pool-less coins",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.2",
     title: "Effective TVL symbol-fallback inflation fix",

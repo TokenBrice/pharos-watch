@@ -64,6 +64,22 @@ describe("mergeStagedPools", () => {
     expect(result.skippedCount).toBe(0);
   });
 
+  it("does not modify metrics when staging table is empty", async () => {
+    const mockDb = createMockDb([]);
+    const metrics = new Map<string, { totalTvlUsd: number; poolCount: number }>();
+    metrics.set("test-coin", {
+      totalTvlUsd: 1000000,
+      poolCount: 5,
+    });
+    const originalTvl = metrics.get("test-coin")?.totalTvlUsd;
+
+    const result = await mergeStagedPools(mockDb, metrics as never, new Set(), 1710000000);
+
+    expect(result.mergedCount).toBe(0);
+    expect(result.skippedCount).toBe(0);
+    expect(metrics.get("test-coin")?.totalTvlUsd).toBe(originalTvl);
+  });
+
   it("skips pools that exist in knownPoolAddrs", async () => {
     const mockDb = createMockDb([{
       pool_id: "ethereum:0xabc",

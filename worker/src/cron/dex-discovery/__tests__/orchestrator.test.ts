@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { DiscoveryMeta } from "../types";
 import {
   compareDiscoveryMeta,
@@ -80,5 +81,61 @@ describe("compareDiscoveryMeta", () => {
     coins.sort((a, b) => compareDiscoveryMeta(metaById.get(a.id), metaById.get(b.id)));
 
     expect(coins.map((coin) => coin.id)).toEqual(["older", "newer"]);
+  });
+});
+
+describe("chain-aware routing", () => {
+  it("coin contracts array determines crawl chains", () => {
+    const usdc = TRACKED_STABLECOINS.find((stablecoin) => stablecoin.id.includes("usdc"));
+    expect(usdc).toBeDefined();
+    expect(usdc?.contracts).toBeDefined();
+    expect(Array.isArray(usdc?.contracts)).toBe(true);
+
+    const coinChains = new Map((usdc?.contracts ?? []).map((contract) => [contract.chain, contract.address]));
+
+    expect(coinChains.size).toBeGreaterThan(0);
+    for (const [chain] of coinChains) {
+      expect(usdc?.contracts?.some((contract) => contract.chain === chain)).toBe(true);
+    }
+  });
+});
+
+describe("backoff reset integration", () => {
+  const nowSec = 1710000000;
+
+  it("after miss reset, coin returns to base tier", () => {
+    const meta: DiscoveryMeta = {
+      stablecoinId: "test-coin",
+      consecutiveMisses: 0,
+      lastCrawlAt: nowSec - 100,
+      lastHitAt: nowSec - 100,
+    };
+
+    const tier = computeEffectiveTier(0, 0, meta, 1, nowSec);
+    expect(tier).toBe("t1");
+  });
+
+  it("dormant coin becomes eligible after 24h", () => {
+    const meta: DiscoveryMeta = {
+      stablecoinId: "test-coin",
+      consecutiveMisses: 15,
+      lastCrawlAt: nowSec - 86401,
+      lastHitAt: null,
+    };
+
+    const tier = computeEffectiveTier(0, 0, meta, 10, nowSec);
+    expect(tier).not.toBe("skip");
+  });
+
+  it("dormant coin with recent crawl is skipped", () => {
+    const meta: DiscoveryMeta = {
+      stablecoinId: "test-coin",
+      consecutiveMisses: 15,
+      lastCrawlAt: nowSec - 3600,
+      lastHitAt: null,
+    };
+
+    const tier = computeEffectiveTier(0, 0, meta, 10, nowSec);
+    expect(tier).toBe("skip");
   });
 });

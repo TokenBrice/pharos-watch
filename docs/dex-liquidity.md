@@ -24,16 +24,9 @@ Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K poo
 
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
-## Discovery Staging Orchestrator
+Data sources are split across two cron families: scoring remains on `10,40 * * * *`, while discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) now run only on `3,23,43 * * * *` and write to `dex_pool_staging` for later merge.
 
-`worker/src/cron/dex-discovery/orchestrator.ts` is the staged-pool discovery scheduler that decides which stablecoins should be crawled before those pools are merged into the main DEX-liquidity scoring pipeline.
-
-- Reads existing `dex_liquidity` coverage (`pool_count`, `chain_count`) plus per-coin backoff state from `dex_discovery_meta`
-- Classifies tracked stablecoins into effective tiers using `DISCOVERY_TIERS` from `worker/src/cron/dex-discovery/types.ts`
-- Uses cadence gates instead of parallelism: `t1` every run, `t2` every 3rd run, `t3` every 10th run, `dormant` at most once per 24 hours using the same 10-run cadence gate
-- Demotes repeated misses from `t1`/`t2`/`t3` into slower cadences via `consecutiveMisses`, then sorts eligible coins by `lastCrawlAt` so never-crawled and stalest assets run first
-- Enforces a separate 14-minute wall-clock budget and crawls strictly sequentially, one stablecoin at a time, to stay compatible with the shared Workers cron connection pool
-- Writes raw candidates into `dex_pool_staging`; later persistence/merge steps deduplicate and promote those staged pools into scoring inputs
+See the [Discovery Cron](#discovery-cron) section below for the full discovery pipeline architecture.
 
 ### Quality Multipliers (v2)
 
@@ -80,7 +73,6 @@ Chain resolution is registry-backed in `worker/src/lib/chain-registry.ts`: the w
 | Balance data | Not available (defaults to 1.0) | Approximated from token prices |
 | Fee tier | DEX-prefix lookup only | `pool_fee_percentage` field |
 | Locked liquidity | Not available | `locked_liquidity_percentage` field |
-| Time budget | 3 min (GT-only chains, partial coverage) | 5 min (partial coverage, leaves room for scoring + GT-only chains) |
 
 The CG integration extracts three signals unavailable from GeckoTerminal:
 1. **Balance ratio approximation**: Computed from `base_token_price_usd`/`quote_token_price_usd` for stable pairs. Feeds into `balanceHealth`, `balanceRatioWeightedSum`, and pool stress.
@@ -142,6 +134,34 @@ DeFiLlama's yields API uses opaque UUIDs as pool identifiers (e.g., `6b6de6c7-..
 Stored in D1 `dex_liquidity` table (created in migration 0009; extended in 0010, 0012, 0024, and 0036) with per-stablecoin aggregate metrics, protocol/chain TVL breakdowns, top 10 pools as JSON columns, plus v2 columns: `avg_pool_stress`, `weighted_balance_ratio`, `organic_fraction`, `effective_tvl_usd`, `durability_score`, `score_components_json`, `locked_liquidity_pct`, and `methodology_version`. Stablecoins with no DEX presence store `liquidity_score = NULL` (NR semantics).
 
 Both `dex_liquidity` and `dex_liquidity_history` also carry `methodology_version` (migration 0036), reconstructed from commit-history version windows in `shared/lib/liquidity-score-version.ts`.
+
+Discovery and merge staging tables are documented in the [Discovery Cron](#discovery-cron) section below.
+
+## Discovery Cron
+
+`worker/src/cron/dex-discovery/orchestrator.ts` runs every 20 minutes (`3,23,43 * * * *`) and is responsible for pool discovery only. Scored TVL continues on the 30-minute cadence; discovery data is merged during the scoring run.
+
+- **Architecture**: two dedicated cron tracks feed discovery from scratch:
+  - Scoring cron: `syncDexLiquidity()` every 30 minutes (`10,40 * * * *`).
+  - Discovery cron: `syncDexDiscovery()` every 20 minutes (`3,23,43 * * * *`).
+  - Discovery writes normalized candidates to `dex_pool_staging`; scoring cron consumes and merges them.
+- **Discovery staging schema**: `dex_pool_staging` includes `pool_id`, `stablecoin_id`, `source`, `chain`, `protocol`, `symbol`, `tvl_usd`, `volume_24h`, `fee_tier`, `balance_ratio`, `is_stable`, `base_token`, `quote_token`, `quote_symbol`, `price_usd`, `locked_liq_pct`, `raw_json`, `discovered_at`, `refreshed_at`; PK is `(pool_id, stablecoin_id)`.
+- **Discovery meta schema**: `dex_discovery_meta` stores `stablecoin_id` (PK), `consecutive_misses`, `last_crawl_at`, `last_hit_at`.
+- **Tiered priority**:
+  - T1: coins with 0 pools (or effectively eligible baseline), every run.
+  - T2: 1–4 pools or 1 chain, every 3rd run.
+  - T3: `>=5` pools on `>=2` chains, every 10th run.
+  - Sorting within each tier is by staleness (oldest crawl first) to prioritize stale coverage.
+- **Exponential backoff**:
+  - `consecutiveMisses` 0: T1
+  - 3–5: T2
+  - 6–9: T3
+  - 10+: dormant (daily gate)
+  - Any discovery hit resets `consecutiveMisses` to 0 and returns the coin to T1 immediately.
+- **Chain-aware source routing**: discovery only queries chains with defined entries in a stablecoin’s `contracts` map; this avoids unnecessary API calls against un-deployed chains.
+- **Freshness confidence decay**: staged pool effective TVL is multiplied by `max(0.5, 1 - ageHours / 48)`; rows older than 24h are excluded from scoring merge.
+- **Staged pool defaults**: `organic_fraction = 0.5`, `balanceRatio = 1.0`, `lockedLiquidity = null`, `maturity = min(daysSinceDiscovered, 30)`, `isStable` inferred from normalized `quoteSymbol`.
+- **Source order and transport**: `CG Onchain -> GeckoTerminal -> DexScreener -> CG Tickers`, executed sequentially with one active fetch at a time (`1` connection).
 
 ### Global Deduped Aggregates (`__global__`)
 
