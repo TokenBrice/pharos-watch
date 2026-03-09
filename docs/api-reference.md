@@ -1681,6 +1681,8 @@ Backfills CoinGecko historical prices into the price_cache table for more accura
 
 Backfills `amount_usd` for all mint-burn events with NULL values using current prices from `price_cache`. Recalculates affected hourly aggregation buckets.
 
+Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-hour window and reports the healed count in cron metadata as `nullPricesHealed`; this endpoint is primarily for historical backfills beyond that window.
+
 **Headers:** `X-Admin-Key: <secret>` (required)
 
 **Response**

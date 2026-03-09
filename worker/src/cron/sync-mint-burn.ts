@@ -20,6 +20,7 @@ import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
+import { healNullPrices } from "../lib/mint-burn-pipeline/price-heal";
 import {
   collectAffectedHours,
   insertMintBurnRows,
@@ -258,6 +259,7 @@ export async function syncMintBurn(
       degradedSignal: false,
       degradedStreak: 0,
       coverageRatio: 1,
+      nullPricesHealed: 0,
     });
 
     return {
@@ -609,6 +611,20 @@ export async function syncMintBurn(
     status = "degraded";
   }
 
+  // Auto-heal NULL prices for recent events (only on non-error runs).
+  let nullPricesHealed = 0;
+  if (status !== "error") {
+    try {
+      const healResult = await healNullPrices(db, Math.floor(Date.now() / 1000));
+      nullPricesHealed = healResult.healed;
+      if (healResult.affectedHours.size > 0) {
+        await recalcAffectedHours(db, healResult.affectedHours);
+      }
+    } catch (error) {
+      console.warn("[sync-mint-burn] Price heal failed (non-fatal):", error);
+    }
+  }
+
   const metadata = JSON.stringify({
     rowsRead,
     rowsParsed,
@@ -646,6 +662,7 @@ export async function syncMintBurn(
     degradedSignal,
     degradedStreak,
     runStatePersistenceFailed,
+    nullPricesHealed,
   });
 
   console.log(`[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests (${status})`);

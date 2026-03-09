@@ -27,7 +27,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 - **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
-- **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows)
+- **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `nullPricesHealed` for auto-healed recent NULL-price events.
 - **Operator runbook:** `agents/runbooks/mint-burn-ingestion.md`
 
 ---
@@ -184,7 +184,8 @@ Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-qua
      - If events found: advance to `maxBlockSeen`.
      - If no events: advance to `chainHead - safetyMarginBlocks` (avoids skipping not-yet-indexed events).
 6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`.
-7. **Escalate degraded runs** — emit `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`.
+7. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, resolve from `price_cache`, update `amount_usd/price_*` with `price_source=price_cache_heal`, and re-aggregate only newly affected hourly buckets.
+8. **Escalate degraded runs** — emit `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`.
 
 **Counterparty resolution:** For mints, `topics[2]` (recipient). For burns, `topics[1]` (sender).
 
@@ -408,6 +409,8 @@ Returns: `{ events[], total }`. Events sorted by `timestamp DESC`.
 
 Backfills `amount_usd` for events that were synced without price data. Requires `X-Admin-Key` header.
 
+Note: cron now auto-heals recent NULL-price events (48h lookback). This endpoint remains the operator tool for broader historical backfills.
+
 1. Finds all `mint_burn_events` rows with `amount_usd IS NULL`.
 2. Applies current price from `price_cache`: `amount_usd = amount * price`.
 3. Deletes and re-aggregates all `mint_burn_hourly` rows for affected coins.
@@ -475,7 +478,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 
 | Condition | Behavior |
 |-----------|----------|
-| Price unavailable at sync time | `amount_usd` stored as NULL; backfillable via admin endpoint |
+| Price unavailable at sync time | `amount_usd` stored as NULL initially; cron auto-heals recent rows (48h window) and admin endpoint handles older history |
 | Fewer than 7 days of flow history | Pressure shift returns `null`; coin excluded from gauge weighting |
 | No 24h mint/burn activity in a sparse window | Pressure shift returns `null` (NR) for that window; coin excluded from gauge weighting |
 | All coins have null pressure shift | Gauge score returns `null`; frontend shows "Calibrating" state |
