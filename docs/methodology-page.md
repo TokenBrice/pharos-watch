@@ -48,3 +48,7 @@ If a versioned methodology changes, bump the corresponding version module in `sh
 - **Pressure Shift / gauge bands / flight-to-quality:** `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`
 - **DEWS weights / signal thresholds / bands:** `worker/src/lib/dews.ts`
 - **Peg score blend / penalties / min history:** `shared/lib/peg-score.ts`
+
+## Changelog
+
+- **v3.3** (2026-03-09): Separated discovery pipeline with staged pool confidence decay. Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on an independent 20-minute cron with 3x more budget. Staged pools merge into scoring with freshness confidence decay (`max(0.5, 1 - ageHours/48)`) and explicit defaults contract. Chain-aware source routing reduces wasted API calls. Tiered priority with exponential backoff prevents looping on pool-less coins.

@@ -55,15 +55,15 @@ Primary source for token prices, market caps, and DEX pool discovery.
 | **Addresses per request** | Up to 50 (paid plan) |
 | **Overage billing** | Disabled by default (hard cutoff at quota) |
 
-**Current usage pattern**: The CG onchain API is called during the 30-min DEX liquidity cron with 250 ms between requests (~240 req/min). The monthly quota depends on cron frequency — if all tokens are crawled each run, this can add up quickly. `sync-yield-data` also adds 1 regular CoinGecko `/simple/price` call per run for the conservative LUSD B.Protocol APR.
+**Current usage pattern**: The CG onchain API is called during the 20-minute `sync-dex-discovery` cron with 250 ms between requests (~240 req/min). Discovery is now decoupled from the 30-minute `sync-dex-liquidity` scoring cron; staged pools are merged later by scoring. `sync-yield-data` also adds 1 regular CoinGecko `/simple/price` call per run for the conservative LUSD B.Protocol APR.
 
 **Rate limit in code**: `RATE_LIMITS.COINGECKO_ONCHAIN_MS = 250` ms in `worker/src/lib/rate-limit.ts` (used by `worker/src/lib/coingecko-onchain.ts`)
 
 **Crawl budget**: 5 min max wall-time for CoinGecko onchain pool discovery (`CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS`). This prevents the paid onchain crawl from consuming the entire `sync-dex-liquidity` runtime before scoring and persistence.
 
-**Shared optional-discovery budget**: `sync-dex-liquidity` also applies a 5-minute shared deadline across optional discovery stages (CG/GT token batches, CG/GT pool crawls, DexScreener fallback, CG tickers fallback). Stage-local budgets are subordinate to that shared deadline.
+**Discovery budget**: Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on the independent `sync-dex-discovery` cron (every 20 min) with a 14-minute wall-clock budget. `sync-dex-liquidity` no longer calls discovery APIs directly — it reads staged results from `dex_pool_staging`.
 
-> **Key constraint**: 500,000 calls/month ÷ ~1,440 cron runs/month (every 30 min) = ~347 CG calls per cron run on average before hitting the monthly cap. The pool crawl can still blow through this if not throttled.
+> **Key constraint**: 500,000 calls/month ÷ ~2,160 discovery runs/month (every 20 min) = ~231 CG calls per discovery run on average before hitting the monthly cap. The pool crawl can still blow through this if not throttled.
 
 ---
 
@@ -78,7 +78,7 @@ Fallback DEX pool data source when CoinGecko onchain API is unavailable.
 
 **Rate limit in code**: `GECKO_TERMINAL_MS = 2000` ms (30 req/min) in `worker/src/lib/rate-limit.ts`, used by `worker/src/cron/dex-liquidity/fetch-crawlers.ts`
 
-**Crawl budget**: 3 min max wall-time within the 30-min cron window (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). This GT-only crawl now shares the total runtime budget with the 5-minute CoinGecko onchain crawl so the combined pool-discovery phase stays under the 13-minute app timeout / 15-minute Cloudflare wall-clock cap.
+**Crawl budget**: 3 min max wall-time within the 20-minute discovery cron (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). This GT crawl shares the discovery runtime budget with the 5-minute CoinGecko onchain crawl and downstream fallback stages so the full discovery pass stays under the 14-minute in-app budget / 15-minute Cloudflare wall-clock cap.
 
 ---
 

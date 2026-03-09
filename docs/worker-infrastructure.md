@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 18 primary cron jobs across 4 trigger slots (plus one daily chained Telegram dispatch pass).
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 19 primary cron jobs across 4 trigger slots (plus one daily chained Telegram dispatch pass).
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -230,8 +230,13 @@ crons = [
 |-----|----------|------|---------------|
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | `docs/blacklist-tracker.md` |
 | `sync-mint-burn` | `syncMintBurn()` | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
+| `sync-dex-discovery` | `syncDexDiscovery()` | `worker/src/cron/dex-discovery/orchestrator.ts` | `docs/dex-liquidity.md`, `intervalSec: 1200` |
 
-**Provider split + independent controls:** `sync-blacklist` uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC where Etherscan free-tier `getLogs` is unavailable, dRPC for historical L2 balance reads, and TronGrid for Tron. `sync-mint-burn` uses Alchemy JSON-RPC and is governed by its own request budget plus the Alchemy circuit breaker.
+3 jobs now run on the 20-minute slot: `sync-blacklist`, `sync-mint-burn`, `sync-dex-discovery`.
+
+**Provider split + independent controls:** `sync-blacklist` uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC where Etherscan free-tier `getLogs` is unavailable, dRPC for historical L2 balance reads, and TronGrid for Tron. `sync-mint-burn` uses Alchemy JSON-RPC and is governed by its own request budget plus the Alchemy circuit breaker. `sync-dex-discovery` runs independently in the same slot (no circuit-breaker gate) and stages pools from CoinGecko/GeckoTerminal/DexScreener/CoinGecko tickers for later merge by `sync-dex-liquidity`.
+
+Discovery uses strictly sequential fetches (1 connection at a time), coexisting within the 6-connection pool alongside blacklist (2-3 connections) and mint-burn (1-2 connections).
 
 ### Trigger 3: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
@@ -579,7 +584,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 18 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
+Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 19 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -592,6 +597,7 @@ Returns raw and effective status, recent `cron_runs`, data-quality metrics, stat
 | `dispatch-telegram-alerts` | 900s (15min) | `*/15 * * * *` |
 | `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-mint-burn` | 1,200s (20min) | `3,23,43 * * * *` |
+| `sync-dex-discovery` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-dex-liquidity` | 1,800s (30min) | `10,40 * * * *` |
 | `sync-yield-data` | 1,800s (30min) | `10,40 * * * *` |
 | `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
