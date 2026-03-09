@@ -88,6 +88,44 @@ describe("logCronRun", () => {
     expect(insertedStatus).toBe("skipped_locked");
   });
 
+  it("writes and clears cron_run_progress when the job reports progress", async () => {
+    const operations: string[] = [];
+    const dbWithProgressCapture = {
+      prepare: (sql: string) => ({
+        bind: (..._args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_run_progress")) operations.push("progress-upsert");
+            if (sql.includes("DELETE FROM cron_run_progress")) operations.push("progress-clear");
+            if (sql.includes("INSERT INTO cron_runs")) operations.push("cron-run");
+            return { success: true, meta: { changes: 1 } };
+          },
+          all: async () => ({ results: [], success: true, meta: {} }),
+          first: async () => null,
+        }),
+        run: async () => ({ success: true, meta: { changes: 1 } }),
+        all: async () => ({ results: [], success: true, meta: {} }),
+        first: async () => null,
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    await logCronRun(dbWithProgressCapture, "test-job", async (_signal, reportProgress) => {
+      await reportProgress({
+        stage: "scan",
+        itemsDone: 1,
+        itemsTotal: 3,
+        message: "Scanning config 1/3",
+      });
+      return { itemCount: 1 };
+    });
+
+    expect(operations).toContain("progress-upsert");
+    expect(operations).toContain("progress-clear");
+    expect(operations).toContain("cron-run");
+  });
+
   it("falls back to safety-valve prune when time-based prune fails", async () => {
     let safetyValvePruneCalled = false;
     const dbWithPruneFallback = {

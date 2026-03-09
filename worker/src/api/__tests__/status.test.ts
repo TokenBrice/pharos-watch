@@ -193,6 +193,49 @@ describe("handleStatus", () => {
     expect(syncStablecoins).toHaveProperty("expectedIntervalSec");
   });
 
+  it("includes in-flight cron progress when a leased job is still running", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-blacklist", "ok", 30)] },
+      {
+        match: "cron_run_progress",
+        rows: [{
+          job: "sync-blacklist",
+          started_at: now - 120,
+          updated_at: now - 10,
+          stage: "scan-config",
+          items_done: 2,
+          items_total: 7,
+          message: "Scanning USDC on Ethereum",
+          lease_owner: "lease-123",
+          metadata: JSON.stringify({ budgetUsed: 18, budgetLimit: 900 }),
+        }],
+      },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      crons: Record<string, { inFlight?: { stage?: string; stale: boolean; itemsDone?: number; itemsTotal?: number } | null }>;
+    };
+
+    expect(body.crons["sync-blacklist"]?.inFlight).toMatchObject({
+      stage: "scan-config",
+      stale: false,
+      itemsDone: 2,
+      itemsTotal: 7,
+    });
+  });
+
   it("includes Telegram bot subscriber stats when Telegram tables are present", async () => {
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [] },
@@ -376,12 +419,14 @@ describe("handleStatus", () => {
       "sync-stablecoin-charts",
       "sync-blacklist",
       "sync-mint-burn",
+      "sync-mint-burn-extended",
       "sync-dex-discovery",
       "sync-dex-liquidity",
       "sync-usds-status",
       "sync-bluechip",
       "sync-fx-rates",
       "daily-digest",
+      "dispatch-telegram-alerts-daily",
       "snapshot-supply",
       "snapshot-safety-grade-history",
       "stability-index",

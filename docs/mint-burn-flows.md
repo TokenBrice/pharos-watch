@@ -1,6 +1,6 @@
 # Mint/Burn Flow Tracker
 
-On-chain mint and burn event tracker for stablecoins on **Ethereum** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Runs every 20 minutes, incrementally scanning from the last processed block.
+On-chain mint and burn event tracker for stablecoins on **Ethereum** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion now runs in two lanes: a critical 20-minute lane for major coverage and an offset extended 20-minute lane for long-tail backlog drain.
 
 Operational freshness configuration is shared via `worker/src/lib/mint-burn-health-config.ts`:
 - major-symbol baseline (`USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`)
@@ -21,14 +21,19 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 ## Cron Schedule
 
-- **Pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
-- **Shares slot with:** `sync-blacklist` (independent providers — Alchemy for mint/burn, Etherscan for blacklist)
-- **Function:** `syncMintBurn(db, alchemyApiKey)`
+- **Critical lane pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
+- **Extended lane pattern:** `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
+- **Shares primary slot with:** `sync-blacklist` + `sync-dex-discovery` (independent providers, separate leases)
+- **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
 - **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
-- **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `nullPricesHealed` for auto-healed recent NULL-price events plus per-config coverage-frontier diagnostics when scans are partial.
+- **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `lane`, `jobName`, `nullPricesHealed`, and per-config coverage-frontier diagnostics when scans are partial.
 - **Operator runbook:** `agents/runbooks/mint-burn-ingestion.md`
+
+Lane policy:
+- `sync-mint-burn` = critical lane. Uses the existing job id so freshness alerts and API freshness remain keyed to the major-symbol path.
+- `sync-mint-burn-extended` = extended lane. Uses its own `mint_burn_run_state.job` key and warning-only coverage semantics so long-tail backlog churn does not escalate the critical lane to `error`.
 
 ---
 
@@ -49,7 +54,8 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 | `ETHEREUM_SCAN_RANGE` | 50K (Ethereum) | Max block range per contract per cycle |
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
 | Subrequest budget | 200 per cron run | Global Alchemy API call budget |
-| Config tier policy | `critical` / `extended` | Under budget pressure, extended configs can be deferred deterministically |
+| Per-config request cap | 60 critical / 25 extended | Prevents one hot config from consuming the full lane budget |
+| Config tier policy | `critical` / `extended` | Critical and extended lanes run on separate cron schedules; each config also has a per-config request cap |
 
 ---
 
@@ -61,7 +67,7 @@ Token identity now resolves from shared metadata in `shared/lib/stablecoins.ts`.
 
 ### Tracked Stablecoins
 
-Current scope: **84 contract configs** across **81 symbols** (81 transfer-only ERC-20 configs + 1 USDT mixed-event config + 2 reUSD custom-event configs).
+Current scope: **84 contract configs** across **81 symbols** (7 critical + 77 extended; 81 transfer-only ERC-20 configs + 1 USDT mixed-event config + 2 reUSD custom-event configs).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -174,13 +180,14 @@ Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to 
 
 ## Sync Algorithm
 
-1. **Load sync state** — batch query `mint_burn_sync_state` for all configured contract keys. Falls back to `startBlock - 1` for new configs.
-2. **Apply runtime policy** — filter disabled configs (`MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`), rotate start index from persisted run-state, and assign per-chain budget quotas.
+1. **Load sync state** — batch query `mint_burn_sync_state` for all lane-selected contract keys. Falls back to `startBlock - 1` for new configs.
+2. **Apply runtime policy** — filter disabled configs (`MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`), select the requested lane (`critical`, `extended`, or `all`), rotate start index from the lane-specific `mint_burn_run_state.job`, front-load critical configs inside mixed/all runs, and assign a per-config request cap inside the global budget.
 3. **Get chain head** — Alchemy `eth_blockNumber` call per chain (cached per chain ID).
 4. **Load price cache** — query `price_cache` for all tracked stablecoin IDs (used for USD conversion).
 5. **For each contract config:**
-   - Skip if `fromBlock > chainHead` or subrequest budget exhausted.
+   - Skip if `fromBlock > chainHead` or the lane/global budget is exhausted.
    - For each event definition, call Alchemy `eth_getLogs` with adaptive recursive block-range splitting on provider/range failures.
+   - Enforce the per-config request cap while fetching logs, resolving timestamps, and classifying bridge burns so a single config cannot monopolize the lane.
    - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs, using local + persistent (`block_timestamp_cache`) caches.
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
    - Classify bridge burns per parsed batch to preserve the shared Alchemy transaction-context budget.
@@ -195,7 +202,8 @@ Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to 
      - If no safe frontier exists for the config in that run: do not advance.
 6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`, counting only `flow_type='standard'` rows so atomic roundtrips do not leak into flow statistics.
 7. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, resolve from `price_cache`, update `amount_usd/price_*` with `price_source=price_cache_heal`, and re-aggregate only newly affected hourly buckets.
-8. **Escalate degraded runs** — emit `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`.
+8. **Emit active progress** — long runs call the shared cron `reportProgress(...)` hook so `/api/status` can surface the active stage, queue position, and budget heartbeat while the lease is still live.
+9. **Escalate degraded runs** — the critical lane emits `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`. The extended lane keeps the same observability metadata but does not escalate long-tail backlog pressure to `error`.
 
 **Counterparty resolution:** For mints, `topics[2]` (recipient). For burns, `topics[1]` (sender).
 
@@ -574,7 +582,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 
 | File | Role |
 |------|------|
-| `worker/src/cron/sync-mint-burn.ts` | Cron job: incremental event sync + hourly aggregation |
+| `worker/src/cron/sync-mint-burn.ts` | Cron job: critical + extended incremental event sync lanes, hourly aggregation, lane-specific run-state |
 | `worker/src/lib/mint-burn-pipeline/types.ts` | Shared ingestion types for cron/backfill |
 | `worker/src/lib/mint-burn-pipeline/parse.ts` | Shared log parsing and price resolution |
 | `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts` | Shared same-transaction roundtrip tagging |

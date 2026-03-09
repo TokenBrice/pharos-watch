@@ -1,4 +1,12 @@
-import { logCronRun, getCache, setCache, runCronWithLease, buildInClause, type CronResult } from "../lib/db";
+import {
+  logCronRun,
+  getCache,
+  setCache,
+  runCronWithLease,
+  buildInClause,
+  type CronProgressReporter,
+  type CronResult,
+} from "../lib/db";
 import { syncStablecoins } from "../cron/sync-stablecoins";
 import { syncStablecoinCharts } from "../cron/sync-stablecoin-charts";
 import { syncBlacklist } from "../cron/sync-blacklist";
@@ -44,13 +52,31 @@ export async function handleScheduledEvent(
   const mintBurnDisabledIds = parseCsvEnv(env.MINT_BURN_DISABLED_IDS);
   const mintBurnDisabledSymbols = parseCsvEnv(env.MINT_BURN_DISABLED_SYMBOLS);
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
-  const isDownstreamSafeStablecoinsRun = (result: CronResult | null | void): boolean => {
-    if (!result?.metadata) return false;
+  const parseStablecoinsCapabilities = (
+    result: CronResult | null | void,
+  ): { stablecoinsCache: boolean; depegPipeline: boolean } => {
+    if (!result?.metadata) {
+      return {
+        stablecoinsCache: false,
+        depegPipeline: false,
+      };
+    }
     try {
-      const parsed = JSON.parse(result.metadata) as { downstreamSafe?: unknown };
-      return parsed.downstreamSafe === true;
+      const parsed = JSON.parse(result.metadata) as {
+        downstreamSafe?: unknown;
+        capabilities?: { stablecoinsCache?: unknown; depegPipeline?: unknown };
+      };
+      return {
+        stablecoinsCache:
+          parsed.capabilities?.stablecoinsCache === true ||
+          (parsed.capabilities?.stablecoinsCache == null && parsed.downstreamSafe === true),
+        depegPipeline: parsed.capabilities?.depegPipeline === true,
+      };
     } catch {
-      return false;
+      return {
+        stablecoinsCache: false,
+        depegPipeline: false,
+      };
     }
   };
   const normalizeCronMetadata = (result: CronResult): string | undefined => {
@@ -74,14 +100,28 @@ export async function handleScheduledEvent(
       ...parsed,
     });
   };
-  const runLeasedCron = (job: string, fn: (signal: AbortSignal) => Promise<CronResult | void>) =>
-    logCronRun(db, job, async (signal): Promise<CronResult> => {
+  const createLeaseOwner = (job: string): string => {
+    const cryptoObj = globalThis as typeof globalThis & { crypto?: { randomUUID?: () => string } };
+    if (typeof cryptoObj.crypto?.randomUUID === "function") return cryptoObj.crypto.randomUUID();
+    return `${job}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  };
+  const runLeasedCron = (
+    job: string,
+    fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
+  ) =>
+    logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
+      const leaseOwner = createLeaseOwner(job);
       const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
         const mergedSignal = typeof AbortSignal.any === "function"
           ? AbortSignal.any([signal, leaseSignal])
           : signal;
-        return fn(mergedSignal);
-      });
+        await reportProgress({
+          stage: "lease-acquired",
+          message: `Lease acquired for ${job}`,
+          leaseOwner,
+        });
+        return fn(mergedSignal, reportProgress);
+      }, { owner: leaseOwner });
       if (lease.status === "skipped_locked") {
         return {
           status: "skipped_locked",
@@ -129,7 +169,7 @@ export async function handleScheduledEvent(
       ctx.waitUntil((async () => {
         const runQuarterHourlyJob = async (
           job: string,
-          fn: (signal: AbortSignal) => Promise<CronResult | void>,
+          fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
         ): Promise<CronResult | null> => {
           try {
             return (await runLeasedCron(job, fn)) ?? null;
@@ -145,12 +185,14 @@ export async function handleScheduledEvent(
           "sync-stablecoins",
           (signal) => syncStablecoins(db, env.CMC_API_KEY, signal),
         );
-        const stablecoinsDownstreamSafe = isDownstreamSafeStablecoinsRun(stablecoinsResult);
-        if (stablecoinsResult && !stablecoinsDownstreamSafe) {
+        const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
+        const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;
+        const depegPipelineSafe = stablecoinsCapabilities.depegPipeline;
+        if (stablecoinsResult && !stablecoinsCacheSafe) {
           console.warn("[cron] sync-stablecoins completed without downstream-safe cache write — skipping dependent jobs");
         }
 
-        if (stablecoinsDownstreamSafe) {
+        if (stablecoinsCacheSafe) {
           // Retry daily supply snapshots throughout the day so a stale-cache skip at 08:00
           // cannot permanently leave a missing date.
           await runQuarterHourlyJob("snapshot-supply", (signal) => snapshotSupply(db, signal));
@@ -160,9 +202,14 @@ export async function handleScheduledEvent(
         await runQuarterHourlyJob("sync-fx-rates", (signal) => syncFxRates(db, signal));
 
         let dewsResult: CronResult | null = null;
-        if (stablecoinsDownstreamSafe) {
-          // PSI depends on stablecoins cache + depeg_events — run after sync completes
+        if (stablecoinsCacheSafe && depegPipelineSafe) {
+          // PSI depends on stablecoins cache + fresh depeg events.
           await runQuarterHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(db, signal));
+        } else if (stablecoinsCacheSafe && !depegPipelineSafe) {
+          console.warn("[cron] sync-stablecoins completed without a safe depeg pipeline — skipping stability-index");
+        }
+
+        if (stablecoinsCacheSafe) {
           // DEWS depends on stablecoins cache + dex data — run after sync
           dewsResult = await runQuarterHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(db, signal));
         }
@@ -181,7 +228,7 @@ export async function handleScheduledEvent(
         );
 
         // Telegram alert dispatch — must run LAST, after sync-stablecoins + compute-dews
-        if (env.TELEGRAM_BOT_TOKEN && stablecoinsDownstreamSafe && dewsResult !== null) {
+        if (env.TELEGRAM_BOT_TOKEN && stablecoinsCacheSafe && depegPipelineSafe && dewsResult !== null) {
           await runQuarterHourlyJob("dispatch-telegram-alerts", (signal) =>
             dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
           );
@@ -210,8 +257,16 @@ export async function handleScheduledEvent(
       if (etherscanAllowed) {
         const etherscanRL = createRateLimiter(4);
         const etherscanKey = env.ETHERSCAN_API_KEY ?? null;
-        const blacklistJob = runLeasedCron("sync-blacklist", (signal) =>
-          syncBlacklist(db, etherscanKey, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null, etherscanRL, signal)
+        const blacklistJob = runLeasedCron("sync-blacklist", (signal, reportProgress) =>
+          syncBlacklist(
+            db,
+            etherscanKey,
+            env.TRONGRID_API_KEY ?? null,
+            env.DRPC_API_KEY ?? null,
+            etherscanRL,
+            signal,
+            reportProgress,
+          )
         );
         ctx.waitUntil(blacklistJob);
         ctx.waitUntil(blacklistJob.then(
@@ -225,11 +280,14 @@ export async function handleScheduledEvent(
       // Mint/burn — gated by Alchemy circuit breaker
       const alchemyAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ALCHEMY);
       if (alchemyAllowed) {
-        const mintBurnJob = runLeasedCron("sync-mint-burn", (signal) =>
+        const mintBurnJob = runLeasedCron("sync-mint-burn", (signal, reportProgress) =>
           syncMintBurn(db, env.ALCHEMY_API_KEY ?? null, {
             signal,
             disabledConfigIds: mintBurnDisabledIds,
             disabledSymbols: mintBurnDisabledSymbols,
+            lane: "critical",
+            jobName: "sync-mint-burn",
+            onProgress: reportProgress,
           })
         );
         ctx.waitUntil(mintBurnJob);
@@ -237,7 +295,7 @@ export async function handleScheduledEvent(
           (result) => recordOutcome(
             db,
             CIRCUIT_SOURCE.ALCHEMY,
-            (result?.status ?? "ok") === "ok",
+            (result?.status ?? "ok") !== "error",
           ),
           () => recordOutcome(db, CIRCUIT_SOURCE.ALCHEMY, false),
         ));
@@ -290,8 +348,36 @@ export async function handleScheduledEvent(
       }
 
       // DEX pool discovery — no circuit breaker, sequential fetches (1 connection)
-      ctx.waitUntil(runLeasedCron("sync-dex-discovery", (signal) =>
-        syncDexDiscovery(db, env.COINGECKO_API_KEY ?? null, signal)
+      ctx.waitUntil(runLeasedCron("sync-dex-discovery", (signal, reportProgress) =>
+        syncDexDiscovery(db, env.COINGECKO_API_KEY ?? null, signal, reportProgress)
+      ));
+      break;
+    }
+    case CRON_SCHEDULES.twentyMinuteExtendedOffset: {
+      const alchemyAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ALCHEMY);
+      if (!alchemyAllowed) {
+        console.warn("[cron] Alchemy circuit open - skipping extended mint/burn sync");
+        break;
+      }
+
+      const extendedJob = runLeasedCron("sync-mint-burn-extended", (signal, reportProgress) =>
+        syncMintBurn(db, env.ALCHEMY_API_KEY ?? null, {
+          signal,
+          disabledConfigIds: mintBurnDisabledIds,
+          disabledSymbols: mintBurnDisabledSymbols,
+          lane: "extended",
+          jobName: "sync-mint-burn-extended",
+          onProgress: reportProgress,
+        })
+      );
+      ctx.waitUntil(extendedJob);
+      ctx.waitUntil(extendedJob.then(
+        (result) => recordOutcome(
+          db,
+          CIRCUIT_SOURCE.ALCHEMY,
+          (result?.status ?? "ok") !== "error",
+        ),
+        () => recordOutcome(db, CIRCUIT_SOURCE.ALCHEMY, false),
       ));
       break;
     }

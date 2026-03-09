@@ -1,8 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const cronMocks = vi.hoisted(() => ({
-  syncStablecoins: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{\"downstreamSafe\":true,\"cacheWriteMode\":\"main-write\"}" })),
+  syncStablecoins: vi.fn(async () => ({
+    status: "ok",
+    itemCount: 1,
+    metadata: JSON.stringify({
+      downstreamSafe: true,
+      cacheWriteMode: "main-write",
+      capabilities: {
+        stablecoinsCache: true,
+        depegPipeline: true,
+      },
+    }),
+  })),
   syncStablecoinCharts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncBlacklist: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncMintBurn: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncDexDiscovery: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncFxRates: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeAndStoreStabilityIndex: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeAndStoreDEWS: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -11,8 +25,12 @@ const cronMocks = vi.hoisted(() => ({
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncDexLiquidity: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  logCronRun: vi.fn(async (_db: D1Database, _job: string, fn: (signal: AbortSignal) => Promise<unknown>) => (
-    fn(new AbortController().signal)
+  logCronRun: vi.fn(async (
+    _db: D1Database,
+    _job: string,
+    fn: (signal: AbortSignal, reportProgress: (update: Record<string, unknown>) => Promise<void>) => Promise<unknown>,
+  ) => (
+    fn(new AbortController().signal, async () => undefined)
   )),
   runCronWithLease: vi.fn(async (
     _db: D1Database,
@@ -33,6 +51,9 @@ const cronMocks = vi.hoisted(() => ({
 
 vi.mock("../cron/sync-stablecoins", () => ({ syncStablecoins: cronMocks.syncStablecoins }));
 vi.mock("../cron/sync-stablecoin-charts", () => ({ syncStablecoinCharts: cronMocks.syncStablecoinCharts }));
+vi.mock("../cron/sync-blacklist", () => ({ syncBlacklist: cronMocks.syncBlacklist }));
+vi.mock("../cron/sync-mint-burn", () => ({ syncMintBurn: cronMocks.syncMintBurn }));
+vi.mock("../cron/dex-discovery", () => ({ syncDexDiscovery: cronMocks.syncDexDiscovery }));
 vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }));
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
@@ -156,7 +177,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
   });
 
-  it("still runs dependent jobs when sync-stablecoins is degraded but marks the cache downstream-safe", async () => {
+  it("runs cache-dependent jobs but skips depeg-dependent jobs when sync-stablecoins writes a safe cache with depeg failures", async () => {
     cronMocks.syncStablecoins.mockResolvedValueOnce({
       status: "degraded",
       itemCount: 1,
@@ -164,6 +185,10 @@ describe("worker.scheduled", () => {
         downstreamSafe: true,
         cacheWriteMode: "main-write",
         depegErrorCount: 1,
+        capabilities: {
+          stablecoinsCache: true,
+          depegPipeline: false,
+        },
       }),
     });
 
@@ -182,9 +207,9 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
-    expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
+    expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
   });
 
   it("runs dex then yield on the 30-min cron", async () => {
@@ -206,5 +231,55 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncYieldData.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.syncDexLiquidity.mock.invocationCallOrder[0],
     );
+  });
+
+  it("runs blacklist, critical mint/burn, and dex discovery on the primary 20-min slot", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      ALCHEMY_API_KEY: "alchemy-key",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "3,23,43 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncBlacklist).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncMintBurn).toHaveBeenCalledTimes(1);
+    const criticalCall = cronMocks.syncMintBurn.mock.calls[0] as unknown[] | undefined;
+    expect(criticalCall?.[2]).toMatchObject({
+      lane: "critical",
+      jobName: "sync-mint-burn",
+    });
+    expect(cronMocks.syncDexDiscovery).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs the extended mint/burn lane on the offset 20-min slot", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      ALCHEMY_API_KEY: "alchemy-key",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "13,33,53 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncMintBurn).toHaveBeenCalledTimes(1);
+    const extendedCall = cronMocks.syncMintBurn.mock.calls[0] as unknown[] | undefined;
+    expect(extendedCall?.[2]).toMatchObject({
+      lane: "extended",
+      jobName: "sync-mint-burn-extended",
+    });
+    expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
+    expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
   });
 });

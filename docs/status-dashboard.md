@@ -42,10 +42,12 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Renders Telegram subscriber adoption metrics, top subscribed coins, and the latest `dispatch-telegram-alerts` delivery summary
 - Cron cards are grouped by trigger slot on the page:
   - 15-minute core ingestion / score recompute
-  - 20-minute intake + `sync-dex-discovery`
+  - 20-minute intake + critical mint/burn + `sync-dex-discovery`
+  - offset 20-minute extended mint/burn lane
   - 30-minute scoring + downstream `sync-yield-data`
   - daily snapshot / digest jobs
   - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup
+  - When a leased job is still running, cards surface `running` / `running-stale` state from `crons[*].inFlight`
 
 ### Endpoint groups
 
@@ -79,6 +81,8 @@ For the split DEX pipeline:
 
 - `sync-dex-discovery` surfaces crawl-progress metadata (`coinsCrawled`, `poolsDiscovered`, `tierBreakdown`, `budgetExhausted`, `failedCoins`, `failedCoinErrors`) so operators can tell whether the staging crawl is still feeding the scorer and which source path failed per coin.
 - `sync-dex-liquidity` `degraded` explicitly captures non-fatal upstream degradation (critical source-family failures or near-guard coverage drops), with machine-readable metadata (`failedSources`, `fallbackMode`, `sourceCoverage`, staged-pool merge counters, and staged skip-reason breakdowns for address vs fingerprint dedup).
+- `sync-mint-burn` is now the critical lane, while `sync-mint-burn-extended` drains long-tail backlog on its own offset schedule. The status surface tracks them independently so extended backlog pressure does not mask critical freshness.
+- `crons[*].inFlight` exposes live `cron_run_progress` state (`stage`, `itemsDone`, `itemsTotal`, `message`, `updatedAt`, `stale`) for long-running leased jobs such as blacklist, mint/burn, and DEX discovery.
 
 ### Availability status
 
@@ -181,6 +185,7 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
    - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising the real handler/auth path
    - explicit non-default `SELF_URL`: real HTTPS `fetch()` probes with a 10s timeout per endpoint
    - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency
+   - cache-backed bootstrap probes (`/api/usds-status`, `/api/bluechip-ratings`, `/api/yield-rankings`) are treated as bootstrap misses rather than hard failures only while their producing cron has never recorded a run
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
 4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.
@@ -189,6 +194,7 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 The cron metadata now includes:
 
 - `probeMode` / `probeBaseUrl`
+- `bootstrapMissCount`
 - `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`)
 - `slowestProbes` (top slow endpoints for the run)
 

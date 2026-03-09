@@ -277,6 +277,24 @@ describe("syncMintBurn", () => {
     expect(firstContract).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7"); // USDT critical first
   });
 
+  it("filters to the extended lane and reports lane metadata", async () => {
+    const db = makeDb();
+
+    const result = await syncMintBurn(db, "alchemy-key", {
+      lane: "extended",
+      jobName: "sync-mint-burn-extended",
+    });
+    const firstCall = vi.mocked(fetchAlchemyLogs).mock.calls[0];
+    const firstContract = firstCall[1] as string;
+    const meta = JSON.parse(result.metadata);
+
+    expect(firstContract).toBe("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"); // USDC extended-only lane
+    expect(meta.lane).toBe("extended");
+    expect(meta.jobName).toBe("sync-mint-burn-extended");
+    expect(meta.criticalCoverage.contractsEnabled).toBe(0);
+    expect(meta.sourceCoverage.contractsEnabled).toBe(1);
+  });
+
   it("does not advance when one eventDef fails with no safe frontier", async () => {
     const db = makeDb();
 
@@ -468,11 +486,48 @@ describe("syncMintBurn", () => {
     const meta = JSON.parse(result.metadata);
 
     expect(result.status).toBe("ok");
-    expect(meta.contractsDeferredExtended).toBeGreaterThan(0);
     expect(meta.criticalCoverage.contractsEnabled).toBe(1);
     expect(meta.criticalCoverage.contractsSatisfied).toBe(1);
     expect(meta.criticalCoverage.ratio).toBe(1);
     expect(meta.degradedSignal).toBe(false);
+  });
+
+  it("caps per-config budget so a hot config cannot consume the whole cron budget", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockImplementationOnce(async (_url, _contract, _topics, fromBlock, _toBlock, budget) => {
+        budget.count = budget.limit;
+        return {
+          logs: [],
+          complete: false,
+          scannedToBlock: fromBlock - 1,
+          calls: budget.limit,
+          maxDepth: 0,
+        };
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      });
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+    const fetchedContracts = vi.mocked(fetchAlchemyLogs).mock.calls.map((call) => call[1] as string);
+
+    expect(fetchedContracts[0]).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
+    expect(fetchedContracts).toContain("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+    expect(meta.configBreakdown[0].requestBudgetUsed).toBe(meta.configBreakdown[0].requestBudgetLimit);
   });
 
   it("rejects when ALCHEMY_API_KEY is missing", async () => {

@@ -29,6 +29,7 @@ import { getChainRpc } from "../lib/chain-registry";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { throwIfAborted } from "../lib/abort";
+import type { CronProgressReporter } from "../lib/db";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
@@ -820,6 +821,7 @@ export async function syncBlacklist(
   drpcApiKey: string | null,
   externalEtherscanRL?: RateLimitedFetch,
   signal?: AbortSignal,
+  onProgress?: CronProgressReporter,
 ): Promise<SyncBlacklistResult> {
   const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);
@@ -866,6 +868,16 @@ export async function syncBlacklist(
     console.warn("[sync-blacklist] Backfill failed:", err);
   }
   console.log(`[sync-blacklist] Backfill done, budget: ${budget.count}/${budget.limit}`);
+  await onProgress?.({
+    stage: "backfill-amounts",
+    itemsDone: 0,
+    itemsTotal: configStates.length,
+    message: `Backfill pass complete; scanning ${configStates.length} blacklist config(s)`,
+    metadata: {
+      budgetUsed: budget.count,
+      budgetLimit: budget.limit,
+    },
+  });
 
   // Sort by lastBlock ascending so least-synced configs go first
   configStates.sort((a, b) => a.lastBlock - b.lastBlock);
@@ -884,6 +896,19 @@ export async function syncBlacklist(
       break;
     }
     const { config, configKey, lastBlock } = configStates[ci];
+    await onProgress?.({
+      stage: "scan-config",
+      itemsDone: ci,
+      itemsTotal: configStates.length,
+      message: `Scanning ${config.stablecoin} on ${config.chain.chainName}`,
+      metadata: {
+        configKey,
+        stablecoin: config.stablecoin,
+        chainId: config.chain.chainId,
+        budgetUsed: budget.count,
+        budgetLimit: budget.limit,
+      },
+    });
     if (budgetExhausted(budget)) {
       contractsSkipped = configStates.length - ci;
       console.log(`[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping ${contractsSkipped} remaining contracts`);
@@ -1022,6 +1047,18 @@ export async function syncBlacklist(
   }
 
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
+  await onProgress?.({
+    stage: "complete",
+    itemsDone: configStates.length,
+    itemsTotal: configStates.length,
+    message: "Completed blacklist sync",
+    metadata: {
+      budgetUsed: budget.count,
+      budgetLimit: budget.limit,
+      contractsSkipped,
+      apiErrors,
+    },
+  });
   const status: SyncBlacklistResult["status"] = apiErrors > 0
     ? (apiErrors > CONTRACT_CONFIGS.length / 2 ? "error" : "degraded")
     : runtimeBudgetHit ? "degraded" : "ok";

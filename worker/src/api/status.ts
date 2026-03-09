@@ -21,7 +21,15 @@ import {
 } from "../lib/status-thresholds";
 import { queryBlacklistGapMetrics } from "../lib/blacklist-gaps";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { CronRun, CronStatus, DataQuality, StatusCause, StatusResponse, TelegramBotStats } from "@shared/types";
+import type {
+  CronInFlight,
+  CronRun,
+  CronStatus,
+  DataQuality,
+  StatusCause,
+  StatusResponse,
+  TelegramBotStats,
+} from "@shared/types";
 
 // --- Config ---
 
@@ -170,6 +178,55 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       metadata: string | null;
     }>();
 
+  let cronProgressByJob = new Map<string, CronInFlight>();
+  try {
+    const progressRows = await db
+      .prepare(
+        `SELECT job, started_at, updated_at, stage, items_done, items_total, message, lease_owner, metadata
+           FROM cron_run_progress
+           WHERE job IN (${cronJobInClause.sql})`,
+      )
+      .bind(...cronJobInClause.binds)
+      .all<{
+        job: string;
+        started_at: number;
+        updated_at: number;
+        stage: string | null;
+        items_done: number | null;
+        items_total: number | null;
+        message: string | null;
+        lease_owner: string | null;
+        metadata: string | null;
+      }>();
+
+    cronProgressByJob = new Map(
+      (progressRows.results ?? []).map((row) => {
+        let parsedMeta: Record<string, unknown> | undefined;
+        if (row.metadata) {
+          try {
+            parsedMeta = JSON.parse(row.metadata);
+          } catch {
+            parsedMeta = undefined;
+          }
+        }
+
+        return [row.job, {
+          startedAt: row.started_at,
+          updatedAt: row.updated_at,
+          ...(row.stage ? { stage: row.stage } : {}),
+          ...(row.items_done != null ? { itemsDone: row.items_done } : {}),
+          ...(row.items_total != null ? { itemsTotal: row.items_total } : {}),
+          ...(row.message ? { message: row.message } : {}),
+          ...(row.lease_owner ? { leaseOwner: row.lease_owner } : {}),
+          ...(parsedMeta ? { metadata: parsedMeta } : {}),
+          stale: false,
+        } satisfies CronInFlight];
+      }),
+    );
+  } catch (err) {
+    console.warn("[status] cron_run_progress unavailable:", err);
+  }
+
   // Group by job, keeping only the 10 most recent per job
   const cronByJob = new Map<string, CronRun[]>();
   for (const r of cronRows.results ?? []) {
@@ -226,6 +283,14 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       recentRuns: runs,
       expectedIntervalSec: interval,
       healthy,
+      inFlight: (() => {
+        const inFlight = cronProgressByJob.get(job);
+        if (!inFlight) return null;
+        return {
+          ...inFlight,
+          stale: now - inFlight.updatedAt > Math.max(300, interval),
+        };
+      })(),
     };
   }
 

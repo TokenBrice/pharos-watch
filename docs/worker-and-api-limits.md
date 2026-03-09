@@ -14,7 +14,7 @@ The entire backend runs on a single Cloudflare Worker script.
 | **Included CPU time/month** | 30 M CPU-ms | $0.02/M over |
 | **CPU time per HTTP request** | 30 s default (up to 5 min configurable) | |
 | **CPU time per Cron Trigger** | 30 s if the schedule runs more than once per hour; 15 min otherwise | Platform default. This repo additionally sets `cpu_ms = 5000` in `worker/wrangler.toml`, so our effective per-invocation CPU cap is 5 s unless reconfigured |
-| **Cron Triggers** | No current per-worker cap; account quota applies | Cloudflare removed the old per-worker trigger cap. This repo currently uses 4 cron expressions: `*/15`, `3,23,43`, `10,40`, `0 8 * * *` |
+| **Cron Triggers** | No current per-worker cap; account quota applies | Cloudflare removed the old per-worker trigger cap. This repo currently uses 5 cron expressions: `*/15`, `3,23,43`, `13,33,53`, `10,40`, `0 8 * * *` |
 | **Concurrent outbound fetch() per invocation** | **6** | ⚠️ Hard platform limit. DEX liquidity already batches (2 DL fetches, then 4 Curve) to stay within budget |
 | **Subrequests per invocation (Workers Standard default)** | 10,000 | Configurable higher on Workers Paid; the old 1,000-subrequest cap was removed |
 | **D1 connections per invocation** | 6 simultaneous | |
@@ -161,9 +161,9 @@ Primary RPC provider for mint/burn ingestion and shared chain-RPC utilities (Eth
 
 > **Key constraint**: Mint/burn flow sync is the largest steady Alchemy consumer. Batch `eth_call` calls (where used) support up to 25 per batch. 30M CUs ÷ 26 CU/call = ~1.15 M `eth_call`s/month.
 
-**Mint/burn usage**: `sync-mint-burn` now uses Alchemy for all `eth_getLogs` and `eth_blockNumber` calls.
-Steady-state: ~35 getLogs + 4 blockNumbers + ~30 batch timestamp lookups per run → ~3,000 CUs/run.
-72 runs/day × 30 days → ~6.5M CUs/month (22% of 30M free-tier CU cap).
+**Mint/burn usage**: `sync-mint-burn` (critical lane) and `sync-mint-burn-extended` (extended lane) now use Alchemy for all `eth_getLogs` and `eth_blockNumber` calls.
+Critical-lane steady-state remains roughly ~35 getLogs + 4 blockNumbers + ~30 batch timestamp lookups per run (~3,000 CUs/run, ~6.5M CUs/month at 72 runs/day).
+The extended lane adds variable backlog-drain load on top of that baseline; re-profile against Workers Logs / Alchemy usage after any large mint/burn config expansion.
 
 **Yield sync usage**: When Ethereum RPC is backed by Alchemy, `sync-yield-data` adds 2 `eth_call`s per 30-minute run for the conservative LUSD B.Protocol source (~2,880 `eth_call`s/month).
 

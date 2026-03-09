@@ -17,6 +17,16 @@ interface CronCardProps {
     recentRuns: Array<{ startedAt: number; durationMs: number; status: string; error?: string }>;
     expectedIntervalSec: number;
     healthy: boolean;
+    inFlight?: {
+      startedAt: number;
+      updatedAt: number;
+      stage?: string;
+      itemsDone?: number;
+      itemsTotal?: number;
+      message?: string;
+      metadata?: Record<string, unknown>;
+      stale: boolean;
+    } | null;
   };
   nowSeconds: number;
 }
@@ -205,6 +215,37 @@ function summarizeMetadata(job: string, metadata: Record<string, unknown> | unde
     return lines.filter((line): line is string => line != null);
   }
 
+  if (job === "sync-mint-burn" || job === "sync-mint-burn-extended") {
+    const lane = readString(metadata.lane);
+    const contractsProcessed = readNumber(metadata.contractsProcessed);
+    const contractsSkipped = readNumber(metadata.contractsSkipped);
+    const contractsDeferredExtended = readNumber(metadata.contractsDeferredExtended);
+    const degradedStreak = readNumber(metadata.degradedStreak);
+    const budgetUsed = readNumber(metadata.budgetUsed);
+    const budgetLimit = readNumber(metadata.budgetLimit);
+    const criticalCoverage = readRecord(metadata.criticalCoverage);
+    const criticalSatisfied = readNumber(criticalCoverage?.contractsSatisfied);
+    const criticalEnabled = readNumber(criticalCoverage?.contractsEnabled);
+    const laggingConfigs = readArray(metadata.laggingConfigs)?.length ?? 0;
+
+    const lines = [
+      lane ? `lane ${lane}` : null,
+      contractsProcessed != null
+        ? `processed ${contractsProcessed}${contractsSkipped != null ? `, skipped ${contractsSkipped}` : ""}`
+        : null,
+      budgetUsed != null && budgetLimit != null ? `budget ${budgetUsed}/${budgetLimit}` : null,
+      criticalEnabled != null && criticalSatisfied != null && criticalEnabled > 0
+        ? `critical coverage ${criticalSatisfied}/${criticalEnabled}`
+        : null,
+      contractsDeferredExtended != null && contractsDeferredExtended > 0
+        ? `extended deferred ${contractsDeferredExtended}`
+        : null,
+      laggingConfigs > 0 ? `lagging configs tracked ${laggingConfigs}` : null,
+      degradedStreak != null && degradedStreak > 0 ? `degraded streak ${degradedStreak}` : null,
+    ];
+    return lines.filter((line): line is string => line != null);
+  }
+
   return [];
 }
 
@@ -239,6 +280,33 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
       <CardContent className="space-y-3">
         {cron.lastRun ? (
           <div className="space-y-1">
+            {cron.inFlight && (
+              <div className={`space-y-1 rounded border p-2 text-xs ${cron.inFlight.stale ? "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-300" : "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-300"}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={`text-xs ${cron.inFlight.stale ? "bg-red-500/15 text-red-700 dark:text-red-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300"}`}>
+                    {cron.inFlight.stale ? "running-stale" : "running"}
+                  </Badge>
+                  <span>started {formatAge(nowSeconds - cron.inFlight.startedAt)} ago</span>
+                  <span>heartbeat {formatAge(nowSeconds - cron.inFlight.updatedAt)} ago</span>
+                  {cron.inFlight.stage && <span>stage {cron.inFlight.stage}</span>}
+                  {cron.inFlight.itemsDone != null && (
+                    <span>
+                      progress {cron.inFlight.itemsDone}
+                      {cron.inFlight.itemsTotal != null ? `/${cron.inFlight.itemsTotal}` : ""}
+                    </span>
+                  )}
+                </div>
+                {cron.inFlight.message && <div>{cron.inFlight.message}</div>}
+                {cron.inFlight.metadata && Object.keys(cron.inFlight.metadata).length > 0 && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-current/80">Active run metadata</summary>
+                    <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/60 p-2 text-xs">
+                      {JSON.stringify(cron.inFlight.metadata, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            )}
             <div className="flex items-center gap-2 text-sm">
               <Badge
                 className={`text-xs ${badgeClassByStatus[cron.lastRun.status] ?? "bg-red-500/15 text-red-700 dark:text-red-400"}`}
@@ -274,7 +342,21 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
             )}
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">No runs recorded</span>
+          cron.inFlight ? (
+            <div className={`space-y-1 rounded border p-2 text-xs ${cron.inFlight.stale ? "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-300" : "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-300"}`}>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className={`text-xs ${cron.inFlight.stale ? "bg-red-500/15 text-red-700 dark:text-red-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300"}`}>
+                  {cron.inFlight.stale ? "running-stale" : "running"}
+                </Badge>
+                <span>started {formatAge(nowSeconds - cron.inFlight.startedAt)} ago</span>
+                <span>heartbeat {formatAge(nowSeconds - cron.inFlight.updatedAt)} ago</span>
+              </div>
+              {cron.inFlight.stage && <div>stage {cron.inFlight.stage}</div>}
+              {cron.inFlight.message && <div>{cron.inFlight.message}</div>}
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">No runs recorded</span>
+          )
         )}
 
         <div className="flex items-center gap-1">

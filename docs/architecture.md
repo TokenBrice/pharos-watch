@@ -385,7 +385,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
     │   ├── sync-yield-data.ts    # Yield data sync orchestration: source load + resolution + persistence/cache stages
     │   ├── yield-sync/           # Yield sync stage modules (source loading, resolution, rankings shaping)
-    │   ├── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (every 20min)
+    │   ├── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (critical + extended 20min lanes)
     │   └── status-self-check.ts  # Status reliability cron: real HTTP probes, hysteresis persistence, discrepancy/probe-failure alerts
     ├── api/
     │   ├── cache-handlers.ts     # Cache-backed handlers: stablecoins, stablecoin-charts, bluechip-ratings, usds-status, yield-rankings

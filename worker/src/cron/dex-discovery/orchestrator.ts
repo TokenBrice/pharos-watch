@@ -1,4 +1,4 @@
-import type { CronResult } from "../../lib/db";
+import type { CronProgressReporter, CronResult } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types";
@@ -129,6 +129,7 @@ export async function syncDexDiscovery(
   db: D1Database,
   cgApiKey: string | null,
   signal?: AbortSignal,
+  onProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   let runSeq = 0;
@@ -177,9 +178,32 @@ export async function syncDexDiscovery(
 
     const deadlineMs = Date.now() + 13 * 60_000;
     const knownPoolIds = new Set<string>();
+    await onProgress?.({
+      stage: "queue-built",
+      itemsDone: 0,
+      itemsTotal: eligibleCoins.length,
+      message: `Prepared ${eligibleCoins.length} eligible discovery candidate(s)`,
+      metadata: {
+        tierBreakdown,
+        runSeq,
+      },
+    });
 
-    for (const candidate of eligibleCoins) {
+    for (let index = 0; index < eligibleCoins.length; index++) {
+      const candidate = eligibleCoins[index];
       throwIfAborted(signal);
+      await onProgress?.({
+        stage: "crawl-coin",
+        itemsDone: index,
+        itemsTotal: eligibleCoins.length,
+        message: `Crawling ${candidate.stablecoinId} (${candidate.tier})`,
+        metadata: {
+          runSeq,
+          tier: candidate.tier,
+          coinsCrawled,
+          poolsDiscovered,
+        },
+      });
 
       try {
         const result = await crawlCoin(
@@ -221,6 +245,19 @@ export async function syncDexDiscovery(
     }
 
     await cleanupStaging(db, nowSec);
+    await onProgress?.({
+      stage: "complete",
+      itemsDone: eligibleCoins.length,
+      itemsTotal: eligibleCoins.length,
+      message: "Completed DEX discovery sync",
+      metadata: {
+        coinsCrawled,
+        poolsDiscovered,
+        tierBreakdown,
+        budgetExhausted,
+        runSeq,
+      },
+    });
 
     return {
       status: failedCoins.length > 0 ? "degraded" : "ok",

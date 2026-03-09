@@ -1,6 +1,7 @@
 export const CRON_SCHEDULES = {
   quarterHourly: "*/15 * * * *",
   twentyMinuteOffset: "3,23,43 * * * *",
+  twentyMinuteExtendedOffset: "13,33,53 * * * *",
   halfHourlyOffset: "10,40 * * * *",
   daily0800Utc: "0 8 * * *",
 } as const;
@@ -23,11 +24,13 @@ const CRON_JOB_DEFINITIONS: readonly CronJobDefinition[] = [
   { job: "dispatch-telegram-alerts", intervalSec: 900, schedule: CRON_SCHEDULES.quarterHourly },
   { job: "sync-blacklist", intervalSec: 1200, schedule: CRON_SCHEDULES.twentyMinuteOffset },
   { job: "sync-mint-burn", intervalSec: 1200, schedule: CRON_SCHEDULES.twentyMinuteOffset },
+  { job: "sync-mint-burn-extended", intervalSec: 1200, schedule: CRON_SCHEDULES.twentyMinuteExtendedOffset },
   { job: "sync-dex-discovery", intervalSec: 1200, schedule: CRON_SCHEDULES.twentyMinuteOffset },
   { job: "sync-dex-liquidity", intervalSec: 1800, schedule: CRON_SCHEDULES.halfHourlyOffset },
   { job: "sync-yield-data", intervalSec: 1800, schedule: CRON_SCHEDULES.halfHourlyOffset },
   { job: "snapshot-supply", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "snapshot-safety-grade-history", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
+  { job: "dispatch-telegram-alerts-daily", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "fetch-tbill-rate", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "snapshot-psi", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "sync-usds-status", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },

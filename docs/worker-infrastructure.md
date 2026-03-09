@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 20 named runtime jobs across 4 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 21 named runtime jobs across 5 trigger slots.
 
 Execution note: `dispatch-telegram-alerts-daily` runs on the `0 8 * * *` (08:00 UTC) trigger, while the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -194,7 +194,7 @@ Current consumers:
 
 ## Cron Scheduling
 
-This worker currently declares 4 cron expressions in `worker/wrangler.toml`. Cloudflare's old per-worker cron-trigger cap has been removed; add new schedules deliberately, but prefer piggybacking an existing slot unless a distinct cadence is actually required.
+This worker currently declares 5 cron expressions in `worker/wrangler.toml`. Cloudflare's old per-worker cron-trigger cap has been removed; add new schedules deliberately, but prefer piggybacking an existing slot unless a distinct cadence is actually required.
 
 ### wrangler.toml Triggers
 
@@ -203,6 +203,7 @@ This worker currently declares 4 cron expressions in `worker/wrangler.toml`. Clo
 crons = [
   "*/15 * * * *",
   "3,23,43 * * * *",
+  "13,33,53 * * * *",
   "10,40 * * * *",
   "0 8 * * *",
 ]
@@ -222,7 +223,12 @@ crons = [
 | `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
 | *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled.ts` | This doc (below) |
 
-**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `snapshot-supply` retry, `stability-index`, and `compute-dews` now run only when `sync-stablecoins` reports `downstreamSafe: true` in cron metadata (currently the validated main cache-write path). `status-self-check` runs near the end of the slot and `dispatch-telegram-alerts` runs last only when the stablecoins sync was downstream-safe and `compute-dews` actually ran, which prevents stale fallback cache states from being re-snapshotted or alert-diffed as fresh data.
+**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `sync-stablecoins` now reports explicit capability metadata:
+
+- `capabilities.stablecoinsCache`
+- `capabilities.depegPipeline`
+
+`snapshot-supply` retry and `compute-dews` require the stablecoins-cache capability. `stability-index` and `dispatch-telegram-alerts` additionally require the depeg-pipeline capability, which prevents depeg-stage regressions from propagating as fresh PSI or alert state.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -231,16 +237,24 @@ crons = [
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | `docs/blacklist-tracker.md` |
-| `sync-mint-burn` | `syncMintBurn()` | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
+| `sync-mint-burn` | `syncMintBurn()` critical lane | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
 | `sync-dex-discovery` | `syncDexDiscovery()` | `worker/src/cron/dex-discovery/orchestrator.ts` | `docs/dex-liquidity.md`, `intervalSec: 1200` |
 
-3 jobs now run on the 20-minute slot: `sync-blacklist`, `sync-mint-burn`, `sync-dex-discovery`.
+3 jobs now run on the primary 20-minute slot: `sync-blacklist`, `sync-mint-burn`, `sync-dex-discovery`.
 
-**Provider split + independent controls:** `sync-blacklist` uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC where Etherscan free-tier `getLogs` is unavailable, dRPC for historical L2 balance reads, and TronGrid for Tron. `sync-mint-burn` uses Alchemy JSON-RPC and is governed by its own request budget plus the Alchemy circuit breaker. `sync-dex-discovery` runs independently in the same slot (no circuit-breaker gate) and stages pools from CoinGecko/GeckoTerminal/DexScreener/CoinGecko tickers for later merge by `sync-dex-liquidity`.
+**Provider split + independent controls:** `sync-blacklist` uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC where Etherscan free-tier `getLogs` is unavailable, dRPC for historical L2 balance reads, and TronGrid for Tron. `sync-mint-burn` is now the critical mint/burn lane and uses Alchemy JSON-RPC plus the Alchemy circuit breaker. `sync-dex-discovery` runs independently in the same slot (no circuit-breaker gate) and stages pools from CoinGecko/GeckoTerminal/DexScreener/CoinGecko tickers for later merge by `sync-dex-liquidity`.
 
 Discovery uses strictly sequential fetches (1 connection at a time). Shared Alchemy `eth_getLogs` range splitting is also depth-first/sequential, so blacklist and mint/burn do not recursively fan out into dozens of concurrent subrequests inside the same 20-minute trigger.
 
-### Trigger 3: `10,40 * * * *` (every 30 minutes, at :10/:40)
+### Trigger 3: `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
+
+| Job | Function | File | Documentation |
+|-----|----------|------|---------------|
+| `sync-mint-burn-extended` | `syncMintBurn()` extended lane | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
+
+This offset schedule exists so long-tail mint/burn backfill pressure cannot starve the critical lane or contend with blacklist/discovery inside the same invocation. It uses a separate `mint_burn_run_state.job` key (`sync-mint-burn-extended`) and warning-only coverage semantics.
+
+### Trigger 4: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -249,7 +263,7 @@ Discovery uses strictly sequential fetches (1 connection at a time). Shared Alch
 
 **Connection budget:** `sync-yield-data` is chained after `sync-dex-liquidity` in the same trigger. The slot still shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. Current steady overhead for the LUSD B.Protocol source is small: 2 Ethereum `eth_call`s plus 1 CoinGecko price fetch per 30-minute run.
 
-### Trigger 4: `0 8 * * *` (daily at 08:00 UTC)
+### Trigger 5: `0 8 * * *` (daily at 08:00 UTC)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -292,25 +306,51 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 
 Every cron job is wrapped with `runCronWithLease(...)` + `logCronRun(...)`:
 
-`ctx.waitUntil(logCronRun(db, "job-name", (signal) => runCronWithLease(db, "job-name", async () => fn(db, signal))))`
+`ctx.waitUntil(logCronRun(db, "job-name", (signal, reportProgress) => runCronWithLease(db, "job-name", async () => fn(db, signal, reportProgress))))`
 
 ```typescript
 async function logCronRun(
   db: D1Database,
   job: string,
-  fn: (signal: AbortSignal) => Promise<CronResult | void>
+  fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>
 ): Promise<void>
 ```
 
 **Behavior:**
 - Records start time (Unix seconds)
+- Exposes a lazy `reportProgress(...)` callback that writes/updates `cron_run_progress` only after a job explicitly reports in-flight state
 - Executes the job function
 - On success: inserts row into `cron_runs` with `status='ok'`, `item_count`, and `metadata`
 - On lease contention: inserts row with `status='skipped_locked'` and lease metadata
 - On error: inserts row with `status='error'` and error message, calls `sendAlert()`, re-throws
+- On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
 - After each run: prunes rows older than 7 days (`started_at < now - 604800`); if prune fails, falls back to keeping only the top 5000 rows by rowid DESC
 
 **Schema:** `cron_runs(job, started_at, duration_ms, status, item_count, metadata, error)`
+
+### In-flight Cron Progress
+
+Long-running leased jobs can now surface active progress through `cron_run_progress`, which powers `/api/status` while the run is still live.
+
+```sql
+CREATE TABLE cron_run_progress (
+  job TEXT PRIMARY KEY,
+  started_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  stage TEXT,
+  items_done INTEGER,
+  items_total INTEGER,
+  message TEXT,
+  lease_owner TEXT,
+  metadata TEXT
+);
+```
+
+Current producers:
+- `sync-blacklist`
+- `sync-mint-burn`
+- `sync-mint-burn-extended`
+- `sync-dex-discovery`
 
 ### Per-Job Cron Timeouts
 
@@ -324,6 +364,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | `sync-dex-liquidity` | 13 min | 150+ pool crawl, with headroom below the platform wall-clock limit |
 | `sync-blacklist` | 8 min | Multi-chain scan + balance enrichment |
 | `sync-mint-burn` | 8 min | Multi-contract EVM log scan |
+| `sync-mint-burn-extended` | 8 min | Long-tail mint/burn lane with its own run-state |
 | `daily-digest` | 8 min | LLM generation + distribution |
 
 Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/db.ts`.
@@ -588,7 +629,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 19 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 21 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -602,17 +643,19 @@ Returns raw and effective status, recent `cron_runs`, data-quality metrics, stat
 | `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-mint-burn` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-dex-discovery` | 1,200s (20min) | `3,23,43 * * * *` |
+| `sync-mint-burn-extended` | 1,200s (20min) | `13,33,53 * * * *` |
 | `sync-dex-liquidity` | 1,800s (30min) | `10,40 * * * *` |
 | `sync-yield-data` | 1,800s (30min) | `10,40 * * * *` |
 | `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-safety-grade-history` | 86,400s (24h) | `0 8 * * *` |
+| `dispatch-telegram-alerts-daily` | 86,400s (24h) | `0 8 * * *` |
 | `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
 | `sync-bluechip` | 86,400s (24h) | `0 8 * * *` |
 | `daily-digest` | 86,400s (24h) | `0 8 * * *` |
 
-A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago.
+A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating.
 
 ### GET /api/status-history
 

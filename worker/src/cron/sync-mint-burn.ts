@@ -35,23 +35,31 @@ import {
   upsertMintBurnSyncState,
 } from "../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipeline/types";
+import type { CronProgressReporter } from "../lib/db";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
 const MAX_SCAN_RANGE = 50_000;
 const EVM_SAFETY_MARGIN_BLOCKS = 75; // Math.ceil(900s indexing safety / 12s block time)
 
-const MINT_BURN_JOB = "sync-mint-burn";
+const MINT_BURN_CRITICAL_JOB = "sync-mint-burn";
+const MINT_BURN_EXTENDED_JOB = "sync-mint-burn-extended";
 const GLOBAL_BUDGET_LIMIT = 200;
+const CRITICAL_CONFIG_BUDGET_LIMIT = 60;
+const EXTENDED_CONFIG_BUDGET_LIMIT = 25;
 const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
 const SQL_IN_CHUNK_SIZE = 90;
 
 type SyncMintBurnStatus = "ok" | "degraded" | "error";
+export type MintBurnLane = "all" | "critical" | "extended";
 
 export interface SyncMintBurnOptions {
   signal?: AbortSignal;
   disabledConfigIds?: Iterable<string>;
   disabledSymbols?: Iterable<string>;
+  lane?: MintBurnLane;
+  jobName?: string;
+  onProgress?: CronProgressReporter;
 }
 
 interface MintBurnConfigSummary {
@@ -88,6 +96,8 @@ interface MintBurnConfigSummary {
     | null;
   missingTimestampCount: number;
   earliestMissingTimestampBlock: number | null;
+  requestBudgetLimit: number;
+  requestBudgetUsed: number;
 }
 
 interface MintBurnRunStateRow {
@@ -101,6 +111,16 @@ function configKey(config: MintBurnContractConfig): string {
 
 function configTier(config: MintBurnContractConfig): MintBurnTier {
   return config.tier ?? "critical";
+}
+
+function laneIncludesConfig(lane: MintBurnLane, config: MintBurnContractConfig): boolean {
+  if (lane === "all") return true;
+  return lane === configTier(config);
+}
+
+function resolveMintBurnJobName(lane: MintBurnLane, explicitJobName?: string): string {
+  if (explicitJobName) return explicitJobName;
+  return lane === "extended" ? MINT_BURN_EXTENDED_JOB : MINT_BURN_CRITICAL_JOB;
 }
 
 function eventDefLabel(eventDef: MintBurnEventDef): string {
@@ -153,13 +173,14 @@ function rotateArray<T>(values: T[], start: number): T[] {
 
 async function getMintBurnRunState(
   db: D1Database,
+  jobName: string,
 ): Promise<{ state: MintBurnRunStateRow; persistenceFailed: boolean }> {
   try {
     const row = await db
       .prepare(
         "SELECT next_config_index, degraded_streak FROM mint_burn_run_state WHERE job = ?",
       )
-      .bind(MINT_BURN_JOB)
+      .bind(jobName)
       .first<{ next_config_index: number; degraded_streak: number }>();
 
     return {
@@ -181,6 +202,7 @@ async function getMintBurnRunState(
 
 async function setMintBurnRunState(
   db: D1Database,
+  jobName: string,
   nextConfigIndex: number,
   degradedStreak: number,
 ): Promise<boolean> {
@@ -195,7 +217,7 @@ async function setMintBurnRunState(
            degraded_streak = excluded.degraded_streak,
            updated_at = excluded.updated_at`,
       )
-      .bind(MINT_BURN_JOB, nextConfigIndex, degradedStreak, now)
+      .bind(jobName, nextConfigIndex, degradedStreak, now)
       .run();
     return true;
   } catch (error) {
@@ -212,6 +234,9 @@ export async function syncMintBurn(
 ): Promise<{ itemCount: number; metadata: string; status?: SyncMintBurnStatus }> {
   const options = normalizeSyncMintBurnOptions(signalOrOptions);
   const signal = options.signal;
+  const lane = options.lane ?? "all";
+  const jobName = resolveMintBurnJobName(lane, options.jobName);
+  const reportProgress = options.onProgress;
 
   const throwIfAborted = () => {
     if (signal?.aborted) {
@@ -227,7 +252,7 @@ export async function syncMintBurn(
   const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
 
   const allTrackableConfigs = MINT_BURN_CONFIGS.filter(
-    (config) => config.chain.chainId === ETHEREUM_CHAIN_ID,
+    (config) => config.chain.chainId === ETHEREUM_CHAIN_ID && laneIncludesConfig(lane, config),
   );
   const enabledConfigs: MintBurnContractConfig[] = [];
   const disabledConfigReasons = new Map<string, string>();
@@ -258,6 +283,8 @@ export async function syncMintBurn(
 
   if (enabledConfigs.length === 0) {
     const metadata = JSON.stringify({
+      lane,
+      jobName,
       rowsRead: 0,
       rowsParsed: 0,
       rowsInserted: 0,
@@ -296,7 +323,7 @@ export async function syncMintBurn(
   }
   const apiKey = alchemyApiKey;
 
-  const runStateSnapshot = await getMintBurnRunState(db);
+  const runStateSnapshot = await getMintBurnRunState(db, jobName);
   const runState = runStateSnapshot.state;
   const startIndex = runState.nextConfigIndex % enabledConfigs.length;
   const rotatedConfigs = rotateArray(enabledConfigs, startIndex);
@@ -330,6 +357,19 @@ export async function syncMintBurn(
     stablecoinIds,
     SQL_IN_CHUNK_SIZE,
   );
+
+  await reportProgress?.({
+    stage: lane === "extended" ? "extended-queue" : lane === "critical" ? "critical-queue" : "queue",
+    itemsDone: 0,
+    itemsTotal: configs.length,
+    message: `Preparing ${configs.length} config(s) for ${lane} mint/burn sync`,
+    metadata: {
+      lane,
+      jobName,
+      contractsEnabled: enabledConfigs.length,
+      contractsTotal,
+    },
+  });
 
   let rowsRead = 0;
   let rowsParsed = 0;
@@ -381,7 +421,24 @@ export async function syncMintBurn(
       advanceReason: null,
       missingTimestampCount: 0,
       earliestMissingTimestampBlock: null,
+      requestBudgetLimit: 0,
+      requestBudgetUsed: 0,
     };
+    await reportProgress?.({
+      stage: "scan-config",
+      itemsDone: i,
+      itemsTotal: configs.length,
+      message: `Scanning ${config.symbol} on ${config.chain.chainName}`,
+      metadata: {
+        lane,
+        jobName,
+        configKey: key,
+        symbol: config.symbol,
+        tier,
+        budgetUsed: budget.count,
+        budgetLimit: budget.limit,
+      },
+    });
     const finalizeSummary = (criticalOutcome: "satisfied" | "unsatisfied" | "n/a" = "n/a"): void => {
       if (tier === "critical") {
         if (criticalOutcome === "satisfied") {
@@ -430,6 +487,16 @@ export async function syncMintBurn(
 
     summary.attempted = true;
     contractsProcessed++;
+    const configBudget = createBudget(
+      Math.max(
+        1,
+        Math.min(
+          budget.limit - budget.count,
+          tier === "critical" ? CRITICAL_CONFIG_BUDGET_LIMIT : EXTENDED_CONFIG_BUDGET_LIMIT,
+        ),
+      ),
+    );
+    summary.requestBudgetLimit = configBudget.limit;
 
     const maxRange = MAX_SCAN_RANGE;
     const scanTo = Math.min(fromBlock + maxRange - 1, chainHead);
@@ -439,7 +506,7 @@ export async function syncMintBurn(
     const allConfigLogs: Array<{ eventDef: MintBurnEventDef; logs: AlchemyLogEntry[] }> = [];
     for (const eventDef of config.events) {
       const label = eventDefLabel(eventDef);
-      if (budgetExhausted(budget)) {
+      if (budgetExhausted(configBudget)) {
         summary.failedEventDefs.push(`${label}:budget`);
         summary.eventCoverage.push({
           eventDef: label,
@@ -462,7 +529,7 @@ export async function syncMintBurn(
         topics,
         fromBlock,
         scanTo,
-        budget,
+        configBudget,
         signal,
       );
 
@@ -505,7 +572,7 @@ export async function syncMintBurn(
       ...new Set(allConfigLogs.flatMap(({ logs }) => logs.map((log) => parseInt(log.blockNumber, 16)))),
     ];
     const blockTimestamps = uniqueBlocks.length > 0
-      ? await resolveBlockTimestamps(alchemyUrl, uniqueBlocks, budget, {
+      ? await resolveBlockTimestamps(alchemyUrl, uniqueBlocks, configBudget, {
           signal,
           localCache: chainTimestampCache,
           persistentCache: {
@@ -556,7 +623,7 @@ export async function syncMintBurn(
         parsed.rows,
         config,
         alchemyUrl,
-        budget,
+        configBudget,
         txContextCache,
         signal,
       );
@@ -632,6 +699,8 @@ export async function syncMintBurn(
       lastBlocksAfterRun.set(key, newLastBlock);
       summary.advancedTo = newLastBlock;
     }
+    summary.requestBudgetUsed = configBudget.count;
+    budget.count += configBudget.count;
 
     console.log(
       `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: ` +
@@ -647,6 +716,19 @@ export async function syncMintBurn(
   }
 
   await recalcAffectedHours(db, affectedHours);
+  await reportProgress?.({
+    stage: "recalc-hours",
+    itemsDone: configs.length,
+    itemsTotal: configs.length,
+    message: `Recalculating ${affectedHours.size} affected hourly bucket(s)`,
+    metadata: {
+      lane,
+      jobName,
+      affectedHours: affectedHours.size,
+      budgetUsed: budget.count,
+      budgetLimit: budget.limit,
+    },
+  });
 
   const laggingConfigs = configs
     .map((config) => {
@@ -670,12 +752,13 @@ export async function syncMintBurn(
   const criticalCoverageRatio =
     criticalContractsEnabled > 0 ? criticalContractsSatisfied / criticalContractsEnabled : 1;
   const degradedSignal =
-    criticalCoverageRatio < 1 ||
-    apiErrors > 1;
+    lane === "extended"
+      ? apiErrors > 1
+      : criticalCoverageRatio < 1 || apiErrors > 1;
   const degradedStreak = degradedSignal ? runState.degradedStreak + 1 : 0;
 
   let status: SyncMintBurnStatus = "ok";
-  if (degradedStreak >= ERROR_CONSECUTIVE_THRESHOLD) {
+  if (lane !== "extended" && degradedStreak >= ERROR_CONSECUTIVE_THRESHOLD) {
     status = "error";
   } else if (degradedStreak >= DEGRADE_CONSECUTIVE_THRESHOLD) {
     status = "degraded";
@@ -684,7 +767,7 @@ export async function syncMintBurn(
   const nextConfigIndex = enabledConfigs.length > 0
     ? (startIndex + 1) % enabledConfigs.length
     : 0;
-  const runStatePersisted = await setMintBurnRunState(db, nextConfigIndex, degradedStreak);
+  const runStatePersisted = await setMintBurnRunState(db, jobName, nextConfigIndex, degradedStreak);
   const runStatePersistenceFailed = runStateSnapshot.persistenceFailed || !runStatePersisted;
 
   if (runStatePersistenceFailed && status === "ok") {
@@ -706,6 +789,8 @@ export async function syncMintBurn(
   }
 
   const metadata = JSON.stringify({
+    lane,
+    jobName,
     rowsRead,
     rowsParsed,
     rowsInserted,
@@ -722,6 +807,8 @@ export async function syncMintBurn(
     contractsProcessed,
     contractsSkipped,
     contractsDeferredExtended,
+    budgetUsed: budget.count,
+    budgetLimit: budget.limit,
     apiErrors,
     validationFailures: apiErrors,
     fallbackMode: null,
@@ -744,6 +831,22 @@ export async function syncMintBurn(
     degradedStreak,
     runStatePersistenceFailed,
     nullPricesHealed,
+  });
+
+  await reportProgress?.({
+    stage: "complete",
+    itemsDone: configs.length,
+    itemsTotal: configs.length,
+    message: `Completed ${lane} mint/burn sync`,
+    metadata: {
+      lane,
+      jobName,
+      status,
+      contractsProcessed,
+      contractsSkipped,
+      budgetUsed: budget.count,
+      budgetLimit: budget.limit,
+    },
   });
 
   console.log(`[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests (${status})`);

@@ -829,11 +829,24 @@ export interface CronRun {
   metadata?: Record<string, unknown>;
 }
 
+export interface CronInFlight {
+  startedAt: number;
+  updatedAt: number;
+  stage?: string;
+  itemsDone?: number;
+  itemsTotal?: number;
+  message?: string;
+  leaseOwner?: string;
+  metadata?: Record<string, unknown>;
+  stale: boolean;
+}
+
 export interface CronStatus {
   lastRun: CronRun | null;
   recentRuns: CronRun[];
   expectedIntervalSec: number;
   healthy: boolean;
+  inFlight?: CronInFlight | null;
 }
 
 export interface StatusCause {
@@ -879,6 +892,7 @@ export interface StatusProbeSummary {
   sampleCount: number;
   passCount: number;
   failCount: number;
+  bootstrapMissCount?: number;
   p95LatencyMs: number | null;
 }
 

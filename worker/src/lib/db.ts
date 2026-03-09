@@ -142,6 +142,17 @@ export interface CronResult {
   status?: "ok" | "degraded" | "error" | "skipped_locked";
 }
 
+export interface CronProgressUpdate {
+  stage?: string | null;
+  itemsDone?: number | null;
+  itemsTotal?: number | null;
+  message?: string | null;
+  leaseOwner?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export type CronProgressReporter = (update: CronProgressUpdate) => Promise<void>;
+
 // --- Cron lease primitives ---
 
 export interface CronLeaseOptions {
@@ -350,9 +361,62 @@ const CRON_TIMEOUT_MS: Record<string, number> = {
   "sync-dex-discovery":  14 * 60_000,
   "sync-blacklist":       8 * 60_000,
   "sync-mint-burn":       8 * 60_000,
+  "sync-mint-burn-extended": 8 * 60_000,
   "daily-digest":         8 * 60_000,
 };
 const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
+
+function serializeProgressMetadata(metadata: Record<string, unknown> | null | undefined): string | null {
+  if (!metadata || Object.keys(metadata).length === 0) return null;
+  return JSON.stringify(metadata);
+}
+
+async function upsertCronProgress(
+  db: D1Database,
+  job: string,
+  startedAt: number,
+  progress: Required<Omit<CronProgressUpdate, "metadata">> & { metadata: Record<string, unknown> | null },
+): Promise<void> {
+  const updatedAt = Math.floor(Date.now() / 1000);
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT INTO cron_run_progress
+           (job, started_at, updated_at, stage, items_done, items_total, message, lease_owner, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(job) DO UPDATE SET
+           started_at = excluded.started_at,
+           updated_at = excluded.updated_at,
+           stage = excluded.stage,
+           items_done = excluded.items_done,
+           items_total = excluded.items_total,
+           message = excluded.message,
+           lease_owner = excluded.lease_owner,
+           metadata = excluded.metadata`,
+      )
+      .bind(
+        job,
+        startedAt,
+        updatedAt,
+        progress.stage,
+        progress.itemsDone,
+        progress.itemsTotal,
+        progress.message,
+        progress.leaseOwner,
+        serializeProgressMetadata(progress.metadata),
+      )
+      .run()
+  );
+}
+
+async function clearCronProgress(db: D1Database, job: string): Promise<void> {
+  await runWithOverloadRetry(() =>
+    db
+      .prepare("DELETE FROM cron_run_progress WHERE job = ?")
+      .bind(job)
+      .run()
+  );
+}
 
 /**
  * Wraps a cron job function with execution logging and an AbortController timeout.
@@ -362,7 +426,7 @@ const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
 export async function logCronRun(
   db: D1Database,
   job: string,
-  fn: (signal: AbortSignal) => Promise<CronResult | void>,
+  fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
   alertFn?: (title: string, message: string) => Promise<unknown> | void,
 ): Promise<CronResult | void> {
   const startMs = Date.now();
@@ -372,6 +436,31 @@ export async function logCronRun(
   const timeoutError = new CronTimeoutError(job, timeoutMs);
   let resolvedResult: CronResult | void;
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  let progressActivated = false;
+  let progressState: Required<Omit<CronProgressUpdate, "metadata">> & { metadata: Record<string, unknown> | null } = {
+    stage: "running",
+    itemsDone: null,
+    itemsTotal: null,
+    message: null,
+    leaseOwner: null,
+    metadata: null,
+  };
+  const reportProgress: CronProgressReporter = async (update) => {
+    progressActivated = true;
+    progressState = {
+      stage: update.stage === undefined ? progressState.stage : update.stage ?? null,
+      itemsDone: update.itemsDone === undefined ? progressState.itemsDone : update.itemsDone ?? null,
+      itemsTotal: update.itemsTotal === undefined ? progressState.itemsTotal : update.itemsTotal ?? null,
+      message: update.message === undefined ? progressState.message : update.message ?? null,
+      leaseOwner: update.leaseOwner === undefined ? progressState.leaseOwner : update.leaseOwner ?? null,
+      metadata: update.metadata === undefined ? progressState.metadata : update.metadata ?? null,
+    };
+    try {
+      await upsertCronProgress(db, job, startSec, progressState);
+    } catch (err) {
+      console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
+    }
+  };
   const timeoutPromise = new Promise<never>((_resolve, reject) => {
     timeoutHandle = setTimeout(() => {
       ac.abort(timeoutError);
@@ -381,7 +470,7 @@ export async function logCronRun(
 
   try {
     resolvedResult = await Promise.race([
-      fn(ac.signal),
+      fn(ac.signal, reportProgress),
       timeoutPromise,
     ]);
     const resultStatus = resolvedResult?.status ?? "ok";
@@ -426,6 +515,13 @@ export async function logCronRun(
     throw e;
   } finally {
     if (timeoutHandle) clearTimeout(timeoutHandle);
+    if (progressActivated) {
+      try {
+        await clearCronProgress(db, job);
+      } catch (err) {
+        console.warn(`[db] Failed to clear cron progress for ${job}:`, err);
+      }
+    }
   }
   // Prune rows older than 7 days
   try {
