@@ -18,12 +18,15 @@ export interface FlowIntensityInput {
   baselineDailyAbs: number;
   /** How many days of flow history we have */
   dataAgeDays: number;
+  /** Current 24 h absolute flow (|mint| + |burn|), USD — used for activity gate */
+  currentDailyAbs?: number;
 }
 
 const DENOM_SCALE = 0.3;
 const DENOM_FLOOR = 1_000_000; // $1 M minimum denominator
 const Z_MULTIPLIER = 50;
 const MIN_DATA_DAYS = 7;
+export const MIN_ACTIVITY_USD = 50_000;
 
 /**
  * Compute the Flow Intensity Score for a single stablecoin.
@@ -33,11 +36,13 @@ const MIN_DATA_DAYS = 7;
  *   z = (currentDailyNet − baselineDailyNet) / denominator
  *   intensity = clamp(-100, 100, z * 50)
  *
- * Returns `null` when we have fewer than 7 days of data.
+ * Returns `null` when 24h absolute flow is below MIN_ACTIVITY_USD,
+ * or when we have fewer than 7 days of data.
  */
 export function computeFlowIntensity(
   input: FlowIntensityInput
 ): number | null {
+  if (input.currentDailyAbs !== undefined && input.currentDailyAbs < MIN_ACTIVITY_USD) return null;
   if (input.dataAgeDays < MIN_DATA_DAYS) return null;
 
   const denominator = Math.max(

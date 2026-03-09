@@ -674,6 +674,7 @@ export async function generateDailyDigest(
         baselineDailyNet: f30.avg_daily_net,
         baselineDailyAbs: f30.avg_daily_abs,
         dataAgeDays: f30.data_days,
+        currentDailyAbs: f24.mint_24h + f24.burn_24h,
       });
       coinIntensities.push({ id, symbol: coin.symbol, intensity, net24h: f24.net_24h, mcap: getCirculatingRaw(coin) });
     }

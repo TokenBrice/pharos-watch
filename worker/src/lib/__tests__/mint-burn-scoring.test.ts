@@ -18,6 +18,39 @@ describe("computeFlowIntensity", () => {
     ).toBeNull();
   });
 
+  it("returns null when currentDailyAbs is below MIN_ACTIVITY_USD", () => {
+    const result = computeFlowIntensity({
+      currentDailyNet: 10_000,
+      baselineDailyNet: 5_000,
+      baselineDailyAbs: 20_000,
+      dataAgeDays: 30,
+      currentDailyAbs: 40_000, // below 50K threshold
+    });
+    expect(result).toBeNull();
+  });
+
+  it("returns score when currentDailyAbs meets MIN_ACTIVITY_USD", () => {
+    const result = computeFlowIntensity({
+      currentDailyNet: 100_000,
+      baselineDailyNet: 50_000,
+      baselineDailyAbs: 200_000,
+      dataAgeDays: 30,
+      currentDailyAbs: 150_000, // above 50K threshold
+    });
+    expect(result).not.toBeNull();
+  });
+
+  it("skips activity gate when currentDailyAbs is undefined (backward compat)", () => {
+    const result = computeFlowIntensity({
+      currentDailyNet: 100_000,
+      baselineDailyNet: 50_000,
+      baselineDailyAbs: 200_000,
+      dataAgeDays: 30,
+      // no currentDailyAbs - legacy callers
+    });
+    expect(result).not.toBeNull();
+  });
+
   it("returns exactly 0 when current equals baseline (neutral)", () => {
     const result = computeFlowIntensity({
       currentDailyNet: 1e8,
