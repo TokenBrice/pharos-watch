@@ -65,11 +65,11 @@ const EXAMPLE_MESSAGES = [
   {
     label: "DEWS band escalation",
     content: `DEWS Band Change: USDT
-Calm -> Elevated (score: 34)
+WATCH -> ALERT (score: 42)
 
 Top stress signals:
-  pool_balance_drift: 0.42
-  supply_velocity: 0.38
+  pool_balance_drift: 0.61
+  supply_velocity: 0.48
 
 View on Pharos: pharos.watch/stablecoin/tether`,
   },
@@ -238,10 +238,10 @@ export default function TelegramPage() {
                   </div>
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
-                      /subscribe safety DAI,FRAX
+                      /subscribe safety USDS,frxUSD,fxUSD
                     </code>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Get notified when DAI or FRAX safety grades change
+                      Get notified when USDS, frxUSD or fxUSD safety score changes
                     </p>
                   </div>
                   <div>
@@ -337,12 +337,9 @@ export default function TelegramPage() {
               </table>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ticker matching is case-insensitive. If a symbol matches multiple
-              coins (e.g.{" "}
-              <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
-                USD
-              </span>
-              ), the bot will ask you to pick from a numbered list.
+              Ticker matching is case-insensitive and requires an exact symbol
+              match. If an unknown ticker is close to a known symbol, the bot
+              will suggest the closest match.
             </p>
           </CardContent>
         </Card>
