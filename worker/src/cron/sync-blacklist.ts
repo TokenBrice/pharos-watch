@@ -318,10 +318,17 @@ async function fetchEvmEventsIncremental(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-): Promise<{ rows: BlacklistRow[]; maxBlock: number; apiError: boolean; chainHead: number | null; usedRpcLogs: boolean }> {
+): Promise<{
+  rows: BlacklistRow[];
+  maxBlock: number;
+  apiError: boolean;
+  chainHead: number | null;
+  usedRpcLogs: boolean;
+  scannedToBlock: number | null;
+}> {
   const evmChainId = config.chain.evmChainId;
   if (evmChainId == null) {
-    return { rows: [], maxBlock: fromBlock, apiError: false, chainHead: null, usedRpcLogs: false };
+    return { rows: [], maxBlock: fromBlock, apiError: false, chainHead: null, usedRpcLogs: false, scannedToBlock: null };
   }
 
   const allRows: BlacklistRow[] = [];
@@ -329,6 +336,7 @@ async function fetchEvmEventsIncremental(
   let apiError = false;
   let chainHead: number | null = null;
   let usedRpcLogs = false;
+  let scannedToBlock: number | null = null;
   const blockTimestampCache = new Map<number, number>();
   let rpcTargetPromise: Promise<{ rpcUrl: string; chainHead: number } | null> | null = null;
   const getRpcTarget = (): Promise<{ rpcUrl: string; chainHead: number } | null> => {
@@ -372,7 +380,7 @@ async function fetchEvmEventsIncremental(
 
         const fetchedLogs =
           fromBlock > rpcTarget.chainHead
-            ? { logs: [], complete: true }
+            ? { logs: [], complete: true, scannedToBlock: rpcTarget.chainHead, calls: 0, maxDepth: 0 }
             : await fetchAlchemyLogs(
                 rpcTarget.rpcUrl,
                 config.contractAddress,
@@ -397,6 +405,18 @@ async function fetchEvmEventsIncremental(
                 localCache: blockTimestampCache,
               })
             : new Map<number, number>();
+          let eventScannedToBlock = fetchedLogs.scannedToBlock;
+          if (uniqueBlocks.length > blockTimestamps.size) {
+            const earliestMissingBlock = uniqueBlocks
+              .filter((block) => !blockTimestamps.has(block))
+              .reduce((min, block) => Math.min(min, block), Number.POSITIVE_INFINITY);
+            if (Number.isFinite(earliestMissingBlock)) {
+              eventScannedToBlock = Math.min(eventScannedToBlock, earliestMissingBlock - 1);
+            }
+          }
+          scannedToBlock = scannedToBlock == null
+            ? eventScannedToBlock
+            : Math.min(scannedToBlock, eventScannedToBlock);
 
           rows = parseEvmLogs(
             config,
@@ -429,7 +449,7 @@ async function fetchEvmEventsIncremental(
     }
   }
 
-  return { rows: allRows, maxBlock, apiError, chainHead, usedRpcLogs };
+  return { rows: allRows, maxBlock, apiError, chainHead, usedRpcLogs, scannedToBlock };
 }
 
 // --- Tron fetching ---
@@ -772,7 +792,14 @@ export async function syncBlacklist(
     }
 
     try {
-      let result: { rows: BlacklistRow[]; maxBlock: number; apiError?: boolean; chainHead?: number | null; usedRpcLogs?: boolean };
+      let result: {
+        rows: BlacklistRow[];
+        maxBlock: number;
+        apiError?: boolean;
+        chainHead?: number | null;
+        usedRpcLogs?: boolean;
+        scannedToBlock?: number | null;
+      };
 
       if (config.chain.type === "tron") {
         result = await fetchTronEventsIncremental(config, trongridApiKey, lastBlock, tronLimiter, budget, signal);
@@ -804,13 +831,20 @@ export async function syncBlacklist(
         await insertRows(db, result.rows);
 
         let newBlock: number;
-        if (result.rows.length > 0) {
-          newBlock = result.maxBlock;
-        } else if (result.apiError) {
-          // API failure — don't advance sync state; retry next cycle
+        if (result.apiError) {
+          const partialAdvance = result.scannedToBlock;
           apiErrors++;
-          console.warn(`[sync-blacklist] API error scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`);
-          newBlock = lastBlock;
+          if (partialAdvance != null && partialAdvance > lastBlock) {
+            newBlock = partialAdvance;
+            console.warn(
+              `[sync-blacklist] Partial coverage scanning ${config.stablecoin} on ${config.chain.chainName}, advancing sync from ${lastBlock} to ${newBlock}`
+            );
+          } else {
+            console.warn(`[sync-blacklist] API error scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`);
+            newBlock = lastBlock;
+          }
+        } else if (result.rows.length > 0) {
+          newBlock = result.maxBlock;
         } else {
           // Genuine no events — advance sync state toward chain head, but leave a safety
           // margin to avoid permanently skipping events that the explorer hasn't indexed yet.

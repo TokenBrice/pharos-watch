@@ -70,7 +70,7 @@ vi.mock("../../lib/blacklist-contracts", () => ({
 }));
 
 vi.mock("../../lib/alchemy-logs", () => ({
-  fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, calls: 1, maxDepth: 0 })),
+  fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 20000000, calls: 1, maxDepth: 0 })),
   getAlchemyBlockNumber: vi.fn(async () => 20000000),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
@@ -154,7 +154,13 @@ describe("syncBlacklist", () => {
     vi.mocked(batchExecute).mockResolvedValue(0);
     vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
-    vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: [], complete: true, calls: 1, maxDepth: 0 });
+    vi.mocked(fetchAlchemyLogs).mockResolvedValue({
+      logs: [],
+      complete: true,
+      scannedToBlock: 20000000,
+      calls: 1,
+      maxDepth: 0,
+    });
     vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20000000);
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map());
     vi.mocked(getChainRpc).mockImplementation((chainId: string) =>
@@ -344,6 +350,7 @@ describe("syncBlacklist", () => {
         },
       ],
       complete: true,
+      scannedToBlock: 20000000,
       calls: 1,
       maxDepth: 0,
     });
@@ -365,5 +372,38 @@ describe("syncBlacklist", () => {
     const meta = JSON.parse(result.metadata);
     expect(meta.apiErrors).toBe(0);
     expect(meta.rpcLogConfigs).toBeGreaterThanOrEqual(1);
+  });
+
+  it("advances the cursor after partial RPC coverage instead of restarting from zero", async () => {
+    const db = makeDb();
+
+    vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) => (
+      configKey.startsWith("base-") ? 0 : 100
+    ));
+    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
+      logs: [],
+      complete: false,
+      scannedToBlock: 12345,
+      calls: 9,
+      maxDepth: 3,
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ success: true, data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+    );
+
+    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
+
+    expect(result.itemCount).toBe(0);
+    const meta = JSON.parse(result.metadata);
+    expect(meta.apiErrors).toBe(1);
+    expect(setLastBlock).toHaveBeenCalledWith(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 12345);
   });
 });

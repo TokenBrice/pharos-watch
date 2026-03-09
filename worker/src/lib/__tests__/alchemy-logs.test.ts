@@ -145,12 +145,13 @@ describe("fetchAlchemyLogs", () => {
 
     expect(result).not.toBeNull();
     expect(result?.complete).toBe(true);
+    expect(result?.scannedToBlock).toBe(0x176f100);
     expect(result?.logs).toHaveLength(1);
     expect(result?.logs[0].transactionHash).toBe("0xabc123");
     expect(budget.count).toBe(1);
   });
 
-  it("returns null when budget exhausted", async () => {
+  it("returns incomplete coverage when budget is exhausted before the call starts", async () => {
     const budget = createBudget(0);
     const result = await fetchAlchemyLogs(
       "https://eth-mainnet.g.alchemy.com/v2/key",
@@ -161,7 +162,13 @@ describe("fetchAlchemyLogs", () => {
       budget,
     );
 
-    expect(result).toBeNull();
+    expect(result).toEqual({
+      logs: [],
+      complete: false,
+      scannedToBlock: 99,
+      calls: 0,
+      maxDepth: 0,
+    });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -196,6 +203,7 @@ describe("fetchAlchemyLogs", () => {
 
     expect(result).not.toBeNull();
     expect(result?.complete).toBe(true);
+    expect(result?.scannedToBlock).toBe(200);
     expect(result?.logs).toHaveLength(2);
     expect(result?.maxDepth).toBeGreaterThan(0);
   });
@@ -235,6 +243,7 @@ describe("fetchAlchemyLogs", () => {
 
     expect(result).not.toBeNull();
     expect(result?.complete).toBe(false);
+    expect(result?.scannedToBlock).toBe(150);
     expect(result?.logs).toHaveLength(1);
   });
 

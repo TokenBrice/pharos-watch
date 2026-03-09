@@ -234,6 +234,7 @@ CREATE TABLE blacklist_sync_state (
 | Tron       | `tron-{contractAddress}`      | `tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t` |
 
 **Important:** For EVM chains, `last_block` stores block numbers. For Tron, it stores millisecond timestamps (NOT block numbers).
+For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` coverage now advances `last_block` to the highest contiguous block that was fully scanned so backlogs catch up across runs instead of restarting from `0`.
 
 ---
 
@@ -261,6 +262,7 @@ CREATE TABLE blacklist_sync_state (
 
 4. **Sync state advancement**
    - EVM: advance to max block of fetched events, or to the active source's chain head minus safety margin if no events
+   - EVM RPC partial coverage: if `eth_getLogs`/timestamp resolution only completes part of the range, advance to the highest contiguous fully scanned block and retry the remainder next cycle
    - Tron: advance to max timestamp, or to `now - TRON_SAFETY_MS` if no events
 
 ### Safety Margins
@@ -427,7 +429,8 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 8. **Etherscan free-tier `getLogs`** is not available on Base, Optimism, Avalanche, or BSC -- those chains use chain RPC log scans instead.
 9. **EVM sentinel bug (fixed):** storing `99999999` as `last_block` could cause permanent scan stall.
 10. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
-11. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
+11. **Partial RPC scans now preserve progress:** incomplete Base/Optimism/Avalanche/BSC log scans still advance to the highest safely covered block, so large first-sync backlogs drain over multiple cron runs instead of re-scanning genesis every time.
+12. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
 
 ---
 

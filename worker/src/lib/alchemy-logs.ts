@@ -46,6 +46,7 @@ interface JsonRpcCallResult<T> {
 export interface AlchemyLogsFetchResult {
   logs: AlchemyLogEntry[];
   complete: boolean;
+  scannedToBlock: number;
   calls: number;
   maxDepth: number;
 }
@@ -220,7 +221,7 @@ export async function fetchAlchemyLogs(
   budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<AlchemyLogsFetchResult | null> {
-  const result = await fetchAlchemyLogsRange(
+  return fetchAlchemyLogsRange(
     alchemyUrl,
     contractAddress,
     topics,
@@ -230,8 +231,6 @@ export async function fetchAlchemyLogs(
     signal,
     0,
   );
-  if (!result.complete && result.logs.length === 0) return null;
-  return result;
 }
 
 const LOG_SPLIT_MAX_DEPTH = 8;
@@ -265,11 +264,11 @@ async function fetchAlchemyLogsRange(
   depth: number,
 ): Promise<FetchLogsRangeResult> {
   if (fromBlock > toBlock) {
-    return { logs: [], complete: true, calls: 0, maxDepth: depth };
+    return { logs: [], complete: true, scannedToBlock: toBlock, calls: 0, maxDepth: depth };
   }
 
   if (budgetExhausted(budget)) {
-    return { logs: [], complete: false, calls: 0, maxDepth: depth };
+    return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 0, maxDepth: depth };
   }
   budget.count++;
 
@@ -289,7 +288,7 @@ async function fetchAlchemyLogsRange(
   try {
     const rpc = await jsonRpcCall<AlchemyLogEntry[]>(alchemyUrl, "eth_getLogs", params, signal);
     if (Array.isArray(rpc.result)) {
-      return { logs: rpc.result, complete: true, calls: 1, maxDepth: depth };
+      return { logs: rpc.result, complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
     }
 
     const rangeSize = toBlock - fromBlock + 1;
@@ -302,12 +301,12 @@ async function fetchAlchemyLogsRange(
     );
 
     if (!canSplit || !splitRecommended) {
-      return { logs: [], complete: false, calls: 1, maxDepth: depth };
+      return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth };
     }
 
     const mid = Math.floor((fromBlock + toBlock) / 2);
     if (mid <= fromBlock || mid >= toBlock) {
-      return { logs: [], complete: false, calls: 1, maxDepth: depth };
+      return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth };
     }
 
     const [left, right] = await Promise.all([
@@ -336,12 +335,13 @@ async function fetchAlchemyLogsRange(
     return {
       logs: [...left.logs, ...right.logs],
       complete: left.complete && right.complete,
+      scannedToBlock: left.complete ? right.scannedToBlock : left.scannedToBlock,
       calls: 1 + left.calls + right.calls,
       maxDepth: Math.max(depth, left.maxDepth, right.maxDepth),
     };
   } catch (e) {
     console.warn("[alchemy-logs] eth_getLogs failed:", e);
-    return { logs: [], complete: false, calls: 1, maxDepth: depth };
+    return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth };
   }
 }
 

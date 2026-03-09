@@ -88,7 +88,7 @@ vi.mock("../../lib/alchemy-logs", () => ({
   getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
   getAlchemyTransactionByHash: vi.fn(async () => ({ hash: "0xtx", to: "0xrouter", input: "0x96f4e9f9" })),
   getAlchemyTransactionReceipt: vi.fn(async () => ({ transactionHash: "0xtx", to: "0xrouter", logs: [] })),
-  fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, calls: 1, maxDepth: 0 })),
+  fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
 
@@ -203,7 +203,13 @@ describe("syncMintBurn", () => {
     vi.mocked(getAlchemyBlockNumber).mockReset().mockResolvedValue(22_000_000);
     vi.mocked(getAlchemyTransactionByHash).mockReset().mockResolvedValue({ hash: "0xtx", to: "0xrouter", input: "0x96f4e9f9" });
     vi.mocked(getAlchemyTransactionReceipt).mockReset().mockResolvedValue({ transactionHash: "0xtx", to: "0xrouter", logs: [] });
-    vi.mocked(fetchAlchemyLogs).mockReset().mockResolvedValue({ logs: [], complete: true, calls: 1, maxDepth: 0 });
+    vi.mocked(fetchAlchemyLogs).mockReset().mockResolvedValue({
+      logs: [],
+      complete: true,
+      scannedToBlock: 22_000_000,
+      calls: 1,
+      maxDepth: 0,
+    });
     vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
     vi.mocked(batchExecute).mockReset().mockImplementation(async (_db, stmts) => stmts.length);
   });
@@ -217,9 +223,9 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({ logs: [makeMintLog(), makeMintLog({ txHash: "0xsecond", logIndex: 1 })], complete: true, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce({ logs: [makeMintLog(), makeMintLog({ txHash: "0xsecond", logIndex: 1 })], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
@@ -276,8 +282,8 @@ describe("syncMintBurn", () => {
 
     vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce(null as unknown as never)
-      .mockResolvedValueOnce({ logs: [makeMintLog()], complete: true, calls: 1, maxDepth: 0 })
-      .mockResolvedValueOnce({ logs: [], complete: true, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce({ logs: [makeMintLog()], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
@@ -306,7 +312,7 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
-      .mockResolvedValueOnce({ logs: [], complete: true, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
       .mockResolvedValueOnce({
         logs: [
           makeBurnLog({
@@ -320,10 +326,11 @@ describe("syncMintBurn", () => {
           }),
         ],
         complete: true,
+        scannedToBlock: 22_000_000,
         calls: 1,
         maxDepth: 0,
       })
-      .mockResolvedValueOnce({ logs: [], complete: true, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
     vi.mocked(getAlchemyTransactionByHash).mockImplementation(async (_url, txHash) => {
@@ -370,16 +377,18 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce({
         logs: [makeMintLog({ txHash: "0xroundtrip", logIndex: 0 })],
         complete: true,
+        scannedToBlock: 22_000_000,
         calls: 1,
         maxDepth: 0,
       })
       .mockResolvedValueOnce({
         logs: [makeBurnLog({ txHash: "0xroundtrip", logIndex: 1 })],
         complete: true,
+        scannedToBlock: 22_000_000,
         calls: 1,
         maxDepth: 0,
       })
-      .mockResolvedValueOnce({ logs: [], complete: true, calls: 1, maxDepth: 0 });
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
 
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
 
