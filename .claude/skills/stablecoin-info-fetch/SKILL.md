@@ -131,7 +131,6 @@ After user approval:
 
 - `flags` (backing, pegCurrency, governance, yieldBearing, rwa, navToken) — these are set intentionally
 - `id`, `name`, `symbol` — canonical identifiers
-- `supplyMethod` — requires separate technical verification
 - `commodityOunces` — requires domain-specific knowledge (gold/silver peg normalization)
 - `protocolSlug` / `cmcSlug` — only add if specifically identified as needed for price fallback
 

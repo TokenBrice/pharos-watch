@@ -50,7 +50,7 @@ export async function detectDepegEvents(
   });
 
   // Load DEX-implied prices for cross-validation.
-  // loadDexPriceMap handles missing-table fallbacks and logging.
+  // loadDexPriceRows handles missing-table fallbacks and logging.
   throwIfAborted(signal);
   const dexPriceRows = await loadDexPriceRows(db);
 

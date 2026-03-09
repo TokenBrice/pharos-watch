@@ -69,26 +69,6 @@ export interface ContractDeployment {
   decimals: number; // Token decimals
 }
 
-/** Configures how on-chain circulating supply is computed for a stablecoin */
-interface SupplyMethodConfig {
-  type:
-    | "totalSupply" // Default: raw totalSupply() is circulating
-    | "totalSupply-minus-addresses" // totalSupply() - sum(balanceOf(addr)) per chain
-    | "custom-contract" // Call a dedicated circulating supply contract
-    | "exclude"; // Skip on-chain supply for this token
-
-  /** For totalSupply-minus-addresses: addresses whose balanceOf() to subtract */
-  subtractAddresses?: { chain: string; address: string }[];
-
-  /** For custom-contract: dedicated contract returning circulating supply */
-  customContract?: {
-    chain: string; // Chain where the contract lives
-    address: string; // Contract address
-    selector: string; // Function selector (e.g., "0x9e2bf22c")
-    decimals: number; // Decimals for the return value
-  };
-}
-
 export type DependencyType = "wrapper" | "mechanism" | "collateral";
 
 export interface DependencyWeight {
@@ -155,7 +135,6 @@ export interface StablecoinMeta {
   jurisdiction?: Jurisdiction;
   contracts?: ContractDeployment[]; // On-chain contract deployments per chain
   tradedContracts?: ContractDeployment[]; // Wrapper / secondary-market token addresses used for trading and DEX discovery
-  supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
   dependencies?: DependencyWeight[]; // Upstream stablecoins with collateral weights (CeFi-Dependent coins only)
   canBeBlacklisted?: boolean | "possible"; // true = active blacklist, "possible" = mutable contract / governance-upgradeable, false/undefined = no
   chainTier?: ChainTier;
@@ -477,7 +456,7 @@ const StablecoinDataRawSchema = z.object({
   chains: z.array(z.string()),
 });
 
-export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
+const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
   id: asset.id,
   name: asset.name,
   symbol: asset.symbol,
@@ -558,7 +537,7 @@ export type BluechipRatingsMap = Record<string, BluechipRating>;
 // - If runtime schema and TS type are 1:1, export via z.infer.
 // - Keep hand-written interfaces only when they intentionally narrow/widen schema typing.
 
-export const DexLiquidityPoolSchema = z.object({
+const DexLiquidityPoolSchema = z.object({
   project: z.string(),
   chain: z.string(),
   tvlUsd: z.number(),
@@ -591,14 +570,14 @@ export const DexLiquidityPoolSchema = z.object({
 });
 export type DexLiquidityPool = z.infer<typeof DexLiquidityPoolSchema>;
 
-export const DexPriceSourceSchema = z.object({
+const DexPriceSourceSchema = z.object({
   protocol: z.string(),
   chain: z.string(),
   price: z.number(),
   tvl: z.number(),
 });
 
-export const DexLiquidityDataSchema = z.object({
+const DexLiquidityDataSchema = z.object({
   totalTvlUsd: z.number(),
   totalVolume24hUsd: z.number(),
   totalVolume7dUsd: z.number(),
@@ -666,7 +645,7 @@ export interface SafetyScoreHistoryPoint {
   methodologyVersion: string;
 }
 
-export const SafetyScoreHistoryPointSchema = z.object({
+const SafetyScoreHistoryPointSchema = z.object({
   date: z.number(),
   grade: z.string(),
   score: z.number().nullable(),
@@ -777,7 +756,7 @@ export interface ReportCardsResponse {
 
 // --- Stability Index types ---
 
-export const MethodologyEnvelopeSchema = z.object({
+const MethodologyEnvelopeSchema = z.object({
   version: z.string(),
   versionLabel: z.string(),
   currentVersion: z.string(),
@@ -787,14 +766,14 @@ export const MethodologyEnvelopeSchema = z.object({
   isCurrent: z.boolean(),
 });
 
-export const StabilityIndexComponentsSchema = z.object({
+const StabilityIndexComponentsSchema = z.object({
   severity: z.number(),
   breadth: z.number(),
   stressBreadth: z.number().optional(),
   trend: z.number(),
 });
 
-export const StabilityContributorSchema = z.object({
+const StabilityContributorSchema = z.object({
   id: z.string(),
   symbol: z.string(),
   bps: z.number(),
@@ -803,7 +782,7 @@ export const StabilityContributorSchema = z.object({
   factor: z.number(),
 });
 
-export const StabilityIndexCurrentSchema = z.object({
+const StabilityIndexCurrentSchema = z.object({
   score: z.number(),
   band: z.string(),
   avg24h: z.number().optional(),
@@ -815,7 +794,7 @@ export const StabilityIndexCurrentSchema = z.object({
   methodologyVersion: z.string(),
 });
 
-export const StabilityIndexHistoryPointSchema = z.object({
+const StabilityIndexHistoryPointSchema = z.object({
   date: z.number(),
   score: z.number(),
   band: z.string(),
@@ -944,7 +923,7 @@ export interface DataQuality {
   onchainStaleRatio: number;
 }
 
-export interface DatasetFreshness {
+interface DatasetFreshness {
   stablecoins: number | null;
   blacklist: number | null;
   mintBurn: number | null;
@@ -955,7 +934,7 @@ export interface DatasetFreshness {
   digest: number | null;
 }
 
-export interface TelegramBotTopStablecoin {
+interface TelegramBotTopStablecoin {
   stablecoinId: string;
   symbol: string;
   subscribers: number;
@@ -1067,7 +1046,7 @@ export interface DepegEvent {
   source: "live" | "backfill";
 }
 
-export const DepegEventSchema = z.object({
+const DepegEventSchema = z.object({
   id: z.number(),
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -1091,9 +1070,9 @@ export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
 
 // --- Peg Summary types (from /api/peg-summary) ---
 
-export type DepegDewsMethodology = z.infer<typeof MethodologyEnvelopeSchema>;
+type DepegDewsMethodology = z.infer<typeof MethodologyEnvelopeSchema>;
 
-export const PegSummaryCoinSchema = z.object({
+const PegSummaryCoinSchema = z.object({
   id: z.string(),
   symbol: z.string(),
   name: z.string(),
@@ -1124,7 +1103,7 @@ export const PegSummaryCoinSchema = z.object({
 });
 export type PegSummaryCoin = z.infer<typeof PegSummaryCoinSchema>;
 
-export const PegSummaryStatsSchema = z.object({
+const PegSummaryStatsSchema = z.object({
   activeDepegCount: z.number(),
   medianDeviationBps: z.number(),
   worstCurrent: z.object({ id: z.string(), symbol: z.string(), bps: z.number() }).nullable(),
@@ -1165,7 +1144,7 @@ export interface BlacklistEvent {
   explorerAddressUrl: string;
 }
 
-export const BlacklistEventSchema = z.object({
+const BlacklistEventSchema = z.object({
   id: z.string(),
   stablecoin: z.enum(BLACKLIST_STABLECOINS),
   chainId: z.string(),
@@ -1197,7 +1176,7 @@ export type YieldType =
   | "governance-set"
   | "lending-opportunity";
 
-export interface YieldConfig {
+interface YieldConfig {
   /** DeFiLlama pool UUID for deterministic matching */
   defiLlamaPoolId?: string;
   /** Human-readable yield source description */
@@ -1227,7 +1206,7 @@ export interface YieldHistoryPoint {
   warningSignals: string[];
 }
 
-export const AltYieldSourceSchema = z.object({
+const AltYieldSourceSchema = z.object({
   sourceKey: z.string(),
   yieldSource: z.string(),
   yieldType: z.string(),
@@ -1264,7 +1243,7 @@ export interface YieldRanking {
   altSources: AltYieldSource[];
 }
 
-export const YieldRankingSchema = z.object({
+const YieldRankingSchema = z.object({
   id: z.string(),
   symbol: z.string(),
   name: z.string(),
@@ -1314,7 +1293,7 @@ const SignedFlowIntensitySchema = z.number().min(-100).max(100);
 const PressureShiftStateSchema = z.enum(PRESSURE_SHIFT_STATE_VALUES);
 const NetFlowDirection24hSchema = z.enum(NET_FLOW_DIRECTION_24H_VALUES);
 
-export const MintBurnGaugeSchema = z.object({
+const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
   band: z.string().nullable(),
   intensitySemantics: z.enum(["midpoint-v1", "signed-v2"]).optional(),
@@ -1325,7 +1304,7 @@ export const MintBurnGaugeSchema = z.object({
 });
 export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
 
-export const MintBurnCoinFlowSchema = z.object({
+const MintBurnCoinFlowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
   // Deprecated alias retained for one compatibility cycle.
@@ -1356,7 +1335,7 @@ export const MintBurnCoinFlowSchema = z.object({
 });
 export type MintBurnCoinFlow = z.infer<typeof MintBurnCoinFlowSchema>;
 
-export const MintBurnHourlyBucketSchema = z.object({
+const MintBurnHourlyBucketSchema = z.object({
   hourTs: z.number(),
   netFlowUsd: z.number(),
   mintVolumeUsd: z.number(),
@@ -1372,7 +1351,7 @@ export const MintBurnFlowsResponseSchema = z.object({
 });
 export type MintBurnFlowsResponse = z.infer<typeof MintBurnFlowsResponseSchema>;
 
-export const MintBurnPerCoinChainSchema = z.object({
+const MintBurnPerCoinChainSchema = z.object({
   chainId: z.string(),
   mintVolumeUsd: z.number(),
   burnVolumeUsd: z.number(),
@@ -1395,9 +1374,9 @@ export const MintBurnPerCoinResponseSchema = z.object({
 });
 export type MintBurnPerCoinResponse = z.infer<typeof MintBurnPerCoinResponseSchema>;
 
-export const MintBurnFlowTypeSchema = z.enum(["standard", "atomic_roundtrip"]);
+const MintBurnFlowTypeSchema = z.enum(["standard", "atomic_roundtrip"]);
 
-export const MintBurnEventSchema = z.object({
+const MintBurnEventSchema = z.object({
   id: z.string(),
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -1427,14 +1406,14 @@ export type MintBurnEventsResponse = z.infer<typeof MintBurnEventsResponseSchema
 
 // --- Stress signals (DEWS) types ---
 
-export const SignalDetailSchema = z
+const SignalDetailSchema = z
   .object({
     value: z.number(),
     available: z.boolean(),
   })
   .passthrough();
 
-export const StressSignalEntrySchema = z.object({
+const StressSignalEntrySchema = z.object({
   score: z.number(),
   band: z.string(),
   signals: z.record(z.string(), SignalDetailSchema),
@@ -1466,7 +1445,7 @@ export interface StressSignalsAllResponse {
   methodology: DepegDewsMethodology;
 }
 
-export const StressSignalHistoryEntrySchema = z.object({
+const StressSignalHistoryEntrySchema = z.object({
   date: z.number(),
   score: z.number(),
   band: z.string(),
