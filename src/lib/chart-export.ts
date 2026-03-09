@@ -1,11 +1,10 @@
-import { toPng } from "html-to-image";
-
 export async function downloadChartPng(
   elementRef: React.RefObject<HTMLElement | null>,
   filename: string,
 ): Promise<void> {
   if (!elementRef.current) return;
   try {
+    const { toPng } = await import("html-to-image");
     const dataUrl = await toPng(elementRef.current, {
       pixelRatio: 2,
     });
