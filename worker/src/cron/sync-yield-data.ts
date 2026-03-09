@@ -324,12 +324,14 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     outputMode: "map",
   });
   const safetyScores = safetySnapshot.scores;
-  const safetyCoverageRatio = TRACKED_STABLECOINS.length > 0 ? safetyScores.size / TRACKED_STABLECOINS.length : 1;
-  const safetySnapshotDegraded = safetyScores.size === 0 || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
+  const safetyCoverageRatio = safetySnapshot.coverageRatio;
+  const safetySnapshotDegraded =
+    safetySnapshot.kind !== "ok" || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
 
   if (safetySnapshotDegraded) {
     console.warn(
-      `[sync-yield-data] Safety snapshot coverage degraded: ${safetyScores.size}/${TRACKED_STABLECOINS.length} (${(safetyCoverageRatio * 100).toFixed(1)}%)`,
+      `[sync-yield-data] Safety snapshot coverage degraded: ${safetySnapshot.coveredCount}/${safetySnapshot.trackedCount} ` +
+      `(${(safetyCoverageRatio * 100).toFixed(1)}%)${safetySnapshot.reason ? ` reason=${safetySnapshot.reason}` : ""}`,
     );
   }
 
@@ -922,6 +924,9 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   const degradationReasons: string[] = [];
   if (safetySnapshotDegraded) {
     degradationReasons.push("safety-snapshot-coverage");
+    if (safetySnapshot.reason) {
+      degradationReasons.push(`safety-snapshot:${safetySnapshot.reason}`);
+    }
   }
 
   let validationFailures = 0;
@@ -945,8 +950,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       rowsWritten: updatedCount,
       rowsDropped: 0,
       sourceCoverage: {
-        safetyScoresComputed: safetyScores.size,
-        safetyScoresExpected: TRACKED_STABLECOINS.length,
+        safetyScoresComputed: safetySnapshot.coveredCount,
+        safetyScoresExpected: safetySnapshot.trackedCount,
         safetyCoverageRatio: Number(safetyCoverageRatio.toFixed(4)),
       },
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,

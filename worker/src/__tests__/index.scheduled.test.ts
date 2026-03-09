@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const cronMocks = vi.hoisted(() => ({
-  syncStablecoins: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncStablecoins: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{\"downstreamSafe\":true,\"cacheWriteMode\":\"main-write\"}" })),
   syncStablecoinCharts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncFxRates: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeAndStoreStabilityIndex: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -120,6 +120,71 @@ describe("worker.scheduled", () => {
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
     expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips downstream-safe dependent jobs when sync-stablecoins finishes degraded without safe cache write", async () => {
+    cronMocks.syncStablecoins.mockResolvedValueOnce({
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        downstreamSafe: false,
+        cacheWriteMode: "blocked-invalid-payload",
+      }),
+    });
+
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "*/15 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
+    expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
+    expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
+  });
+
+  it("still runs dependent jobs when sync-stablecoins is degraded but marks the cache downstream-safe", async () => {
+    cronMocks.syncStablecoins.mockResolvedValueOnce({
+      status: "degraded",
+      itemCount: 1,
+      metadata: JSON.stringify({
+        downstreamSafe: true,
+        cacheWriteMode: "main-write",
+        depegErrorCount: 1,
+      }),
+    });
+
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "*/15 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
+    expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
   });
 
   it("runs dex then yield on the 30-min cron", async () => {

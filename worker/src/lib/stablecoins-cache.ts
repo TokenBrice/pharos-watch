@@ -6,21 +6,42 @@ export interface StablecoinsCachePayload {
   fxFallbackRates?: Record<string, number>;
 }
 
-interface StablecoinsCacheLoadBase {
+export type StablecoinsCacheFailureReason =
+  | "missing-cache"
+  | "json-parse-failed"
+  | "invalid-payload-shape"
+  | "missing-pegged-assets"
+  | "legacy-array-not-allowed"
+  | "legacy-array-payload";
+
+export interface StablecoinsCacheLoadOk {
+  kind: "ok";
   payload: StablecoinsCachePayload;
+  updatedAt: number;
+}
+
+export interface StablecoinsCacheLoadDegraded {
+  kind: "degraded";
+  reason: StablecoinsCacheFailureReason;
+  payload: StablecoinsCachePayload | null;
+  updatedAt: number | null;
+}
+
+export interface StablecoinsCacheLoadError {
+  kind: "error";
+  reason: StablecoinsCacheFailureReason;
   updatedAt: number | null;
 }
 
 export type StablecoinsCacheLoadResult =
-  | (StablecoinsCacheLoadBase & { ok: true; warningReason?: string })
-  | (StablecoinsCacheLoadBase & { ok: false; reason: string });
+  | StablecoinsCacheLoadOk
+  | StablecoinsCacheLoadDegraded
+  | StablecoinsCacheLoadError;
 
 export interface LoadStablecoinsCacheOptions {
   mode?: "strict" | "lenient";
   allowLegacyArray?: boolean;
 }
-
-const EMPTY_PAYLOAD: StablecoinsCachePayload = { peggedAssets: [] };
 
 function toFxFallbackRates(value: unknown): Record<string, number> | undefined {
   if (!value || typeof value !== "object") return undefined;
@@ -36,30 +57,57 @@ function toFxFallbackRates(value: unknown): Record<string, number> | undefined {
 function normalizePayload(
   parsed: unknown,
   allowLegacyArray: boolean,
-): { ok: true; payload: StablecoinsCachePayload } | { ok: false; reason: string } {
+):
+  | { kind: "ok"; payload: StablecoinsCachePayload }
+  | { kind: "degraded"; reason: "legacy-array-payload"; payload: StablecoinsCachePayload }
+  | { kind: "error"; reason: StablecoinsCacheFailureReason } {
   if (Array.isArray(parsed)) {
     if (!allowLegacyArray) {
-      return { ok: false, reason: "legacy-array-not-allowed" };
+      return { kind: "error", reason: "legacy-array-not-allowed" };
     }
-    return { ok: true, payload: { peggedAssets: parsed as StablecoinData[] } };
+    return {
+      kind: "degraded",
+      reason: "legacy-array-payload",
+      payload: { peggedAssets: parsed as StablecoinData[] },
+    };
   }
 
   if (!parsed || typeof parsed !== "object") {
-    return { ok: false, reason: "invalid-payload-shape" };
+    return { kind: "error", reason: "invalid-payload-shape" };
   }
 
   const obj = parsed as { peggedAssets?: unknown; fxFallbackRates?: unknown };
   if (!Array.isArray(obj.peggedAssets)) {
-    return { ok: false, reason: "missing-pegged-assets" };
+    return { kind: "error", reason: "missing-pegged-assets" };
   }
 
   return {
-    ok: true,
+    kind: "ok",
     payload: {
       peggedAssets: obj.peggedAssets as StablecoinData[],
       fxFallbackRates: toFxFallbackRates(obj.fxFallbackRates),
     },
   };
+}
+
+function toFailure(
+  _mode: "strict" | "lenient",
+  reason: StablecoinsCacheFailureReason,
+  updatedAt: number | null,
+): StablecoinsCacheLoadError {
+  return {
+    kind: "error",
+    reason,
+    updatedAt,
+  };
+}
+
+export function hasUsableStablecoinsPayload(
+  result: StablecoinsCacheLoadResult,
+): result is StablecoinsCacheLoadOk | (StablecoinsCacheLoadDegraded & { payload: StablecoinsCachePayload }) {
+  return (result.kind === "ok" || result.kind === "degraded")
+    && result.payload != null
+    && result.payload.peggedAssets.length > 0;
 }
 
 export async function loadStablecoinsCache(
@@ -71,44 +119,29 @@ export async function loadStablecoinsCache(
   const cached = await getCache(db, "stablecoins");
 
   if (!cached) {
-    if (mode === "strict") {
-      return { ok: false, reason: "missing-cache", payload: EMPTY_PAYLOAD, updatedAt: null };
-    }
-    return {
-      ok: true,
-      warningReason: "missing-cache",
-      payload: EMPTY_PAYLOAD,
-      updatedAt: null,
-    };
+    return toFailure(mode, "missing-cache", null);
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(cached.value);
   } catch {
-    if (mode === "strict") {
-      return { ok: false, reason: "json-parse-failed", payload: EMPTY_PAYLOAD, updatedAt: cached.updatedAt };
-    }
-    return {
-      ok: true,
-      warningReason: "json-parse-failed",
-      payload: EMPTY_PAYLOAD,
-      updatedAt: cached.updatedAt,
-    };
+    return toFailure(mode, "json-parse-failed", cached.updatedAt);
   }
 
   const normalized = normalizePayload(parsed, allowLegacyArray);
-  if (!normalized.ok) {
-    if (mode === "strict") {
-      return { ok: false, reason: normalized.reason, payload: EMPTY_PAYLOAD, updatedAt: cached.updatedAt };
-    }
+  if (normalized.kind === "error") {
+    return toFailure(mode, normalized.reason, cached.updatedAt);
+  }
+
+  if (normalized.kind === "degraded") {
     return {
-      ok: true,
-      warningReason: normalized.reason,
-      payload: EMPTY_PAYLOAD,
+      kind: "degraded",
+      reason: normalized.reason,
+      payload: normalized.payload,
       updatedAt: cached.updatedAt,
     };
   }
 
-  return { ok: true, payload: normalized.payload, updatedAt: cached.updatedAt };
+  return { kind: "ok", payload: normalized.payload, updatedAt: cached.updatedAt };
 }

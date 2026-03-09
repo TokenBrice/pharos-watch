@@ -906,6 +906,8 @@ export interface StatusTransition {
 }
 
 export interface DataQuality {
+  stablecoinsCacheStatus: "ok" | "degraded" | "error";
+  stablecoinsCacheReason: string | null;
   totalStablecoins: number;
   missingPrices: number;
   blacklistMissingAmounts: number;

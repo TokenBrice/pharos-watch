@@ -100,6 +100,7 @@ Computed from cache staleness + cron error state:
 Computed from missing prices + blacklist gaps + on-chain supply monitor:
 
 - `stale` if any of:
+  - stablecoins cache is unavailable/corrupt (`dataQuality.stablecoinsCacheStatus === "error"`)
   - `missingPriceRatio > 0.4`
   - `blacklistMissingRatio >= 0.02` (2%)
   - `blacklistRecentMissingAmounts >= 25` (last 24h)
@@ -108,6 +109,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor:
   - `onchainStaleRatio >= 0.25`
   - `onchainDivergenceRatio >= 0.25`
 - `degraded` if any of:
+  - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
   - `missingPriceRatio > 0.15`
   - `blacklistRecentMissingAmounts > 0` (last 24h)
   - `blacklistMissingRatio >= 0.005` (0.5%)
@@ -144,6 +146,13 @@ Additional response fields:
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
+
+`dataQuality` now also exposes:
+
+- `stablecoinsCacheStatus`: `ok | degraded | error`
+- `stablecoinsCacheReason`: machine-readable reason when the stablecoins cache is unavailable or transitional
+
+This prevents `/status` from silently treating a broken stablecoins cache as `0 / 0` healthy price coverage.
 
 ### Telegram bot metrics
 

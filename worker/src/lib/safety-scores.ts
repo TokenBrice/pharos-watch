@@ -10,7 +10,7 @@ import {
 } from "@shared/lib/report-cards";
 import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
-import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { PegSummaryCoin } from "@shared/types";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { getFirstSeenDates } from "./db";
 import { loadStablecoinsCache } from "./stablecoins-cache";
@@ -36,24 +36,64 @@ export interface ComputeSafetyScoresOptions {
 }
 
 type SafetyScoresResultMap = {
+  kind: "ok" | "degraded";
   mode: "map";
+  reason?: string;
+  coveredCount: number;
+  trackedCount: number;
+  coverageRatio: number;
   scores: Map<string, SafetyResult>;
 };
 
 type SafetyScoresResultFull = {
+  kind: "ok" | "degraded";
   mode: "full-grades";
+  reason?: string;
+  coveredCount: number;
+  trackedCount: number;
+  coverageRatio: number;
   scores: Map<string, SafetyResult>;
   grades: SafetyGradeRow[];
 };
 
 export type SafetyScoresSnapshotResult = SafetyScoresResultMap | SafetyScoresResultFull;
 
-function toMapResult(scores: Map<string, SafetyResult>): SafetyScoresResultMap {
-  return { mode: "map", scores };
+function toMapResult(
+  kind: "ok" | "degraded",
+  scores: Map<string, SafetyResult>,
+  trackedCount: number,
+  reason?: string,
+): SafetyScoresResultMap {
+  const coveredCount = scores.size;
+  return {
+    kind,
+    mode: "map",
+    ...(reason ? { reason } : {}),
+    coveredCount,
+    trackedCount,
+    coverageRatio: trackedCount > 0 ? coveredCount / trackedCount : 1,
+    scores,
+  };
 }
 
-function toFullResult(scores: Map<string, SafetyResult>, grades: SafetyGradeRow[]): SafetyScoresResultFull {
-  return { mode: "full-grades", scores, grades };
+function toFullResult(
+  kind: "ok" | "degraded",
+  scores: Map<string, SafetyResult>,
+  grades: SafetyGradeRow[],
+  trackedCount: number,
+  reason?: string,
+): SafetyScoresResultFull {
+  const coveredCount = scores.size;
+  return {
+    kind,
+    mode: "full-grades",
+    ...(reason ? { reason } : {}),
+    coveredCount,
+    trackedCount,
+    coverageRatio: trackedCount > 0 ? coveredCount / trackedCount : 1,
+    scores,
+    grades,
+  };
 }
 
 export async function computeSafetyScoresSnapshot(
@@ -70,16 +110,22 @@ export async function computeSafetyScoresSnapshot(
 ): Promise<SafetyScoresSnapshotResult> {
   const outputMode = options.outputMode ?? "map";
   const includeNavTokens = options.includeNavTokens ?? true;
+  const trackedCount = TRACKED_STABLECOINS.filter((meta) => includeNavTokens || !meta.flags.navToken).length;
 
   const scores = new Map<string, SafetyResult>();
   const allGrades: SafetyGradeRow[] = [];
 
   try {
-    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
-    if (stablecoinsCache.ok && stablecoinsCache.warningReason) {
-      console.warn(`[safety-scores] stablecoins cache fallback (${stablecoinsCache.warningReason})`);
+    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+    if (stablecoinsCache.kind !== "ok") {
+      const reason = `stablecoins-cache:${stablecoinsCache.reason}`;
+      console.warn(`[safety-scores] computation skipped (${reason})`);
+      if (outputMode === "full-grades") {
+        return toFullResult("degraded", scores, allGrades, trackedCount, reason);
+      }
+      return toMapResult("degraded", scores, trackedCount, reason);
     }
-    const peggedAssets = stablecoinsCache.payload.peggedAssets as StablecoinData[];
+    const peggedAssets = stablecoinsCache.payload.peggedAssets;
     const priceById = new Map(peggedAssets.map((asset) => [asset.id, asset]));
 
     const nowSec = Math.floor(Date.now() / 1000);
@@ -174,11 +220,16 @@ export async function computeSafetyScoresSnapshot(
       computeForCoin(meta);
     }
   } catch (err) {
-    console.warn("[safety-scores] computation failed, returning empty snapshot:", err);
+    const reason = err instanceof Error ? err.message : String(err);
+    console.warn("[safety-scores] computation failed, returning degraded snapshot:", err);
+    if (outputMode === "full-grades") {
+      return toFullResult("degraded", scores, allGrades, trackedCount, reason);
+    }
+    return toMapResult("degraded", scores, trackedCount, reason);
   }
 
   if (outputMode === "full-grades") {
-    return toFullResult(scores, allGrades);
+    return toFullResult("ok", scores, allGrades, trackedCount);
   }
-  return toMapResult(scores);
+  return toMapResult("ok", scores, trackedCount);
 }

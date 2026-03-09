@@ -343,13 +343,23 @@ export async function generateDailyDigest(
     const rawText = !meta ? (r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text) : null;
     return { meta, rawText };
   });
+  const degradedReasons: string[] = [];
 
   // --- Collect data ---
 
   // 1. Total mcap + 7d delta from stablecoins cache
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
-  if (stablecoinsCacheResult.ok && stablecoinsCacheResult.warningReason) {
-    console.warn(`[daily-digest] stablecoins cache fallback (${stablecoinsCacheResult.warningReason})`);
+  if (stablecoinsCacheResult.kind !== "ok") {
+    console.warn(`[daily-digest] stablecoins cache unavailable (${stablecoinsCacheResult.reason}), skipping regeneration`);
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "stablecoins-cache-unavailable",
+        stablecoinsCacheReason: stablecoinsCacheResult.reason,
+        skipped: true,
+      }),
+    };
   }
   const stablecoinAssets = stablecoinsCacheResult.payload.peggedAssets as StablecoinData[];
   const trackedStablecoinAssets = stablecoinAssets.filter((coin) => TRACKED_IDS.has(coin.id));
@@ -562,33 +572,41 @@ export async function generateDailyDigest(
       includeNavTokens: false,
       outputMode: "full-grades",
     });
-    const allGrades = safetySnapshot.grades;
-    safetyGrades = allGrades;
+    if (safetySnapshot.kind !== "ok") {
+      degradedReasons.push(`safety-snapshot:${safetySnapshot.reason ?? "degraded"}`);
+      console.warn(
+        `[daily-digest] Safety snapshot degraded: ${safetySnapshot.coveredCount}/${safetySnapshot.trackedCount} ` +
+        `(${(safetySnapshot.coverageRatio * 100).toFixed(1)}%)`,
+      );
+    } else {
+      const allGrades = safetySnapshot.grades;
+      safetyGrades = allGrades;
 
-    // Distribution stats
-    const scores = allGrades.map((g) => g.score).sort((a, b) => a - b);
-    const medianScore = scores.length > 0 ? scores[Math.floor(scores.length / 2)] : 0;
-    const medianGrade = scoreToGrade(medianScore);
-    const aboveBCount = allGrades.filter((g) => g.score >= 75).length;
-    const fCount = allGrades.filter((g) => g.grade === "F").length;
+      // Distribution stats
+      const scores = allGrades.map((g) => g.score).sort((a, b) => a - b);
+      const medianScore = scores.length > 0 ? scores[Math.floor(scores.length / 2)] : 0;
+      const medianGrade = scoreToGrade(medianScore);
+      const aboveBCount = allGrades.filter((g) => g.score >= 75).length;
+      const fCount = allGrades.filter((g) => g.grade === "F").length;
 
-    // Per-coin grades for mentioned coins + up to 2 "notable tension" coins
-    const mentionedCoinGrades = allGrades.filter((g) => mentionedSymbols.has(g.symbol));
-    const tensionCoins = allGrades
-      .filter((g) => !mentionedSymbols.has(g.symbol) && g.pegScore !== null && g.pegScore > 90 && g.score < 50)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 2);
-    const reportCoins = [...mentionedCoinGrades, ...tensionCoins];
+      // Per-coin grades for mentioned coins + up to 2 "notable tension" coins
+      const mentionedCoinGrades = allGrades.filter((g) => mentionedSymbols.has(g.symbol));
+      const tensionCoins = allGrades
+        .filter((g) => !mentionedSymbols.has(g.symbol) && g.pegScore !== null && g.pegScore > 90 && g.score < 50)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+      const reportCoins = [...mentionedCoinGrades, ...tensionCoins];
 
-    safetyScores = {
-      mentionedCoins: reportCoins.map((g) => ({
-        symbol: g.symbol, grade: g.grade, score: g.score,
-        peg: g.pegScore, liq: g.liqScore,
-      })),
-      medianGrade,
-      aboveBCount,
-      fCount,
-    };
+      safetyScores = {
+        mentionedCoins: reportCoins.map((g) => ({
+          symbol: g.symbol, grade: g.grade, score: g.score,
+          peg: g.pegScore, liq: g.liqScore,
+        })),
+        medianGrade,
+        aboveBCount,
+        fCount,
+      };
+    }
   } catch (e) {
     console.error("[daily-digest] Failed to compute safety scores:", e);
   }
@@ -1105,5 +1123,9 @@ export async function generateDailyDigest(
   }
 
   console.log(`[daily-digest] Generated and stored digest: "${digestTitle}" (${digestText.length} chars + ${digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}`);
-  return { itemCount: 1, metadata: `${digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}` };
+  return {
+    itemCount: 1,
+    ...(degradedReasons.length > 0 ? { status: "degraded" as const } : {}),
+    metadata: `${digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}`,
+  };
 }

@@ -215,6 +215,9 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(db);
 
     expect(result.itemCount).toBe(60);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.cacheWriteMode).toBe("main-write");
+    expect(metadata.downstreamSafe).toBe(true);
     // Should have written to cache
     const cacheWrites = prepareSpy.mock.calls.filter(
       (args) => (args[0] as string).includes("INSERT INTO cache")
@@ -395,6 +398,7 @@ describe("syncStablecoins", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.validationFailures).toBe(1);
     expect(metadata.cacheWriteMode).toBe("blocked-invalid-payload");
+    expect(metadata.downstreamSafe).toBe(false);
     expect(sendAlert).toHaveBeenCalledWith(
       "Stablecoins schema validation warning",
       expect.stringContaining("forced-test-validation-failure"),

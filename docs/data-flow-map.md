@@ -27,7 +27,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 
 Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worker/src/handlers/scheduled.ts`:
 
-- `*/15 * * * *`: stablecoins, chained snapshot-supply retry, charts, FX, PSI compute, DEWS compute, status self-check, Telegram alert dispatch
+- `*/15 * * * *`: stablecoins, then downstream-safe chained snapshot-supply retry / PSI / DEWS, charts, FX, status self-check, Telegram alert dispatch
 - `3,23,43 * * * *`: blacklist sync, mint/burn sync, discovery sync
 - `10,40 * * * *`: DEX liquidity sync, then yield sync
 - `0 8 * * *`: supply snapshot, safety-grade snapshot, daily Telegram alert pass, T-bill rate, PSI daily snapshot, USDS status, bluechip sync, then daily digest
@@ -45,3 +45,4 @@ Defined centrally in `src/hooks/use-api-query.ts`.
 
 - Cache passthrough endpoints include freshness metadata via `_meta` and/or `X-Data-Age`.
 - Admin/backfill endpoints bypass edge cache via `cacheBypass` flags in `shared/lib/api-endpoints.ts`.
+- The stablecoins cache loader distinguishes `ok`, `degraded`, and `error` states. Operator-facing or published consumers (`/status`, daily digest, safety snapshot) now fail closed on non-`ok` cache reads instead of treating broken cache state as an empty valid dataset.

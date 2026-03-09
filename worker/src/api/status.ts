@@ -12,7 +12,7 @@ import {
   clampConfidence,
   type StatusLevel,
 } from "../lib/status-reliability";
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { CRON_INTERVALS } from "../lib/cron-schedule";
 import {
   BLACKLIST_RECENT_WINDOW_SEC,
@@ -265,6 +265,7 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
     : maxStatus(baseAvailabilityStatus, "degraded");
 
   const dataQualityStatus: StatusResponse["dataQualityStatus"] =
+    dataQuality.stablecoinsCacheStatus === "error" ||
     missingPriceRatio > 0.4 ||
     blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
     blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale ||
@@ -273,7 +274,8 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
     staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
     onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
       ? "stale"
-      : missingPriceRatio > 0.15 ||
+      : dataQuality.stablecoinsCacheStatus === "degraded" ||
+          missingPriceRatio > 0.15 ||
           blacklistRecentMissing > 0 ||
           blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
           staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
@@ -358,6 +360,21 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
   }
 
   const dataQualityCauses: StatusCause[] = [];
+  if (dataQuality.stablecoinsCacheStatus === "error") {
+    pushCause(dataQualityCauses, {
+      code: "stablecoins_cache_unavailable",
+      layer: "data-quality",
+      severity: "critical",
+      message: `Stablecoins cache is unavailable (${dataQuality.stablecoinsCacheReason ?? "unknown"}).`,
+    });
+  } else if (dataQuality.stablecoinsCacheStatus === "degraded") {
+    pushCause(dataQualityCauses, {
+      code: "stablecoins_cache_degraded",
+      layer: "data-quality",
+      severity: "warning",
+      message: `Stablecoins cache is degraded (${dataQuality.stablecoinsCacheReason ?? "unknown"}).`,
+    });
+  }
   if (missingPriceRatio > 0.4) {
     pushCause(dataQualityCauses, {
       code: "missing_prices_stale",
@@ -537,6 +554,8 @@ export const handleStatus = withErrorHandler(
 
 function emptyDataQuality(): DataQuality {
   return {
+    stablecoinsCacheStatus: "error",
+    stablecoinsCacheReason: "db-unavailable",
     totalStablecoins: 0,
     missingPrices: 0,
     blacklistMissingAmounts: 0,
@@ -737,14 +756,16 @@ async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["data
 
 async function getDataQuality(db: D1Database, now: number): Promise<DataQuality> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
-  if (stablecoinsCacheResult.ok && stablecoinsCacheResult.warningReason) {
-    console.warn(`[status] stablecoins cache fallback (${stablecoinsCacheResult.warningReason})`);
+  if (stablecoinsCacheResult.kind !== "ok") {
+    console.warn(`[status] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason})`);
   }
-  const stablecoinAssets = stablecoinsCacheResult.payload.peggedAssets as Array<{
-    id: string;
-    price?: number;
-    circulating?: Record<string, number>;
-  }>;
+  const stablecoinAssets = hasUsableStablecoinsPayload(stablecoinsCacheResult)
+    ? stablecoinsCacheResult.payload.peggedAssets as Array<{
+        id: string;
+        price?: number;
+        circulating?: Record<string, number>;
+      }>
+    : [];
   const stablecoinAssetMap = new Map(stablecoinAssets.map((asset) => [asset.id, asset]));
 
   // Missing prices: parse stablecoins cache
@@ -846,6 +867,8 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
   }
 
   return {
+    stablecoinsCacheStatus: stablecoinsCacheResult.kind,
+    stablecoinsCacheReason: stablecoinsCacheResult.kind === "ok" ? null : stablecoinsCacheResult.reason,
     totalStablecoins,
     missingPrices,
     blacklistMissingAmounts,

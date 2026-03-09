@@ -382,19 +382,21 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   let fxRates: Record<string, number> | undefined;
 
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
-  if (stablecoinsCache.ok && stablecoinsCache.warningReason) {
-    console.warn(`[backfill-depegs] stablecoins cache fallback (${stablecoinsCache.warningReason})`);
-  } else if (!stablecoinsCache.ok) {
-    console.warn(`[backfill-depegs] stablecoins cache unavailable (${stablecoinsCache.reason})`);
+  if (stablecoinsCache.kind !== "ok") {
+    console.warn(`[backfill-depegs] stablecoins cache ${stablecoinsCache.kind} (${stablecoinsCache.reason})`);
   }
-  if (stablecoinsCache.ok) {
+  const stablecoinsPayload =
+    stablecoinsCache.kind === "ok" || (stablecoinsCache.kind === "degraded" && stablecoinsCache.payload)
+      ? stablecoinsCache.payload
+      : null;
+  if (stablecoinsPayload) {
     const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
     ({ rates: pegRates } = derivePegRates(
-      stablecoinsCache.payload.peggedAssets,
+      stablecoinsPayload.peggedAssets,
       metaById,
-      stablecoinsCache.payload.fxFallbackRates,
+      stablecoinsPayload.fxFallbackRates,
     ));
-    fxRates = stablecoinsCache.payload.fxFallbackRates;
+    fxRates = stablecoinsPayload.fxFallbackRates;
   }
 
   // Filter to processable coins (skip NAV tokens)

@@ -59,7 +59,7 @@ vi.mock("@shared/lib/depeg-dews-version", () => ({
 
 vi.mock("../stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({
-    ok: true,
+    kind: "ok",
     payload: {
       peggedAssets: [
         { id: "usdt-tether", pegType: "peggedUSD" },
@@ -97,6 +97,7 @@ describe("computeSafetyScoresSnapshot", () => {
       outputMode: "map",
     });
 
+    expect(result.kind).toBe("ok");
     expect(result.mode).toBe("map");
     expect(result.scores.has("usdt-tether")).toBe(true);
     expect(result.scores.has("usdc-circle")).toBe(true);
@@ -109,8 +110,27 @@ describe("computeSafetyScoresSnapshot", () => {
       outputMode: "full-grades",
     });
 
+    expect(result.kind).toBe("ok");
     expect(result.mode).toBe("full-grades");
     expect(result.scores.has("ust-terra")).toBe(true);
     expect(result.grades.some((grade) => grade.id === "ust-terra")).toBe(true);
+  });
+
+  it("returns degraded result when stablecoins cache is unavailable", async () => {
+    const { loadStablecoinsCache } = await import("../stablecoins-cache");
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "error",
+      reason: "missing-cache",
+      updatedAt: null,
+    });
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      includeNavTokens: false,
+      outputMode: "map",
+    });
+
+    expect(result.kind).toBe("degraded");
+    expect(result.coveredCount).toBe(0);
+    expect(result.reason).toBe("stablecoins-cache:missing-cache");
   });
 });

@@ -92,7 +92,7 @@ export async function computeAndStoreDEWS(
 
   // 1. Read stablecoins cache
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
-  if (!stablecoinsCache.ok) {
+  if (stablecoinsCache.kind !== "ok") {
     const failure: SourceFailure = {
       source: "stablecoins-cache",
       reason: stablecoinsCache.reason,
@@ -111,10 +111,6 @@ export async function computeAndStoreDEWS(
         validationFailures: 1,
       }),
     };
-  }
-
-  if (stablecoinsCache.warningReason) {
-    console.warn(`[dews] stablecoins cache fallback (${stablecoinsCache.warningReason})`);
   }
 
   const assets = stablecoinsCache.payload.peggedAssets;

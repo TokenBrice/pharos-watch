@@ -2,7 +2,7 @@
 
 Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 20 named runtime jobs across 4 trigger slots.
 
-Execution note: `dispatch-telegram-alerts-daily` runs on the `0 8 * * *` (08:00 UTC) trigger, while the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger after successful `sync-stablecoins`.
+Execution note: `dispatch-telegram-alerts-daily` runs on the `0 8 * * *` (08:00 UTC) trigger, while the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -222,7 +222,7 @@ crons = [
 | `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
 | *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled.ts` | This doc (below) |
 
-**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `snapshot-supply` retry, `stability-index`, and `compute-dews` run only after a successful `sync-stablecoins`; `status-self-check` runs near the end of the slot and `dispatch-telegram-alerts` runs last to diff DEWS/depeg/safety snapshots and fan out consolidated subscriber alerts using the same bot token as the digest channel integration.
+**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `snapshot-supply` retry, `stability-index`, and `compute-dews` now run only when `sync-stablecoins` reports `downstreamSafe: true` in cron metadata (currently the validated main cache-write path). `status-self-check` runs near the end of the slot and `dispatch-telegram-alerts` runs last only when the stablecoins sync was downstream-safe and `compute-dews` actually ran, which prevents stale fallback cache states from being re-snapshotted or alert-diffed as fresh data.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 

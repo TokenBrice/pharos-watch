@@ -112,6 +112,37 @@ describe("handleStatus", () => {
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
+  it("marks data quality stale when the stablecoins cache is malformed", async () => {
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: "{bad-json", updated_at: Math.floor(Date.now() / 1000) - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      dataQualityStatus: string;
+      dataQuality: {
+        stablecoinsCacheStatus: string;
+        stablecoinsCacheReason: string | null;
+      };
+      causes: { dataQuality: Array<{ code: string }> };
+    };
+
+    expect(body.dataQualityStatus).toBe("stale");
+    expect(body.dataQuality.stablecoinsCacheStatus).toBe("error");
+    expect(body.dataQuality.stablecoinsCacheReason).toBe("json-parse-failed");
+    expect(body.causes.dataQuality.some((cause) => cause.code === "stablecoins_cache_unavailable")).toBe(true);
+  });
+
   it("returns Cache-Control: no-store", async () => {
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [] },

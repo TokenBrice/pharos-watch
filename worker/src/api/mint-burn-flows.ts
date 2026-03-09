@@ -248,8 +248,16 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     // Load stablecoins cache for mcap lookup
     const mcapById = new Map<string, number>();
     const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
-    if (stablecoinsCacheResult.ok && stablecoinsCacheResult.warningReason) {
-      console.warn(`[mint-burn-flows] stablecoins cache fallback (${stablecoinsCacheResult.warningReason})`);
+    if (stablecoinsCacheResult.kind !== "ok") {
+      const cached = await getCache(db, cacheKey);
+      if (cached) {
+        console.error(
+          `[mint-burn-flows] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason}), ` +
+          `serving fallback cache (${cacheKey})`,
+        );
+        return cachedFlowFallbackResponse(cached);
+      }
+      return errorResponse(503, "Stablecoins data not yet available");
     }
     for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
       if (TRACKED_IDS.has(asset.id)) {

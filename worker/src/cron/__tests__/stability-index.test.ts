@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({
-    ok: true,
+    kind: "ok",
     payload: {
       peggedAssets: [
         {
@@ -81,7 +81,7 @@ describe("computeAndStoreStabilityIndex", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-05T12:00:00Z"));
     vi.mocked(loadStablecoinsCache).mockReset().mockResolvedValue({
-      ok: true,
+      kind: "ok",
       payload: {
         peggedAssets: [
           {

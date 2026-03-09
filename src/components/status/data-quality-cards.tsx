@@ -3,6 +3,8 @@ import { HOUR_SECONDS } from "@/lib/constants";
 
 interface DataQualityCardsProps {
   dq: {
+    stablecoinsCacheStatus: "ok" | "degraded" | "error";
+    stablecoinsCacheReason: string | null;
     totalStablecoins: number;
     missingPrices: number;
     blacklistMissingAmounts: number;
@@ -24,6 +26,9 @@ interface DataQualityCardsProps {
 export function DataQualityCards({ dq }: DataQualityCardsProps) {
   type Severity = "green" | "amber" | "red" | "neutral";
   const onchainUnavailable = dq.onchainSupplyMonitoring === "unavailable";
+  const cacheIssueDetail = dq.stablecoinsCacheReason
+    ? `cache ${dq.stablecoinsCacheStatus}: ${dq.stablecoinsCacheReason}`
+    : "cache healthy";
   const onchainStalenessDetail = onchainUnavailable
     ? "monitor unavailable"
     : `/${dq.onchainSupplyTrackedCoins} coins >2h old`;
@@ -31,9 +36,17 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
   const cards: Array<{ label: string; value: number | string; detail: string; severity: Severity }> = [
     {
       label: "Missing Prices",
-      value: dq.missingPrices,
-      detail: `/ ${dq.totalStablecoins} coins`,
-      severity: dq.missingPrices > 5 ? "red" : dq.missingPrices > 0 ? "amber" : "green",
+      value: dq.stablecoinsCacheStatus === "error" ? "ERR" : dq.missingPrices,
+      detail: dq.stablecoinsCacheStatus === "ok"
+        ? `/ ${dq.totalStablecoins} coins`
+        : dq.stablecoinsCacheStatus === "degraded"
+          ? `/ ${dq.totalStablecoins} coins, ${cacheIssueDetail}`
+          : cacheIssueDetail,
+      severity: dq.stablecoinsCacheStatus === "error"
+        ? "red"
+        : dq.stablecoinsCacheStatus === "degraded"
+          ? "amber"
+          : dq.missingPrices > 5 ? "red" : dq.missingPrices > 0 ? "amber" : "green",
     },
     {
       label: "Blacklist Gaps",

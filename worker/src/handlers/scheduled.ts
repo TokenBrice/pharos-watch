@@ -44,6 +44,15 @@ export async function handleScheduledEvent(
   const mintBurnDisabledIds = parseCsvEnv(env.MINT_BURN_DISABLED_IDS);
   const mintBurnDisabledSymbols = parseCsvEnv(env.MINT_BURN_DISABLED_SYMBOLS);
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
+  const isDownstreamSafeStablecoinsRun = (result: CronResult | null | void): boolean => {
+    if (!result?.metadata) return false;
+    try {
+      const parsed = JSON.parse(result.metadata) as { downstreamSafe?: unknown };
+      return parsed.downstreamSafe === true;
+    } catch {
+      return false;
+    }
+  };
   const normalizeCronMetadata = (result: CronResult): string | undefined => {
     const parsed: Record<string, unknown> = {};
     if (result.metadata) {
@@ -121,24 +130,27 @@ export async function handleScheduledEvent(
         const runQuarterHourlyJob = async (
           job: string,
           fn: (signal: AbortSignal) => Promise<CronResult | void>,
-        ): Promise<boolean> => {
+        ): Promise<CronResult | null> => {
           try {
-            await runLeasedCron(job, fn);
-            return true;
+            return (await runLeasedCron(job, fn)) ?? null;
           } catch (err) {
             console.error(`[cron] ${job} failed in quarter-hour slot:`, err);
-            return false;
+            return null;
           }
         };
 
         // All jobs in this trigger share one Workers 6-connection fetch pool.
         // Run sequentially in-slot to avoid cross-job connection spikes.
-        const stablecoinsOk = await runQuarterHourlyJob(
+        const stablecoinsResult = await runQuarterHourlyJob(
           "sync-stablecoins",
           (signal) => syncStablecoins(db, env.CMC_API_KEY, signal),
         );
+        const stablecoinsDownstreamSafe = isDownstreamSafeStablecoinsRun(stablecoinsResult);
+        if (stablecoinsResult && !stablecoinsDownstreamSafe) {
+          console.warn("[cron] sync-stablecoins completed without downstream-safe cache write — skipping dependent jobs");
+        }
 
-        if (stablecoinsOk) {
+        if (stablecoinsDownstreamSafe) {
           // Retry daily supply snapshots throughout the day so a stale-cache skip at 08:00
           // cannot permanently leave a missing date.
           await runQuarterHourlyJob("snapshot-supply", (signal) => snapshotSupply(db, signal));
@@ -147,11 +159,12 @@ export async function handleScheduledEvent(
         await runQuarterHourlyJob("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal));
         await runQuarterHourlyJob("sync-fx-rates", (signal) => syncFxRates(db, signal));
 
-        if (stablecoinsOk) {
+        let dewsResult: CronResult | null = null;
+        if (stablecoinsDownstreamSafe) {
           // PSI depends on stablecoins cache + depeg_events — run after sync completes
           await runQuarterHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(db, signal));
           // DEWS depends on stablecoins cache + dex data — run after sync
-          await runQuarterHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(db, signal));
+          dewsResult = await runQuarterHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(db, signal));
         }
 
         // Status system self-check: persists hysteresis state and probes critical endpoints.
@@ -168,7 +181,7 @@ export async function handleScheduledEvent(
         );
 
         // Telegram alert dispatch — must run LAST, after sync-stablecoins + compute-dews
-        if (env.TELEGRAM_BOT_TOKEN) {
+        if (env.TELEGRAM_BOT_TOKEN && stablecoinsDownstreamSafe && dewsResult !== null) {
           await runQuarterHourlyJob("dispatch-telegram-alerts", (signal) =>
             dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
           );

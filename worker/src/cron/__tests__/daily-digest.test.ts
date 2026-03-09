@@ -127,7 +127,7 @@ describe("generateDailyDigest", () => {
     vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
 
     vi.mocked(loadStablecoinsCache).mockReset().mockResolvedValue({
-      ok: true,
+      kind: "ok",
       payload: {
         peggedAssets: [
           makeAsset({
@@ -148,7 +148,11 @@ describe("generateDailyDigest", () => {
     });
 
     vi.mocked(computeSafetyScoresSnapshot).mockReset().mockResolvedValue({
+      kind: "ok",
       mode: "full-grades",
+      coveredCount: 2,
+      trackedCount: 2,
+      coverageRatio: 1,
       scores: new Map(),
       grades: [
         { id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 },
@@ -265,6 +269,43 @@ describe("generateDailyDigest", () => {
     expect(result.metadata).toBe("skipped: recent digest exists");
     expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(getInsertDigestBinds(recentDigestDb as MockD1Database)).toBeUndefined();
+  });
+
+  it("skips regeneration when stablecoins cache is unavailable", async () => {
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "error",
+      reason: "missing-cache",
+      updatedAt: null,
+    });
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();
+  });
+
+  it("skips safety summary output when safety snapshot is degraded", async () => {
+    vi.mocked(computeSafetyScoresSnapshot).mockResolvedValueOnce({
+      kind: "degraded",
+      mode: "full-grades",
+      coveredCount: 0,
+      trackedCount: 2,
+      coverageRatio: 0,
+      reason: "stablecoins-cache:missing-cache",
+      scores: new Map(),
+      grades: [],
+    });
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+
+    expect(result.status).toBe("degraded");
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3])) as { safetyScores?: unknown };
+    expect(storedInput.safetyScores).toBeUndefined();
   });
 
   it("fails early on DB data-collection error and does not call Claude", async () => {

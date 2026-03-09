@@ -40,6 +40,8 @@ type StablecoinsPayload = {
   fxFallbackRates?: Record<string, number>;
 };
 
+type SyncCacheWriteMode = "main-write" | "fallback-write" | "blocked-invalid-payload" | "no-write";
+
 function resolveGeckoId(asset: PeggedAsset): string | undefined {
   if (typeof asset.geckoId === "string" && asset.geckoId.length > 0) {
     return asset.geckoId;
@@ -90,6 +92,20 @@ function summarizeValidationIssues(issues: string): string {
   return `${issues.slice(0, VALIDATION_ISSUES_MAX_CHARS)}...`;
 }
 
+function buildSyncMetadata(
+  metadata: Record<string, unknown>,
+  options?: {
+    cacheWriteMode?: SyncCacheWriteMode;
+    downstreamSafe?: boolean;
+  },
+): string {
+  return JSON.stringify({
+    ...metadata,
+    cacheWriteMode: options?.cacheWriteMode ?? "no-write",
+    downstreamSafe: options?.downstreamSafe ?? false,
+  });
+}
+
 function abortResult(signal: AbortSignal | undefined, stage: string): CronResult {
   const reasonRaw = signal?.reason;
   const reason =
@@ -101,7 +117,7 @@ function abortResult(signal: AbortSignal | undefined, stage: string): CronResult
   return {
     status: "degraded",
     itemCount: 0,
-    metadata: JSON.stringify({ reason: "aborted", stage, detail: reason }),
+    metadata: buildSyncMetadata({ reason: "aborted", stage, detail: reason }),
   };
 }
 
@@ -211,7 +227,7 @@ async function fallbackToCgSupply(
   if (assets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] CG fallback only got ${assets.length} assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
     return {
-      metadata: JSON.stringify({
+      metadata: buildSyncMetadata({
         rowsRead: assets.length,
         rowsWritten: 0,
         rowsDropped: 0,
@@ -286,7 +302,7 @@ async function fallbackToCgSupply(
     return {
       status: "degraded",
       itemCount: assets.length,
-      metadata: JSON.stringify({
+      metadata: buildSyncMetadata({
         rowsRead: assets.length,
         rowsWritten: 0,
         rowsDropped: 0,
@@ -295,6 +311,8 @@ async function fallbackToCgSupply(
         validationFailures: 1,
         validationContext: "fallback",
         stablecoinsCacheAgeSec,
+        cacheWriteMode: "blocked-invalid-payload",
+      }, {
         cacheWriteMode: "blocked-invalid-payload",
       }),
     };
@@ -316,7 +334,7 @@ async function fallbackToCgSupply(
 
   return {
     itemCount: assets.length,
-    metadata: JSON.stringify({
+    metadata: buildSyncMetadata({
       rowsRead: assets.length,
       rowsWritten: assets.length,
       rowsDropped: 0,
@@ -324,6 +342,9 @@ async function fallbackToCgSupply(
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: enrichStats,
+    }, {
+      cacheWriteMode: "fallback-write",
+      downstreamSafe: false,
     }),
   };
 }
@@ -605,7 +626,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     return {
       status: "degraded",
       itemCount: llamaData.peggedAssets.length,
-      metadata: JSON.stringify({
+      metadata: buildSyncMetadata({
         rowsRead: rawAssetCount,
         rowsWritten: 0,
         rowsDropped: droppedMalformedAssets,
@@ -614,6 +635,8 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
         validationFailures: 1,
         validationContext: "main",
         stablecoinsCacheAgeSec,
+        cacheWriteMode: "blocked-invalid-payload",
+      }, {
         cacheWriteMode: "blocked-invalid-payload",
       }),
     };
@@ -677,5 +700,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     metadata.depegErrors = depegErrors;
   }
 
-  return { itemCount: llamaData.peggedAssets.length, status, metadata: JSON.stringify(metadata) };
+  return {
+    itemCount: llamaData.peggedAssets.length,
+    status,
+    metadata: buildSyncMetadata(metadata, {
+      cacheWriteMode: "main-write",
+      downstreamSafe: true,
+    }),
+  };
 }

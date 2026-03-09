@@ -74,14 +74,11 @@ function deriveDexDeviationBps(
 export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
-  if (!stablecoinsCache.ok) {
+  if (stablecoinsCache.kind !== "ok") {
     if (stablecoinsCache.reason === "missing-cache") {
       return errorResponse(503, "Data not yet available");
     }
     return errorResponse(503, "Cached stablecoins data is corrupt");
-  }
-  if (stablecoinsCache.updatedAt == null) {
-    return errorResponse(503, "Data not yet available");
   }
   const { peggedAssets, fxFallbackRates } = stablecoinsCache.payload as {
     peggedAssets: StablecoinData[];

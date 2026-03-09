@@ -306,7 +306,7 @@ CREATE TABLE yield_history (
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
 3. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries
 4. Read cached risk-free rate from D1
-5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; classify safety input as degraded when coverage is empty or below the minimum ratio
+5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
 6. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3, potentially multiple sources per coin), then append auto-discovered lending rows for any remaining eligible tracked coins
 7. Determine `is_best` per coin: source with highest `currentApy` wins
 8. Batch preload `yield_history` datasets (7d previous exchange rates, previous TVL rows, and 30d APY history), group in memory, then compute trailing averages and PYS without per-coin query loops
@@ -316,7 +316,7 @@ CREATE TABLE yield_history (
 12. Prune `yield_history` older than 365 days
 13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, then cache rankings JSON only when safety input is healthy and schema validation succeeds (with safe `warning_signals` JSON parsing on read paths)
 
-**Degraded semantics:** If safety coverage is degraded or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"` and skips `yield-rankings` cache overwrite. Safety-degraded runs also skip `report_card_cache` writes to preserve last-known-good snapshots.
+**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"` and skips `yield-rankings` cache overwrite. Safety-degraded runs also skip `report_card_cache` writes to preserve last-known-good snapshots.
 
 **Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 

@@ -217,6 +217,19 @@ describe("syncYieldData", () => {
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
     vi.mocked(getChainRpc).mockReset().mockReturnValue(undefined);
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 4,
+      trackedCount: 4,
+      coverageRatio: 1,
+      scores: new Map([
+        ["100", { score: 80, grade: "B+" }],
+        ["usdc-circle", { score: 78, grade: "B+" }],
+        ["u-united-stables", { score: 55, grade: "C" }],
+        ["lusd-liquity", { score: 86, grade: "A-" }],
+      ]),
+    } as never);
   });
 
   afterEach(() => {
@@ -426,7 +439,11 @@ describe("syncYieldData", () => {
     });
 
     vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+      kind: "ok",
       mode: "map",
+      coveredCount: 4,
+      trackedCount: 4,
+      coverageRatio: 1,
       scores: new Map([
         ["100", { score: 80, grade: "B+" }],
         ["usdc-circle", { score: 78, grade: "B+" }],
@@ -613,7 +630,12 @@ describe("syncYieldData", () => {
     mockFetch([]);
 
     vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+      kind: "degraded",
       mode: "map",
+      coveredCount: 0,
+      trackedCount: 4,
+      coverageRatio: 0,
+      reason: "stablecoins-cache:missing-cache",
       scores: new Map(),
     } as never);
 

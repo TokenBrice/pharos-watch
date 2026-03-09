@@ -7,7 +7,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
-  if (!stablecoinsCache.ok) {
+  if (stablecoinsCache.kind !== "ok") {
     return {
       status: "degraded",
       itemCount: 0,
@@ -17,10 +17,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
         dewsUnavailable: true,
       }),
     };
-  }
-
-  if (stablecoinsCache.warningReason) {
-    console.warn(`[stability-index] stablecoins cache fallback (${stablecoinsCache.warningReason})`);
   }
 
   const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => PSI_ELIGIBLE_IDS.has(coin.id));

@@ -12,13 +12,18 @@ const RATCHET_ALL = process.env.CRITICAL_COVERAGE_RATCHET_ALL === "1";
 const CRITICAL_FILES = [
   "src/lib/api.ts",
   "worker/src/lib/api-utils.ts",
+  "worker/src/lib/stablecoins-cache.ts",
+  "worker/src/lib/safety-scores.ts",
+  "worker/src/handlers/scheduled.ts",
   "worker/src/cron/sync-stablecoins.ts",
+  "worker/src/cron/daily-digest.ts",
   "worker/src/cron/sync-yield-data.ts",
   "worker/src/api/peg-summary.ts",
   "worker/src/api/report-cards.ts",
   "worker/src/api/dex-liquidity.ts",
   "worker/src/api/stress-signals.ts",
   "worker/src/api/mint-burn-flows.ts",
+  "worker/src/api/status.ts",
   "worker/src/lib/alerts.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/cron/dex-liquidity/orchestrator.ts",
@@ -27,7 +32,12 @@ const CRITICAL_FILES = [
 // Explicit per-file minimums for critical reliability paths.
 const CRITICAL_THRESHOLDS = {
   "worker/src/lib/alerts.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_ALERTS ?? "80"),
+  "worker/src/lib/stablecoins-cache.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE ?? "50"),
+  "worker/src/lib/safety-scores.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES ?? "40"),
+  "worker/src/handlers/scheduled.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_SCHEDULED ?? "40"),
+  "worker/src/cron/daily-digest.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST ?? "40"),
   "worker/src/api/stablecoin-detail.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL ?? "30"),
+  "worker/src/api/status.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_STATUS ?? "40"),
   "worker/src/cron/dex-liquidity/orchestrator.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR ?? "55"),
 };
 

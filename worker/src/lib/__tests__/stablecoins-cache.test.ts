@@ -25,22 +25,20 @@ describe("loadStablecoinsCache", () => {
     const result = await loadStablecoinsCache(db, { mode: "strict" });
 
     expect(result).toEqual({
-      ok: false,
+      kind: "error",
       reason: "missing-cache",
-      payload: { peggedAssets: [] },
       updatedAt: null,
     });
   });
 
-  it("returns lenient warning when cache is missing", async () => {
+  it("returns lenient error when cache is missing", async () => {
     const db = makeDbWithStablecoinsValue(null);
 
     const result = await loadStablecoinsCache(db, { mode: "lenient" });
 
     expect(result).toEqual({
-      ok: true,
-      warningReason: "missing-cache",
-      payload: { peggedAssets: [] },
+      kind: "error",
+      reason: "missing-cache",
       updatedAt: null,
     });
   });
@@ -50,8 +48,8 @@ describe("loadStablecoinsCache", () => {
 
     const result = await loadStablecoinsCache(db, { mode: "strict" });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
       expect(result.reason).toBe("json-parse-failed");
       expect(result.updatedAt).toBe(1_700_000_000);
     }
@@ -62,21 +60,20 @@ describe("loadStablecoinsCache", () => {
 
     const result = await loadStablecoinsCache(db, { mode: "strict" });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
       expect(result.reason).toBe("missing-pegged-assets");
     }
   });
 
-  it("returns lenient empty payload when cache is malformed", async () => {
+  it("returns lenient error when cache is malformed", async () => {
     const db = makeDbWithStablecoinsValue("{still-bad");
 
     const result = await loadStablecoinsCache(db, { mode: "lenient" });
 
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.warningReason).toBe("json-parse-failed");
-      expect(result.payload.peggedAssets).toEqual([]);
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.reason).toBe("json-parse-failed");
     }
   });
 
@@ -84,20 +81,19 @@ describe("loadStablecoinsCache", () => {
     const db = makeDbWithStablecoinsValue("123");
 
     const strict = await loadStablecoinsCache(db, { mode: "strict" });
-    expect(strict.ok).toBe(false);
-    if (!strict.ok) {
+    expect(strict.kind).toBe("error");
+    if (strict.kind === "error") {
       expect(strict.reason).toBe("invalid-payload-shape");
     }
 
     const lenient = await loadStablecoinsCache(db, { mode: "lenient" });
-    expect(lenient.ok).toBe(true);
-    if (lenient.ok) {
-      expect(lenient.warningReason).toBe("invalid-payload-shape");
-      expect(lenient.payload).toEqual({ peggedAssets: [] });
+    expect(lenient.kind).toBe("error");
+    if (lenient.kind === "error") {
+      expect(lenient.reason).toBe("invalid-payload-shape");
     }
   });
 
-  it("supports legacy array shape fallback when enabled", async () => {
+  it("marks legacy array payloads as degraded when enabled", async () => {
     const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
 
     const result = await loadStablecoinsCache(db, {
@@ -105,10 +101,13 @@ describe("loadStablecoinsCache", () => {
       allowLegacyArray: true,
     });
 
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.payload.peggedAssets).toHaveLength(1);
-      expect(result.payload.peggedAssets[0]?.id).toBe("usdt-tether");
+    expect(result.kind).toBe("degraded");
+    if (result.kind === "degraded") {
+      expect(result.reason).toBe("legacy-array-payload");
+      const payload = result.payload;
+      expect(payload).not.toBeNull();
+      expect(payload?.peggedAssets).toHaveLength(1);
+      expect(payload?.peggedAssets[0]?.id).toBe("usdt-tether");
     }
   });
 
@@ -120,8 +119,8 @@ describe("loadStablecoinsCache", () => {
       allowLegacyArray: false,
     });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
       expect(result.reason).toBe("legacy-array-not-allowed");
     }
   });
@@ -136,8 +135,8 @@ describe("loadStablecoinsCache", () => {
 
     const result = await loadStablecoinsCache(db, { mode: "strict" });
 
-    expect(result.ok).toBe(true);
-    if (result.ok) {
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
       expect(result.payload.fxFallbackRates).toEqual({ EUR: 1.09, GBP: 1.27 });
     }
   });
