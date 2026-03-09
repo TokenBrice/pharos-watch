@@ -47,7 +47,7 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
     },
     {
       label: "On-chain Divergences",
-      value: onchainUnavailable ? "N/A" : dq.onchainSupplyDivergences,
+      value: onchainUnavailable ? "—" : dq.onchainSupplyDivergences,
       detail: onchainUnavailable ? "monitor unavailable" : "coins >5% off",
       severity: onchainUnavailable
         ? "neutral"
@@ -61,7 +61,7 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
     },
     {
       label: "Stale On-chain",
-      value: onchainUnavailable ? "N/A" : dq.staleOnchainSupply,
+      value: onchainUnavailable ? "—" : dq.staleOnchainSupply,
       detail: onchainStalenessDetail,
       severity: onchainUnavailable
         ? "neutral"

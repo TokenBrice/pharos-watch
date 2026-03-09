@@ -253,7 +253,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                     <span className="text-muted-foreground">NR</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right font-mono tabular-nums text-sm">
                   {dews ? (
                     <div className="flex items-center justify-end gap-1.5">
                       <DEWSBadge score={dews.score} band={dews.band as ThreatBand} signals={dews.signals} />
@@ -262,7 +262,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                       </span>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground text-sm">--</span>
+                    <span className="text-muted-foreground text-sm">—</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm">
@@ -271,7 +271,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                       {coin.currentDeviationBps > 0 ? "+" : ""}{coin.currentDeviationBps} bps
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">--</span>
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm hidden md:table-cell">
@@ -286,7 +286,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                       {coin.worstDeviationBps > 0 ? "+" : ""}{coin.worstDeviationBps} bps
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">--</span>
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
                 <TableCell className="text-center hidden xl:table-cell">
@@ -297,7 +297,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                       <span className="text-red-700 dark:text-red-400 text-sm" title="DEX price disagrees">&#10007;</span>
                     )
                   ) : (
-                    <span className="text-muted-foreground text-sm">--</span>
+                    <span className="text-muted-foreground text-sm">—</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm hidden xl:table-cell">

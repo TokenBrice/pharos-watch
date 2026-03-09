@@ -66,7 +66,7 @@ export function SystemDiagnostics({
           <div className="font-mono text-sm">
             {probe.status} ({probe.passCount}/{probe.sampleCount})
           </div>
-          <div className="text-xs text-muted-foreground">p95 {probe.p95LatencyMs != null ? `${probe.p95LatencyMs}ms` : "N/A"}</div>
+          <div className="text-xs text-muted-foreground">p95 {probe.p95LatencyMs != null ? `${probe.p95LatencyMs}ms` : "—"}</div>
           <div className="text-xs text-muted-foreground">
             {probe.timestamp ? `${formatAge(Math.max(0, nowSeconds - probe.timestamp))} ago` : "no probe yet"}
           </div>

@@ -122,7 +122,7 @@ export function YieldClient() {
                   </span>
                 </div>
               ) : (
-                <span className="text-muted-foreground">--</span>
+                <span className="text-muted-foreground">—</span>
               )}
             </CardContent>
           </Card>

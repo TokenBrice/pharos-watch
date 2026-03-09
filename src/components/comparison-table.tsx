@@ -183,7 +183,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}>{rowData.prices[i]}</dd>
               <dt className="text-muted-foreground">Peg Score</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}>
-                {rowData.pegScores[i] != null ? formatScore(rowData.pegScores[i]) : "N/A"}
+                {rowData.pegScores[i] != null ? formatScore(rowData.pegScores[i]) : "—"}
               </dd>
               <dt className="text-muted-foreground">Market Cap</dt>
               <dd className="text-right font-mono tabular-nums">{formatCurrency(rowData.marketCaps[i])}</dd>
@@ -191,11 +191,11 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dd className="text-right font-mono tabular-nums">
                 {rowData.weeklyChanges[i] != null
                   ? `${rowData.weeklyChanges[i]! >= 0 ? "+" : ""}${rowData.weeklyChanges[i]!.toFixed(2)}%`
-                  : "N/A"}
+                  : "—"}
               </dd>
               <dt className="text-muted-foreground">Liquidity</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}>
-                {rowData.liquidityScores[i] != null ? formatScore(rowData.liquidityScores[i]) : "N/A"}
+                {rowData.liquidityScores[i] != null ? formatScore(rowData.liquidityScores[i]) : "—"}
               </dd>
               <dt className="text-muted-foreground">Governance</dt>
               <dd className="text-right">{rowData.governanceLabels[i]}</dd>
@@ -205,7 +205,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dd className="text-right">{rowData.pegCurrencies[i]}</dd>
               <dt className="text-muted-foreground">Safety Rating</dt>
               <dd className={`text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`}>
-                {rowData.safetyGrades[i] ?? "N/A"}
+                {rowData.safetyGrades[i] ?? "—"}
               </dd>
             </dl>
           </div>
@@ -261,7 +261,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                   >
                     {rowData.pegScores[i] != null
                       ? formatScore(rowData.pegScores[i])
-                      : "N/A"}
+                      : "—"}
                   </TableCell>
                 ))}
               </TableRow>
@@ -290,7 +290,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                     key={coin.id}
                     className="text-center font-mono tabular-nums"
                   >
-                    {change != null ? `${sign}${change.toFixed(2)}%` : "N/A"}
+                    {change != null ? `${sign}${change.toFixed(2)}%` : "—"}
                   </TableCell>
                 );
               })}
@@ -306,7 +306,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                 >
                   {rowData.liquidityScores[i] != null
                     ? formatScore(rowData.liquidityScores[i])
-                    : "N/A"}
+                    : "—"}
                 </TableCell>
               ))}
             </TableRow>
@@ -349,7 +349,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                   key={coin.id}
                   className={`text-center ${i === rowData.bestGrade ? BEST_CLASS : ""}`}
                 >
-                  {rowData.safetyGrades[i] ?? "N/A"}
+                  {rowData.safetyGrades[i] ?? "—"}
                 </TableCell>
               ))}
             </TableRow>

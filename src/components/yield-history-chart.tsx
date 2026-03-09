@@ -252,13 +252,13 @@ function YieldHistoryTooltip({
             <div className="flex items-center justify-between gap-4">
               <span>Base</span>
               <span className="font-mono tabular-nums">
-                {point.apyBase !== null ? `${formatPercent(point.apyBase)}%` : "N/A"}
+                {point.apyBase !== null ? `${formatPercent(point.apyBase)}%` : "—"}
               </span>
             </div>
             <div className="flex items-center justify-between gap-4">
               <span>Reward</span>
               <span className="font-mono tabular-nums">
-                {point.apyReward !== null ? `${formatPercent(point.apyReward)}%` : "N/A"}
+                {point.apyReward !== null ? `${formatPercent(point.apyReward)}%` : "—"}
               </span>
             </div>
           </>

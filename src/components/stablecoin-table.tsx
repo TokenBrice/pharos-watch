@@ -402,7 +402,9 @@ export function StablecoinTable({
                   tabIndex={0}
                 >
                   {isVisible("rank") && (
-                    <TableCell className="text-right text-muted-foreground text-xs tabular-nums">{index + 1}</TableCell>
+                    <TableCell className="text-right text-muted-foreground text-xs font-mono tabular-nums">
+                      {index + 1}
+                    </TableCell>
                   )}
                   {isVisible("name") && (
                     <TableCell>
@@ -475,7 +477,7 @@ export function StablecoinTable({
                             {change24h >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevDay)}
                           </>
                         ) : (
-                          "N/A"
+                          "—"
                         )}
                       </span>
                     </TableCell>
@@ -497,7 +499,7 @@ export function StablecoinTable({
                             {change7d >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevWeek)}
                           </>
                         ) : (
-                          "N/A"
+                          "—"
                         )}
                       </span>
                     </TableCell>

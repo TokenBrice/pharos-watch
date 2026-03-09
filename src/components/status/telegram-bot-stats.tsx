@@ -62,7 +62,7 @@ function renderDelta(label: string, value: number | null) {
   return (
     <div className="flex items-center justify-between gap-4 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-mono tabular-nums">{value ?? "N/A"}</span>
+      <span className="font-mono tabular-nums">{value ?? "—"}</span>
     </div>
   );
 }

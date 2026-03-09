@@ -147,11 +147,11 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
         </p>
       ) : null}
       <p className="text-muted-foreground">
-        Safety: <span className="font-mono">{d.safetyGrade ?? "N/A"}</span> ({d.x}/100)
+        Safety: <span className="font-mono">{d.safetyGrade ?? "—"}</span> ({d.x}/100)
       </p>
       <p className="text-muted-foreground">Type: {YIELD_TYPE_LABELS[d.yieldType] ?? d.yieldType}</p>
       <p className="text-muted-foreground">
-        PYS: <span className="font-mono">{d.pharosYieldScore !== null ? d.pharosYieldScore.toFixed(1) : "N/A"}</span>
+        PYS: <span className="font-mono">{d.pharosYieldScore !== null ? d.pharosYieldScore.toFixed(1) : "—"}</span>
       </p>
       <p className="text-muted-foreground">Source: {d.yieldSource}</p>
     </div>

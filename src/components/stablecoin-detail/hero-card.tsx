@@ -137,7 +137,7 @@ export function HeroCard({
         </p>
       </details>
     ) : (
-      <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
+      <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">—</div>
     )
   ) : (
     <div className="text-sm font-medium text-muted-foreground">NAV Token</div>
@@ -146,7 +146,7 @@ export function HeroCard({
   const liquidityContent = (() => {
     const liq = liquidityData;
     if (liq == null || (liq.liquidityScore === null && liq.poolCount === 0)) {
-      return <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>;
+      return <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">—</div>;
     }
     const score = liq.liquidityScore ?? 0;
     return (
@@ -271,7 +271,7 @@ export function HeroCard({
             <HeroMetricCard label="Market Cap">
               <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
               <p className={`text-xs font-mono tabular-nums mt-0.5 ${prevDayTrendClass}`}>
-                {hasPrevDay ? formatPercentChange(mcap, prevDay) : "N/A"}{" "}
+                {hasPrevDay ? formatPercentChange(mcap, prevDay) : "—"}{" "}
                 <span className="text-muted-foreground">24h</span>
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -294,11 +294,11 @@ export function HeroCard({
             <div className="grid gap-3 border-t border-border/50 px-4 pb-4 pt-4 sm:grid-cols-2">
               <HeroMetricCard label="Supply">
                 <div className="text-xl font-bold font-mono tracking-tight leading-none">
-                  {supply != null ? formatSupply(supply) : "N/A"}{" "}
+                  {supply != null ? formatSupply(supply) : "—"}{" "}
                   <span className="text-sm text-muted-foreground">{coin.symbol}</span>
                 </div>
                 <p className="text-xs font-mono tabular-nums mt-0.5">
-                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek) : "N/A"}</span>
+                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek) : "—"}</span>
                   <span className="text-muted-foreground"> 7d</span>
                   {hasPrevMonth && (
                     <>
@@ -397,7 +397,7 @@ export function HeroCard({
               <HeroMetricCard label="Market Cap">
                 <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
                 <p className={`text-xs font-mono tabular-nums mt-0.5 ${prevDayTrendClass}`}>
-                  {hasPrevDay ? formatPercentChange(mcap, prevDay) : "N/A"}{" "}
+                  {hasPrevDay ? formatPercentChange(mcap, prevDay) : "—"}{" "}
                   <span className="text-muted-foreground">24h</span>
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -407,11 +407,11 @@ export function HeroCard({
 
               <HeroMetricCard label="Supply">
                 <div className="text-xl font-bold font-mono tracking-tight leading-none">
-                  {supply != null ? formatSupply(supply) : "N/A"}{" "}
+                  {supply != null ? formatSupply(supply) : "—"}{" "}
                   <span className="text-sm text-muted-foreground">{coin.symbol}</span>
                 </div>
                 <p className="text-xs font-mono tabular-nums mt-0.5">
-                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek) : "N/A"}</span>
+                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek) : "—"}</span>
                   <span className="text-muted-foreground"> 7d</span>
                   {hasPrevMonth && (
                     <>
