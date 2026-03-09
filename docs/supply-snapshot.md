@@ -2,7 +2,7 @@
 
 Daily market cap snapshot pipeline. Captures each PSI-eligible stablecoin's circulating supply (in USD) once per day from cached DefiLlama data and stores it in D1 for historical charting.
 
-The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama's aggregated supply data cached by the 15-minute `syncStablecoins()` cron. The `supplyMethod` config in `StablecoinMeta` exists for potential future on-chain supply verification but is not used by the snapshot pipeline today.
+The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama's aggregated supply data cached by the 15-minute `syncStablecoins()` cron.
 
 ---
 
@@ -115,32 +115,6 @@ All in `shared/lib/supply.ts`:
 
 ---
 
-## Supply Method Configuration
-
-Defined in `StablecoinMeta.supplyMethod` (`shared/types/index.ts`). **Not** used by the snapshot cron but documented here for completeness since it is part of the supply system.
-
-```typescript
-interface SupplyMethodConfig {
-  type:
-    | "totalSupply"                  // Default: raw totalSupply() is circulating
-    | "totalSupply-minus-addresses"  // totalSupply() - sum(balanceOf(addr)) per chain
-    | "custom-contract"              // Call a dedicated circulating supply contract
-    | "exclude";                     // Skip on-chain supply for this token
-
-  subtractAddresses?: { chain: string; address: string }[];
-  customContract?: { chain: string; address: string; selector: string; decimals: number };
-}
-```
-
-### Known configurations
-
-| Token | ID | Method | Reason |
-|-------|----|--------|--------|
-| USDT | `usdt-tether` | `totalSupply-minus-addresses` | Subtracts Tether Treasury on Ethereum |
-| USDC | `usdc-circle` | `totalSupply-minus-addresses` | Subtracts Circle Reserve on Ethereum |
-| PYUSD | `pyusd-paypal` | `exclude` | Significant Solana supply not coverable on-chain --- use DefiLlama |
-| crvUSD | `crvusd-curve` | `exclude` | `totalSupply()` includes pre-minted lending capacity |
-| MIM | `mim-abracadabra` | `exclude` | `totalSupply()` includes unborrowed MIM across 45+ Cauldron contracts |
 
 ### Known decimal exceptions
 
@@ -265,8 +239,7 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 1. Depends entirely on DefiLlama data (no on-chain verification)
 2. Price may be `null` if DL price data is unavailable
 3. One snapshot per UTC day (no intraday data)
-4. `supplyMethod` configs are future-proofing, not actively used
-5. Tron `balanceOf` subtraction not yet supported (needs base58-to-hex conversion)
+4. Tron `balanceOf` subtraction not yet supported (needs base58-to-hex conversion)
 6. Non-USD peg backfill requires historical prices (may fall back to current price)
 7. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
 
@@ -287,8 +260,8 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 | `shared/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |
 | `shared/lib/psi-eligible.ts` | PSI-eligible tracked + shadow stablecoin registry used by the snapshot filter |
 | `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata referenced by `PSI_ELIGIBLE_STABLECOINS` |
-| `shared/types/index.ts` | `SupplyMethodConfig`, `StablecoinMeta` types |
-| `shared/lib/stablecoins.ts` | Stablecoin metadata including `supplyMethod` configs |
+| `shared/types/index.ts` | `StablecoinMeta` types |
+| `shared/lib/stablecoins.ts` | Stablecoin metadata |
 | `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook, `detailToSupplyHistory()` transform |
 | `src/components/mcap-chart.tsx` | Individual mcap chart |
 | `src/components/total-mcap-chart.tsx` | Aggregated mcap breakdown chart |

@@ -18,7 +18,6 @@ interface StablecoinOpts {
   jurisdiction?: StablecoinMeta["jurisdiction"];
   contracts?: StablecoinMeta["contracts"];
   tradedContracts?: StablecoinMeta["tradedContracts"];
-  supplyMethod?: StablecoinMeta["supplyMethod"];
   dependencies?: StablecoinMeta["dependencies"];
   canBeBlacklisted?: boolean | "possible";
   chainTier?: StablecoinMeta["chainTier"];
@@ -33,7 +32,7 @@ interface StablecoinOpts {
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, llamaId: opts?.llamaId, detailProvider: opts?.detailProvider ?? "defillama", geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, tradedContracts: opts?.tradedContracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, llamaId: opts?.llamaId, detailProvider: opts?.detailProvider ?? "defillama", geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, tradedContracts: opts?.tradedContracts, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -102,12 +101,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     tradedContracts: [
       { chain: "optimism", address: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6 },
     ],
-    supplyMethod: {
-      type: "totalSupply-minus-addresses",
-      subtractAddresses: [
-        { chain: "ethereum", address: "0x5754284f345afc66a98fbB0a0Afe71e0f007b949" }, // Tether Treasury
-      ],
-    },
     reserves: [
       { name: "U.S. Treasury Bills", pct: 80, risk: "very-low" },
       { name: "Reverse Repos", pct: 12, risk: "very-low" },
@@ -176,12 +169,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "berachain", address: "0x549943e04f40284185054145c6e4e9568c1d3241", decimals: 6 },
       { chain: "katana", address: "0x203a662b0bd271a6ed5a60edfbd04bfce608fd36", decimals: 6 },
     ],
-    supplyMethod: {
-      type: "totalSupply-minus-addresses",
-      subtractAddresses: [
-        { chain: "ethereum", address: "0x55FE002aEFF02F77364de339a1292923A15844B8" }, // Circle Reserve
-      ],
-    },
     reserves: [
       { name: "U.S. Treasuries", pct: 75, risk: "very-low" },
       { name: "Overnight Repos", pct: 18, risk: "very-low" },
@@ -362,7 +349,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "stellar", address: "PYUSD-GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5", decimals: 7 },
       { chain: "flow", address: "0x99af3eea856556646c98c8b9b2548fe815240750", decimals: 6 },
     ],
-    supplyMethod: { type: "exclude" }, // Significant Solana supply not coverable on-chain — use DefiLlama
     reserves: [
       // Source: Paxos KPMG Feb 2025 attestation ($744.6M repos, $25.6M cash of $770.1M total)
       { name: "U.S. Treasury Reverse Repos", pct: 97, risk: "very-low" },
@@ -955,9 +941,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "taiko", address: "0xc8f4518ed4bab9a972808a493107926ce8237068", decimals: 18 },
       { chain: "fraxtal", address: "0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3", decimals: 18 },
     ],
-    supplyMethod: {
-      type: "exclude", // totalSupply() includes pre-minted lending capacity; DefiLlama aggregates debt across all factories
-    },
     reserves: [
       // Source: Curve Finance crvUSD Mint Markets UI (Feb 2026). Based on Mint Markets TVL breakdown.
       { name: "WBTC / cbBTC", pct: 69, risk: "medium" },
@@ -2093,9 +2076,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "kava", address: "0x471ee749ba270eb4c1165b5ad95e614947f6fceb", decimals: 18 },
       { chain: "blast", address: "0x76da31d7c9cbeae102aff34d3398bc450c8374c1", decimals: 18 },
     ],
-    supplyMethod: {
-      type: "exclude", // totalSupply() includes unborrowed MIM across 45+ Cauldron contracts; DefiLlama tracks actual debt
-    },
     collateralQuality: "exotic",
     reserves: [
       { name: "Yield-bearing tokens (yvWETH, yvUSDC, yvUSDT, yvDAI)", pct: 35, risk: "high", coinId: "usdc-circle" },

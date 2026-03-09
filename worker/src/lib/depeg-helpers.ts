@@ -49,11 +49,6 @@ export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexP
   }
 }
 
-export async function loadDexPriceMap(db: D1Database): Promise<Map<string, number>> {
-  const rows = await loadDexPriceRows(db);
-  return new Map([...rows.entries()].map(([id, row]) => [id, row.dex_price_usd]));
-}
-
 export function isTrustedDexPriceRow(
   row: Pick<DexPriceRow, "updated_at" | "source_total_tvl">,
   nowSec: number,
