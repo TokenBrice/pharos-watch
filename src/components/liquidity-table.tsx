@@ -376,7 +376,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
           total={totalRows}
           onPrevious={onPreviousPage}
           onNext={onNextPage}
-          noun="pools"
+          noun="stables tracked on DEXes"
         />
       )}
     </div>

@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/use-stress-signals";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { THREAT_BAND_HEX, THREAT_BAND_LABELS } from "@shared/lib/classification";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { ThreatBand } from "@shared/lib/classification";
 import {
   scoreToRadius,
@@ -96,8 +98,18 @@ interface ElevatedCoin {
   symbol: string;
   name: string;
   logoUrl?: string;
+  mcap?: number;
   x: number;
   y: number;
+}
+
+/** Map a circulating supply (USD) to a dot radius. 4 tiers, fallback = undefined (caller uses band-based default). */
+function mcapDotRadius(mcap: number | undefined): number | undefined {
+  if (mcap == null) return undefined;
+  if (mcap >= 5_000_000_000) return 13; // mega: >$5B
+  if (mcap >= 500_000_000) return 10;   // large: >$500M
+  if (mcap >= 50_000_000) return 7;     // mid:   >$50M
+  return 5;                              // small: ≤$50M
 }
 
 interface RadarClickOutcome {
@@ -112,6 +124,7 @@ interface RadarClickOutcome {
 function computePositions(
   signals: Record<string, { score: number; band: string }>,
   logos: Record<string, string> | undefined,
+  mcapById?: Map<string, number>,
 ): ElevatedCoin[] {
   const byBand: Record<ElevatedBand, Array<{ id: string; score: number }>> = {
     WATCH: [],
@@ -142,6 +155,7 @@ function computePositions(
         symbol: meta?.symbol ?? coin.id,
         name: meta?.name ?? coin.id,
         logoUrl: logos?.[coin.id],
+        mcap: mcapById?.get(coin.id),
         x: CX + r * Math.cos(angle),
         y: CY + r * Math.sin(angle),
       });
@@ -224,7 +238,7 @@ function DEWSDot({
 }) {
   const hex = THREAT_BAND_HEX[coin.band];
   const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
-  const dotR = isHighTier ? 9 : 6;
+  const dotR = mcapDotRadius(coin.mcap) ?? (isHighTier ? 9 : 6);
   const glowR = dotR + 7;
   const dur = pulseDuration(coin.band);
 
@@ -570,7 +584,13 @@ interface DEWSSummaryProps {
 
 export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummaryProps) {
   const { data, isLoading, error } = useStressSignals();
+  const { data: stablecoinsData } = useStablecoins();
   const router = useRouter();
+
+  const mcapById = useMemo(() => {
+    if (!stablecoinsData?.peggedAssets) return undefined;
+    return new Map(stablecoinsData.peggedAssets.map((c) => [c.id, getCirculatingRaw(c)]));
+  }, [stablecoinsData]);
 
   if (isLoading) {
     return (
@@ -594,7 +614,7 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
   if (!data?.signals || Object.keys(data.signals).length === 0) return null;
 
   const totalCount = Object.keys(data.signals).length;
-  const elevated = computePositions(data.signals, logos);
+  const elevated = computePositions(data.signals, logos, mcapById);
   const calmDots = computeCalmDots(data.signals);
   const bandCounts = computeBandCounts(data.signals);
   const highest = highestBand(elevated.map((c) => c.band));
