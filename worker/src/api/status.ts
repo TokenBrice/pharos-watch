@@ -9,6 +9,7 @@ import {
   listRecentStatusTransitions,
   reconcileStatusState,
   STATUS_SYSTEM_FRESHNESS_SEC,
+  clampConfidence,
   type StatusLevel,
 } from "../lib/status-reliability";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -43,11 +44,6 @@ interface RawStatusComputation {
   telegramBot: StatusResponse["telegramBot"];
   datasetFreshness: StatusResponse["datasetFreshness"];
   summary: StatusResponse["summary"];
-}
-
-function clampConfidence(confidence: number): number {
-  if (!Number.isFinite(confidence)) return 0.1;
-  return Math.min(1, Math.max(0.1, confidence));
 }
 
 function formatRatio(value: number): string {

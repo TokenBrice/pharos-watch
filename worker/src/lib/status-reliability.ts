@@ -72,7 +72,7 @@ interface StatusProbeRow {
 
 const SEVERITY: Record<StatusLevel, number> = { healthy: 0, degraded: 1, stale: 2 };
 
-function clampConfidence(confidence: number): number {
+export function clampConfidence(confidence: number): number {
   if (!Number.isFinite(confidence)) return 0.1;
   return Math.min(1, Math.max(0.1, confidence));
 }

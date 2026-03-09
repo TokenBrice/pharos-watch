@@ -26,7 +26,7 @@ export function logUpstreamException(
   );
 }
 
-export function createJsonResponse(body: string, cacheControl: string): Response {
+function createJsonResponse(body: string, cacheControl: string): Response {
   return new Response(body, {
     headers: {
       "Content-Type": "application/json",
@@ -46,7 +46,7 @@ export function createFreshUpstreamResponse(body: string): Response {
   return createJsonResponse(body, `public, s-maxage=${CACHE_TTL_SECONDS}, max-age=10`);
 }
 
-export function createStaleCacheResponse(cached: DetailCacheEntry): Response | null {
+function createStaleCacheResponse(cached: DetailCacheEntry): Response | null {
   if (!cached) return null;
   return createJsonResponse(cached.value, CACHE_PROFILES.realtime);
 }

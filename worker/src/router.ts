@@ -45,7 +45,7 @@ import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
 
-import { resolveOrReject, withErrorHandler, errorResponse } from "./lib/api-utils";
+import { resolveOrReject, withErrorHandler, errorResponse, jsonResponse } from "./lib/api-utils";
 import { handleOg } from "./api/og";
 
 interface RouteContext {
@@ -175,9 +175,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
           true,
           telegramCreds ?? null,
         );
-        return new Response(JSON.stringify({ ok: true, result }), {
-          headers: { "Content-Type": "application/json" },
-        });
+        return jsonResponse({ ok: true, result });
       },
     );
   })],
@@ -199,10 +197,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
         ]);
         const evmChanged = result[0]?.meta?.changes ?? 0;
         const tronChanged = result[1]?.meta?.changes ?? 0;
-        return new Response(
-          JSON.stringify({ ok: true, evmReset: evmChanged, tronReset: tronChanged }),
-          { headers: { "Content-Type": "application/json" } },
-        );
+        return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
       },
     );
   })],
@@ -212,9 +207,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     const rows = await db
       .prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key")
       .all();
-    return new Response(JSON.stringify(rows.results), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse(rows.results);
   })],
 ]);
 
