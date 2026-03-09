@@ -18,8 +18,8 @@ import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
 import { WARNING_SIGNAL_LABELS } from "@/lib/yield-constants";
+import { TABLE_PAGE_SIZE } from "@/lib/constants";
 
-const PAGE_SIZE = 25;
 const COLUMN_COUNT = 12;
 
 type SortKey = "pys" | "apy30d" | "safetyScore" | "tvl" | "yieldStability" | "yieldType";
@@ -161,7 +161,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     defaultKey: "pys",
     defaultDirection: "desc",
     compareRows,
-    pageSize: PAGE_SIZE,
+    pageSize: TABLE_PAGE_SIZE,
     resetPageOnTotalChange: true,
   });
   const prefetch = usePrefetchStablecoin();

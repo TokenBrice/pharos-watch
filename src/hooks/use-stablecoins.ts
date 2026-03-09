@@ -18,7 +18,7 @@ export function useStablecoins() {
 }
 
 /** Stablecoin detail shape (tokens array from DL, CG, or commodity paths) */
-export interface DetailToken {
+interface DetailToken {
   date: number;
   totalCirculatingUSD?: Record<string, number>;
   totalCirculating?: Record<string, number>;

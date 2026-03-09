@@ -13,7 +13,7 @@ import type {
 // Types
 // ---------------------------------------------------------------------------
 
-export interface StressTestImpact {
+interface StressTestImpact {
   coinId: string;
   name: string;
   symbol: string;
@@ -24,7 +24,7 @@ export interface StressTestImpact {
   delta: number; // score change (negative = downgrade)
 }
 
-export interface SystemicRisk {
+interface SystemicRisk {
   coinId: string;
   name: string;
   symbol: string;

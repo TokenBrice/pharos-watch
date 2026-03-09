@@ -1,6 +1,6 @@
 import { CRON_15MIN, CRON_20MIN, CRON_30MIN, CRON_24H } from "@/lib/cron-intervals";
 
-export interface DataHealthPreset {
+interface DataHealthPreset {
   label: string;
   staleTime: number;
 }

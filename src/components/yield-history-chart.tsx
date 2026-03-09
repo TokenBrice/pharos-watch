@@ -16,12 +16,12 @@ import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useYieldHistory } from "@/hooks/use-yield-history";
 import { CHART_AMBER, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
+import { DAY_MS } from "@/lib/constants";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
 import type { YieldHistoryPoint } from "@shared/types";
 
 const BRAND_ACCENT = "oklch(0.72 0.14 248)";
-const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_DAYS = 90;
 const PRESET_DAYS = [7, 30, 90, 365] as const;
 

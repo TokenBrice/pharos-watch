@@ -1,11 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useStabilityIndex } from "@/hooks/use-stability-index";
-import { formatScore } from "@shared/lib/format";
-import { PSI_BAND_CLASSES, PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_PULSE_DURATION, type ConditionBand } from "@shared/lib/psi-colors";
 
 export function PsiLighthouse({ band, color, size = 36 }: { band: string; color: string; size?: number }) {
   const uid = useId();
@@ -91,100 +87,6 @@ export function PsiLighthouse({ band, color, size = 36 }: { band: string; color:
       {/* Base */}
       <rect x="30" y="66" width="28" height="5" rx="2.5" fill="#E8DCC4" opacity={0.7} />
       <rect x="26" y="71" width="36" height="5" rx="2.5" fill="#E8DCC4" opacity={0.45} />
-    </svg>
-  );
-}
-
-export function StabilityIndex() {
-  const { data, isLoading } = useStabilityIndex();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-4 py-3">
-        <Skeleton className="h-9 w-9 rounded-full" />
-        <Skeleton className="h-8 w-36" />
-        <Skeleton className="h-6 w-32" />
-      </div>
-    );
-  }
-
-  if (!data || !data.current) return null;
-
-  const { score, band, avg24h, avg24hBand, computedAt } = data.current;
-  const displayScore = avg24h ?? score;
-  const displayBand = avg24hBand ?? band;
-  const history = data.history;
-
-  // Delta from yesterday (first history point)
-  const yesterday = history.length > 0 ? history[0] : null;
-  const delta = yesterday ? Math.round((displayScore - yesterday.score) * 10) / 10 : null;
-
-  const colorClass = PSI_BAND_CLASSES[displayBand as ConditionBand] ?? "text-foreground";
-  const sparkColor = PSI_HEX_COLORS[displayBand as ConditionBand] ?? "#888";
-
-  // Build sparkline points from history (oldest to newest) + current
-  const sparkData = [...history].reverse().concat({
-    date: computedAt,
-    score: displayScore,
-    band: displayBand,
-    methodologyVersion: data.methodology.version,
-  });
-
-  return (
-    <Link href="/stability-index" className="flex items-center gap-4 animate-in fade-in duration-300 hover:opacity-80 transition-opacity">
-      <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-        Pharos Stability Index
-      </span>
-      <div className="flex items-center gap-3">
-        <PsiLighthouse band={displayBand} color={sparkColor} />
-        <div className="flex items-baseline gap-2">
-          <span className={`text-2xl font-extrabold font-mono tabular-nums ${colorClass}`}>
-            {formatScore(displayScore)}
-          </span>
-          <span className={`text-sm font-bold uppercase tracking-wide ${colorClass}`}>
-            {displayBand}
-          </span>
-        </div>
-      </div>
-      {delta !== null && (
-        <span className={`text-sm font-medium tabular-nums ${delta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
-          {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}
-        </span>
-      )}
-      {sparkData.length > 1 && (
-        <Sparkline data={sparkData} color={sparkColor} />
-      )}
-    </Link>
-  );
-}
-
-function Sparkline({ data, color }: { data: { score: number; band: string }[]; color: string }) {
-  const scores = data.map((d) => d.score);
-  const min = scores.reduce((m, s) => Math.min(m, s), Infinity);
-  const max = scores.reduce((m, s) => Math.max(m, s), -Infinity);
-  const range = max - min || 1;
-  const w = 120;
-  const h = 28;
-  const padding = 2;
-
-  const points = scores
-    .map((s, i) => {
-      const x = padding + (i / (scores.length - 1)) * (w - 2 * padding);
-      const y = h - padding - ((s - min) / range) * (h - 2 * padding);
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return (
-    <svg width={w} height={h} className="shrink-0" aria-label="30-day stability index trend">
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
     </svg>
   );
 }

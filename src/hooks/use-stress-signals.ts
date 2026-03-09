@@ -4,14 +4,11 @@ import { useApiQuery, CRON_15MIN } from "./use-api-query";
 import type {
   StressSignalsAllResponse,
   StressSignalDetailResponse,
-  StressSignalEntry,
 } from "@shared/types";
 import {
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
 } from "@shared/types";
-
-export type { StressSignalEntry };
 
 export function useStressSignals() {
   return useApiQuery<StressSignalsAllResponse>(

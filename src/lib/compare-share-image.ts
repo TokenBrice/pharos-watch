@@ -1,5 +1,5 @@
 /** Radar section data for one coin. */
-export interface ShareRadarCoinData {
+interface ShareRadarCoinData {
   symbol: string;
   overallGrade: string;
   color: string;

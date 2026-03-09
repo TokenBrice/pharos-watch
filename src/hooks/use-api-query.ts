@@ -14,7 +14,7 @@ import type { ZodType } from "zod";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 
-export interface PollingQueryControlOptions {
+interface PollingQueryControlOptions {
   enabled?: boolean;
   retry?: number | boolean;
   retryDelay?: (attempt: number) => number;
@@ -103,8 +103,3 @@ export function useApiQuery<T>(
     },
   );
 }
-
-/**
- * Meta-aware variant of useApiQuery — returns { data, meta } where meta
- * contains freshness info (updatedAt, ageSeconds, status).
- */

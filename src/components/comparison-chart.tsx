@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { ChartSkeleton } from "@/components/chart-skeleton";
 import { DateTooltip, MonoYAxis, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate } from "@shared/lib/format";
 
@@ -28,7 +27,6 @@ interface ComparisonChartProps {
   range?: TimeRangeOption;
   onRangeChange?: (range: TimeRangeOption) => void;
   normalizable?: boolean;
-  isLoading?: boolean;
 }
 
 export function ComparisonChart({
@@ -38,7 +36,6 @@ export function ComparisonChart({
   range,
   onRangeChange,
   normalizable,
-  isLoading,
 }: ComparisonChartProps) {
   const [normalized, setNormalized] = useState(false);
   // Merge all series into a single array keyed by timestamp
@@ -204,8 +201,6 @@ export function ComparisonChart({
               </LineChart>
             </ResponsiveContainer>
           </div>
-        ) : isLoading ? (
-          <ChartSkeleton className="h-[300px] sm:h-[400px]" />
         ) : (
           <div className="flex h-[300px] sm:h-[400px] items-center justify-center text-muted-foreground">
             No data available

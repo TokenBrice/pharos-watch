@@ -120,7 +120,9 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
               )}
             </div>
             {/* Radar chart — fills remaining width and full column height on desktop */}
-            <ReportCardRadar card={card} labels="full" className="w-full flex-1 min-h-[260px] md:h-full" />
+            <div className="w-full flex-1 min-h-[260px] md:h-full">
+              <ReportCardRadar card={card} labels="full" />
+            </div>
           </div>
 
           {/* Right column: Dimension breakdown */}

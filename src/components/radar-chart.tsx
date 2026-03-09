@@ -33,10 +33,9 @@ interface ReportCardRadarProps {
   card: ReportCard;
   size?: number;
   labels?: "full" | "short" | "none";
-  className?: string;
 }
 
-export function ReportCardRadar({ card, size, labels = "full", className }: ReportCardRadarProps) {
+export function ReportCardRadar({ card, size, labels = "full" }: ReportCardRadarProps) {
   const data = buildRadarData(card, labels);
   const color = GRADE_RADAR_COLORS[gradeRange(card.overallGrade)] ?? GRADE_RADAR_COLORS.NR;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
@@ -46,7 +45,7 @@ export function ReportCardRadar({ card, size, labels = "full", className }: Repo
   return (
     <div
       ref={chartContainerRef}
-      className={`w-full ${className ?? ""}`}
+      className="w-full"
       style={size !== undefined ? { height: size } : { height: "100%" }}
       role="figure"
       aria-label={`Safety score radar chart for ${card.symbol}`}
@@ -82,10 +81,9 @@ export function ReportCardRadar({ card, size, labels = "full", className }: Repo
 interface CompareRadarProps {
   cards: { card: ReportCard; color: string }[];
   size?: number;
-  className?: string;
 }
 
-export function CompareRadar({ cards, size = 300, className }: CompareRadarProps) {
+export function CompareRadar({ cards, size = 300 }: CompareRadarProps) {
   // Build a merged dataset: each entry has dimension + one score key per card
   const data = DIMENSION_ORDER.map((key) => {
     const entry: Record<string, string | number> = {
@@ -102,7 +100,7 @@ export function CompareRadar({ cards, size = 300, className }: CompareRadarProps
   return (
     <div
       ref={chartContainerRef}
-      className={`w-full ${className ?? ""}`}
+      className="w-full"
       style={{ height: size }}
       role="figure"
       aria-label={`Safety score comparison for ${cards.map(({ card }) => card.symbol).join(", ")}`}

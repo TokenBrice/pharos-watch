@@ -16,7 +16,7 @@ import type {
 // Types
 // ---------------------------------------------------------------------------
 
-export interface PortfolioHolding {
+interface PortfolioHolding {
   coinId: string;
   amount: number; // USD
 }
@@ -30,7 +30,7 @@ export interface UpstreamExposure {
   isCollateral: boolean; // true = non-stablecoin collateral (ETH, T-bills, etc.)
 }
 
-export interface PortfolioState {
+interface PortfolioState {
   initialized: boolean;
   holdings: PortfolioHolding[];
   totalUsd: number;

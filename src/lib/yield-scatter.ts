@@ -8,7 +8,7 @@ const APY_OUTLIER_MIN_ROWS = 12;
 const APY_OUTLIER_SHARE = 0.08;
 const APY_OUTLIER_RATIO = 1.35;
 
-export interface ApyAxisConfig {
+interface ApyAxisConfig {
   domainMax: number;
   clipThreshold: number | null;
   clippedCount: number;

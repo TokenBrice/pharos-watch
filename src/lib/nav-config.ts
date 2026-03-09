@@ -34,7 +34,7 @@ export interface NavItem {
   description?: string;
 }
 
-export interface NavGroup {
+interface NavGroup {
   label: string;
   items: NavItem[];
 }

@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 import type { DigestInputData } from "@shared/types";
 import { createStaticQueryOptions } from "./use-api-query";
 
-export interface DigestSnapshotData {
+interface DigestSnapshotData {
   date: string;
   inputData: DigestInputData | null;
   prevInputData: DigestInputData | null;

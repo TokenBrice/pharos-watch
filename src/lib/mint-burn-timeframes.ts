@@ -1,11 +1,11 @@
 import { DAY_HOURS, WEEK_HOURS, THIRTY_DAYS_HOURS, NINETY_DAYS_HOURS } from "@/lib/constants";
 
-export interface MintBurnSummaryTimeframePreset {
+interface MintBurnSummaryTimeframePreset {
   shortHours: number;
   longHours: number;
 }
 
-export interface ResolvedMintBurnSummaryTimeframePreset extends MintBurnSummaryTimeframePreset {
+interface ResolvedMintBurnSummaryTimeframePreset extends MintBurnSummaryTimeframePreset {
   shortLabel: string;
   longLabel: string;
 }

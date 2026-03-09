@@ -5,7 +5,7 @@ import { NINETY_DAYS_MS, WEEK_MS } from "./constants";
 
 const NINETY_DAY_TOLERANCE_MS = WEEK_MS;
 
-export interface SupplyHistoryEntry {
+interface SupplyHistoryEntry {
   date: number;
   circulatingUsd: number;
 }
@@ -18,7 +18,7 @@ interface PegReferenceInputs {
   metaById?: Map<string, StablecoinMeta>;
 }
 
-export interface PegReferenceContext {
+interface PegReferenceContext {
   pegReference: number;
   pegRates: Record<string, number>;
   pegRateSources: Record<string, PegRateSource>;

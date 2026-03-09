@@ -1,9 +1,9 @@
 import type { ApiMeta } from "@/lib/api";
 import { ApiFetchError } from "@/lib/api";
 
-export type DataHealthState = "fresh" | "degraded" | "stale" | "unavailable" | "error";
+type DataHealthState = "fresh" | "degraded" | "stale" | "unavailable" | "error";
 
-export interface QueryHealthInput {
+interface QueryHealthInput {
   label: string;
   dataUpdatedAt: number;
   staleTime: number;
@@ -22,7 +22,7 @@ export interface DataHealthInfo {
   meta: ApiMeta | null;
 }
 
-export interface MergedDataHealth {
+interface MergedDataHealth {
   state: DataHealthState;
   affectedLabels: string[];
   latestUpdatedAt: number | null;
@@ -167,4 +167,3 @@ export function formatDataHealthTimestamp(
     timeZoneName: "short",
   });
 }
-
