@@ -9,7 +9,7 @@ Cron result status semantics:
 - `degraded`: one or more critical non-fatal source families failed (for example DeFiLlama yields/protocol coverage), or coverage falls near the guardrail band.
 - throw/error: catastrophic source failure (for example DL+Curve hard failure) still aborts the run.
 
-Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`).
+Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByAddress`, `stagedPoolsSkippedByFingerprint`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`).
 
 | Component | Weight | Source | How Computed |
 |-----------|--------|--------|-------------|
@@ -132,7 +132,7 @@ Each `PoolEntry` carries a `poolId` field formatted as `chain:address` (lowercas
 
 DeFiLlama's yields API uses opaque UUIDs as pool identifiers (e.g., `6b6de6c7-...`), while CoinGecko/GeckoTerminal/DexScreener return on-chain pool addresses. Since these formats never match, `buildKnownPoolAddresses()` also stores **token-pair fingerprints** in the format `fp:<chain>:<normalized_protocol>:<sorted_token_addresses>`. When CG/GT/DS discover a pool, they compute the same fingerprint from their base/quote token addresses and check against the known set. This prevents the same physical pool from being counted twice across data sources.
 
-The scoring cron applies the same fingerprint dedup during staged-pool merge, so a discovery-stage row cannot be re-counted when DeFiLlama already covers the same physical pool under a UUID.
+The scoring cron applies the same fingerprint dedup during staged-pool merge, so a discovery-stage row cannot be re-counted when DeFiLlama already covers the same physical pool under a UUID. `/status` exposes this split directly via `stagedPoolsSkippedByFingerprint` versus `stagedPoolsSkippedByAddress`.
 
 ### Storage
 

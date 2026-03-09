@@ -91,9 +91,13 @@ describe("syncDexLiquidity", () => {
     expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
+      stagedPoolsSkippedByAddress?: number;
+      stagedPoolsSkippedByFingerprint?: number;
       sourceCoverage?: { nearCoverageGuard?: boolean };
     };
     expect(metadata.failedSources).toEqual([]);
+    expect(metadata.stagedPoolsSkippedByAddress).toBe(0);
+    expect(metadata.stagedPoolsSkippedByFingerprint).toBe(0);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
   });
 });

@@ -104,7 +104,13 @@ export async function syncDexLiquidity(
     curvePoolMap, uniV3PoolFees, uniV3SymbolFees, aerodromeIsStable,
   );
 
-  const { mergedCount: stagedMergedCount, skippedCount: stagedSkippedCount, priceObservations: stagedPriceObs } =
+  const {
+    mergedCount: stagedMergedCount,
+    skippedCount: stagedSkippedCount,
+    skippedByAddressCount: stagedSkippedByAddressCount,
+    skippedByFingerprintCount: stagedSkippedByFingerprintCount,
+    priceObservations: stagedPriceObs,
+  } =
     await mergeStagedPools(db, metrics, knownPoolAddrs, syncStartSec);
   for (const [id, obs] of stagedPriceObs) {
     const existing = priceObservations.get(id) ?? [];
@@ -152,6 +158,8 @@ export async function syncDexLiquidity(
       rowsDropped: 0,
       stagedPoolsMerged: stagedMergedCount,
       stagedPoolsSkipped: stagedSkippedCount,
+      stagedPoolsSkippedByAddress: stagedSkippedByAddressCount,
+      stagedPoolsSkippedByFingerprint: stagedSkippedByFingerprintCount,
       sourceCoverage: {
         dlYieldsAvailable: dataSources.dlYieldsAvailable,
         dlProtocolsAvailable: dataSources.dlProtocolsAvailable,

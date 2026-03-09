@@ -62,6 +62,8 @@ describe("mergeStagedPools", () => {
 
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
+    expect(result.skippedByAddressCount).toBe(0);
+    expect(result.skippedByFingerprintCount).toBe(0);
   });
 
   it("does not modify metrics when staging table is empty", async () => {
@@ -77,6 +79,8 @@ describe("mergeStagedPools", () => {
 
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
+    expect(result.skippedByAddressCount).toBe(0);
+    expect(result.skippedByFingerprintCount).toBe(0);
     expect(metrics.get("test-coin")?.totalTvlUsd).toBe(originalTvl);
   });
 
@@ -106,6 +110,8 @@ describe("mergeStagedPools", () => {
     const result = await mergeStagedPools(mockDb, metrics, knownPoolAddrs, 1710000000);
 
     expect(result.skippedCount).toBe(1);
+    expect(result.skippedByAddressCount).toBe(1);
+    expect(result.skippedByFingerprintCount).toBe(0);
     expect(result.mergedCount).toBe(0);
   });
 
@@ -139,6 +145,8 @@ describe("mergeStagedPools", () => {
     const result = await mergeStagedPools(mockDb, metrics, knownPoolAddrs, 1710000000);
 
     expect(result.skippedCount).toBe(1);
+    expect(result.skippedByAddressCount).toBe(0);
+    expect(result.skippedByFingerprintCount).toBe(1);
     expect(result.mergedCount).toBe(0);
   });
 
@@ -153,6 +161,8 @@ describe("mergeStagedPools", () => {
 
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
+    expect(result.skippedByAddressCount).toBe(0);
+    expect(result.skippedByFingerprintCount).toBe(0);
     expect(warnSpy).toHaveBeenCalledOnce();
   });
 
@@ -185,6 +195,8 @@ describe("mergeStagedPools", () => {
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedCount).toBe(0);
+    expect(result.skippedByAddressCount).toBe(0);
+    expect(result.skippedByFingerprintCount).toBe(0);
     expect(result.priceObservations.get("usdt-tether")).toHaveLength(1);
     expect(metric).toBeDefined();
     expect(metric.totalTvlUsd).toBe(75000);
@@ -226,6 +238,8 @@ describe("mergeStagedPools", () => {
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedCount).toBe(0);
+    expect(result.skippedByAddressCount).toBe(0);
+    expect(result.skippedByFingerprintCount).toBe(0);
     expect(result.priceObservations.get("usdt-tether")).toHaveLength(1);
     expect(metric).toBeDefined();
     expect(metric.totalTvlUsd).toBe(100000);

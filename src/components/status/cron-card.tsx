@@ -154,6 +154,8 @@ function summarizeMetadata(job: string, metadata: Record<string, unknown> | unde
   if (job === "sync-dex-liquidity") {
     const stagedPoolsMerged = readNumber(metadata.stagedPoolsMerged);
     const stagedPoolsSkipped = readNumber(metadata.stagedPoolsSkipped);
+    const stagedPoolsSkippedByAddress = readNumber(metadata.stagedPoolsSkippedByAddress);
+    const stagedPoolsSkippedByFingerprint = readNumber(metadata.stagedPoolsSkippedByFingerprint);
     const failedSources = formatStringList(metadata.failedSources);
     const fallbackMode = formatStringList(metadata.fallbackMode);
     const sourceCoverage = readRecord(metadata.sourceCoverage);
@@ -162,10 +164,17 @@ function summarizeMetadata(job: string, metadata: Record<string, unknown> | unde
     const minExpectedCoverage = readNumber(sourceCoverage?.minExpectedCoverage);
     const priceObservationCoins = readNumber(sourceCoverage?.priceObservationCoins);
     const nearCoverageGuard = readBoolean(sourceCoverage?.nearCoverageGuard);
+    const skipBreakdown =
+      stagedPoolsSkippedByAddress != null || stagedPoolsSkippedByFingerprint != null
+        ? [
+            stagedPoolsSkippedByFingerprint != null ? `fp ${stagedPoolsSkippedByFingerprint}` : null,
+            stagedPoolsSkippedByAddress != null ? `addr ${stagedPoolsSkippedByAddress}` : null,
+          ].filter((part): part is string => part != null).join(", ")
+        : null;
 
     const lines = [
       stagedPoolsMerged != null
-        ? `staged pools merged ${stagedPoolsMerged}${stagedPoolsSkipped != null ? `, skipped ${stagedPoolsSkipped}` : ""}`
+        ? `staged pools merged ${stagedPoolsMerged}${stagedPoolsSkipped != null ? `, skipped ${stagedPoolsSkipped}${skipBreakdown ? ` (${skipBreakdown})` : ""}` : ""}`
         : null,
       currentCoverage != null
         ? `coverage ${currentCoverage}${previousCoverage != null ? ` vs ${previousCoverage} previous` : ""}${minExpectedCoverage != null ? `, floor ${minExpectedCoverage}` : ""}`

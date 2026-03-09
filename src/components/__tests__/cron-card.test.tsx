@@ -100,6 +100,8 @@ describe("CronCard", () => {
             metadata: {
               stagedPoolsMerged: 41,
               stagedPoolsSkipped: 9,
+              stagedPoolsSkippedByAddress: 2,
+              stagedPoolsSkippedByFingerprint: 7,
               failedSources: ["defillama-yields"],
               fallbackMode: ["dl-yields-unavailable"],
               sourceCoverage: {
@@ -120,7 +122,7 @@ describe("CronCard", () => {
 
     expect(html).toContain("DEX liquidity scoring");
     expect(html).toContain("sync-dex-liquidity");
-    expect(html).toContain("staged pools merged 41, skipped 9");
+    expect(html).toContain("staged pools merged 41, skipped 9 (fp 7, addr 2)");
     expect(html).toContain("coverage 126 vs 131 previous, floor 78");
     expect(html).toContain("dex price observations 93 coins");
     expect(html).toContain("failed sources defillama-yields");
