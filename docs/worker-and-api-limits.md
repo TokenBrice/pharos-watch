@@ -61,6 +61,8 @@ Primary source for token prices, market caps, and DEX pool discovery.
 
 **Crawl budget**: 5 min max wall-time for CoinGecko onchain pool discovery (`CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS`). This prevents the paid onchain crawl from consuming the entire `sync-dex-liquidity` runtime before scoring and persistence.
 
+**Shared optional-discovery budget**: `sync-dex-liquidity` also applies a 5-minute shared deadline across optional discovery stages (CG/GT token batches, CG/GT pool crawls, DexScreener fallback, CG tickers fallback). Stage-local budgets are subordinate to that shared deadline.
+
 > **Key constraint**: 500,000 calls/month ÷ ~1,440 cron runs/month (every 30 min) = ~347 CG calls per cron run on average before hitting the monthly cap. The pool crawl can still blow through this if not throttled.
 
 ---

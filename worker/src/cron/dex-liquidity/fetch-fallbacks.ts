@@ -37,6 +37,7 @@ export async function fetchDsFallbackPools(
   priceObservations: Map<string, DexPriceObs[]>,
   knownPoolAddrs: Set<string>,
   signal?: AbortSignal,
+  deadlineMs?: number,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -56,9 +57,17 @@ export async function fetchDsFallbackPools(
 
   for (const meta of targetCoins) {
     throwIfAborted(signal);
+    if (deadlineMs && Date.now() >= deadlineMs) {
+      console.log(`[dex-liquidity] DexScreener fallback budget exhausted after ${requests} requests, yielding partial results`);
+      return { newPools, priceObs };
+    }
 
     for (const contract of getTrackedContracts(meta)) {
       if (!DS_CHAIN_MAP[contract.chain]) continue;
+      if (deadlineMs && Date.now() >= deadlineMs) {
+        console.log(`[dex-liquidity] DexScreener fallback budget exhausted after ${requests} requests, yielding partial results`);
+        return { newPools, priceObs };
+      }
 
       if (requests > 0) await dsRateLimit(signal);
       requests++;
@@ -155,6 +164,7 @@ export async function fetchCgTickersFallback(
   metrics: Map<string, LiquidityMetrics>,
   priceObservations: Map<string, DexPriceObs[]>,
   signal?: AbortSignal,
+  deadlineMs?: number,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -170,6 +180,10 @@ export async function fetchCgTickersFallback(
 
   for (const meta of targetCoins) {
     throwIfAborted(signal);
+    if (deadlineMs && Date.now() >= deadlineMs) {
+      console.log(`[dex-liquidity] CG tickers fallback budget exhausted, yielding partial results`);
+      return { newPools, priceObs };
+    }
     try {
       const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`);
       const timeout = AbortSignal.timeout(10_000);

@@ -578,6 +578,7 @@ export async function fetchGtTokenBatch(
   addressToId: Map<string, string>,
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(GT_CHAIN_MAP),
+  deadlineMs?: number,
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
   let requestCount = 0;
@@ -587,6 +588,10 @@ export async function fetchGtTokenBatch(
 
     // Batch into groups of 30 (GT limit for multi endpoint)
     for (let i = 0; i < tokens.length; i += 30) {
+      if (deadlineMs && Date.now() >= deadlineMs) {
+        console.log(`[dex-liquidity] GT token batch budget exhausted after ${requestCount} requests, yielding partial results`);
+        return priceObs;
+      }
       const batch = tokens.slice(i, i + 30);
       const addresses = batch.map((t) => t.address).join(",");
 
@@ -640,6 +645,7 @@ export async function fetchCgTokenBatchPrices(
   addressToId: Map<string, string>,
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
+  deadlineMs?: number,
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
   let requestCount = 0;
@@ -649,6 +655,10 @@ export async function fetchCgTokenBatchPrices(
 
     // Batch into groups of 30 (CG limit for multi endpoint)
     for (let i = 0; i < tokens.length; i += 30) {
+      if (deadlineMs && Date.now() >= deadlineMs) {
+        console.log(`[dex-liquidity] CG token batch budget exhausted after ${requestCount} requests, yielding partial results`);
+        return priceObs;
+      }
       const batch = tokens.slice(i, i + 30);
       const addresses = batch.map((t) => t.address);
 

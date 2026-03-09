@@ -15,6 +15,8 @@ import { processPoolMetrics } from "./process-pools";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 
+const OPTIONAL_DISCOVERY_BUDGET_MS = 5 * 60_000;
+
 function rethrowIfAborted(err: unknown, signal?: AbortSignal): void {
   if (signal?.aborted) {
     if (signal.reason instanceof Error) throw signal.reason;
@@ -101,14 +103,21 @@ export async function syncDexLiquidity(
 
   const cgChainAddresses = buildChainAddresses(CG_CHAIN_MAP);
   const gtChainAddresses = buildChainAddresses(useCg ? GT_ONLY_CHAIN_MAP : GT_CHAIN_MAP);
+  const optionalDiscoveryDeadlineMs = Date.now() + OPTIONAL_DISCOVERY_BUDGET_MS;
+  let optionalBudgetExhausted = false;
+  const hasOptionalBudget = (): boolean => {
+    if (Date.now() < optionalDiscoveryDeadlineMs) return true;
+    optionalBudgetExhausted = true;
+    return false;
+  };
 
   // 4d. Token-level batch price observations (provider-specific by mapped chain support)
   let cgTokenPriceObs = new Map<string, DexPriceObs[]>();
   let gtTokenPriceObs = new Map<string, DexPriceObs[]>();
 
-  if (useCg) {
+  if (useCg && hasOptionalBudget()) {
     try {
-      cgTokenPriceObs = await fetchCgTokenBatchPrices(addressToId, signal, cgChainAddresses);
+      cgTokenPriceObs = await fetchCgTokenBatchPrices(addressToId, signal, cgChainAddresses, optionalDiscoveryDeadlineMs);
     } catch (err) {
       rethrowIfAborted(err, signal);
       console.warn("[dex-liquidity] CG token batch failed (non-fatal):", err);
@@ -118,9 +127,9 @@ export async function syncDexLiquidity(
     }
   }
 
-  if (!useCg || gtChainAddresses.size > 0) {
+  if ((!useCg || gtChainAddresses.size > 0) && hasOptionalBudget()) {
     try {
-      gtTokenPriceObs = await fetchGtTokenBatch(addressToId, signal, gtChainAddresses);
+      gtTokenPriceObs = await fetchGtTokenBatch(addressToId, signal, gtChainAddresses, optionalDiscoveryDeadlineMs);
     } catch (err) {
       rethrowIfAborted(err, signal);
       console.warn(`[dex-liquidity] GT token batch failed (non-fatal):`, err);
@@ -136,9 +145,16 @@ export async function syncDexLiquidity(
   let gtCrawlNewPools = new Map<string, GtNewPool[]>();
   let gtCrawlPriceObs = new Map<string, DexPriceObs[]>();
 
-  if (useCg) {
+  if (useCg && hasOptionalBudget()) {
     try {
-      const cgResult = await fetchCgPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps, signal, cgChainAddresses);
+      const cgResult = await fetchCgPools(
+        addressToId,
+        knownPoolAddrs,
+        dataSources.protocolTvlCaps,
+        signal,
+        cgChainAddresses,
+        optionalDiscoveryDeadlineMs,
+      );
       cgCrawlNewPools = cgResult.newPools;
       cgCrawlPriceObs = cgResult.priceObs;
     } catch (err) {
@@ -150,9 +166,16 @@ export async function syncDexLiquidity(
     }
   }
 
-  if (!useCg || gtChainAddresses.size > 0) {
+  if ((!useCg || gtChainAddresses.size > 0) && hasOptionalBudget()) {
     try {
-      const gtResult = await fetchGtPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps, signal, gtChainAddresses);
+      const gtResult = await fetchGtPools(
+        addressToId,
+        knownPoolAddrs,
+        dataSources.protocolTvlCaps,
+        signal,
+        gtChainAddresses,
+        optionalDiscoveryDeadlineMs,
+      );
       gtCrawlNewPools = gtResult.newPools;
       gtCrawlPriceObs = gtResult.priceObs;
     } catch (err) {
@@ -215,33 +238,48 @@ export async function syncDexLiquidity(
   }
 
   // 5c. DexScreener fallback for coins still missing pool or price coverage
-  try {
-    const dsFallback = await fetchDsFallbackPools(metrics, priceObservations, knownPoolAddrs, signal);
-    mergeGtPools(metrics, dsFallback.newPools);
-    for (const [id, obs] of dsFallback.priceObs) {
-      const existing = priceObservations.get(id) ?? [];
-      existing.push(...obs);
-      priceObservations.set(id, existing);
+  if (hasOptionalBudget()) {
+    try {
+      const dsFallback = await fetchDsFallbackPools(
+        metrics,
+        priceObservations,
+        knownPoolAddrs,
+        signal,
+        optionalDiscoveryDeadlineMs,
+      );
+      mergeGtPools(metrics, dsFallback.newPools);
+      for (const [id, obs] of dsFallback.priceObs) {
+        const existing = priceObservations.get(id) ?? [];
+        existing.push(...obs);
+        priceObservations.set(id, existing);
+      }
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      console.warn("[dex-liquidity] DexScreener fallback failed (non-fatal):", err);
+      failedSources.push("dexscreener-fallback");
     }
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn("[dex-liquidity] DexScreener fallback failed (non-fatal):", err);
-    failedSources.push("dexscreener-fallback");
   }
 
   // 5d. CoinGecko tickers fallback for orderbook DEXes (e.g. Kinesis Exchange for KAG/KAU)
-  try {
-    const cgTickersFallback = await fetchCgTickersFallback(metrics, priceObservations, signal);
-    mergeGtPools(metrics, cgTickersFallback.newPools);
-    for (const [id, obs] of cgTickersFallback.priceObs) {
-      const existing = priceObservations.get(id) ?? [];
-      existing.push(...obs);
-      priceObservations.set(id, existing);
+  if (hasOptionalBudget()) {
+    try {
+      const cgTickersFallback = await fetchCgTickersFallback(
+        metrics,
+        priceObservations,
+        signal,
+        optionalDiscoveryDeadlineMs,
+      );
+      mergeGtPools(metrics, cgTickersFallback.newPools);
+      for (const [id, obs] of cgTickersFallback.priceObs) {
+        const existing = priceObservations.get(id) ?? [];
+        existing.push(...obs);
+        priceObservations.set(id, existing);
+      }
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
+      failedSources.push("coingecko-tickers-fallback");
     }
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
-    failedSources.push("coingecko-tickers-fallback");
   }
 
   // 6. Compute composite scores per stablecoin
@@ -295,6 +333,7 @@ export async function syncDexLiquidity(
       fallbackMode: [
         dataSources.dlYieldsAvailable ? null : (useCg ? "cg-crawl-primary" : "gt-crawl-primary"),
         ...fallbackSignals,
+        ...(optionalBudgetExhausted ? ["optional-discovery-budget-exhausted"] : []),
       ].filter(Boolean),
       validationFailures: 0,
     }),

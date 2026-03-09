@@ -37,6 +37,7 @@ export async function fetchCgPools(
   protocolTvlCaps: Map<string, number>,
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
+  deadlineMs?: number,
 ): Promise<{ newPools: Map<string, CgNewPool[]>; priceObs: Map<string, DexPriceObs[]>; stats: GtCrawlResult["stats"] }> {
   const newPools = new Map<string, CgNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -54,6 +55,12 @@ export async function fetchCgPools(
     stats,
     signal,
     beforeRequest: async ({ requestCount, totalTokens, startMs, signal: abortSignal }) => {
+      if (deadlineMs && Date.now() >= deadlineMs) {
+        console.log(
+          `[dex-liquidity] CG pool crawl shared deadline reached after ${requestCount}/${totalTokens} requests, yielding partial results`,
+        );
+        return false;
+      }
       if (Date.now() - startMs > CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS) {
         console.log(
           `[dex-liquidity] CG pool crawl time budget exhausted after ${requestCount}/${totalTokens} requests ` +
@@ -234,6 +241,7 @@ export async function fetchGtPools(
   protocolTvlCaps: Map<string, number>,
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(GT_CHAIN_MAP),
+  deadlineMs?: number,
 ): Promise<GtCrawlResult> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -257,6 +265,12 @@ export async function fetchGtPools(
     stats,
     signal,
     beforeRequest: async ({ requestCount, totalTokens, startMs, signal: abortSignal }) => {
+      if (deadlineMs && Date.now() >= deadlineMs) {
+        console.log(
+          `[dex-liquidity] GT pool crawl shared deadline reached after ${requestCount}/${totalTokens} requests, yielding partial results`,
+        );
+        return false;
+      }
       if (Date.now() - startMs > CRAWL_BUDGETS.GECKO_TERMINAL_MS) {
         console.log(
           `[dex-liquidity] GT pool crawl time budget exhausted after ${requestCount}/${totalTokens} requests ` +

@@ -22,6 +22,8 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, and detailed 
 
 Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + registry-backed CoinGecko Onchain / GeckoTerminal pool discovery + DexScreener token API (30+ chains, fallback for coins that still lack pool coverage or DEX price observations after primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins that still lack pool coverage or DEX price observations, e.g. KAG/KAU on Kinesis Exchange).
 
+Optional discovery stages (CG token batch, GT token batch, CG pool crawl, GT-only pool crawl, DexScreener fallback, CG tickers fallback) now share a single 5-minute wall-clock budget inside the cron. When that shared budget is exhausted, the run keeps the data gathered so far, skips the remaining optional phases, and proceeds to scoring/persistence instead of timing out the entire cron.
+
 ### Quality Multipliers (v2)
 
 | Pool Type | Multiplier | Detection |
