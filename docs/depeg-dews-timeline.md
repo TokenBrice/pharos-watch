@@ -1,6 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v4.4` (2026-02-18 -> 2026-03-02).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v4.5` (2026-02-18 -> 2026-03-09).
+
+---
+
+## v4.5 — Trusted DEX-price gating for depeg suppression, confirmation, and UI checks (Mar 9, 2026)
+
+**Commit:** `unreleased`
+
+- Depeg suppression and pending-confirmation promotion now require fresh DEX rows backed by at least `$1M` of aggregate source TVL
+- Public DEX price-check UI exposure now requires fresh data backed by at least `$250K` of aggregate source TVL
+- Thin DEX rows can no longer veto new depeg events or confirm pending large-cap depegs on their own
 
 ---
 

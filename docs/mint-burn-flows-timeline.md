@@ -1,6 +1,18 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.5` (2026-03-01 -> 2026-03-09).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.6` (2026-03-01 -> 2026-03-09).
+
+---
+
+## v4.6 - Safe-frontier ingestion and counted event-history alignment (Mar 9, 2026)
+
+**Commit:** `unreleased`
+
+- Sync-state advancement now stops at the shared safe coverage frontier when any event definition is only partially scanned
+- Missing block timestamps now cap advancement at the earliest unresolved block instead of silently skipping rows forever
+- `GET /api/mint-burn-events` now exposes `flowType` and supports `scope=counted` for rows that participate in aggregates
+- Stablecoin detail event-history views now default to counted economic-flow rows, excluding bridge burns, review-required burns, and atomic roundtrips
+- Event rows with missing USD prices now render native token amounts instead of misleading dollar values
 
 ---
 

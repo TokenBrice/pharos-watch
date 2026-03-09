@@ -360,10 +360,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "events": [DepegEvent, ...],
   "total": 4080,
   "methodology": {
-    "version": "4.4",
-    "versionLabel": "v4.4",
-    "currentVersion": "4.4",
-    "currentVersionLabel": "v4.4",
+    "version": "4.5",
+    "versionLabel": "v4.5",
+    "currentVersion": "4.5",
+    "currentVersionLabel": "v4.5",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -382,7 +382,7 @@ Results are ordered by `startedAt` descending (most recent first).
 | `symbol` | `string` | Token symbol |
 | `pegType` | `string` | DefiLlama peg type (e.g. `"peggedUSD"`) |
 | `direction` | `"above" \| "below"` | Whether the price was above or below the peg |
-| `peakDeviationBps` | `number` | Largest deviation observed (basis points, always positive) |
+| `peakDeviationBps` | `number` | Largest deviation observed (basis points, signed; negative = below peg, positive = above peg) |
 | `startedAt` | `number` | Unix seconds when depeg was first detected |
 | `endedAt` | `number \| null` | Unix seconds when price returned to peg; `null` if still active |
 | `startPrice` | `number` | Price at event start (USD) |
@@ -396,7 +396,7 @@ Results are ordered by `startedAt` descending (most recent first).
 | Field | Type | Description |
 |-------|------|-------------|
 | `version` | `string` | Methodology version attributed from the latest returned event timestamp |
-| `versionLabel` | `string` | Display label (e.g. `"v4.4"`) |
+| `versionLabel` | `string` | Display label (e.g. `"v4.5"`) |
 | `currentVersion` | `string` | Latest methodology version |
 | `currentVersionLabel` | `string` | Display label for latest methodology version |
 | `changelogPath` | `string` | Relative URL to the methodology changelog page |
@@ -418,10 +418,10 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "4.4",
-    "versionLabel": "v4.4",
-    "currentVersion": "4.4",
-    "currentVersionLabel": "v4.4",
+    "version": "4.5",
+    "versionLabel": "v4.5",
+    "currentVersion": "4.5",
+    "currentVersionLabel": "v4.5",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -787,7 +787,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
   "date": "2026-02-27",
   "inputData": { "totalMcapUsd": 230000000000, "mcap7dDelta": 0.012, ... },
   "prevInputData": { ... },
-  "depegEvents": [{ "stablecoinId": "usdt-tether", "symbol": "USDT", "direction": "below", "peakDeviationBps": 150, ... }],
+  "depegEvents": [{ "stablecoinId": "usdt-tether", "symbol": "USDT", "direction": "below", "peakDeviationBps": -150, ... }],
   "blacklistEvents": [{ "stablecoin": "USDT", "chainName": "Ethereum", "eventType": "blacklist", ... }]
 }
 ```
@@ -1355,15 +1355,15 @@ Aggregate responses are filtered to tracked stablecoin IDs only, even if stale r
         "price": { "value": 1, "available": true }
       },
       "computedAt": 1740000000,
-      "methodologyVersion": "4.4"
+      "methodologyVersion": "4.5"
     }
   },
   "updatedAt": 1740000000,
   "methodology": {
-    "version": "4.4",
-    "versionLabel": "v4.4",
-    "currentVersion": "4.4",
-    "currentVersionLabel": "v4.4",
+    "version": "4.5",
+    "versionLabel": "v4.5",
+    "currentVersion": "4.5",
+    "currentVersionLabel": "v4.5",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -1383,7 +1383,7 @@ Aggregate responses are filtered to tracked stablecoin IDs only, even if stale r
       "price": { "value": 1, "available": true }
     },
     "computedAt": 1740000000,
-    "methodologyVersion": "4.4"
+    "methodologyVersion": "4.5"
   },
   "history": [
     {
@@ -1398,10 +1398,10 @@ Aggregate responses are filtered to tracked stablecoin IDs only, even if stale r
     }
   ],
   "methodology": {
-    "version": "4.4",
-    "versionLabel": "v4.4",
-    "currentVersion": "4.4",
-    "currentVersionLabel": "v4.4",
+    "version": "4.5",
+    "versionLabel": "v4.5",
+    "currentVersion": "4.5",
+    "currentVersionLabel": "v4.5",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

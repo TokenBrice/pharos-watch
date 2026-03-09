@@ -67,7 +67,7 @@ This ordering prevents a frontend deploy if the newly deployed worker fails crit
 ```ts
 export default defineConfig({
   test: {
-    exclude: [".worktrees/**", ".next/**", "out/**", "coverage/**"],
+    exclude: [".worktrees/**", "worktrees/**", ".next/**", "out/**", "coverage/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
@@ -199,7 +199,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `blacklist-api.test.ts` | `src/lib/blacklist-api.ts` | Query param encoding and API path generation for blacklist filters |
 | `methodology-version.test.ts` | `shared/lib/methodology-version.ts` | Version-window resolution, labels, and changelog selection logic |
 | `mint-burn-timeframes.test.ts` | `src/lib/mint-burn-timeframes.ts` | Timeframe presets and label semantics for flow views |
-| `peg-scoring.test.ts` | `src/lib/peg-scoring.ts` | Peg score display helpers and band formatting |
+| `peg-scoring.test.ts` | `shared/lib/peg-score.ts` + `src/lib/peg-stability.ts` | Peg score computation helpers plus UI-facing peg-stability formatting |
 | `stablecoin-detail-derive.test.ts` | `src/lib/stablecoin-detail-derive.ts` | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback |
 | `stablecoin-schema-compat.test.ts` | `shared/lib/stablecoins.ts` + schemas | Tracked stablecoin metadata remains compatible with shared schemas |
 | `yield-scatter.test.ts` | `src/lib/yield-scatter.ts` | Scatterplot point derivation and label bucketing for yield views |
@@ -514,7 +514,7 @@ describe("syncFxRates", () => {
 | `react-hooks/purity` | warn | `Date.now()` in render is intentional for timestamp-based UIs |
 | `react-hooks/incompatible-library` | warn | TanStack Virtual `useVirtualizer()` — known library limitation |
 
-**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.worktrees/`, `worker/.wrangler/` (auto-generated build artifacts).
+**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.worktrees/`, `worktrees/`, `.codex-autorunner/`, `worker/.wrangler/` (auto-generated build artifacts).
 
 ### Zod Runtime Validation
 
@@ -528,6 +528,7 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current s
 - `SafetyScoreHistoryResponseSchema` (wired with a typed cast in `use-safety-score-history.ts`)
 - `MintBurnFlowsResponseSchema`
 - `MintBurnPerCoinResponseSchema`
+- `MintBurnEventsResponseSchema`
 - `StressSignalsAllResponseSchema`
 - `StressSignalDetailResponseSchema`
 

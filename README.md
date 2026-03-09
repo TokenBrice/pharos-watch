@@ -121,7 +121,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migrations (59 total)
+└── migrations/                   D1 SQL migrations (60 total)
 ```
 
 ## Infrastructure
@@ -129,7 +129,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 ```
 Cloudflare Worker (API layer)
   ├── Cron: */15 * * * *    → sync stablecoins + chained snapshot-supply retry + charts + FX rates + depeg detection + stability index (PSI) + DEWS + status self-check + Telegram alert dispatch
-  ├── Cron: 3,23,43 * * * * → blacklist sync + mint/burn sync
+  ├── Cron: 3,23,43 * * * * → blacklist sync + mint/burn sync + DEX discovery sync
   ├── Cron: 10,40 * * * *   → DEX liquidity sync + yield sync
   └── Cron: 0 8 * * *       → supply snapshot + safety-grade snapshot + daily Telegram alert pass + PSI snapshot + USDS status + Bluechip safety ratings + daily digest (chained after PSI) + T-bill rate
 

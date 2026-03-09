@@ -1,6 +1,17 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v3.3` (2026-02-19 -> 2026-03-09).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v3.4` (2026-02-19 -> 2026-03-09).
+
+---
+
+## v3.4 - Retained-pool recomputation and trusted staged-price hardening (Mar 9, 2026)
+
+**Commit:** `unreleased`
+
+- Aggregate score inputs are now recomputed from the retained pool set after filtering and TVL caps, preventing dropped pools from leaking stale influence
+- HHI now uses the full retained pool set before display truncation, and global 7d volume is deduped by physical pool
+- Staged discovery merges now preserve raw DEX metadata and pool-quality multipliers while deduping against token-pair fingerprints
+- DEX price observations require a consistent `$50K` post-confidence TVL floor across source families
 
 ---
 

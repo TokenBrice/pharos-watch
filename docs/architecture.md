@@ -1,4 +1,4 @@
-# Architecture — Full File Tree & API Endpoints
+# Architecture — Curated File Tree & API Endpoints
 
 ## API Endpoints
 
@@ -62,7 +62,9 @@ These tables are created in `worker/migrations/0054_telegram_subscribers.sql`. F
 |-----|-------------|
 | `dispatch-telegram-alerts` | Detects DEWS/depeg/safety changes and fans out alerts to subscribers (runs on `*/15` and `0 8` triggers) |
 
-## Full File Tree
+## File Tree Guide
+
+Representative tree of architecture-significant files and directories. For an exhaustive inventory, use `rg --files src shared worker scripts data`.
 
 ```
 src/                              # Next.js frontend (static export)
@@ -334,7 +336,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (59 total)
+├── migrations/                   # D1 SQL migrations (60 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
