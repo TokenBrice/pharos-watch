@@ -211,7 +211,7 @@ export function Sidebar() {
         <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md" aria-label="Pharos home">
           <Image
             src="/pharos-icon.png"
-            alt=""
+            alt="Pharos"
             width={28}
             height={28}
             className="rounded-lg ring-1 ring-border/60 shrink-0 bg-slate-900/90 dark:bg-transparent"

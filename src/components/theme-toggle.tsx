@@ -13,7 +13,13 @@ export function ThemeToggle() {
   // Standard next-themes hydration guard — must set state in effect to detect client mount
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
-  if (!mounted) return <Button variant="ghost" size="icon" className="h-9 w-9" />;
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" className="h-9 w-9">
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    );
+  }
 
   return (
     <Button

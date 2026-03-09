@@ -22,9 +22,11 @@ const LAST_EDITED: Record<string, string> = {
   "/methodology/stability-index-changelog/": "2026-03-03",
   "/methodology/mint-burn-flow-changelog/": "2026-03-07",
   "/methodology/yield-changelog/": "2026-03-04",
+  "/portfolio/": "2026-03-09",
   "/depeg/": "2026-03-02",
   "/yield/": "2026-03-02",
   "/flows/": "2026-03-07",
+  "/telegram/": "2026-03-09",
   "/stablecoins/backing/algorithmic/": "2026-03-07",
   "/stablecoins/backing/crypto/": "2026-03-07",
   "/stablecoins/backing/rwa/": "2026-03-07",
@@ -68,6 +70,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: "https://pharos.watch/portfolio/",
+      lastModified: new Date(LAST_EDITED["/portfolio/"]!),
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
+    {
       url: "https://pharos.watch/digest/",
       lastModified: now,
       changeFrequency: "daily",
@@ -101,6 +109,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: "https://pharos.watch/flows/",
       lastModified: new Date(LAST_EDITED["/flows/"]!),
       changeFrequency: "daily",
+      priority: 0.7,
+    },
+    {
+      url: "https://pharos.watch/telegram/",
+      lastModified: new Date(LAST_EDITED["/telegram/"]!),
+      changeFrequency: "weekly",
       priority: 0.7,
     },
     {
