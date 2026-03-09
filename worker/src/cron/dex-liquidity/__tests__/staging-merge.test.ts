@@ -150,7 +150,9 @@ describe("mergeStagedPools", () => {
     const result = await mergeStagedPools(mockDb, metrics as never, new Set(), now);
     const metric = metrics.get("usdt-tether");
 
-    expect(result).toEqual({ mergedCount: 1, skippedCount: 0 });
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+    expect(result.priceObservations.get("usdt-tether")).toHaveLength(1);
     expect(metric).toBeDefined();
     expect(metric.totalTvlUsd).toBe(75000);
     expect(metric.totalVolume24hUsd).toBe(37500);
@@ -189,7 +191,9 @@ describe("mergeStagedPools", () => {
     const result = await mergeStagedPools(mockDb, metrics as never, new Set(), now);
     const metric = metrics.get("usdt-tether");
 
-    expect(result).toEqual({ mergedCount: 1, skippedCount: 0 });
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+    expect(result.priceObservations.get("usdt-tether")).toHaveLength(1);
     expect(metric).toBeDefined();
     expect(metric.totalTvlUsd).toBe(100000);
     expect(metric.totalVolume24hUsd).toBe(50000);

@@ -104,9 +104,13 @@ export async function syncDexLiquidity(
     curvePoolMap, uniV3PoolFees, uniV3SymbolFees, aerodromeIsStable,
   );
 
-  const { mergedCount: stagedMergedCount, skippedCount: stagedSkippedCount } =
-    // TODO(phase-2): Reconstruct price observations from staged pools for computeDexPrices() coverage
+  const { mergedCount: stagedMergedCount, skippedCount: stagedSkippedCount, priceObservations: stagedPriceObs } =
     await mergeStagedPools(db, metrics, knownPoolAddrs, syncStartSec);
+  for (const [id, obs] of stagedPriceObs) {
+    const existing = priceObservations.get(id) ?? [];
+    existing.push(...obs);
+    priceObservations.set(id, existing);
+  }
 
   // 6. Compute composite scores per stablecoin
   const { scores: scoreResults, globalAgg } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);

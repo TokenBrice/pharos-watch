@@ -2,7 +2,8 @@ import type { StagedPool } from "../dex-discovery/types";
 import { stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import { getGtDexQuality } from "./pool-helpers";
-import type { CgNewPool, GtNewPool, LiquidityMetrics } from "./types";
+import { isPlausibleDexObservationPrice } from "./price-sanity";
+import type { CgNewPool, GtNewPool, LiquidityMetrics, DexPriceObs } from "./types";
 
 interface StagedPoolRow {
   pool_id: string;
@@ -83,7 +84,7 @@ export async function mergeStagedPools(
   metrics: Map<string, LiquidityMetrics>,
   knownPoolAddrs: Set<string>,
   nowSec: number,
-): Promise<{ mergedCount: number; skippedCount: number }> {
+): Promise<{ mergedCount: number; skippedCount: number; priceObservations: Map<string, DexPriceObs[]> }> {
   let rows: StagedPoolRow[];
   try {
     const result = await db
@@ -97,11 +98,12 @@ export async function mergeStagedPools(
     rows = result.results ?? [];
   } catch (err) {
     console.warn("[dex-liquidity] staging table read failed (pre-migration?):", err);
-    return { mergedCount: 0, skippedCount: 0 };
+    return { mergedCount: 0, skippedCount: 0, priceObservations: new Map() };
   }
 
   const cgPoolMap = new Map<string, CgNewPool[]>();
   const gtPoolMap = new Map<string, GtNewPool[]>();
+  const stagedPriceObs = new Map<string, DexPriceObs[]>();
   let skippedCount = 0;
 
   for (const row of rows) {
@@ -123,6 +125,23 @@ export async function mergeStagedPools(
     const address = stagedPool.poolId.split(":")[1] ?? stagedPool.poolId;
     const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
     const poolType = stagedPool.isStable ? "stable" : "amm";
+
+    // Extract price observations from staged pools with plausible prices
+    if (
+      stagedPool.priceUsd != null &&
+      stagedPool.priceUsd > 0 &&
+      adjustedTvl >= 10_000 &&
+      isPlausibleDexObservationPrice(stagedPool.stablecoinId, stagedPool.priceUsd)
+    ) {
+      const obs = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
+      obs.push({
+        price: stagedPool.priceUsd,
+        tvl: adjustedTvl,
+        chain: stagedPool.chain,
+        protocol: `staged-${stagedPool.source}-${stagedPool.protocol}`,
+      });
+      stagedPriceObs.set(stagedPool.stablecoinId, obs);
+    }
 
     if (stagedPool.source === "cg_onchain") {
       pushPool(cgPoolMap, stagedPool.stablecoinId, {
@@ -166,5 +185,5 @@ export async function mergeStagedPools(
   if (cgPoolMap.size > 0) mergeCgPools(metrics, cgPoolMap);
   if (gtPoolMap.size > 0) mergeGtPools(metrics, gtPoolMap);
 
-  return { mergedCount, skippedCount };
+  return { mergedCount, skippedCount, priceObservations: stagedPriceObs };
 }
