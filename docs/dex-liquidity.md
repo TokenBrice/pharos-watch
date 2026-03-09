@@ -24,6 +24,17 @@ Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve F
 
 Optional discovery stages (CG token batch, GT token batch, CG pool crawl, GT-only pool crawl, DexScreener fallback, CG tickers fallback) now share a single 5-minute wall-clock budget inside the cron. When that shared budget is exhausted, the run keeps the data gathered so far, skips the remaining optional phases, and proceeds to scoring/persistence instead of timing out the entire cron.
 
+## Discovery Staging Orchestrator
+
+`worker/src/cron/dex-discovery/orchestrator.ts` is the staged-pool discovery scheduler that decides which stablecoins should be crawled before those pools are merged into the main DEX-liquidity scoring pipeline.
+
+- Reads existing `dex_liquidity` coverage (`pool_count`, `chain_count`) plus per-coin backoff state from `dex_discovery_meta`
+- Classifies tracked stablecoins into effective tiers using `DISCOVERY_TIERS` from `worker/src/cron/dex-discovery/types.ts`
+- Uses cadence gates instead of parallelism: `t1` every run, `t2` every 3rd run, `t3` every 10th run, `dormant` at most once per 24 hours using the same 10-run cadence gate
+- Demotes repeated misses from `t1`/`t2`/`t3` into slower cadences via `consecutiveMisses`, then sorts eligible coins by `lastCrawlAt` so never-crawled and stalest assets run first
+- Enforces a separate 14-minute wall-clock budget and crawls strictly sequentially, one stablecoin at a time, to stay compatible with the shared Workers cron connection pool
+- Writes raw candidates into `dex_pool_staging`; later persistence/merge steps deduplicate and promote those staged pools into scoring inputs
+
 ### Quality Multipliers (v2)
 
 | Pool Type | Multiplier | Detection |
