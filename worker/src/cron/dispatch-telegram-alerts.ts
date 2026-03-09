@@ -89,6 +89,9 @@ interface SafetyRow {
   stablecoin_id: string;
   grade: string;
   score: number | null;
+  prev_grade: string | null;
+  prev_score: number | null;
+  recorded_at: number;
 }
 
 interface SubscriberRow {
@@ -278,9 +281,15 @@ export async function dispatchTelegramAlerts(
         .then((result) => result.results ?? []),
       db
         .prepare(
-          `SELECT stablecoin_id, grade, score
-             FROM safety_grade_history
-            WHERE recorded_at = (SELECT MAX(recorded_at) FROM safety_grade_history)`,
+          `SELECT h.stablecoin_id, h.grade, h.score, h.prev_grade, h.prev_score, h.recorded_at
+             FROM safety_grade_history h
+             INNER JOIN (
+               SELECT stablecoin_id, MAX(recorded_at) AS max_recorded_at
+                 FROM safety_grade_history
+                GROUP BY stablecoin_id
+             ) latest
+               ON latest.stablecoin_id = h.stablecoin_id
+              AND latest.max_recorded_at = h.recorded_at`,
         )
         .all<SafetyRow>()
         .then((result) => result.results ?? []),
@@ -381,12 +390,22 @@ export async function dispatchTelegramAlerts(
     for (const row of safetyRows) {
       const previous = previousSafetySnapshot[row.stablecoin_id];
       if (previous?.grade === row.grade) continue;
+
+      if (!previous) {
+        // Older dispatcher builds cached only the latest change-day rows, not the latest row per coin.
+        // Skip historical rows missing from that partial cache, but still alert if this coin changed since
+        // the snapshot was written and the history row carries its previous grade.
+        if (row.recorded_at <= (safetyCache?.updatedAt ?? 0) || row.prev_grade == null) {
+          continue;
+        }
+      }
+
       safetyChanges.push({
         stablecoinId: row.stablecoin_id,
         symbol: getSymbol(row.stablecoin_id),
-        oldGrade: previous?.grade ?? "UNKNOWN",
+        oldGrade: previous?.grade ?? row.prev_grade ?? "UNKNOWN",
         newGrade: row.grade,
-        oldScore: previous?.score ?? null,
+        oldScore: previous?.score ?? row.prev_score ?? null,
         newScore: row.score ?? null,
       });
     }

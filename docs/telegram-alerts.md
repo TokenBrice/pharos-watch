@@ -96,7 +96,7 @@ Each dispatch run loads:
 
 - Latest DEWS rows from `stress_signals`
 - Active depegs from `depeg_events WHERE ended_at IS NULL`
-- Latest safety grades from `safety_grade_history`
+- The latest `safety_grade_history` row for each stablecoin (not just the latest change day)
 - Prior dispatch snapshots from cache keys:
   - `alert:dews-snapshot`
   - `alert:depeg-snapshot`
@@ -121,7 +121,9 @@ This prevents a cold start from blasting subscribers with every current conditio
 - DEWS band escalations and de-escalations by comparing current band to prior band
 - New active depeg events by comparing current active-depeg snapshot to the prior snapshot
 - Depeg resolutions by checking which prior active depegs disappeared and then loading the corresponding closed event rows
-- Safety-grade changes by comparing the latest `safety_grade_history` snapshot to the prior snapshot
+- Safety-grade changes by comparing each coin's latest `safety_grade_history` row to the prior snapshot
+
+If the cached safety snapshot is missing a coin, the dispatcher suppresses the alert unless that coin's latest grade-change row is newer than the cached snapshot timestamp. This avoids false `UNKNOWN → grade` alerts when repairing older partial snapshots or when a newly tracked coin gets its first seed row.
 
 The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `worker/src/lib/telegram-alerts.ts`.
 

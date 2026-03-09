@@ -157,6 +157,146 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockSendToChat).toHaveBeenCalledTimes(1);
   });
 
+  it("uses per-coin latest safety rows and prev_grade when repairing a partial legacy snapshot", async () => {
+    const now = 1_778_150_000;
+    const snapshotUpdatedAt = now - 3600;
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: snapshotUpdatedAt };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: snapshotUpdatedAt };
+      }
+      if (key === "alert:safety-snapshot") {
+        return {
+          value: JSON.stringify({
+            "usdc-circle": { grade: "A", score: 84 },
+          }),
+          updatedAt: snapshotUpdatedAt,
+        };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      {
+        match: "GROUP BY stablecoin_id",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            grade: "A",
+            score: 84,
+            prev_grade: null,
+            prev_score: null,
+            recorded_at: snapshotUpdatedAt - 86_400,
+          },
+          {
+            stablecoin_id: "bold-liquity",
+            grade: "B+",
+            score: 79,
+            prev_grade: "A-",
+            prev_score: 80,
+            recorded_at: snapshotUpdatedAt + 60,
+          },
+        ],
+      },
+      {
+        match: "u.alert_safety = 1",
+        matchBinds: ["bold-liquity"],
+        rows: [{ chat_id: "12345", last_active_at: now }],
+      },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { safety: number };
+      subscribersNotified: number;
+    };
+
+    expect(metadata.eventsDetected.safety).toBe(1);
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockSendToChat.mock.calls[0]?.[1]).toContain("A- → B+");
+    expect(mockSendToChat.mock.calls[0]?.[1]).not.toContain("UNKNOWN");
+
+    const safetySnapshotCall = mockSetCache.mock.calls.find((call) => call[1] === "alert:safety-snapshot");
+    expect(safetySnapshotCall?.[2]).toContain("\"bold-liquity\"");
+    expect(safetySnapshotCall?.[2]).toContain("\"usdc-circle\"");
+  });
+
+  it("does not alert on historical rows missing from a partial legacy safety snapshot", async () => {
+    const now = 1_778_150_000;
+    const snapshotUpdatedAt = now - 3600;
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: snapshotUpdatedAt };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: snapshotUpdatedAt };
+      }
+      if (key === "alert:safety-snapshot") {
+        return {
+          value: JSON.stringify({
+            "usdc-circle": { grade: "A", score: 84 },
+          }),
+          updatedAt: snapshotUpdatedAt,
+        };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      {
+        match: "GROUP BY stablecoin_id",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            grade: "A",
+            score: 84,
+            prev_grade: null,
+            prev_score: null,
+            recorded_at: snapshotUpdatedAt - 86_400,
+          },
+          {
+            stablecoin_id: "bold-liquity",
+            grade: "A-",
+            score: 80,
+            prev_grade: "B+",
+            prev_score: 79,
+            recorded_at: snapshotUpdatedAt - 86_400,
+          },
+        ],
+      },
+      {
+        match: "u.alert_safety = 1",
+        matchBinds: ["bold-liquity"],
+        rows: [{ chat_id: "12345", last_active_at: now }],
+      },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { safety: number };
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.eventsDetected.safety).toBe(0);
+    expect(metadata.subscribersNotified).toBe(0);
+    expect(metadata.messagesSent).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+
+    const safetySnapshotCall = mockSetCache.mock.calls.find((call) => call[1] === "alert:safety-snapshot");
+    expect(safetySnapshotCall?.[2]).toContain("\"bold-liquity\"");
+    expect(safetySnapshotCall?.[2]).toContain("\"usdc-circle\"");
+  });
+
   it("ignores DEWS transitions to CALM/WATCH", async () => {
     const now = Math.floor(Date.now() / 1000);
 
