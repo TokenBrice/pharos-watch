@@ -42,6 +42,10 @@ const InfoSection = dynamic(() => import("@/components/stablecoin-detail/info-se
   loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
 });
 
+const YieldDetailSection = dynamic(() => import("@/components/yield-detail-section"), {
+  loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+});
+
 const LiquiditySection = dynamic(
   () => import("@/components/stablecoin-detail/liquidity-section").then((mod) => mod.LiquiditySection),
   {
@@ -61,6 +65,7 @@ const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "chart", label: "Chart" },
   { id: "info", label: "Info" },
+  { id: "yield", label: "Yield" },
   { id: "flows", label: "Flows" },
   { id: "liquidity", label: "Liquidity" },
   { id: "history", label: "Depeg History" },
@@ -175,6 +180,8 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       <ChartSection supplyHistory={viewModel.supplyHistory} />
 
       <InfoSection coin={viewModel.coin} />
+
+      {detailSections.some((section) => section.id === "yield") ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
 
       <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
 

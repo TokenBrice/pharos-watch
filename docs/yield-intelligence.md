@@ -417,6 +417,23 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 5. Yield leaderboard table
 6. Disclaimer
 
+### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
+
+Detail pages can mount a per-coin yield section that reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, then passes the shared risk-free rate and peer median into `YieldHistoryChart`.
+
+**Layout (top to bottom):**
+
+1. Header row: "Yield Intelligence" + yield-type badge from `YIELD_TYPE_LABELS` / `YIELD_TYPE_STYLES`
+2. Warning treatment:
+   - 2+ active signals: amber callout block listing every warning label
+   - 1 active signal: compact inline alert row
+3. Five stat cards: Current APY, 30d APY, PYS (with hover breakdown), Stability, Excess Yield
+4. Source info row: source name, normalized data-source badge, source TVL
+5. Alternative sources list when `altSources.length > 0`
+6. Shared `YieldHistoryChart`
+
+The section returns `null` once rankings have loaded and the coin is neither `yieldBearing` nor present in the rankings cache. If a coin is marked `yieldBearing` in metadata but has no ranking row yet, it renders an inline empty/error state instead of silently disappearing.
+
 ### `YieldScatterPlot` (`src/components/yield-scatter-plot.tsx`)
 
 Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-source point per stablecoin, auto-focuses the x-axis on the occupied safety-score band instead of always rendering the full 0-100 range, and keeps the safety threshold at 60 visible for quadrant context. Scatter markers render each stablecoin's logo (with an initial fallback if no logo exists), and yield type information lives in the tooltip instead of a separate legend. Rare high-APY outliers are pinned to a disclosed top rail so one extreme point does not flatten the rest of the plot.
@@ -532,8 +549,10 @@ Covers all pure functions in `yield-helpers.ts`:
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `shared/lib/classification.ts`                       | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`                                                                                                     |
 | `src/hooks/use-yield-rankings.ts`                    | TanStack Query hook for rankings                                                                                                             |
+| `src/lib/yield-constants.ts`                         | Shared warning-signal labels and formatter used by yield detail/history surfaces                                                             |
 | `src/app/yield/page.tsx`                             | SSG page wrapper with metadata                                                                                                               |
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
+| `src/components/yield-detail-section.tsx`            | Stablecoin detail-page yield section with warnings, source metadata, metric cards, and shared history chart                                 |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |
 | `src/components/yield-history-chart.tsx`             | Shared APY history chart with T-bill / peer-median reference lines, optional base-reward split, and warning markers                          |
 | `src/components/yield-scatter-plot.tsx`              | Risk-adjusted scatter visualization                                                                                                          |
