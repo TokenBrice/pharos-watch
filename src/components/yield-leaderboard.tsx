@@ -91,14 +91,17 @@ interface YieldLeaderboardProps {
 }
 
 export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: YieldLeaderboardProps) {
-  const [activeYieldTypes, setActiveYieldTypes] = useState<Set<string>>(
-    () => new Set(Object.keys(YIELD_TYPE_LABELS)),
+  // Filter state tracks by display label so that types sharing a label (e.g. "lending-vault"
+  // and "governance-set" both labeled "Native") are toggled together as one pill.
+  const getLabel = (type: YieldType) => YIELD_TYPE_LABELS[type] ?? type;
+  const [activeLabels, setActiveLabels] = useState<Set<string>>(
+    () => new Set(Object.values(YIELD_TYPE_LABELS)),
   );
   const [hideWarnings, setHideWarnings] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const visibleTypes = [...new Set(rankings.map((ranking) => ranking.yieldType))];
-  const typeFiltered = rankings.filter((ranking) => activeYieldTypes.has(ranking.yieldType));
+  const visibleLabels = [...new Set(rankings.map((r) => getLabel(r.yieldType)))];
+  const typeFiltered = rankings.filter((r) => activeLabels.has(getLabel(r.yieldType)));
   const warningFiltered = hideWarnings
     ? typeFiltered.filter((ranking) => ranking.warningSignals.length === 0)
     : typeFiltered;
@@ -171,30 +174,36 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     <TooltipProvider>
       <div className="rounded-xl border">
         <div className="mb-3 flex flex-wrap items-center gap-2 px-3 pt-3">
-          {visibleTypes.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => {
-                setActiveYieldTypes((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(type)) {
-                    next.delete(type);
-                  } else {
-                    next.add(type);
-                  }
-                  return next;
-                });
-              }}
-              className={
-                activeYieldTypes.has(type)
-                  ? `pharos-focus-ring rounded-full border px-2 py-0.5 text-xs font-medium ${YIELD_TYPE_STYLES[type as YieldType].badge}`
-                  : "pharos-focus-ring rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground"
-              }
-            >
-              {YIELD_TYPE_LABELS[type as YieldType] ?? type}
-            </button>
-          ))}
+          {visibleLabels.map((label) => {
+            // Pick the badge style from the first type that maps to this label
+            const repType = (Object.entries(YIELD_TYPE_LABELS) as [YieldType, string][]).find(
+              ([, l]) => l === label,
+            )?.[0];
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  setActiveLabels((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(label)) {
+                      next.delete(label);
+                    } else {
+                      next.add(label);
+                    }
+                    return next;
+                  });
+                }}
+                className={
+                  activeLabels.has(label)
+                    ? `pharos-focus-ring rounded-full border px-2 py-0.5 text-xs font-medium ${repType ? YIELD_TYPE_STYLES[repType].badge : ""}`
+                    : "pharos-focus-ring rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                }
+              >
+                {label}
+              </button>
+            );
+          })}
           <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
             <input
               type="checkbox"

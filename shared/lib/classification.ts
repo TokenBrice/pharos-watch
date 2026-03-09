@@ -283,7 +283,7 @@ export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string
 // ---------------------------------------------------------------------------
 
 export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
-  "lending-vault": "Lending",
+  "lending-vault": "Native",
   rebase: "Rebase",
   "fee-sharing": "Fee Share",
   "lp-receipt": "LP Receipt",
@@ -293,7 +293,10 @@ export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
 };
 
 export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }> = {
-  "lending-vault": { badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20", hex: "#3b82f6" },
+  "lending-vault": {
+    badge: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+    hex: "#f97316",
+  },
   rebase: { badge: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20", hex: "#8b5cf6" },
   "fee-sharing": { badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20", hex: "#06b6d4" },
   "lp-receipt": { badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20", hex: "#f59e0b" },
