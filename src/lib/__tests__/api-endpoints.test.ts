@@ -48,6 +48,7 @@ describe("api endpoint registry", () => {
       "/api/backfill-stability-index",
       "/api/backfill-mint-burn-prices",
       "/api/backfill-mint-burn",
+      "/api/reclassify-atomic-roundtrips",
       "/api/audit-depeg-history?dry-run=true",
       "/api/backfill-dews",
     ]);
