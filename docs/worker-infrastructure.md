@@ -236,7 +236,7 @@ crons = [
 
 **Provider split + independent controls:** `sync-blacklist` uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC where Etherscan free-tier `getLogs` is unavailable, dRPC for historical L2 balance reads, and TronGrid for Tron. `sync-mint-burn` uses Alchemy JSON-RPC and is governed by its own request budget plus the Alchemy circuit breaker. `sync-dex-discovery` runs independently in the same slot (no circuit-breaker gate) and stages pools from CoinGecko/GeckoTerminal/DexScreener/CoinGecko tickers for later merge by `sync-dex-liquidity`.
 
-Discovery uses strictly sequential fetches (1 connection at a time), coexisting within the 6-connection pool alongside blacklist (2-3 connections) and mint-burn (1-2 connections).
+Discovery uses strictly sequential fetches (1 connection at a time). Shared Alchemy `eth_getLogs` range splitting is also depth-first/sequential, so blacklist and mint/burn do not recursively fan out into dozens of concurrent subrequests inside the same 20-minute trigger.
 
 ### Trigger 3: `10,40 * * * *` (every 30 minutes, at :10/:40)
 

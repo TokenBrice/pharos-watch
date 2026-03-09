@@ -247,6 +247,59 @@ describe("fetchAlchemyLogs", () => {
     expect(result?.logs).toHaveLength(1);
   });
 
+  it("processes split branches sequentially to avoid concurrent log fan-out", async () => {
+    let releaseLeft!: () => void;
+    let markLeftStarted!: () => void;
+    const leftStarted = new Promise<void>((resolve) => {
+      markLeftStarted = resolve;
+    });
+
+    fetchMock
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          error: { code: -32005, message: "block range is too wide" },
+        }),
+        { status: 400 },
+      ))
+      .mockImplementationOnce(async () => {
+        markLeftStarted();
+        await new Promise<void>((resolve) => {
+          releaseLeft = resolve;
+        });
+        return new Response(
+          JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xleft")] }),
+          { status: 200 },
+        );
+      })
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xright", 0x176f051)] }),
+        { status: 200 },
+      ));
+
+    const budget = createBudget(100);
+    const pending = fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xcontract",
+      [{ index: 0, value: "0xtopic" }],
+      100,
+      200,
+      budget,
+    );
+
+    await leftStarted;
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    releaseLeft();
+    const result = await pending;
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result?.complete).toBe(true);
+    expect(result?.scannedToBlock).toBe(200);
+    expect(result?.logs).toHaveLength(2);
+  });
+
   it("builds correct sparse topic array for multi-topic filters", async () => {
     fetchMock.mockResolvedValueOnce(new Response(
       JSON.stringify({ jsonrpc: "2.0", id: 1, result: [] }),

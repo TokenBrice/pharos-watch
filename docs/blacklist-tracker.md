@@ -32,6 +32,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 - Base, Optimism, Avalanche, and BSC prefer chain RPC `eth_getLogs` scans because Etherscan free-tier coverage is not available
 - Production uses Alchemy primaries when `ALCHEMY_API_KEY` is configured, otherwise public RPC URLs from the chain registry
 - Used for both chain-head discovery and log scans; timestamps are resolved via `eth_getBlockByNumber`
+- Range splitting is depth-first/sequential inside `worker/src/lib/alchemy-logs.ts` so one oversized scan cannot burst past the Workers shared fetch-connection pool
 
 ### dRPC Archive Nodes (L2-specific)
 

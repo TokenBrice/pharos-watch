@@ -309,33 +309,43 @@ async function fetchAlchemyLogsRange(
       return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth };
     }
 
-    const [left, right] = await Promise.all([
-      fetchAlchemyLogsRange(
-        alchemyUrl,
-        contractAddress,
-        topics,
-        fromBlock,
-        mid,
-        budget,
-        signal,
-        depth + 1,
-      ),
-      fetchAlchemyLogsRange(
-        alchemyUrl,
-        contractAddress,
-        topics,
-        mid + 1,
-        toBlock,
-        budget,
-        signal,
-        depth + 1,
-      ),
-    ]);
+    // Walk split ranges depth-first so one oversized scan cannot fan out into
+    // many concurrent eth_getLogs requests and exhaust the shared Worker connection pool.
+    const left = await fetchAlchemyLogsRange(
+      alchemyUrl,
+      contractAddress,
+      topics,
+      fromBlock,
+      mid,
+      budget,
+      signal,
+      depth + 1,
+    );
+    if (!left.complete) {
+      return {
+        logs: left.logs,
+        complete: false,
+        scannedToBlock: left.scannedToBlock,
+        calls: 1 + left.calls,
+        maxDepth: Math.max(depth, left.maxDepth),
+      };
+    }
+
+    const right = await fetchAlchemyLogsRange(
+      alchemyUrl,
+      contractAddress,
+      topics,
+      mid + 1,
+      toBlock,
+      budget,
+      signal,
+      depth + 1,
+    );
 
     return {
       logs: [...left.logs, ...right.logs],
-      complete: left.complete && right.complete,
-      scannedToBlock: left.complete ? right.scannedToBlock : left.scannedToBlock,
+      complete: right.complete,
+      scannedToBlock: right.scannedToBlock,
       calls: 1 + left.calls + right.calls,
       maxDepth: Math.max(depth, left.maxDepth, right.maxDepth),
     };
