@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "4.4",
+  currentVersion: "4.5",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "4.5",
+    title: "Data quality: noise filtering, auto-heal, and activity gating",
+    date: "2026-03-09",
+    effectiveAt: 1773014400,
+    summary:
+      "Improves flow data reliability by excluding flash-loan roundtrips from aggregation, auto-healing missing USD prices, and gating pressure shift for low-activity coins.",
+    impact: [
+      "Transactions containing both mint and burn for the same token (flash loans, atomic arb) are now flagged as atomic_roundtrip and excluded from all flow aggregates",
+      "Events synced without USD price are now automatically backfilled within 48h by the sync cron",
+      "Coins with less than $50K absolute 24h flow now return NR instead of a potentially misleading pressure shift score",
+      "New observability counters in cron metadata: atomicRoundtripsDetected, nullPricesHealed",
+    ],
+    commits: ["unreleased"],
+    reconstructed: false,
+  },
   {
     version: "4.4",
     title: "Two-signal flow semantics and baseline-aware interpretation",

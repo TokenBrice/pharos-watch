@@ -13,7 +13,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.4`
+- **Current methodology version:** `v4.5`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** `docs/mint-burn-flows-timeline.md`
 
@@ -44,7 +44,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 | `Z_MULTIPLIER` | 50 | Z-score amplification in the pressure-shift formula |
 | Pressure-shift clamp range | -100 to +100 | Signed baseline-relative score output range |
 | `MIN_DATA_DAYS` | 7 | Days of history required before pressure shift returns a value |
-| `MIN_ACTIVITY_USD` | $50,000 | Minimum 24h absolute flow (`|mint| + |burn|`) required for pressure shift scoring |
+| `MIN_ACTIVITY_USD` | 50,000 | 24h absolute flow below this returns NR pressure shift |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
 | `ETHEREUM_SCAN_RANGE` | 50K (Ethereum) | Max block range per contract per cycle |
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
@@ -149,6 +149,8 @@ Current scope: **84 contract configs** across **81 symbols** (81 transfer-only E
 
 Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.
 
+Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to exclude flash loan / atomic arb noise from aggregation.
+
 ### Event Detection
 
 **Standard mint/burn:** ERC-20 `Transfer(address,address,uint256)` events filtered by zero address.
@@ -232,7 +234,10 @@ z = (currentDailyNet - baselineDailyNet) / denominator
 pressureShift = clamp(-100, 100, z * 50)
 ```
 
+**Activity gate:** If the coin's 24h absolute flow (mint volume + burn volume) is below `MIN_ACTIVITY_USD` ($50,000), pressure shift returns `null` (NR). This prevents misleading scores for dormant or low-activity coins.
+
 - **Input:** 24h net flow, 24h absolute flow (`|mint| + |burn|`), 30-day rolling average net flow, 30-day rolling average absolute flow, data age in days.
+
 - **Output:** -100 to +100 score, or `null` (NR) if fewer than 7 days of history, if 24h absolute flow is below $50,000, or if the coin has no 24h mint/burn activity.
 - Score of 0 = current flow matches baseline. Negative values = pressure is worse than baseline. Positive values = pressure is improving versus baseline.
 
@@ -310,6 +315,7 @@ CREATE TABLE mint_burn_events (
   direction TEXT NOT NULL,             -- "mint" or "burn"
   amount REAL NOT NULL,                -- Token-native amount
   amount_usd REAL,                     -- NULL if price unavailable at sync time
+  flow_type TEXT DEFAULT 'standard',   -- "standard" or "atomic_roundtrip"
   counterparty TEXT,                   -- Address that received/sent tokens
   tx_hash TEXT NOT NULL,
   block_number INTEGER NOT NULL,
