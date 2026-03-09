@@ -114,7 +114,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
               ) : metrics.currentStreakDays !== null ? (
                 <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">{metrics.currentStreakDays}d at peg</span>
               ) : (
-                <span className="font-mono font-semibold text-muted-foreground">N/A</span>
+                <span className="font-mono font-semibold text-muted-foreground">—</span>
               )}
             </div>
           </div>
