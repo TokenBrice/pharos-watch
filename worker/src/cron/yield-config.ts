@@ -257,6 +257,30 @@ export const YIELD_POOL_MAP: Record<string, string> = {
 
   // GAIB AID -> sAID - gaib native savings, Ethereum, $15M TVL, ~11.4% APY
   "aid-gaib": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
+
+  // OUSG - ondo-yield-assets native, Ethereum, $519M TVL, ~3.1% APY
+  "ousg-ondo-finance": "7436db9b-2872-46c8-81a2-da6baff902b7",
+
+  // USD.AI -> sUSDai - usd-ai native savings, Arbitrum, $217M TVL, ~7.7% APY
+  "usdai-usd-ai": "712ce948-bd9e-4f4a-8916-b72c447f7578",
+
+  // wsrUSD - reservoir-protocol native, Ethereum, $159M TVL, ~4.8% APY
+  "wsrusd-reservoir": "d646f32f-d5af-4e34-a29f-8ebeea6a8520",
+
+  // avUSD -> savUSD - merkl HOLD pool, Avalanche, $72M TVL, APY via on-chain rate
+  "avusd-avant": "2fe112ff-95a5-4ba0-8ee3-a741e6a8f7c9",
+
+  // Neutrl USD -> sNUSD - pendle PT-buying pool, Ethereum, $41M TVL, ~7.5% APY
+  "nusd-neutrl": "0f38d9a4-8e34-4abc-b9ba-25f326ef7828",
+
+  // Main Street USD - mainstreet native pool, Ethereum, $29M TVL, ~12.0% APY
+  "msusd-main-street": "8a28570f-2316-488a-94a7-67c87e76c1f1",
+
+  // Yuzu USD -> syzUSD - yuzu-money native savings, Plasma, $28M TVL, ~7.3% APY
+  "yzusd-yuzu": "6174b1d6-8212-4964-95bf-ca9c539864ba",
+
+  // Noon USN -> sUSN - morpho-v1 collateral, Ethereum, $10M TVL, APY via on-chain rate
+  "usn-noon": "a18a761b-49cd-416d-8342-839cac722094",
 };
 
 /** On-chain exchange rate config for Tier 1 vault tokens. */
@@ -295,6 +319,12 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
  */
 export const PRICE_DERIVED_FALLBACK_IDS = new Set([
   "buidl-blackrock", // BUIDL - BlackRock/Securitize fund (not tracked in DL Yields)
+  "ylds-figure", // YLDS - Figure Markets (not tracked in DL Yields)
+  "usdb-blast", // USDB - Blast native yield (not tracked in DL Yields)
+  "mtbill-midas", // mTBILL - Midas (not tracked in DL Yields)
+  "usd-dinari", // USD+ - Dinari (not tracked in DL Yields; symbol collision with Overnight Finance)
+  "ustb-superstate", // USTB - Superstate (only USCC tracked in DL, not USTB)
+  "usda-avalon", // USDa - Avalon (no DL protocol pool; sUSDa Pendle pool too small at $55K)
 ]);
 
 /**
@@ -302,13 +332,14 @@ export const PRICE_DERIVED_FALLBACK_IDS = new Set([
  * Only pools from these protocols are considered for non-yield-bearing coins.
  *
  * Tier 1 (battle-tested, $1B+ historical TVL):
- *   aave-v3, compound-v3, sparklend, spark-savings, maple, yearn-finance
+ *   aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance
  *
  * Tier 2 (established, well-audited):
- *   fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle
+ *   fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle,
+ *   curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2
  *
  * Tier 3 (targeted additions to expand coverage):
- *   justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx
+ *   justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending
  */
 export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   // Tier 1
@@ -318,6 +349,8 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "spark-savings",
   "maple",
   "yearn-finance",
+  "compound-v2", // $112M TVL, ETH stablecoin markets (USDT $20M, DAI $5.8M, USDC $3.1M)
+  "dolomite", // $284M TVL, ETH+ARB stablecoin markets (USD1 $64M, USDC $15M)
   // Tier 2
   "fluid-lending",
   "euler-v2",
@@ -325,12 +358,20 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "kamino-lend",
   "morpho-v1",
   "pendle",
+  "curve-llamalend", // $59M TVL, crvUSD lending on ETH ($32.5M top pool)
+  "exactly", // $32M TVL, USDC lending on Optimism (6 pools, $1.7M each)
+  "flux-finance", // $43M TVL, USDT/USDC on ETH (Ondo ecosystem)
+  "gains-network", // $21M TVL, USDC vaults on ARB ($12.2M) + Base ($1.9M)
+  "lazy-summer-protocol", // $45M TVL, USDC vaults on ETH ($14.8M) + Base ($3.6M)
+  "moonwell-lending", // $46M TVL, USDC on Base ($7.4M)
+  "silo-v2", // $46M TVL, multi-chain isolated lending (ETH, ARB, AVAX)
   // Tier 3
   "justlend",
   "openeden-usdo",
   "multipli.fi",
   "jupiter-lend",
   "stables-labs-usdx",
+  "benqi-lending", // $133M total TVL, $8M stablecoin; USDC/USDT on Avalanche
 ]);
 
 /**
