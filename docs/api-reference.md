@@ -1278,7 +1278,8 @@ Paginated list of individual mint/burn events for a specific stablecoin. Events 
 | Param | Type | Default | Bounds | Description |
 |-------|------|---------|--------|-------------|
 | `direction` | `string` | — | `"mint"` or `"burn"` | Filter by direction |
-| `chain` | `string` | — | — | Filter by chain ID (e.g. `"ethereum"`) |
+| `chain` | `string` | — | `"ethereum"` | Filter by chain ID (current production scope is Ethereum only) |
+| `burnType` | `string` | — | `"effective_burn"`, `"bridge_burn"`, `"review_required"` | Filter burn rows by classification |
 | `minAmount` | `number` | — | — | Minimum USD amount |
 | `limit` | `integer` | `50` | 1–500 | Max results |
 | `offset` | `integer` | `0` | — | Pagination offset |
@@ -1305,11 +1306,16 @@ Results are ordered by `timestamp` descending (most recent first).
 | `direction` | `"mint" \| "burn"` | Whether tokens were minted or burned |
 | `amount` | `number` | Amount in native token units |
 | `amountUsd` | `number \| null` | USD value at time of event |
+| `burnType` | `"effective_burn" \| "bridge_burn" \| "review_required" \| null` | Burn classification; `null` for mint rows |
+| `burnReviewReason` | `string \| null` | Reason emitted when a burn requires manual review classification |
 | `counterparty` | `string \| null` | Non-zero address (recipient for mint, sender for burn) |
 | `txHash` | `string` | Transaction hash |
 | `blockNumber` | `number` | Block number |
 | `timestamp` | `number` | Unix seconds |
 | `explorerTxUrl` | `string` | Block explorer URL for the transaction |
+| `priceUsed` | `number \| null` | Price used to derive `amountUsd` |
+| `priceTimestamp` | `number \| null` | Unix seconds of the price snapshot used |
+| `priceSource` | `string \| null` | Valuation provenance (`supply_history`, `price_cache`, `price_cache_heal`, etc.) |
 
 ---
 

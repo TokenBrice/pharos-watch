@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ComposedChart,
   Line,
@@ -315,12 +315,7 @@ export function YieldHistoryChart({
     () => chartData.some((point) => point.apyBase !== null),
     [chartData],
   );
-
-  useEffect(() => {
-    if (!hasBreakdown) {
-      setShowBreakdown(false);
-    }
-  }, [hasBreakdown]);
+  const effectiveShowBreakdown = hasBreakdown && showBreakdown;
 
   const tickValues = useMemo(() => buildTicks(chartData, days), [chartData, days]);
 
@@ -340,7 +335,7 @@ export function YieldHistoryChart({
       values.push(medianApy);
     }
 
-    if (showBreakdown) {
+    if (effectiveShowBreakdown) {
       for (const point of chartData) {
         if (point.apyBase !== null) values.push(point.apyBase);
         if (point.apyReward !== null) values.push(point.apyReward);
@@ -353,7 +348,7 @@ export function YieldHistoryChart({
     const padding = Math.max(span * 0.08, 0.5);
 
     return [min - padding, max + padding] as const;
-  }, [chartData, medianApy, riskFreeRate, showBreakdown]);
+  }, [chartData, effectiveShowBreakdown, medianApy, riskFreeRate]);
 
   const chartHeightClass = compact ? "h-[200px]" : "h-[300px]";
   const referenceLabelStyle = compact
@@ -395,7 +390,7 @@ export function YieldHistoryChart({
           days={days}
           onDaysChange={setDays}
           hasBreakdown={false}
-          showBreakdown={showBreakdown}
+          showBreakdown={effectiveShowBreakdown}
           onShowBreakdownChange={setShowBreakdown}
         />
         <ChartShell compact={compact}>
@@ -414,7 +409,7 @@ export function YieldHistoryChart({
         days={days}
         onDaysChange={setDays}
         hasBreakdown={hasBreakdown}
-        showBreakdown={showBreakdown}
+        showBreakdown={effectiveShowBreakdown}
         onShowBreakdownChange={setShowBreakdown}
       />
       <ChartShell compact={compact}>
@@ -455,7 +450,7 @@ export function YieldHistoryChart({
               />
               <Tooltip
                 cursor={{ stroke: "var(--color-border)", strokeWidth: 1, strokeDasharray: "3 3" }}
-                content={<YieldHistoryTooltip showBreakdown={showBreakdown} compact={compact} />}
+                content={<YieldHistoryTooltip showBreakdown={effectiveShowBreakdown} compact={compact} />}
               />
               <ReferenceLine
                 y={riskFreeRate}
@@ -490,7 +485,7 @@ export function YieldHistoryChart({
                 activeDot={false}
                 isAnimationActive={false}
               />
-              {showBreakdown && hasBreakdown ? (
+              {effectiveShowBreakdown ? (
                 <Line
                   type="monotone"
                   dataKey="apyBase"
@@ -503,7 +498,7 @@ export function YieldHistoryChart({
                   isAnimationActive={false}
                 />
               ) : null}
-              {showBreakdown && hasBreakdown ? (
+              {effectiveShowBreakdown ? (
                 <Line
                   type="monotone"
                   dataKey="apyReward"

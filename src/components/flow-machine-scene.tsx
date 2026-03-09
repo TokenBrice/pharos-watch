@@ -104,6 +104,23 @@ function calcOffset(offset: number): string {
   return `calc(50% ${offset >= 0 ? "+" : "-"} ${Math.abs(offset)}px)`;
 }
 
+const BILL_PATTERN = [-0.2, -0.12, -0.06, 0, 0.06, 0.12, 0.2] as const;
+const STRIP_PATTERN = [
+  -0.72,
+  -0.56,
+  -0.4,
+  -0.26,
+  -0.14,
+  -0.06,
+  0,
+  0.06,
+  0.14,
+  0.26,
+  0.4,
+  0.56,
+  0.72,
+] as const;
+
 const MINI_PRINTER_DIMS: PrinterDims = {
   containerClass: "relative h-[210px] overflow-hidden rounded-xl border border-border/60 bg-background/40 p-3",
   areaClass: "relative mt-2 h-[160px]",
@@ -630,28 +647,11 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
   const billCenterX = calcOffset(dims.billCenterOffset + dims.billEmitOffset);
   const stripCenterX = calcOffset(dims.stripCenterOffset);
 
-  const billPattern = [-0.2, -0.12, -0.06, 0, 0.06, 0.12, 0.2];
-  const stripPattern = [
-    -0.72,
-    -0.56,
-    -0.4,
-    -0.26,
-    -0.14,
-    -0.06,
-    0,
-    0.06,
-    0.14,
-    0.26,
-    0.4,
-    0.56,
-    0.72,
-  ];
-
   const bills = useMemo(() => {
     return Array.from({ length: billCount }).map((_, i) => {
       const seed = Math.abs(Math.sin((i + 1) * 17.113) * 43758.5453);
       const chaos = seed - Math.floor(seed);
-      const dx = Math.round(billPattern[i % billPattern.length] * billSpread) + Math.round((chaos - 0.5) * 2);
+      const dx = Math.round(BILL_PATTERN[i % BILL_PATTERN.length] * billSpread) + Math.round((chaos - 0.5) * 2);
       const drop = billEntryDrop + (i % 3) * (isMini ? 1 : 2) + Math.round((chaos - 0.5) * 2);
       const rot = -3 + (chaos - 0.5) * 8;
       const style: CssVarStyle = {
@@ -673,7 +673,7 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
     return Array.from({ length: stripCount }).map((_, i) => {
       const seed = Math.abs(Math.sin((i + 1) * 29.477) * 43758.5453);
       const chaos = seed - Math.floor(seed);
-      const dx = Math.round(stripPattern[i % stripPattern.length] * stripSpread) + Math.round((chaos - 0.5) * 4);
+      const dx = Math.round(STRIP_PATTERN[i % STRIP_PATTERN.length] * stripSpread) + Math.round((chaos - 0.5) * 4);
       const drop = stripDrop + (i % 4) * (isMini ? 5 : 6) + Math.round((chaos - 0.5) * 10);
       const style: CssVarStyle = {
         left: "50%",

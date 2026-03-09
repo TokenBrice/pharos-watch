@@ -34,15 +34,16 @@ export function useCountUp(target: number, opts?: CountUpOptions): string {
     suffix = "",
   } = opts ?? {};
 
+  const reducedMotion = prefersReducedMotion();
   const [display, setDisplay] = useState(() =>
-    prefersReducedMotion() ? target : 0,
+    reducedMotion ? target : 0,
   );
   const fromRef = useRef(0);
   const rafRef = useRef<number>(0);
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
-      setDisplay(target);
+    if (reducedMotion) {
+      fromRef.current = target;
       return;
     }
 
@@ -76,7 +77,9 @@ export function useCountUp(target: number, opts?: CountUpOptions): string {
         Math.min((performance.now() - start) / duration, 1),
       );
     };
-  }, [target, duration]);
+  }, [target, duration, reducedMotion]);
 
-  return `${prefix}${formatNumber(display, decimals)}${suffix}`;
+  const value = reducedMotion ? target : display;
+
+  return `${prefix}${formatNumber(value, decimals)}${suffix}`;
 }

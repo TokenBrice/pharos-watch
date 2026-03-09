@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CHART_DRAW_IN } from "@/lib/chart-animation";
 import { AreaChart, Area } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,9 +89,11 @@ function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
 
 export function PegDiversityChart() {
   const { data, isLoading } = useStablecoinCharts();
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const animProps = hasAnimated ? { isAnimationActive: false } : CHART_DRAW_IN;
-  useEffect(() => { setHasAnimated(true); }, []);
+  const [shouldAnimate, setShouldAnimate] = useState(true);
+  const animProps = shouldAnimate ? CHART_DRAW_IN : { isAnimationActive: false };
+  const handleAnimationEnd = useCallback(() => {
+    setShouldAnimate(false);
+  }, []);
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const { chartData, pegKeys, totalNonUsd, pegCount } = useMemo(() => {
@@ -219,6 +221,7 @@ export function PegDiversityChart() {
                       stroke={pegKeyToHex(key)}
                       fill={`url(#pegGrad-${pegKeyToCode(key)})`}
                       strokeWidth={1.5}
+                      onAnimationEnd={handleAnimationEnd}
                       {...animProps}
                     />
                   ))}

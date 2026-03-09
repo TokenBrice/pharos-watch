@@ -166,12 +166,10 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     resetPageOnTotalChange: true,
   });
   const prefetch = usePrefetchStablecoin();
-
-  useEffect(() => {
-    if (expandedId !== null && !paginated.some((row) => row.id === expandedId)) {
-      setExpandedId(null);
-    }
-  }, [expandedId, paginated]);
+  const visibleExpandedId =
+    expandedId !== null && paginated.some((row) => row.id === expandedId)
+      ? expandedId
+      : null;
 
   return (
     <TooltipProvider>
@@ -211,7 +209,11 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
               onClick={() => {
                 setActiveYieldTypes((prev) => {
                   const next = new Set(prev);
-                  next.has(type) ? next.delete(type) : next.add(type);
+                  if (next.has(type)) {
+                    next.delete(type);
+                  } else {
+                    next.add(type);
+                  }
                   return next;
                 });
               }}
@@ -319,7 +321,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                 return (
                   <Fragment key={row.id}>
                     <InteractiveTableRow
-                      onActivate={() => setExpandedId(expandedId === row.id ? null : row.id)}
+                      onActivate={() => setExpandedId((current) => (current === row.id ? null : row.id))}
                       onHover={() => prefetch(row.id)}
                       className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50" : ""}
                     >
@@ -478,14 +480,14 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                       <TableCell className="px-2 py-2 text-right">
                         <ChevronDown
                           className={
-                            expandedId === row.id
+                            visibleExpandedId === row.id
                               ? "h-4 w-4 text-muted-foreground rotate-180 transition-transform"
                               : "h-4 w-4 text-muted-foreground transition-transform"
                           }
                         />
                       </TableCell>
                     </InteractiveTableRow>
-                    {expandedId === row.id && (
+                    {visibleExpandedId === row.id && (
                       <TableRow>
                         <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4">
                           <YieldHistoryChart

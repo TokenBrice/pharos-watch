@@ -1,6 +1,17 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v3.2` (2026-02-19 -> 2026-03-02).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v3.3` (2026-02-19 -> 2026-03-09).
+
+---
+
+## v3.3 - Separated discovery pipeline with staged pool confidence decay (Mar 9, 2026)
+
+**Commit:** `unreleased`
+
+- Discovery sources now run on an independent 20-minute cron with roughly 15 minutes of crawl budget instead of sharing a short scoring-run budget
+- Staged pools merge into scoring with freshness confidence decay `max(0.5, 1 - ageHours/48)` and fall out after 24 hours
+- Chain-aware source routing now skips irrelevant networks, reducing wasted crawl attempts
+- Tiered priority with exponential backoff prevents repeated looping on pool-less coins
 
 ---
 

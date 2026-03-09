@@ -15,7 +15,7 @@ The status dashboard combines six signals:
 5. Synthetic status probes (`/api/status` -> `probe`, `discrepancy`)
 6. Live endpoint probing (`useEndpointProbes`)
 
-This page is **admin-only in practice** because all status/probe calls require `X-Admin-Key` for admin paths.
+This page is **auth-gated in practice** because `/api/status` plus the admin probe/action paths require `X-Admin-Key`.
 
 ---
 
@@ -229,6 +229,7 @@ Status-page manual actions are router-dispatched from shared endpoint metadata (
 - `POST /api/backfill-stability-index`
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
+- `POST /api/reclassify-atomic-roundtrips`
 - `GET /api/audit-depeg-history?dry-run=true`
 - `GET /api/backfill-dews`
 
@@ -248,7 +249,7 @@ Mutating admin paths are protected by method guardrails:
 | `src/hooks/use-status.ts`                      | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                 |
 | `src/hooks/use-endpoint-probes.ts`             | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                               |
 | `shared/lib/api-endpoints.ts`                  | Shared endpoint registry for probe groups + status-page actions                                                                                                                                                       |
-| `worker/src/router.ts`                         | Static route dispatch for status/manual actions (`feedback`, `trigger-digest`, `reset-blacklist-sync`, `debug-sync-state`)                                                                                            |
+| `worker/src/router.ts`                         | Static route dispatch for status, probes, and shared admin action endpoints (`trigger-digest`, `reset-blacklist-sync`, `debug-sync-state`, mint/burn backfills, DEWS audit/backfill)                                 |
 | `worker/src/api/status.ts`                     | Raw status synthesis + effective state response                                                                                                                                                                       |
 | `worker/src/api/status-history.ts`             | Machine-readable status timeline/history endpoint                                                                                                                                                                     |
 | `worker/src/api/health.ts`                     | Public health endpoint for cache/circuit observability                                                                                                                                                                |

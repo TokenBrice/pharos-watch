@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
-const nextConfig: NextConfig = {
+const baseConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
   images: { unoptimized: true },
@@ -8,16 +9,27 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["recharts", "lucide-react"],
   },
-  // Rewrites are ignored in static exports — only active during `next dev`.
-  // Proxies /api/* to the prod worker so local dev has real data without CORS issues.
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "https://api.pharos.watch/api/:path*",
-      },
-    ];
-  },
 };
 
-export default nextConfig;
+async function devRewrites() {
+  return [
+    {
+      source: "/api/:path*",
+      destination: "https://api.pharos.watch/api/:path*",
+    },
+  ];
+}
+
+export default function createNextConfig(phase: string): NextConfig {
+  // The /api proxy is only useful in `next dev`.
+  // Static exports rely on Cloudflare Pages `_redirects`, and leaving rewrites
+  // enabled at build time triggers a noisy export warning from Next.js.
+  if (phase === PHASE_DEVELOPMENT_SERVER) {
+    return {
+      ...baseConfig,
+      rewrites: devRewrites,
+    };
+  }
+
+  return baseConfig;
+}

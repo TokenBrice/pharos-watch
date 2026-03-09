@@ -166,7 +166,7 @@ Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to 
 | `Issue(uint256)` | `0xcb8241ad...` | `first-data-uint256` |
 | `Redeem(uint256)` | `0x702d5967...` | `first-data-uint256` |
 
-**reUSD special handling:** Re Protocol vault contracts emit custom deposit/redeem events instead of standard mint/burn Transfers. Deposits are decoded from `Deposited(address,address,uint256)` (`dataSlot=2`, 6-decimal collateral amount), and burns from `InstantRedemptionProcessed(address,uint256,uint256)` (`first-data-uint256`, 18-decimal shares burned).
+**reUSD special handling:** Re Protocol vault contracts emit custom deposit/redeem events instead of standard mint/burn Transfers. Deposits are decoded from `Deposited(address,address,uint256)` (`dataSlot=2`, 18-decimal amount), and burns from `InstantRedemptionProcessed(address,uint256,uint256)` (`first-data-uint256`, 18-decimal shares burned).
 
 ---
 
@@ -210,6 +210,7 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 | `classification.ts` | Bridge-aware burn classification and transaction-context loading |
 | `context.ts` | Shared loaders for current prices and historical price series |
 | `persistence.ts` | `INSERT OR IGNORE` event writes, burn classification updates, affected-hour aggregation |
+| `price-heal.ts` | Auto-heal recent NULL-price rows from `price_cache` and return affected hours |
 | `sync-state.ts` | Sync-state key helpers plus mode-specific upserts (`replace` for cron, `monotonic-max` for backfill) |
 
 Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
@@ -410,12 +411,15 @@ Paginated event feed for a single stablecoin.
 |-------|------|---------|-------------|
 | `stablecoin` | string | — | Stablecoin ID (required) |
 | `direction` | string | — | Filter: `"mint"` or `"burn"` |
-| `chain` | string | — | Filter by chain ID |
+| `chain` | string | — | Filter by chain ID (`"ethereum"` only in current production scope) |
+| `burnType` | string | — | Burn-only filter: `"effective_burn"`, `"bridge_burn"`, or `"review_required"` |
 | `minAmount` | number | — | Minimum USD amount (uses `COALESCE(amount_usd, amount)`) |
 | `limit` | int | 50 | Page size, 1–500 |
 | `offset` | int | 0 | Pagination offset |
 
 Returns: `{ events[], total }`. Events sorted by `timestamp DESC`.
+
+Each event row includes valuation provenance fields (`priceUsed`, `priceTimestamp`, `priceSource`) plus burn classification fields (`burnType`, `burnReviewReason`).
 
 **Cache:** `CACHE_PROFILES.realtime` (~900s freshness with 15-min staleness window)
 
@@ -565,9 +569,11 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `worker/src/cron/sync-mint-burn.ts` | Cron job: incremental event sync + hourly aggregation |
 | `worker/src/lib/mint-burn-pipeline/types.ts` | Shared ingestion types for cron/backfill |
 | `worker/src/lib/mint-burn-pipeline/parse.ts` | Shared log parsing and price resolution |
+| `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts` | Shared same-transaction roundtrip tagging |
 | `worker/src/lib/mint-burn-pipeline/classification.ts` | Shared bridge-burn classification |
 | `worker/src/lib/mint-burn-pipeline/context.ts` | Shared current/historical price context loaders |
 | `worker/src/lib/mint-burn-pipeline/persistence.ts` | Shared event write + hourly recompute helpers |
+| `worker/src/lib/mint-burn-pipeline/price-heal.ts` | Shared NULL-price auto-heal helper |
 | `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
 | `worker/src/lib/mint-burn-contracts.ts` | Contract configs, event definitions, safe haven IDs |
 | `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: pressure shift (FIS), gauge, flight-to-quality |

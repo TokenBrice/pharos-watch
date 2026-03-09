@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { useMemo, useRef, useState, useCallback } from "react";
 import { CHART_DRAW_IN } from "@/lib/chart-animation";
 import { AreaChart, Area } from "recharts";
 import { Camera } from "lucide-react";
@@ -24,9 +24,11 @@ const OTHERS_SLATE = "#94a3b8";
 
 export function TotalMcapChart() {
   const chartRef = useRef<HTMLDivElement>(null);
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const animProps = hasAnimated ? { isAnimationActive: false } : CHART_DRAW_IN;
-  useEffect(() => { setHasAnimated(true); }, []);
+  const [shouldAnimate, setShouldAnimate] = useState(true);
+  const animProps = shouldAnimate ? CHART_DRAW_IN : { isAnimationActive: false };
+  const handleAnimationEnd = useCallback(() => {
+    setShouldAnimate(false);
+  }, []);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
@@ -178,6 +180,7 @@ export function TotalMcapChart() {
                     fill="url(#usdtGrad)"
                     strokeWidth={1.5}
                     name="USDT"
+                    onAnimationEnd={handleAnimationEnd}
                     {...animProps}
                   />
                   <Area
@@ -188,6 +191,7 @@ export function TotalMcapChart() {
                     fill="url(#usdcGrad)"
                     strokeWidth={1.5}
                     name="USDC"
+                    onAnimationEnd={handleAnimationEnd}
                     {...animProps}
                   />
                   <Area
@@ -198,6 +202,7 @@ export function TotalMcapChart() {
                     fill="url(#skyGrad)"
                     strokeWidth={1.5}
                     name="USDS + DAI"
+                    onAnimationEnd={handleAnimationEnd}
                     {...animProps}
                   />
                   <Area
@@ -208,6 +213,7 @@ export function TotalMcapChart() {
                     fill="url(#othersGrad)"
                     strokeWidth={1.5}
                     name="Others"
+                    onAnimationEnd={handleAnimationEnd}
                     {...animProps}
                   />
                 </AreaChart>

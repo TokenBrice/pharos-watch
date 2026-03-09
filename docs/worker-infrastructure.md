@@ -60,7 +60,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram, bot chat replies, subscriber alert dispatch |
 | `TELEGRAM_CHAT_ID` | string | No | Digest → Telegram |
 | `TELEGRAM_WEBHOOK_SECRET` | string | No | Random string for webhook URL validation (set via `wrangler secret put`) |
-| `MAINTENANCE_MODE` | `string?` | No | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-admin requests. Used as a kill switch. |
+| `MAINTENANCE_MODE` | `string?` | No | Optional. When set to the exact string `"true"`, the worker returns 503 for all requests. Used as a kill switch. |
 | `MINT_BURN_DISABLED_IDS` | string | No | Mint/burn runtime disable list by stablecoin ID (CSV) |
 | `MINT_BURN_DISABLED_SYMBOLS` | string | No | Mint/burn runtime disable list by symbol (CSV) |
 | `MINT_BURN_MAJOR_SYMBOLS` | string | No | Mint/burn health-check major symbols override (CSV) |

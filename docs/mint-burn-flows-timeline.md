@@ -1,6 +1,17 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.4` (2026-03-01 -> 2026-03-07).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.5` (2026-03-01 -> 2026-03-09).
+
+---
+
+## v4.5 - Data quality: noise filtering, auto-heal, and activity gating (Mar 9, 2026)
+
+**Commit:** `unreleased`
+
+- Same-transaction mint+burn pairs for the same stablecoin are now flagged as `atomic_roundtrip` and excluded from all flow aggregates
+- `sync-mint-burn` now auto-heals recent `amount_usd IS NULL` rows within a 48-hour window using `price_cache`
+- Coins with less than $50K of absolute 24h flow now return `NR` for pressure shift instead of a misleading score
+- Cron metadata now reports `atomicRoundtripsDetected` and `nullPricesHealed`
 
 ---
 

@@ -13,13 +13,13 @@ The digest pipeline has four layers:
 3. **Distribution** — posted to Twitter and Telegram immediately after generation
 4. **Frontend** — served via public API endpoints, displayed on the homepage and a dedicated archive
 
-Each digest has three fields produced by the LLM:
+Each digest has four fields produced by the LLM:
 
 | Field | Description | Constraint |
 |-------|-------------|------------|
 | `title` | 2–6 word punchy headline | — |
 | `text` | Tweet-sized distillation of the day's key take | ≤270 chars combined with title |
-| `extended` | 1–3 sentences of sharp editorial analysis | No limit |
+| `extended` | 2–3 short paragraphs of editorial analysis | 80–160 words target |
 | `meta` | Editorial choice metadata for variety enforcement | `{ lead, tone, coins }` |
 
 ---
@@ -202,7 +202,7 @@ Used in two places: the homepage (title + first editorial paragraph + "Read toda
 ### Archive page
 
 **Route:** `/digest/`
-**Page:** `src/app/digest/page.tsx` (SSR)
+**Page:** `src/app/digest/page.tsx` (static route in the Next.js export)
 **Component:** `src/components/digest-archive-client.tsx`
 **Hook:** `src/hooks/use-digest-archive.ts` → `GET /api/digest-archive`
 
@@ -269,7 +269,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `src/components/daily-digest.tsx` | Broadsheet component (shared: homepage + archive page) |
 | `src/components/digest-archive-client.tsx` | Archive page: broadsheet + wire table with month picker |
 | `src/components/digest-snapshot.tsx` | Date-specific data cards (8 categories) |
-| `src/app/digest/page.tsx` | Archive page (SSR) |
+| `src/app/digest/page.tsx` | Archive page route shell (static export) |
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
 | `src/hooks/use-daily-digest.ts` | TanStack Query hook for latest digest |
 | `src/hooks/use-digest-archive.ts` | TanStack Query hook for full archive |

@@ -66,9 +66,11 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
   // After render, mark all current events as seen.
   useEffect(() => {
     if (events.length > 0) {
+      // These IDs must be committed after paint so only newly arrived rows animate once.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSeenIds((prev) => {
         const next = new Set(prev);
-        for (const e of events) next.add(e.id);
+        for (const event of events) next.add(event.id);
         return next.size === prev.size ? prev : next;
       });
     }

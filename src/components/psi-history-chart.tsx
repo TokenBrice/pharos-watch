@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { CHART_DRAW_IN } from "@/lib/chart-animation";
 import { AreaChart, Area, ReferenceArea, ReferenceLine } from "recharts";
 import { Camera } from "lucide-react";
@@ -159,9 +159,11 @@ export function ScoreChart({
   showHeader?: boolean;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const animProps = hasAnimated ? { isAnimationActive: false } : CHART_DRAW_IN;
-  useEffect(() => { setHasAnimated(true); }, []);
+  const [shouldAnimate, setShouldAnimate] = useState(true);
+  const animProps = shouldAnimate ? CHART_DRAW_IN : { isAnimationActive: false };
+  const handleAnimationEnd = useCallback(() => {
+    setShouldAnimate(false);
+  }, []);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-psi-history");
   }, []);
@@ -325,6 +327,7 @@ export function ScoreChart({
                     stroke={CHART_BLUE}
                     fill="url(#psiScoreGradient)"
                     strokeWidth={2}
+                    onAnimationEnd={handleAnimationEnd}
                     {...animProps}
                   />
                 </AreaChart>

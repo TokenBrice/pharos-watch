@@ -82,6 +82,9 @@ export function useTablePagination<T>(
   );
 
   useEffect(() => {
+    // Persist the reset so a filtered table stays on page 1 even if the row
+    // count later grows back to the previous size.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPageState((previous) =>
       reconcilePaginationStateOnTotalChange(previous, totalRows, resetPageOnTotalChange)
     );

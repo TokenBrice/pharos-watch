@@ -29,13 +29,14 @@
 | `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
 | `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
 | `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
-| `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=`, `?minAmount=`, `?limit=N&offset=M`) |
+| `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?minAmount=`, `?limit=N&offset=M`) |
 | `GET /api/stress-signals` | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`) |
 | `POST /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 | `POST /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
 | `POST /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
 | `POST /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
 | `POST /api/backfill-mint-burn` | Admin: controlled mint/burn ingestion backfill by `configKey` (requires `X-Admin-Key`) |
+| `POST /api/reclassify-atomic-roundtrips` | Admin: retroactively tag same-tx mint/burn noise as `flow_type='atomic_roundtrip'` (requires `X-Admin-Key`) |
 | `POST /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; requires `X-Admin-Key`) |
 | `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`) |
 | `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`) |
@@ -332,7 +333,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (56 total)
+├── migrations/                   # D1 SQL migrations (59 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
@@ -353,6 +354,12 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
+    │   ├── dex-discovery/        # Independent 20-min staged-pool discovery pipeline
+    │   │   ├── index.ts          # Barrel export
+    │   │   ├── types.ts          # Discovery tiers, staged-pool rows, confidence defaults
+    │   │   ├── crawl-sources.ts  # Chain-aware CG Onchain/GT/DexScreener/tickers pool crawl
+    │   │   ├── persistence.ts    # Staging-table upserts, run-seq meta, cleanup
+    │   │   └── orchestrator.ts   # syncDexDiscovery() main function
     │   ├── dex-liquidity/        # DeFiLlama Yields + Curve API + CG Onchain → D1 (every 30min)
     │   │   ├── index.ts           # Barrel re-export
     │   │   ├── types.ts           # All interfaces and type aliases
@@ -410,6 +417,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-dews.ts     # GET /api/backfill-dews (admin)
     │   ├── backfill-mint-burn-prices.ts # POST /api/backfill-mint-burn-prices (admin)
     │   ├── backfill-mint-burn.ts # POST /api/backfill-mint-burn (admin)
+    │   ├── reclassify-atomic-roundtrips.ts # POST /api/reclassify-atomic-roundtrips (admin)
     │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)
     │   ├── yield-history.ts     # GET /api/yield-history
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
@@ -450,7 +458,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         │   ├── parse.ts          # parseMintBurnLogs() + event price resolution
         │   ├── classification.ts # Bridge-aware burn classification + tx-context loader
         │   ├── context.ts        # Shared current + historical price context loading
+        │   ├── roundtrip-detection.ts # Same-tx mint+burn tagging for flow_type=atomic_roundtrip
         │   ├── persistence.ts    # Event insert, burn update, affected-hour recompute helpers
+        │   ├── price-heal.ts     # Auto-heal recent NULL amount_usd rows from price_cache
         │   └── sync-state.ts     # Sync-state read/init/upsert helpers (replace vs monotonic-max)
         ├── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
         ├── dexscreener.ts        # DexScreener API client (token price + pool search)
