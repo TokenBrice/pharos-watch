@@ -61,7 +61,7 @@ Primary source for token prices, market caps, and DEX pool discovery.
 
 **Crawl budget**: 5 min max wall-time for CoinGecko onchain pool discovery (`CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS`). This prevents the paid onchain crawl from consuming the entire `sync-dex-liquidity` runtime before scoring and persistence.
 
-**Discovery budget**: Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on the independent `sync-dex-discovery` cron (every 20 min) with a 14-minute wall-clock budget. `sync-dex-liquidity` no longer calls discovery APIs directly — it reads staged results from `dex_pool_staging`.
+**Discovery budget**: Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on the independent `sync-dex-discovery` cron (every 20 min) with a 13-minute in-app budget (14-min cron timeout, 15-min Workers hard limit). Crawl errors count as misses for backoff demotion. `sync-dex-liquidity` no longer calls discovery APIs directly — it reads staged results from `dex_pool_staging`.
 
 > **Key constraint**: 500,000 calls/month ÷ ~2,160 discovery runs/month (every 20 min) = ~231 CG calls per discovery run on average before hitting the monthly cap. The pool crawl can still blow through this if not throttled.
 
@@ -78,7 +78,7 @@ Fallback DEX pool data source when CoinGecko onchain API is unavailable.
 
 **Rate limit in code**: `GECKO_TERMINAL_MS = 2000` ms (30 req/min) in `worker/src/lib/rate-limit.ts`, used by `worker/src/cron/dex-liquidity/fetch-crawlers.ts`
 
-**Crawl budget**: 3 min max wall-time within the 20-minute discovery cron (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). This GT crawl shares the discovery runtime budget with the 5-minute CoinGecko onchain crawl and downstream fallback stages so the full discovery pass stays under the 14-minute in-app budget / 15-minute Cloudflare wall-clock cap.
+**Crawl budget**: 3 min max wall-time within the 20-minute discovery cron (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). This GT crawl shares the discovery runtime budget with the 5-minute CoinGecko onchain crawl and downstream fallback stages so the full discovery pass stays under the 13-minute in-app budget / 15-minute Cloudflare wall-clock cap.
 
 ---
 

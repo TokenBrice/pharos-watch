@@ -149,7 +149,7 @@ export async function syncDexDiscovery(
 
     eligibleCoins.sort((a, b) => compareDiscoveryMeta(a.meta, b.meta));
 
-    const deadlineMs = Date.now() + 14 * 60_000;
+    const deadlineMs = Date.now() + 13 * 60_000;
     const knownPoolIds = new Set<string>();
 
     for (const candidate of eligibleCoins) {
@@ -179,6 +179,11 @@ export async function syncDexDiscovery(
         rethrowIfAborted(err, signal);
         console.warn("[dex-discovery]", candidate.stablecoinId, err);
         failedCoins.push(candidate.stablecoinId);
+        // Count crawl errors as misses so perpetually-failing coins get demoted
+        // instead of staying at T1 and consuming budget every run.
+        try {
+          await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec);
+        } catch { /* non-blocking */ }
       }
 
       if (Date.now() >= deadlineMs) {
