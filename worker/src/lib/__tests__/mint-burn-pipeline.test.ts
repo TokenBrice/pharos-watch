@@ -58,6 +58,101 @@ function makeDb(): D1Database {
   } as unknown as D1Database;
 }
 
+type HourlyRow = {
+  stablecoin_id: string;
+  chain_id: string;
+  hour_ts: number;
+  mint_count: number;
+  burn_count: number;
+  mint_volume_usd: number;
+  burn_volume_usd: number;
+  net_flow_usd: number;
+};
+
+function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow> } {
+  const events: MintBurnRow[] = [];
+  const hourlyRows = new Map<string, HourlyRow>();
+
+  return {
+    hourlyRows,
+    prepare: (sql: string) => ({
+      bind: (...args: unknown[]) => ({
+        run: async () => {
+          if (sql.includes("INSERT OR IGNORE INTO mint_burn_events")) {
+            const row: MintBurnRow = {
+              id: args[0] as string,
+              stablecoin_id: args[1] as string,
+              symbol: args[2] as string,
+              chain_id: args[3] as string,
+              direction: args[4] as MintBurnRow["direction"],
+              amount: args[5] as number,
+              amount_usd: args[6] as number | null,
+              price_used: args[7] as number | null,
+              price_timestamp: args[8] as number | null,
+              price_source: args[9] as string | null,
+              burn_type: args[10] as MintBurnRow["burn_type"],
+              burn_review_reason: args[11] as string | null,
+              counterparty: args[12] as string | null,
+              tx_hash: args[13] as string,
+              block_number: args[14] as number,
+              timestamp: args[15] as number,
+              explorer_tx_url: args[16] as string,
+              flow_type: args[17] as MintBurnRow["flow_type"],
+            };
+            events.push(row);
+            return { success: true, meta: { changes: 1 } };
+          }
+
+          if (sql.includes("INSERT OR REPLACE INTO mint_burn_hourly")) {
+            const [stablecoinId, chainId, startTs, endTs] = args as [string, string, number, number];
+            const relevant = events.filter((row) =>
+              row.stablecoin_id === stablecoinId &&
+              row.chain_id === chainId &&
+              row.timestamp >= startTs &&
+              row.timestamp < endTs,
+            );
+
+            hourlyRows.set(`${stablecoinId}-${chainId}-${startTs}`, {
+              stablecoin_id: stablecoinId,
+              chain_id: chainId,
+              hour_ts: startTs,
+              mint_count: relevant.filter((row) => row.direction === "mint" && row.flow_type === "standard").length,
+              burn_count: relevant.filter((row) =>
+                row.direction === "burn" &&
+                row.burn_type === "effective_burn" &&
+                row.flow_type === "standard",
+              ).length,
+              mint_volume_usd: relevant.reduce((sum, row) =>
+                row.direction === "mint" && row.flow_type === "standard"
+                  ? sum + (row.amount_usd ?? 0)
+                  : sum,
+              0),
+              burn_volume_usd: relevant.reduce((sum, row) =>
+                row.direction === "burn" &&
+                row.burn_type === "effective_burn" &&
+                row.flow_type === "standard"
+                  ? sum + (row.amount_usd ?? 0)
+                  : sum,
+              0),
+              net_flow_usd: relevant.reduce((sum, row) => {
+                if (row.flow_type !== "standard") return sum;
+                if (row.direction === "mint") return sum + (row.amount_usd ?? 0);
+                if (row.direction === "burn" && row.burn_type === "effective_burn") {
+                  return sum - (row.amount_usd ?? 0);
+                }
+                return sum;
+              }, 0),
+            });
+            return { success: true, meta: { changes: 1 } };
+          }
+
+          return { success: true, meta: {} };
+        },
+      }),
+    }),
+  } as unknown as D1Database & { hourlyRows: Map<string, HourlyRow> };
+}
+
 function makeRow(overrides?: Partial<MintBurnRow>): MintBurnRow {
   return {
     id: overrides?.id ?? "id-1",
@@ -72,6 +167,7 @@ function makeRow(overrides?: Partial<MintBurnRow>): MintBurnRow {
     price_source: overrides?.price_source ?? "price-cache-current",
     burn_type: overrides?.burn_type ?? null,
     burn_review_reason: overrides?.burn_review_reason ?? null,
+    flow_type: overrides?.flow_type ?? "standard",
     counterparty: overrides?.counterparty ?? null,
     tx_hash: overrides?.tx_hash ?? "0xtx-1",
     block_number: overrides?.block_number ?? 22_000_000,
@@ -160,6 +256,59 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(1);
     const firstCall = vi.mocked(batchExecute).mock.calls[0];
     expect(firstCall[1]).toHaveLength(2);
+  });
+
+  it("excludes atomic roundtrip rows from hourly aggregation", async () => {
+    const db = makeAggregationDb();
+    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
+      for (const stmt of stmts) {
+        await stmt.run();
+      }
+      return stmts.length;
+    });
+
+    const rows = [
+      makeRow({ id: "mint-standard", direction: "mint", amount_usd: 100, timestamp: 3_605, tx_hash: "0xmint-standard" }),
+      makeRow({
+        id: "burn-standard",
+        direction: "burn",
+        burn_type: "effective_burn",
+        amount_usd: 25,
+        timestamp: 3_610,
+        tx_hash: "0xburn-standard",
+      }),
+      makeRow({
+        id: "mint-roundtrip",
+        direction: "mint",
+        amount_usd: 999,
+        timestamp: 3_615,
+        tx_hash: "0xroundtrip",
+        flow_type: "atomic_roundtrip",
+      }),
+      makeRow({
+        id: "burn-roundtrip",
+        direction: "burn",
+        burn_type: "effective_burn",
+        amount_usd: 777,
+        timestamp: 3_620,
+        tx_hash: "0xroundtrip",
+        flow_type: "atomic_roundtrip",
+      }),
+    ];
+
+    await insertMintBurnRows(db, rows);
+    await recalcAffectedHours(db, collectAffectedHours(rows));
+
+    expect(db.hourlyRows.get("usdt-tether-ethereum-3600")).toEqual({
+      stablecoin_id: "usdt-tether",
+      chain_id: "ethereum",
+      hour_ts: 3600,
+      mint_count: 1,
+      burn_count: 1,
+      mint_volume_usd: 100,
+      burn_volume_usd: 25,
+      net_flow_usd: 75,
+    });
   });
 
   it("updates burn classification rows only for burn events", async () => {

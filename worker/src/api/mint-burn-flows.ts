@@ -330,12 +330,14 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
              WHERE chain_id = ?
                AND timestamp >= ?
                AND (direction = 'mint' OR burn_type = 'effective_burn')
+               AND flow_type = 'standard'
              GROUP BY stablecoin_id
            ) m ON e.stablecoin_id = m.stablecoin_id
               AND COALESCE(e.amount_usd, e.amount) = m.max_val
               AND e.chain_id = ?
               AND e.timestamp >= ?
               AND (e.direction = 'mint' OR e.burn_type = 'effective_burn')
+              AND e.flow_type = 'standard'
            GROUP BY e.stablecoin_id
            HAVING e.timestamp = MAX(e.timestamp)`,
         )

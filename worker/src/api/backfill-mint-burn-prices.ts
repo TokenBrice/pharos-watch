@@ -61,11 +61,11 @@ export const handleBackfillMintBurnPrices = withErrorHandler(
             SELECT
               stablecoin_id, chain_id,
               (timestamp / 3600) * 3600 AS hour_ts,
-              SUM(CASE WHEN direction = 'mint' THEN 1 ELSE 0 END),
-              SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN 1 ELSE 0 END),
-              COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE 0 END), 0),
-              COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN amount_usd ELSE 0 END), 0),
-              COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN -amount_usd ELSE 0 END), 0)
+              SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN 1 ELSE 0 END),
+              SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN 1 ELSE 0 END),
+              COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
+              COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
+              COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN -amount_usd ELSE 0 END), 0)
             FROM mint_burn_events
             WHERE stablecoin_id = ?
             GROUP BY stablecoin_id, chain_id, hour_ts
