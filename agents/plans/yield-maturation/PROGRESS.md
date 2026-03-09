@@ -1,79 +1,89 @@
 # Yield Maturation — Progress Tracker
 
-**Last updated:** 2026-03-09 (initial creation)
+**Last updated:** 2026-03-09
 
 ## Current State
 
-**Active phase:** Phase 0 — Research (not started)
-**Next action:** Complete Phase 0 research (DL pool audit + protocol evaluation), then dispatch Phase 1A + 1B worktrees
+**Active phase:** COMPLETE
+**Next action:** Deploy, run D1 migration, smoke tests
 
 ## Phase Checklist
 
 ### Phase 0: Research (Manual)
-- [ ] DL pool audit completed (yield-bearing coins vs live pools)
-- [ ] Candidate lending protocols evaluated against quality gates
-- [ ] Research output documented and ticket amendments prepared
+- [x] DL pool audit completed — 40 yield-bearing coins audited, 8 new pool mappings + 6 price-derived fallbacks identified
+- [x] Candidate lending protocols evaluated — 10 new protocols approved (compound-v2, dolomite, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2, benqi-lending)
+- [x] Research output documented (`phase0-research-output.md`) and ticket amendments prepared (TICKET-001 + TICKET-002 amended)
 
 ### Phase 1A: Worker Backend (`yield-maturation-backend`)
-- [ ] Worktree created
-- [ ] Tickets copied
-- [ ] cmcs run started
-- [ ] cmcs run completed (_/7 tickets, _ failures)
-- [ ] Review checklist passed
-- [ ] Merged to main (commit ___)
-- [ ] Post-deploy smoke test passed
+- [x] Worktree created
+- [x] Tickets copied
+- [x] cmcs run started
+- [x] cmcs run completed (7/7 tickets, 0 failures)
+- [x] Review checklist passed (build, tsc, tests green; all spot checks pass; Zod schema verified)
+- [x] Merged to main (commit e909e596)
+- [ ] Post-deploy smoke test passed (deferred — D1 migration needed first)
 - [ ] Worktree cleaned up
 
 ### Phase 1B: Coverage Config (`yield-maturation-coverage`)
-- [ ] Worktree created
-- [ ] Tickets copied (amended with research output)
-- [ ] cmcs run started
-- [ ] cmcs run completed (_/2 tickets, _ failures)
-- [ ] Review checklist passed
-- [ ] Merged to main (commit ___)
-- [ ] Post-deploy smoke test passed
+- [x] Worktree created
+- [x] Tickets copied (amended with research output)
+- [x] cmcs run started
+- [x] cmcs run completed (2/2 tickets, 0 failures)
+- [x] Review checklist passed (build, tsc, tests all green; all entries verified)
+- [x] Merged to main (commit a08611c7)
+- [ ] Post-deploy smoke test passed (deferred — deploy pending)
 - [ ] Worktree cleaned up
 
 ### Phase 2: Frontend Foundation (`yield-maturation-frontend-foundation`)
-- [ ] Worktree created
-- [ ] Tickets copied
-- [ ] cmcs run started
-- [ ] cmcs run completed (_/3 tickets, _ failures)
-- [ ] Review checklist passed
-- [ ] Merged to main (commit ___)
-- [ ] Post-deploy smoke test passed
+- [x] Worktree created
+- [x] Tickets copied
+- [x] cmcs run started
+- [x] cmcs run completed (3/3 tickets, 0 failures)
+- [x] Review checklist passed (build, 1315 tests green; all spot checks pass)
+- [x] Merged to main (commit 103bc2e4)
+- [ ] Post-deploy smoke test passed (frontend-only — visual check at deploy)
 - [ ] Worktree cleaned up
 
 ### Phase 3D: Leaderboard Enhancements (`yield-maturation-leaderboard`)
-- [ ] Worktree created
-- [ ] Tickets copied
-- [ ] cmcs run started
-- [ ] cmcs run completed (_/5 tickets, _ failures)
-- [ ] Review checklist passed
-- [ ] Merged to main (commit ___)
-- [ ] Post-deploy smoke test passed
+- [x] Worktree created
+- [x] Tickets copied
+- [x] cmcs run started
+- [x] cmcs run completed (5/5 tickets, 0 failures) — 3 in first run, 2 after cmcs DB fix
+- [x] Review checklist passed (build, tests green; all spot checks pass)
+- [x] Merged to main (commit 47739904)
+- [ ] Post-deploy smoke test passed (frontend-only — visual check at deploy)
 - [ ] Worktree cleaned up
 
 ### Phase 3E: Detail Page Yield Section (`yield-maturation-detail-page`)
-- [ ] Worktree created
-- [ ] Tickets copied
-- [ ] cmcs run started
-- [ ] cmcs run completed (_/2 tickets, _ failures)
-- [ ] Review checklist passed
-- [ ] Merged to main (commit ___)
-- [ ] Post-deploy smoke test passed
+- [x] Worktree created
+- [x] Tickets copied
+- [x] cmcs run started
+- [x] cmcs run completed (2/2 tickets, 0 failures)
+- [x] Review checklist passed (build, 1330 tests green; all spot checks pass)
+- [x] Merged to main (commit fd2b21bd)
+- [ ] Post-deploy smoke test passed (frontend-only — visual check at deploy)
 - [ ] Worktree cleaned up
 
+**Post-merge cleanup:** WARNING_SIGNAL_LABELS deduplicated to `src/lib/yield-constants.ts` (commit 6df3ce8f)
+
 ### Phase 4: Polish (`yield-maturation-polish`)
-- [ ] Worktree created
-- [ ] Tickets copied
-- [ ] cmcs run started
-- [ ] cmcs run completed (_/1 tickets, _ failures)
-- [ ] Review checklist passed
-- [ ] Merged to main (commit ___)
+- [x] Worktree created
+- [x] Tickets copied
+- [x] cmcs run started
+- [x] cmcs run completed (1/1 tickets, 0 failures)
+- [x] Review checklist passed (build, 1347 tests green; no experimental markers; all docs updated)
+- [x] Merged to main (commit 7b139fbf)
 - [ ] Post-deploy smoke test passed
 - [ ] Worktree cleaned up
 
 ## Incident Log
 
-(empty — no incidents yet)
+1. **cmcs DB FK constraint failure** — After cmcs DB was reinitialized mid-execution, the `worktrees` table was empty. `cmcs run` from worktree CWD uses the worktree's own `.cmcs/cmcs.db` (which has no worktree registrations), not the main repo's DB. Fixed by always running `cmcs run <absolute-path>` from the main repo root. Phase 3D TICKET-004 + 005 relaunched after fix.
+
+## Final Stats
+
+- **Total tickets:** 20 (7 + 2 + 3 + 5 + 2 + 1)
+- **First-pass success:** 20/20 (0 failures)
+- **Test count:** 1313 → 1347 (+34 tests added by agents)
+- **Files changed:** ~20 files across worker, shared types, frontend components, hooks, docs
+- **Post-merge cleanups:** 1 (WARNING_SIGNAL_LABELS dedup)
