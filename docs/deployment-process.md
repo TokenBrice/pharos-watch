@@ -87,6 +87,8 @@ Defined in `.github/workflows/deploy-cloudflare.yml`:
 4. `deploy-pages`
 5. `smoke-ui`
 
+Action dependencies in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
+
 Deployment stops on the first failed job.
 
 ## Failure Policy

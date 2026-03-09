@@ -39,19 +39,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: cd worker && npm ci
-      - uses: cloudflare/wrangler-action@fef56d74e3f01b9fc1af0e1de4bbef5c0e74adcb # v3.14.1
+      - uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
           command: d1 migrations apply stablecoin-db --remote
-      - uses: cloudflare/wrangler-action@fef56d74e3f01b9fc1af0e1de4bbef5c0e74adcb # v3.14.1
+      - uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
           command: deploy
-      - uses: cloudflare/wrangler-action@fef56d74e3f01b9fc1af0e1de4bbef5c0e74adcb # v3.14.1
+      - uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -85,7 +85,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE: ${{ vars.API_BASE_URL }}
       - run: npm run seo:check
-      - uses: cloudflare/wrangler-action@fef56d74e3f01b9fc1af0e1de4bbef5c0e74adcb # v3.14.1
+      - uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
