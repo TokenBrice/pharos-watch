@@ -5,6 +5,7 @@ import { useApiQuery, CRON_20MIN } from "./use-api-query";
 import {
   MintBurnFlowsResponseSchema,
   MintBurnPerCoinResponseSchema,
+  MintBurnEventsResponseSchema,
   type MintBurnFlowsResponse,
   type MintBurnPerCoinResponse,
   type MintBurnEventsResponse,
@@ -127,6 +128,7 @@ export function useMintBurnEvents(
   opts?: {
     direction?: string;
     burnType?: "effective_burn" | "bridge_burn" | "review_required";
+    scope?: "all" | "counted";
     limit?: number;
     offset?: number;
   }
@@ -134,12 +136,22 @@ export function useMintBurnEvents(
   const params = new URLSearchParams({ stablecoin: stablecoinId });
   if (opts?.direction) params.set("direction", opts.direction);
   if (opts?.burnType) params.set("burnType", opts.burnType);
+  if (opts?.scope && opts.scope !== "all") params.set("scope", opts.scope);
   if (opts?.limit) params.set("limit", opts.limit.toString());
   if (opts?.offset) params.set("offset", opts.offset.toString());
 
   return useApiQuery<MintBurnEventsResponse>(
-    ["mint-burn-events", stablecoinId, opts?.direction ?? "all", opts?.offset ?? 0],
+    [
+      "mint-burn-events",
+      stablecoinId,
+      opts?.scope ?? "all",
+      opts?.direction ?? "all",
+      opts?.burnType ?? "all",
+      opts?.limit ?? 50,
+      opts?.offset ?? 0,
+    ],
     `/api/mint-burn-events?${params}`,
     CRON_20MIN,
+    { schema: MintBurnEventsResponseSchema },
   );
 }

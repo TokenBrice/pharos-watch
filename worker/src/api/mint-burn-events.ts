@@ -14,6 +14,7 @@ const ETHEREUM_CHAIN_ID = "ethereum";
 const VALID_CHAIN_IDS = new Set([ETHEREUM_CHAIN_ID]);
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
 const VALID_BURN_TYPES = new Set(["effective_burn", "bridge_burn", "review_required"]);
+const VALID_SCOPES = new Set(["all", "counted"]);
 
 interface EventRow {
   id: string;
@@ -21,6 +22,7 @@ interface EventRow {
   symbol: string;
   chain_id: string;
   direction: string;
+  flow_type: "standard" | "atomic_roundtrip";
   amount: number;
   amount_usd: number | null;
   burn_type: "effective_burn" | "bridge_burn" | "review_required" | null;
@@ -62,6 +64,10 @@ export const handleMintBurnEvents = withErrorHandler(
     if (burnType && !VALID_BURN_TYPES.has(burnType)) {
       return errorResponse(400, "Invalid burnType parameter");
     }
+    const scope = params.get("scope") ?? "all";
+    if (!VALID_SCOPES.has(scope)) {
+      return errorResponse(400, "Invalid scope parameter");
+    }
     const minAmountRaw = params.get("minAmount");
     const minAmount = minAmountRaw !== null ? parseFloat(minAmountRaw) : null;
 
@@ -90,8 +96,12 @@ export const handleMintBurnEvents = withErrorHandler(
       conditions.push("burn_type = ?");
       filterBindings.push(burnType);
     }
+    if (scope === "counted") {
+      conditions.push("flow_type = 'standard'");
+      conditions.push("(direction = 'mint' OR burn_type = 'effective_burn')");
+    }
     if (minAmount !== null && !isNaN(minAmount) && minAmount > 0) {
-      conditions.push("COALESCE(amount_usd, amount) >= ?");
+      conditions.push("amount_usd IS NOT NULL AND amount_usd >= ?");
       filterBindings.push(minAmount);
     }
 
@@ -101,6 +111,7 @@ export const handleMintBurnEvents = withErrorHandler(
       symbol: string;
       chainId: string;
       direction: "mint" | "burn";
+      flowType: EventRow["flow_type"];
       amount: number;
       amountUsd: number | null;
       burnType: EventRow["burn_type"];
@@ -126,6 +137,7 @@ export const handleMintBurnEvents = withErrorHandler(
       symbol: row.symbol,
       chainId: row.chain_id,
       direction: row.direction as "mint" | "burn",
+      flowType: row.flow_type,
       amount: row.amount,
       amountUsd: row.amount_usd,
       burnType: row.burn_type,

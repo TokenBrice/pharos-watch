@@ -374,6 +374,37 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "benqi-lending", // $133M total TVL, $8M stablecoin; USDC/USDT on Avalanche
 ]);
 
+/** Human-readable display names for DeFiLlama lending protocol slugs. */
+export const LENDING_PROTOCOL_LABELS: Record<string, string> = {
+  "aave-v3": "Aave v3",
+  "compound-v3": "Compound v3",
+  "compound-v2": "Compound v2",
+  "sparklend": "SparkLend",
+  "spark-savings": "Spark Savings",
+  "maple": "Maple Finance",
+  "yearn-finance": "Yearn",
+  "dolomite": "Dolomite",
+  "fluid-lending": "Fluid",
+  "euler-v2": "Euler v2",
+  "venus-core-pool": "Venus",
+  "kamino-lend": "Kamino",
+  "morpho-v1": "Morpho",
+  "pendle": "Pendle",
+  "curve-llamalend": "Curve LlamaLend",
+  "exactly": "Exactly",
+  "flux-finance": "Flux Finance",
+  "gains-network": "Gains Network",
+  "lazy-summer-protocol": "Lazy Summer",
+  "moonwell-lending": "Moonwell",
+  "silo-v2": "Silo v2",
+  "justlend": "JustLend",
+  "openeden-usdo": "OpenEden",
+  "multipli.fi": "Multipli",
+  "jupiter-lend": "Jupiter Lend",
+  "stables-labs-usdx": "Stables Labs",
+  "benqi-lending": "BENQI",
+};
+
 /**
  * Deterministic auto-discovery overrides for non-yield-bearing coins.
  * Maps Pharos stablecoin ID -> DeFiLlama lending pool UUID.

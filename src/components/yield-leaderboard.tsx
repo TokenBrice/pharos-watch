@@ -91,18 +91,14 @@ interface YieldLeaderboardProps {
 }
 
 export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: YieldLeaderboardProps) {
-  const [activeTab, setActiveTab] = useState<"native" | "lending">("native");
   const [activeYieldTypes, setActiveYieldTypes] = useState<Set<string>>(
     () => new Set(Object.keys(YIELD_TYPE_LABELS)),
   );
   const [hideWarnings, setHideWarnings] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const nativeRankings = rankings.filter((ranking) => ranking.dataSource !== "defillama-auto");
-  const lendingRankings = rankings.filter((ranking) => ranking.dataSource === "defillama-auto");
-  const tabData = activeTab === "native" ? nativeRankings : lendingRankings;
-  const visibleTypes = [...new Set(tabData.map((ranking) => ranking.yieldType))];
-  const typeFiltered = tabData.filter((ranking) => activeYieldTypes.has(ranking.yieldType));
+  const visibleTypes = [...new Set(rankings.map((ranking) => ranking.yieldType))];
+  const typeFiltered = rankings.filter((ranking) => activeYieldTypes.has(ranking.yieldType));
   const warningFiltered = hideWarnings
     ? typeFiltered.filter((ranking) => ranking.warningSignals.length === 0)
     : typeFiltered;
@@ -174,34 +170,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
   return (
     <TooltipProvider>
       <div className="rounded-xl border">
-        <div className="mb-4 flex gap-1 border-b border-border px-3 pt-3">
-          <button
-            type="button"
-            aria-pressed={activeTab === "native"}
-            onClick={() => setActiveTab("native")}
-            className={
-              activeTab === "native"
-                ? "pharos-focus-ring border-b-2 border-foreground px-4 py-2 text-sm font-medium text-foreground"
-                : "pharos-focus-ring px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-            }
-          >
-            Native Yield ({nativeRankings.length})
-          </button>
-          <button
-            type="button"
-            aria-pressed={activeTab === "lending"}
-            onClick={() => setActiveTab("lending")}
-            className={
-              activeTab === "lending"
-                ? "pharos-focus-ring border-b-2 border-foreground px-4 py-2 text-sm font-medium text-foreground"
-                : "pharos-focus-ring px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-            }
-          >
-            Lending Opportunities ({lendingRankings.length})
-          </button>
-        </div>
-
-        <div className="mb-3 flex flex-wrap items-center gap-2 px-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2 px-3 pt-3">
           {visibleTypes.map((type) => (
             <button
               key={type}
@@ -505,7 +474,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
               {sorted.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-                    {activeTab === "native" ? "No native yield data available." : "No lending opportunities available."}
+                    No yield data available.
                   </TableCell>
                 </TableRow>
               )}

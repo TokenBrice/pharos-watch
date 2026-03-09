@@ -277,7 +277,7 @@ describe("syncMintBurn", () => {
     expect(firstContract).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7"); // USDT critical first
   });
 
-  it("advances contract despite one failing eventDef and reports failedEventDefs", async () => {
+  it("does not advance when one eventDef fails with no safe frontier", async () => {
     const db = makeDb();
 
     vi.mocked(fetchAlchemyLogs)
@@ -292,7 +292,69 @@ describe("syncMintBurn", () => {
     const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
 
     expect(usdt?.failedEventDefs).toBeTruthy();
-    expect(usdt?.advancedTo).not.toBeNull();
+    expect(usdt?.advancedTo).toBeNull();
+    expect(usdt?.advanceReason).toBe("no-safe-frontier");
+  });
+
+  it("advances only to the shared coverage frontier on partial event coverage", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: false,
+        scannedToBlock: 21_910_000,
+        calls: 3,
+        maxDepth: 1,
+      })
+      .mockResolvedValueOnce({
+        logs: [makeBurnLog({ blockNumber: 22_000_000 })],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+
+    expect(usdt?.advancedTo).toBe(21_910_000);
+    expect(usdt?.coverageFrontier).toBe(21_910_000);
+    expect(usdt?.advanceReason).toBe("partial-frontier");
+  });
+
+  it("caps advancement before the earliest missing timestamp block", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [
+          makeMintLog({ blockNumber: 21_950_000, txHash: "0xmissing-ts", logIndex: 0 }),
+          makeMintLog({ blockNumber: 22_000_000, txHash: "0xpresent-ts", logIndex: 1 }),
+        ],
+        complete: true,
+        scannedToBlock: 22_000_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+    const usdt = (meta.configBreakdown as Array<Record<string, unknown>>).find((row) => row.symbol === "USDT");
+
+    expect(usdt?.missingTimestampCount).toBe(1);
+    expect(usdt?.earliestMissingTimestampBlock).toBe(21_950_000);
+    expect(usdt?.advancedTo).toBe(21_949_999);
+    expect(usdt?.coverageFrontier).toBe(21_949_999);
+    expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
   it("marks run as degraded after consecutive degraded streak", async () => {

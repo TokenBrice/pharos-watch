@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "4.5",
+  currentVersion: "4.6",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "4.6",
+    title: "Safe-frontier ingestion and counted event-history alignment",
+    date: "2026-03-09",
+    effectiveAt: 1773057600,
+    summary:
+      "Mint/burn ingestion now advances only to a shared safe coverage frontier under partial scans, and product event-history surfaces now default to counted economic-flow rows.",
+    impact: [
+      "Partial event-definition coverage no longer advances sync state past uncovered log ranges",
+      "Missing block timestamps now cap advancement at the earliest unresolved block instead of silently skipping rows forever",
+      "The event API now exposes `flowType` and supports `scope=counted` for rows that participate in aggregates",
+      "Detail-page flow history now excludes bridge burns, review-required burns, and atomic roundtrips by default",
+      "Unpriced event rows now render native token amounts instead of false dollar values",
+      "`minAmount` filtering is now strictly USD-only when `amountUsd` is available",
+    ],
+    commits: ["unreleased"],
+    reconstructed: false,
+  },
   {
     version: "4.5",
     title: "Data quality: noise filtering, auto-heal, and activity gating",

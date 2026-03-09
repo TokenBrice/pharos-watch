@@ -55,8 +55,7 @@ Environment variables:
 - `rowsParsed`, `rowsInserted`, `rowsIgnored`, `rowsDropped`
 - `configsDisabled`
 - `sourceCoverage.contractsEnabled/contractsProcessed/contractsSkipped/contractsTotal`
-- `perChainBudget` (`used`, `quota` per EVM chain)
-- `configBreakdown[]` (`attempted`, `scanFrom`, `scanTo`, `failedEventDefs`, `advancedTo`, insert stats)
+- `configBreakdown[]` (`attempted`, `scanFrom`, `scanTo`, `failedEventDefs`, `advancedTo`, `advanceReason`, `coverageFrontier`, `missingTimestampCount`, insert stats, per-event coverage)
 - `laggingConfigs[]` (largest `head-lastBlock` deltas)
 - `coverageRatio`, `degradedSignal`, `degradedStreak`
 
@@ -154,16 +153,20 @@ curl -X POST "https://api.pharos.watch/api/backfill-mint-burn" \
 
 ## One-Time Recovery Sequence
 
-1. Deploy reliability fixes and verify `sync-mint-burn` runs healthy for at least 6 consecutive runs.
-2. Backfill major configs first:
-   - `ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` (USDC)
-   - `ethereum-0xdc035d45d973e3ec169d2276ddab16f1e407384f` (USDS)
-   - `ethereum-0x6b175474e89094c44da98b954eedeac495271d0f` (DAI)
-   - `ethereum-0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f` (GHO)
-   - `ethereum-0xcacd6fd266af91b8aed52accc382b4e165586e29` (FRXUSD)
-   - `ethereum-0x6440f144b7e50d6a8439336510312d2f54beb01d` (BOLD)
-3. Backfill reUSD chain configs after majors.
-4. Re-run freshness SQL checks and capture timestamps in incident log.
+Use this sequence after any change to sync-frontier or event-coverage advancement semantics.
+
+1. Deploy the worker and verify `sync-mint-burn` is healthy for at least 6 consecutive runs.
+2. Identify every config with `events.length > 1`.
+   - Current mandatory recovery target: `ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7` (`USDT`)
+3. Run `POST /api/backfill-mint-burn` from `startBlock` to head for each multi-event config until `done: true`.
+4. After backfill completes, run `POST /api/reclassify-atomic-roundtrips` until `done: true`.
+   - This is required because pre-existing rows skipped by `INSERT OR IGNORE` do not get `flow_type` updated during backfill inserts.
+5. Re-run freshness and recent-run SQL checks.
+6. Spot-check:
+   - event totals for the repaired config
+   - 24h / 7d / 30d net flow for the repaired config
+   - recent hourly buckets around known treasury-event windows
+7. Capture the executed chunk settings and completion timestamps in the incident or deploy log.
 
 ## Emergency Rollback
 

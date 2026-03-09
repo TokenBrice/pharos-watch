@@ -29,7 +29,7 @@
 | `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
 | `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
 | `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
-| `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?minAmount=`, `?limit=N&offset=M`) |
+| `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all|counted`, `?minAmount=`, `?limit=N&offset=M`) |
 | `GET /api/stress-signals` | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`) |
 | `POST /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 | `POST /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |

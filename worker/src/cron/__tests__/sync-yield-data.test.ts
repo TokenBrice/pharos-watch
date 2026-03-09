@@ -115,6 +115,10 @@ vi.mock("../yield-config", () => ({
   YIELD_POOL_MAP: {},
   ON_CHAIN_RATE_CONFIGS: [],
   LENDING_PROTOCOL_ALLOWLIST: new Set(["venus-core-pool", "aave-v3"]),
+  LENDING_PROTOCOL_LABELS: {
+    "venus-core-pool": "Venus Core Pool",
+    "aave-v3": "Aave V3",
+  },
   PRICE_DERIVED_FALLBACK_IDS: new Set(),
   AUTO_LENDING_POOL_MAP: {
     "u-united-stables": "pool-u-venus",
@@ -520,7 +524,7 @@ describe("syncYieldData", () => {
     const aaveRow = writeStatements.find(
       (stmt) => stmt.boundValues?.[0] === "lusd-liquity" && stmt.boundValues?.[1] === "pool-lusd-aave",
     );
-    expect(aaveRow?.boundValues?.[8]).toBe("Best lending rate");
+    expect(aaveRow?.boundValues?.[8]).toBe("Aave V3");
     expect(aaveRow?.boundValues?.[9]).toBe("lending-opportunity");
     expect(aaveRow?.boundValues?.[12]).toBe("defillama-auto");
     expect(aaveRow?.boundValues?.[25]).toBe(0);

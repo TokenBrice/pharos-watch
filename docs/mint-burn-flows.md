@@ -13,7 +13,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.5`
+- **Current methodology version:** `v4.6`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** `docs/mint-burn-flows-timeline.md`
 
@@ -27,7 +27,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 - **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
-- **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `nullPricesHealed` for auto-healed recent NULL-price events.
+- **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `nullPricesHealed` for auto-healed recent NULL-price events plus per-config coverage-frontier diagnostics when scans are partial.
 - **Operator runbook:** `agents/runbooks/mint-burn-ingestion.md`
 
 ---
@@ -186,8 +186,11 @@ Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to 
    - Filter out dust events (amount < `dustThreshold`).
    - Batch `INSERT OR IGNORE` into `mint_burn_events`, track parsed vs inserted counts from D1 `meta.changes`.
    - Update `mint_burn_sync_state.last_block`:
-     - If events found: advance to `maxBlockSeen`.
-     - If no events: advance to `chainHead - safetyMarginBlocks` (avoids skipping not-yet-indexed events).
+     - If every event definition completed and timestamps are fully resolved:
+       - If events found: advance to `maxBlockSeen`.
+       - If no events: advance to `chainHead - safetyMarginBlocks` (avoids skipping not-yet-indexed events).
+     - If any event definition was partial or any block timestamps were unresolved: advance only to the shared safe coverage frontier (`min(scannedToBlock, earliestMissingTimestamp-1)`).
+     - If no safe frontier exists for the config in that run: do not advance.
 6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`, counting only `flow_type='standard'` rows so atomic roundtrips do not leak into flow statistics.
 7. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, resolve from `price_cache`, update `amount_usd/price_*` with `price_source=price_cache_heal`, and re-aggregate only newly affected hourly buckets.
 8. **Escalate degraded runs** — emit `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`.
@@ -413,13 +416,16 @@ Paginated event feed for a single stablecoin.
 | `direction` | string | — | Filter: `"mint"` or `"burn"` |
 | `chain` | string | — | Filter by chain ID (`"ethereum"` only in current production scope) |
 | `burnType` | string | — | Burn-only filter: `"effective_burn"`, `"bridge_burn"`, or `"review_required"` |
-| `minAmount` | number | — | Minimum USD amount (uses `COALESCE(amount_usd, amount)`) |
+| `scope` | string | `"all"` | `"all"` returns the classified raw event stream; `"counted"` returns only rows that contribute to economic-flow aggregates (`flow_type='standard'` and mint/effective-burn semantics) |
+| `minAmount` | number | — | Minimum USD amount; rows with `amount_usd IS NULL` are excluded when this filter is used |
 | `limit` | int | 50 | Page size, 1–500 |
 | `offset` | int | 0 | Pagination offset |
 
 Returns: `{ events[], total }`. Events sorted by `timestamp DESC`.
 
-Each event row includes valuation provenance fields (`priceUsed`, `priceTimestamp`, `priceSource`) plus burn classification fields (`burnType`, `burnReviewReason`).
+Each event row includes valuation provenance fields (`priceUsed`, `priceTimestamp`, `priceSource`), `flowType`, plus burn classification fields (`burnType`, `burnReviewReason`).
+
+Product note: stablecoin detail-page "Mint & Burn Flow History" uses the counted view so bridge burns, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
 
 **Cache:** `CACHE_PROFILES.realtime` (~900s freshness with 15-min staleness window)
 

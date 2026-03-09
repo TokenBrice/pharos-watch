@@ -5,6 +5,7 @@ import {
   formatPegDeviation,
   formatPercentChange,
   formatSupply,
+  formatTokenAmount,
   formatAddress,
   formatDuration,
   formatNativePrice,
@@ -161,6 +162,38 @@ describe("formatSupply", () => {
     expect(formatSupply(NaN)).toBe("N/A");
     expect(formatSupply(Infinity)).toBe("N/A");
     expect(formatSupply(-Infinity)).toBe("N/A");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatTokenAmount
+// ---------------------------------------------------------------------------
+describe("formatTokenAmount", () => {
+  it("formats large token amounts with tier suffixes", () => {
+    expect(formatTokenAmount(12_345)).toBe("12.35K");
+    expect(formatTokenAmount(2_500_000)).toBe("2.50M");
+  });
+
+  it("formats token amounts above one with trimmed decimals", () => {
+    expect(formatTokenAmount(12)).toBe("12");
+    expect(formatTokenAmount(12.5)).toBe("12.5");
+    expect(formatTokenAmount(12.34)).toBe("12.34");
+  });
+
+  it("formats sub-one token amounts with up to four decimals", () => {
+    expect(formatTokenAmount(0.5)).toBe("0.5");
+    expect(formatTokenAmount(0.1234)).toBe("0.1234");
+    expect(formatTokenAmount(0.1000)).toBe("0.1");
+  });
+
+  it("formats zero without decimals", () => {
+    expect(formatTokenAmount(0)).toBe("0");
+  });
+
+  it("returns N/A for NaN and Infinity", () => {
+    expect(formatTokenAmount(NaN)).toBe("N/A");
+    expect(formatTokenAmount(Infinity)).toBe("N/A");
+    expect(formatTokenAmount(-Infinity)).toBe("N/A");
   });
 });
 

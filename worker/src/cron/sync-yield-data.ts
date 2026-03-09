@@ -31,6 +31,7 @@ import {
   YIELD_POOL_MAP,
   ON_CHAIN_RATE_CONFIGS,
   LENDING_PROTOCOL_ALLOWLIST,
+  LENDING_PROTOCOL_LABELS,
   PRICE_DERIVED_FALLBACK_IDS,
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
@@ -80,6 +81,7 @@ interface ResolvedYield {
   sourceKey: string; // DL pool UUID or "price-derived"
   yieldSource?: string; // label override for variant wrapper rows
   yieldType?: string; // type override for variant wrapper rows
+  project?: string; // DeFiLlama protocol slug for defillama-auto sources
 }
 
 interface JsonRpcCallResponse {
@@ -541,6 +543,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
           dataSource: "defillama-auto",
           exchangeRate: null,
           sourceKey: pool.pool,
+          project: pool.project,
         },
       });
       autoDiscoveredIds.add(meta.id);
@@ -580,6 +583,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
           dataSource: "defillama-auto",
           exchangeRate: null,
           sourceKey: pool.pool,
+          project: pool.project,
         },
       });
       autoDiscoveredIds.add(meta.id);
@@ -677,7 +681,9 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     const yieldSource =
       y.yieldSource ??
       yieldConfig?.yieldSource ??
-      (y.dataSource === "defillama-auto" ? "Best lending rate" : "Unknown");
+      (y.dataSource === "defillama-auto" && y.project
+        ? (LENDING_PROTOCOL_LABELS[y.project] ?? y.project.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
+        : "Unknown");
     const yieldType =
       y.yieldType ??
       yieldConfig?.yieldType ??

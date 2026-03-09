@@ -1395,30 +1395,35 @@ export const MintBurnPerCoinResponseSchema = z.object({
 });
 export type MintBurnPerCoinResponse = z.infer<typeof MintBurnPerCoinResponseSchema>;
 
-export interface MintBurnEvent {
-  id: string;
-  stablecoinId: string;
-  symbol: string;
-  chainId: string;
-  direction: "mint" | "burn";
-  burnType: "effective_burn" | "bridge_burn" | "review_required" | null;
-  burnReviewReason: string | null;
-  amount: number;
-  amountUsd: number | null;
-  priceUsed?: number | null;
-  priceTimestamp?: number | null;
-  priceSource?: string | null;
-  counterparty: string | null;
-  txHash: string;
-  blockNumber: number;
-  timestamp: number;
-  explorerTxUrl: string;
-}
+export const MintBurnFlowTypeSchema = z.enum(["standard", "atomic_roundtrip"]);
 
-export interface MintBurnEventsResponse {
-  events: MintBurnEvent[];
-  total: number;
-}
+export const MintBurnEventSchema = z.object({
+  id: z.string(),
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  chainId: z.string(),
+  direction: z.enum(["mint", "burn"]),
+  flowType: MintBurnFlowTypeSchema,
+  burnType: z.enum(["effective_burn", "bridge_burn", "review_required"]).nullable(),
+  burnReviewReason: z.string().nullable(),
+  amount: z.number(),
+  amountUsd: z.number().nullable(),
+  priceUsed: z.number().nullable(),
+  priceTimestamp: z.number().nullable(),
+  priceSource: z.string().nullable(),
+  counterparty: z.string().nullable(),
+  txHash: z.string(),
+  blockNumber: z.number(),
+  timestamp: z.number(),
+  explorerTxUrl: z.string(),
+});
+export type MintBurnEvent = z.infer<typeof MintBurnEventSchema>;
+
+export const MintBurnEventsResponseSchema = z.object({
+  events: z.array(MintBurnEventSchema),
+  total: z.number(),
+});
+export type MintBurnEventsResponse = z.infer<typeof MintBurnEventsResponseSchema>;
 
 // --- Stress signals (DEWS) types ---
 

@@ -72,6 +72,22 @@ interface MintBurnConfigSummary {
   rowsDropped: number;
   errors: number;
   failedEventDefs: string[];
+  eventCoverage: Array<{
+    eventDef: string;
+    status: "ok" | "partial" | "fetch-failed" | "budget";
+    complete: boolean;
+    scannedToBlock: number;
+    rowsRead: number;
+  }>;
+  coverageFrontier: number | null;
+  advanceReason:
+    | "full-success-events"
+    | "full-success-empty"
+    | "partial-frontier"
+    | "no-safe-frontier"
+    | null;
+  missingTimestampCount: number;
+  earliestMissingTimestampBlock: number | null;
 }
 
 interface MintBurnRunStateRow {
@@ -89,6 +105,11 @@ function configTier(config: MintBurnContractConfig): MintBurnTier {
 
 function eventDefLabel(eventDef: MintBurnEventDef): string {
   return `${eventDef.signature}:${eventDef.direction}`;
+}
+
+function minOrNull(values: number[]): number | null {
+  if (values.length === 0) return null;
+  return values.reduce((min, value) => Math.min(min, value), values[0]);
 }
 
 function normalizeSyncMintBurnOptions(
@@ -355,6 +376,11 @@ export async function syncMintBurn(
       rowsDropped: 0,
       errors: 0,
       failedEventDefs: [],
+      eventCoverage: [],
+      coverageFrontier: null,
+      advanceReason: null,
+      missingTimestampCount: 0,
+      earliestMissingTimestampBlock: null,
     };
     const finalizeSummary = (criticalOutcome: "satisfied" | "unsatisfied" | "n/a" = "n/a"): void => {
       if (tier === "critical") {
@@ -411,11 +437,17 @@ export async function syncMintBurn(
     summary.scanTo = scanTo;
 
     const allConfigLogs: Array<{ eventDef: MintBurnEventDef; logs: AlchemyLogEntry[] }> = [];
-    let successfulEventDefs = 0;
-
     for (const eventDef of config.events) {
+      const label = eventDefLabel(eventDef);
       if (budgetExhausted(budget)) {
-        summary.failedEventDefs.push(`${eventDefLabel(eventDef)}:budget`);
+        summary.failedEventDefs.push(`${label}:budget`);
+        summary.eventCoverage.push({
+          eventDef: label,
+          status: "budget",
+          complete: false,
+          scannedToBlock: fromBlock - 1,
+          rowsRead: 0,
+        });
         continue;
       }
 
@@ -437,19 +469,31 @@ export async function syncMintBurn(
       if (!fetched) {
         apiErrors++;
         summary.errors++;
-        summary.failedEventDefs.push(`${eventDefLabel(eventDef)}:fetch-failed`);
+        summary.failedEventDefs.push(`${label}:fetch-failed`);
+        summary.eventCoverage.push({
+          eventDef: label,
+          status: "fetch-failed",
+          complete: false,
+          scannedToBlock: fromBlock - 1,
+          rowsRead: 0,
+        });
         continue;
       }
 
       rowsRead += fetched.logs.length;
       summary.rowsRead += fetched.logs.length;
+      summary.eventCoverage.push({
+        eventDef: label,
+        status: fetched.complete ? "ok" : "partial",
+        complete: fetched.complete,
+        scannedToBlock: fetched.scannedToBlock,
+        rowsRead: fetched.logs.length,
+      });
 
       if (!fetched.complete) {
         apiErrors++;
         summary.errors++;
-        summary.failedEventDefs.push(`${eventDefLabel(eventDef)}:partial-coverage`);
-      } else {
-        successfulEventDefs++;
+        summary.failedEventDefs.push(`${label}:partial-coverage`);
       }
 
       if (fetched.logs.length > 0) {
@@ -471,8 +515,14 @@ export async function syncMintBurn(
         })
       : new Map<number, number>();
 
-    if (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length) {
-      const missing = uniqueBlocks.length - blockTimestamps.size;
+    const missingTimestampBlocks = uniqueBlocks
+      .filter((blockNum) => !blockTimestamps.has(blockNum))
+      .sort((a, b) => a - b);
+    summary.missingTimestampCount = missingTimestampBlocks.length;
+    summary.earliestMissingTimestampBlock = missingTimestampBlocks[0] ?? null;
+
+    if (missingTimestampBlocks.length > 0) {
+      const missing = missingTimestampBlocks.length;
       apiErrors++;
       summary.errors++;
       summary.failedEventDefs.push(`timestamps:${missing}`);
@@ -540,15 +590,26 @@ export async function syncMintBurn(
       await updateBurnClassifications(db, allParsedRows);
     }
 
-    // Advance sync state whenever at least one event definition completed with full coverage.
-    if (successfulEventDefs > 0) {
-      let newLastBlock: number;
+    const fullEventCoverage =
+      summary.eventCoverage.length === config.events.length &&
+      summary.eventCoverage.every((coverage) => coverage.complete);
+    const eventCoverageFrontier = minOrNull(
+      summary.eventCoverage.map((coverage) => coverage.scannedToBlock),
+    );
+    const timestampCoverageFrontier = summary.earliestMissingTimestampBlock != null
+      ? summary.earliestMissingTimestampBlock - 1
+      : null;
+    const partialCoverageFrontier = minOrNull(
+      [eventCoverageFrontier, timestampCoverageFrontier]
+        .filter((value): value is number => value != null),
+    );
+    summary.coverageFrontier = partialCoverageFrontier;
+
+    let newLastBlock: number | null = null;
+    if (fullEventCoverage && summary.missingTimestampCount === 0) {
       if (summary.maxBlockSeen > 0) {
         newLastBlock = summary.maxBlockSeen;
-      } else if (summary.failedEventDefs.length > 0) {
-        // Partial failures: make forward progress but keep overlap for retries.
-        const step = Math.max(1, Math.floor((scanTo - fromBlock + 1) / 2));
-        newLastBlock = Math.min(scanTo, fromBlock + step - 1);
+        summary.advanceReason = "full-success-events";
       } else {
         // Full success and no events found: advance to end of scanned range,
         // preserving a safety margin near chain head.
@@ -557,10 +618,17 @@ export async function syncMintBurn(
           fromBlock - 1,
           Math.min(scanTo, chainHead - safetyBlocks),
         );
+        summary.advanceReason = "full-success-empty";
       }
+    } else if (partialCoverageFrontier != null && partialCoverageFrontier >= fromBlock) {
+      newLastBlock = partialCoverageFrontier;
+      summary.advanceReason = "partial-frontier";
+    } else {
+      summary.advanceReason = "no-safe-frontier";
+    }
 
+    if (newLastBlock != null) {
       await upsertMintBurnSyncState(db, key, newLastBlock, "replace");
-
       lastBlocksAfterRun.set(key, newLastBlock);
       summary.advancedTo = newLastBlock;
     }
@@ -571,7 +639,6 @@ export async function syncMintBurn(
       `scan ${fromBlock}-${scanTo}, advancedTo=${summary.advancedTo ?? "none"}`,
     );
 
-    const fullEventCoverage = successfulEventDefs === config.events.length;
     finalizeSummary(
       fullEventCoverage && summary.errors === 0
         ? "satisfied"

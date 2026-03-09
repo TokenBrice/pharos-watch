@@ -14,8 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ArrowDownUp } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
-import { formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
+import {
+  formatCurrency,
+  formatTokenAmount,
+  timeAgo,
+  formatEventDate,
+} from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
+import type { MintBurnEvent } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -24,6 +30,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 interface FlowEventFeedProps {
   stablecoinId: string;
   limit?: number;
+  scope?: "all" | "counted";
 }
 
 // ---------------------------------------------------------------------------
@@ -43,6 +50,44 @@ function formatTxHash(hash: string): string {
 
 function chainName(chainId: string): string {
   return CHAIN_META[chainId]?.name ?? chainId;
+}
+
+function getEventBadge(event: MintBurnEvent): {
+  label: string;
+  className: string;
+} {
+  if (event.flowType === "atomic_roundtrip") {
+    return {
+      label: "Roundtrip",
+      className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 text-xs",
+    };
+  }
+
+  if (event.direction === "burn" && event.burnType === "bridge_burn") {
+    return {
+      label: "Bridge burn",
+      className: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 text-xs",
+    };
+  }
+
+  if (event.direction === "burn" && event.burnType === "review_required") {
+    return {
+      label: "Review burn",
+      className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20 text-xs",
+    };
+  }
+
+  if (event.direction === "mint") {
+    return {
+      label: "Mint",
+      className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-xs",
+    };
+  }
+
+  return {
+    label: "Burn",
+    className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 text-xs",
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -97,11 +142,12 @@ function FeedError({ message }: { message: string }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function FlowEventFeed({ stablecoinId, limit }: FlowEventFeedProps) {
+export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventFeedProps) {
   const pageSize = limit ?? DEFAULT_PAGE_SIZE;
   const [page, setPage] = useState(0);
 
   const { data, isLoading, isError, error } = useMintBurnEvents(stablecoinId, {
+    scope,
     limit: pageSize,
     offset: page * pageSize,
   });
@@ -133,50 +179,53 @@ export function FlowEventFeed({ stablecoinId, limit }: FlowEventFeedProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {events.map((evt) => (
-              <TableRow key={evt.id}>
-                <TableCell
-                  className="whitespace-nowrap text-xs"
-                  title={formatEventDate(evt.timestamp)}
-                >
-                  <span className="font-mono">{timeAgo(evt.timestamp)}</span>
-                </TableCell>
-                <TableCell>
-                  {evt.direction === "mint" ? (
-                    <Badge
-                      variant="outline"
-                      className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-xs"
-                    >
-                      Mint
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 text-xs"
-                    >
-                      Burn
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right font-mono tabular-nums text-sm">
-                  {evt.amountUsd != null ? formatCurrency(evt.amountUsd) : formatCurrency(evt.amount)}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-sm">
-                  {chainName(evt.chainId)}
-                </TableCell>
-                <TableCell className="text-center">
-                  <a
-                    href={evt.explorerTxUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
+            {events.map((evt) => {
+              const badge = getEventBadge(evt);
+              return (
+                <TableRow key={evt.id}>
+                  <TableCell
+                    className="whitespace-nowrap text-xs"
+                    title={formatEventDate(evt.timestamp)}
                   >
-                    <span className="hidden md:inline">{formatTxHash(evt.txHash)}</span>
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </TableCell>
-              </TableRow>
-            ))}
+                    <span className="font-mono">{timeAgo(evt.timestamp)}</span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={badge.className}
+                    >
+                      {badge.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums text-sm">
+                    {evt.amountUsd != null ? (
+                      formatCurrency(evt.amountUsd)
+                    ) : (
+                      <div className="flex flex-col items-end gap-1">
+                        <span>{formatTokenAmount(evt.amount)} {evt.symbol}</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          Unpriced
+                        </Badge>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm">
+                    {chainName(evt.chainId)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <a
+                      href={evt.explorerTxUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <span className="hidden md:inline">{formatTxHash(evt.txHash)}</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {events.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-12">

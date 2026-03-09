@@ -14,6 +14,10 @@ export function formatCurrency(value: number, decimals = 2): string {
   return abbreviateNumber(value, decimals, "$");
 }
 
+function trimTrailingZeros(value: string): string {
+  return value.replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
+}
+
 const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$", EUR: "€", GBP: "£", CHF: "₣", BRL: "R$", RUB: "₽", JPY: "¥",
   IDR: "Rp", SGD: "S$", TRY: "₺", AUD: "A$", ZAR: "R",
@@ -73,6 +77,16 @@ export function formatSupply(value: number): string {
   if (!Number.isFinite(value)) return "N/A";
   if (value < 1e3) return value.toFixed(0);
   return abbreviateNumber(value, 2);
+}
+
+export function formatTokenAmount(value: number): string {
+  if (!Number.isFinite(value)) return "N/A";
+
+  const abs = Math.abs(value);
+  if (abs >= 1e3) return abbreviateNumber(value, 2);
+  if (abs >= 1) return trimTrailingZeros(value.toFixed(2));
+  if (abs === 0) return "0";
+  return trimTrailingZeros(value.toFixed(4));
 }
 
 export function formatAddress(address: string): string {

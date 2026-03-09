@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1, type MockD1Database } from "./helpers/mock-d1";
 import { makeMintBurnRow } from "./helpers/fixtures";
 import { handleMintBurnEvents } from "../mint-burn-events";
 
@@ -32,6 +32,7 @@ describe("handleMintBurnEvents", () => {
     expect(event).toHaveProperty("priceUsed");
     expect(event).toHaveProperty("priceTimestamp");
     expect(event).toHaveProperty("priceSource");
+    expect(event).toHaveProperty("flowType");
     expect(event).toHaveProperty("burnType");
     expect(event).toHaveProperty("burnReviewReason");
     expect(event).toHaveProperty("txHash");
@@ -86,6 +87,68 @@ describe("handleMintBurnEvents", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { events: Array<{ burnType: string | null }> };
     expect(body.events[0]?.burnType).toBe("bridge_burn");
+  });
+
+  it("maps flowType from snake_case and preserves atomic roundtrip rows", async () => {
+    const atomicRow = makeMintBurnRow({
+      direction: "burn",
+      flow_type: "atomic_roundtrip",
+      burn_type: "effective_burn",
+    });
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "mint_burn_events", rows: [atomicRow] },
+    ]);
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { events: Array<{ flowType: string }> };
+    expect(body.events[0]?.flowType).toBe("atomic_roundtrip");
+  });
+
+  it("rejects invalid scope with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&scope=debug"),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("uses counted scope to filter to standard economic-flow rows", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "mint_burn_events", rows: [makeMintBurnRow()] },
+    ]) as MockD1Database;
+
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&scope=counted"),
+    );
+
+    expect(res.status).toBe(200);
+    const countQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) as total"));
+    expect(countQuery?.sql).toContain("flow_type = 'standard'");
+    expect(countQuery?.sql).toContain("(direction = 'mint' OR burn_type = 'effective_burn')");
+  });
+
+  it("treats minAmount as USD-only filtering", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "mint_burn_events", rows: [makeMintBurnRow()] },
+    ]) as MockD1Database;
+
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&minAmount=1000000"),
+    );
+
+    expect(res.status).toBe(200);
+    const countQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) as total"));
+    expect(countQuery?.sql).toContain("amount_usd IS NOT NULL AND amount_usd >= ?");
+    expect(countQuery?.sql).not.toContain("COALESCE(amount_usd, amount)");
   });
 
   it("includes X-Data-Age header", async () => {
