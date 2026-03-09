@@ -248,10 +248,11 @@ function ComponentChart({
 /* ─── HistoryStats ──────────────────────────────────────────────── */
 
 type HistoryPoint = { date: number; score: number; band: string };
+type HistoryStatItem = { label: string; value: string; band: string; sub: string | null };
 
-function useHistoryStats(history: HistoryPoint[]) {
+function useHistoryStats(history: HistoryPoint[]): HistoryStatItem[] {
   return useMemo(() => {
-    if (!history.length) return null;
+    if (!history.length) return [];
     const last30 = history.slice(0, 30);
     const scores = last30.map((p) => p.score);
     const high30 = scores.reduce((m, s) => Math.max(m, s), -Infinity);
@@ -271,13 +272,19 @@ function useHistoryStats(history: HistoryPoint[]) {
         band: worst.band,
         sub: formatChartDate(worst.date * 1000, "month-year"),
       },
-    ] as const;
+    ];
   }, [history]);
 }
 
 function HistoryStats({ history }: { history: HistoryPoint[] }) {
   const items = useHistoryStats(history);
-  if (!items) return null;
+  if (!items.length) {
+    return (
+      <div className="text-center py-8 text-muted-foreground text-sm">
+        No data available
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-4 gap-x-4 gap-y-2">
@@ -297,7 +304,13 @@ function HistoryStats({ history }: { history: HistoryPoint[] }) {
 
 function HistoryStatsMobile({ history }: { history: HistoryPoint[] }) {
   const items = useHistoryStats(history);
-  if (!items) return null;
+  if (!items.length) {
+    return (
+      <div className="text-center py-8 text-muted-foreground text-sm">
+        No data available
+      </div>
+    );
+  }
 
   return (
     <div className="grid w-full grid-cols-4 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden">
@@ -482,63 +495,69 @@ function ContributorsTable({
       .sort((a, b) => b.total - a.total);
   }, [contributors, totalMcapUsd]);
 
-  if (!rows.length) return null;
-
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader>
         <CardTitle as="h2">Top Contributors</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground mb-4">
-          Which stablecoins are currently pushing the score below 100, ranked by total impact.
-          Long-lasting depegs (over 30 days) receive a scoring depreciation — the percentage in parentheses next to the age shows the remaining impact weight.
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="pb-2 pr-4 font-medium text-muted-foreground">Coin</th>
-                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Deviation</th>
-                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">MCap</th>
-                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">Severity</th>
-                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">Breadth</th>
-                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Total</th>
-                <th className="pb-2 font-medium text-muted-foreground text-right">Age</th>
-              </tr>
-            </thead>
-            <tbody className="text-muted-foreground">
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">
-                    <a
-                      href={buildStablecoinUrl(r.id)}
-                      className="flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:text-blue-400 transition-colors"
-                    >
-                      <StablecoinLogo src={logos[r.id]} name={r.symbol} size={20} />
-                      {r.symbol}
-                    </a>
-                  </td>
-                  <td className={`py-2 pr-4 text-right tabular-nums ${r.bps < 0 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"}`}>
-                    {r.bps > 0 ? "+" : ""}{(r.bps / 100).toFixed(2)}%
-                  </td>
-                  <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">
-                    {formatCurrency(r.mcapUsd)}
-                  </td>
-                  <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.severity.toFixed(2)}</td>
-                  <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.breadth.toFixed(2)}</td>
-                  <td className="py-2 pr-4 text-right tabular-nums font-medium text-foreground">{r.total.toFixed(2)}</td>
-                  <td className="py-2 text-right tabular-nums">
-                    {r.ageDays < 1 ? "<1d" : `${Math.round(r.ageDays)}d`}
-                    {r.factor < 1 && (
-                      <span className="ml-1 text-xs text-muted-foreground/60">({Math.round(r.factor * 100)}%)</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {rows.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No data available
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground mb-4">
+              Which stablecoins are currently pushing the score below 100, ranked by total impact.
+              Long-lasting depegs (over 30 days) receive a scoring depreciation — the percentage in parentheses next to the age shows the remaining impact weight.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Coin</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Deviation</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">MCap</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">Severity</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">Breadth</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Total</th>
+                    <th className="pb-2 font-medium text-muted-foreground text-right">Age</th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-b last:border-0">
+                      <td className="py-2 pr-4">
+                        <a
+                          href={buildStablecoinUrl(r.id)}
+                          className="flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:text-blue-400 transition-colors"
+                        >
+                          <StablecoinLogo src={logos[r.id]} name={r.symbol} size={20} />
+                          {r.symbol}
+                        </a>
+                      </td>
+                      <td className={`py-2 pr-4 text-right tabular-nums ${r.bps < 0 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"}`}>
+                        {r.bps > 0 ? "+" : ""}{(r.bps / 100).toFixed(2)}%
+                      </td>
+                      <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">
+                        {formatCurrency(r.mcapUsd)}
+                      </td>
+                      <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.severity.toFixed(2)}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.breadth.toFixed(2)}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums font-medium text-foreground">{r.total.toFixed(2)}</td>
+                      <td className="py-2 text-right tabular-nums">
+                        {r.ageDays < 1 ? "<1d" : `${Math.round(r.ageDays)}d`}
+                        {r.factor < 1 && (
+                          <span className="ml-1 text-xs text-muted-foreground/60">({Math.round(r.factor * 100)}%)</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -642,7 +661,17 @@ export function StabilityIndexClient() {
     );
   }
 
-  if (!data?.current) return null;
+  if (!data?.current) {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <Card className="rounded-xl">
+          <CardContent>
+            <div className="text-center py-8 text-muted-foreground text-sm">No data available</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const { score, band, avg24h, avg24hBand, components } = data.current;
   const displayScore = avg24h ?? score;
