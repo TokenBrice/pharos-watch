@@ -3,8 +3,11 @@ import {
   sumPegBuckets,
   getCirculatingRaw,
   getPrevDayRaw,
+  getPrevDayRawOrNull,
   getPrevWeekRaw,
+  getPrevWeekRawOrNull,
   getPrevMonthRaw,
+  getPrevMonthRawOrNull,
   computeGovernanceBreakdown,
 } from "@shared/lib/supply";
 import type { GovernanceType, StablecoinData } from "@shared/types";
@@ -110,6 +113,37 @@ describe("getPrevDayRaw", () => {
 });
 
 // ---------------------------------------------------------------------------
+// getPrevDayRawOrNull
+// ---------------------------------------------------------------------------
+describe("getPrevDayRawOrNull", () => {
+  it("returns null when circulatingPrevDay is undefined", () => {
+    const coin = mockCoin();
+    expect(getPrevDayRawOrNull(coin)).toBeNull();
+  });
+
+  it("returns null when all buckets are missing-equivalent", () => {
+    const coin = mockCoin({
+      circulatingPrevDay: {
+        peggedUSD: 0,
+        peggedEUR: null as unknown as number,
+        peggedGBP: undefined as unknown as number,
+      },
+    });
+    expect(getPrevDayRawOrNull(coin)).toBeNull();
+  });
+
+  it("returns zero when real bucket data exists but sums to zero", () => {
+    const coin = mockCoin({
+      circulatingPrevDay: {
+        peggedUSD: 100,
+        peggedEUR: -100,
+      },
+    });
+    expect(getPrevDayRawOrNull(coin)).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // getPrevWeekRaw
 // ---------------------------------------------------------------------------
 describe("getPrevWeekRaw", () => {
@@ -127,6 +161,23 @@ describe("getPrevWeekRaw", () => {
 });
 
 // ---------------------------------------------------------------------------
+// getPrevWeekRawOrNull
+// ---------------------------------------------------------------------------
+describe("getPrevWeekRawOrNull", () => {
+  it("returns null when circulatingPrevWeek is undefined", () => {
+    const coin = mockCoin();
+    expect(getPrevWeekRawOrNull(coin)).toBeNull();
+  });
+
+  it("returns summed value when any bucket has data", () => {
+    const coin = mockCoin({
+      circulatingPrevWeek: { peggedUSD: 800_000, peggedEUR: 100_000 },
+    });
+    expect(getPrevWeekRawOrNull(coin)).toBe(900_000);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // getPrevMonthRaw
 // ---------------------------------------------------------------------------
 describe("getPrevMonthRaw", () => {
@@ -140,6 +191,25 @@ describe("getPrevMonthRaw", () => {
   it("returns 0 when circulatingPrevMonth is undefined", () => {
     const coin = mockCoin();
     expect(getPrevMonthRaw(coin)).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getPrevMonthRawOrNull
+// ---------------------------------------------------------------------------
+describe("getPrevMonthRawOrNull", () => {
+  it("returns null when circulatingPrevMonth has only zeros", () => {
+    const coin = mockCoin({
+      circulatingPrevMonth: { peggedUSD: 0, peggedEUR: 0 },
+    });
+    expect(getPrevMonthRawOrNull(coin)).toBeNull();
+  });
+
+  it("returns summed value when any bucket has data", () => {
+    const coin = mockCoin({
+      circulatingPrevMonth: { peggedUSD: 700_000 },
+    });
+    expect(getPrevMonthRawOrNull(coin)).toBe(700_000);
   });
 });
 

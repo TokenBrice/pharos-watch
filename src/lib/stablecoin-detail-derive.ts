@@ -30,10 +30,12 @@ function toEpochMs(rawDate: number): number {
 }
 
 export function deriveSupplyFromMarketCap(
-  marketCapUsd: number,
+  marketCapUsd: number | null | undefined,
   priceUsd: number | null | undefined,
-): number {
-  return typeof priceUsd === "number" && priceUsd > 0 ? marketCapUsd / priceUsd : marketCapUsd;
+): number | null {
+  if (typeof marketCapUsd !== "number" || marketCapUsd <= 0) return null;
+  if (typeof priceUsd !== "number" || priceUsd <= 0) return null;
+  return marketCapUsd / priceUsd;
 }
 
 function hasPositivePegReference(pegReference: number): boolean {

@@ -11,6 +11,12 @@ export function sumPegBuckets(obj: Record<string, number> | undefined): number {
   return Object.values(obj).reduce((s, v) => s + safeNum(v), 0);
 }
 
+/** Return true when at least one peg bucket has a non-zero finite numeric value. */
+function hasAnyBucket(obj: Record<string, number> | undefined): boolean {
+  if (!obj) return false;
+  return Object.values(obj).some((v) => typeof v === "number" && Number.isFinite(v) && v !== 0);
+}
+
 /**
  * Sum circulating values across all peg buckets.
  * DefiLlama's list API returns values already in USD for all peg types,
@@ -24,12 +30,27 @@ export function getPrevDayRaw(c: StablecoinData): number {
   return sumPegBuckets(c.circulatingPrevDay);
 }
 
+export function getPrevDayRawOrNull(c: StablecoinData): number | null {
+  const val = sumPegBuckets(c.circulatingPrevDay);
+  return val === 0 && !hasAnyBucket(c.circulatingPrevDay) ? null : val;
+}
+
 export function getPrevWeekRaw(c: StablecoinData): number {
   return sumPegBuckets(c.circulatingPrevWeek);
 }
 
+export function getPrevWeekRawOrNull(c: StablecoinData): number | null {
+  const val = sumPegBuckets(c.circulatingPrevWeek);
+  return val === 0 && !hasAnyBucket(c.circulatingPrevWeek) ? null : val;
+}
+
 export function getPrevMonthRaw(c: StablecoinData): number {
   return sumPegBuckets(c.circulatingPrevMonth);
+}
+
+export function getPrevMonthRawOrNull(c: StablecoinData): number | null {
+  const val = sumPegBuckets(c.circulatingPrevMonth);
+  return val === 0 && !hasAnyBucket(c.circulatingPrevMonth) ? null : val;
 }
 
 // ---------------------------------------------------------------------------

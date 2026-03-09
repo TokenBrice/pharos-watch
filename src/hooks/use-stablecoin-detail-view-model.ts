@@ -6,7 +6,12 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { getCirculatingRaw, getPrevDayRaw, getPrevMonthRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import {
+  getCirculatingRaw,
+  getPrevDayRawOrNull,
+  getPrevMonthRawOrNull,
+  getPrevWeekRawOrNull,
+} from "@shared/lib/supply";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import {
@@ -61,10 +66,10 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   reportCard: ReportCard | undefined;
   coinData: StablecoinData;
   mcap: number;
-  supply: number;
-  prevDay: number;
-  prevWeek: number;
-  prevMonth: number;
+  supply: number | null;
+  prevDay: number | null;
+  prevWeek: number | null;
+  prevMonth: number | null;
   prev90d: number;
   pegRef: number;
   deviationBps: number;
@@ -167,9 +172,9 @@ export function useStablecoinDetailViewModel({
   const isNavToken = coin.flags.navToken ?? false;
   const mcap = getCirculatingRaw(coinData);
   const supply = deriveSupplyFromMarketCap(mcap, coinData.price);
-  const prevDay = getPrevDayRaw(coinData);
-  const prevWeek = getPrevWeekRaw(coinData);
-  const prevMonth = getPrevMonthRaw(coinData);
+  const prevDay = getPrevDayRawOrNull(coinData);
+  const prevWeek = getPrevWeekRawOrNull(coinData);
+  const prevMonth = getPrevMonthRawOrNull(coinData);
   const supplyHistory = supplyData ?? [];
   const earliestTrackingDate = supplyHistory.length > 0 ? String(supplyHistory[0].date) : null;
   const prev90d = derivePrev90dReferenceMcap(supplyHistory, SESSION_NOW_MS);
