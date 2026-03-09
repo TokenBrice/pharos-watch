@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
 const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
 const routeMock = vi.fn(async () => new Response("{}", { status: 200 }));
@@ -52,7 +53,7 @@ vi.mock("@shared/lib/api-endpoints", () => ({
   },
 }));
 
-const { runStatusSelfCheck } = await import("../status-self-check");
+const { runStatusSelfCheck, isBootstrapCacheMiss } = await import("../status-self-check");
 
 describe("runStatusSelfCheck", () => {
   afterEach(() => {
@@ -187,5 +188,18 @@ describe("runStatusSelfCheck", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(metadata.probeMode).toBe("internal-router");
     expect(metadata.probeBaseUrl).toBe("https://api.pharos.watch");
+  });
+
+  it("treats missing cache 503s as bootstrap misses only before the producer cron has ever run", async () => {
+    const freshDb = mockD1([
+      { match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 0 } },
+    ]);
+    const establishedDb = mockD1([
+      { match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 2 } },
+    ]);
+
+    await expect(isBootstrapCacheMiss(freshDb, "/api/usds-status", 503)).resolves.toBe(true);
+    await expect(isBootstrapCacheMiss(establishedDb, "/api/usds-status", 503)).resolves.toBe(false);
+    await expect(isBootstrapCacheMiss(freshDb, "/api/peg-summary", 500)).resolves.toBe(false);
   });
 });

@@ -682,7 +682,7 @@ describe("syncYieldData", () => {
     expect(wroteYieldRankings).toBe(false);
   });
 
-  it("marks run degraded and preserves yield-rankings cache when safety snapshot coverage is empty", async () => {
+  it("marks run degraded but still writes yield-rankings cache when safety snapshot coverage is empty", async () => {
     const db = makeDb();
     vi.mocked(getCache).mockResolvedValue(null);
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -707,11 +707,11 @@ describe("syncYieldData", () => {
       sourceCoverage: { safetyCoverageRatio: number };
     };
     expect(metadata.fallbackMode ?? "").toContain("safety-snapshot-coverage");
-    expect(metadata.cacheWriteSkipped).toBe(true);
+    expect(metadata.cacheWriteSkipped).toBe(false);
     expect(metadata.sourceCoverage.safetyCoverageRatio).toBe(0);
 
     const cacheCalls = vi.mocked(setCache).mock.calls;
-    expect(cacheCalls.some((call) => call[1] === "yield-rankings")).toBe(false);
+    expect(cacheCalls.some((call) => call[1] === "yield-rankings")).toBe(true);
     expect(cacheCalls.some((call) => call[1] === "report_card_cache")).toBe(false);
   });
 });

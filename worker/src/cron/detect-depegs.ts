@@ -9,7 +9,7 @@ import {
   type DepegRow,
 } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { DepegEvent, PegAssetBase } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 
@@ -22,8 +22,7 @@ export async function detectDepegEvents(
   signal?: AbortSignal,
 ): Promise<void> {
   throwIfAborted(signal);
-  const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]));
-  const { rates: pegRates } = derivePegRates(assets, metaById, fxFallbackRates);
+  const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
   const now = syncStart;
 
@@ -113,7 +112,7 @@ export async function detectDepegEvents(
 
   for (const asset of assets) {
     throwIfAborted(signal);
-    const meta = metaById.get(asset.id);
+    const meta = PSI_ELIGIBLE_META_BY_ID.get(asset.id);
     if (!meta) continue; // not tracked
     if (meta.flags.navToken) continue; // skip NAV tokens
     trackedCoinIds.add(asset.id);

@@ -21,6 +21,7 @@ interface ProbeResult {
   latencyMs: number;
   ok: boolean;
   error?: string;
+  bootstrapMiss?: boolean;
 }
 
 interface ProbeLatencySummary {
@@ -41,6 +42,30 @@ const CRITICAL_PROBE_PATHS = [
 const DEFAULT_SELF_URL = "https://api.pharos.watch";
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_FAILURE_ALERT_THRESHOLD = 3;
+const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = {
+  "/api/usds-status": "sync-usds-status",
+  "/api/bluechip-ratings": "sync-bluechip",
+  "/api/yield-rankings": "sync-yield-data",
+};
+
+export async function isBootstrapCacheMiss(
+  db: D1Database,
+  path: string,
+  status: number,
+): Promise<boolean> {
+  if (status !== 503) return false;
+  const producerJob = BOOTSTRAP_CACHE_PRODUCER_BY_PATH[path];
+  if (!producerJob) return false;
+  try {
+    const row = await db
+      .prepare("SELECT COUNT(*) AS cnt FROM cron_runs WHERE job = ?")
+      .bind(producerJob)
+      .first<{ cnt: number | null }>();
+    return (row?.cnt ?? 0) === 0;
+  } catch {
+    return false;
+  }
+}
 
 function percentile95(latencies: number[]): number {
   if (latencies.length === 0) return 0;
@@ -210,12 +235,14 @@ async function probePathInternally(
       };
     }
     const status = response.status;
+    const bootstrapMiss = await isBootstrapCacheMiss(db, path, status);
     await cancelResponseBody(response);
     return {
       path,
       status,
       latencyMs: Math.max(0, Date.now() - startedAt),
-      ok: status >= 200 && status < 300,
+      ok: bootstrapMiss || (status >= 200 && status < 300),
+      ...(bootstrapMiss ? { error: "bootstrap-cache-miss", bootstrapMiss: true } : {}),
     };
   } catch (error) {
     return {
@@ -250,6 +277,7 @@ export async function runStatusSelfCheck(
   const now = Math.floor(Date.now() / 1000);
 
   const sampleCount = probes.length;
+  const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
   const passCount = probes.filter((probe) => probe.ok).length;
   const failCount = sampleCount - passCount;
   const hasProbeFailure = failCount > 0;
@@ -274,6 +302,11 @@ export async function runStatusSelfCheck(
           latencyMs: probe.latencyMs,
           error: probe.error ?? null,
         })),
+      bootstrapMisses: bootstrapMisses.map((probe) => ({
+        path: probe.path,
+        status: probe.status,
+        latencyMs: probe.latencyMs,
+      })),
       latencySummary,
       slowestProbes,
       probeBaseUrl: probeBaseUrl.origin,

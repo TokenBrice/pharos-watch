@@ -1,5 +1,5 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 import {
@@ -153,7 +153,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   let worstCurrent: { id: string; symbol: string; bps: number } | null = null;
   let coinsAtPeg = 0;
 
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of TRACKED_META_BY_ID.values()) {
     if (meta.flags.navToken) continue;
 
     const pegData = pegDataById.get(meta.id);

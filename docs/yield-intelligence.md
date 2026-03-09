@@ -314,9 +314,9 @@ CREATE TABLE yield_history (
 10. Batch upsert `yield_data` (all sources) + insert `yield_history` point (best source only)
 11. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together
 12. Prune `yield_history` older than 365 days
-13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, then cache rankings JSON only when safety input is healthy and schema validation succeeds (with safe `warning_signals` JSON parsing on read paths)
+13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, then cache rankings JSON whenever the payload passes schema validation. Safety-degraded runs still publish fresh rankings but skip `report_card_cache`.
 
-**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"` and skips `yield-rankings` cache overwrite. Safety-degraded runs also skip `report_card_cache` writes to preserve last-known-good snapshots.
+**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"`. Schema-invalid runs still skip cache overwrite. Safety-degraded runs now continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 
 Implementation stages:
 - `yield-sync/sources.ts`: DL pool loading, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers

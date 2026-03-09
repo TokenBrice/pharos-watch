@@ -433,14 +433,12 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   }
 
   let validationFailures = 0;
-  if (validation.ok && !safetySnapshotDegraded) {
+  if (validation.ok) {
     await setCache(db, "yield-rankings", JSON.stringify(validation.data));
   } else if (!validation.ok) {
     validationFailures++;
     degradationReasons.push("schema-validation-failed");
     console.warn("[sync-yield-data] Skipped yield-rankings cache write due to schema validation failure");
-  } else {
-    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to degraded safety snapshot");
   }
 
   console.log(`[sync-yield-data] Updated ${updatedCount} coins (${yieldCoins.length} yield-bearing + auto-discovered)`);
@@ -460,7 +458,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       validationFailures,
       riskFreeRate,
-      cacheWriteSkipped: !validation.ok || safetySnapshotDegraded,
+      cacheWriteSkipped: !validation.ok,
     }),
   };
 }

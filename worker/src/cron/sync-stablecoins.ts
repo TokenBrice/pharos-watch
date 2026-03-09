@@ -41,6 +41,10 @@ type StablecoinsPayload = {
 };
 
 type SyncCacheWriteMode = "main-write" | "fallback-write" | "blocked-invalid-payload" | "no-write";
+interface SyncCapabilities {
+  stablecoinsCache: boolean;
+  depegPipeline: boolean;
+}
 
 function resolveGeckoId(asset: PeggedAsset): string | undefined {
   if (typeof asset.geckoId === "string" && asset.geckoId.length > 0) {
@@ -97,12 +101,18 @@ function buildSyncMetadata(
   options?: {
     cacheWriteMode?: SyncCacheWriteMode;
     downstreamSafe?: boolean;
+    capabilities?: Partial<SyncCapabilities>;
   },
 ): string {
+  const capabilities: SyncCapabilities = {
+    stablecoinsCache: options?.capabilities?.stablecoinsCache ?? options?.downstreamSafe ?? false,
+    depegPipeline: options?.capabilities?.depegPipeline ?? false,
+  };
   return JSON.stringify({
     ...metadata,
     cacheWriteMode: options?.cacheWriteMode ?? "no-write",
-    downstreamSafe: options?.downstreamSafe ?? false,
+    downstreamSafe: capabilities.stablecoinsCache,
+    capabilities,
   });
 }
 
@@ -114,10 +124,10 @@ function abortResult(signal: AbortSignal | undefined, stage: string): CronResult
       : typeof reasonRaw === "string" && reasonRaw.length > 0
         ? reasonRaw
         : "aborted";
-  return {
-    status: "degraded",
-    itemCount: 0,
-    metadata: buildSyncMetadata({ reason: "aborted", stage, detail: reason }),
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: buildSyncMetadata({ reason: "aborted", stage, detail: reason }),
   };
 }
 
@@ -234,6 +244,11 @@ async function fallbackToCgSupply(
         sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
         fallbackMode: "coingecko-supply-fallback",
         validationFailures: 1,
+      }, {
+        capabilities: {
+          stablecoinsCache: false,
+          depegPipeline: false,
+        },
       }),
     };
   }
@@ -314,6 +329,10 @@ async function fallbackToCgSupply(
         cacheWriteMode: "blocked-invalid-payload",
       }, {
         cacheWriteMode: "blocked-invalid-payload",
+        capabilities: {
+          stablecoinsCache: false,
+          depegPipeline: false,
+        },
       }),
     };
   }
@@ -334,20 +353,23 @@ async function fallbackToCgSupply(
 
   return {
     itemCount: assets.length,
-    metadata: buildSyncMetadata({
-      rowsRead: assets.length,
-      rowsWritten: assets.length,
+      metadata: buildSyncMetadata({
+        rowsRead: assets.length,
+        rowsWritten: assets.length,
       rowsDropped: 0,
       sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: enrichStats,
-    }, {
-      cacheWriteMode: "fallback-write",
-      downstreamSafe: false,
-    }),
-  };
-}
+      }, {
+        cacheWriteMode: "fallback-write",
+        capabilities: {
+          stablecoinsCache: false,
+          depegPipeline: false,
+        },
+      }),
+    };
+  }
 
 export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal?: AbortSignal): Promise<CronResult> {
   const startAbort = returnIfAborted(signal, "start");
@@ -638,6 +660,10 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
         cacheWriteMode: "blocked-invalid-payload",
       }, {
         cacheWriteMode: "blocked-invalid-payload",
+        capabilities: {
+          stablecoinsCache: false,
+          depegPipeline: false,
+        },
       }),
     };
   }
@@ -705,7 +731,10 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     status,
     metadata: buildSyncMetadata(metadata, {
       cacheWriteMode: "main-write",
-      downstreamSafe: true,
+      capabilities: {
+        stablecoinsCache: true,
+        depegPipeline: depegErrorCount === 0,
+      },
     }),
   };
 }
