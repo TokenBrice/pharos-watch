@@ -235,7 +235,7 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
       {/* ── Header bar ── */}
       <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
         <h2 className="pharos-kicker">Biggest Depegs</h2>
-        <h2 className="pharos-kicker">Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span></h2>
+        <h2 className="pharos-kicker">Biggest Movers 7D</h2>
       </div>
 
       {/* ── Content ── */}
