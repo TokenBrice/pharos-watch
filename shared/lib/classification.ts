@@ -288,7 +288,7 @@ export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
   "fee-sharing": "Fee Share",
   "lp-receipt": "LP Receipt",
   "nav-appreciation": "NAV",
-  "governance-set": "Gov. Set",
+  "governance-set": "Native",
   "lending-opportunity": "Lending Opp.",
 };
 
