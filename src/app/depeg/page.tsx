@@ -11,6 +11,7 @@ import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/depeg-dews-version";
+import { safeJsonLd } from "@/lib/json-ld";
 
 const DepegClient = dynamic(
   () => import("./client").then((m) => ({ default: m.DepegClient })),
@@ -72,7 +73,7 @@ export default function DepegPage() {
       preface={
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
         />
       }
       leadParagraphs={[

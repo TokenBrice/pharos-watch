@@ -1,4 +1,5 @@
 import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";
+import { safeJsonLd } from "@/lib/json-ld";
 
 interface FaqSectionProps {
   items: readonly FaqItem[];
@@ -29,7 +30,7 @@ export function FaqSection({
       {includeJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(buildFaqJsonLd(items)) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(buildFaqJsonLd(items)) }}
         />
       )}
     </>
