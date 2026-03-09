@@ -1,6 +1,8 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 19 primary cron jobs across 4 trigger slots (plus one daily chained Telegram dispatch pass).
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 20 primary cron jobs across 4 trigger slots.
+
+Execution note: `dispatch-telegram-alerts-daily` runs on the `0 8 * * *` (08:00 UTC) trigger, while the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger after successful `sync-stablecoins`.
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
