@@ -2,7 +2,13 @@
 
 import path from "path";
 import { fileURLToPath } from "url";
-import { STRICT_CONTRACT_PATHS_LIST } from "../shared/lib/strict-contract-paths.ts";
+
+const strictContractModule = await import("../shared/lib/strict-contract-paths.ts");
+const STRICT_CONTRACT_PATHS_LIST =
+  strictContractModule.STRICT_CONTRACT_PATHS_LIST
+  ?? strictContractModule.default?.STRICT_CONTRACT_PATHS_LIST
+  ?? strictContractModule["module.exports"]?.STRICT_CONTRACT_PATHS_LIST
+  ?? [];
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_RETRY_COUNT = 1;
