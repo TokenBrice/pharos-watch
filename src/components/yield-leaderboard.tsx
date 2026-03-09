@@ -17,15 +17,7 @@ import { formatCurrency, formatScore, formatApy } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
-
-const WARNING_SIGNAL_LABELS: Record<string, string> = {
-  "yield-spike": "APY spiked 2x above 30d average",
-  "yield-divergence": "APY is 3x the market median",
-  "negative-trend": "APY declined 30%+ from average",
-  "reward-heavy": "80%+ of yield from incentive rewards",
-  "tvl-outflow": "TVL dropped 20%+ in the past week",
-  "data-stale": "Yield data hasn't refreshed in 90+ min",
-};
+import { WARNING_SIGNAL_LABELS } from "@/lib/yield-constants";
 
 const PAGE_SIZE = 25;
 const COLUMN_COUNT = 12;
