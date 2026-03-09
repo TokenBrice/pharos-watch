@@ -44,7 +44,7 @@ function getPysColor(pys: number | null): string {
 }
 
 function formatSignedPercent(value: number | null) {
-  if (value === null) return "--";
+  if (value === null) return "—";
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
 }
@@ -149,7 +149,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const yieldEfficiency = ranking.apy30d / riskPenalty;
   const sustainabilityMult = Math.max(0.3, ranking.yieldStability ?? 1.0);
   const pysColor = getPysColor(ranking.pharosYieldScore);
-  const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "--";
+  const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
 
@@ -201,7 +201,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             <DetailStatCard label="PYS">
               <div className="group relative inline-flex cursor-help flex-col">
                 <span className={cn("font-mono text-2xl tabular-nums", pysColor)}>
-                  {ranking.pharosYieldScore !== null ? ranking.pharosYieldScore.toFixed(1) : "--"}
+                  {ranking.pharosYieldScore !== null ? ranking.pharosYieldScore.toFixed(1) : "—"}
                 </span>
                 <div className="absolute bottom-full left-1/2 z-50 mb-2 hidden w-max max-w-[220px] -translate-x-1/2 group-hover:block">
                   <div className="space-y-1.5 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
@@ -253,7 +253,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">TVL</p>
               <p className="mt-2 font-mono text-sm tabular-nums text-foreground">
-                {ranking.sourceTvlUsd !== null ? formatCurrency(ranking.sourceTvlUsd) : "--"}
+                {ranking.sourceTvlUsd !== null ? formatCurrency(ranking.sourceTvlUsd) : "—"}
               </p>
             </div>
           </div>

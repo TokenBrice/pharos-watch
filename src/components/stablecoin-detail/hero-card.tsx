@@ -119,7 +119,7 @@ export function HeroCard({
         </p>
       </details>
     ) : (
-      <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
+      <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">—</div>
     )
   ) : (
     <div className="text-sm font-medium text-muted-foreground">NAV Token</div>
@@ -128,7 +128,7 @@ export function HeroCard({
   const liquidityContent = (() => {
     const liq = liquidityData;
     if (liq == null || (liq.liquidityScore === null && liq.poolCount === 0)) {
-      return <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>;
+      return <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">—</div>;
     }
     const score = liq.liquidityScore ?? 0;
     return (
@@ -255,7 +255,7 @@ export function HeroCard({
               <p
                 className={`text-xs font-mono tabular-nums mt-0.5 ${mcap >= prevDay ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
               >
-                {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}{" "}
+                {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "—"}{" "}
                 <span className="text-muted-foreground">24h</span>
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -286,7 +286,7 @@ export function HeroCard({
                       mcap >= prevWeek ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
                     }
                   >
-                    {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
+                    {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "—"}
                   </span>
                   <span className="text-muted-foreground"> 7d</span>
                   {prevMonth > 0 && (
@@ -392,7 +392,7 @@ export function HeroCard({
                 <p
                   className={`text-xs font-mono tabular-nums mt-0.5 ${mcap >= prevDay ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
                 >
-                  {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}{" "}
+                  {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "—"}{" "}
                   <span className="text-muted-foreground">24h</span>
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -410,7 +410,7 @@ export function HeroCard({
                       mcap >= prevWeek ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
                     }
                   >
-                    {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
+                    {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "—"}
                   </span>
                   <span className="text-muted-foreground"> 7d</span>
                   {prevMonth > 0 && (

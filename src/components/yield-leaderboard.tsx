@@ -303,7 +303,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                       onHover={() => prefetch(row.id)}
                       className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50" : ""}
                     >
-                      <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
+                      <TableCell className="text-right text-muted-foreground text-xs font-mono tabular-nums">
                         {pageStartIndex + index + 1}
                       </TableCell>
                       <TableCell>
@@ -334,7 +334,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                             {Math.round(safetyScore)}
                           </Badge>
                         ) : (
-                          <span className="text-muted-foreground">--</span>
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
@@ -374,7 +374,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                             </TooltipContent>
                           </Tooltip>
                         ) : (
-                          <span className={pysColor}>--</span>
+                          <span className={`font-mono tabular-nums ${pysColor}`}>—</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
@@ -392,9 +392,9 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums">
-                        {row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "--"}
+                        {row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—"}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-right">
+                      <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums">
                         {row.yieldStability !== null ? (
                           <div className="flex items-center justify-end gap-2">
                             <div
@@ -415,13 +415,13 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                             </span>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">--</span>
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums text-xs text-muted-foreground">
                         {row.apyMin30d !== null && row.apyMax30d !== null
                           ? `${row.apyMin30d.toFixed(1)}% – ${row.apyMax30d.toFixed(1)}%`
-                          : "--"}
+                          : "—"}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-center">
                         {warningSignalCount === 0 ? (

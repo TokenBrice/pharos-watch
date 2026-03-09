@@ -55,6 +55,15 @@ const COMPONENT_DETAIL = [
   { key: "trend", label: "Trend", sign: "+", color: COMPONENT_COLORS.trend },
 ] as const;
 
+const CONDITION_BANDS: Array<{ range: string; band: ConditionBand; meaning: string }> = [
+  { range: "90 – 100", band: "BEDROCK", meaning: "Exceptional stability across all tracked stablecoins" },
+  { range: "75 – 89", band: "STEADY", meaning: "Normal conditions with minor deviations" },
+  { range: "60 – 74", band: "TREMOR", meaning: "Notable stress in parts of the market" },
+  { range: "40 – 59", band: "FRACTURE", meaning: "Significant depegs affecting multiple assets" },
+  { range: "20 – 39", band: "CRISIS", meaning: "Severe market-wide instability" },
+  { range: "0 – 19", band: "MELTDOWN", meaning: "Systemic failure across stablecoin markets" },
+];
+
 /* ─── EventTimeline ─────────────────────────────────────────────── */
 
 function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
@@ -419,36 +428,13 @@ function Methodology({
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
-                <tr className="border-b">
-                  <td className="py-2 pr-4 tabular-nums">90 &ndash; 100</td>
-                  <td className="py-2 pr-4 font-medium text-green-700 dark:text-green-400">BEDROCK</td>
-                  <td className="py-2">Exceptional stability across all tracked stablecoins</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 pr-4 tabular-nums">75 &ndash; 89</td>
-                  <td className="py-2 pr-4 font-medium text-teal-700 dark:text-teal-400">STEADY</td>
-                  <td className="py-2">Normal conditions with minor deviations</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 pr-4 tabular-nums">60 &ndash; 74</td>
-                  <td className="py-2 pr-4 font-medium text-yellow-700 dark:text-yellow-400">TREMOR</td>
-                  <td className="py-2">Notable stress in parts of the market</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 pr-4 tabular-nums">40 &ndash; 59</td>
-                  <td className="py-2 pr-4 font-medium text-orange-700 dark:text-orange-400">FRACTURE</td>
-                  <td className="py-2">Significant depegs affecting multiple assets</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 pr-4 tabular-nums">20 &ndash; 39</td>
-                  <td className="py-2 pr-4 font-medium text-red-700 dark:text-red-400">CRISIS</td>
-                  <td className="py-2">Severe market-wide instability</td>
-                </tr>
-                <tr>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 19</td>
-                  <td className="py-2 pr-4 font-medium text-red-800 dark:text-red-300">MELTDOWN</td>
-                  <td className="py-2">Systemic failure across stablecoin markets</td>
-                </tr>
+                {CONDITION_BANDS.map((row, idx) => (
+                  <tr key={row.band} className={idx < CONDITION_BANDS.length - 1 ? "border-b" : ""}>
+                    <td className="py-2 pr-4 tabular-nums">{row.range}</td>
+                    <td className={`py-2 pr-4 font-medium ${PSI_BAND_CLASSES[row.band] ?? ""}`}>{row.band}</td>
+                    <td className="py-2">{row.meaning}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

@@ -292,7 +292,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 onActivate={() => onRowClick(row.meta.id)}
                 onHover={() => prefetch(row.meta.id)}
               >
-                <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
+                <TableCell className="text-right text-muted-foreground text-xs font-mono tabular-nums">
                   {pageStartIndex + index + 1}
                 </TableCell>
                 <TableCell>

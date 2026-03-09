@@ -35,7 +35,7 @@ function ProgressBar({ value, band }: { value: number; band: ThreatBand }) {
 }
 
 function formatMetric(key: string, val: unknown): string {
-  if (val === null || val === undefined) return "n/a";
+  if (val === null || val === undefined) return "—";
   if (Array.isArray(val)) return `${val.length} active`;
   if (typeof val === "number") {
     if (key === "delta1d" || key === "delta7d" || key === "scoreDelta7d" || key === "tvlDelta7d") {
@@ -139,7 +139,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   <div className="flex items-center justify-between">
                     <span className={signal.available ? "text-foreground" : "text-muted-foreground"}>{meta.name}</span>
                     <span className="font-mono text-xs tabular-nums">
-                      {signal.available ? `${Math.round(signal.value)}/100` : "n/a"}
+                      {signal.available ? `${Math.round(signal.value)}/100` : "—"}
                     </span>
                   </div>
                   <ProgressBar value={signal.available ? signal.value : 0} band={typedBand} />
