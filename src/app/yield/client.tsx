@@ -183,7 +183,12 @@ export function YieldClient() {
             <h2 id="leaderboard-heading" className="text-xl font-semibold">
               Yield Leaderboard
             </h2>
-            <YieldLeaderboard rankings={rankings} logos={logos} onRowClick={handleNavigate} />
+            <YieldLeaderboard
+              rankings={rankings}
+              logos={logos ?? {}}
+              riskFreeRate={data.riskFreeRate}
+              medianApy={data.medianApy ?? 0}
+            />
           </div>
         </section>
       )}
