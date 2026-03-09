@@ -155,12 +155,12 @@ export default function TelegramPage() {
           <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-4">
             <p>
               <a
-                href="https://t.me/PharosDigestBot"
+                href="https://t.me/PharosWatchBot"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors"
               >
-                @PharosDigestBot
+                @PharosWatchBot
               </a>{" "}
               sends you real-time alerts for the stablecoins you care about.
               Subscribe to any combination of alert types and coins.
@@ -205,12 +205,12 @@ export default function TelegramPage() {
               <p>
                 Open{" "}
                 <a
-                  href="https://t.me/PharosDigestBot"
+                  href="https://t.me/PharosWatchBot"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-foreground underline underline-offset-4 hover:text-emerald-500 transition-colors"
                 >
-                  @PharosDigestBot
+                  @PharosWatchBot
                 </a>{" "}
                 in Telegram and send{" "}
                 <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
