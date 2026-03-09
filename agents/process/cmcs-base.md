@@ -92,6 +92,16 @@ After merging each phase:
 
 **`/agents/process/cmcs-large-implementation-preparation.md`** — Preparation process for large multi-phase projects executed via cmcs: research → design → implementation plan → execution handover → tickets. **Read before planning any task that touches 10+ files or spans multiple worktrees.**
 
+### Plan Cleanup
+
+After all phases are merged and validated, move the implementation plan to the historical archive:
+
+```bash
+mv agents/plans/<plan-file>.md agents/plans/historical/
+```
+
+This keeps `agents/plans/` clean for active work. Do not delete plans — the historical folder serves as a reference for retrospectives and future planning.
+
 ### Post-Execution Retrospective
 
 After completing a cmcs execution (all phases merged), record what worked and what didn't. Place in `agents/retrospectives/<date>-<project>.md`:
