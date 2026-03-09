@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Image from "next/image";
 import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -430,7 +431,21 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             )}
             {liq.effectiveTvlUsd > 0 && liq.effectiveTvlUsd !== liq.totalTvlUsd && (
               <div className="text-xs text-muted-foreground mt-0.5">
-                Effective: {formatCurrency(liq.effectiveTvlUsd)}
+                <TooltipProvider>
+                  <UiTooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help underline decoration-dotted underline-offset-2">
+                        Effective: {formatCurrency(liq.effectiveTvlUsd)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[260px]">
+                      <p className="text-xs">
+                        TVL adjusted for pool balance, pair quality, and AMM mechanism. Reflects
+                        liquidity that would hold up under real pressure.
+                      </p>
+                    </TooltipContent>
+                  </UiTooltip>
+                </TooltipProvider>
               </div>
             )}
           </div>
