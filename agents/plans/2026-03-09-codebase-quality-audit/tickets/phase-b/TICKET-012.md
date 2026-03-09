@@ -3,7 +3,7 @@ title: "Lazy-load html-to-image to reduce initial bundle size"
 agent: "codex"
 model: "gpt-5.3-codex-spark"
 reasoning_effort: "medium"
-done: false
+done: true
 ---
 
 ## Goal

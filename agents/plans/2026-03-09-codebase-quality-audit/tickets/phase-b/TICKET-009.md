@@ -3,7 +3,7 @@ title: "Fix deriveSupplyFromMarketCap fallback and add null-safety to supply dis
 agent: "codex"
 model: "gpt-5.3-codex"
 reasoning_effort: "high"
-done: false
+done: true
 ---
 
 ## Goal

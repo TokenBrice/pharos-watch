@@ -85,23 +85,23 @@
 | TICKET-006 | `audit-ci-docs` (ID: 21) | R7-I2/M2, R8-D1/D2 | [x] merged |
 | TICKET-007 | `audit-perf-config` (ID: 19) | R4-M2/M3 | [x] merged |
 
-### Phase B: Data Integrity + Design Polish (pending Phase A gate)
+### Phase B: Data Integrity + Design Polish (MERGED)
 
 | Ticket | Branch | Findings | Status |
 |--------|--------|----------|--------|
-| TICKET-008 | `audit-worker-scoring` | R5-C3/I1/I3/I2 | dispatched |
-| TICKET-009 | `audit-fe-data-integrity` | R5-C2/M2/I4 | dispatched |
-| TICKET-010 | `audit-si-table-ui` | R3-C1/I3/M4, R6-C3/I1 | dispatched |
-| TICKET-011 | `audit-design-system` | R6-C3/I3/I4, R3-M2/M3/I8 | dispatched |
-| TICKET-012 | `audit-chart-lazy` | R4-C1 | dispatched |
-| TICKET-013 | `audit-worker-fetch` | R2-I3/I4 | dispatched |
+| TICKET-008 | `audit-worker-scoring` (ID: 26) | R5-C3/I1/I3/I2 | [x] merged |
+| TICKET-009 | `audit-fe-data-integrity` (ID: 27) | R5-C2/M2/I4 | [x] merged |
+| TICKET-010 | `audit-si-table-ui` (ID: 28) | R3-C1/I3/M4 | [x] merged |
+| TICKET-011 | `audit-design-system` (ID: 29) | R6-C3/I3/I1 | [x] merged |
+| TICKET-012 | `audit-chart-lazy` (ID: 30) | R4-C1 | [x] merged |
+| TICKET-013 | `audit-worker-fetch` (ID: 31) | R2-I3/I4 | [x] merged |
 
 ## Gate Log
 
 | Phase | Gate command | Result | Date |
 |-------|-------------|--------|------|
 | A     | `npm run build && cd worker && npx tsc --noEmit && npm test` | PASS (143 files, 1378 tests) | 2026-03-09 |
-| B     | `npm run build && cd worker && npx tsc --noEmit && npm test` | | |
+| B     | `npm run build && cd worker && npx tsc --noEmit && npm test` | PASS (143 files, 1386 tests) | 2026-03-09 |
 
 ## Incident Log
 
@@ -111,11 +111,15 @@
 - TICKET-006 spec review found .env.example was gitignored by `.env*` pattern. Fixed by adding `!.env.example` to .gitignore.
 - TICKET-006 code quality review flagged wrangler-action SHA may be non-existent. Cannot verify without GitHub access; will fail-safe on first CI run if wrong.
 - TICKET-001 code quality review noted 7 more JSON-LD sites on separate lines remain unprotected (out of ticket scope, added to backlog).
+- TICKET-011 spec review found 2 missed N/A instances (depeg-history.tsx:117, yield/client.tsx:125). Fixed by orchestrator.
+- TICKET-011 merge conflict in hero-card.tsx between TICKET-009 nullable guards and TICKET-011 em-dash changes. Resolved by orchestrator: kept nullable guards + em-dash.
 
-## Summary (fill after audit completes)
+## Summary
 
 - **Total findings:** ~90 across 8 dimensions
-- **Tickets executed:** 7/13 (Phase A complete)
-- **LOC impact:** -508 LOC net (Phase A: +148 added, -656 removed)
-- **Key improvements:** JSON-LD XSS fix, -325 LOC dead code (worker/shared), -125 LOC dead code (frontend), SHA-pinned CI, homepage SEO, a11y fixes, perf config
-- **Deferred items:** ~45 items in backlog (see implementation-plan.md)
+- **Tickets executed:** 13/13 (Phase A + Phase B complete)
+- **LOC impact (Phase A):** -508 LOC net (+148 added, -656 removed)
+- **LOC impact (Phase B):** +100 LOC net (+481 added, -381 removed) — mostly new null-safety helpers + tests
+- **Key improvements (Phase A):** JSON-LD XSS fix, -325 LOC dead code (worker/shared), -125 LOC dead code (frontend), SHA-pinned CI, homepage SEO, a11y fixes, perf config
+- **Key improvements (Phase B):** PSI/DEWS null-on-insufficient-data guards, nullable supply derivation, SI empty states, table row a11y, N/A→em-dash standardization, font-mono on numeric surfaces, PSI band colors canonicalized, html-to-image lazy-loaded, fetchWithRetry extracted
+- **Deferred items:** ~35 items in backlog (see implementation-plan.md)

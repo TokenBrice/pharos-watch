@@ -3,7 +3,7 @@ title: "Add empty states to stability-index sections and table row a11y"
 agent: "codex"
 model: "gpt-5.1-codex-max"
 reasoning_effort: "high"
-done: false
+done: true
 ---
 
 ## Goal

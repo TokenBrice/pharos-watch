@@ -3,7 +3,7 @@ title: "Extract shared fetchWithRetry helper for admin endpoints"
 agent: "codex"
 model: "gpt-5.3-codex"
 reasoning_effort: "high"
-done: false
+done: true
 ---
 
 ## Goal

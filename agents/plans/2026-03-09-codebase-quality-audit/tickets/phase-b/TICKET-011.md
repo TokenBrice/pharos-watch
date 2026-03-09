@@ -3,7 +3,7 @@ title: "Standardize N/A display convention and add font-mono to key numeric surf
 agent: "codex"
 model: "gpt-5.1-codex-max"
 reasoning_effort: "high"
-done: false
+done: true
 ---
 
 ## Goal
