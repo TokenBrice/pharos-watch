@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -5,6 +6,23 @@ import { HomepageClient } from "@/components/homepage-client";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
 import { buildStablecoinUrl } from "@/lib/urls";
+
+export const metadata: Metadata = {
+  title: "Pharos - Stablecoin Analytics Dashboard",
+  description:
+    "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Pharos - Stablecoin Analytics Dashboard",
+    description:
+      "Pharos tracks stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
+    url: "/",
+    type: "website",
+    images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+  },
+};
 
 export default function HomePage() {
   const total = TRACKED_STABLECOINS.length;
