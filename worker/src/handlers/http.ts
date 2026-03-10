@@ -99,7 +99,7 @@ export async function handleHttpRequest(
 
   const url = new URL(request.url);
   if (url.pathname.startsWith("/api/") && url.pathname !== "/api/telegram-webhook" && !isAdminRequest(request, env.ADMIN_KEY)) {
-    const rateLimitResponse = checkRateLimit(getClientIp(request));
+    const rateLimitResponse = checkRateLimit(getClientIp(request), 300);
     if (rateLimitResponse) {
       return addCorsHeaders(rateLimitResponse, origin);
     }
