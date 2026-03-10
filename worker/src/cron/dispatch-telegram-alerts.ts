@@ -1,7 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db";
-import { sendToChat } from "../lib/telegram";
+import { sendToChat, sendBatch } from "../lib/telegram";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import {
@@ -23,9 +23,12 @@ interface DispatchResult {
   blockedUsersCleanedUp: number;
   cappedAtLimit: boolean;
   snapshotSeeded: boolean;
+  pendingDrained: number;
+  pendingEnqueued: number;
+  pendingExpired: number;
 }
 
-const MAX_MESSAGES_PER_RUN = 50;
+const MAX_MESSAGES_PER_RUN = 200;
 const SNAPSHOT_MAX_AGE_SEC = 86400; // 24h
 const PENDING_TTL_SEC = 3600; // 1 hour — stale alerts are worse than no alert
 const SEND_BATCH_SIZE = 5; // Parallel sends per batch (stay under Workers 6-conn limit)
@@ -118,6 +121,9 @@ function emptyResult(snapshotSeeded: boolean): DispatchResult {
     blockedUsersCleanedUp: 0,
     cappedAtLimit: false,
     snapshotSeeded,
+    pendingDrained: 0,
+    pendingEnqueued: 0,
+    pendingExpired: 0,
   };
 }
 
@@ -229,25 +235,6 @@ async function writeSnapshots(
     setCache(db, SNAPSHOT_KEYS.depeg, JSON.stringify(snapshots.depeg)),
     setCache(db, SNAPSHOT_KEYS.safety, JSON.stringify(snapshots.safety)),
   ]);
-}
-
-async function loadSubscriberRows(
-  db: D1Database,
-  stablecoinId: string,
-  type: AlertType,
-): Promise<SubscriberRow[]> {
-  const alertColumn = ALERT_COLUMN_BY_TYPE[type];
-  const result = await db
-    .prepare(
-      `SELECT s.chat_id, u.last_active_at
-         FROM telegram_subscriptions s
-         JOIN telegram_subscribers u ON u.chat_id = s.chat_id
-        WHERE s.stablecoin_id = ?
-          AND u.${alertColumn} = 1`,
-    )
-    .bind(stablecoinId)
-    .all<SubscriberRow>();
-  return result.results ?? [];
 }
 
 async function loadSubscriberRowsBatch(
@@ -492,6 +479,12 @@ export async function dispatchTelegramAlerts(
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
 
+    // --- Phase 1: Drain pending queue ---
+    const pendingBudget = Math.floor(MAX_MESSAGES_PER_RUN / 4); // Reserve 75% for fresh events
+    const drainResult = await drainPendingQueue(db, botToken, pendingBudget, signal);
+
+    throwIfAborted(signal);
+
     const dewsChanges: DewsChange[] = [];
     for (const row of dewsRows) {
       const oldBand = previousDewsSnapshot[row.stablecoin_id];
@@ -576,88 +569,150 @@ export async function dispatchTelegramAlerts(
       });
     }
 
+    // --- Phase 3: Batched subscriber lookups ---
+    const dewsIds = dewsChanges.map((c) => c.stablecoinId);
+    const depegIds = [
+      ...depegTriggered.map((e) => e.stablecoinId),
+      ...depegResolved.map((e) => e.stablecoinId),
+    ];
+    const safetyIds = safetyChanges.map((c) => c.stablecoinId);
+
+    const [dewsSubs, depegSubs, safetySubs] = await Promise.all([
+      loadSubscriberRowsBatch(db, dewsIds, "dews"),
+      loadSubscriberRowsBatch(db, depegIds, "depeg"),
+      loadSubscriberRowsBatch(db, safetyIds, "safety"),
+    ]);
+
+    throwIfAborted(signal);
+
+    // --- Phase 4: Build per-chat consolidated alerts ---
     const alertsByChat = new Map<string, { lastActiveAt: number; alerts: ConsolidatedAlerts }>();
-    const queueSubscribers = async <T>(
-      stablecoinId: string,
-      type: AlertType,
-      append: (alerts: ConsolidatedAlerts) => T[],
-      event: T,
-    ): Promise<void> => {
-      const subscribers = await loadSubscriberRows(db, stablecoinId, type);
-      for (const subscriber of subscribers) {
-        const existing = alertsByChat.get(subscriber.chat_id);
-        if (existing) {
-          existing.lastActiveAt = Math.max(existing.lastActiveAt, subscriber.last_active_at ?? 0);
-          append(existing.alerts).push(event);
-          continue;
-        }
-        const alerts = emptyAlerts();
-        append(alerts).push(event);
-        alertsByChat.set(subscriber.chat_id, {
-          lastActiveAt: subscriber.last_active_at ?? 0,
-          alerts,
-        });
+
+    const addToChat = (
+      chatId: string,
+      lastActiveAt: number,
+      append: (alerts: ConsolidatedAlerts) => unknown[],
+      event: unknown,
+    ): void => {
+      const existing = alertsByChat.get(chatId);
+      if (existing) {
+        existing.lastActiveAt = Math.max(existing.lastActiveAt, lastActiveAt);
+        append(existing.alerts).push(event);
+        return;
       }
+      const alerts = emptyAlerts();
+      append(alerts).push(event);
+      alertsByChat.set(chatId, { lastActiveAt, alerts });
     };
 
     for (const change of dewsChanges) {
-      await queueSubscribers(change.stablecoinId, "dews", (alerts) => alerts.dews, change);
+      for (const sub of dewsSubs.get(change.stablecoinId) ?? []) {
+        addToChat(sub.chat_id, sub.last_active_at, (a) => a.dews, change);
+      }
     }
     for (const event of depegTriggered) {
-      await queueSubscribers(event.stablecoinId, "depeg", (alerts) => alerts.depegTriggered, event);
+      for (const sub of depegSubs.get(event.stablecoinId) ?? []) {
+        addToChat(sub.chat_id, sub.last_active_at, (a) => a.depegTriggered, event);
+      }
     }
     for (const event of depegResolved) {
-      await queueSubscribers(event.stablecoinId, "depeg", (alerts) => alerts.depegResolved, event);
+      for (const sub of depegSubs.get(event.stablecoinId) ?? []) {
+        addToChat(sub.chat_id, sub.last_active_at, (a) => a.depegResolved, event);
+      }
     }
     for (const change of safetyChanges) {
-      await queueSubscribers(change.stablecoinId, "safety", (alerts) => alerts.safety, change);
+      for (const sub of safetySubs.get(change.stablecoinId) ?? []) {
+        addToChat(sub.chat_id, sub.last_active_at, (a) => a.safety, change);
+      }
     }
 
+    // --- Phase 5: Format, split, send up to budget, enqueue overflow ---
+    // Pre-split ALL messages once (avoid calling splitMessage twice)
     const subscriberQueue = [...alertsByChat.entries()]
-      .map(([chatId, entry]) => ({
-        chatId,
-        lastActiveAt: entry.lastActiveAt,
-        alerts: entry.alerts,
-      }))
+      .map(([chatId, entry]) => {
+        const message = formatConsolidatedMessage(entry.alerts);
+        return {
+          chatId,
+          lastActiveAt: entry.lastActiveAt,
+          alerts: entry.alerts,
+          chunks: splitMessage(message),
+          disableNotification: !hasEscalation(entry.alerts),
+        };
+      })
       .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+
+    const freshBudget = MAX_MESSAGES_PER_RUN - drainResult.sent;
+    const toSend = subscriberQueue.slice(0, freshBudget);
+    const toEnqueue = subscriberQueue.slice(freshBudget);
+
+    // Build flat message list from pre-split chunks
+    const sendList: Array<{
+      chatId: string;
+      html: string;
+      disableNotification: boolean;
+    }> = [];
+    for (const sub of toSend) {
+      for (const chunk of sub.chunks) {
+        sendList.push({
+          chatId: sub.chatId,
+          html: chunk,
+          disableNotification: sub.disableNotification,
+        });
+      }
+    }
+
+    const sendResults = await sendBatch(sendList, botToken, SEND_BATCH_SIZE);
 
     let subscribersNotified = 0;
     let messagesSent = 0;
-    let blockedUsersCleanedUp = 0;
+    let blockedUsersCleanedUp = drainResult.blocked;
 
-    for (const subscriber of subscriberQueue.slice(0, MAX_MESSAGES_PER_RUN)) {
-      throwIfAborted(signal);
-
-      const message = formatConsolidatedMessage(subscriber.alerts);
-      const chunks = splitMessage(message);
-      const disableNotification = !hasEscalation(subscriber.alerts);
-
-      let deliveredAllChunks = true;
-      for (const chunk of chunks) {
-        const sendResult = await sendToChat(subscriber.chatId, chunk, botToken, {
-          disableWebPagePreview: true,
-          disableNotification,
-        });
-
-        if (sendResult.blocked) {
-          await db
-            .prepare("UPDATE telegram_subscribers SET alert_dews=0, alert_depeg=0, alert_safety=0 WHERE chat_id=?")
-            .bind(subscriber.chatId)
-            .run();
+    // Track which chats were blocked so we skip counting them
+    const blockedChats = new Set<string>();
+    for (const result of sendResults) {
+      if (result.blocked) {
+        if (!blockedChats.has(result.chatId)) {
+          blockedChats.add(result.chatId);
           blockedUsersCleanedUp++;
-          deliveredAllChunks = false;
-          break;
+          await db
+            .prepare(
+              "UPDATE telegram_subscribers SET alert_dews=0, alert_depeg=0, alert_safety=0 WHERE chat_id=?",
+            )
+            .bind(result.chatId)
+            .run();
         }
-
+      } else if (result.ok) {
         messagesSent++;
-      }
-
-      if (deliveredAllChunks && chunks.length > 0) {
-        subscribersNotified++;
       }
     }
 
+    // Count subscribers where at least one chunk succeeded and none blocked
+    for (const sub of toSend) {
+      if (blockedChats.has(sub.chatId)) continue;
+      if (sub.chunks.length > 0) subscribersNotified++;
+    }
+
+    // Enqueue overflow — store pre-split chunks so drain path can send directly.
+    // Don't enqueue for blocked chats.
+    const overflowMessages: Array<{ chatId: string; html: string; disableNotification: boolean }> = [];
+    for (const sub of toEnqueue) {
+      if (blockedChats.has(sub.chatId)) continue;
+      for (const chunk of sub.chunks) {
+        overflowMessages.push({
+          chatId: sub.chatId,
+          html: chunk,
+          disableNotification: sub.disableNotification,
+        });
+      }
+    }
+
+    if (overflowMessages.length > 0) {
+      await enqueuePendingAlerts(db, overflowMessages, nowSec);
+    }
+
+    // --- Phase 6: Always write snapshots, then cleanup ---
     await writeSnapshots(db, currentSnapshots);
+    const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
     await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
 
     const result: DispatchResult = {
@@ -667,12 +722,15 @@ export async function dispatchTelegramAlerts(
         safety: safetyChanges.length,
       },
       subscribersNotified,
-      messagesSent,
+      messagesSent: messagesSent + drainResult.sent,
       blockedUsersCleanedUp,
-      cappedAtLimit: subscriberQueue.length > MAX_MESSAGES_PER_RUN,
+      cappedAtLimit: toEnqueue.length > 0,
       snapshotSeeded: false,
+      pendingDrained: drainResult.sent,
+      pendingEnqueued: overflowMessages.length,
+      pendingExpired: expiredCount,
     };
-    return { itemCount: messagesSent, metadata: JSON.stringify(result) };
+    return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
   } catch (error) {
     await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
     throw error;
