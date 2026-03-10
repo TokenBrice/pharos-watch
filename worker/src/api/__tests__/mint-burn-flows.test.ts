@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import {
@@ -69,6 +69,10 @@ describe("mint-burn-flows regression: per-coin vs aggregate shape", () => {
 // ---------------------------------------------------------------------------
 
 describe("handleMintBurnFlows contract tests", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const nowSec = Math.floor(Date.now() / 1000);
 
   const hourlyRow = {
@@ -334,7 +338,253 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(usdf?.has24hActivity).toBe(true);
     expect(usdf?.baselineDailyNetUsd).toBe(-7_500_000);
     expect(usdf?.baselineDailyAbsUsd).toBe(40_000_000);
-    expect(usdf?.baselineDataDays).toBe(10);
+    expect(usdf?.baselineDataDays).toBe(9);
+  });
+
+  it("excludes the current UTC day from the trailing baseline window", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const nowDay = Math.floor(now / 86400) * 86400;
+    const firstHourTs = nowDay - 10 * 86400;
+    const baselineRows = [
+      ...Array.from({ length: 10 }, (_, index) => ({
+        stablecoin_id: "usdt-tether",
+        day_ts: nowDay - ((index + 1) * 86400),
+        daily_net: 1_000_000,
+        daily_abs: 10_000_000,
+      })),
+      {
+        stablecoin_id: "usdt-tether",
+        day_ts: nowDay,
+        daily_net: 999_000_000,
+        daily_abs: 999_000_000,
+      },
+    ];
+    const cache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 1,
+            burn_count: 0,
+            mint_volume_usd: 1_500_000,
+            burn_volume_usd: 500_000,
+            net_flow_usd: 1_000_000,
+          },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 1_000_000 }],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: baselineRows,
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: firstHourTs }],
+      },
+      { match: "FROM mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cache, updated_at: now }],
+        first: { key: "stablecoins", value: cache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
+
+    expect(usdt?.baselineDailyNetUsd).toBe(1_000_000);
+    expect(usdt?.baselineDailyAbsUsd).toBe(10_000_000);
+    expect(usdt?.pressureShiftScore).toBe(0);
+  });
+
+  it("selects the latest event when largest-event amounts tie", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    const cache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 2,
+            burn_count: 0,
+            mint_volume_usd: 2_000_000,
+            burn_volume_usd: 0,
+            net_flow_usd: 2_000_000,
+          },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 2_000_000 }],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 2_000_000 }],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+      },
+      {
+        match: "FROM mint_burn_events",
+        rows: [
+          {
+            id: "evt-older",
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            chain_id: "ethereum",
+            direction: "mint",
+            amount: 1_000_000,
+            amount_usd: 5_000_000,
+            counterparty: null,
+            tx_hash: "0xolder",
+            block_number: 10,
+            timestamp: now - 3600,
+            explorer_tx_url: "https://etherscan.io/tx/0xolder",
+          },
+          {
+            id: "evt-newer",
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            chain_id: "ethereum",
+            direction: "mint",
+            amount: 1_000_000,
+            amount_usd: 5_000_000,
+            counterparty: null,
+            tx_hash: "0xnewer",
+            block_number: 11,
+            timestamp: now - 1800,
+            explorer_tx_url: "https://etherscan.io/tx/0xnewer",
+          },
+        ],
+      },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cache, updated_at: now }],
+        first: { key: "stablecoins", value: cache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
+
+    expect(usdt?.largestEvent24h?.txHash).toBe("0xnewer");
+    expect(usdt?.largestEvent24h?.timestamp).toBe(now - 1800);
+  });
+
+  it("keeps aggregate coin fields on a fixed 24h window even when hours changes", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-10T12:00:00Z"));
+
+    const now = Math.floor(Date.now() / 1000);
+    const twentyFourHourStart = now - 24 * 3600;
+    const sevenDayStart = now - 168 * 3600;
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    const cache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        matchBinds: ["ethereum", sevenDayStart],
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 1,
+            burn_count: 0,
+            mint_volume_usd: 15_000_000,
+            burn_volume_usd: 5_000_000,
+            net_flow_usd: 10_000_000,
+          },
+          {
+            stablecoin_id: "usdt-tether",
+            chain_id: "ethereum",
+            hour_ts: now - 48 * 3600,
+            mint_count: 1,
+            burn_count: 0,
+            mint_volume_usd: 45_000_000,
+            burn_volume_usd: 15_000_000,
+            net_flow_usd: 30_000_000,
+          },
+        ],
+      },
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        matchBinds: ["ethereum", twentyFourHourStart],
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 1,
+            burn_count: 0,
+            mint_volume_usd: 15_000_000,
+            burn_volume_usd: 5_000_000,
+            net_flow_usd: 10_000_000,
+          },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [
+          { stablecoin_id: "usdt-tether", net_flow_usd: 40_000_000 },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+      },
+      { match: "FROM mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cache, updated_at: now }],
+        first: { key: "stablecoins", value: cache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?hours=168"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
+
+    expect(body.windowHours).toBe(168);
+    expect(body.hourly).toHaveLength(2);
+    expect(usdt?.netFlow24hUsd).toBe(10_000_000);
+    expect(usdt?.mintVolume24hUsd).toBe(15_000_000);
+    expect(usdt?.burnVolume24hUsd).toBe(5_000_000);
   });
 
   it("serves cached aggregate fallback when live query fails", async () => {

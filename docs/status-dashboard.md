@@ -42,7 +42,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Calls `GET /api/status-history` with `X-Admin-Key`
   - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
 - `src/components/status/telegram-bot-stats.tsx`
-  - Renders Telegram subscriber adoption metrics, top subscribed coins, and the latest `dispatch-telegram-alerts` delivery summary
+  - Renders Telegram subscriber adoption metrics, top subscribed coins, custom-preference / quiet-hour counts, and the latest `dispatch-telegram-alerts` delivery summary
 - Cron cards are grouped by trigger slot on the page:
   - 15-minute core ingestion / score recompute
   - 20-minute on-chain intake jobs shown together, but labeled as isolated triggers (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`, `sync-dex-discovery`)
@@ -54,6 +54,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - Status-specific sections now include:
   - `Status Facts`: summary counters + machine-readable causes with optional inline remediation actions
   - `Status Diagnostics`: worker-side self-check, browser-side probe loop, divergence, and state-machine counters
+  - `Mint/Burn Reconciliation`: 24h Ethereum flow-vs-chain-supply delta comparison for tracked flow coins
   - `Dataset Freshness`: last-writer timestamps by dataset domain and expected freshness based on owning cron cadence
   - `Incident Timeline`: filtered history windows with expandable persisted causes per transition
 
@@ -178,6 +179,7 @@ The `/status` payload now includes a `telegramBot` block derived from:
 - `telegram_subscribers`
 - `telegram_subscriptions`
 - `telegram_pending_disambiguation`
+- `telegram_pending_alerts`
 
 The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata` to show:
 
@@ -185,10 +187,12 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 - alert-enabled and alert-ready chats
 - total coin follows and average follows per subscribed chat
 - pending disambiguation replies
+- pending delivery backlog
 - alert-type adoption counts
+- custom-preference adoption and quiet-hours adoption
 - muted / misconfigured chat counts
 - top subscribed stablecoins
-- latest dispatch delivery stats (`subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`)
+- latest dispatch delivery stats (`subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`, `freshRetryQueued`, `freshPermanentFailures`, `pendingRetryQueued`, `pendingDropped`)
 
 ### Synthetic self-check
 
@@ -298,6 +302,29 @@ Renders after the Circuit Breakers section. Shows the current price confidence d
 
 Data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row — no extra DB query required.
 
+## Mint/Burn Reconciliation Card
+
+**Component:** `MintBurnReconciliationCard` (`src/components/status/mint-burn-reconciliation.tsx`)
+
+Renders after the Liquidity Health section. It compares:
+
+- 24h Ethereum mint/burn net flow from `mint_burn_hourly`
+- 24h Ethereum chain-supply delta from the cached stablecoins payload's `chainCirculating.ethereum.current - circulatingPrevDay`
+
+Each row shows:
+
+- stablecoin symbol
+- reconciliation status (`ok`, `warn`, `critical`, `insufficient-source`)
+- coverage hint (`full`, `partial-history`, `bootstrapping`, or `unknown`)
+- absolute USD difference
+- raw flow net, raw chain delta, and ratio
+
+This is an operator integrity signal, not a public user-facing score. Large gaps typically mean one of:
+
+- flow coverage is still partial or newly bootstrapping
+- upstream chain distribution moved in a way the mint/burn tracker does not capture
+- ingestion or classification logic needs review
+
 ---
 
 ## Related Files
@@ -309,6 +336,7 @@ Data is sourced from `sync-stablecoins` cron metadata stored in the most recent 
 | `src/components/status/telegram-bot-stats.tsx`   | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                          |
 | `src/components/status/discovery-candidates.tsx` | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                             |
 | `src/components/status/price-source-health.tsx`  | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                      |
+| `src/components/status/mint-burn-reconciliation.tsx` | Mint/burn reconciliation card — 24h Ethereum flow vs chain-supply delta diagnostics                                                                                                                                                                                               |
 | `src/hooks/use-status.ts`                        | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                                                                                  |
 | `src/hooks/use-endpoint-probes.ts`               | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                                                                                                |
 | `src/hooks/use-status-history.ts`                | Shared polling policy for `/api/status-history` + dashboard time-window filters                                                                                                                                                                                                        |

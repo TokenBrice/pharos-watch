@@ -84,6 +84,15 @@ export async function recalcAffectedHours(
 ): Promise<void> {
   if (affectedHours.size === 0) return;
 
+  const deleteStmt = db.prepare(
+    `DELETE FROM mint_burn_hourly
+     WHERE stablecoin_id = ? AND chain_id = ? AND hour_ts = ?`,
+  );
+  const deleteStmts = [...affectedHours.values()].map((hour) =>
+    deleteStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs),
+  );
+  await batchExecute(db, deleteStmts);
+
   const aggStmt = db.prepare(
     `INSERT OR REPLACE INTO mint_burn_hourly
       (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,

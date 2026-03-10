@@ -2,6 +2,8 @@
 
 On-chain mint and burn event tracker for stablecoins on **Ethereum** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion now runs in two lanes: a critical 20-minute lane for major coverage and an offset extended 20-minute lane for long-tail backlog drain.
 
+Product scope note: the public `/flows` page now labels this feature explicitly as **Ethereum-only** and surfaces per-coin `coverage` metadata so partial history or lagging sync states are visible to users instead of implied as complete market-wide coverage.
+
 Operational freshness configuration is shared via `worker/src/lib/mint-burn-health-config.ts`:
 - major-symbol baseline (`USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`)
 - warning threshold (`6h`)
@@ -202,6 +204,7 @@ Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to 
      - If no safe frontier exists for the config in that run: do not advance.
 6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`, counting only `flow_type='standard'` rows so atomic roundtrips do not leak into flow statistics.
 7. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, resolve from `price_cache`, update `amount_usd/price_*` with `price_source=price_cache_heal`, and re-aggregate only newly affected hourly buckets.
+   - Cron metadata now includes both `nullPricesHealed` and `nullPriceBacklog` (`recent`, `historical`) so operators can distinguish live healable gaps from older debt.
 8. **Emit active progress** — long runs call the shared cron `reportProgress(...)` hook so `/api/status` can surface the active stage, queue position, and budget heartbeat while the lease is still live.
 9. **Escalate degraded runs** — the critical lane emits `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`. The extended lane keeps the same observability metadata but does not escalate long-tail backlog pressure to `error`.
 
@@ -250,7 +253,7 @@ pressureShift = clamp(-100, 100, z * 50)
 
 **Activity gate:** If the coin's 24h absolute flow (mint volume + burn volume) is below `MIN_ACTIVITY_USD` ($50,000), pressure shift returns `null` (NR). This prevents misleading scores for dormant or low-activity coins.
 
-- **Input:** 24h net flow, 24h absolute flow (`|mint| + |burn|`), 30-day rolling average net flow, 30-day rolling average absolute flow, data age in days.
+- **Input:** 24h net flow, 24h absolute flow (`|mint| + |burn|`), trailing 30 fully closed daily average net flow, trailing 30 fully closed daily average absolute flow, data age in days.
 
 - **Output:** -100 to +100 score, or `null` (NR) if fewer than 7 days of history, if 24h absolute flow is below $50,000, or if the coin has no 24h mint/burn activity.
 - Score of 0 = current flow matches baseline. Negative values = pressure is worse than baseline. Positive values = pressure is improving versus baseline.
@@ -340,6 +343,7 @@ CREATE TABLE mint_burn_events (
 CREATE INDEX idx_mbe2_ts ON mint_burn_events(timestamp DESC);
 CREATE INDEX idx_mbe2_coin ON mint_burn_events(stablecoin_id, timestamp DESC);
 CREATE INDEX idx_mbe2_chain ON mint_burn_events(chain_id, timestamp DESC);
+CREATE INDEX idx_mbe_null_price_ts ON mint_burn_events(timestamp DESC) WHERE amount_usd IS NULL;
 ```
 
 ### mint_burn_hourly (migration 0031)
@@ -393,9 +397,12 @@ Two modes depending on whether `stablecoin` is provided.
 Returns:
 
 - `gauge` — composite Bank Run Gauge: `{ score, band, flightToQuality, flightIntensity, trackedCoins, trackedMcapUsd }`
-- `coins[]` — per-coin summaries: raw net flow, canonical `pressureShiftScore`, derived interpretation fields, baseline context, and largest event
+- `coins[]` — per-coin summaries: fixed 24h raw net flow, canonical `pressureShiftScore`, derived interpretation fields, baseline context, coverage metadata, and largest event
 - `hourly[]` — aggregate hourly timeseries: `{ hourTs, netFlowUsd, mintVolumeUsd, burnVolumeUsd }`
 - `updatedAt` — Unix seconds of latest hourly bucket
+- `windowHours` — requested chart window for `hourly[]`
+- `scope` — current ingestion scope (`Ethereum-only`)
+- `sync` — latest critical-lane freshness and warning state
 
 **Per-coin mode** (`stablecoin` param provided):
 
@@ -411,10 +418,13 @@ Returns:
 - `chains[]` — per-chain breakdown
 - `hourly[]` — hourly timeseries
 - `updatedAt`
+- `windowHours`, `scope`, `sync`
 
 Returns 404 if the stablecoin ID is not in the tracked set.
 
-**Cache:** `CACHE_PROFILES.standard` (~300s freshness)
+Contract note: aggregate `hours` only changes `hourly[]`. Coin-level `netFlow24hUsd`, mint/burn 24h volumes, counts, and pressure state remain fixed to the canonical 24-hour window.
+
+**Cache:** `CACHE_PROFILES.standard` (~20-minute freshness keyed to successful critical-lane syncs)
 
 ### GET /api/mint-burn-events
 
@@ -566,6 +576,7 @@ An Alchemy outage does not block blacklist sync, and vice versa. Each circuit br
 - Pipeline convergence: inserted-vs-ignored accounting, bridge/effective/review burn counters, affected-hour recomputation, sync-state mode semantics
 - Backfill chunking: `done=false` and `nextFromBlock` emitted when `maxChunks` stops before target range
 - API: aggregate vs per-coin response shapes against Zod schemas, 404 for unknown coin
+- Coverage/freshness: aggregate `hours` leaves 24h coin fields unchanged, current UTC day excluded from baseline, deterministic largest-event selection on ties
 
 ---
 

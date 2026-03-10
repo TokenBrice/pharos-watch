@@ -69,11 +69,12 @@ type HourlyRow = {
   net_flow_usd: number;
 };
 
-function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow> } {
+function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow>; events: MintBurnRow[] } {
   const events: MintBurnRow[] = [];
   const hourlyRows = new Map<string, HourlyRow>();
 
   return {
+    events,
     hourlyRows,
     prepare: (sql: string) => ({
       bind: (...args: unknown[]) => ({
@@ -103,6 +104,27 @@ function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow> 
             return { success: true, meta: { changes: 1 } };
           }
 
+          if (sql.includes("UPDATE mint_burn_events")) {
+            const [burnType, burnReviewReason, id] = args as [
+              MintBurnRow["burn_type"],
+              string | null,
+              string,
+            ];
+            const existing = events.find((row) => row.id === id);
+            if (existing) {
+              existing.burn_type = burnType;
+              existing.burn_review_reason = burnReviewReason;
+              return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          }
+
+          if (sql.includes("DELETE FROM mint_burn_hourly")) {
+            const [stablecoinId, chainId, hourTs] = args as [string, string, number];
+            hourlyRows.delete(`${stablecoinId}-${chainId}-${hourTs}`);
+            return { success: true, meta: { changes: 1 } };
+          }
+
           if (sql.includes("INSERT OR REPLACE INTO mint_burn_hourly")) {
             const [stablecoinId, chainId, startTs, endTs] = args as [string, string, number, number];
             const relevant = events.filter((row) =>
@@ -111,6 +133,10 @@ function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow> 
               row.timestamp >= startTs &&
               row.timestamp < endTs,
             );
+
+            if (relevant.length === 0) {
+              return { success: true, meta: { changes: 0 } };
+            }
 
             hourlyRows.set(`${stablecoinId}-${chainId}-${startTs}`, {
               stablecoin_id: stablecoinId,
@@ -150,7 +176,7 @@ function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow> 
         },
       }),
     }),
-  } as unknown as D1Database & { hourlyRows: Map<string, HourlyRow> };
+  } as unknown as D1Database & { hourlyRows: Map<string, HourlyRow>; events: MintBurnRow[] };
 }
 
 function makeRow(overrides?: Partial<MintBurnRow>): MintBurnRow {
@@ -253,9 +279,9 @@ describe("mint-burn shared pipeline modules", () => {
     expect(affected.size).toBe(2);
 
     await recalcAffectedHours(db, affected);
-    expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(1);
-    const firstCall = vi.mocked(batchExecute).mock.calls[0];
-    expect(firstCall[1]).toHaveLength(2);
+    expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(2);
+    expect(vi.mocked(batchExecute).mock.calls[1]?.[1]).toHaveLength(2);
   });
 
   it("excludes atomic roundtrip rows from hourly aggregation", async () => {
@@ -309,6 +335,42 @@ describe("mint-burn shared pipeline modules", () => {
       burn_volume_usd: 25,
       net_flow_usd: 75,
     });
+  });
+
+  it("removes stale hourly rows when an affected bucket has no rows left after recompute", async () => {
+    const db = makeAggregationDb();
+    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
+      for (const stmt of stmts) {
+        await stmt.run();
+      }
+      return stmts.length;
+    });
+
+    const burnRow = makeRow({
+      id: "burn-effective",
+      direction: "burn",
+      burn_type: "effective_burn",
+      amount_usd: 125,
+      timestamp: 3_610,
+    });
+
+    await insertMintBurnRows(db, [burnRow]);
+    await recalcAffectedHours(db, collectAffectedHours([burnRow]));
+    expect(db.hourlyRows.get("usdt-tether-ethereum-3600")).toEqual({
+      stablecoin_id: "usdt-tether",
+      chain_id: "ethereum",
+      hour_ts: 3600,
+      mint_count: 0,
+      burn_count: 1,
+      mint_volume_usd: 0,
+      burn_volume_usd: 125,
+      net_flow_usd: -125,
+    });
+
+    db.events.length = 0;
+    await recalcAffectedHours(db, collectAffectedHours([burnRow]));
+
+    expect(db.hourlyRows.has("usdt-tether-ethereum-3600")).toBe(false);
   });
 
   it("updates burn classification rows only for burn events", async () => {

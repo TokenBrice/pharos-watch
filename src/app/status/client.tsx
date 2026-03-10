@@ -24,6 +24,8 @@ import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
 import { getStatusCronDisplay, STATUS_CRON_GROUPS } from "@/components/status/cron-config";
 import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
+import { LiquidityHealthCard } from "@/components/status/liquidity-health";
+import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 
 const SESSION_KEY = "pharos-admin-key";
@@ -269,6 +271,16 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
           shadowComparison={data.shadowComparison}
           nowSeconds={data.timestamp}
         />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Liquidity Health</h2>
+        <LiquidityHealthCard health={data.liquidityHealth} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Mint/Burn Reconciliation</h2>
+        <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
       </section>
 
       <section>

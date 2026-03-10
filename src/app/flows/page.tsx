@@ -25,6 +25,7 @@ function FlowsPageInner() {
   const [hours, setHours] = useState(720);
   const {
     data: summaryData,
+    meta: summaryMeta,
     isLoading: isSummaryLoading,
     error: summaryError,
     dataUpdatedAt: summaryUpdatedAt,
@@ -32,6 +33,7 @@ function FlowsPageInner() {
   } = useMintBurnFlows(24);
   const {
     data: chartData,
+    meta: chartMeta,
     isLoading: isChartLoading,
     error: chartError,
     dataUpdatedAt: chartUpdatedAt,
@@ -49,6 +51,8 @@ function FlowsPageInner() {
   const weeklyHourly = (hours === 168 ? chartData?.hourly : weeklyData?.hourly) ?? [];
   const error = summaryError ?? chartError;
   const hasData = !!summaryData || !!chartData;
+  const scopeLabel = summaryData?.scope?.label ?? "Ethereum-only";
+  const syncWarning = summaryData?.sync?.warning ?? chartData?.sync?.warning ?? null;
 
   return (
     <div className="space-y-6">
@@ -72,6 +76,9 @@ function FlowsPageInner() {
             status="mature"
             version={MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
           />
+          <span className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-300">
+            {scopeLabel}
+          </span>
         </div>
         <p className="text-xs text-muted-foreground">
           Methodology {MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}.{" "}
@@ -83,14 +90,20 @@ function FlowsPageInner() {
           </Link>
         </p>
         <p className="text-sm text-muted-foreground">
-          Real-time minting and redemption flows for tracked stablecoins.
+          Ethereum minting and redemption flows for tracked stablecoins.
         </p>
         <p className="text-sm text-muted-foreground">
           Net flow tells you whether tokens are being minted or burned right
           now. Pressure Shift vs 30D tells you whether today&apos;s activity is
           stronger or weaker than each coin&apos;s recent norm, and the Bank Run
-          Gauge aggregates that baseline-relative pressure across the market.
+          Gauge aggregates that baseline-relative pressure across tracked
+          Ethereum issuance and redemption activity.
         </p>
+        {syncWarning && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+            {syncWarning}
+          </div>
+        )}
       </div>
 
       {/* Error / stale banner */}
@@ -112,6 +125,7 @@ function FlowsPageInner() {
             dataUpdatedAt: summaryUpdatedAt,
             error: summaryError,
             hasData: !!summaryData,
+            meta: summaryMeta,
           },
           ...(hours !== 24
             ? [{
@@ -119,6 +133,7 @@ function FlowsPageInner() {
               dataUpdatedAt: chartUpdatedAt,
               error: chartError,
               hasData: !!chartData,
+              meta: chartMeta,
             }]
             : []),
         ]}
@@ -131,6 +146,11 @@ function FlowsPageInner() {
           weeklyHourly={weeklyHourly}
           isLoading={isSummaryLoading || (hours !== 168 && isWeeklyLoading)}
         />
+        <p className="mt-3 text-xs text-muted-foreground">
+          Coverage badges flag coins that are still bootstrapping, lagging, or
+          missing enough history for full long-window comparisons. Values marked
+          partial reflect only the covered history window.
+        </p>
       </section>
 
       {/* Section 2: Per-coin flow table */}

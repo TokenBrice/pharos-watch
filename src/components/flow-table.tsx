@@ -65,6 +65,36 @@ const PRESSURE_VALUE_CLASS: Record<PressureShiftState, string> = {
   nr: "text-muted-foreground",
 };
 
+function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; className: string } | null {
+  const status = coin.coverage?.status;
+  if (!status || status === "full") return null;
+
+  switch (status) {
+    case "partial-history":
+      return {
+        label: "Partial history",
+        className: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+      };
+    case "lagging":
+      return {
+        label: "Lagging",
+        className: "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-300",
+      };
+    case "bootstrapping":
+      return {
+        label: "Bootstrapping",
+        className: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+      };
+    case "disabled":
+      return {
+        label: "Disabled",
+        className: "border-muted-foreground/20 bg-muted/40 text-muted-foreground",
+      };
+    default:
+      return null;
+  }
+}
+
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const router = useRouter();
   const compareRows = useCallback(
@@ -302,6 +332,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
             const name = meta?.name ?? coin.symbol;
             const pressureScore = getPressureScore(coin);
             const pressureState = getPressureState(coin);
+            const coverageBadge = getCoverageBadge(coin);
             const pressureDisplay = pressureScore != null
               ? getPressureShiftDisplay(pressureScore)
               : null;
@@ -318,7 +349,19 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                       name={name}
                       size={24}
                     />
-                    <span className="font-medium">{coin.symbol}</span>
+                    <div className="flex min-w-0 flex-col items-start gap-0.5">
+                      <span className="font-medium">{coin.symbol}</span>
+                      {coverageBadge && (
+                        <span
+                          className={cn(
+                            "inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none",
+                            coverageBadge.className,
+                          )}
+                        >
+                          {coverageBadge.label}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
@@ -357,16 +400,50 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                   </span>
                 </TableCell>
                 <TableCell className="hidden text-right font-mono tabular-nums lg:table-cell">
-                  <span className={getNetColor(coin.netFlow30dUsd)}>
-                    {getNetPrefix(coin.netFlow30dUsd)}
-                    {formatCurrency(coin.netFlow30dUsd)}
-                  </span>
+                  <div
+                    className="flex items-center justify-end gap-1"
+                    title={
+                      coin.coverage?.has30dWindow === false
+                        ? "30-day window is incomplete; value reflects the covered portion only."
+                        : undefined
+                    }
+                  >
+                    <span
+                      className={cn(
+                        getNetColor(coin.netFlow30dUsd),
+                        coin.coverage?.has30dWindow === false && "opacity-60",
+                      )}
+                    >
+                      {getNetPrefix(coin.netFlow30dUsd)}
+                      {formatCurrency(coin.netFlow30dUsd)}
+                    </span>
+                    {coin.coverage?.has30dWindow === false && (
+                      <span className="text-[10px] text-muted-foreground">partial</span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="hidden text-right font-mono tabular-nums xl:table-cell">
-                  <span className={getNetColor(coin.netFlow90dUsd)}>
-                    {getNetPrefix(coin.netFlow90dUsd)}
-                    {formatCurrency(coin.netFlow90dUsd)}
-                  </span>
+                  <div
+                    className="flex items-center justify-end gap-1"
+                    title={
+                      coin.coverage?.has90dWindow === false
+                        ? "90-day window is incomplete; value reflects the covered portion only."
+                        : undefined
+                    }
+                  >
+                    <span
+                      className={cn(
+                        getNetColor(coin.netFlow90dUsd),
+                        coin.coverage?.has90dWindow === false && "opacity-60",
+                      )}
+                    >
+                      {getNetPrefix(coin.netFlow90dUsd)}
+                      {formatCurrency(coin.netFlow90dUsd)}
+                    </span>
+                    {coin.coverage?.has90dWindow === false && (
+                      <span className="text-[10px] text-muted-foreground">partial</span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="hidden text-right font-mono tabular-nums xl:table-cell">
                   {coin.largestEvent24h ? (

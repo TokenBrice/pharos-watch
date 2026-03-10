@@ -65,7 +65,42 @@ describe("handleStatus", () => {
       // cron_runs query
       {
         match: "cron_runs",
-        rows: [makeCronRow("sync-stablecoins"), makeCronRow("sync-stablecoin-charts"), makeCronRow("sync-blacklist")],
+        rows: [
+          makeCronRow("sync-stablecoins"),
+          {
+            ...makeCronRow("sync-dex-liquidity"),
+            metadata: JSON.stringify({
+              failedSources: ["defillama-yields"],
+              sourceCoverage: {
+                currentCoverage: 120,
+                previousCoverage: 125,
+                currentGlobalTvl: 123_000_000,
+                previousGlobalTvl: 125_000_000,
+                currentTop10CoveredTvl: 100_000_000,
+                previousTop10CoveredTvl: 102_000_000,
+                nearCoverageGuard: false,
+                nearValueGuard: false,
+                nearMajorCoverageGuard: false,
+                currentCoverageClasses: {
+                  primary: 80,
+                  mixed: 20,
+                  fallback: 20,
+                  legacy: 0,
+                  unobserved: 36,
+                },
+                previousCoverageClasses: {
+                  primary: 82,
+                  mixed: 18,
+                  fallback: 25,
+                  legacy: 0,
+                  unobserved: 31,
+                },
+              },
+            }),
+          },
+          makeCronRow("sync-stablecoin-charts"),
+          makeCronRow("sync-blacklist"),
+        ],
       },
       // Data quality: stablecoins cache for missing prices
       {
@@ -96,6 +131,8 @@ describe("handleStatus", () => {
       dataQuality: Record<string, unknown>;
       telegramBot: Record<string, unknown> | null;
       datasetFreshness: Record<string, number | null>;
+      liquidityHealth: Record<string, unknown> | null;
+      mintBurnReconciliation: Record<string, unknown> | null;
     };
 
     expect(body).toHaveProperty("timestamp");
@@ -106,9 +143,15 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("dataQuality");
     expect(body).toHaveProperty("telegramBot");
     expect(body).toHaveProperty("datasetFreshness");
+    expect(body).toHaveProperty("liquidityHealth");
+    expect(body).toHaveProperty("mintBurnReconciliation");
     expect(typeof body.dbHealthy).toBe("boolean");
     expect(body.datasetFreshness).toHaveProperty("stablecoins");
     expect(body.datasetFreshness).toHaveProperty("mintBurn");
+    expect(body.liquidityHealth).toMatchObject({
+      currentCoverage: 120,
+      failedSources: ["defillama-yields"],
+    });
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
@@ -355,6 +398,11 @@ describe("handleStatus", () => {
         first: { pending_count: 3 },
       },
       {
+        match: "FROM telegram_pending_alerts",
+        rows: [],
+        first: { pending_count: 4 },
+      },
+      {
         match: "GROUP BY stablecoin_id",
         rows: [
           { stablecoin_id: "usdc-circle", subscribers: 7 },
@@ -371,6 +419,9 @@ describe("handleStatus", () => {
         deliverableChats: number;
         totalSubscriptions: number;
         pendingDisambiguations: number;
+        pendingDeliveries: number;
+        customPreferenceChats: number;
+        quietHoursEnabledChats: number;
         alertTypeChats: { dews: number; depeg: number; safety: number; allTypes: number };
         topStablecoins: Array<{ stablecoinId: string; symbol: string; subscribers: number }>;
       } | null;
@@ -381,6 +432,9 @@ describe("handleStatus", () => {
     expect(body.telegramBot?.deliverableChats).toBe(9);
     expect(body.telegramBot?.totalSubscriptions).toBe(37);
     expect(body.telegramBot?.pendingDisambiguations).toBe(3);
+    expect(body.telegramBot?.pendingDeliveries).toBe(4);
+    expect(body.telegramBot?.customPreferenceChats).toBe(0);
+    expect(body.telegramBot?.quietHoursEnabledChats).toBe(0);
     expect(body.telegramBot?.alertTypeChats).toEqual({
       dews: 8,
       depeg: 7,

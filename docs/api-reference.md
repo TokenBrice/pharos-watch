@@ -441,6 +441,10 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `pegCurrency`         | `string`                | Peg currency code (`USD`, `EUR`, `GOLD`, etc.)                                                                                                |
 | `governance`          | `string`                | `"centralized"`, `"centralized-dependent"`, `"decentralized"`                                                                                 |
 | `currentDeviationBps` | `number \| null`        | Live price deviation from peg (basis points, signed). `null` for coins with supply < $1M or missing price.                                    |
+| `priceSource`         | `string`                | Primary price source used for current deviation (`defillama`, `coingecko`, `defillama-contract`, `coinmarketcap`, `dexscreener`, `cached`, etc.) |
+| `priceConfidence`     | `"high" \| "single-source" \| "low" \| "fallback" \| null` | Confidence tier attached to the primary price input |
+| `priceUpdatedAt`      | `number \| null`        | Unix seconds when the primary price was last refreshed; cached fallback prices keep the original cache timestamp |
+| `primaryTrust`        | `"authoritative" \| "confirm_required" \| "unusable"` | Whether the current primary price is trusted to mutate live depeg state directly |
 | `pegScore`            | `number \| null`        | Composite peg score 0–100 (higher = more stable)                                                                                              |
 | `pegPct`              | `number`                | % of tracked time within ±100 bps                                                                                                             |
 | `severityScore`       | `number`                | Severity sub-score (0–100)                                                                                                                    |
@@ -470,7 +474,7 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `activeDepegCount`     | `number`                      | Coins with an open depeg event                                      |
 | `medianDeviationBps`   | `number`                      | Median absolute deviation across all tracked coins                  |
 | `worstCurrent`         | `{ id, symbol, bps } \| null` | Coin with the largest current deviation                             |
-| `coinsAtPeg`           | `number`                      | Coins with current deviation < 100 bps                              |
+| `coinsAtPeg`           | `number`                      | Coins with current deviation below their live depeg threshold (100 bps for USD pegs, 150 bps for non-USD pegs) |
 | `totalTracked`         | `number`                      | Total coins in the response                                         |
 | `depegEventsToday`     | `number`                      | Number of depeg events whose `startedAt` is in the current UTC day  |
 | `depegEventsYesterday` | `number`                      | Number of depeg events whose `startedAt` is in the previous UTC day |
@@ -546,9 +550,11 @@ Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins
 
 ### `GET /api/dex-liquidity`
 
-DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all tracked stablecoins. Updated every 30 minutes. Includes 7-day trend data computed from stored history snapshots.
+DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain DEX price data for all tracked stablecoins. Updated every 30 minutes. Trend data is only returned when a trusted historical baseline exists.
 
 **Cache:** standard
+
+**Freshness note:** In addition to stale-data warnings, this endpoint can also emit a `Warning` header when the latest `sync-dex-liquidity` run finished in `degraded` or `error` state and the API is serving the last successful dataset.
 
 **Response:** Object keyed by Pharos stablecoin ID.
 
@@ -588,6 +594,11 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 | `weightedBalanceRatio` | `number \| null`           | TVL-weighted balance ratio across pools                                                                                                              |
 | `organicFraction`      | `number \| null`           | Fraction of TVL from organic (non-incentivized) pools                                                                                                |
 | `durabilityScore`      | `number \| null`           | Score for pool maturity and reliability                                                                                                              |
+| `coverageClass`        | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved"` | Coverage-confidence classification for the retained pool set |
+| `coverageConfidence`   | `number`                   | Confidence attached to the row (`1.0`, `0.85`, `0.55`, `0.5`, `0`)                                                                                  |
+| `sourceMix`            | `Record<string, { poolCount: number; tvlUsd: number }>` | TVL/pool-count mix across source families (`dl`, `cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`) |
+| `balanceMeasuredTvlUsd` | `number`                  | TVL denominator actually used for `weightedBalanceRatio`                                                                                             |
+| `organicMeasuredTvlUsd` | `number`                  | TVL denominator actually used for `organicFraction`                                                                                                  |
 | `scoreComponents`      | `ScoreComponents \| null`  | Breakdown of the composite liquidity score                                                                                                           |
 | `lockedLiquidityPct`   | `number \| null`           | TVL-weighted fraction of liquidity reported as locked by source pools                                                                                |
 | `methodologyVersion`   | `string`                   | Methodology version attributed to this row                                                                                                           |
@@ -601,7 +612,6 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 | `poolQuality`    | `number` | Pool quality sub-score             |
 | `durability`     | `number` | Durability sub-score               |
 | `pairDiversity`  | `number` | Pair diversity sub-score           |
-| `crossChain`     | `number` | Cross-chain distribution sub-score |
 
 **`DexLiquidityPool`**
 
@@ -613,6 +623,7 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 | `symbol`      | `string`              | Pool pair name (e.g. `"USDC-USDT"`)                            |
 | `volumeUsd1d` | `number`              | 24 h volume (USD)                                              |
 | `poolType`    | `string`              | Pool type (e.g. `"curve-stableswap"`, `"uniswap-v3-5bp"`)      |
+| `source`      | `string \| undefined` | Canonical source family for this retained pool                 |
 | `extra`       | `object \| undefined` | Optional detailed pool metrics (A-factor, balance ratio, etc.) |
 
 **`DexPriceSource`**
@@ -628,7 +639,7 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 
 ### `GET /api/dex-liquidity-history`
 
-Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC midnight, first sync after day rollover).
+Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC midnight, first sync after day rollover). Baseline consumers should use `coverageClass` / `coverageConfidence` before treating a history point as trend-worthy.
 
 **Cache:** slow
 
@@ -653,6 +664,8 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
     "volume24h": 1700000000,
     "score": 93,
     "date": 1771500000,
+    "coverageClass": "mixed",
+    "coverageConfidence": 0.85,
     "methodologyVersion": "3.1"
   }
 ]
@@ -664,6 +677,8 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 | `volume24h`          | `number`         | 24 h volume at time of snapshot (USD)           |
 | `score`              | `number \| null` | Liquidity score at time of snapshot             |
 | `date`               | `number`         | Unix seconds                                    |
+| `coverageClass`      | `string`         | Snapshot confidence class (`primary`, `mixed`, `fallback`, `legacy`, `unobserved`) |
+| `coverageConfidence` | `number`         | Snapshot confidence score                       |
 | `methodologyVersion` | `string`         | Methodology version attributed to this snapshot |
 
 ---
@@ -1069,9 +1084,9 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. Includes Pharos Yield Score, risk-adjusted metrics, and the current risk-free rate.
+Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. Includes Pharos Yield Score, risk-adjusted metrics, source-selection provenance, and the current risk-free rate.
 
-**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour).
+**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 1800 s (30 minutes).
 
 **Response**
 
@@ -1081,7 +1096,13 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
   "riskFreeRate": 3.76,
   "scalingFactor": 5,
   "medianApy": 4.21,
-  "updatedAt": 1772000000
+  "updatedAt": 1772000000,
+  "provenance": {
+    "selectionMethod": "confidence-weighted",
+    "benchmark": { "rate": 3.76, "recordDate": "2026-03-10", "isFallback": false },
+    "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },
+    "safetySnapshot": { "kind": "ok", "coverageRatio": 0.98 }
+  }
 }
 ```
 
@@ -1092,6 +1113,7 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 | `scalingFactor` | `number`         | Scaling factor applied in yield score computation                                                     |
 | `medianApy`     | `number`         | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics |
 | `updatedAt`     | `number`         | Unix seconds when the rankings were last computed                                                     |
+| `provenance`    | `object \| null` | Snapshot-level provenance for benchmark freshness, DeFiLlama pool input freshness, safety coverage, and selection method |
 
 **`YieldRanking`**
 
@@ -1118,6 +1140,7 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 | `apyVariance30d`   | `number`         | 30-day APY variance                                             |
 | `apyMin30d`        | `number`         | Minimum APY in last 30 days (%)                                 |
 | `apyMax30d`        | `number`         | Maximum APY in last 30 days (%)                                 |
+| `provenance`       | `object \| null` | Source-level provenance: confidence tier, selection reason, benchmark state, and source-switch metadata |
 
 ---
 
@@ -1125,7 +1148,7 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 
 Historical yield data for a single stablecoin.
 
-**Cache:** slow
+**Cache:** slow — `X-Data-Age` and `Warning` headers included.
 
 **Required query parameter**
 
@@ -1138,6 +1161,8 @@ Historical yield data for a single stablecoin.
 | Param  | Type      | Default | Bounds | Description             |
 | ------ | --------- | ------- | ------ | ----------------------- |
 | `days` | `integer` | `90`    | 1–365  | Lookback window in days |
+| `mode` | `string`  | `best`  | —      | `best` for historically selected best-source rows |
+| `sourceKey` | `string` | — | — | When present, returns source-specific history for that source key |
 
 **Response:** Array sorted by `date` ascending.
 
@@ -1149,7 +1174,13 @@ Historical yield data for a single stablecoin.
     "apyBase": 10.2,
     "apyReward": 2.2,
     "exchangeRate": 1.052,
-    "sourceTvlUsd": 5200000000
+    "sourceTvlUsd": 5200000000,
+    "sourceKey": "rate-derived",
+    "yieldSource": "T-bill proxy",
+    "yieldType": "nav-appreciation",
+    "dataSource": "rate-derived",
+    "isBest": true,
+    "sourceSwitch": false
   }
 ]
 ```
@@ -1162,6 +1193,12 @@ Historical yield data for a single stablecoin.
 | `apyReward`    | `number \| null` | Reward APY component (%); `null` if none                                   |
 | `exchangeRate` | `number \| null` | Exchange rate at snapshot time (e.g. sUSDe/USDe); `null` if not applicable |
 | `sourceTvlUsd` | `number`         | TVL of the yield source pool at snapshot time (USD)                        |
+| `sourceKey`    | `string \| null` | Stable source identifier for this history row                              |
+| `yieldSource`  | `string \| null` | Human-readable source label at that snapshot                               |
+| `yieldType`    | `string \| null` | Yield type classification at that snapshot                                 |
+| `dataSource`   | `string \| null` | Underlying data-source family                                              |
+| `isBest`       | `boolean`        | Whether this row was the selected best source at that timestamp            |
+| `sourceSwitch` | `boolean`        | True when the historically selected best source changed at this row        |
 
 ---
 
@@ -1176,7 +1213,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | Param        | Type      | Default | Bounds | Description                                                               |
 | ------------ | --------- | ------- | ------ | ------------------------------------------------------------------------- |
 | `stablecoin` | `string`  | —       | —      | Filter to a single stablecoin ID. Changes response shape to per-coin mode |
-| `hours`      | `integer` | `24`    | 1–720  | Lookback window in hours                                                  |
+| `hours`      | `integer` | `24`    | 1–720  | Lookback window for the returned `hourly[]` series                        |
 
 **Response (aggregate mode — no `stablecoin` param)**
 
@@ -1192,7 +1229,10 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
   },
   "coins": [CoinFlow, ...],
   "hourly": [HourlyFlow, ...],
-  "updatedAt": 1772000000
+  "updatedAt": 1772000000,
+  "windowHours": 24,
+  "scope": { "chainIds": ["ethereum"], "label": "Ethereum-only" },
+  "sync": { "lastSuccessfulSyncAt": 1772000200, "freshnessStatus": "fresh", "warning": null, "criticalLaneHealthy": true }
 }
 ```
 
@@ -1206,6 +1246,14 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `flightIntensity` | `number`         | Flight-to-quality intensity (0–100). 0 when not active                                               |
 | `trackedCoins`    | `number`         | Number of stablecoins tracked for mint/burn flows                                                    |
 | `trackedMcapUsd`  | `number`         | Combined market cap of tracked coins (USD)                                                           |
+
+**Top-level metadata**
+
+| Field         | Type     | Description                                                                                   |
+| ------------- | -------- | --------------------------------------------------------------------------------------------- |
+| `windowHours` | `number` | Requested chart window for `hourly[]`                                                         |
+| `scope`       | `object` | Current ingestion scope, currently `{ chainIds: ["ethereum"], label: "Ethereum-only" }`      |
+| `sync`        | `object` | Latest critical-lane freshness metadata and warning state                                     |
 
 **`CoinFlow`**
 
@@ -1221,15 +1269,16 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `baselineDailyNetUsd` | `number \| null`                                 | Average daily net flow over the baseline window used for scoring                                             |
 | `baselineDailyAbsUsd` | `number \| null`                                 | Average daily absolute flow over the baseline window used for scoring                                        |
 | `baselineDataDays`    | `number \| null`                                 | Number of tracked days contributing to the baseline window                                                   |
-| `netFlow24hUsd`       | `number`                                         | Raw 24h net flow (USD, positive = net minting, negative = net burning)                                       |
-| `mintVolume24hUsd`    | `number`                                         | Total mint volume (USD)                                                                                      |
-| `burnVolume24hUsd`    | `number`                                         | Total burn volume (USD)                                                                                      |
-| `mintCount24h`        | `number`                                         | Number of mint events                                                                                        |
-| `burnCount24h`        | `number`                                         | Number of burn events                                                                                        |
+| `netFlow24hUsd`       | `number`                                         | Raw 24h net flow (USD, positive = net minting, negative = net burning). Fixed to the canonical 24h window even when `hours` changes |
+| `mintVolume24hUsd`    | `number`                                         | Total mint volume in the canonical 24h window (USD)                                                          |
+| `burnVolume24hUsd`    | `number`                                         | Total burn volume in the canonical 24h window (USD)                                                          |
+| `mintCount24h`        | `number`                                         | Number of mint events in the canonical 24h window                                                            |
+| `burnCount24h`        | `number`                                         | Number of burn events in the canonical 24h window                                                            |
 | `netFlow7dUsd`        | `number`                                         | 7-day net flow (USD)                                                                                         |
 | `netFlow30dUsd`       | `number`                                         | 30-day net flow (USD)                                                                                        |
 | `netFlow90dUsd`       | `number`                                         | 90-day net flow (USD)                                                                                        |
 | `largestEvent24h`     | `object \| null`                                 | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }`                                 |
+| `coverage`            | `object \| undefined`                            | Coverage metadata: `startBlock`, `lastSyncedBlock`, `lagBlocks`, `historyStartAt`, window booleans, and `status` |
 
 **`HourlyFlow`**
 
@@ -1255,7 +1304,10 @@ Returns per-chain breakdown and hourly timeseries for a single coin. Returns `40
   "burnCount": 8,
   "chains": [{ "chainId": "ethereum", "mintVolumeUsd": 40000000, ... }],
   "hourly": [HourlyFlow, ...],
-  "updatedAt": 1772000000
+  "updatedAt": 1772000000,
+  "windowHours": 24,
+  "scope": { "chainIds": ["ethereum"], "label": "Ethereum-only" },
+  "sync": { "lastSuccessfulSyncAt": 1772000200, "freshnessStatus": "fresh", "warning": null, "criticalLaneHealthy": true }
 }
 ```
 
@@ -1484,7 +1536,11 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/subscribe <types> <tickers>` — Subscribe to alerts (types: dews, depeg, safety)
 - `/unsubscribe <tickers>` — Remove coin subscriptions
 - `/unsubscribe all` — Remove all subscriptions
-- `/list` — Show current subscriptions
+- `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes
+- `/mute <start>-<end>` — Enable UTC quiet hours
+- `/unmutehours` — Disable quiet hours
+- `/cancel` — Cancel a pending disambiguation flow
+- `/list` — Show current subscriptions, per-coin settings, and quiet hours
 - `/help` — Command reference
 
 ---
@@ -1495,7 +1551,7 @@ These endpoints require an `X-Admin-Key` header matching the `ADMIN_KEY` Worker 
 
 ### `GET /api/status`
 
-Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, and Telegram bot subscriber stats.
+Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
@@ -1585,7 +1641,10 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "totalSubscriptions": 611,
     "avgSubscriptionsPerSubscribedChat": 4.9,
     "pendingDisambiguations": 1,
+    "pendingDeliveries": 6,
     "lastSubscriberActivityAt": 1771856420,
+    "customPreferenceChats": 47,
+    "quietHoursEnabledChats": 18,
     "alertTypeChats": {
       "dews": 121,
       "depeg": 118,
@@ -1612,6 +1671,40 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "degradedCrons": 1,
     "cronErrors": 0,
     "worstCacheRatio": 1.03
+  },
+  "liquidityHealth": {
+    "lastRunStatus": "degraded",
+    "currentCoverage": 120,
+    "previousCoverage": 125,
+    "currentGlobalTvl": 123000000,
+    "previousGlobalTvl": 125000000,
+    "currentTop10CoveredTvl": 100000000,
+    "previousTop10CoveredTvl": 102000000,
+    "failedSources": ["defillama-yields"],
+    "nearCoverageGuard": false,
+    "nearValueGuard": false,
+    "nearMajorCoverageGuard": false,
+    "currentCoverageClasses": { "primary": 80, "mixed": 20, "fallback": 20, "legacy": 0, "unobserved": 36 },
+    "previousCoverageClasses": { "primary": 82, "mixed": 18, "fallback": 25, "legacy": 0, "unobserved": 31 }
+  },
+  "mintBurnReconciliation": {
+    "checkedAt": 1771856453,
+    "comparedCoins": 42,
+    "criticalCount": 1,
+    "warnCount": 3,
+    "insufficientCount": 12,
+    "rows": [
+      {
+        "stablecoinId": "usdt-tether",
+        "symbol": "USDT",
+        "flowNet24hUsd": -240000000,
+        "chainSupplyDelta24hUsd": -220000000,
+        "absoluteDiffUsd": 20000000,
+        "diffRatio": 0.08,
+        "status": "warn",
+        "coverageStatus": "full"
+      }
+    ]
   }
 }
 ```
@@ -1627,6 +1720,12 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 `dbHealthy=false` means the DB sentinel failed (`SELECT 1`), so status is forced to at least degraded and data-quality/database freshness queries are skipped.
 
 `telegramBot` is `null` when the Telegram tables are unavailable in the current environment (for example, migrations not yet applied in dev/staging). The rest of `/api/status` still resolves normally.
+
+`crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `suppressedMethodologyChanges`).
+
+`liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
+
+`mintBurnReconciliation` compares 24h Ethereum mint/burn net flow (`mint_burn_hourly`) against the cached stablecoins payload's Ethereum chain-supply delta (`chainCirculating.ethereum.current - circulatingPrevDay`). It is intended for operator diagnostics, not public scoring.
 
 ### `GET /api/status-history`
 

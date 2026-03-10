@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "4.6",
+  currentVersion: "4.7",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "4.7",
+    title: "Closed-day baseline, fixed aggregate 24h semantics, and coverage disclosures",
+    date: "2026-03-10",
+    effectiveAt: 1773144000,
+    summary:
+      "Pressure Shift now compares live 24-hour flows against trailing fully closed daily baselines, aggregate API 24h fields are fixed regardless of chart window, and the product now exposes Ethereum-only scope plus coverage/freshness metadata.",
+    impact: [
+      "Pressure Shift baseline now excludes the current UTC day and uses the last 30 fully closed daily buckets",
+      "Aggregate `/api/mint-burn-flows?hours=N` now keeps coin-level 24h fields fixed to the canonical 24h window while only the hourly series respects `hours`",
+      "Aggregate flow API now exposes `scope`, `sync`, `windowHours`, and per-coin `coverage` metadata",
+      "The `/flows` page now labels the feature as Ethereum-only and visually marks partial-history or lagging coverage states",
+      "Flow freshness headers now follow successful sync timestamps instead of latest event timestamps, avoiding false staleness during quiet periods",
+    ],
+    commits: ["unreleased"],
+    reconstructed: false,
+  },
   {
     version: "4.6",
     title: "Safe-frontier ingestion and counted event-history alignment",

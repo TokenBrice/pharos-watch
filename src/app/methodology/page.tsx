@@ -1270,7 +1270,7 @@ export default function MethodologyPage() {
               {/* Aggregation */}
               <div className="rounded-lg border p-3 text-center flex-1 flex flex-col justify-center">
                 <p className="text-foreground font-medium">Hourly Buckets</p>
-                <p className="text-xs text-muted-foreground mt-0.5">30-day rolling baseline</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Trailing 30 closed daily Ethereum buckets</p>
               </div>
               <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
               <div className="flex flex-col gap-2 flex-1">
@@ -1312,7 +1312,7 @@ export default function MethodologyPage() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium">Hourly Buckets</p>
-                <p className="text-xs text-muted-foreground mt-0.5">30-day rolling baseline</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Trailing 30 closed daily Ethereum buckets</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="grid w-full gap-2">
@@ -1370,7 +1370,7 @@ export default function MethodologyPage() {
               <h3 className="text-foreground font-medium">Pressure Shift vs 30D</h3>
               <p>
                 This is the existing Flow Intensity formula under clearer naming. It measures how far current 24-hour
-                flow pressure deviates from the coin&apos;s own 30-day baseline.
+                flow pressure deviates from the coin&apos;s own trailing 30 fully closed daily Ethereum baseline.
               </p>
               <p className="font-mono text-xs bg-muted rounded px-3 py-2">
                 denominator = max(baselineDailyAbs &times; 0.3, $1M)
@@ -1381,8 +1381,8 @@ export default function MethodologyPage() {
               </p>
               <ul className="list-disc list-inside space-y-1">
                 <li>
-                  <span className="text-foreground">Baseline period</span> &mdash; 30-day rolling average of daily net
-                  flows and absolute volumes
+                  <span className="text-foreground">Baseline period</span> &mdash; trailing 30 fully closed UTC days of
+                  Ethereum daily net flows and absolute volumes, excluding the current partial day
                 </li>
                 <li>
                   <span className="text-foreground">Minimum data</span> &mdash; requires 7 days of history; returns null
@@ -1412,7 +1412,7 @@ export default function MethodologyPage() {
               <h3 className="text-foreground font-medium">Bank Run Gauge</h3>
               <p>
                 Market-cap-weighted composite of all tracked coins&apos; pressure-shift values, producing a single
-                ecosystem-wide pressure reading. The gauge score maps to one of seven condition bands:
+                ecosystem-wide Ethereum flow-pressure reading. The gauge score maps to one of seven condition bands:
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -1514,15 +1514,16 @@ export default function MethodologyPage() {
             </Link>
           </div>
           <p className="text-xs text-muted-foreground">
-            Version increments when APY source resolution, PYS scoring logic, or eligibility rules for discovered yield
-            sources change.
+            Version increments when APY source resolution, source arbitration, history semantics, PYS scoring logic, or
+            eligibility rules for discovered yield sources change.
           </p>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the Pharos Yield Score
-            (PYS). Data is refreshed every 30 minutes using a three-tier APY resolution strategy, with alternative
-            sources retained when multiple valid yield paths exist.
+            (PYS). Data is refreshed every 30 minutes using a source-aware APY resolution strategy, with alternative
+            sources retained when multiple valid yield paths exist and confidence-weighted arbitration selecting the
+            primary row.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
@@ -1531,7 +1532,7 @@ export default function MethodologyPage() {
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">APY priority</p>
-              <p className="text-foreground">On-chain, then DeFiLlama, then price</p>
+              <p className="text-foreground">Confidence-weighted across deterministic, curated, and fallback sources</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Output</p>
@@ -1544,16 +1545,16 @@ export default function MethodologyPage() {
               facts={[
                 {
                   label: "Minimum data",
-                  value: "Need one resolved APY tier; Tier 1 additionally needs a prior exchange-rate history point",
+                  value: "Need one resolved APY source; deterministic exchange-rate sources additionally need prior source-specific history",
                 },
                 {
                   label: "Required sources",
-                  value: "Direct on-chain reads or DeFiLlama pools; Tier 3 needs current and ~30d-old prices",
+                  value: "Direct on-chain reads, curated DeFiLlama pools, rate-derived benchmark inputs, or 30d price history",
                 },
                 {
                   label: "Failure behavior",
                   value:
-                    "No resolved tier skips coin update; PYS returns 0 when apy30d <= 0 (safety defaults to 40 if missing)",
+                    "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 (safety defaults to 40 if missing), while degraded benchmark or safety inputs are surfaced in provenance",
                 },
               ]}
             />
@@ -1569,7 +1570,7 @@ export default function MethodologyPage() {
             </p>
           </WorkedExample>
 
-          <MethodologyDetails summary="Technical details: APY tier resolution, PYS formula, NAV handling, and limits">
+          <MethodologyDetails summary="Technical details: APY source resolution, confidence arbitration, PYS formula, NAV handling, and limits">
             {/* Yield pipeline diagram — desktop: horizontal */}
             <div className="hidden md:flex items-stretch gap-4">
               {/* Three tiers */}
@@ -1584,7 +1585,7 @@ export default function MethodologyPage() {
                 </div>
                 <div className="rounded-lg border p-3 text-center flex-1">
                   <p className="text-foreground font-medium">Tier 3</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Price-derived (NAV)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Price- or rate-derived fallback</p>
                 </div>
               </div>
               <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
@@ -1654,7 +1655,7 @@ export default function MethodologyPage() {
 
             {/* APY Resolution tiers */}
             <div className="space-y-2">
-              <h3 className="text-foreground font-medium">APY Resolution (three-tier)</h3>
+              <h3 className="text-foreground font-medium">APY Resolution and Source Arbitration</h3>
               <ul className="list-disc list-inside space-y-1">
                 <li>
                   <span className="text-foreground">Tier 1 &mdash; Direct on-chain reads</span>: reads protocol state
@@ -1669,10 +1670,20 @@ export default function MethodologyPage() {
                   <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives
                   APY from the 30-day price appreciation in supply_history
                 </li>
+                <li>
+                  <span className="text-foreground">Tier 4 &mdash; Rate-derived</span>: for dividend-distributing and
+                  Treasury-tracking tokens, derives APY from the cached 3-month Treasury benchmark net of known fee
+                  spreads
+                </li>
               </ul>
               <p>
-                Each tier is tried in order; Tier 1 and Tier 2 can both contribute rows, then the highest-APY source is
-                marked primary and the rest remain as alternatives.
+                Deterministic and curated paths can all contribute rows, then a confidence-weighted arbitration layer
+                chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when a
+                canonical source disagrees materially.
+              </p>
+              <p>
+                Trailing APY metrics are computed from source-specific history rather than a mixed coin-level series, so
+                source switches no longer contaminate the displayed 7d/30d averages.
               </p>
             </div>
 
@@ -1766,8 +1777,9 @@ export default function MethodologyPage() {
             tries to anticipate future depeg risk before it fully manifests.
           </p>
           <p>
-            Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets, and a
-            per-coin peg score that penalizes time off peg, event severity, active depegs, and unstable event spread.
+            Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets,
+            low-confidence primary prices, and extreme moves, plus a per-coin peg score that penalizes time off peg,
+            event severity, active depegs, and unstable event spread.
           </p>
           <p>
             DEX cross-validation uses explicit trust gates. Detection and pending confirmation only trust fresh DEX

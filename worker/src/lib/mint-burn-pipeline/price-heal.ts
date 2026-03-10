@@ -8,6 +8,30 @@ interface PriceHealResult {
   affectedHours: Map<string, MintBurnAffectedHour>;
 }
 
+export interface NullPriceBacklogSummary {
+  recent: number;
+  historical: number;
+}
+
+export async function getNullPriceBacklog(
+  db: D1Database,
+  nowSec: number,
+): Promise<NullPriceBacklogSummary> {
+  const cutoff = nowSec - LOOKBACK_SEC;
+  const row = await db.prepare(
+    `SELECT
+       SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) as recent_count,
+       SUM(CASE WHEN timestamp < ? THEN 1 ELSE 0 END) as historical_count
+     FROM mint_burn_events
+     WHERE amount_usd IS NULL`,
+  ).bind(cutoff, cutoff).first<{ recent_count: number | null; historical_count: number | null }>();
+
+  return {
+    recent: row?.recent_count ?? 0,
+    historical: row?.historical_count ?? 0,
+  };
+}
+
 /**
  * Find recent mint_burn_events with NULL amount_usd, resolve prices
  * from price_cache, and update. Returns count of healed events and

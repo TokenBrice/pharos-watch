@@ -297,6 +297,7 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
 // --- Price confidence (dual-primary validation) ---
 
 export type PriceConfidence = "high" | "single-source" | "low" | "fallback";
+export type DepegPrimaryTrust = "authoritative" | "confirm_required" | "unusable";
 
 // --- API data types (DefiLlama responses) ---
 
@@ -308,6 +309,9 @@ export interface PegAssetBase {
   id: string;
   symbol: string;
   price?: number | null;
+  priceSource?: string | null;
+  priceConfidence?: PriceConfidence | null;
+  priceUpdatedAt?: number | null;
   pegType?: string;
   circulating?: Record<string, number>;
 }
@@ -435,6 +439,7 @@ const ChainCirculatingSchema = z.record(
 );
 
 const PriceConfidenceSchema = z.enum(["high", "single-source", "low", "fallback"]);
+const DepegPrimaryTrustSchema = z.enum(["authoritative", "confirm_required", "unusable"]);
 
 const StablecoinDataRawSchema = z.object({
   id: z.string(),
@@ -447,6 +452,7 @@ const StablecoinDataRawSchema = z.object({
   price: z.number().nullable(),
   priceSource: z.string(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  priceUpdatedAt: z.number().nullable().optional(),
   supplySource: z.string().optional(),
   circulating: PegBucketsSchema,
   circulatingPrevDay: PegBucketsSchema.nullish(),
@@ -466,6 +472,7 @@ const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
   price: asset.price,
   priceSource: asset.priceSource,
   priceConfidence: asset.priceConfidence ?? null,
+  priceUpdatedAt: asset.priceUpdatedAt ?? null,
   supplySource: asset.supplySource,
   circulating: asset.circulating,
   circulatingPrevDay: asset.circulatingPrevDay ?? {},
@@ -537,6 +544,33 @@ export type BluechipRatingsMap = Record<string, BluechipRating>;
 // - If runtime schema and TS type are 1:1, export via z.infer.
 // - Keep hand-written interfaces only when they intentionally narrow/widen schema typing.
 
+export const LiquidityPoolSourceFamilySchema = z.enum([
+  "dl",
+  "cg_onchain",
+  "gecko_terminal",
+  "dexscreener",
+  "cg_tickers",
+]);
+export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamilySchema>;
+
+export const LiquidityCoverageClassSchema = z.enum([
+  "primary",
+  "mixed",
+  "fallback",
+  "legacy",
+  "unobserved",
+]);
+export type LiquidityCoverageClass = z.infer<typeof LiquidityCoverageClassSchema>;
+
+const LiquiditySourceMixEntrySchema = z.object({
+  poolCount: z.number(),
+  tvlUsd: z.number(),
+});
+export type LiquiditySourceMixEntry = z.infer<typeof LiquiditySourceMixEntrySchema>;
+
+export const LiquiditySourceMixSchema = z.record(z.string(), LiquiditySourceMixEntrySchema);
+export type LiquiditySourceMix = Record<string, LiquiditySourceMixEntry>;
+
 const DexLiquidityPoolSchema = z.object({
   project: z.string(),
   chain: z.string(),
@@ -544,6 +578,7 @@ const DexLiquidityPoolSchema = z.object({
   symbol: z.string(),
   volumeUsd1d: z.number(),
   poolType: z.string(),
+  source: LiquidityPoolSourceFamilySchema.optional(),
   extra: z
     .object({
       amplificationCoefficient: z.number().optional(),
@@ -603,6 +638,11 @@ const DexLiquidityDataSchema = z.object({
   weightedBalanceRatio: z.number().nullable(),
   organicFraction: z.number().nullable(),
   durabilityScore: z.number().nullable(),
+  coverageClass: LiquidityCoverageClassSchema,
+  coverageConfidence: z.number(),
+  sourceMix: LiquiditySourceMixSchema,
+  balanceMeasuredTvlUsd: z.number(),
+  organicMeasuredTvlUsd: z.number(),
   scoreComponents: z
     .object({
       tvlDepth: z.number(),
@@ -623,6 +663,8 @@ export interface DexLiquidityHistoryPoint {
   volume24h: number;
   score: number | null;
   date: number;
+  coverageClass: LiquidityCoverageClass;
+  coverageConfidence: number;
   methodologyVersion: string;
 }
 
@@ -966,7 +1008,10 @@ export interface TelegramBotStats {
   totalSubscriptions: number;
   avgSubscriptionsPerSubscribedChat: number;
   pendingDisambiguations: number;
+  pendingDeliveries: number;
   lastSubscriberActivityAt: number | null;
+  customPreferenceChats: number;
+  quietHoursEnabledChats: number;
   alertTypeChats: {
     dews: number;
     depeg: number;
@@ -1039,6 +1084,42 @@ export interface PriceSourceHealth {
   lastSync: number;
 }
 
+export interface LiquidityHealth {
+  lastRunStatus: string | null;
+  currentCoverage: number;
+  previousCoverage: number | null;
+  currentGlobalTvl: number | null;
+  previousGlobalTvl: number | null;
+  currentTop10CoveredTvl: number | null;
+  previousTop10CoveredTvl: number | null;
+  failedSources: string[];
+  nearCoverageGuard: boolean;
+  nearValueGuard: boolean;
+  nearMajorCoverageGuard: boolean;
+  currentCoverageClasses: Record<LiquidityCoverageClass, number>;
+  previousCoverageClasses: Record<LiquidityCoverageClass, number>;
+}
+
+export interface MintBurnReconciliationRow {
+  stablecoinId: string;
+  symbol: string;
+  flowNet24hUsd: number;
+  chainSupplyDelta24hUsd: number | null;
+  absoluteDiffUsd: number | null;
+  diffRatio: number | null;
+  status: "ok" | "warn" | "critical" | "insufficient-source";
+  coverageStatus: MintBurnCoverageStatus | "unknown";
+}
+
+export interface MintBurnReconciliationSummary {
+  checkedAt: number;
+  comparedCoins: number;
+  criticalCount: number;
+  warnCount: number;
+  insufficientCount: number;
+  rows: MintBurnReconciliationRow[];
+}
+
 export interface StatusResponse {
   timestamp: number;
   dbHealthy: boolean;
@@ -1068,9 +1149,11 @@ export interface StatusResponse {
     cronErrors: number;
     worstCacheRatio: number;
   };
+  liquidityHealth: LiquidityHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
   shadowComparison: ShadowComparisonResult | null;
   discoveryCandidates: DiscoveryCandidate[] | null;
+  mintBurnReconciliation: MintBurnReconciliationSummary | null;
 }
 
 export interface StatusHistoryResponse {
@@ -1170,6 +1253,10 @@ const PegSummaryCoinSchema = z.object({
   governance: z.string(),
   currentDeviationBps: z.number().nullable(),
   pegScore: z.number().nullable(),
+  priceSource: z.string().optional(),
+  priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  priceUpdatedAt: z.number().nullable().optional(),
+  primaryTrust: DepegPrimaryTrustSchema.optional(),
   pegPct: z.number(),
   severityScore: z.number(),
   spreadPenalty: z.number(),
@@ -1200,6 +1287,7 @@ const PegSummaryStatsSchema = z.object({
   totalTracked: z.number(),
   depegEventsToday: z.number(),
   depegEventsYesterday: z.number(),
+  fallbackPegRates: z.array(z.string()).optional(),
 });
 export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
 
@@ -1285,14 +1373,70 @@ export interface AltYieldSource {
   dataSource: string;
 }
 
+export interface YieldBenchmarkMeta {
+  rate: number;
+  recordDate: string | null;
+  fetchedAt: number | null;
+  ageSeconds: number | null;
+  source: string;
+  isFallback: boolean;
+  fallbackMode: string | null;
+}
+
+export interface YieldSourceInputMeta {
+  mode: "dex-cache" | "direct-fetch" | "unavailable";
+  updatedAt: number | null;
+  ageSeconds: number | null;
+  poolCount: number;
+  fallbackMode: string | null;
+}
+
+export interface YieldSafetySnapshotMeta {
+  kind: "ok" | "degraded";
+  coverageRatio: number;
+  coveredCount: number;
+  trackedCount: number;
+  reason: string | null;
+}
+
+export interface YieldRankingProvenance {
+  sourceKey: string;
+  sourceObservedAt: number;
+  sourceAgeSeconds: number;
+  confidenceTier: "deterministic" | "curated" | "discovered" | "fallback";
+  selectionMethod: "confidence-weighted";
+  selectionReason: string;
+  sourceSwitch: boolean;
+  previousBestSourceKey: string | null;
+  usedLegacyHistory: boolean;
+  usedDefaultSafety: boolean;
+  benchmarkRecordDate: string | null;
+  benchmarkIsFallback: boolean;
+  benchmarkFallbackMode: string | null;
+  anomalies: string[];
+}
+
+export interface YieldRankingsProvenance {
+  selectionMethod: "confidence-weighted";
+  benchmark: YieldBenchmarkMeta;
+  dlPools: YieldSourceInputMeta;
+  safetySnapshot: YieldSafetySnapshotMeta;
+}
+
 export interface YieldHistoryPoint {
-  date: string;
+  date: number | string;
   apy: number;
   apyBase: number | null;
   apyReward: number | null;
   exchangeRate: number | null;
   sourceTvlUsd: number | null;
   warningSignals: string[];
+  sourceKey?: string | null;
+  yieldSource?: string | null;
+  yieldType?: YieldType | null;
+  dataSource?: string | null;
+  isBest?: boolean;
+  sourceSwitch?: boolean;
 }
 
 const AltYieldSourceSchema = z.object({
@@ -1303,6 +1447,56 @@ const AltYieldSourceSchema = z.object({
   apy30d: z.number(),
   sourceTvlUsd: z.number().nullable(),
   dataSource: z.string(),
+});
+
+const YieldBenchmarkMetaSchema = z.object({
+  rate: z.number(),
+  recordDate: z.string().nullable(),
+  fetchedAt: z.number().nullable(),
+  ageSeconds: z.number().nullable(),
+  source: z.string(),
+  isFallback: z.boolean(),
+  fallbackMode: z.string().nullable(),
+});
+
+const YieldSourceInputMetaSchema = z.object({
+  mode: z.enum(["dex-cache", "direct-fetch", "unavailable"]),
+  updatedAt: z.number().nullable(),
+  ageSeconds: z.number().nullable(),
+  poolCount: z.number(),
+  fallbackMode: z.string().nullable(),
+});
+
+const YieldSafetySnapshotMetaSchema = z.object({
+  kind: z.enum(["ok", "degraded"]),
+  coverageRatio: z.number(),
+  coveredCount: z.number(),
+  trackedCount: z.number(),
+  reason: z.string().nullable(),
+});
+
+const YieldRankingProvenanceSchema = z.object({
+  sourceKey: z.string(),
+  sourceObservedAt: z.number(),
+  sourceAgeSeconds: z.number(),
+  confidenceTier: z.enum(["deterministic", "curated", "discovered", "fallback"]),
+  selectionMethod: z.literal("confidence-weighted"),
+  selectionReason: z.string(),
+  sourceSwitch: z.boolean(),
+  previousBestSourceKey: z.string().nullable(),
+  usedLegacyHistory: z.boolean(),
+  usedDefaultSafety: z.boolean(),
+  benchmarkRecordDate: z.string().nullable(),
+  benchmarkIsFallback: z.boolean(),
+  benchmarkFallbackMode: z.string().nullable(),
+  anomalies: z.array(z.string()),
+});
+
+const YieldRankingsProvenanceSchema = z.object({
+  selectionMethod: z.literal("confidence-weighted"),
+  benchmark: YieldBenchmarkMetaSchema,
+  dlPools: YieldSourceInputMetaSchema,
+  safetySnapshot: YieldSafetySnapshotMetaSchema,
 });
 
 // Keep manual interface: includes YieldType and ReportCardGrade narrow unions not represented by schema strings.
@@ -1330,6 +1524,7 @@ export interface YieldRanking {
   apyMax30d: number | null;
   warningSignals: string[];
   altSources: AltYieldSource[];
+  provenance?: YieldRankingProvenance | null;
 }
 
 const YieldRankingSchema = z.object({
@@ -1356,6 +1551,7 @@ const YieldRankingSchema = z.object({
   apyMax30d: z.number().nullable(),
   warningSignals: z.array(z.string()),
   altSources: z.array(AltYieldSourceSchema).optional().default([]),
+  provenance: YieldRankingProvenanceSchema.nullable().optional(),
 });
 
 // Keep manual interface: downstream callers expect rankings typed via YieldRanking with narrow unions.
@@ -1365,6 +1561,7 @@ export interface YieldRankingsResponse {
   scalingFactor: number;
   medianApy: number;
   updatedAt: number;
+  provenance?: YieldRankingsProvenance | null;
 }
 
 export const YieldRankingsResponseSchema = z.object({
@@ -1373,6 +1570,7 @@ export const YieldRankingsResponseSchema = z.object({
   scalingFactor: z.number(),
   medianApy: z.number(),
   updatedAt: z.number(),
+  provenance: YieldRankingsProvenanceSchema.nullable().optional(),
 });
 
 // --- Mint/Burn Flow types ---
@@ -1392,6 +1590,42 @@ const MintBurnGaugeSchema = z.object({
   trackedMcapUsd: z.number(),
 });
 export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
+
+const MintBurnScopeSchema = z.object({
+  chainIds: z.array(z.string()),
+  label: z.string(),
+});
+export type MintBurnScope = z.infer<typeof MintBurnScopeSchema>;
+
+const MintBurnSyncSchema = z.object({
+  lastSuccessfulSyncAt: z.number().nullable(),
+  freshnessStatus: z.enum(["fresh", "degraded", "stale"]),
+  warning: z.string().nullable(),
+  criticalLaneHealthy: z.boolean(),
+});
+export type MintBurnSync = z.infer<typeof MintBurnSyncSchema>;
+
+const MintBurnCoverageStatusSchema = z.enum([
+  "full",
+  "partial-history",
+  "lagging",
+  "bootstrapping",
+  "disabled",
+]);
+export type MintBurnCoverageStatus = z.infer<typeof MintBurnCoverageStatusSchema>;
+
+const MintBurnCoinCoverageSchema = z.object({
+  startBlock: z.number(),
+  lastSyncedBlock: z.number().nullable(),
+  lagBlocks: z.number().nullable(),
+  historyStartAt: z.number().nullable(),
+  has24hWindow: z.boolean(),
+  has30dWindow: z.boolean(),
+  has90dWindow: z.boolean(),
+  isPartial: z.boolean(),
+  status: MintBurnCoverageStatusSchema,
+});
+export type MintBurnCoinCoverage = z.infer<typeof MintBurnCoinCoverageSchema>;
 
 const MintBurnCoinFlowSchema = z.object({
   stablecoinId: z.string(),
@@ -1421,6 +1655,7 @@ const MintBurnCoinFlowSchema = z.object({
       timestamp: z.number(),
     })
     .nullable(),
+  coverage: MintBurnCoinCoverageSchema.optional(),
 });
 export type MintBurnCoinFlow = z.infer<typeof MintBurnCoinFlowSchema>;
 
@@ -1437,6 +1672,9 @@ export const MintBurnFlowsResponseSchema = z.object({
   coins: z.array(MintBurnCoinFlowSchema),
   hourly: z.array(MintBurnHourlyBucketSchema),
   updatedAt: z.number(),
+  windowHours: z.number().int().positive().optional(),
+  scope: MintBurnScopeSchema.optional(),
+  sync: MintBurnSyncSchema.optional(),
 });
 export type MintBurnFlowsResponse = z.infer<typeof MintBurnFlowsResponseSchema>;
 
@@ -1460,6 +1698,9 @@ export const MintBurnPerCoinResponseSchema = z.object({
   chains: z.array(MintBurnPerCoinChainSchema),
   hourly: z.array(MintBurnHourlyBucketSchema),
   updatedAt: z.number(),
+  windowHours: z.number().int().positive().optional(),
+  scope: MintBurnScopeSchema.optional(),
+  sync: MintBurnSyncSchema.optional(),
 });
 export type MintBurnPerCoinResponse = z.infer<typeof MintBurnPerCoinResponseSchema>;
 

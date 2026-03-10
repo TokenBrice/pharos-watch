@@ -20,7 +20,7 @@ import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
-import { healNullPrices } from "../lib/mint-burn-pipeline/price-heal";
+import { getNullPriceBacklog, healNullPrices } from "../lib/mint-burn-pipeline/price-heal";
 import {
   collectAffectedHours,
   insertMintBurnRows,
@@ -776,6 +776,7 @@ export async function syncMintBurn(
 
   // Auto-heal NULL prices for recent events (only on non-error runs).
   let nullPricesHealed = 0;
+  const nullPriceBacklog = await getNullPriceBacklog(db, Math.floor(Date.now() / 1000));
   if (status !== "error") {
     try {
       const healResult = await healNullPrices(db, Math.floor(Date.now() / 1000));
@@ -791,6 +792,7 @@ export async function syncMintBurn(
   const metadata = JSON.stringify({
     lane,
     jobName,
+    chainHead,
     rowsRead,
     rowsParsed,
     rowsInserted,
@@ -831,6 +833,7 @@ export async function syncMintBurn(
     degradedStreak,
     runStatePersistenceFailed,
     nullPricesHealed,
+    nullPriceBacklog,
   });
 
   await reportProgress?.({

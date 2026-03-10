@@ -1,7 +1,16 @@
-import { getCache, setCache } from "../lib/db";
-import { withErrorHandler, addFreshnessHeaders, resolveOrReject, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
+import { getCache, setCacheIfNewer } from "../lib/db";
+import {
+  withErrorHandler,
+  addFreshnessHeaders,
+  resolveOrReject,
+  errorResponse,
+  parseIntParam,
+  jsonResponse,
+  getLatestSuccessfulCronTimestamp,
+} from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_CONFIGS, SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
+import { readMintBurnSyncStateBatch } from "../lib/mint-burn-pipeline/sync-state";
 import {
   computeFlowIntensity,
   computeGaugeScore,
@@ -116,9 +125,24 @@ interface EventRow {
 
 const DAY_SEC = 86400;
 const BASELINE_WINDOW_DAYS = 30;
-const FLOW_MAX_AGE_SEC = 300;
+const FLOW_MAX_AGE_SEC = 20 * 60;
 const FLOW_CACHE_PREFIX = "mint-burn-flows:v2";
 const ETHEREUM_CHAIN_ID = "ethereum";
+const FLOW_DEFAULT_WINDOW_HOURS = 24;
+const FLOW_CRON_INTERVAL_SEC = 20 * 60;
+const MINT_BURN_CRON_JOB = "sync-mint-burn";
+const ETH_BLOCK_TIME_SEC = 12;
+const WINDOW_24H_BLOCKS = Math.ceil(24 * 3600 / ETH_BLOCK_TIME_SEC);
+const WINDOW_30D_BLOCKS = Math.ceil(30 * DAY_SEC / ETH_BLOCK_TIME_SEC);
+const WINDOW_90D_BLOCKS = Math.ceil(90 * DAY_SEC / ETH_BLOCK_TIME_SEC);
+const COVERAGE_LAG_GRACE_BLOCKS = 5_000;
+const COVERAGE_LAG_THRESHOLD_BLOCKS = 10_000;
+
+interface MintBurnCronSnapshot {
+  startedAt: number | null;
+  status: string | null;
+  chainHead: number | null;
+}
 
 function bucketDay(ts: number): number {
   return Math.floor(ts / DAY_SEC) * DAY_SEC;
@@ -133,15 +157,97 @@ function perCoinFlowCacheKey(stablecoinId: string, hours: number): string {
 }
 
 function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }): Response {
+  let freshnessTs = cached.updatedAt;
+  try {
+    const parsed = JSON.parse(cached.value) as {
+      sync?: { lastSuccessfulSyncAt?: number | null };
+      updatedAt?: number;
+    };
+    freshnessTs = parsed.sync?.lastSuccessfulSyncAt ?? parsed.updatedAt ?? cached.updatedAt;
+  } catch {
+    freshnessTs = cached.updatedAt;
+  }
+
   const headers = addFreshnessHeaders({
     "Content-Type": "application/json",
     "Cache-Control": CACHE_PROFILES.standard,
-  }, cached.updatedAt, FLOW_MAX_AGE_SEC);
+  }, freshnessTs, FLOW_MAX_AGE_SEC);
   const fallbackWarning = "199 - \"Served cached mint/burn flows due transient backend error\"";
   headers.Warning = headers.Warning
     ? `${headers.Warning}, ${fallbackWarning}`
     : fallbackWarning;
   return new Response(cached.value, { headers });
+}
+
+function computeFlowFreshnessStatus(
+  nowSec: number,
+  lastSuccessfulSyncAt: number | null,
+): "fresh" | "degraded" | "stale" {
+  if (lastSuccessfulSyncAt == null) return "stale";
+  const ageSec = Math.max(0, nowSec - lastSuccessfulSyncAt);
+  if (ageSec <= FLOW_CRON_INTERVAL_SEC) return "fresh";
+  if (ageSec <= FLOW_CRON_INTERVAL_SEC * 2) return "degraded";
+  return "stale";
+}
+
+function compareLargestEventRows(a: EventRow, b: EventRow): number {
+  const aValue = a.amount_usd ?? a.amount ?? 0;
+  const bValue = b.amount_usd ?? b.amount ?? 0;
+  if (aValue !== bValue) return bValue - aValue;
+  if (a.timestamp !== b.timestamp) return b.timestamp - a.timestamp;
+  if (a.block_number !== b.block_number) return b.block_number - a.block_number;
+  return b.id.localeCompare(a.id);
+}
+
+function selectLargestEvents(rows: EventRow[]): Map<string, EventRow> {
+  const bestByCoin = new Map<string, EventRow>();
+  for (const row of rows) {
+    const current = bestByCoin.get(row.stablecoin_id);
+    if (!current || compareLargestEventRows(current, row) > 0) {
+      bestByCoin.set(row.stablecoin_id, row);
+    }
+  }
+  return bestByCoin;
+}
+
+async function readMintBurnCronSnapshot(db: D1Database): Promise<MintBurnCronSnapshot> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT started_at, status, metadata
+         FROM cron_runs
+         WHERE job = ?
+         ORDER BY started_at DESC
+         LIMIT 1`,
+      )
+      .bind(MINT_BURN_CRON_JOB)
+      .first<{ started_at: number | null; status: string | null; metadata: string | null }>();
+
+    if (!row) {
+      return { startedAt: null, status: null, chainHead: null };
+    }
+
+    let chainHead: number | null = null;
+    if (row.metadata) {
+      try {
+        const parsed = JSON.parse(row.metadata) as { chainHead?: unknown };
+        const rawHead = parsed.chainHead;
+        if (typeof rawHead === "number" && Number.isFinite(rawHead)) {
+          chainHead = rawHead;
+        }
+      } catch {
+        chainHead = null;
+      }
+    }
+
+    return {
+      startedAt: row.started_at ?? null,
+      status: row.status ?? null,
+      chainHead,
+    };
+  } catch {
+    return { startedAt: null, status: null, chainHead: null };
+  }
 }
 
 /**
@@ -157,6 +263,7 @@ function buildBaselineMap(
   firstSeenRows: FirstSeenRow[],
 ): Map<string, { avgNet: number; avgAbs: number; dataDays: number }> {
   const nowDayTs = bucketDay(nowSec);
+  const baselineEndDayTs = nowDayTs - DAY_SEC;
   const byCoinDay = new Map<string, Map<number, { net: number; abs: number }>>();
 
   for (const row of dailyRows) {
@@ -174,18 +281,18 @@ function buildBaselineMap(
   for (const row of firstSeenRows) {
     if (!Number.isFinite(row.first_hour_ts)) continue;
     const firstDayTs = bucketDay(row.first_hour_ts);
-    if (firstDayTs > nowDayTs) continue;
+    if (firstDayTs > baselineEndDayTs) continue;
 
-    const trackedDays = Math.floor((nowDayTs - firstDayTs) / DAY_SEC) + 1;
+    const trackedDays = Math.floor((baselineEndDayTs - firstDayTs) / DAY_SEC) + 1;
     const dataDays = Math.max(0, Math.min(BASELINE_WINDOW_DAYS, trackedDays));
     if (dataDays === 0) continue;
 
-    const startDayTs = nowDayTs - (dataDays - 1) * DAY_SEC;
+    const startDayTs = baselineEndDayTs - (dataDays - 1) * DAY_SEC;
     const perDay = byCoinDay.get(row.stablecoin_id);
     let sumNet = 0;
     let sumAbs = 0;
 
-    for (let dayTs = startDayTs; dayTs <= nowDayTs; dayTs += DAY_SEC) {
+    for (let dayTs = startDayTs; dayTs <= baselineEndDayTs; dayTs += DAY_SEC) {
       const bucket = perDay?.get(dayTs);
       if (!bucket) continue;
       sumNet += bucket.net;
@@ -200,6 +307,109 @@ function buildBaselineMap(
   }
 
   return baselineMap;
+}
+
+function buildMintBurnSync(
+  nowSec: number,
+  lastSuccessfulSyncAt: number | null,
+  latestRunStatus: string | null,
+) {
+  const freshnessStatus = computeFlowFreshnessStatus(nowSec, lastSuccessfulSyncAt);
+  const criticalLaneHealthy =
+    latestRunStatus === "ok" || latestRunStatus === "degraded" || latestRunStatus === "skipped_locked";
+
+  let warning: string | null = null;
+  if (latestRunStatus === "error") {
+    warning = "Critical mint/burn lane last run errored; cached or partial data may be served.";
+  } else if (latestRunStatus === "degraded") {
+    warning = "Critical mint/burn lane is running in degraded mode; coverage may be partial.";
+  } else if (freshnessStatus === "stale") {
+    warning = "Mint/burn sync freshness is stale versus the 20-minute cron cadence.";
+  } else if (freshnessStatus === "degraded") {
+    warning = "Mint/burn sync freshness is degraded versus the 20-minute cron cadence.";
+  }
+
+  return {
+    lastSuccessfulSyncAt,
+    freshnessStatus,
+    warning,
+    criticalLaneHealthy,
+  };
+}
+
+function buildCoinCoverageMap(
+  nowSec: number,
+  firstSeenRows: FirstSeenRow[],
+  lastBlocks: Map<string, number>,
+  referenceHead: number | null,
+) {
+  const firstSeenMap = new Map(firstSeenRows.map((row) => [row.stablecoin_id, row.first_hour_ts]));
+  const configsByCoin = new Map<string, typeof MINT_BURN_CONFIGS>();
+  for (const config of MINT_BURN_CONFIGS) {
+    if (config.chain.chainId !== ETHEREUM_CHAIN_ID) continue;
+    const existing = configsByCoin.get(config.stablecoinId) ?? [];
+    existing.push(config);
+    configsByCoin.set(config.stablecoinId, existing);
+  }
+
+  const fallbackHead = referenceHead ?? Math.max(
+    0,
+    ...[...lastBlocks.values()].filter((value) => Number.isFinite(value)),
+  );
+  const effectiveHead = fallbackHead > 0 ? fallbackHead : null;
+
+  const coverageMap = new Map<string, {
+    startBlock: number;
+    lastSyncedBlock: number | null;
+    lagBlocks: number | null;
+    historyStartAt: number | null;
+    has24hWindow: boolean;
+    has30dWindow: boolean;
+    has90dWindow: boolean;
+    isPartial: boolean;
+    status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled";
+  }>();
+
+  for (const [stablecoinId, configs] of configsByCoin) {
+    const startBlock = Math.min(...configs.map((config) => config.startBlock));
+    const lastSyncedBlock = Math.min(
+      ...configs.map((config) => lastBlocks.get(`${config.chain.chainId}-${config.contractAddress}`) ?? (config.startBlock - 1)),
+    );
+    const historyStartAt = firstSeenMap.get(stablecoinId) ?? null;
+    const disabled = configs.every((config) => config.enabled === false);
+    const lagBlocks = effectiveHead != null ? Math.max(0, effectiveHead - lastSyncedBlock) : null;
+
+    const has24hWindow = effectiveHead != null
+      ? startBlock <= effectiveHead - WINDOW_24H_BLOCKS && lastSyncedBlock >= effectiveHead - COVERAGE_LAG_GRACE_BLOCKS
+      : historyStartAt != null && historyStartAt <= nowSec - (24 * 3600);
+    const has30dWindow = effectiveHead != null
+      ? startBlock <= effectiveHead - WINDOW_30D_BLOCKS && lastSyncedBlock >= effectiveHead - COVERAGE_LAG_GRACE_BLOCKS
+      : false;
+    const has90dWindow = effectiveHead != null
+      ? startBlock <= effectiveHead - WINDOW_90D_BLOCKS && lastSyncedBlock >= effectiveHead - COVERAGE_LAG_GRACE_BLOCKS
+      : false;
+
+    const status =
+      disabled ? "disabled" :
+      !has24hWindow || lastSyncedBlock < startBlock ? "bootstrapping" :
+      lagBlocks != null && lagBlocks > COVERAGE_LAG_THRESHOLD_BLOCKS ? "lagging" :
+      !has30dWindow ? "partial-history" :
+      "full";
+
+    coverageMap.set(stablecoinId, {
+      startBlock,
+      lastSyncedBlock,
+      lagBlocks,
+      historyStartAt,
+      has24hWindow,
+      has30dWindow,
+      has90dWindow,
+      isPartial: status !== "full",
+      status,
+    });
+  }
+
+  return coverageMap;
 }
 
 // ---------------------------------------------------------------------------
@@ -235,12 +445,14 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   const cacheKey = aggregateFlowCacheKey(hours);
   try {
     const nowSec = Math.floor(Date.now() / 1000);
+    const syncStartSec = nowSec;
     const windowStart = nowSec - hours * 3600;
+    const window24h = nowSec - FLOW_DEFAULT_WINDOW_HOURS * 3600;
     const window7d  = nowSec - 7  * 24 * 3600;
     const window30d = nowSec - 30 * 24 * 3600;
     const window90d = nowSec - 90 * 24 * 3600;
     const nowDayTs = bucketDay(nowSec);
-    const baselineWindowStart = nowDayTs - (BASELINE_WINDOW_DAYS - 1) * DAY_SEC;
+    const baselineWindowStart = nowDayTs - BASELINE_WINDOW_DAYS * DAY_SEC;
 
     // Load grade-based classification (falls back to hardcoded SAFE_HAVEN_IDS if unavailable)
     const gradeClassification = await getGradeBasedClassification(db);
@@ -264,9 +476,29 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
         mcapById.set(asset.id, sumPegBuckets(asset.circulating));
       }
     }
-    // Parallel queries: hourly data for window, 7d/30d/90d net sums, daily baseline rows,
-    // first-seen timestamps (history age), and largest events.
-    const [hourlyResult, hourly7dResult, hourly30dResult, hourly90dResult, baselineDailyResult, firstSeenResult, largestEventsResult] = await Promise.all([
+    const ethereumConfigs = MINT_BURN_CONFIGS.filter((config) => config.chain.chainId === ETHEREUM_CHAIN_ID);
+
+    // Parallel queries:
+    // - hourly data for requested chart window
+    // - hourly data for canonical 24h coin/gauge summaries
+    // - 7d/30d/90d net sums
+    // - daily baseline rows excluding the current UTC day
+    // - first-seen timestamps
+    // - raw 24h event candidates for deterministic largest-event selection
+    // - sync state / cron freshness inputs
+    const [
+      hourlyWindowResult,
+      hourly24hResult,
+      hourly7dResult,
+      hourly30dResult,
+      hourly90dResult,
+      baselineDailyResult,
+      firstSeenResult,
+      largestEventsResult,
+      lastBlocks,
+      latestCronSnapshot,
+      latestSuccessfulSyncAt,
+    ] = await Promise.all([
       db
         .prepare(
            `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
@@ -276,6 +508,16 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
             ORDER BY hour_ts ASC`,
         )
         .bind(ETHEREUM_CHAIN_ID, windowStart)
+        .all<HourlyRow>(),
+      db
+        .prepare(
+           `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                   mint_volume_usd, burn_volume_usd, net_flow_usd
+            FROM mint_burn_hourly
+           WHERE chain_id = ? AND hour_ts >= ?
+            ORDER BY hour_ts ASC`,
+        )
+        .bind(ETHEREUM_CHAIN_ID, window24h)
         .all<HourlyRow>(),
       db
         .prepare(
@@ -314,10 +556,10 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
                   SUM(net_flow_usd) as daily_net,
                   SUM(mint_volume_usd + burn_volume_usd) as daily_abs
            FROM mint_burn_hourly
-           WHERE chain_id = ? AND hour_ts >= ?
+           WHERE chain_id = ? AND hour_ts >= ? AND hour_ts < ?
            GROUP BY stablecoin_id, day_ts`,
         )
-        .bind(ETHEREUM_CHAIN_ID, baselineWindowStart)
+        .bind(ETHEREUM_CHAIN_ID, baselineWindowStart, nowDayTs)
         .all<DailyBaselineRow>(),
       db
         .prepare(
@@ -330,30 +572,23 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
         .all<FirstSeenRow>(),
       db
         .prepare(
-          `SELECT e.*
-           FROM mint_burn_events e
-           INNER JOIN (
-             SELECT stablecoin_id, MAX(COALESCE(amount_usd, amount)) as max_val
-             FROM mint_burn_events
-             WHERE chain_id = ?
-               AND timestamp >= ?
-               AND (direction = 'mint' OR burn_type = 'effective_burn')
-               AND flow_type = 'standard'
-             GROUP BY stablecoin_id
-           ) m ON e.stablecoin_id = m.stablecoin_id
-              AND COALESCE(e.amount_usd, e.amount) = m.max_val
-              AND e.chain_id = ?
-              AND e.timestamp >= ?
-              AND (e.direction = 'mint' OR e.burn_type = 'effective_burn')
-              AND e.flow_type = 'standard'
-           GROUP BY e.stablecoin_id
-           HAVING e.timestamp = MAX(e.timestamp)`,
+          `SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+                  counterparty, tx_hash, block_number, timestamp, explorer_tx_url
+           FROM mint_burn_events
+           WHERE chain_id = ?
+             AND timestamp >= ?
+             AND (direction = 'mint' OR burn_type = 'effective_burn')
+             AND flow_type = 'standard'`,
         )
-        .bind(ETHEREUM_CHAIN_ID, windowStart, ETHEREUM_CHAIN_ID, windowStart)
+        .bind(ETHEREUM_CHAIN_ID, window24h)
         .all<EventRow>(),
+      readMintBurnSyncStateBatch(db, ethereumConfigs),
+      readMintBurnCronSnapshot(db),
+      getLatestSuccessfulCronTimestamp(db, MINT_BURN_CRON_JOB, nowSec),
     ]);
 
-    const hourlyRows = hourlyResult.results ?? [];
+    const hourlyRows = hourlyWindowResult.results ?? [];
+    const hourly24hRows = hourly24hResult.results ?? [];
     const net7dMap  = new Map((hourly7dResult.results  ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
     const net30dMap = new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
     const net90dMap = new Map((hourly90dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
@@ -362,11 +597,16 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       baselineDailyResult.results ?? [],
       firstSeenResult.results ?? [],
     );
-    const largestEventMap = new Map(
-      (largestEventsResult.results ?? []).map((r) => [r.stablecoin_id, r]),
+    const largestEventMap = selectLargestEvents(largestEventsResult.results ?? []);
+    const coverageMap = buildCoinCoverageMap(
+      nowSec,
+      firstSeenResult.results ?? [],
+      lastBlocks,
+      latestCronSnapshot.chainHead,
     );
+    const sync = buildMintBurnSync(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
-    // Aggregate per-coin summaries from hourly rows
+    // Aggregate per-coin summaries from canonical 24h rows
     const coinAgg = new Map<
       string,
       {
@@ -377,7 +617,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
         netFlow: number;
       }
     >();
-    for (const row of hourlyRows) {
+    for (const row of hourly24hRows) {
       const agg = coinAgg.get(row.stablecoin_id) ?? {
         mintVolume: 0,
         burnVolume: 0,
@@ -399,26 +639,37 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       symbol: string;
       flowIntensity: number | null;
       pressureShiftScore: number | null;
-      pressureShiftState: "improving" | "stable" | "worsening" | "nr";
-      netFlowDirection24h: "minting" | "burning" | "flat" | "inactive";
-      has24hActivity: boolean;
-      baselineDailyNetUsd: number | null;
-      baselineDailyAbsUsd: number | null;
-      baselineDataDays: number | null;
-      netFlow24hUsd: number;
-      mintVolume24hUsd: number;
-      burnVolume24hUsd: number;
+        pressureShiftState: "improving" | "stable" | "worsening" | "nr";
+        netFlowDirection24h: "minting" | "burning" | "flat" | "inactive";
+        has24hActivity: boolean;
+        baselineDailyNetUsd: number | null;
+        baselineDailyAbsUsd: number | null;
+        baselineDataDays: number | null;
+        netFlow24hUsd: number;
+        mintVolume24hUsd: number;
+        burnVolume24hUsd: number;
       mintCount24h: number;
       burnCount24h: number;
       netFlow7dUsd: number;
       netFlow30dUsd: number;
       netFlow90dUsd: number;
-      largestEvent24h: {
-        direction: string;
-        amountUsd: number;
-        txHash: string;
-        timestamp: number;
-      } | null;
+        largestEvent24h: {
+          direction: string;
+          amountUsd: number;
+          txHash: string;
+          timestamp: number;
+        } | null;
+        coverage: {
+          startBlock: number;
+          lastSyncedBlock: number | null;
+          lagBlocks: number | null;
+          historyStartAt: number | null;
+          has24hWindow: boolean;
+          has30dWindow: boolean;
+          has90dWindow: boolean;
+          isPartial: boolean;
+          status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled";
+        };
     }> = [];
 
     const gaugeInputs: Array<{ intensity: number | null; mcap: number }> = [];
@@ -481,6 +732,17 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       }
 
       const largest = largestEventMap.get(id);
+      const coverage = coverageMap.get(id) ?? {
+        startBlock: 0,
+        lastSyncedBlock: null,
+        lagBlocks: null,
+        historyStartAt: null,
+        has24hWindow: false,
+        has30dWindow: false,
+        has90dWindow: false,
+        isPartial: true,
+        status: "bootstrapping" as const,
+      };
       coins.push({
         stablecoinId: id,
         symbol: config.symbol,
@@ -508,6 +770,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
               timestamp: largest.timestamp,
             }
           : null,
+        coverage,
       });
     }
 
@@ -554,12 +817,18 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       coins,
       hourly,
       updatedAt,
+      windowHours: hours,
+      scope: {
+        chainIds: [ETHEREUM_CHAIN_ID],
+        label: "Ethereum-only",
+      },
+      sync,
     };
 
-    await setCache(db, cacheKey, JSON.stringify(body));
+    await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
     return jsonResponse(body, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, updatedAt, FLOW_MAX_AGE_SEC));
+    }, latestSuccessfulSyncAt, FLOW_MAX_AGE_SEC));
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {
@@ -587,18 +856,23 @@ async function handlePerCoin(
   const cacheKey = perCoinFlowCacheKey(stablecoinId, hours);
   try {
     const nowSec = Math.floor(Date.now() / 1000);
+    const syncStartSec = nowSec;
     const windowStart = nowSec - hours * 3600;
 
-    const hourlyResult = await db
-      .prepare(
-        `SELECT chain_id, hour_ts, mint_count, burn_count,
-                mint_volume_usd, burn_volume_usd, net_flow_usd
-         FROM mint_burn_hourly
-         WHERE chain_id = ? AND stablecoin_id = ? AND hour_ts >= ?
-         ORDER BY hour_ts ASC`,
-      )
-      .bind(ETHEREUM_CHAIN_ID, stablecoinId, windowStart)
-      .all<HourlyRow>();
+    const [hourlyResult, latestCronSnapshot, latestSuccessfulSyncAt] = await Promise.all([
+      db
+        .prepare(
+          `SELECT chain_id, hour_ts, mint_count, burn_count,
+                  mint_volume_usd, burn_volume_usd, net_flow_usd
+           FROM mint_burn_hourly
+           WHERE chain_id = ? AND stablecoin_id = ? AND hour_ts >= ?
+           ORDER BY hour_ts ASC`,
+        )
+        .bind(ETHEREUM_CHAIN_ID, stablecoinId, windowStart)
+        .all<HourlyRow>(),
+      readMintBurnCronSnapshot(db),
+      getLatestSuccessfulCronTimestamp(db, MINT_BURN_CRON_JOB, nowSec),
+    ]);
 
     const rows = hourlyResult.results ?? [];
 
@@ -675,12 +949,18 @@ async function handlePerCoin(
       chains,
       hourly,
       updatedAt,
+      windowHours: hours,
+      scope: {
+        chainIds: [ETHEREUM_CHAIN_ID],
+        label: "Ethereum-only",
+      },
+      sync: buildMintBurnSync(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     };
 
-    await setCache(db, cacheKey, JSON.stringify(body));
+    await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
     return jsonResponse(body, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, updatedAt, FLOW_MAX_AGE_SEC));
+    }, latestSuccessfulSyncAt, FLOW_MAX_AGE_SEC));
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {
