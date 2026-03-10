@@ -27,6 +27,7 @@ import { fetchTbillRate } from "../cron/fetch-tbill-rate";
 import { computeAndStoreDEWS } from "../cron/compute-dews";
 import { dispatchTelegramAlerts } from "../cron/dispatch-telegram-alerts";
 import { runStatusSelfCheck } from "../cron/status-self-check";
+import { runDiscoveryScan } from "../cron/discovery-scan";
 import { initChainRpcs } from "../lib/chain-registry";
 import { initAlerts, sendAlert } from "../lib/alerts";
 import { initCoinGecko } from "../lib/coingecko";
@@ -432,6 +433,7 @@ export async function handleScheduledEvent(
             : null;
         return generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null, twitterCreds, false, telegramCreds, signal);
       })));
+      ctx.waitUntil(runLeasedCron("discovery-scan", (signal) => runDiscoveryScan(db, signal)));
       break;
     }
   }
