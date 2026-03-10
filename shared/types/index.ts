@@ -976,6 +976,69 @@ export interface TelegramBotStats {
   topStablecoins: TelegramBotTopStablecoin[];
 }
 
+// --- Discovery candidates ---
+
+export interface DiscoveryCandidate {
+  id: number;
+  geckoId: string | null;
+  llamaId: number | null;
+  name: string;
+  symbol: string;
+  marketCap: number | null;
+  source: "defillama" | "coingecko" | "both";
+  firstSeen: number;
+  lastSeen: number;
+  daysSeen: number;
+  dismissed: boolean;
+}
+
+export interface DiscoveryCandidatesResponse {
+  candidates: DiscoveryCandidate[];
+  total: number;
+}
+
+// --- Shadow comparison ---
+
+export interface ShadowComparisonResult {
+  totalCompared: number;
+  meanDivergenceBps: number;
+  p95DivergenceBps: number;
+  maxDivergenceBps: number;
+  coverageLost: number;
+  coverageGained: number;
+  cgAvailable: boolean;
+}
+
+// --- Price source health ---
+
+export interface PriceSourceHealth {
+  sourceDistribution: {
+    coingecko: number;
+    "defillama+coingecko": number;
+    defillama: number;
+    "defillama-contract": number;
+    coinmarketcap: number;
+    dexscreener: number;
+    cached: number;
+    missing: number;
+  };
+  confidenceDistribution: {
+    high: number;
+    "single-source": number;
+    low: number;
+    fallback: number;
+  };
+  divergences: {
+    id: string;
+    symbol: string;
+    cgPrice: number;
+    dlPrice: number;
+    bps: number;
+  }[];
+  totalAssets: number;
+  lastSync: number;
+}
+
 export interface StatusResponse {
   timestamp: number;
   dbHealthy: boolean;
@@ -1005,6 +1068,9 @@ export interface StatusResponse {
     cronErrors: number;
     worstCacheRatio: number;
   };
+  priceSourceHealth: PriceSourceHealth | null;
+  shadowComparison: ShadowComparisonResult | null;
+  discoveryCandidates: DiscoveryCandidate[] | null;
 }
 
 export interface StatusHistoryResponse {

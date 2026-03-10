@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchDualPrimaryPrices } from "../enrich-prices";
+import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchDualPrimaryPrices, computeShadowComparison } from "../enrich-prices";
 import type { PeggedAsset } from "../enrich-prices";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
@@ -601,5 +601,39 @@ describe("fetchDualPrimaryPrices", () => {
 
     expect(results.size).toBe(0);
     expect(stats.attempted).toBe(0);
+  });
+});
+
+describe("computeShadowComparison", () => {
+  it("computes zero divergence for identical prices", () => {
+    const old = new Map([["a", 1.0], ["b", 0.999]]);
+    const newP = new Map([["a", 1.0], ["b", 0.999]]);
+    const result = computeShadowComparison(old, newP);
+    expect(result.meanDivergenceBps).toBe(0);
+    expect(result.coverageLost).toBe(0);
+    expect(result.coverageGained).toBe(0);
+    expect(result.totalCompared).toBe(2);
+  });
+
+  it("detects coverage loss", () => {
+    const old = new Map([["a", 1.0], ["b", 0.999]]);
+    const newP = new Map([["a", 1.0]]);
+    const result = computeShadowComparison(old, newP);
+    expect(result.coverageLost).toBe(1);
+  });
+
+  it("detects coverage gain", () => {
+    const old = new Map([["a", 1.0]]);
+    const newP = new Map([["a", 1.0], ["b", 0.999]]);
+    const result = computeShadowComparison(old, newP);
+    expect(result.coverageGained).toBe(1);
+  });
+
+  it("computes divergence in bps correctly", () => {
+    const old = new Map([["a", 1.0]]);
+    const newP = new Map([["a", 1.001]]);
+    const result = computeShadowComparison(old, newP);
+    // 0.001 / 1.0005 * 10000 ≈ 9.995 bps
+    expect(result.meanDivergenceBps).toBeCloseTo(10, 0);
   });
 });

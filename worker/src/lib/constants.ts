@@ -122,6 +122,7 @@ export const CIRCUIT_SOURCE = {
   CG_PRICES: "coingecko-prices",
   CG_DETAIL_PLATFORMS: "coingecko-detail-platforms",
   CG_MCAP: "coingecko-mcap",
+  CG_DISCOVERY: "coingecko-discovery",
   DEXSCREENER_PRICES: "dexscreener-prices",
   CMC_PRICES: "coinmarketcap-prices",
   TREASURY_RATES: "treasury-rates",

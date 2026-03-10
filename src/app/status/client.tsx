@@ -19,6 +19,8 @@ import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
 import { getStatusCronDisplay, STATUS_CRON_GROUPS } from "@/components/status/cron-config";
+import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
+import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 
 const SESSION_KEY = "pharos-admin-key";
 
@@ -181,8 +183,18 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       </section>
 
       <section>
+        <h2 className="mb-3 text-xl font-semibold">Price Source Health</h2>
+        <PriceSourceHealthCard health={data.priceSourceHealth} shadowComparison={data.shadowComparison} />
+      </section>
+
+      <section>
         <h2 className="mb-3 text-xl font-semibold">Admin Actions</h2>
         <AdminActionsPanel adminKey={adminKey} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Coverage Discovery</h2>
+        <DiscoveryCandidatesCard candidates={data.discoveryCandidates} adminKey={adminKey} />
       </section>
 
       <section>

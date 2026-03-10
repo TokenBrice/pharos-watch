@@ -37,7 +37,7 @@ describe("api endpoint registry", () => {
       "/api/stress-signals",
     ]);
 
-    expect(getProbePaths("admin")).toEqual(["/api/status", "/api/status-history?limit=10", "/api/debug-sync-state"]);
+    expect(getProbePaths("admin")).toEqual(["/api/status", "/api/status-history?limit=10", "/api/debug-sync-state", "/api/discovery-candidates"]);
 
     expect(getProbePaths("manual")).toEqual([
       "/api/trigger-digest",

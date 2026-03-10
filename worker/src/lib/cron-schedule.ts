@@ -39,6 +39,7 @@ const CRON_JOB_DEFINITIONS: readonly CronJobDefinition[] = [
   { job: "sync-usds-status", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "sync-bluechip", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "daily-digest", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
+  { job: "discovery-scan", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
 ] as const;
 
 export const CRON_INTERVALS = Object.freeze(

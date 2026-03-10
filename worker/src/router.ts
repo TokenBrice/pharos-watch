@@ -35,10 +35,11 @@ import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleReclassifyAtomicRoundtrips } from "./api/reclassify-atomic-roundtrips";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
+import { handleDiscoveryCandidates, handleDismissCandidate } from "./api/discovery";
 import { handleFeedback, type FeedbackEnv } from "./api/feedback";
 import { handleTelegramWebhook } from "./api/telegram-webhook";
 import { runIdempotentAdminAction } from "./lib/idempotency";
-import { requireAdmin } from "./lib/auth";
+import { requireAdmin, withAdmin } from "./lib/auth";
 import { generateDailyDigest } from "./cron/daily-digest";
 import {
   getEndpointDefinition,
@@ -214,6 +215,8 @@ const STATIC_ROUTE_HANDLER_BY_KEY: Record<string, StaticRouteHandler> = {
       .all();
     return jsonResponse(rows.results);
   }),
+  "discovery-candidates": ({ db, url, adminKey, request }) =>
+    withAdmin(request, adminKey, () => handleDiscoveryCandidates(db, url)),
 };
 
 const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>(
@@ -332,6 +335,13 @@ export function route(
     ctx,
   );
   if (detailResult) return detailResult;
+
+  // Discovery candidate dismiss (dynamic :id route with admin auth)
+  const dismissMatch = path.match(/^\/api\/discovery-candidates\/(\d+)\/dismiss$/);
+  if (dismissMatch && request?.method === "POST") {
+    const candidateId = parseInt(dismissMatch[1], 10);
+    return withAdmin(request, adminKey, () => handleDismissCandidate(db, candidateId));
+  }
 
   // OG image generation (dynamic paths under /api/og/)
   if (path.startsWith("/api/og/")) {
