@@ -76,15 +76,14 @@ describe("dex-liquidity pool helpers", () => {
     // 89.4*0.15 + 90*0.35 + 80*0.25 + 100*0.25 = 13.4+31.5+20+25 = 90
     expect(computeDurabilityScore(rich, 0.9, 0.8)).toBe(90);
 
-    const zeroLiquidity = computeLiquidityScore(empty, 44);
-    expect(zeroLiquidity.score).toBe(8);
+    const zeroLiquidity = computeLiquidityScore(empty, 41);
+    expect(zeroLiquidity.score).toBe(6);
     expect(zeroLiquidity.components).toEqual({
       tvlDepth: 0,
       volumeActivity: 0,
       poolQuality: 0,
-      durability: 44,
+      durability: 41,
       pairDiversity: 0,
-      crossChain: 15,
     });
 
     rich.effectiveTvl = 10_000_000;
@@ -94,10 +93,12 @@ describe("dex-liquidity pool helpers", () => {
     rich.poolCount = 8;
     rich.chains = new Set(["Ethereum", "Base", "Arbitrum"]);
 
-    const healthyLiquidity = computeLiquidityScore(rich, 92);
-    expect(healthyLiquidity.score).toBeGreaterThan(50);
-    expect(healthyLiquidity.components.crossChain).toBe(39);
+    // V/T = 1M/5M = 0.2 -> log-scale: 33.3*log10(0.2/0.005) = 33.3*log10(40) = 33.3*1.602 = 53.3
+    const healthyLiquidity = computeLiquidityScore(rich, 90);
+    expect(healthyLiquidity.score).toBeGreaterThan(60);
     expect(healthyLiquidity.components.pairDiversity).toBe(40);
+    // crossChain should not be present
+    expect("crossChain" in healthyLiquidity.components).toBe(false);
   });
 
   it("normalizes protocols and computes pair-quality and stress helpers", () => {

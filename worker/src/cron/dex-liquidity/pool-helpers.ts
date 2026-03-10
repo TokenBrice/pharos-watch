@@ -85,18 +85,20 @@ export function computeLiquidityScore(
   m: LiquidityMetrics,
   durabilityScore: number,
 ): { score: number; components: ScoreComponents } {
-  // Component 1: TVL depth (30%) — now uses effectiveTvl
+  // Component 1: TVL depth (35%) — uses effectiveTvl
   const tvlInput = m.effectiveTvl > 0 ? m.effectiveTvl : m.totalTvlUsd;
   const tvlDepth = Math.min(
     100,
     Math.max(0, 20 * Math.log10(Math.max(tvlInput, 1) / 100_000) + 20),
   );
 
-  // Component 2: Volume activity (20%)
+  // Component 2: Volume activity (20%) — log-scale
   const vtRatio = m.totalTvlUsd > 0 ? m.totalVolume24hUsd / m.totalTvlUsd : 0;
-  const volumeActivity = Math.min(100, vtRatio * 200);
+  const volumeActivity = vtRatio <= 0
+    ? 0
+    : Math.min(100, Math.max(0, 33.3 * Math.log10(vtRatio / 0.005)));
 
-  // Component 3: Pool quality (20%) — quality-adjusted TVL on same log scale
+  // Component 3: Pool quality (22.5%) — quality-adjusted TVL on same log scale
   const poolQuality = Math.min(
     100,
     Math.max(0, 20 * Math.log10(Math.max(m.qualityAdjustedTvl, 1) / 100_000) + 20),
@@ -108,19 +110,12 @@ export function computeLiquidityScore(
   // Component 5: Pair diversity (7.5%)
   const pairDiversity = Math.min(100, m.poolCount * 5);
 
-  // Component 6: Cross-chain presence (7.5%)
-  const chainCount = m.chains.size;
-  const crossChain = chainCount <= 1
-    ? 15
-    : Math.min(100, 15 + (chainCount - 1) * 12);
-
   const raw =
-    tvlDepth * 0.30 +
+    tvlDepth * 0.35 +
     volumeActivity * 0.20 +
-    poolQuality * 0.20 +
+    poolQuality * 0.225 +
     durability * 0.15 +
-    pairDiversity * 0.075 +
-    crossChain * 0.075;
+    pairDiversity * 0.075;
 
   const components: ScoreComponents = {
     tvlDepth: Math.round(tvlDepth),
@@ -128,7 +123,6 @@ export function computeLiquidityScore(
     poolQuality: Math.round(poolQuality),
     durability: Math.round(durability),
     pairDiversity: Math.round(pairDiversity),
-    crossChain: Math.round(crossChain),
   };
 
   return {
