@@ -29,7 +29,6 @@ import type { StablecoinMeta, DexLiquidityData } from "@shared/types";
 export type LiquiditySortKey =
   | "score"
   | "tvl"
-  | "effectiveTvl"
   | "tvlTrend"
   | "volume"
   | "volume7d"
@@ -93,10 +92,6 @@ export function compareLiquidityRows(
     case "chains":
       aVal = aLiq.chainCount;
       bVal = bLiq.chainCount;
-      break;
-    case "effectiveTvl":
-      aVal = aLiq.effectiveTvlUsd ?? 0;
-      bVal = bLiq.effectiveTvlUsd ?? 0;
       break;
     case "balance":
       aVal = aLiq.weightedBalanceRatio ?? 0;
@@ -241,16 +236,6 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
             />
             <TableHead className="hidden md:table-cell text-left">Top Protocol</TableHead>
             <SortableTableHead
-              sortKey="effectiveTvl"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Eff. TVL"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden xl:table-cell text-right"
-            />
-            <SortableTableHead
               sortKey="balance"
               currentSortKey={sortKey}
               sortDirection={sortDirection}
@@ -351,9 +336,6 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                       {prettifyProtocol(topProtocol[0])}
                     </span>
                   ) : "—"}
-                </TableCell>
-                <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums">
-                  {liq.effectiveTvlUsd ? formatCurrency(liq.effectiveTvlUsd) : "—"}
                 </TableCell>
                 <TableCell className="hidden xl:table-cell text-right">
                   {liq.weightedBalanceRatio != null ? (
