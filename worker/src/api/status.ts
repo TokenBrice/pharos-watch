@@ -26,6 +26,8 @@ import type {
   CronRun,
   CronStatus,
   DataQuality,
+  DiscoveryCandidate,
+  PriceSourceHealth,
   StatusCause,
   StatusResponse,
   TelegramBotStats,
@@ -584,6 +586,43 @@ export const handleStatus = withErrorHandler(
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
       const timeline = await listRecentStatusTransitions(db, 40);
 
+      // Discovery candidates (active only, top 20 by market cap)
+      let discoveryCandidates: DiscoveryCandidate[] | null = null;
+      try {
+        const discRows = await db.prepare(
+          "SELECT * FROM discovery_candidates WHERE dismissed = 0 ORDER BY market_cap DESC LIMIT 20",
+        ).all();
+        discoveryCandidates = (discRows.results ?? []).map((row: Record<string, unknown>) => ({
+          id: row.id as number,
+          geckoId: row.gecko_id as string | null,
+          llamaId: row.llama_id as number | null,
+          name: row.name as string,
+          symbol: row.symbol as string,
+          marketCap: row.market_cap as number | null,
+          source: row.source as "defillama" | "coingecko" | "both",
+          firstSeen: row.first_seen as number,
+          lastSeen: row.last_seen as number,
+          daysSeen: Math.max(1, Math.floor((now - (row.first_seen as number)) / 86400)),
+          dismissed: false,
+        }));
+      } catch (err) {
+        console.warn("[status] Discovery candidates query failed:", err);
+      }
+
+      // Price source health from already-loaded cron metadata (no extra DB query)
+      let priceSourceHealth: PriceSourceHealth | null = null;
+      try {
+        const syncStablecoinsCron = raw.crons?.["sync-stablecoins"];
+        if (syncStablecoinsCron?.lastRun?.metadata) {
+          const meta = syncStablecoinsCron.lastRun.metadata;
+          if (meta.priceSourceHealth) {
+            priceSourceHealth = meta.priceSourceHealth as PriceSourceHealth;
+          }
+        }
+      } catch (err) {
+        console.warn("[status] Price source health extraction failed:", err);
+      }
+
       const body: StatusResponse = {
         timestamp: now,
         dbHealthy: raw.dbHealthy,
@@ -608,8 +647,8 @@ export const handleStatus = withErrorHandler(
         telegramBot: raw.telegramBot,
         datasetFreshness: raw.datasetFreshness,
         summary: raw.summary,
-        priceSourceHealth: null,
-        discoveryCandidates: null,
+        priceSourceHealth,
+        discoveryCandidates,
       };
 
       return jsonResponse(body, { "Cache-Control": "no-store" });
