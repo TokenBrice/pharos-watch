@@ -131,7 +131,28 @@ Zero new API calls — reuses cached price data. Falls through if no price histo
 
 **Tier 3 as additional source:** For `navToken` and `PRICE_DERIVED_FALLBACK_IDS` coins, Tier 3 also runs when Tier 2 found sources but they all report 0% APY. This handles DL pools that exist but have stale/broken yield data (e.g., a tiny Aave lending market matched via Layer 3 symbol fallback). The price-derived source is added alongside the DL source, and `is_best` picks the higher-APY winner.
 
-**Known limitation:** Price-derived cannot capture yield for tokens that distribute dividends as new tokens while maintaining a fixed $1.00 NAV (e.g., BUIDL, YLDS). These tokens require an alternative data source (on-chain rate config, dedicated API, or supply-growth analysis).
+**Known limitation:** Price-derived cannot capture yield for tokens that distribute dividends as new tokens while maintaining a fixed $1.00 NAV (e.g., BUIDL, YLDS). These tokens use the rate-derived tier instead (see below).
+
+### Tier 4: Rate-Derived APY
+
+For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token mints) and T-bill-backed funds whose yield mechanically tracks short-term rates. Configured via `RATE_DERIVED_CONFIGS` in `yield-config.ts`.
+
+```
+apy = max(0, cachedTbillRate - spreadBps / 100)
+```
+
+Uses the `risk_free_rate` already cached daily by `fetch-tbill-rate` (FRED DGS3MO). Zero additional API calls.
+
+**Configured tokens:**
+
+| Token | Spread (bps) | Rationale |
+| ----- | ------------ | --------- |
+| BUIDL | 20 | BlackRock fund, 0.20% management fee |
+| YLDS  | 50 | Figure Markets, SOFR - 50 bps formula |
+| USTB  | 15 | Superstate, 0.15% management fee |
+| mTBILL | 0 | Midas, tracks T-bill rate directly |
+
+Rate-derived runs after Tier 3 in the resolution loop and participates in the `is_best` selection like any other source. For tokens that also have price-derived or DL sources, the highest-APY source wins.
 
 ### Automatic Lending Pool Discovery (Wave 2)
 
@@ -225,7 +246,7 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 
 At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when `updated_at` is older than 90 minutes (`STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
 
-The sync also performs an operational cross-source check after metric computation: if a coin has both native yield (`onchain` / `defillama` / `price-derived`) and auto-discovered lending yield (`defillama-auto`), and the APYs diverge by more than 50% (relative to the larger APY), it emits a `[yield-sync] APY divergence ...` `console.warn` log. This is observability-only and does not affect persisted data or ranking behavior.
+The sync also performs an operational cross-source check after metric computation: if a coin has both native yield (`onchain` / `defillama` / `price-derived` / `rate-derived`) and auto-discovered lending yield (`defillama-auto`), and the APYs diverge by more than 50% (relative to the larger APY), it emits a `[yield-sync] APY divergence ...` `console.warn` log. This is observability-only and does not affect persisted data or ranking behavior.
 
 ---
 
@@ -238,7 +259,7 @@ The sync also performs an operational cross-source check after metric computatio
 ```sql
 CREATE TABLE yield_data (
   stablecoin_id       TEXT NOT NULL,
-  source_key          TEXT NOT NULL,  -- DL pool UUID or "price-derived"
+  source_key          TEXT NOT NULL,  -- DL pool UUID, "price-derived", or "rate-derived"
   symbol              TEXT NOT NULL,
   current_apy         REAL NOT NULL,
   apy_base            REAL,
@@ -249,7 +270,7 @@ CREATE TABLE yield_data (
   yield_type          TEXT NOT NULL,
   source_pool         TEXT,           -- DL pool UUID
   source_tvl_usd      REAL,
-  data_source         TEXT NOT NULL,  -- "onchain" | "defillama" | "defillama-auto" | "price-derived"
+  data_source         TEXT NOT NULL,  -- "onchain" | "defillama" | "defillama-auto" | "price-derived" | "rate-derived"
   safety_score        REAL,
   safety_grade        TEXT,
   pharos_yield_score  REAL,
@@ -550,7 +571,7 @@ Covers all pure functions in `yield-helpers.ts`:
 - **DL Yields circuit-broken:** Tier 2 skipped entirely. Coins with Tier 1 or Tier 3 coverage still get APY. Others get `yield: null`.
 - **Cron gaps (7d filter):** The 7d trailing average uses timestamp-based filtering (`recorded_at >= now - 7d`) rather than proportional slicing, so gaps don't shift the window.
 - **DL pool returns 0% for navToken:** When Tier 2 finds a DL pool but it reports 0% APY, Tier 3 price-derived is tried as an additional source. The `is_best` logic picks the higher APY. This covers upstream DL data staleness and spurious Layer 3 symbol matches.
-- **Dividend-distributing tokens (BUIDL, YLDS):** These maintain a fixed $1.00 NAV and distribute yield as new tokens. Price-derived returns ~0% because the price doesn't change. Needs an alternative data source (on-chain rate, dedicated API, or supply-growth inference).
+- **Dividend-distributing tokens (BUIDL, YLDS):** These maintain a fixed $1.00 NAV and distribute yield as new tokens. Price-derived returns ~0% because the price doesn't change. Resolved via Tier 4 rate-derived, which computes APY from the cached T-bill rate minus the token's management fee spread.
 
 ---
 
@@ -562,7 +583,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | `worker/migrations/0041_yield_data_multi_source.sql` | Adds `source_key` + `is_best` columns, changes PK to `(stablecoin_id, source_key)`                                                           |
 | `worker/migrations/0056_yield_history_warning_signals.sql` | Adds `warning_signals` history persistence support                                                                                       |
 | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | Yield sync orchestration and stage modules: source loading, multi-source matching, PYS, safety scores, caching |
-| `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`                                                                |
+| `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`, `RATE_DERIVED_CONFIGS`                                        |
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/fetch-tbill-rate.ts`                | Daily T-bill rate cron                                                                                                                       |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler (`handleYieldRankings`)                                                                       |

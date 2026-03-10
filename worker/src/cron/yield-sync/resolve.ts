@@ -17,6 +17,7 @@ import {
   LENDING_PROTOCOL_ALLOWLIST,
   ON_CHAIN_RATE_CONFIGS,
   PRICE_DERIVED_FALLBACK_IDS,
+  RATE_DERIVED_CONFIGS,
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
 } from "../yield-config";
@@ -49,6 +50,7 @@ interface ResolveYieldSourcesParams {
   dlPools: DlPool[];
   onChainRates: Map<string, { rate: number }>;
   safetyScores: Map<string, SafetyScoreSnapshot>;
+  riskFreeRate: number;
   signal?: AbortSignal;
 }
 
@@ -59,6 +61,7 @@ export async function resolveYieldSources({
   dlPools,
   onChainRates,
   safetyScores,
+  riskFreeRate,
   signal,
 }: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
   const resolved: ResolvedYieldEntry[] = [];
@@ -203,6 +206,29 @@ export async function resolveYieldSources({
         });
         hasAnySource = true;
       }
+    }
+
+    // Rate-derived: for dividend-distributing tokens and T-bill-backed funds,
+    // compute yield from the cached T-bill rate minus the token's fee spread.
+    const rateDerivedConfig = RATE_DERIVED_CONFIGS.find((c) => c.stablecoinId === id);
+    if (rateDerivedConfig && riskFreeRate > 0) {
+      const apy = Math.max(0, riskFreeRate - rateDerivedConfig.spreadBps / 100);
+      resolved.push({
+        id,
+        symbol,
+        yield: {
+          currentApy: apy,
+          apyBase: apy,
+          apyReward: null,
+          sourcePool: null,
+          sourceTvlUsd: null,
+          dataSource: "rate-derived",
+          exchangeRate: null,
+          sourceKey: "rate-derived",
+          yieldSource: rateDerivedConfig.label,
+        },
+      });
+      hasAnySource = true;
     }
 
     if (hasAnySource) continue;

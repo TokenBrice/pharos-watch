@@ -19,7 +19,7 @@ export interface ResolvedYield {
   apyReward: number | null;
   sourcePool: string | null;
   sourceTvlUsd: number | null;
-  dataSource: "onchain" | "defillama" | "defillama-auto" | "price-derived";
+  dataSource: "onchain" | "defillama" | "defillama-auto" | "price-derived" | "rate-derived";
   exchangeRate: number | null;
   sourceKey: string;
   yieldSource?: string;

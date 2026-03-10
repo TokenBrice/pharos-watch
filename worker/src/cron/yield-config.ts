@@ -318,13 +318,31 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
  * usable on-chain rate source and no DeFiLlama pool.
  */
 export const PRICE_DERIVED_FALLBACK_IDS = new Set([
-  "buidl-blackrock", // BUIDL - BlackRock/Securitize fund (not tracked in DL Yields)
-  "ylds-figure", // YLDS - Figure Markets (not tracked in DL Yields)
   "usdb-blast", // USDB - Blast native yield (not tracked in DL Yields)
-  "mtbill-midas", // mTBILL - Midas (not tracked in DL Yields)
-  "ustb-superstate", // USTB - Superstate (only USCC tracked in DL, not USTB)
   "usda-avalon", // USDa - Avalon (no DL protocol pool; sUSDa Pendle pool too small at $55K)
 ]);
+
+/**
+ * Rate-derived yield config for dividend-distributing tokens (rebasing at $1 NAV)
+ * and T-bill-backed NAV tokens whose yield mechanically tracks short-term rates.
+ *
+ * APY = max(0, cachedTbillRate - spreadBps / 100).
+ * Uses the risk_free_rate already cached daily by fetch-tbill-rate (FRED DGS3MO).
+ */
+export interface RateDerivedConfig {
+  stablecoinId: string;
+  /** Basis points subtracted from the cached T-bill rate (management fee / spread). */
+  spreadBps: number;
+  /** Human-readable label surfaced as yield_source in yield_data. */
+  label: string;
+}
+
+export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
+  { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
+  { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
+  { stablecoinId: "ustb-superstate", spreadBps: 15, label: "T-bill proxy (net of 0.15% fee)" },
+  { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy" },
+];
 
 /**
  * Curated protocol allowlist for automatic lending pool discovery (Wave 2).

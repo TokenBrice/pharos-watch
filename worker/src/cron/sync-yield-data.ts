@@ -96,6 +96,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     dlPools,
     onChainRates,
     safetyScores,
+    riskFreeRate,
     signal,
   });
 
@@ -320,7 +321,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     for (const r of resolved) {
       if (!r.yield) continue;
       const ds = r.yield.dataSource;
-      if (ds === "defillama" || ds === "onchain" || ds === "price-derived") {
+      if (ds === "defillama" || ds === "onchain" || ds === "price-derived" || ds === "rate-derived") {
         nativeApyByCoin.set(r.id, r.yield.currentApy);
       } else if (ds === "defillama-auto") {
         lendingApyByCoin.set(r.id, r.yield.currentApy);

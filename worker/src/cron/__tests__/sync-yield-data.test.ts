@@ -179,6 +179,7 @@ vi.mock("../yield-config", () => ({
     "aave-v3": "Aave V3",
   },
   PRICE_DERIVED_FALLBACK_IDS: new Set(),
+  RATE_DERIVED_CONFIGS: [],
   AUTO_LENDING_POOL_MAP: {
     "u-united-stables": "pool-u-venus",
     "lusd-liquity": "pool-lusd-aave",
@@ -240,6 +241,7 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
+import * as yieldConfigModule from "../yield-config";
 
 // --- Helpers ---
 
@@ -738,6 +740,52 @@ describe("syncYieldData", () => {
     expect(priceDerivedRow?.boundValues?.[12]).toBe("price-derived");
     // price-derived should be is_best (higher APY than DL's 0%)
     expect(priceDerivedRow?.boundValues?.[25]).toBe(1);
+  });
+
+  it("resolves rate-derived yield from cached T-bill rate for configured tokens", async () => {
+    // Temporarily inject a rate-derived config for sDAI (id "100")
+    const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+    configs.push({ stablecoinId: "100", spreadBps: 25, label: "T-bill proxy (net of 0.25% fee)" });
+
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      { match: "yield_history", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    // Return a risk_free_rate of 4.0% from cache
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    // Should have at least one row written for rate-derived
+    expect(result.itemCount).toBeGreaterThanOrEqual(1);
+
+    // Check that batchExecute was called with a rate-derived source
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const rateDerivedRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "rate-derived",
+    );
+    expect(rateDerivedRow).toBeDefined();
+    // APY should be 4.0 - 0.25 = 3.75
+    expect(Number(rateDerivedRow?.boundValues?.[3])).toBeCloseTo(3.75, 2);
+    // data_source should be "rate-derived"
+    expect(rateDerivedRow?.boundValues?.[12]).toBe("rate-derived");
+    // rate-derived should be is_best (only source)
+    expect(rateDerivedRow?.boundValues?.[25]).toBe(1);
+
+    // Clean up
+    configs.length = 0;
   });
 
   it("marks run degraded but still writes yield-rankings cache when safety snapshot coverage is empty", async () => {
