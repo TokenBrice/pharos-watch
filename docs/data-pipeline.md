@@ -163,3 +163,27 @@ The `blacklist_sync_state.last_block` column has different semantics per chain t
 - **Tron**: stores millisecond timestamps (Tron events are ordered by timestamp, not block number)
 
 This is intentional — do not mix these values across chain types.
+
+## Coverage Discovery
+
+`runDiscoveryScan()` in `worker/src/cron/discovery-scan.ts` runs daily and surfaces stablecoins tracked by CoinGecko or DefiLlama that Pharos doesn't yet monitor.
+
+### Source A: DL Residuals (free)
+
+After `syncStablecoins()` filters DL assets against `REGISTRY_BY_LLAMA_ID`, untracked assets with circulating > $5M are upserted into `discovery_candidates`. Zero extra API calls.
+
+### Source B: CG Stablecoin Category (one call/day)
+
+`GET /coins/markets?category=stablecoins&vs_currency=usd&per_page=250&order=market_cap_desc`
+
+Untracked coins with market cap > $5M are upserted. Coins found by both sources get `source: "both"`.
+
+### Circuit Breaker
+
+Uses `CG_DISCOVERY` — independent from `CG_PRICES`. Open after 5 consecutive failures, probe after 24 hours.
+
+### Candidate Lifecycle
+
+- Upserted daily with `last_seen` and `market_cap` updates
+- Dismissed candidates don't resurface unless market cap crosses 10x the value at dismissal
+- Hard-deleted after 90 days dismissed
