@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { formatCurrency, getNetPrefix } from "@shared/lib/format";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
-import { getFlowDirectionUi, getFlowPressureUi } from "@/lib/flow-signal-ui";
+import { buildFlowSummaryNarrative, getFlowDirectionUi, getFlowPressureUi } from "@/lib/flow-signal-ui";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 
 const PRESSURE_BAR_COLOR: Record<PressureShiftState, string> = {
@@ -37,7 +37,7 @@ export function CoinFlowCard({
     : null;
 
   const barFillPct = pressureShiftScore != null
-    ? Math.round(((pressureShiftScore + 100) / 200) * 100)
+    ? Math.round(((Math.min(100, Math.max(-100, pressureShiftScore)) + 100) / 200) * 100)
     : 50;
 
   return (
@@ -67,7 +67,7 @@ export function CoinFlowCard({
           pressureUi.badgeClass,
         )}>
           {pressureDisplay != null
-            ? `${getNetPrefix(pressureDisplay)}${pressureDisplay}`
+            ? `${pressureUi.label} ${getNetPrefix(pressureDisplay)}${pressureDisplay}`
             : "NR"}
         </span>
       </div>
@@ -78,6 +78,13 @@ export function CoinFlowCard({
           style={{ width: `${barFillPct}%` }}
         />
       </div>
+
+      {/* Pressure description */}
+      {pressureDisplay != null && (
+        <p className="text-[10px] text-muted-foreground truncate">
+          {buildFlowSummaryNarrative(netFlowDirection24h, pressureShiftState)}
+        </p>
+      )}
     </div>
   );
 }
