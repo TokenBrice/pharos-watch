@@ -60,7 +60,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "independent-audit", url: "https://tether.to/en/transparency", provider: "BDO Italia" },
     links: [
       { label: "Website", url: "https://tether.to/" },
-      { label: "Twitter", url: "https://x.com/Tether_to" },
+      { label: "Twitter", url: "https://x.com/tether" },
       { label: "Transparency", url: "https://tether.to/en/transparency" },
       { label: "USDT0", url: "https://usdt0.to/" },
     ],
@@ -185,7 +185,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://app.ethena.fi/dashboards/transparency", provider: "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk" },
     links: [
       { label: "Website", url: "https://ethena.fi/" },
-      { label: "Twitter", url: "https://x.com/ethena_labs" },
+      { label: "Twitter", url: "https://x.com/ethena" },
       { label: "Docs", url: "https://docs.ethena.fi/" },
     ],
     jurisdiction: { country: "British Virgin Islands" },
@@ -366,7 +366,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://app.falcon.finance/transparency", provider: "ht.digital" },
     links: [
       { label: "Website", url: "https://falcon.finance/" },
-      { label: "Twitter", url: "https://x.com/FalconStable" },
+      { label: "Twitter", url: "https://x.com/falconfinance" },
       { label: "Docs", url: "https://docs.falcon.finance" },
     ],
     jurisdiction: { country: "British Virgin Islands" },
@@ -569,7 +569,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "independent-audit", url: "https://www.anchorage.com/platform/usdtb-reserve-attestations", provider: "Big Four accounting firm via Anchorage Digital Bank" },
     links: [
       { label: "Website", url: "https://usdtb.money/" },
-      { label: "Twitter", url: "https://x.com/ethena_labs" },
+      { label: "Twitter", url: "https://x.com/ethena" },
       { label: "Docs", url: "https://docs.usdtb.money/" },
     ],
     jurisdiction: { country: "United States", regulator: "OCC", license: "Federal Bank Charter" },
@@ -703,7 +703,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     pegMechanism: "Overcollateralized minting via Aave V3 facilitator model; GHO Stability Module (GSM) enables 1:1 conversions with USDC and USDT; dynamic borrow rate adjustments by GHO Stewards reinforce the peg",
     links: [
       { label: "Website", url: "https://aave.com/gho" },
-      { label: "Twitter", url: "https://x.com/GHOAave" },
+      { label: "Twitter", url: "https://x.com/GHO" },
       { label: "Docs", url: "https://aave.com/docs/ecosystem/gho" },
       { label: "GitHub", url: "https://github.com/aave-dao/gho-origin" },
     ],
@@ -3112,11 +3112,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { id: "dai-makerdao", weight: 0.1 },
     ],
     reserves: [
-      { name: "sfrxUSD (Staked Frax USD)", pct: 42, risk: "medium", coinId: "frxusd-frax" },
+      { name: "sfrxUSD (Staked Frax USD)", pct: 42, risk: "medium" },
       { name: "Curve AMO positions (dUSD/sfrxUSD LP)", pct: 35, risk: "high" },
       { name: "frxUSD / DAI / sDAI (Fraxtal)", pct: 14, risk: "medium" },
       { name: "vbUSDT / vbUSDC (Katana Vault Bridge)", pct: 6, risk: "medium" },
-      { name: "sUSDS (Sky Savings Rate)", pct: 3, risk: "medium", coinId: "usds-sky" },
+      { name: "sUSDS (Sky Savings Rate)", pct: 3, risk: "medium" },
     ],
     notices: [
       { type: "warning", title: "Sonic deployment paused", message: "dUSD minting and redemption on Sonic is currently paused per the dTRINITY app." },
@@ -3134,7 +3134,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "independent-audit", url: "https://superstate.com/assets/ustb", provider: "Ernst & Young LLP (annual audit); Chronicle VAO + Chainlink oracle provide daily on-chain NAV transparency" },
     links: [
       { label: "Website", url: "https://superstate.com/assets/ustb" },
-      { label: "Twitter", url: "https://x.com/superstatefunds" },
+      { label: "Twitter", url: "https://x.com/SuperstateInc" },
       { label: "Docs", url: "https://docs.superstate.com/ustb" },
     ],
     jurisdiction: { country: "United States", regulator: "SEC", license: "Reg D Rule 506(c); Delaware Statutory Trust; restricted to U.S. Qualified Purchasers and Accredited Investors" },
