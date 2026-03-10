@@ -51,7 +51,14 @@ function pickBaseState(meta: ApiMeta | null | undefined, ageMs: number | null, s
 
 export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
   const hasData = input.hasData ?? input.dataUpdatedAt > 0;
-  const ageMs = input.dataUpdatedAt > 0 ? Date.now() - input.dataUpdatedAt : null;
+  const updatedAtMs = input.meta?.updatedAt != null && input.meta.updatedAt > 0
+    ? input.meta.updatedAt * 1000
+    : input.dataUpdatedAt;
+  const ageMs = input.meta?.ageSeconds != null
+    ? input.meta.ageSeconds * 1000
+    : updatedAtMs > 0
+      ? Date.now() - updatedAtMs
+      : null;
   const baseState = pickBaseState(input.meta, ageMs, input.staleTime);
 
   if (input.error && !hasData) {
@@ -60,7 +67,7 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
         label: input.label,
         state: "unavailable",
         message: "Data is not yet available.",
-        dataUpdatedAt: input.dataUpdatedAt,
+        dataUpdatedAt: updatedAtMs,
         ageMs,
         staleTime: input.staleTime,
         meta: input.meta ?? null,
@@ -71,7 +78,7 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
       label: input.label,
       state: "error",
       message: "Failed to load data.",
-      dataUpdatedAt: input.dataUpdatedAt,
+      dataUpdatedAt: updatedAtMs,
       ageMs,
       staleTime: input.staleTime,
       meta: input.meta ?? null,
@@ -84,7 +91,7 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
       label: input.label,
       state,
       message: "Using last successful data while refresh retries.",
-      dataUpdatedAt: input.dataUpdatedAt,
+      dataUpdatedAt: updatedAtMs,
       ageMs,
       staleTime: input.staleTime,
       meta: input.meta ?? null,
@@ -96,7 +103,7 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
       label: input.label,
       state: "unavailable",
       message: "Data is not yet available.",
-      dataUpdatedAt: input.dataUpdatedAt,
+      dataUpdatedAt: updatedAtMs,
       ageMs,
       staleTime: input.staleTime,
       meta: input.meta ?? null,
@@ -114,7 +121,7 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
     label: input.label,
     state: baseState,
     message,
-    dataUpdatedAt: input.dataUpdatedAt,
+    dataUpdatedAt: updatedAtMs,
     ageMs,
     staleTime: input.staleTime,
     meta: input.meta ?? null,

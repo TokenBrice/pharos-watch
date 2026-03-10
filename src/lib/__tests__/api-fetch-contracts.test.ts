@@ -147,4 +147,25 @@ describe("api contract validation policy", () => {
     expect(result.meta?.warning).toContain("Response is stale");
     expect(result.meta?.status).toBe("stale");
   });
+
+  it("uses the caller-provided maxAgeSec when deriving freshness from X-Data-Age", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Data-Age": "1122",
+        },
+      })
+    );
+
+    const result = await apiFetchWithMeta(
+      "/api/dex-liquidity",
+      z.object({ ok: z.boolean() }),
+      undefined,
+      1800,
+    );
+    expect(result.meta?.status).toBe("fresh");
+    expect(result.meta?.ageSeconds).toBe(1122);
+  });
 });

@@ -76,6 +76,8 @@ describe("deriveDataHealth", () => {
       },
     });
     expect(health.state).toBe("stale");
+    expect(health.ageMs).toBe(7_200_000);
+    expect(health.dataUpdatedAt).toBe((Math.floor((now - 2 * 60 * 60_000) / 1000)) * 1000);
   });
 
   it("returns unavailable on 503 error with no data", () => {

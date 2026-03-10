@@ -139,9 +139,10 @@ export function useApiQueryWithMeta<T>(
   cronInterval: number,
   opts?: ApiQueryOptions<T>,
 ): ApiQueryWithMetaResult<T> {
+  const metaMaxAgeSec = opts?.metaMaxAgeSec ?? Math.max(1, Math.round(cronInterval / 1000));
   const query = usePollingQuery(
     key,
-    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, opts?.metaMaxAgeSec),
+    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, metaMaxAgeSec),
     cronInterval,
     {
       enabled: opts?.enabled,
