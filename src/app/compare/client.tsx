@@ -9,6 +9,7 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
+import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
@@ -196,6 +197,7 @@ export function CompareClient() {
     error: reportCardsError,
     refetch: refetchReportCards,
   } = useReportCards();
+  const { data: flowData } = useMintBurnFlows();
   const globalError = listError ?? pegError ?? bluechipError ?? dexError ?? reportCardsError;
 
   const cardMap = useMemo(() => {
@@ -251,6 +253,7 @@ export function CompareClient() {
         const pegCoin = pegSummary?.coins?.find((c) => c.id === id);
         const dexCoin = dexData?.[id];
         const safetyGrade = cardMap.get(id)?.overallGrade ?? null;
+        const flowCoin = flowData?.coins.find((c) => c.stablecoinId === id);
         return {
           id,
           symbol: data.symbol,
@@ -260,11 +263,11 @@ export function CompareClient() {
           pegScore: pegCoin?.pegScore ?? null,
           liquidityScore: dexCoin?.liquidityScore ?? null,
           safetyGrade,
-          netFlow30d: null,
+          netFlow30d: flowCoin?.netFlow30dUsd ?? null,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
-  }, [selectedIds, listData, pegSummary, dexData, cardMap]);
+  }, [selectedIds, listData, pegSummary, dexData, cardMap, flowData]);
 
   // Build supply chart series
   const supplySeries = useMemo(() => {
