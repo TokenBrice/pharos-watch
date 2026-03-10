@@ -2,7 +2,7 @@
 
 ## DEX Liquidity Score
 
-`syncDexLiquidity()` in `worker/src/cron/dex-liquidity/orchestrator.ts` runs every 30 minutes (on the `10,40 * * * *` cron schedule) and computes a composite liquidity score (0-100) per stablecoin from 6 components:
+`syncDexLiquidity()` in `worker/src/cron/dex-liquidity/orchestrator.ts` runs every 30 minutes (on the `10,40 * * * *` cron schedule) and computes a composite liquidity score (0-100) per stablecoin from 5 components:
 
 Cron result status semantics:
 
@@ -14,12 +14,11 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool m
 
 | Component           | Weight | Source                     | How Computed                                                                                                           |
 | ------------------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **TVL Depth**       | 30%    | DeFiLlama Yields           | Log-scale using effective TVL (quality-adjusted, metapool-deduped): $100K->20, $1M->40, $10M->60, $100M->80, $1B+->100 |
-| **Volume Activity** | 20%    | DeFiLlama Yields           | Volume/TVL ratio. 0->0, 0.5->100                                                                                       |
-| **Pool Quality**    | 20%    | Curve API + DeFiLlama      | Quality-adjusted TVL using mechanism x balance health x pair quality multipliers (see below)                           |
-| **Durability**      | 15%    | DeFiLlama Yields + History | 35% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity, 5% locked liquidity                     |
+| **TVL Depth**       | 35%    | DeFiLlama Yields           | Log-scale using effective TVL (quality-adjusted, metapool-deduped): $100K->20, $1M->40, $10M->60, $100M->80, $1B+->100 |
+| **Volume Activity** | 20%    | DeFiLlama Yields           | Log-scale V/T ratio: 33.3*log10(vtRatio/0.005). ~0.5%->13, ~5%->56, ~50%->100                                         |
+| **Pool Quality**    | 22.5%  | Curve API + DeFiLlama      | Quality-adjusted TVL using mechanism x balance health x pair quality multipliers (see below)                           |
+| **Durability**      | 15%    | DeFiLlama Yields + History | 35% TVL stability, 25% volume consistency, 25% maturity, 15% organic fraction (sqrt curve)                             |
 | **Pair Diversity**  | 7.5%   | DeFiLlama Yields           | Pool count, diminishing returns: min(100, poolCount x 5)                                                               |
-| **Cross-chain**     | 7.5%   | DeFiLlama Yields           | 1 chain→15, then +12 per chain, capped at 100 (e.g. 2→27, 5→63, 9+→100)                                                |
 
 Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base). After primary-source pool matching, the scoring cron also reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
 
@@ -128,7 +127,7 @@ Per-pool stress metric: `35x(1-balanceRatio) + 25x(1-organicFraction) + 20xImmat
 
 ### Durability Score (0-100)
 
-Per-stablecoin durability metric combining: organic fee fraction (35%), TVL stability from 30-day CV (25%), volume consistency from 30-day CV (20%), oldest pool maturity (15%), and locked liquidity fraction (5%). Stored as `durability_score`.
+Per-stablecoin durability metric combining: TVL stability from 30-day CV (35%), volume consistency from 30-day CV (25%), oldest pool maturity (25%), and organic fee fraction with sqrt curve (15%). Locked liquidity removed — no reliable data source. Stored as `durability_score`.
 
 ### Pool Identity (`poolId`)
 
