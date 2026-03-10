@@ -10,6 +10,8 @@ import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { MintBurnPerCoinResponseSchema } from "@shared/types";
+import { CoinFlowCard } from "@/components/coin-flow-card";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
@@ -50,6 +52,11 @@ const ComparisonChart = dynamic(() => import("@/components/comparison-chart").th
 const CompareRadar = dynamic(() => import("@/components/radar-chart").then((m) => m.CompareRadar), {
   loading: () => <ChartSkeleton className="h-[420px] rounded-xl" />,
 });
+
+const FlowComparisonChart = dynamic(
+  () => import("@/components/flow-comparison-chart").then((m) => ({ default: m.FlowComparisonChart })),
+  { loading: () => <div className="h-[280px] rounded-xl animate-pulse bg-muted/20" /> },
+);
 
 /** Lookup from lowercased symbol to coin — used for preset cards and legacy URL fallback. */
 const SYMBOL_TO_COIN = new Map<string, CoinOption>(
@@ -134,6 +141,7 @@ export function CompareClient() {
   }, [searchParams]);
 
   const range = (searchParams.get("range") as TimeRangeOption) || "all";
+  const [flowHours, setFlowHours] = useState<24 | 168 | 720>(24);
 
   const setRange = useCallback(
     (newRange: TimeRangeOption) => {
@@ -233,6 +241,21 @@ export function CompareClient() {
     })),
   });
 
+  // Per-coin flow queries for the Live Flow Signals chart
+  // Direct apiFetch used here because hooks cannot be called inside useQueries callbacks —
+  // same pattern as detailQueries above.
+  const flowCoinQueries = useQueries({
+    queries: selectedIds.map((id) => ({
+      queryKey: ["mint-burn-flows", id, flowHours],
+      queryFn: async () => {
+        const raw = await apiFetch(`/api/mint-burn-flows?stablecoin=${encodeURIComponent(id)}&hours=${flowHours}`);
+        return MintBurnPerCoinResponseSchema.parse(raw);
+      },
+      staleTime: CRON_1H,
+      enabled: !!id,
+    })),
+  });
+
   // Track per-coin detail fetch errors
   const detailErrors = useMemo(() => {
     const errors: Record<string, boolean> = {};
@@ -288,6 +311,47 @@ export function CompareClient() {
       })
       .filter((s): s is NonNullable<typeof s> => s !== null);
   }, [selectedIds, detailQueries, CHART_COLORS]);
+
+  // Build flow series for the net flow chart
+  const flowSeries = useMemo(() => {
+    return selectedIds
+      .map((id, i) => {
+        const detail = flowCoinQueries[i]?.data;
+        if (!detail?.hourly?.length) return null;
+        const meta = TRACKED_META_BY_ID.get(id);
+        return {
+          id,
+          label: meta?.symbol ?? id,
+          color: COMPARE_COLORS[i % COMPARE_COLORS.length],
+          data: detail.hourly.map((h) => ({ ts: h.hourTs * 1000, netFlowUsd: h.netFlowUsd })),
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+  }, [selectedIds, flowCoinQueries]);
+
+  // Build per-coin flow card data from the aggregate flow response
+  const flowCardData = useMemo(() => {
+    if (!flowData?.coins) return [];
+    return selectedIds
+      .map((id, i) => {
+        const coin = flowData.coins.find((c) => c.stablecoinId === id);
+        if (!coin) return null;
+        // normalizeMintBurnFlowsResponse always sets these, but the schema marks them optional
+        const netFlowDirection24h = coin.netFlowDirection24h ?? "inactive";
+        const pressureShiftState = coin.pressureShiftState ?? "nr";
+        const meta = TRACKED_META_BY_ID.get(id);
+        return {
+          id,
+          symbol: meta?.symbol ?? id,
+          color: COMPARE_COLORS[i % COMPARE_COLORS.length],
+          netFlow24hUsd: coin.netFlow24hUsd,
+          pressureShiftScore: coin.pressureShiftScore ?? null,
+          netFlowDirection24h,
+          pressureShiftState,
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null);
+  }, [selectedIds, flowData]);
 
   const detailLoading = detailQueries.some((q) => q.isLoading);
   const handleRetry = useCallback(() => {
@@ -561,6 +625,50 @@ export function CompareClient() {
       {selectedIds.length >= 2 && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <ComparisonTable coins={comparisonCoins} pegRates={pegRates} logos={logos} detailErrors={detailErrors} />
+
+          {/* Live Flow Signals */}
+          {(flowCardData.length > 0 || flowSeries.length > 0) && (
+            <div className="rounded-2xl border border-border/60 bg-card/50 p-4 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Live Flow Signals
+                </h3>
+                {flowData?.updatedAt && (
+                  <span className="text-xs text-muted-foreground">
+                    Updated {Math.round((Date.now() / 1000 - flowData.updatedAt) / 60)} min ago · Ethereum
+                  </span>
+                )}
+              </div>
+
+              {/* Per-coin flow cards */}
+              {flowCardData.length > 0 && (
+                <div
+                  className="grid gap-3"
+                  style={{ gridTemplateColumns: `repeat(${Math.min(flowCardData.length, 5)}, minmax(0, 1fr))` }}
+                >
+                  {flowCardData.map((card) => (
+                    <CoinFlowCard key={card.id} {...card} />
+                  ))}
+                </div>
+              )}
+
+              {/* Net flow chart */}
+              {flowSeries.length >= 2 && (
+                <FlowComparisonChart
+                  series={flowSeries}
+                  hours={flowHours}
+                  onHoursChange={(h) => setFlowHours(h as 24 | 168 | 720)}
+                />
+              )}
+
+              {/* Coverage note */}
+              {selectedIds.length > flowCardData.length && (
+                <p className="text-xs text-muted-foreground">
+                  {flowCardData.length} of {selectedIds.length} selected coins have Ethereum flow tracking.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {detailLoading ? (
