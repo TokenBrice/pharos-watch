@@ -248,6 +248,34 @@ async function loadSubscriberRows(
   return result.results ?? [];
 }
 
+async function loadSubscriberRowsBatch(
+  db: D1Database,
+  stablecoinIds: string[],
+  type: AlertType,
+): Promise<Map<string, SubscriberRow[]>> {
+  if (stablecoinIds.length === 0) return new Map();
+  const alertColumn = ALERT_COLUMN_BY_TYPE[type];
+  const placeholders = stablecoinIds.map(() => "?").join(",");
+  const result = await db
+    .prepare(
+      `SELECT s.stablecoin_id, s.chat_id, u.last_active_at
+         FROM telegram_subscriptions s
+         JOIN telegram_subscribers u ON u.chat_id = s.chat_id
+        WHERE s.stablecoin_id IN (${placeholders})
+          AND u.${alertColumn} = 1`,
+    )
+    .bind(...stablecoinIds)
+    .all<{ stablecoin_id: string; chat_id: string; last_active_at: number }>();
+
+  const map = new Map<string, SubscriberRow[]>();
+  for (const row of result.results ?? []) {
+    const existing = map.get(row.stablecoin_id) ?? [];
+    existing.push({ chat_id: row.chat_id, last_active_at: row.last_active_at });
+    map.set(row.stablecoin_id, existing);
+  }
+  return map;
+}
+
 export async function dispatchTelegramAlerts(
   db: D1Database,
   botToken: string,
