@@ -26,6 +26,7 @@ import {
   type CoinGeckoMcapData,
 } from "./sync-stablecoins/supplemental-assets";
 
+import { upsertDiscoveryCandidates } from "./discovery-scan";
 import { DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { StablecoinListResponseSchema } from "@shared/types";
@@ -446,6 +447,32 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // for current/prev values — flatten to plain numbers so the frontend schema
   // and components can consume them directly.
   normalizeChainCirculating(llamaData.peggedAssets);
+
+  // Discovery Source A: DL residuals — upsert untracked coins with circulating > $5M
+  const dlResiduals = llamaData.peggedAssets
+    .filter((a) => !REGISTRY_BY_LLAMA_ID.has(String(a.id)))
+    .filter((a) => {
+      const circ = a.circulating;
+      if (!circ || typeof circ !== "object") return false;
+      const total = Object.values(circ).reduce((sum: number, v: unknown) => sum + (typeof v === "number" ? v : 0), 0);
+      return total >= 5_000_000;
+    })
+    .map((a) => ({
+      llamaId: Number(a.id),
+      name: a.name as string,
+      symbol: a.symbol as string,
+      marketCap: Object.values(a.circulating ?? {}).reduce((sum: number, v: unknown) => sum + (typeof v === "number" ? v : 0), 0),
+      source: "defillama",
+    }));
+
+  if (dlResiduals.length > 0) {
+    try {
+      await upsertDiscoveryCandidates(db, dlResiduals);
+      console.log(`[discovery] DL residuals: ${dlResiduals.length} untracked coins above $5M`);
+    } catch (err) {
+      console.warn("[discovery] DL residuals upsert failed:", err);
+    }
+  }
 
   // Remap DefiLlama numeric IDs to canonical IDs as early as possible.
   // Unmapped assets keep their original IDs and are filtered downstream.
