@@ -3111,6 +3111,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { id: "usds-sky", weight: 0.15 },
       { id: "dai-makerdao", weight: 0.1 },
     ],
+    reserves: [
+      { name: "sfrxUSD (Staked Frax USD)", pct: 42, risk: "medium", coinId: "frxusd-frax" },
+      { name: "Curve AMO positions (dUSD/sfrxUSD LP)", pct: 35, risk: "high" },
+      { name: "frxUSD / DAI / sDAI (Fraxtal)", pct: 14, risk: "medium" },
+      { name: "vbUSDT / vbUSDC (Katana Vault Bridge)", pct: 6, risk: "medium" },
+      { name: "sUSDS (Sky Savings Rate)", pct: 3, risk: "medium", coinId: "usds-sky" },
+    ],
     notices: [
       { type: "warning", title: "Sonic deployment paused", message: "dUSD minting and redemption on Sonic is currently paused per the dTRINITY app." },
     ],
