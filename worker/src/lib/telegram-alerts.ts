@@ -234,7 +234,18 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   }
 
   const body = sections.join("\n\n");
-  return `<b>Pharos Alerts</b>\n\n${body}\n\n<a href="https://pharos.watch">View on Pharos</a>`;
+  const allIds = [
+    ...alerts.dews.map((e) => e.stablecoinId),
+    ...alerts.depegTriggered.map((e) => e.stablecoinId),
+    ...alerts.depegResolved.map((e) => e.stablecoinId),
+    ...alerts.safety.map((e) => e.stablecoinId),
+  ];
+  const uniqueIds = new Set(allIds);
+  const url =
+    uniqueIds.size === 1
+      ? `https://pharos.watch/stablecoin/${[...uniqueIds][0]}`
+      : "https://pharos.watch";
+  return `<b>Pharos Alerts</b>\n\n${body}\n\n<a href="${url}">View on Pharos</a>`;
 }
 
 /** Split a message into chunks under the given character limit. */

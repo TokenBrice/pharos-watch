@@ -190,6 +190,53 @@ describe("formatConsolidatedMessage", () => {
     expect(msg).toContain("Pharos Alerts");
     expect(msg).toContain("View on Pharos");
   });
+
+  it("links to coin page when all alerts are for a single coin", () => {
+    const msg = formatConsolidatedMessage({
+      dews: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          oldBand: "CALM",
+          newBand: "ALERT",
+          score: 42,
+          topSignals: [],
+        },
+      ],
+      depegTriggered: [],
+      depegResolved: [],
+      safety: [],
+    });
+    expect(msg).toContain("https://pharos.watch/stablecoin/usdc-circle");
+  });
+
+  it("links to root when alerts span multiple coins", () => {
+    const msg = formatConsolidatedMessage({
+      dews: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          oldBand: "CALM",
+          newBand: "ALERT",
+          score: 42,
+          topSignals: [],
+        },
+      ],
+      depegTriggered: [
+        {
+          stablecoinId: "usdt-tether",
+          symbol: "USDT",
+          direction: "below",
+          deviationBps: 100,
+          price: 0.99,
+          pegReference: 1.0,
+        },
+      ],
+      depegResolved: [],
+      safety: [],
+    });
+    expect(msg).toContain('href="https://pharos.watch"');
+  });
 });
 
 describe("splitMessage", () => {

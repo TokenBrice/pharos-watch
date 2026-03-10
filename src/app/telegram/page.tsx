@@ -71,7 +71,7 @@ Top stress signals:
   pool_balance_drift: 0.61
   supply_velocity: 0.48
 
-View on Pharos: pharos.watch/stablecoin/tether`,
+View on Pharos: pharos.watch/stablecoin/usdt-tether`,
   },
   {
     label: "Depeg triggered",
@@ -80,7 +80,7 @@ Direction: below peg
 Deviation: -112 bps
 Price: $0.9888
 
-View on Pharos: pharos.watch/stablecoin/usd-coin`,
+View on Pharos: pharos.watch/stablecoin/usdc-circle`,
   },
   {
     label: "Safety grade change",
@@ -88,7 +88,7 @@ View on Pharos: pharos.watch/stablecoin/usd-coin`,
 Grade: A- -> B+
 Score: 71
 
-View on Pharos: pharos.watch/stablecoin/dai`,
+View on Pharos: pharos.watch/stablecoin/dai-makerdao`,
   },
 ] as const;
 
