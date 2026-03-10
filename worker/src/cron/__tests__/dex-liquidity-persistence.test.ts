@@ -9,6 +9,7 @@ import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-versi
 import { batchExecute } from "../../lib/db";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
+import type { FullScoreResult } from "../dex-liquidity/types";
 
 interface PreparedStatementWithMeta extends D1PreparedStatement {
   sql: string;
@@ -41,6 +42,33 @@ function makeDb(options: { historyRow?: { cnt: number; scored: number | null }; 
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
+}
+
+function makeFullScoreResult(overrides: Partial<FullScoreResult> = {}): FullScoreResult {
+  return {
+    tvl: 1,
+    vol24h: 1,
+    score: 1,
+    hhi: 0.1,
+    durability: 50,
+    components: {
+      tvlDepth: 10,
+      volumeActivity: 10,
+      poolQuality: 10,
+      durability: 50,
+      pairDiversity: 5,
+    },
+    weightedBalanceRatio: null,
+    organicFrac: null,
+    avgStress: null,
+    lockedLiqPct: null,
+    coverageClass: "primary",
+    coverageConfidence: 1,
+    sourceMix: { dl: { poolCount: 1, tvlUsd: 1 } },
+    balanceMeasuredTvlUsd: 0,
+    organicMeasuredTvlUsd: 0,
+    ...overrides,
+  };
 }
 
 describe("dex-liquidity persistence", () => {
@@ -79,7 +107,7 @@ describe("dex-liquidity persistence", () => {
       new Map([
         [
           "usdt-tether",
-          {
+          makeFullScoreResult({
             tvl: 123_456,
             vol24h: 22_222,
             score: 78,
@@ -96,7 +124,15 @@ describe("dex-liquidity persistence", () => {
             organicFrac: 0.67,
             avgStress: 12.34,
             lockedLiqPct: 0.55,
-          },
+            coverageClass: "mixed",
+            coverageConfidence: 0.85,
+            sourceMix: {
+              dl: { poolCount: 1, tvlUsd: 100_000 },
+              gecko_terminal: { poolCount: 1, tvlUsd: 23_456 },
+            },
+            balanceMeasuredTvlUsd: 120_000,
+            organicMeasuredTvlUsd: 120_000,
+          }),
         ],
       ]),
       {
@@ -147,6 +183,14 @@ describe("dex-liquidity persistence", () => {
         pairDiversity: 10,
       }),
       0.55,
+      "mixed",
+      0.85,
+      JSON.stringify({
+        dl: { poolCount: 1, tvlUsd: 100_000 },
+        gecko_terminal: { poolCount: 1, tvlUsd: 23_456 },
+      }),
+      120_000,
+      120_000,
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
@@ -171,6 +215,11 @@ describe("dex-liquidity persistence", () => {
       null,
       null,
       null,
+      "unobserved",
+      0,
+      null,
+      0,
+      0,
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
@@ -195,6 +244,11 @@ describe("dex-liquidity persistence", () => {
       null,
       null,
       null,
+      "unobserved",
+      0,
+      null,
+      0,
+      0,
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
@@ -209,8 +263,8 @@ describe("dex-liquidity persistence", () => {
         },
       }),
       new Map([
-        ["usdt-tether", { tvl: 1, vol24h: 1, score: 1 }],
-        ["usdc-circle", { tvl: 1, vol24h: 1, score: 1 }],
+        ["usdt-tether", makeFullScoreResult()],
+        ["usdc-circle", makeFullScoreResult()],
       ]),
     );
 
@@ -230,8 +284,8 @@ describe("dex-liquidity persistence", () => {
         },
       }),
       new Map([
-        ["usdt-tether", { tvl: 10, vol24h: 11, score: 12 }],
-        ["usdc-circle", { tvl: 20, vol24h: 21, score: 22 }],
+        ["usdt-tether", makeFullScoreResult({ tvl: 10, vol24h: 11, score: 12 })],
+        ["usdc-circle", makeFullScoreResult({ tvl: 20, vol24h: 21, score: 22 })],
       ]),
     );
 
@@ -250,6 +304,9 @@ describe("dex-liquidity persistence", () => {
       11,
       12,
       todayMidnight,
+      "primary",
+      1,
+      JSON.stringify({ dl: { poolCount: 1, tvlUsd: 1 } }),
       LIQUIDITY_METHODOLOGY_VERSION,
     ]);
     expect(daiPlaceholder?.boundValues).toEqual([
@@ -268,7 +325,7 @@ describe("dex-liquidity persistence", () => {
     await expect(
       writeHistoricalSnapshots(
         makeDb({ historyError: new Error("snapshot unavailable") }),
-        new Map([["usdt-tether", { tvl: 1, vol24h: 1, score: 1 }]]),
+        new Map([["usdt-tether", makeFullScoreResult()]]),
       ),
     ).resolves.toBeUndefined();
 

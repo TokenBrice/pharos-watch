@@ -1,7 +1,16 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { getCache, batchExecute } from "../../lib/db";
-import type { LiquidityMetrics, FullScoreResult, GlobalAgg, DexPriceObs } from "./types";
+import type {
+  LiquidityMetrics,
+  FullScoreResult,
+  GlobalAgg,
+  DexPriceObs,
+  LiquidityCoverageClass,
+  LiquiditySourceMix,
+} from "./types";
 import { computeDurabilityScore, computeLiquidityScore, normalizeProtocol } from "./pool-helpers";
+
+const HISTORY_CONFIDENCE_MIN = 0.75;
 
 function getPoolExtraNumber(
   extra: LiquidityMetrics["topPools"][number]["extra"] | undefined,
@@ -22,6 +31,7 @@ function getPoolExtraBoolean(
 function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   const protocolTvl: Record<string, number> = {};
   const chainTvl: Record<string, number> = {};
+  const sourceMix: LiquiditySourceMix = {};
   const chains = new Set<string>();
   const pairs = new Set<string>();
 
@@ -43,6 +53,10 @@ function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
     const proto = normalizeProtocol(pool.project);
     protocolTvl[proto] = (protocolTvl[proto] ?? 0) + pool.tvlUsd;
     chainTvl[pool.chain] = (chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
+    const sourceEntry = sourceMix[pool.source] ?? { poolCount: 0, tvlUsd: 0 };
+    sourceEntry.poolCount += 1;
+    sourceEntry.tvlUsd += pool.tvlUsd;
+    sourceMix[pool.source] = sourceEntry;
     chains.add(pool.chain);
     pairs.add(pool.symbol);
 
@@ -103,6 +117,7 @@ function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
     pairs,
     protocolTvl,
     chainTvl,
+    sourceMix,
     qualityAdjustedTvl,
     effectiveTvl,
     balanceRatioWeightedSum,
@@ -118,52 +133,104 @@ function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   };
 }
 
+function computeSeriesStability(values: number[]): number | null {
+  if (values.length < 7) return null;
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  if (mean <= 0) return null;
+  const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
+  const cv = Math.sqrt(variance) / mean;
+  return Math.round((1 - Math.min(1, cv)) * 10000) / 10000;
+}
+
+async function loadConfidentHistoryStability(db: D1Database): Promise<{
+  tvlStabilityMap: Map<string, number>;
+  volumeStabilityMap: Map<string, number>;
+}> {
+  const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400;
+  const thirtyDaysAgo = todayMidnight - 30 * 86_400;
+  const tvlStabilityMap = new Map<string, number>();
+  const volumeStabilityMap = new Map<string, number>();
+
+  const histRows = await db
+    .prepare(
+      `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, coverage_confidence
+       FROM dex_liquidity_history
+       WHERE snapshot_date >= ?
+       ORDER BY stablecoin_id, snapshot_date`
+    )
+    .bind(thirtyDaysAgo)
+    .all<{
+      stablecoin_id: string;
+      total_tvl_usd: number;
+      total_volume_24h_usd: number;
+      coverage_confidence: number | null;
+    }>();
+
+  const tvlByCoin = new Map<string, number[]>();
+  const volumeByCoin = new Map<string, number[]>();
+  for (const row of histRows.results ?? []) {
+    const confidence = row.coverage_confidence ?? 0;
+    if (confidence < HISTORY_CONFIDENCE_MIN) continue;
+
+    const tvlSeries = tvlByCoin.get(row.stablecoin_id) ?? [];
+    tvlSeries.push(row.total_tvl_usd);
+    tvlByCoin.set(row.stablecoin_id, tvlSeries);
+
+    const volumeSeries = volumeByCoin.get(row.stablecoin_id) ?? [];
+    volumeSeries.push(row.total_volume_24h_usd);
+    volumeByCoin.set(row.stablecoin_id, volumeSeries);
+  }
+
+  for (const [coinId, tvls] of tvlByCoin) {
+    const stability = computeSeriesStability(tvls);
+    if (stability != null) {
+      tvlStabilityMap.set(coinId, stability);
+    }
+  }
+  for (const [coinId, volumes] of volumeByCoin) {
+    const stability = computeSeriesStability(volumes);
+    if (stability != null) {
+      volumeStabilityMap.set(coinId, stability);
+    }
+  }
+
+  return { tvlStabilityMap, volumeStabilityMap };
+}
+
+function classifyCoverage(sourceMix: LiquiditySourceMix, totalTvlUsd: number): {
+  coverageClass: LiquidityCoverageClass;
+  coverageConfidence: number;
+} {
+  if (totalTvlUsd <= 0 || Object.keys(sourceMix).length === 0) {
+    return { coverageClass: "unobserved", coverageConfidence: 0 };
+  }
+
+  const primaryTvl = sourceMix.dl?.tvlUsd ?? 0;
+  const fallbackTvl = totalTvlUsd - primaryTvl;
+
+  if (primaryTvl > 0 && fallbackTvl <= 0) {
+    return { coverageClass: "primary", coverageConfidence: 1 };
+  }
+  if (primaryTvl > 0 && fallbackTvl > 0) {
+    return { coverageClass: "mixed", coverageConfidence: 0.85 };
+  }
+
+  return { coverageClass: "fallback", coverageConfidence: 0.55 };
+}
+
 /** Compute HHI, durability, and 6-component composite score per stablecoin. */
 export async function computeStablecoinScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
   protocolTvlCaps: Map<string, number>,
 ): Promise<{ scores: Map<string, FullScoreResult>; globalAgg: GlobalAgg }> {
-  // Pre-fetch depth stability for durability computation
-  const stabilityMap = new Map<string, number>();
+  let tvlStabilityMap = new Map<string, number>();
+  let volumeStabilityMap = new Map<string, number>();
   try {
-    const stabRows = await db
-      .prepare("SELECT stablecoin_id, depth_stability FROM dex_liquidity WHERE depth_stability IS NOT NULL")
-      .all<{ stablecoin_id: string; depth_stability: number }>();
-    for (const row of stabRows.results ?? []) {
-      stabilityMap.set(row.stablecoin_id, row.depth_stability);
-    }
-  } catch { /* first run has no data */ }
-
-  // Pre-fetch volume history for volume consistency (CV of 30-day volumes)
-  const volumeStabilityMap = new Map<string, number>();
-  try {
-    const todayMidnightForVol = Math.floor(Date.now() / 86_400_000) * 86_400;
-    const thirtyDaysAgoVol = todayMidnightForVol - 30 * 86_400;
-    const volRows = await db
-      .prepare(
-        `SELECT stablecoin_id, total_volume_24h_usd
-         FROM dex_liquidity_history
-         WHERE snapshot_date >= ?
-         ORDER BY stablecoin_id, snapshot_date`
-      )
-      .bind(thirtyDaysAgoVol)
-      .all<{ stablecoin_id: string; total_volume_24h_usd: number }>();
-    const volByCoin = new Map<string, number[]>();
-    for (const row of volRows.results ?? []) {
-      const arr = volByCoin.get(row.stablecoin_id) ?? [];
-      arr.push(row.total_volume_24h_usd);
-      volByCoin.set(row.stablecoin_id, arr);
-    }
-    for (const [coinId, vols] of volByCoin) {
-      if (vols.length < 7) continue;
-      const mean = vols.reduce((s, v) => s + v, 0) / vols.length;
-      if (mean <= 0) continue;
-      const variance = vols.reduce((s, v) => s + (v - mean) ** 2, 0) / vols.length;
-      const cv = Math.sqrt(variance) / mean;
-      volumeStabilityMap.set(coinId, Math.round((1 - Math.min(1, cv)) * 10000) / 10000);
-    }
-  } catch { /* first run has no data */ }
+    ({ tvlStabilityMap, volumeStabilityMap } = await loadConfidentHistoryStability(db));
+  } catch {
+    // First run / pre-migration state — fall back to neutral defaults downstream.
+  }
 
   const results = new Map<string, FullScoreResult>();
 
@@ -276,7 +343,7 @@ export async function computeStablecoinScores(
     m.topPools = rebuilt.visiblePools;
 
     // v2: Compute durability score
-    const tvlStab = stabilityMap.get(id) ?? null;
+    const tvlStab = tvlStabilityMap.get(id) ?? null;
     const volStab = volumeStabilityMap.get(id) ?? null;
     const durability = computeDurabilityScore(m, tvlStab, volStab);
 
@@ -296,6 +363,7 @@ export async function computeStablecoinScores(
     const lockedLiqPct = m.totalTvlForLocked > 0
       ? Math.round((m.lockedLiqWeightedSum / m.totalTvlForLocked) * 10000) / 10000
       : null;
+    const { coverageClass, coverageConfidence } = classifyCoverage(rebuilt.sourceMix, m.totalTvlUsd);
 
     results.set(id, {
       tvl: m.totalTvlUsd,
@@ -308,6 +376,11 @@ export async function computeStablecoinScores(
       organicFrac,
       avgStress,
       lockedLiqPct,
+      coverageClass,
+      coverageConfidence,
+      sourceMix: rebuilt.sourceMix,
+      balanceMeasuredTvlUsd: m.totalTvlForBalance,
+      organicMeasuredTvlUsd: m.totalTvlForOrganic,
     });
   }
 
@@ -350,43 +423,21 @@ export async function computeStablecoinScores(
 
 /** Compute depth stability (CV-based) from 30-day history and persist to D1. */
 export async function computeDepthStability(db: D1Database): Promise<void> {
-  const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400;
   try {
-    const thirtyDaysAgo = todayMidnight - 30 * 86_400;
-    const histRows = await db
-      .prepare(
-        `SELECT stablecoin_id, total_tvl_usd
-         FROM dex_liquidity_history
-         WHERE snapshot_date >= ?
-         ORDER BY stablecoin_id, snapshot_date`
-      )
-      .bind(thirtyDaysAgo)
-      .all<{ stablecoin_id: string; total_tvl_usd: number }>();
-
-    // Group by stablecoin
-    const histByCoin = new Map<string, number[]>();
-    for (const row of histRows.results ?? []) {
-      const arr = histByCoin.get(row.stablecoin_id) ?? [];
-      arr.push(row.total_tvl_usd);
-      histByCoin.set(row.stablecoin_id, arr);
-    }
+    const { tvlStabilityMap } = await loadConfidentHistoryStability(db);
 
     const stabilityStmts: D1PreparedStatement[] = [];
-    for (const [id, tvls] of histByCoin) {
-      if (tvls.length < 7) continue; // Need at least 7 days for meaningful stability
-      const mean = tvls.reduce((s, v) => s + v, 0) / tvls.length;
-      if (mean <= 0) continue;
-      const variance = tvls.reduce((s, v) => s + (v - mean) ** 2, 0) / tvls.length;
-      const stddev = Math.sqrt(variance);
-      const cv = stddev / mean;
-      const stability = Math.round((1 - Math.min(1, cv)) * 10000) / 10000;
+    stabilityStmts.push(
+      db.prepare("UPDATE dex_liquidity SET depth_stability = NULL WHERE stablecoin_id != '__global__'")
+    );
+    for (const [id, stability] of tvlStabilityMap) {
       stabilityStmts.push(
         db.prepare("UPDATE dex_liquidity SET depth_stability = ? WHERE stablecoin_id = ?").bind(stability, id)
       );
     }
     if (stabilityStmts.length > 0) {
       await batchExecute(db, stabilityStmts);
-      console.log(`[dex-liquidity] Updated depth stability for ${stabilityStmts.length} coins`);
+      console.log(`[dex-liquidity] Updated depth stability for ${tvlStabilityMap.size} coins`);
     }
   } catch (err) {
     console.warn("[dex-liquidity] Depth stability computation failed:", err);

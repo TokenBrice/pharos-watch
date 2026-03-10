@@ -159,7 +159,7 @@ describe("dex-liquidity scoring", () => {
         volumeUsd1d: 40_000,
         volumeUsd7d: 28_000,
         poolType: "generic",
-        source: "cg",
+        source: "cg_onchain",
         extra: { effectiveTvl: 80_000 },
       },
       {
@@ -171,7 +171,7 @@ describe("dex-liquidity scoring", () => {
         volumeUsd1d: 35_000,
         volumeUsd7d: 24_500,
         poolType: "generic",
-        source: "gt",
+        source: "gecko_terminal",
         extra: { effectiveTvl: 70_000 },
       },
       {
@@ -194,7 +194,7 @@ describe("dex-liquidity scoring", () => {
         volumeUsd1d: 10_000,
         volumeUsd7d: 70_000,
         poolType: "generic",
-        source: "gt",
+        source: "gecko_terminal",
       },
       ...Array.from({ length: 9 }, (_, index) => ({
         poolId: `ethereum:extra-${index + 1}`,
@@ -233,7 +233,7 @@ describe("dex-liquidity scoring", () => {
         volumeUsd1d: 30_000,
         volumeUsd7d: 21_000,
         poolType: "generic",
-        source: "gt",
+        source: "gecko_terminal",
         extra: { effectiveTvl: 90_000 },
       },
       {
@@ -354,26 +354,26 @@ describe("dex-liquidity scoring", () => {
       {
         match: "FROM dex_liquidity_history",
         all: [
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 100 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 100 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0 },
+          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdt-tether", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "usdc-circle", total_tvl_usd: 100, total_volume_24h_usd: 10, coverage_confidence: 1 },
+          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
+          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
+          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
+          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
+          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
+          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
+          { stablecoin_id: "dai-makerdao", total_tvl_usd: 0, total_volume_24h_usd: 0, coverage_confidence: 1 },
         ],
       },
     ]);
@@ -383,8 +383,9 @@ describe("dex-liquidity scoring", () => {
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts).toHaveLength(1);
-    expect(upserts[0]?.boundValues).toEqual([1, "usdt-tether"]);
+    expect(upserts).toHaveLength(2);
+    expect(upserts[0]?.boundValues).toEqual([]);
+    expect(upserts[1]?.boundValues).toEqual([1, "usdt-tether"]);
     expect(logSpy).toHaveBeenCalledWith("[dex-liquidity] Updated depth stability for 1 coins");
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});

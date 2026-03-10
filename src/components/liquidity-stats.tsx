@@ -23,6 +23,8 @@ export interface LiquidityStatsData {
   totalVol: number;
   avgScore: number;
   withLiquidity: number;
+  highConfidenceCoverage: number;
+  fallbackCoverage: number;
   totalTracked: number;
   agg7dChange: number | null;
   avgBalance: number | null;
@@ -225,10 +227,10 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <MetricStatCard
           borderColorClass="border-l-violet-500"
-          title="Active on DEX"
+          title="Covered on DEX"
           value={stats.withLiquidity}
           valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
-          subtext={`of ${stats.totalTracked} tracked stablecoins`}
+          subtext={`${stats.highConfidenceCoverage} primary/mixed · ${stats.fallbackCoverage} fallback · of ${stats.totalTracked}`}
           subtextClassName="text-sm text-muted-foreground"
         />
         {stats.avgBalance != null && (

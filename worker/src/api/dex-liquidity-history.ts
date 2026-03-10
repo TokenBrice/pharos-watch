@@ -7,6 +7,8 @@ interface LiquidityHistoryRow {
   total_volume_24h_usd: number;
   liquidity_score: number | null;
   snapshot_date: number;
+  coverage_class: string | null;
+  coverage_confidence: number | null;
   methodology_version: string | null;
 }
 
@@ -24,7 +26,8 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
     fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
       const result = await database
         .prepare(
-          `SELECT total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date, methodology_version
+          `SELECT total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
+                  coverage_class, coverage_confidence, methodology_version
            FROM dex_liquidity_history
            WHERE stablecoin_id = ? AND snapshot_date >= ?
            ORDER BY snapshot_date ASC`
@@ -38,6 +41,8 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
       volume24h: row.total_volume_24h_usd,
       score: row.liquidity_score,
       date: row.snapshot_date,
+      coverageClass: row.coverage_class ?? "legacy",
+      coverageConfidence: row.coverage_confidence ?? 0.5,
       methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.snapshot_date),
     }),
   });

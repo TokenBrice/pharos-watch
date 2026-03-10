@@ -1,0 +1,127 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { LiquidityHealth } from "@shared/types";
+import { formatCurrency } from "@shared/lib/format";
+
+function guardTone(active: boolean): string {
+  return active ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
+}
+
+function Metric({
+  label,
+  value,
+  subtext,
+}: {
+  label: string;
+  value: string;
+  subtext?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border/50 p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-mono text-xl font-bold">{value}</div>
+      {subtext ? <div className="text-xs text-muted-foreground">{subtext}</div> : null}
+    </div>
+  );
+}
+
+export function LiquidityHealthCard({ health }: { health: LiquidityHealth | null }) {
+  if (!health) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Liquidity Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">No liquidity health data available yet.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentClasses = health.currentCoverageClasses;
+  const previousClasses = health.previousCoverageClasses;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-base">Liquidity Health</CardTitle>
+          <span className="text-xs text-muted-foreground">
+            Last run {health.lastRunStatus ?? "unknown"}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <Metric
+            label="Covered Coins"
+            value={String(health.currentCoverage)}
+            subtext={
+              health.previousCoverage != null
+                ? `prev ${health.previousCoverage}`
+                : undefined
+            }
+          />
+          <Metric
+            label="Global DEX TVL"
+            value={health.currentGlobalTvl != null ? formatCurrency(health.currentGlobalTvl) : "—"}
+            subtext={
+              health.previousGlobalTvl != null
+                ? `prev ${formatCurrency(health.previousGlobalTvl)}`
+                : undefined
+            }
+          />
+          <Metric
+            label="Top 10 Covered TVL"
+            value={health.currentTop10CoveredTvl != null ? formatCurrency(health.currentTop10CoveredTvl) : "—"}
+            subtext={
+              health.previousTop10CoveredTvl != null
+                ? `prev ${formatCurrency(health.previousTop10CoveredTvl)}`
+                : undefined
+            }
+          />
+          <Metric
+            label="Failed Sources"
+            value={String(health.failedSources.length)}
+            subtext={health.failedSources.length > 0 ? health.failedSources.join(", ") : "none"}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          <span className={guardTone(health.nearCoverageGuard)}>
+            Row guard: {health.nearCoverageGuard ? "near threshold" : "normal"}
+          </span>
+          <span className={guardTone(health.nearValueGuard)}>
+            Value guard: {health.nearValueGuard ? "near threshold" : "normal"}
+          </span>
+          <span className={guardTone(health.nearMajorCoverageGuard)}>
+            Major coverage guard: {health.nearMajorCoverageGuard ? "near threshold" : "normal"}
+          </span>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-border/50 p-3">
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Current coverage mix</div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>Primary: <span className="font-mono">{currentClasses.primary}</span></div>
+              <div>Mixed: <span className="font-mono">{currentClasses.mixed}</span></div>
+              <div>Fallback: <span className="font-mono">{currentClasses.fallback}</span></div>
+              <div>Unobserved: <span className="font-mono">{currentClasses.unobserved}</span></div>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border/50 p-3">
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Previous coverage mix</div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>Primary: <span className="font-mono">{previousClasses.primary}</span></div>
+              <div>Mixed: <span className="font-mono">{previousClasses.mixed}</span></div>
+              <div>Fallback: <span className="font-mono">{previousClasses.fallback}</span></div>
+              <div>Unobserved: <span className="font-mono">{previousClasses.unobserved}</span></div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

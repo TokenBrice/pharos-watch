@@ -10,7 +10,7 @@ Cron result status semantics:
 - `degraded`: one or more critical non-fatal source families failed (for example DeFiLlama yields/protocol coverage), or coverage falls near the guardrail band.
 - throw/error: catastrophic source failure (for example DL+Curve hard failure) still aborts the run.
 
-Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByAddress`, `stagedPoolsSkippedByFingerprint`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`, `priceObservationCoins`, `dsFallbackCoins`, `cgTickerFallbackCoins`).
+Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByAddress`, `stagedPoolsSkippedByFingerprint`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`, `currentGlobalTvl`, `previousGlobalTvl`, `nearValueGuard`, `currentTop10CoveredTvl`, `previousTop10CoveredTvl`, `nearMajorCoverageGuard`, `currentCoverageClasses`, `previousCoverageClasses`, `priceObservationCoins`, `dsFallbackCoins`, `cgTickerFallbackCoins`).
 
 | Component           | Weight | Source                     | How Computed                                                                                                           |
 | ------------------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -22,7 +22,7 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool m
 
 Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base). After primary-source pool matching, the scoring cron also reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
 
-After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates.
+After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates.
 
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
@@ -95,7 +95,8 @@ Quality gates:
 
 - Pool TVL must exceed $1,000
 - Pool must have 24h volume > 0 or TVL > $10,000
-- Only pools where our token is the base token are counted
+- Pools are accepted when the tracked token is either the base or quote asset
+- Quote-side pools still require an explicit tracked-token USD derivation before they can contribute a DEX price observation
 - Pools already discovered by the primary pipeline are deduplicated by `chainId:pairAddress`
 - Generic quality multiplier (0.3x) unless the DEX ID matches a known protocol (same `GT_DEX_QUALITY` lookup)
 
@@ -139,11 +140,26 @@ DeFiLlama's yields API uses opaque UUIDs as pool identifiers (e.g., `6b6de6c7-..
 
 The scoring cron applies the same fingerprint dedup during staged-pool merge, so a discovery-stage row cannot be re-counted when DeFiLlama already covers the same physical pool under a UUID. `/status` exposes this split directly via `stagedPoolsSkippedByFingerprint` versus `stagedPoolsSkippedByAddress`.
 
+### Coverage Confidence
+
+Every scored row now persists:
+
+- `coverage_class`: `primary`, `mixed`, `fallback`, `legacy`, or `unobserved`
+- `coverage_confidence`: current trust score for the row (`1.0`, `0.85`, `0.55`, `0.5`, or `0`)
+- `source_mix_json`: compact source-family composition for the retained pool set
+
+Current rows also persist:
+
+- `balance_measured_tvl_usd`
+- `organic_measured_tvl_usd`
+
+These measurement-denominator fields let the frontend weight balance/organic aggregates only by TVL that actually had measured inputs.
+
 ### Storage
 
-Stored in D1 `dex_liquidity` table (created in migration 0009; extended in 0010, 0012, 0024, and 0036) with per-stablecoin aggregate metrics, protocol/chain TVL breakdowns, top 10 pools as JSON columns, plus v2 columns: `avg_pool_stress`, `weighted_balance_ratio`, `organic_fraction`, `effective_tvl_usd`, `durability_score`, `score_components_json`, `locked_liquidity_pct`, and `methodology_version`. Stablecoins with no DEX presence store `liquidity_score = NULL` (NR semantics).
+Stored in D1 `dex_liquidity` table (created in migration 0009; extended in 0010, 0012, 0024, 0036, and 0061) with per-stablecoin aggregate metrics, protocol/chain TVL breakdowns, top 10 pools as JSON columns, plus v2/v3 columns: `avg_pool_stress`, `weighted_balance_ratio`, `organic_fraction`, `effective_tvl_usd`, `durability_score`, `score_components_json`, `locked_liquidity_pct`, `coverage_class`, `coverage_confidence`, `source_mix_json`, `balance_measured_tvl_usd`, `organic_measured_tvl_usd`, and `methodology_version`. Stablecoins with no observed DEX presence store `liquidity_score = NULL` (NR semantics) and `coverage_class = 'unobserved'`.
 
-Both `dex_liquidity` and `dex_liquidity_history` also carry `methodology_version` (migration 0036), reconstructed from commit-history version windows in `shared/lib/liquidity-score-version.ts`.
+Both `dex_liquidity` and `dex_liquidity_history` also carry `methodology_version` (migration 0036), reconstructed from commit-history version windows in `shared/lib/liquidity-score-version.ts`. Historical rows also persist `coverage_class`, `coverage_confidence`, and `source_mix_json`. Legacy pre-0061 rows are backfilled as `coverage_class = 'legacy'` and `coverage_confidence = 0.5`.
 
 Discovery and merge staging tables are documented in the [Discovery Cron](#discovery-cron) section below.
 
@@ -187,8 +203,9 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 
 - **Concentration HHI**: Herfindahl-Hirschman Index computed from the full retained pool set after filtering/caps but before top-10 display truncation. Range 0-1 (1.0 = single pool). Stored as `concentration_hhi`.
 - **Depth Stability**: Coefficient of variation of daily TVL over 30-day rolling window, inverted to 0-1 scale. Requires >=7 days of data. Stored as `depth_stability`.
-- **TVL Trends**: 24h and 7d percentage changes computed from daily history snapshots. Returned as `tvlChange24h`/`tvlChange7d`.
-- **Daily Snapshots**: One snapshot per stablecoin per day in `dex_liquidity_history` table (migration 0010). Written on first sync after UTC midnight.
+- **TVL Trends**: 24h and 7d percentage changes computed from daily history snapshots, but only when a baseline exists within a tolerance window (`12h` for 24h, `36h` for 7d) and that snapshot has `coverage_confidence >= 0.5`. Otherwise the API returns `null`.
+- **Depth Stability / Volume Consistency inputs**: durability history uses only snapshots with `coverage_confidence >= 0.75`; fewer than 7 confident rows fall back to neutral durability defaults.
+- **Daily Snapshots**: One snapshot per stablecoin per day in `dex_liquidity_history` table (migration 0010, confidence fields added in 0061). Written on first sync after UTC midnight.
 
 ---
 
@@ -226,10 +243,12 @@ Every source family now uses the same minimum liquidity rule for DEX prices: a p
 
 **API exposure:**
 
-- `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`
+- `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`, `coverageClass`, `coverageConfidence`, `sourceMix`, `balanceMeasuredTvlUsd`, `organicMeasuredTvlUsd`
+- `/api/dex-liquidity`: adds a `Warning` header when the latest `sync-dex-liquidity` run was degraded or failed and the endpoint is serving the last successful dataset
 - `/api/peg-summary`: adds optional `dexPriceCheck` per coin when the row passes a UI trust gate (fresh within 60 minutes and aggregate source TVL `>= $250K`)
 
 **Frontend:**
 
-- `dex-liquidity-card.tsx`: shows DEX-implied price section when available
+- `dex-liquidity-card.tsx`: shows DEX-implied price section when available plus coverage badges (`Primary`, `Mixed`, `Fallback`, `NR`)
+- `/liquidity`: shows coverage badges and a separate unrated/unobserved section instead of silently dropping NR assets
 - `peg-heatmap.tsx`: amber "!" badge on tiles where DEX disagrees with primary

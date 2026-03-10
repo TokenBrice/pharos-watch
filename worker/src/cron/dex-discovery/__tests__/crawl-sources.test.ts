@@ -7,6 +7,10 @@ vi.mock("../../dex-liquidity/crawl-helpers", () => ({
 vi.mock("../../../lib/dexscreener", () => ({
   fetchDsTokenPools: vi.fn(),
   dsRateLimit: vi.fn().mockResolvedValue(undefined),
+  getDsTrackedTokenPriceUsd: vi.fn((pair: { baseToken: { address: string }; priceUsd: string | null }, trackedAddress: string) => ({
+    side: pair.baseToken.address?.toLowerCase() === trackedAddress.toLowerCase() ? "base" : null,
+    priceUsd: pair.priceUsd != null ? Number(pair.priceUsd) : null,
+  })),
 }));
 
 import { crawlCoin } from "../crawl-sources";

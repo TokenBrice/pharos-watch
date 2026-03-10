@@ -2,6 +2,10 @@ import { withErrorHandler, safeParse, addFreshnessHeaders, jsonResponse } from "
 import { CACHE_PROFILES } from "../lib/constants";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 
+const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
+const TREND_24H_TOLERANCE_SEC = 12 * 3600;
+const TREND_7D_TOLERANCE_SEC = 36 * 3600;
+
 interface DexLiquidityRow {
   stablecoin_id: string;
   total_tvl_usd: number;
@@ -24,6 +28,11 @@ interface DexLiquidityRow {
   durability_score: number | null;
   score_components_json: string | null;
   locked_liquidity_pct: number | null;
+  coverage_class: string | null;
+  coverage_confidence: number | null;
+  source_mix_json: string | null;
+  balance_measured_tvl_usd: number | null;
+  organic_measured_tvl_usd: number | null;
   methodology_version: string | null;
 }
 
@@ -31,6 +40,8 @@ interface DexHistoryRow {
   stablecoin_id: string;
   total_tvl_usd: number;
   snapshot_date: number;
+  coverage_class: string | null;
+  coverage_confidence: number | null;
 }
 
 interface DexPriceRow {
@@ -43,12 +54,81 @@ interface DexPriceRow {
   updated_at: number;
 }
 
+interface DexLiquidityCronRow {
+  status: string;
+  metadata: string | null;
+}
+
+function selectTrendBaseline(
+  history: DexHistoryRow[],
+  targetSec: number,
+  toleranceSec: number,
+): DexHistoryRow | null {
+  let best: DexHistoryRow | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const row of history) {
+    const confidence = row.coverage_confidence ?? 0;
+    if (confidence < TREND_BASELINE_CONFIDENCE_MIN) continue;
+    if (row.total_tvl_usd <= 0) continue;
+
+    const distance = Math.abs(row.snapshot_date - targetSec);
+    if (distance > toleranceSec) continue;
+    if (distance < bestDistance) {
+      best = row;
+      bestDistance = distance;
+    }
+  }
+
+  return best;
+}
+
+function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null): string | null {
+  if (!latestCron) return null;
+  if (latestCron.status !== "degraded" && latestCron.status !== "error") return null;
+
+  let failedSources: string[] = [];
+  let nearCoverageGuard = false;
+  let nearValueGuard = false;
+  let nearMajorCoverageGuard = false;
+  if (latestCron.metadata) {
+    try {
+      const parsed = JSON.parse(latestCron.metadata) as {
+        failedSources?: string[];
+        sourceCoverage?: {
+          nearCoverageGuard?: boolean;
+          nearValueGuard?: boolean;
+          nearMajorCoverageGuard?: boolean;
+        };
+      };
+      failedSources = parsed.failedSources ?? [];
+      nearCoverageGuard = parsed.sourceCoverage?.nearCoverageGuard ?? false;
+      nearValueGuard = parsed.sourceCoverage?.nearValueGuard ?? false;
+      nearMajorCoverageGuard = parsed.sourceCoverage?.nearMajorCoverageGuard ?? false;
+    } catch {
+      // Ignore malformed metadata and fall back to generic warning text.
+    }
+  }
+
+  const details: string[] = [];
+  if (failedSources.length > 0) details.push(`failedSources=${failedSources.join(",")}`);
+  if (nearCoverageGuard) details.push("nearCoverageGuard");
+  if (nearValueGuard) details.push("nearValueGuard");
+  if (nearMajorCoverageGuard) details.push("nearMajorCoverageGuard");
+
+  const suffix = details.length > 0 ? ` (${details.join("; ")})` : "";
+  if (latestCron.status === "error") {
+    return `199 - "Latest sync-dex-liquidity run failed; serving last successful dataset${suffix}"`;
+  }
+  return `199 - "Latest sync-dex-liquidity run degraded${suffix}"`;
+}
+
 export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D1Database): Promise<Response> => {
-  const [result, histResult, priceResult] = await Promise.all([
+  const [result, histResult, priceResult, latestCron] = await Promise.all([
     db.prepare("SELECT * FROM dex_liquidity ORDER BY liquidity_score DESC").all<DexLiquidityRow>(),
     db
       .prepare(
-        `SELECT stablecoin_id, total_tvl_usd, snapshot_date
+        `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
          ORDER BY stablecoin_id, snapshot_date DESC`
@@ -62,6 +142,16 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       }
       return { results: [] as DexPriceRow[] };
     }),
+    db
+      .prepare(
+        `SELECT status, metadata
+         FROM cron_runs
+         WHERE job = 'sync-dex-liquidity'
+         ORDER BY started_at DESC
+         LIMIT 1`
+      )
+      .first<DexLiquidityCronRow>()
+      .catch(() => null),
   ]);
 
   // Build DEX price lookup
@@ -71,10 +161,10 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
   }
 
   // Build historical TVL lookup: stablecoin_id → sorted snapshots (newest first)
-  const histByCoin = new Map<string, { tvl: number; date: number }[]>();
+  const histByCoin = new Map<string, DexHistoryRow[]>();
   for (const row of histResult.results ?? []) {
     const arr = histByCoin.get(row.stablecoin_id) ?? [];
-    arr.push({ tvl: row.total_tvl_usd, date: row.snapshot_date });
+    arr.push(row);
     histByCoin.set(row.stablecoin_id, arr);
   }
 
@@ -89,19 +179,10 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
 
     // Compute trend changes from history
     const history = histByCoin.get(id) ?? [];
-    let tvlChange24h: number | null = null;
-    let tvlChange7d: number | null = null;
-
-    // Find closest snapshot to 1 day ago and 7 days ago
-    for (const snap of history) {
-      if (tvlChange24h == null && snap.date <= oneDayAgo && snap.tvl > 0) {
-        tvlChange24h = ((currentTvl - snap.tvl) / snap.tvl) * 100;
-      }
-      if (tvlChange7d == null && snap.date <= sevenDaysAgo && snap.tvl > 0) {
-        tvlChange7d = ((currentTvl - snap.tvl) / snap.tvl) * 100;
-      }
-      if (tvlChange24h != null && tvlChange7d != null) break;
-    }
+    const baseline24h = selectTrendBaseline(history, oneDayAgo, TREND_24H_TOLERANCE_SEC);
+    const baseline7d = selectTrendBaseline(history, sevenDaysAgo, TREND_7D_TOLERANCE_SEC);
+    const tvlChange24h = baseline24h ? ((currentTvl - baseline24h.total_tvl_usd) / baseline24h.total_tvl_usd) * 100 : null;
+    const tvlChange7d = baseline7d ? ((currentTvl - baseline7d.total_tvl_usd) / baseline7d.total_tvl_usd) * 100 : null;
 
     // Merge DEX price data if available
     const dexPrice = dexPriceById.get(id);
@@ -133,6 +214,11 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,
       organicFraction: row.organic_fraction ?? null,
       durabilityScore: row.durability_score ?? null,
+      coverageClass: row.coverage_class ?? "legacy",
+      coverageConfidence: row.coverage_confidence ?? 0.5,
+      sourceMix: safeParse<Record<string, { poolCount: number; tvlUsd: number }>>(row.source_mix_json, {}),
+      balanceMeasuredTvlUsd: row.balance_measured_tvl_usd ?? 0,
+      organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
       scoreComponents: safeParse<unknown>(row.score_components_json, null),
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
       methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.updated_at),
@@ -144,7 +230,13 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
     ? rows.reduce((m, r) => Math.min(m, r.updated_at), Infinity)
     : Math.floor(Date.now() / 1000);
 
-  return jsonResponse(map, addFreshnessHeaders({
+  const headers = addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.standard,
-  }, oldestUpdate, 3600));
+  }, oldestUpdate, 3600);
+  const degradedWarning = buildDexLiquidityWarning(latestCron);
+  if (degradedWarning) {
+    headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;
+  }
+
+  return jsonResponse(map, headers);
 });

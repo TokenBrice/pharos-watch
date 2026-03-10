@@ -2,7 +2,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { RATE_LIMITS } from "../../lib/rate-limit";
-import { dsRateLimit, fetchDsTokenPools } from "../../lib/dexscreener";
+import { dsRateLimit, fetchDsTokenPools, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import { CHAIN_REGISTRY, CG_CHAIN_MAP, GT_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { normalizeProtocol, getGtDexQuality } from "../dex-liquidity/pool-helpers";
 import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers";
@@ -272,6 +272,7 @@ export async function crawlCoin(
         baseToken: parsed.baseTokenAddress,
         quoteToken: parsed.quoteTokenAddress,
         quoteSymbol: null,
+        sourceFamily: "gecko_terminal",
       }),
     });
 
@@ -368,9 +369,9 @@ export async function crawlCoin(
 
           const poolId = `${chain.toLowerCase()}:${poolAddress}`;
           if (knownPoolIds.has(poolId)) continue;
-          if (baseAddr !== address.toLowerCase()) continue;
 
-          const price = parseFloat(pair.priceUsd ?? "");
+          const { side, priceUsd } = getDsTrackedTokenPriceUsd(pair, address);
+          if (!side) continue;
 
           addPool({
             poolId,
@@ -395,7 +396,7 @@ export async function crawlCoin(
             baseToken: baseAddr,
             quoteToken: quoteAddr,
             quoteSymbol: pair.quoteToken?.symbol ?? null,
-            priceUsd: Number.isFinite(price) && price > 0 ? price : null,
+            priceUsd,
             lockedLiqPct: null,
             rawJson: null,
             discoveredAt: nowSec,
@@ -403,14 +404,13 @@ export async function crawlCoin(
           });
 
           if (
-            Number.isFinite(price) &&
-            price > 0 &&
+            priceUsd != null &&
             tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
-            isPlausibleDexObservationPrice(stablecoinId, price)
+            isPlausibleDexObservationPrice(stablecoinId, priceUsd)
           ) {
             addPriceObs({
               stablecoinId,
-              price,
+              price: priceUsd,
               tvl,
               chain,
               protocol: `dexscreener-${dexId}`,
@@ -482,7 +482,7 @@ export async function crawlCoin(
               poolId,
               stablecoinId,
               source: "cg_tickers",
-              chain: "cex",
+              chain: "orderbook",
               protocol: exchangeId,
               dexId: exchangeId,
               symbol: `${stablecoinMeta?.symbol ?? stablecoinId} / USD`,
@@ -511,7 +511,7 @@ export async function crawlCoin(
                 stablecoinId,
                 price,
                 tvl: syntheticTvl,
-                chain: "cex",
+                chain: "orderbook",
                 protocol: `cg-ticker-${exchangeId}`,
               });
             }

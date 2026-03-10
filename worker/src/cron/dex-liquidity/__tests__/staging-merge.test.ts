@@ -205,7 +205,7 @@ describe("mergeStagedPools", () => {
     expect(metric.qualityAdjustedTvl).toBe(37500);
     expect(metric.protocolTvl.pancakeswap).toBe(75000);
     expect(metric.topPools).toHaveLength(1);
-    expect(metric.topPools[0]?.source).toBe("gt");
+    expect(metric.topPools[0]?.source).toBe("gecko_terminal");
     expect(metric.topPools[0]?.poolId).toBe("bsc:0xpool1");
   });
 
@@ -249,7 +249,7 @@ describe("mergeStagedPools", () => {
     expect(metric.totalTvlForLocked).toBe(100000);
     expect(metric.lockedLiqWeightedSum).toBe(90000);
     expect(metric.topPools).toHaveLength(1);
-    expect(metric.topPools[0]?.source).toBe("cg");
+    expect(metric.topPools[0]?.source).toBe("cg_onchain");
     expect(metric.topPools[0]?.extra?.balanceRatio).toBe(0.8);
     expect(metric.topPools[0]?.extra?.feeTier).toBe(500);
   });

@@ -238,6 +238,7 @@ export async function mergeStagedPools(
         poolType,
         price: stagedPool.priceUsd ?? 0,
         symbol: stagedPool.symbol,
+        sourceFamily: "cg_onchain",
         balanceRatio: stagedPool.balanceRatio,
         lockedLiquidityPct: stagedPool.lockedLiqPct,
         feePercentage: stagedPool.feeTier ? stagedPool.feeTier / 100 : null,
@@ -246,18 +247,24 @@ export async function mergeStagedPools(
     }
 
     pushPool(gtPoolMap, stagedPool.stablecoinId, {
-        address,
-        chain: stagedPool.chain,
-        dexId,
-        name: stagedPool.symbol,
-        tvlUsd: adjustedTvl,
-        volume24hUsd: adjustedVolume,
+      address,
+      chain: stagedPool.chain,
+      dexId,
+      name: stagedPool.symbol,
+      tvlUsd: adjustedTvl,
+      volume24hUsd: adjustedVolume,
       qualityMultiplier,
       maturityDays,
       poolType,
       price: stagedPool.priceUsd ?? 0,
-        symbol: stagedPool.symbol,
-      });
+      symbol: stagedPool.symbol,
+      sourceFamily:
+        stagedPool.source === "dexscreener"
+          ? "dexscreener"
+          : stagedPool.source === "cg_tickers"
+            ? "cg_tickers"
+            : "gecko_terminal",
+    });
   }
 
   if (fingerprintSkipped > 0) {

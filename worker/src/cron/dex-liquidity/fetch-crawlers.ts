@@ -131,6 +131,7 @@ export async function fetchCgPools(
         poolType,
         price,
         symbol: parsed.poolName,
+        sourceFamily: "cg_onchain",
         balanceRatio,
         lockedLiquidityPct: lockedLiqPct != null && !isNaN(lockedLiqPct) ? lockedLiqPct : null,
         feePercentage: feePct != null && !isNaN(feePct) ? feePct : null,
@@ -216,7 +217,7 @@ export function mergeCgPools(
         volumeUsd1d: pool.volume24hUsd,
         volumeUsd7d: pool.volume7dUsd ?? null,
         poolType: pool.poolType,
-        source: "cg",
+        source: "cg_onchain",
         extra: {
           ...(pool.balanceRatio != null ? { balanceRatio: Math.round(pool.balanceRatio * 100) / 100 } : {}),
           ...(pool.feePercentage != null ? { feeTier: Math.round(pool.feePercentage * 10000) } : {}),
@@ -332,6 +333,7 @@ export async function fetchGtPools(
         poolType: `gt-${poolType}`,
         price,
         symbol: parsed.poolName,
+        sourceFamily: "gecko_terminal",
       };
     },
   });
@@ -404,7 +406,7 @@ export function mergeGtPools(
         volumeUsd1d: pool.volume24hUsd,
         volumeUsd7d: pool.volume7dUsd ?? null,
         poolType: pool.poolType,
-        source: "gt",
+        source: pool.sourceFamily,
         extra: {
           qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
           effectiveTvl: Math.round(poolEffTvl),

@@ -15,11 +15,13 @@ import { SortableTableHead } from "@/components/sortable-table-head";
 import { TablePagination } from "@/components/table-pagination";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { BalanceBar } from "@/components/balance-bar";
+import { Badge } from "@/components/ui/badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { formatCurrency } from "@shared/lib/format";
 import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-constants";
+import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import type { StablecoinMeta, DexLiquidityData } from "@shared/types";
@@ -285,6 +287,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
             const liq = row.liq;
             const vtRatio = liq.totalTvlUsd > 0 ? liq.totalVolume24hUsd / liq.totalTvlUsd : 0;
             const topProtocol = Object.entries(liq.protocolTvl).sort((a, b) => b[1] - a[1])[0];
+            const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass);
 
             return (
               <InteractiveTableRow
@@ -298,14 +301,29 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <StablecoinLogo src={logos?.[row.meta.id]} name={row.meta.name} size={24} />
-                    <span className="font-medium">{row.meta.symbol}</span>
-                    <span className="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline">{row.meta.name}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{row.meta.symbol}</span>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${coverageBadge.className}`}
+                          title={formatLiquiditySourceMix(liq.sourceMix)}
+                        >
+                          {coverageBadge.label}
+                        </Badge>
+                      </div>
+                      <span className="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline">{row.meta.name}</span>
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
-                  <span className={getScoreColor(liq.liquidityScore ?? 0)}>
-                    {liq.liquidityScore ?? 0}
-                  </span>
+                  {liq.liquidityScore != null ? (
+                    <span className={getScoreColor(liq.liquidityScore)}>
+                      {liq.liquidityScore}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">NR</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{formatCurrency(liq.totalTvlUsd)}</TableCell>
                 <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
@@ -360,7 +378,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
           {sorted.length === 0 && (
             <TableRow>
               <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-                {searchQuery ? `No results for "${searchQuery}"` : "No liquidity pools tracked for this stablecoin."}
+                {searchQuery ? `No results for "${searchQuery}"` : "No stablecoins match the current filters."}
               </TableCell>
             </TableRow>
           )}

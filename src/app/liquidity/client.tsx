@@ -29,8 +29,15 @@ const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
   { value: "GOLD", label: "Gold" },
 ];
 
+function formatWarningMessage(warning: string): string {
+  return warning
+    .split(/,\s*(?=\d{3}\s+-)/)
+    .map((entry) => entry.match(/"(.+)"/)?.[1] ?? entry.trim())
+    .join(" ");
+}
+
 export function LiquidityClient() {
-  const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch } = useDexLiquidity();
+  const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch, meta } = useDexLiquidity();
   const { data: logos } = useLogos();
   const { getParam, setParam } = useUrlFilters();
   const pegFilter = (getParam("peg", "all")) as PegCurrency | "all";
@@ -53,8 +60,17 @@ export function LiquidityClient() {
         meta,
         liq: liquidityMap[meta.id],
       }))
-      .filter((r): r is LiquidityRow => r.liq != null && (r.liq.liquidityScore ?? 0) > 0);
+      .filter((r): r is LiquidityRow => r.liq != null);
   }, [liquidityMap, pegFilter, searchQuery]);
+
+  const scoredRows = useMemo(
+    () => rows.filter((row) => row.liq.liquidityScore != null),
+    [rows],
+  );
+  const unratedRows = useMemo(
+    () => rows.filter((row) => row.liq.liquidityScore == null),
+    [rows],
+  );
 
   // Summary stats computed from full (unfiltered) data
   const summaryStats = useMemo((): LiquidityStatsData | null => {
@@ -66,6 +82,8 @@ export function LiquidityClient() {
     let scoreSum = 0;
     let scoreCount = 0;
     let withLiquidity = 0;
+    let highConfidenceCoverage = 0;
+    let fallbackCoverage = 0;
     let tvlForChange = 0;    // current TVL only for coins with 7d change data
     let totalPrevTvl = 0;    // previous TVL for those same coins
     let totalBalance = 0;
@@ -76,10 +94,12 @@ export function LiquidityClient() {
     for (const meta of TRACKED_STABLECOINS) {
       const liq = liquidityMap[meta.id];
       if (!liq) continue;
-      if (liq.liquidityScore != null && liq.liquidityScore > 0) {
+      if (liq.liquidityScore != null) {
         scoreSum += liq.liquidityScore;
         scoreCount++;
         withLiquidity++;
+        if (liq.coverageClass === "primary" || liq.coverageClass === "mixed") highConfidenceCoverage++;
+        if (liq.coverageClass === "fallback") fallbackCoverage++;
       }
       if (liq.tvlChange7d != null && liq.totalTvlUsd > 0) {
         const prevTvl = liq.totalTvlUsd / (1 + liq.tvlChange7d / 100);
@@ -87,12 +107,14 @@ export function LiquidityClient() {
         totalPrevTvl += prevTvl;
       }
       if (liq.weightedBalanceRatio != null) {
-        totalBalance += liq.weightedBalanceRatio * liq.totalTvlUsd;
-        balanceWeight += liq.totalTvlUsd;
+        const measuredTvl = liq.balanceMeasuredTvlUsd;
+        totalBalance += liq.weightedBalanceRatio * measuredTvl;
+        balanceWeight += measuredTvl;
       }
       if (liq.organicFraction != null) {
-        totalOrganic += liq.organicFraction * liq.totalTvlUsd;
-        organicWeight += liq.totalTvlUsd;
+        const measuredTvl = liq.organicMeasuredTvlUsd;
+        totalOrganic += liq.organicFraction * measuredTvl;
+        organicWeight += measuredTvl;
       }
     }
 
@@ -104,6 +126,8 @@ export function LiquidityClient() {
       totalVol,
       avgScore: scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 0,
       withLiquidity,
+      highConfidenceCoverage,
+      fallbackCoverage,
       totalTracked: TRACKED_STABLECOINS.length,
       agg7dChange: agg7dChange != null ? Math.round(agg7dChange * 10) / 10 : null,
       avgBalance: balanceWeight > 0 ? Math.round((totalBalance / balanceWeight) * 100) : null,
@@ -138,8 +162,13 @@ export function LiquidityClient() {
     <div className="space-y-6">
       <QueryErrorNotice error={error} hasData={!!liquidityMap} onRetry={handleRetry} />
       <StaleDataBanner
-        queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap }]}
+        queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap, meta }]}
       />
+      {meta?.warning && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+          {formatWarningMessage(meta.warning)}
+        </div>
+      )}
 
       {summaryStats && liquidityMap && (
         <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />
@@ -176,12 +205,29 @@ export function LiquidityClient() {
         </div>
 
         <LiquidityTable
-          rows={rows}
+          rows={scoredRows}
           logos={logos}
           searchQuery={searchQuery}
           onRowClick={handleRowClick}
         />
       </div>
+
+      {unratedRows.length > 0 && (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">Unrated / Not Observed</h2>
+            <p className="text-sm text-muted-foreground">
+              These assets are tracked, but the current liquidity pipeline has not observed enough DEX coverage to assign a Liquidity Score.
+            </p>
+          </div>
+          <LiquidityTable
+            rows={unratedRows}
+            logos={logos}
+            searchQuery={searchQuery}
+            onRowClick={handleRowClick}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -281,12 +281,12 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `blacklist.test.ts` | `handleBlacklist` | 200 with events, empty results, 400 invalid params, camelCase mapping, X-Data-Age |
 | `depeg-events.test.ts` | `handleDepegEvents` | 200 with events, empty results, 400 invalid params, camelCase mapping |
 | `supply-history.test.ts` | `handleSupplyHistory` | 200 with history, empty, 400 missing/invalid stablecoin |
-| `dex-liquidity-history.test.ts` | `handleDexLiquidityHistory` | 200 with history, empty, 400 missing/invalid stablecoin |
+| `dex-liquidity-history.test.ts` | `handleDexLiquidityHistory` | 200 with history, empty, 400 missing/invalid stablecoin, coverage-confidence fields |
 | `yield-history.test.ts` | `handleYieldHistory` | 200 with history, empty, 400 missing/invalid stablecoin, camelCase |
 | `safety-score-history.test.ts` | `handleSafetyScoreHistory` | 200 with history/empty, 400 missing/invalid stablecoin, freshness headers |
 | `mint-burn-events.test.ts` | `handleMintBurnEvents` | 200 with events, camelCase mapping, invalid stablecoin/direction/chain/burnType guards, freshness headers |
 | `cache-passthrough.test.ts` | stablecoins, charts, usds, bluechip, yield-rankings | 503 cache miss, 200 with _meta, X-Data-Age |
-| `dex-liquidity.test.ts` | `handleDexLiquidity` | 200 with liquidity map, empty map, v2 fields, X-Data-Age |
+| `dex-liquidity.test.ts` | `handleDexLiquidity` | 200 with liquidity map, empty map, coverage-confidence fields, degraded Warning header, X-Data-Age |
 | `peg-summary.test.ts` | `handlePegSummary` | 503 cache miss, 200 with coins + summary, X-Data-Age |
 | `report-cards.test.ts` | `handleReportCards` | 503 cache miss, 200 with cards/methodology/dependencyGraph |
 | `stablecoin-detail.test.ts` | `handleStablecoinDetail` | Upstream retry/timeout fallback behavior, stale-cache fallback, parse-failure diagnostics |
@@ -302,7 +302,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `backfill-mint-burn.test.ts` | `handleBackfillMintBurn` | Auth/validation, chunked ingestion progression, `done/nextFromBlock` semantics |
 | `backfill-mint-burn-prices.test.ts` | `handleBackfillMintBurnPrices` | NULL-price backfill aggregation and response summary shape |
 | `stability-index.test.ts` | `handleStabilityIndex` | Summary, Detail (with components in history) |
-| `status.test.ts` | `handleStatus` | Admin status payload synthesis, cache/cron health aggregation, and probe sections |
+| `status.test.ts` | `handleStatus` | Admin status payload synthesis, cache/cron health aggregation, liquidity health extraction, and probe sections |
 | `status-history.test.ts` | `handleStatusHistory` | Timeline/probe history pagination and range filters |
 | `stress-signals.test.ts` | `handleStressSignals` | DEWS scores, threat bands, signal components |
 | `telegram-webhook.test.ts` | `handleTelegramWebhook` | Command routing, subscription state changes, and webhook auth validation |
@@ -343,9 +343,9 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `dex-liquidity-pool-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | Symbol parsing, pool classification, quality multipliers, chain-map toggles, durability/liquidity scoring branches, protocol normalization, pair/stress helpers |
 | `dex-liquidity-process-pools.test.ts` | `dex-liquidity/process-pools.ts` | Pool filtering, address/symbol matching, collision safety, Curve/Uni v3/Aerodrome enrichment, weighted metric accumulation |
 | `dex-liquidity-price-sanity.test.ts` | `dex-liquidity/price-sanity.ts` | DEX observation plausibility bounds and anomaly rejection |
-| `dex-liquidity-scoring.test.ts` | `dex-liquidity/scoring.ts` | Pool filtering/scaling, per-coin/global aggregate recomputation, depth-stability persistence, DEX price median persistence |
+| `dex-liquidity-scoring.test.ts` | `dex-liquidity/scoring.ts` | Pool filtering/scaling, per-coin/global aggregate recomputation, confidence-gated depth stability, DEX price median persistence |
 | `confirm-pending-depegs.test.ts` | `confirm-pending-depegs.ts` | Pending depeg state-machine decisions, secondary confirmation paths, missing dex table handling, abort propagation |
-| `dex-liquidity-persistence.test.ts` | `dex-liquidity/persistence.ts` | Current-score upserts, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior |
+| `dex-liquidity-persistence.test.ts` | `dex-liquidity/persistence.ts` | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior |
 | `sync-mint-burn.test.ts` | `sync-mint-burn.ts` | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior |
 | `worker/src/cron/dex-discovery/__tests__/orchestrator.test.ts` | `dex-discovery/orchestrator.ts` | Discovery tiering, backoff cadence, staged-pool writes, and budget exhaustion behavior |
 | `worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts` | `dex-liquidity/staging-merge.ts` | Staged-pool confidence decay, default filling, and merge-selection semantics |

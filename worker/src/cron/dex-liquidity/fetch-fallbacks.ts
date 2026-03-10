@@ -2,7 +2,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
-import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP } from "../../lib/dexscreener";
+import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
@@ -82,27 +82,27 @@ export async function fetchDsFallbackPools(
         const vol24h = pair.volume?.h24 ?? 0;
         if (vol24h === 0 && tvl < 10_000) continue;
 
-        // Ensure our token is the base token (not some random meme pairing)
         const baseAddr = pair.baseToken.address.toLowerCase();
-        const isBase = baseAddr === contract.address.toLowerCase();
-        if (!isBase) continue;
-
-        // Parse price early — needed for price observation extraction
-        const price = parseFloat(pair.priceUsd ?? "") || 0;
+        const quoteAddr = pair.quoteToken.address.toLowerCase();
+        const { side, priceUsd } = getDsTrackedTokenPriceUsd(pair, contract.address);
+        if (!side) continue;
 
         // Extract price observation BEFORE dedup check.
         // DL yields pools provide pool metrics but never prices; DexScreener pairs
         // carry priceUsd. Dedup correctly prevents double-counting TVL in dex_liquidity,
         // but price observations feed dex_prices via TVL-weighted median.
-        if (isPlausibleDexObservationPrice(meta.id, price) && tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
+        if (
+          priceUsd != null &&
+          isPlausibleDexObservationPrice(meta.id, priceUsd) &&
+          tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
+        ) {
           const obs = priceObs.get(meta.id) ?? [];
-          obs.push({ price, tvl, chain: contract.chain, protocol: `dexscreener-${pair.dexId}` });
+          obs.push({ price: priceUsd, tvl, chain: contract.chain, protocol: `dexscreener-${pair.dexId}` });
           priceObs.set(meta.id, obs);
         }
 
         // Dedup against known pool addresses + token-pair fingerprints
         const poolKey = `${contract.chain}:${pair.pairAddress.toLowerCase()}`;
-        const quoteAddr = pair.quoteToken.address.toLowerCase();
         const fpKey = buildPoolFingerprint(contract.chain, pair.dexId, [baseAddr, quoteAddr]);
         if (knownPoolAddrs.has(poolKey) || (fpKey != null && knownPoolAddrs.has(fpKey))) continue;
         knownPoolAddrs.add(poolKey);
@@ -137,8 +137,9 @@ export async function fetchDsFallbackPools(
           qualityMultiplier: qualMult,
           maturityDays,
           poolType,
-          price,
+          price: priceUsd ?? 0,
           symbol: symbolStr,
+          sourceFamily: "dexscreener",
         });
         newPools.set(meta.id, poolList);
         poolsFound++;
@@ -216,17 +217,18 @@ export async function fetchCgTickersFallback(
       }
 
       // Aggregate by exchange identifier
-      const byExchange = new Map<string, { name: string; volume: number; price: number }>();
+      const byExchange = new Map<string, { name: string; volume: number; priceVolumeWeightedSum: number }>();
       for (const t of valid) {
         const id = t.market.identifier;
         const entry = byExchange.get(id);
         if (entry) {
           entry.volume += t.converted_volume.usd;
+          entry.priceVolumeWeightedSum += t.converted_last.usd * t.converted_volume.usd;
         } else {
           byExchange.set(id, {
             name: t.market.name,
             volume: t.converted_volume.usd,
-            price: t.converted_last.usd,
+            priceVolumeWeightedSum: t.converted_last.usd * t.converted_volume.usd,
           });
         }
       }
@@ -234,12 +236,13 @@ export async function fetchCgTickersFallback(
       const pools: GtNewPool[] = [];
       for (const [exchangeId, exch] of byExchange) {
         const syntheticTvl = exch.volume * ORDERBOOK_TVL_FACTOR;
+        const price = exch.volume > 0 ? exch.priceVolumeWeightedSum / exch.volume : 0;
 
         // Price observation (only if price is plausible — skip if near 0)
-        if (syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(meta.id, exch.price)) {
+        if (syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(meta.id, price)) {
           const obs = priceObs.get(meta.id) ?? [];
           obs.push({
-            price: exch.price,
+            price,
             tvl: syntheticTvl,
             chain: "orderbook",
             protocol: `cg-ticker-${exchangeId}`,
@@ -257,9 +260,10 @@ export async function fetchCgTickersFallback(
           qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
           maturityDays: 365,
           poolType: "orderbook",
-          price: exch.price,
+          price,
           // Use "USDC" as quote symbol so computePoolPairQuality returns 1.0
           symbol: `${meta.symbol} / USDC`,
+          sourceFamily: "cg_tickers",
         });
       }
 

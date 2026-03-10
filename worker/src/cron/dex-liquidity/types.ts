@@ -68,6 +68,27 @@ export interface LiquidityMetrics {
   totalTvlForLocked: number;
 }
 
+export type LiquidityPoolSourceFamily =
+  | "dl"
+  | "cg_onchain"
+  | "gecko_terminal"
+  | "dexscreener"
+  | "cg_tickers";
+
+export type LiquidityCoverageClass =
+  | "primary"
+  | "mixed"
+  | "fallback"
+  | "legacy"
+  | "unobserved";
+
+export interface LiquiditySourceMixEntry {
+  poolCount: number;
+  tvlUsd: number;
+}
+
+export type LiquiditySourceMix = Partial<Record<LiquidityPoolSourceFamily, LiquiditySourceMixEntry>>;
+
 export interface PoolEntry {
   poolId: string;
   project: string;
@@ -77,8 +98,8 @@ export interface PoolEntry {
   volumeUsd1d: number;
   volumeUsd7d?: number | null;
   poolType: string;
-  /** Data source: "dl" = DeFiLlama, "cg" = CoinGecko, "gt" = GeckoTerminal, "ds" = DexScreener */
-  source: "dl" | "cg" | "gt" | "ds";
+  /** Canonical source family for coverage-confidence accounting and UI attribution. */
+  source: LiquidityPoolSourceFamily;
   extra?: {
     amplificationCoefficient?: number;
     balanceRatio?: number;
@@ -228,6 +249,8 @@ export interface GtNewPool {
   symbol: string;
   /** Discovery/source-specific pool type used for quality weighting */
   poolType: string;
+  /** Canonical source family for later merge attribution. */
+  sourceFamily: Exclude<LiquidityPoolSourceFamily, "dl">;
   /** Optional per-pool 7d volume when source provides it */
   volume7dUsd?: number | null;
 }
@@ -252,7 +275,20 @@ export interface GlobalAgg {
   chainTvl: Record<string, number>;
 }
 
-export type FullScoreResult = ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null; lockedLiqPct: number | null };
+export type FullScoreResult = ScoreResult & {
+  hhi: number;
+  durability: number;
+  components: ScoreComponents;
+  weightedBalanceRatio: number | null;
+  organicFrac: number | null;
+  avgStress: number | null;
+  lockedLiqPct: number | null;
+  coverageClass: LiquidityCoverageClass;
+  coverageConfidence: number;
+  sourceMix: LiquiditySourceMix;
+  balanceMeasuredTvlUsd: number;
+  organicMeasuredTvlUsd: number;
+};
 
 export interface CgTicker {
   base: string;

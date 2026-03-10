@@ -1,4 +1,5 @@
 import type { CronResult } from "../../lib/db";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { throwIfAborted } from "../../lib/abort";
 import type { DexPriceObs } from "./types";
@@ -168,16 +169,103 @@ export async function syncDexLiquidity(
   // 6. Compute composite scores per stablecoin
   const { scores: scoreResults, globalAgg } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
   const currentCoverage = scoreResults.size;
-  const previousCoverageRow = await db
-    .prepare("SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL")
-    .first<{ cnt: number }>()
-    .catch(() => null);
+  const [
+    previousCoverageRow,
+    previousGlobalRow,
+    previousCoverageClassRows,
+    previousTopCoverageRows,
+  ] = await Promise.all([
+    db
+      .prepare("SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL")
+      .first<{ cnt: number }>()
+      .catch(() => null),
+    db
+      .prepare("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = '__global__'")
+      .first<{ total_tvl_usd: number | null }>()
+      .catch(() => null),
+    db
+      .prepare(
+        `SELECT coverage_class, COUNT(*) as cnt
+         FROM dex_liquidity
+         WHERE stablecoin_id != '__global__'
+         GROUP BY coverage_class`
+      )
+      .all<{ coverage_class: string | null; cnt: number }>()
+      .catch(() => ({ results: [] as Array<{ coverage_class: string | null; cnt: number }> })),
+    db
+      .prepare(
+        `SELECT stablecoin_id, total_tvl_usd
+         FROM dex_liquidity
+         WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL
+         ORDER BY total_tvl_usd DESC
+         LIMIT 10`
+      )
+      .all<{ stablecoin_id: string; total_tvl_usd: number }>()
+      .catch(() => ({ results: [] as Array<{ stablecoin_id: string; total_tvl_usd: number }> })),
+  ]);
   const previousCoverage = previousCoverageRow?.cnt ?? 0;
   const minExpectedCoverage = Math.max(1, Math.floor(previousCoverage * 0.6));
   const nearCoverageGuard = previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
+
+  const currentGlobalTvl = globalAgg.totalTvl;
+  const previousGlobalTvl = previousGlobalRow?.total_tvl_usd ?? null;
+  const minExpectedGlobalTvl = previousGlobalTvl != null ? previousGlobalTvl * 0.6 : null;
+  const nearValueGuard = previousGlobalTvl != null &&
+    previousGlobalTvl >= 10_000_000 &&
+    currentGlobalTvl < previousGlobalTvl * 0.85;
+  const hardValueGuard = previousGlobalTvl != null &&
+    previousGlobalTvl >= 10_000_000 &&
+    currentGlobalTvl < previousGlobalTvl * 0.6;
+
+  const previousTop10CoveredTvl = (previousTopCoverageRows.results ?? [])
+    .reduce((sum, row) => sum + row.total_tvl_usd, 0);
+  const currentTop10CoveredTvl = (previousTopCoverageRows.results ?? [])
+    .reduce((sum, row) => sum + (scoreResults.get(row.stablecoin_id)?.tvl ?? 0), 0);
+  const nearMajorCoverageGuard = previousTop10CoveredTvl >= 5_000_000 &&
+    currentTop10CoveredTvl < previousTop10CoveredTvl * 0.85;
+  const hardMajorCoverageGuard = previousTop10CoveredTvl >= 5_000_000 &&
+    currentTop10CoveredTvl < previousTop10CoveredTvl * 0.6;
+
+  const currentCoverageClasses = {
+    primary: 0,
+    mixed: 0,
+    fallback: 0,
+    legacy: 0,
+    unobserved: TRACKED_STABLECOINS.length - currentCoverage,
+  };
+  for (const row of scoreResults.values()) {
+    currentCoverageClasses[row.coverageClass] += 1;
+  }
+
+  const previousCoverageClasses = {
+    primary: 0,
+    mixed: 0,
+    fallback: 0,
+    legacy: 0,
+    unobserved: 0,
+  };
+  for (const row of previousCoverageClassRows.results ?? []) {
+    const key = row.coverage_class;
+    if (key && key in previousCoverageClasses) {
+      previousCoverageClasses[key as keyof typeof previousCoverageClasses] = row.cnt;
+    }
+  }
+
   if (previousCoverage >= 10 && currentCoverage < minExpectedCoverage) {
     throw new Error(
       `[dex-liquidity] coverage guard tripped: current=${currentCoverage}, previous=${previousCoverage}, minExpected=${minExpectedCoverage}`,
+    );
+  }
+  if (hardValueGuard) {
+    throw new Error(
+      `[dex-liquidity] value coverage guard tripped: currentGlobalTvl=${Math.round(currentGlobalTvl)}, ` +
+      `previousGlobalTvl=${Math.round(previousGlobalTvl ?? 0)}, minExpectedGlobalTvl=${Math.round(minExpectedGlobalTvl ?? 0)}`,
+    );
+  }
+  if (hardMajorCoverageGuard) {
+    throw new Error(
+      `[dex-liquidity] major coverage guard tripped: currentTop10CoveredTvl=${Math.round(currentTop10CoveredTvl)}, ` +
+      `previousTop10CoveredTvl=${Math.round(previousTop10CoveredTvl)}`,
     );
   }
   throwIfAborted(signal);
@@ -194,7 +282,9 @@ export async function syncDexLiquidity(
 
   const degraded =
     criticalSourceFailures.length > 0 ||
-    nearCoverageGuard;
+    nearCoverageGuard ||
+    nearValueGuard ||
+    nearMajorCoverageGuard;
 
   return {
     status: degraded ? "degraded" : "ok",
@@ -214,6 +304,15 @@ export async function syncDexLiquidity(
         previousCoverage,
         minExpectedCoverage,
         nearCoverageGuard,
+        currentGlobalTvl,
+        previousGlobalTvl,
+        minExpectedGlobalTvl,
+        nearValueGuard,
+        currentTop10CoveredTvl,
+        previousTop10CoveredTvl,
+        nearMajorCoverageGuard,
+        currentCoverageClasses,
+        previousCoverageClasses,
         priceObservationCoins: priceObservations.size,
         dsFallbackCoins,
         cgTickerFallbackCoins,

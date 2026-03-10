@@ -23,9 +23,53 @@ export interface DsPair {
   baseToken: { address: string; name: string; symbol: string };
   quoteToken: { address: string; name: string; symbol: string };
   priceUsd: string | null;
+  priceNative?: string | null;
   volume: { h24: number; h6: number; h1: number; m5: number } | null;
   liquidity: { usd: number; base: number; quote: number } | null;
   pairCreatedAt: number | null;
+}
+
+export interface DsTrackedTokenPrice {
+  side: "base" | "quote" | null;
+  priceUsd: number | null;
+}
+
+/**
+ * Resolve the tracked token side and, when possible, its USD price.
+ *
+ * DexScreener `priceUsd` is the base token's USD price. When the tracked token
+ * is the quote token, derive its USD price from `priceNative` (base denominated
+ * in quote units): quoteUsd = baseUsd / priceNative.
+ */
+export function getDsTrackedTokenPriceUsd(
+  pair: DsPair,
+  trackedAddress: string,
+): DsTrackedTokenPrice {
+  const tracked = trackedAddress.toLowerCase();
+  const baseAddress = pair.baseToken.address.toLowerCase();
+  const quoteAddress = pair.quoteToken.address.toLowerCase();
+  const basePriceUsd = Number.parseFloat(pair.priceUsd ?? "");
+
+  if (tracked === baseAddress) {
+    return {
+      side: "base",
+      priceUsd: Number.isFinite(basePriceUsd) && basePriceUsd > 0 ? basePriceUsd : null,
+    };
+  }
+
+  if (tracked !== quoteAddress) {
+    return { side: null, priceUsd: null };
+  }
+
+  const priceNative = Number.parseFloat(pair.priceNative ?? "");
+  if (!Number.isFinite(basePriceUsd) || basePriceUsd <= 0 || !Number.isFinite(priceNative) || priceNative <= 0) {
+    return { side: "quote", priceUsd: null };
+  }
+
+  return {
+    side: "quote",
+    priceUsd: basePriceUsd / priceNative,
+  };
 }
 
 /**

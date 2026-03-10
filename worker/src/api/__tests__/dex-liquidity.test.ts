@@ -25,6 +25,9 @@ describe("handleDexLiquidity", () => {
     expect(coin).toHaveProperty("topPools");
     expect(coin).toHaveProperty("updatedAt");
     expect(coin).toHaveProperty("methodologyVersion");
+    expect(coin).toHaveProperty("coverageClass");
+    expect(coin).toHaveProperty("coverageConfidence");
+    expect(coin).toHaveProperty("sourceMix");
   });
 
   it("returns 200 with empty map when no data", async () => {
@@ -53,6 +56,8 @@ describe("handleDexLiquidity", () => {
     expect(coin).toHaveProperty("weightedBalanceRatio");
     expect(coin).toHaveProperty("organicFraction");
     expect(coin).toHaveProperty("durabilityScore");
+    expect(coin).toHaveProperty("balanceMeasuredTvlUsd");
+    expect(coin).toHaveProperty("organicMeasuredTvlUsd");
   });
 
   it("includes X-Data-Age header", async () => {
@@ -80,5 +85,32 @@ describe("handleDexLiquidity", () => {
     const res = await handleDexLiquidity(db);
     const body = (await res.json()) as Record<string, { methodologyVersion: string }>;
     expect(body["usdt-tether"]?.methodologyVersion).toBe("3.0");
+  });
+
+  it("adds a Warning header when the latest liquidity cron run was degraded", async () => {
+    const db = mockD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      {
+        match: "cron_runs",
+        rows: [],
+        first: {
+          status: "degraded",
+          metadata: JSON.stringify({
+            failedSources: ["defillama-yields"],
+            sourceCoverage: {
+              nearCoverageGuard: true,
+              nearValueGuard: false,
+              nearMajorCoverageGuard: false,
+            },
+          }),
+        },
+      },
+      { match: "dex_liquidity", rows: [row] },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+    expect(res.headers.get("Warning") ?? "").toContain("Latest sync-dex-liquidity run degraded");
+    expect(res.headers.get("Warning") ?? "").toContain("failedSources=defillama-yields");
   });
 });

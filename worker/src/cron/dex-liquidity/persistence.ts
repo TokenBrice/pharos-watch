@@ -1,7 +1,7 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
-import type { LiquidityMetrics, ScoreResult, FullScoreResult, GlobalAgg } from "./types";
+import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 
 const DEX_LIQUIDITY_UPSERT_SQL = `INSERT INTO dex_liquidity
   (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,
@@ -9,8 +9,9 @@ const DEX_LIQUIDITY_UPSERT_SQL = `INSERT INTO dex_liquidity
    top_pools_json, liquidity_score, concentration_hhi,
    avg_pool_stress, weighted_balance_ratio, organic_fraction,
    effective_tvl_usd, durability_score, score_components_json,
-   locked_liquidity_pct, methodology_version, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json,
+   balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(stablecoin_id) DO UPDATE SET
   symbol = excluded.symbol,
   total_tvl_usd = excluded.total_tvl_usd,
@@ -31,6 +32,11 @@ ON CONFLICT(stablecoin_id) DO UPDATE SET
   durability_score = excluded.durability_score,
   score_components_json = excluded.score_components_json,
   locked_liquidity_pct = excluded.locked_liquidity_pct,
+  coverage_class = excluded.coverage_class,
+  coverage_confidence = excluded.coverage_confidence,
+  source_mix_json = excluded.source_mix_json,
+  balance_measured_tvl_usd = excluded.balance_measured_tvl_usd,
+  organic_measured_tvl_usd = excluded.organic_measured_tvl_usd,
   methodology_version = excluded.methodology_version,
   updated_at = excluded.updated_at
 WHERE dex_liquidity.updated_at <= excluded.updated_at`;
@@ -74,6 +80,11 @@ export async function persistScores(
           sr.durability,
           JSON.stringify(sr.components),
           sr.lockedLiqPct,
+          sr.coverageClass,
+          sr.coverageConfidence,
+          JSON.stringify(sr.sourceMix),
+          sr.balanceMeasuredTvlUsd,
+          sr.organicMeasuredTvlUsd,
           LIQUIDITY_METHODOLOGY_VERSION,
           nowSec,
         ),
@@ -109,6 +120,11 @@ export async function persistScores(
             null,
             null,
             null,
+            "unobserved",
+            0,
+            null,
+            0,
+            0,
             LIQUIDITY_METHODOLOGY_VERSION,
             nowSec,
           ),
@@ -141,6 +157,11 @@ export async function persistScores(
         null,
         null,
         null,
+        "unobserved",
+        0,
+        null,
+        0,
+        0,
         LIQUIDITY_METHODOLOGY_VERSION,
         nowSec,
       ),
@@ -155,7 +176,7 @@ export async function persistScores(
 /** Write daily snapshot rows (first sync invocation after UTC midnight). */
 export async function writeHistoricalSnapshots(
   db: D1Database,
-  scoreMap: Map<string, ScoreResult>,
+  scoreMap: Map<string, FullScoreResult>,
 ): Promise<void> {
   const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400; // epoch seconds at UTC midnight
   const expectedRowCount = TRACKED_STABLECOINS.length;
@@ -186,10 +207,21 @@ export async function writeHistoricalSnapshots(
         db
           .prepare(
             `INSERT OR REPLACE INTO dex_liquidity_history
-              (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date, methodology_version)
-            VALUES (?, ?, ?, ?, ?, ?)`
+              (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
+               coverage_class, coverage_confidence, source_mix_json, methodology_version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
-          .bind(id, data.tvl, data.vol24h, data.score, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
+          .bind(
+            id,
+            data.tvl,
+            data.vol24h,
+            data.score,
+            todayMidnight,
+            data.coverageClass,
+            data.coverageConfidence,
+            JSON.stringify(data.sourceMix),
+            LIQUIDITY_METHODOLOGY_VERSION,
+          )
       );
     }
     // Also insert placeholder rows for coins without DEX presence (NULL score = NR)
@@ -199,8 +231,9 @@ export async function writeHistoricalSnapshots(
           db
             .prepare(
               `INSERT OR REPLACE INTO dex_liquidity_history
-                (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date, methodology_version)
-              VALUES (?, 0, 0, NULL, ?, ?)`
+                (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
+                 coverage_class, coverage_confidence, source_mix_json, methodology_version)
+              VALUES (?, 0, 0, NULL, ?, 'unobserved', 0, NULL, ?)`
             )
             .bind(meta.id, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
         );

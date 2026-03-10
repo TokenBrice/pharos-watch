@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Image from "next/image";
 import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
@@ -12,6 +13,7 @@ import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
+import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import {
   PROTOCOL_COLORS,
   PROTOCOL_LOGOS,
@@ -386,25 +388,47 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   }
 
   const liq = liquidityMap?.[stablecoinId];
-  if (!liq || liq.liquidityScore === null || (liq.liquidityScore === 0 && liq.poolCount === 0)) return null;
+  if (!liq) return null;
 
   const score = liq.liquidityScore ?? 0;
   const tier = getScoreTier(score);
+  const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass);
+  const isRated = liq.liquidityScore != null;
 
   return (
     <Card className="rounded-xl border-l-[3px] border-l-cyan-500 animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            DEX Liquidity
-          </CardTitle>
-          <div className={`text-2xl font-extrabold font-mono tabular-nums ${TIER_TEXT[tier]}`}>
-            {score}
-            <span className="text-sm text-muted-foreground">/100</span>
+          <div className="space-y-1">
+            <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              DEX Liquidity
+            </CardTitle>
+            <Badge
+              variant="outline"
+              className={`text-[10px] ${coverageBadge.className}`}
+              title={formatLiquiditySourceMix(liq.sourceMix)}
+            >
+              {coverageBadge.label}
+            </Badge>
           </div>
+          {isRated ? (
+            <div className={`text-2xl font-extrabold font-mono tabular-nums ${TIER_TEXT[tier]}`}>
+              {score}
+              <span className="text-sm text-muted-foreground">/100</span>
+            </div>
+          ) : (
+            <div className="text-xl font-semibold text-muted-foreground">NR</div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!isRated && (
+          <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+            No observed DEX liquidity in the current pipeline. This asset is tracked, but it is currently unrated for
+            Liquidity Score.
+          </div>
+        )}
+
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <div>
             <p className="text-xs text-muted-foreground">Total AMM Liquidity TVL</p>
@@ -553,11 +577,11 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
         <ChainBar chainTvl={liq.chainTvl} />
 
-        <ScoreBreakdown components={liq.scoreComponents} />
+        {isRated && <ScoreBreakdown components={liq.scoreComponents} />}
 
-        <TvlTrendChart stablecoinId={stablecoinId} />
+        {isRated && <TvlTrendChart stablecoinId={stablecoinId} />}
 
-        <TopPoolsTable pools={liq.topPools} />
+        {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} />}
       </CardContent>
     </Card>
   );
