@@ -3112,32 +3112,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
 
-  usd("sdusd-dtrinity", "dTRINITY Staked dUSD", "sdUSD", "crypto-backed", "centralized-dependent", {
-    detailProvider: "coingecko",
-    geckoId: "dtrinity-staked-dusd",
-    yieldBearing: true, rwa: false, navToken: true,
-    yieldConfig: { yieldSource: "dTRINITY dStake vault (sdUSD)", yieldType: "lending-vault" },
-    collateral: "dUSD deposited in the dSTAKE ERC-4626 vault, automatically supplied to dLEND (Aave V3 fork) where it earns lending yield from borrowers; sdUSD receipt tokens represent a pro-rata share of the growing dUSD pool plus accrued lending yield.",
-    pegMechanism: "ERC-4626 vault: dUSD deposited mints sdUSD at the current exchange rate; sdUSD appreciates vs dUSD as dLEND lending yield accrues; redemption available at any time when liquidity is present (0.10% unstaking fee distributed to remaining stakers); yield funded by dLEND borrower interest, supplemented by dTRINITY float revenue from dUSD reserves.",
-    links: [
-      { label: "Website", url: "https://dtrinity.org" },
-      { label: "Twitter", url: "https://x.com/dtrinity_defi" },
-      { label: "Docs", url: "https://docs.dtrinity.org/protocol-components/sdusd" },
-      { label: "App", url: "https://app.dtrinity.org/dstake/vault/" },
-    ],
-    contracts: [
-      { chain: "ethereum", address: "0x7cb20517776636ed76b68edb3d99dcce356abf02", decimals: 18 },
-      { chain: "fraxtal", address: "0x58acc2600835211dcb5847c5fa422791fd492409", decimals: 6 },
-      { chain: "sonic", address: "0x41a5477364bf60d8936b90310fecfda79593304e", decimals: 18 },
-    ],
-    collateralQuality: "exotic",
-    custodyModel: "onchain",
-    governanceQuality: "multisig",
-    dependencies: [
-      { id: "dusd-dtrinity", weight: 1.0 },
-    ],
-  }),
-
   // ── Tokenized treasury / RWA fund tokens ──────────────────────────
   usd("ustb-superstate", "Superstate USTB", "USTB", "rwa-backed", "centralized", {
     detailProvider: "coingecko",

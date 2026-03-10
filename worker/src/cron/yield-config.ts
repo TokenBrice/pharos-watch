@@ -320,7 +320,7 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "sdusd-dtrinity", // sdUSD ERC-4626 vault — convertToAssets gives dUSD per sdUSD
+    stablecoinId: "dusd-dtrinity", // dUSD — reads sdUSD vault exchange rate to derive APY
     chain: "ethereum",
     contract: "0x4aCBcFa29fb085097c5f31783403EF7A7930F6Fe",
     selector: "0x07a2d13a", // convertToAssets(uint256)
