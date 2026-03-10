@@ -9,11 +9,11 @@ export const CRON_SCHEDULES = {
   quarterHourly: "*/15 * * * *",
   twentyMinuteOffset: "3,23,43 * * * *",
   twentyMinuteMintBurn: "4,24,44 * * * *",
-  halfHourlyCharts: "5,35 * * * *",
   twentyMinuteDexDiscovery: "6,26,46 * * * *",
   twentyMinuteExtendedOffset: "13,33,53 * * * *",
   halfHourlyOffset: "10,40 * * * *",
   daily0800Utc: "0 8 * * *",
+  daily0805Utc: "5 8 * * *",
 } as const;
 
 export type CronScheduleKey = keyof typeof CRON_SCHEDULES;
@@ -61,9 +61,9 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
   },
   {
     key: "daily",
-    title: "Daily 08:00 UTC",
-    badge: "08:00 UTC",
-    description: "Snapshots, slower monitors, digest generation, and coverage discovery.",
+    title: "Daily slot",
+    badge: "~08:00",
+    description: "Snapshots, slower monitors, digest generation, and coverage discovery. Split across 08:00 and 08:05 triggers for connection-pool headroom.",
   },
   {
     key: "other",
@@ -87,8 +87,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Stablecoin charts",
     group: "half-hourly",
     intervalSec: 1800,
-    scheduleKey: "halfHourlyCharts",
-    triggerMode: "isolated",
+    scheduleKey: "halfHourlyOffset",
+    triggerMode: "shared",
   },
   {
     job: "sync-fx-rates",
@@ -231,7 +231,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Bluechip sync",
     group: "daily",
     intervalSec: 86400,
-    scheduleKey: "daily0800Utc",
+    scheduleKey: "daily0805Utc",
     triggerMode: "shared",
   },
   {
@@ -239,7 +239,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Daily digest",
     group: "daily",
     intervalSec: 86400,
-    scheduleKey: "daily0800Utc",
+    scheduleKey: "daily0805Utc",
     triggerMode: "shared",
   },
   {
@@ -247,7 +247,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Coverage discovery",
     group: "daily",
     intervalSec: 86400,
-    scheduleKey: "daily0800Utc",
+    scheduleKey: "daily0805Utc",
     triggerMode: "shared",
   },
 ] as const;

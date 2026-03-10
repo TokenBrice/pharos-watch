@@ -348,11 +348,6 @@ export async function handleScheduledEvent(
       }
       break;
     }
-    // Stablecoin charts on dedicated 30-min trigger (:05/:35)
-    case CRON_SCHEDULES.halfHourlyCharts: {
-      ctx.waitUntil(runLeasedCron("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal)));
-      break;
-    }
     // DEX pool discovery on dedicated 20-min trigger (:06/:26/:46)
     case CRON_SCHEDULES.twentyMinuteDexDiscovery: {
       ctx.waitUntil(runLeasedCron("sync-dex-discovery", (signal, reportProgress) =>
@@ -388,16 +383,22 @@ export async function handleScheduledEvent(
       ));
       break;
     }
-    // DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)
-    // Yield depends on dex_liquidity for safety scores — chain after DEX sync
+    // Charts + DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)
+    // Charts is a single lightweight DL fetch (~2s) — run first to free the pool.
+    // Yield depends on dex_liquidity for safety scores — chain after DEX sync.
     case CRON_SCHEDULES.halfHourlyOffset: {
-      const dexSync = runLeasedCron("sync-dex-liquidity", (signal) => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, signal));
+      const chartsSync = runLeasedCron("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal));
+      ctx.waitUntil(chartsSync);
+      const dexSync = chartsSync.then(() =>
+        runLeasedCron("sync-dex-liquidity", (signal) => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, signal))
+      );
       ctx.waitUntil(dexSync);
       ctx.waitUntil(dexSync.then(() =>
         runLeasedCron("sync-yield-data", (signal) => syncYieldData(db, signal))
       ));
       break;
     }
+    // Daily A (08:00): D1-only snapshots + lightweight external fetchers (≤3 connections)
     case CRON_SCHEDULES.daily0800Utc: {
       ctx.waitUntil(runLeasedCron("snapshot-supply", (signal) => snapshotSupply(db, signal)));
       const safetyGradePromise = runLeasedCron("snapshot-safety-grade-history", (signal) => snapshotSafetyGradeHistory(db, signal));
@@ -410,11 +411,15 @@ export async function handleScheduledEvent(
         ));
       }
       ctx.waitUntil(runLeasedCron("fetch-tbill-rate", (signal) => fetchTbillRate(db, signal)));
-      const psiPromise = runLeasedCron("snapshot-psi", (signal) => snapshotPsiDaily(db, signal));
-      ctx.waitUntil(psiPromise);
+      ctx.waitUntil(runLeasedCron("snapshot-psi", (signal) => snapshotPsiDaily(db, signal)));
       ctx.waitUntil(runLeasedCron("sync-usds-status", (signal) => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null, signal)));
+      break;
+    }
+    // Daily B (08:05): Heavy external fetchers (≤5 connections).
+    // PSI snapshot from Daily A is already written by now.
+    case CRON_SCHEDULES.daily0805Utc: {
       ctx.waitUntil(runLeasedCron("sync-bluechip", (signal) => syncBluechip(db, signal)));
-      ctx.waitUntil(psiPromise.then(() => runLeasedCron("daily-digest", (signal) => {
+      ctx.waitUntil(runLeasedCron("daily-digest", (signal) => {
         const twitterCreds =
           env.TWITTER_API_KEY &&
           env.TWITTER_API_SECRET &&
@@ -432,7 +437,7 @@ export async function handleScheduledEvent(
             ? { botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID }
             : null;
         return generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null, twitterCreds, false, telegramCreds, signal);
-      })));
+      }));
       ctx.waitUntil(runLeasedCron("discovery-scan", (signal) => runDiscoveryScan(db, signal)));
       break;
     }

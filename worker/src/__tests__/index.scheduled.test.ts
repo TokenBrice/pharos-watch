@@ -140,7 +140,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
     expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
-    // Charts now on its own dedicated trigger
+    // Charts now on the half-hourly offset trigger
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });
 
@@ -212,7 +212,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
   });
 
-  it("runs dex then yield on the 30-min cron", async () => {
+  it("runs charts → dex → yield on the 30-min cron", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -226,8 +226,12 @@ describe("worker.scheduled", () => {
     );
     await Promise.all(waits);
 
+    expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncYieldData).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncDexLiquidity.mock.invocationCallOrder[0]).toBeGreaterThan(
+      cronMocks.syncStablecoinCharts.mock.invocationCallOrder[0],
+    );
     expect(cronMocks.syncYieldData.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.syncDexLiquidity.mock.invocationCallOrder[0],
     );
@@ -275,24 +279,6 @@ describe("worker.scheduled", () => {
     });
     expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
     expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
-  });
-
-  it("runs only stablecoin charts on the dedicated :05/:35 trigger", async () => {
-    const { ctx, waits } = makeCtx();
-    const env = {
-      DB: {} as D1Database,
-      CORS_ORIGIN: "https://pharos.watch",
-    } as const;
-
-    await worker.scheduled(
-      { cron: "5,35 * * * *" } as ScheduledEvent,
-      env as never,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
   });
 
   it("runs only DEX discovery on the dedicated :06/:26/:46 trigger", async () => {

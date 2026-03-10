@@ -204,11 +204,11 @@ crons = [
   "*/15 * * * *",
   "3,23,43 * * * *",
   "4,24,44 * * * *",
-  "5,35 * * * *",
   "6,26,46 * * * *",
   "13,33,53 * * * *",
   "10,40 * * * *",
   "0 8 * * *",
+  "5 8 * * *",
 ]
 ```
 
@@ -250,15 +250,7 @@ Dedicated trigger for blacklist sync. Uses Etherscan for supported chains, chain
 
 Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus the Alchemy circuit breaker. Offset by 1 minute from blacklist to stagger Worker cold starts.
 
-### Trigger 4: `5,35 * * * *` (stablecoin charts — dedicated, 30-min cadence)
-
-| Job | Function | File | Documentation |
-|-----|----------|------|---------------|
-| `sync-stablecoin-charts` | `syncStablecoinCharts()` | `worker/src/cron/sync-stablecoin-charts.ts` | This doc (below) |
-
-Dedicated trigger for chart sync at 30-minute cadence (reduced from 15-minute; chart data changes slowly). Gets its own connection pool for the DefiLlama aggregate charts fetch.
-
-### Trigger 5: `6,26,46 * * * *` (DEX discovery — dedicated)
+### Trigger 4: `6,26,46 * * * *` (DEX discovery — dedicated)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -266,7 +258,7 @@ Dedicated trigger for chart sync at 30-minute cadence (reduced from 15-minute; c
 
 Dedicated trigger for DEX pool discovery. Uses strictly sequential fetches (1 connection at a time) from CoinGecko/GeckoTerminal/DexScreener. Stages pools for later merge by `sync-dex-liquidity`.
 
-### Trigger 6: `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
+### Trigger 5: `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -274,16 +266,17 @@ Dedicated trigger for DEX pool discovery. Uses strictly sequential fetches (1 co
 
 This offset schedule exists so long-tail mint/burn backfill pressure cannot starve the critical lane. It uses a separate `mint_burn_run_state.job` key (`sync-mint-burn-extended`) and warning-only coverage semantics.
 
-### Trigger 7: `10,40 * * * *` (every 30 minutes, at :10/:40)
+### Trigger 6: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
+| `sync-stablecoin-charts` | `syncStablecoinCharts()` | `worker/src/cron/sync-stablecoin-charts.ts` | This doc (below) |
 | `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/dex-liquidity/orchestrator.ts` | `docs/dex-liquidity.md` |
 | `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | `docs/yield-intelligence.md` |
 
-**Connection budget:** `sync-yield-data` is chained after `sync-dex-liquidity` in the same trigger. The slot still shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. Current steady overhead for the LUSD B.Protocol source is small: 2 Ethereum `eth_call`s plus 1 CoinGecko price fetch per 30-minute run.
+**Execution model:** All three jobs are chained sequentially: charts → dex-liquidity → yield-data. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `sync-yield-data` is chained after `sync-dex-liquidity` for safety-score dependencies. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency.
 
-### Trigger 8: `0 8 * * *` (daily at 08:00 UTC)
+### Trigger 7: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -292,12 +285,19 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | `dispatch-telegram-alerts-daily` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
+| `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
+
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED), `sync-usds-status` (Etherscan), and `dispatch-telegram-alerts-daily` (Telegram) use ≤3 concurrent external connections. `dispatch-telegram-alerts-daily` chains off `snapshot-safety-grade-history` so safety diffs use fresh daily grades.
+
+### Trigger 8: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
+
+| Job | Function | File | Documentation |
+|-----|----------|------|---------------|
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
-| `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
 | `discovery-scan` | `runDiscoveryScan()` | `worker/src/cron/discovery-scan.ts` | `docs/data-pipeline.md` |
 
-**Dependencies:** `dispatch-telegram-alerts-daily` is chained off `snapshot-safety-grade-history` (`safetyGradePromise.then(...)`) so safety diffs use fresh daily grades. Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` (1 long-lived Anthropic API call), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 7 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency.
 
 ## Telegram Alert Bot
 
@@ -544,7 +544,7 @@ The three crons below were previously only listed by filename in `docs/architect
 ### sync-stablecoin-charts
 
 **File:** `worker/src/cron/sync-stablecoin-charts.ts`
-**Schedule:** `5,35 * * * *` (every 30 min, dedicated trigger)
+**Schedule:** `10,40 * * * *` (every 30 min, shared with dex-liquidity and yield-data)
 **Data source:** `https://stablecoins.llama.fi/stablecoincharts/all`
 
 **Algorithm:**
@@ -656,7 +656,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | Job | Interval | Trigger |
 |-----|----------|---------|
 | `sync-stablecoins` | 900s (15min) | `*/15 * * * *` |
-| `sync-stablecoin-charts` | 1,800s (30min) | `5,35 * * * *` |
+| `sync-stablecoin-charts` | 1,800s (30min) | `10,40 * * * *` |
 | `sync-fx-rates` | 900s (15min) | `*/15 * * * *` |
 | `stability-index` | 900s (15min) | `*/15 * * * *` |
 | `compute-dews` | 900s (15min) | `*/15 * * * *` |
@@ -674,9 +674,9 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
-| `sync-bluechip` | 86,400s (24h) | `0 8 * * *` |
-| `daily-digest` | 86,400s (24h) | `0 8 * * *` |
-| `discovery-scan` | 86,400s (24h) | `0 8 * * *` |
+| `sync-bluechip` | 86,400s (24h) | `5 8 * * *` |
+| `daily-digest` | 86,400s (24h) | `5 8 * * *` |
+| `discovery-scan` | 86,400s (24h) | `5 8 * * *` |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating.
 

@@ -18,16 +18,16 @@ describe("status cron config", () => {
     });
   });
 
-  it("maps stablecoin charts to the half-hourly group after cadence reduction", () => {
+  it("maps stablecoin charts to the shared half-hourly offset slot", () => {
     expect(getStatusCronDisplay("sync-stablecoin-charts")).toEqual({
       group: "half-hourly",
       label: "Stablecoin charts",
-      schedule: "5,35 * * * *",
-      triggerMode: "isolated",
+      schedule: "10,40 * * * *",
+      triggerMode: "shared",
     });
   });
 
-  it("keeps daily chained jobs in the daily group", () => {
+  it("keeps daily chained jobs in the daily group across both triggers", () => {
     expect(getStatusCronDisplay("dispatch-telegram-alerts-daily")).toEqual({
       group: "daily",
       label: "Telegram alerts (daily)",
@@ -37,7 +37,7 @@ describe("status cron config", () => {
     expect(getStatusCronDisplay("discovery-scan")).toEqual({
       group: "daily",
       label: "Coverage discovery",
-      schedule: "0 8 * * *",
+      schedule: "5 8 * * *",
       triggerMode: "shared",
     });
   });
