@@ -506,7 +506,7 @@ Sky/USDS protocol status — whether the freeze module is currently active.
 
 ### `GET /api/bluechip-ratings`
 
-Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins. Updated daily at 08:00 UTC.
+Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins. Updated daily at 08:05 UTC.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included.
 
@@ -708,7 +708,7 @@ Per-coin circulating supply and price history, snapshotted once daily at 08:00 U
 
 ### `GET /api/daily-digest`
 
-Latest AI-generated market summary, produced daily at 08:00 UTC via the Claude API.
+Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude API.
 
 **Cache:** standard — `X-Data-Age` and `Warning` (max 2 h) headers included.
 

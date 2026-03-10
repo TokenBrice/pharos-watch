@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 155 stablecoins (plus 2 shadow assets for PSI) across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets for PSI) across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -15,7 +15,7 @@ Public-facing analytics dashboard tracking 155 stablecoins (plus 2 shadow assets
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 78 dead stablecoins documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 80 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Detail pages** — price chart, supply history, chain distribution, liquidity card, and safety ratings for each stablecoin
 - **Status dashboard** — cron health, cache freshness, and system monitoring
@@ -121,17 +121,22 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migrations (60 total)
+└── migrations/                   D1 SQL migration files (63 total)
 ```
 
 ## Infrastructure
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *    → sync stablecoins + chained snapshot-supply retry + charts + FX rates + depeg detection + stability index (PSI) + DEWS + status self-check + Telegram alert dispatch
-  ├── Cron: 3,23,43 * * * * → blacklist sync + mint/burn sync + DEX discovery sync
-  ├── Cron: 10,40 * * * *   → DEX liquidity sync + yield sync
-  └── Cron: 0 8 * * *       → supply snapshot + safety-grade snapshot + daily Telegram alert pass + PSI snapshot + USDS status + Bluechip safety ratings + daily digest (chained after PSI) + T-bill rate
+  ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + FX rates + PSI compute + DEWS + status self-check
+  ├── Cron: 3,23,43 * * * *                     → blacklist sync
+  ├── Cron: 4,24,44 * * * *                     → mint/burn critical lane
+  ├── Cron: 6,26,46 * * * *                     → DEX discovery staging
+  ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
+  ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + yield sync
+  ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
+  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
+  └── Cron: 5 8 * * *                           → Bluechip sync + daily digest + discovery scan
 
 Cloudflare D1 (SQLite database)
   ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, FX/status/ranking caches) with CAS write guard
@@ -178,7 +183,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push to `main`, the daily scheduled rebuild, or manual `workflow_dispatch`:
 
 For the full operator runbook (including worktree merge flow and pre-push merge gate), see `docs/deployment-process.md`.
-For mint/burn ingestion diagnostics and recovery, see `agents/runbooks/mint-burn-ingestion.md`.
+For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
 1. **Validate gate:** `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`

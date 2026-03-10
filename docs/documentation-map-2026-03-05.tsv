@@ -1,7 +1,7 @@
 path	format	description	status	note
 docs/	dir	Canonical product and system docs	current	Active Pharos documentation corpus.
 docs/telegram-alerts.md	md	Telegram alert subscriptions and dispatch	current	Dedicated doc for webhook commands, D1 tables, snapshot diffing, and bot operations.
-agents/runbooks/	dir	Operator runbooks	current	Runbooks remain outside `docs/`.
+agents/process/	dir	Operator runbooks	current	Runbooks remain outside `docs/`.
 agents/audits/	dir	Audit reports and forensic writeups	current	Audit artifacts live here instead of `docs/`.
 agents/plans/historical/	dir	Historical plans and design records	current	Non-canonical planning/history archive.
 agents/tasks/	dir	Task trackers and execution boards	current	Execution trackers remain outside `docs/`.

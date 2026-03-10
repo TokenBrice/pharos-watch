@@ -26,7 +26,7 @@ After pool filtering and protocol-level TVL caps are applied, the scorer rebuild
 
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
-Data sources are split across two cron families: scoring remains on `10,40 * * * *`, while discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) now run only on `3,23,43 * * * *` and write to `dex_pool_staging` for later merge.
+Data sources are split across two cron families: scoring remains on `10,40 * * * *`, while discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) now run only on `6,26,46 * * * *` and write to `dex_pool_staging` for later merge.
 
 See the [Discovery Cron](#discovery-cron) section below for the full discovery pipeline architecture.
 
@@ -149,11 +149,11 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
 
 ## Discovery Cron
 
-`worker/src/cron/dex-discovery/orchestrator.ts` runs every 20 minutes (`3,23,43 * * * *`) and is responsible for pool discovery only. Scored TVL continues on the 30-minute cadence; discovery data is merged during the scoring run.
+`worker/src/cron/dex-discovery/orchestrator.ts` runs every 20 minutes (`6,26,46 * * * *`) and is responsible for pool discovery only. Scored TVL continues on the 30-minute cadence; discovery data is merged during the scoring run.
 
 - **Architecture**: two dedicated cron tracks feed discovery from scratch:
   - Scoring cron: `syncDexLiquidity()` every 30 minutes (`10,40 * * * *`).
-  - Discovery cron: `syncDexDiscovery()` every 20 minutes (`3,23,43 * * * *`).
+  - Discovery cron: `syncDexDiscovery()` every 20 minutes (`6,26,46 * * * *`).
   - Discovery writes normalized candidates to `dex_pool_staging`; scoring cron consumes and merges them.
 - **Discovery staging schema**: `dex_pool_staging` includes `pool_id`, `stablecoin_id`, `source`, `chain`, `protocol`, `dex_id`, `symbol`, `tvl_usd`, `volume_24h`, `quality_multiplier`, `pool_type`, `fee_tier`, `balance_ratio`, `is_stable`, `base_token`, `quote_token`, `quote_symbol`, `price_usd`, `locked_liq_pct`, `raw_json`, `discovered_at`, `refreshed_at`; PK is `(pool_id, stablecoin_id)`.
 - **Discovery meta schema**: `dex_discovery_meta` stores `stablecoin_id` (PK), `consecutive_misses`, `last_crawl_at`, `last_hit_at`.

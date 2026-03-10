@@ -8,7 +8,7 @@ Independent stablecoin safety ratings fetched from Bluechip and exposed through 
 
 - **Source:** `https://backend.bluechip.org/coin-data/{slug}`
 - **Cron:** `sync-bluechip` (`worker/src/cron/sync-bluechip.ts`)
-- **Schedule:** daily at `0 8 * * *`
+- **Schedule:** daily at `5 8 * * *`
 - **Storage:** D1 `cache` row with key `bluechip-ratings`
 - **API:** `GET /api/bluechip-ratings`
 

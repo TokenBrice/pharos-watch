@@ -19,11 +19,12 @@ This is a worker-only feature. The frontend does not call it directly.
 - `worker/src/lib/telegram.ts`
 - `worker/src/lib/telegram-alerts.ts`
 - `worker/migrations/0054_telegram_subscribers.sql`
+- `worker/migrations/0060_telegram_pending_alerts.sql`
 - `scripts/register-telegram-webhook.sh`
 
 ## D1 Schema
 
-Migration `worker/migrations/0054_telegram_subscribers.sql` creates three tables:
+`worker/migrations/0054_telegram_subscribers.sql` creates the subscriber/subscription/disambiguation tables, and `worker/migrations/0060_telegram_pending_alerts.sql` adds the overflow delivery queue:
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|

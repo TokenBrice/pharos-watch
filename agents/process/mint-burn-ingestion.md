@@ -4,7 +4,7 @@ Operational runbook for `sync-mint-burn` reliability controls, diagnostics, and 
 
 ## Scope
 
-- Cron job: `sync-mint-burn` (schedule: `3,23,43 * * * *`)
+- Cron job: `sync-mint-burn` (schedule: `4,24,44 * * * *`)
 - Worker module: `worker/src/cron/sync-mint-burn.ts`
 - Backfill endpoint: `POST /api/backfill-mint-burn`
 

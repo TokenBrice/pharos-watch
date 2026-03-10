@@ -2,6 +2,8 @@
 
 ## API Endpoints
 
+Curated architecture-significant routes. For the exhaustive HTTP contract, see `docs/api-reference.md`.
+
 | Endpoint | Description |
 |----------|-------------|
 | `GET /api/stablecoins` | Full stablecoin list with supply, price, chains. Returns `X-Data-Age` header |
@@ -43,6 +45,8 @@
 | `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; requires `X-Admin-Key`) |
 | `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
 | `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`) |
+| `GET /api/discovery-candidates` | Admin: list stablecoin coverage candidates surfaced by the daily discovery scan |
+| `POST /api/discovery-candidates/:id/dismiss` | Admin: dismiss a discovery candidate from the status dashboard |
 | `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
 | `POST /api/telegram-webhook` | Telegram bot webhook (command handling, subscription management) |
 
@@ -53,14 +57,15 @@
 | `telegram_subscribers` | Bot subscriber preferences (`chat_id`, alert type flags) |
 | `telegram_subscriptions` | Per-user coin subscriptions (`chat_id`, `stablecoin_id`) |
 | `telegram_pending_disambiguation` | Ephemeral mid-conversation state for ticker disambiguation |
+| `telegram_pending_alerts` | Overflow subscriber-alert delivery queue drained by the 5-minute alert cron |
 
-These tables are created in `worker/migrations/0054_telegram_subscribers.sql`. For the full bot flow, see `docs/telegram-alerts.md`.
+The subscription/disambiguation tables are created in `worker/migrations/0054_telegram_subscribers.sql`; the overflow queue is added by `worker/migrations/0060_telegram_pending_alerts.sql`. For the full bot flow, see `docs/telegram-alerts.md`.
 
 ## Telegram Alert Cron Job
 
 | Job | Description |
 |-----|-------------|
-| `dispatch-telegram-alerts` | Detects DEWS/depeg/safety changes and fans out alerts to subscribers (runs on `*/15` and `0 8` triggers) |
+| `dispatch-telegram-alerts` | Detects DEWS/depeg/safety changes and fans out alerts to subscribers on the dedicated `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` trigger |
 
 ## File Tree Guide
 
@@ -335,7 +340,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (60 total)
+├── migrations/                   # D1 SQL migration files (63 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
@@ -355,7 +360,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
-    │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
+    │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 08:05 UTC)
     │   ├── dex-discovery/        # Independent 20-min staged-pool discovery pipeline
     │   │   ├── index.ts          # Barrel export
     │   │   ├── types.ts          # Discovery tiers, staged-pool rows, confidence defaults
@@ -377,9 +382,10 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── stability-index.ts    # Composite ecosystem health score → D1 (every 15 min, after sync-stablecoins)
     │   ├── snapshot-psi.ts       # Daily PSI snapshot → D1 (daily, 8AM UTC)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
-    │   ├── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 8AM UTC)
+    │   ├── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 08:05 UTC)
+    │   ├── discovery-scan.ts     # Daily stablecoin coverage discovery → D1 (daily, 08:05 UTC)
     │   ├── compute-dews.ts       # DEWS computation cron (every 15min, after sync-stablecoins)
-    │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety transitions (every 15min + daily post-safety snapshot pass)
+    │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety transitions (dedicated every-5-minute trigger)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
@@ -422,6 +428,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-mint-burn.ts # POST /api/backfill-mint-burn (admin)
     │   ├── reclassify-atomic-roundtrips.ts # POST /api/reclassify-atomic-roundtrips (admin)
     │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)
+    │   ├── discovery.ts         # GET /api/discovery-candidates + POST /api/discovery-candidates/:id/dismiss
     │   ├── yield-history.ts     # GET /api/yield-history
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)

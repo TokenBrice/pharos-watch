@@ -322,7 +322,7 @@ CREATE TABLE yield_history (
 
 ### `sync-yield-data`
 
-**Schedule:** `10,40 * * * *` (every 30 min, Trigger 3)
+**Schedule:** `10,40 * * * *` (every 30 min, Trigger 6)
 **Files:** `worker/src/cron/sync-yield-data.ts` orchestration + `worker/src/cron/yield-sync/{sources,resolve,rankings}.ts`
 
 **Execution flow:**
@@ -355,7 +355,7 @@ Implementation stages:
 
 ### `fetch-tbill-rate`
 
-**Schedule:** `0 8 * * *` (daily, Trigger 4)
+**Schedule:** `0 8 * * *` (daily, Trigger 8)
 **File:** `worker/src/cron/fetch-tbill-rate.ts`
 
 Fetches the latest T-bill proxy rate from FRED (`DGS3MO`). Validates the rate (must be 0–20%), stores in cache. Falls back to `RISK_FREE_RATE_FALLBACK` on any failure.

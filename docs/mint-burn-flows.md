@@ -21,15 +21,15 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 ## Cron Schedule
 
-- **Critical lane pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
+- **Critical lane pattern:** `4,24,44 * * * *` (every 20 minutes, offset at :04/:24/:44)
 - **Extended lane pattern:** `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
-- **Shares primary slot with:** `sync-blacklist` + `sync-dex-discovery` (independent providers, separate leases)
+- **Trigger mode:** isolated. `sync-blacklist` and `sync-dex-discovery` run on their own dedicated 20-minute triggers (`3,23,43 * * * *` and `6,26,46 * * * *`).
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
 - **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
 - **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `lane`, `jobName`, `nullPricesHealed`, and per-config coverage-frontier diagnostics when scans are partial.
-- **Operator runbook:** `agents/runbooks/mint-burn-ingestion.md`
+- **Operator runbook:** `agents/process/mint-burn-ingestion.md`
 
 Lane policy:
 - `sync-mint-burn` = critical lane. Uses the existing job id so freshness alerts and API freshness remain keyed to the major-symbol path.

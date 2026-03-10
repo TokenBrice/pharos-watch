@@ -27,8 +27,8 @@ Each digest has four fields produced by the LLM:
 ## Generation
 
 **File:** `worker/src/cron/daily-digest.ts`
-**Schedule:** daily at **08:00 UTC** (`"0 8 * * *"`)
-**Dependency:** runs after `snapshot-psi` completes (PSI data must be fresh)
+**Schedule:** daily at **08:05 UTC** (`"5 8 * * *"`)
+**Dependency:** runs on the daily 08:05 UTC slot, five minutes after `snapshot-psi` writes the daily PSI row at 08:00 UTC
 **Dedup guard:** skips if the latest digest is <1 hour old (bypassed by `force=true`)
 
 ### Data collection
@@ -59,7 +59,7 @@ Safety score computation is shared with the yield cron via `worker/src/lib/safet
 ### LLM call
 
 - **Model:** `claude-opus-4-6` via `https://api.anthropic.com/v1/messages`
-- **Timeout:** 120 seconds (Opus generates slower than Sonnet; the cron runs at 08:00 UTC with no downstream time pressure)
+- **Timeout:** 120 seconds (Opus generates slower than Sonnet; the cron runs at 08:05 UTC with no downstream time pressure)
 - **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks
 - **Priority rule:** rank everything by market impact (deviation × mcap); enrichment priority varies by regime
 - **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, active depegs, gauge score, FTQ status, and DEWS ALERT+ count

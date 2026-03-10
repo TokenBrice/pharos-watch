@@ -304,7 +304,7 @@ Dedicated trigger for Telegram subscriber alert dispatch. Isolated from the quar
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
 | `discovery-scan` | `runDiscoveryScan()` | `worker/src/cron/discovery-scan.ts` | `docs/data-pipeline.md` |
 
-**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` (1 long-lived Anthropic API call), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 7 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` (1 long-lived Anthropic API call), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 8 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency.
 
 ## Telegram Alert Bot
 
@@ -603,7 +603,7 @@ The three crons below were previously only listed by filename in `docs/architect
 ### sync-bluechip
 
 **File:** `worker/src/cron/sync-bluechip.ts`
-**Schedule:** `0 8 * * *` (daily at 08:00 UTC)
+**Schedule:** `5 8 * * *` (daily at 08:05 UTC)
 **Data source:** `https://backend.bluechip.org/coin-data/{slug}`
 
 **Purpose:** Fetches safety ratings from bluechip.org for 17 tracked stablecoins.
