@@ -96,6 +96,17 @@ Small muted text below the chart: "Ethereum only · N of M selected coins tracke
 ### Condition
 **Implementation-contingent.** The current detail endpoint (`/api/stablecoin/:id`) sets `price: null` in `detailToSupplyHistory` (hardcoded). Price history is required for this chart.
 
+**Investigation result (2026-03-10): DEFERRED — price not derivable for USD stablecoins.**
+
+Findings from live API investigation:
+- **USD-pegged stablecoins (USDT, USDC, etc.):** The top-level `tokens` array only contains `circulating: { peggedUSD: number }` — no `totalCirculating` or `totalCirculatingUSD` fields. Zero out of 3024 USDT tokens had these fields. The ratio approach is inapplicable.
+- **Commodity tokens (PAXG, XAUT — GOLD/SILVER path):** `tokens` DO have both `totalCirculatingUSD` and `totalCirculating` with meaningful different values (e.g. PAXG ratio ≈ $5184/oz = current gold spot). Price IS derivable here.
+- **Non-USD fiat pegs via DefiLlama:** `normalizeDefiLlamaDetailBody` multiplies values by the current price snapshot (not historical), so historical ratios would not give accurate per-date prices.
+
+**Conclusion:** Price derivation via `totalCirculatingUSD / totalCirculating` only works for the commodity (GOLD/SILVER) provider path. Since the primary use case for peg deviation tracking is USD stablecoins (did USDT/USDC hold the $1 peg?), and those coins have no usable price ratio in the detail endpoint, the chart is deferred. A proper implementation would require a dedicated price history endpoint or storing daily prices in `supply_history` during the sync cron.
+
+**Deferred to follow-up.**
+
 **Investigation required during implementation:**
 - Check whether `totalCirculatingUSD` / `totalCirculating` ratio in `DetailToken` yields a usable per-date price
 - If yes: derive `price = sumCirculating(t.totalCirculatingUSD) / sumCirculating(t.totalCirculating)` in `detailToSupplyHistory`; populate the existing `price` field
