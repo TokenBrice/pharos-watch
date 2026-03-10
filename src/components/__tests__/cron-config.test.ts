@@ -27,13 +27,16 @@ describe("status cron config", () => {
     });
   });
 
-  it("keeps daily chained jobs in the daily group across both triggers", () => {
-    expect(getStatusCronDisplay("dispatch-telegram-alerts-daily")).toEqual({
-      group: "daily",
-      label: "Telegram alerts (daily)",
-      schedule: "0 8 * * *",
-      triggerMode: "shared",
+  it("maps telegram alerts to the dedicated 5-minute slot", () => {
+    expect(getStatusCronDisplay("dispatch-telegram-alerts")).toEqual({
+      group: "five-minute",
+      label: "Telegram alerts",
+      schedule: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
+      triggerMode: "isolated",
     });
+  });
+
+  it("keeps daily chained jobs in the daily group across both triggers", () => {
     expect(getStatusCronDisplay("discovery-scan")).toEqual({
       group: "daily",
       label: "Coverage discovery",

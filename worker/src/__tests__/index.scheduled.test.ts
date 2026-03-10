@@ -138,8 +138,9 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
-    expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
+    // Telegram alerts now on dedicated 5-min trigger
+    expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
     // Charts now on the half-hourly offset trigger
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });
@@ -172,7 +173,6 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
-    expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
   });
@@ -209,7 +209,6 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
-    expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
   });
 
   it("runs charts → dex → yield on the 30-min cron", async () => {
@@ -299,6 +298,26 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncDexDiscovery).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncBlacklist).not.toHaveBeenCalled();
     expect(cronMocks.syncMintBurn).not.toHaveBeenCalled();
+  });
+
+  it("runs telegram dispatch on the dedicated 5-min trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
   });
 
   it("runs the extended mint/burn lane on the offset 20-min slot", async () => {
