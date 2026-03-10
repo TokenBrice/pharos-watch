@@ -9,6 +9,8 @@ Supply data uses a two-source model with automatic fallback:
 
 No on-chain overrides, no CMC supply patches, no manual supply corrections.
 
+For tracked supplemental assets that are not in DefiLlama's stablecoin list, the worker still prefers DefiLlama's `coins.llama.fi` price proxy when it exists, but it now falls back to CoinGecko `simple/price` for the current token price when DefiLlama omits that `geckoId`. Gold tokens also fall back to CoinGecko market cap when a configured DefiLlama `protocolSlug` returns TVL history but no usable `mcap`, preventing zero-supply rows for otherwise healthy commodity assets. A positive CoinGecko market cap is still required before CoinGecko-only fiat assets are admitted into the cached `/api/stablecoins` payload.
+
 ### Circuit Breakers
 
 All external data sources are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`.

@@ -21,6 +21,30 @@ function pegTypeKey(meta: StablecoinMeta): string {
 
 export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number }>;
 
+function toPositiveFiniteNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function resolveSupplementalPrice(
+  priceData: { coins: Record<string, DefiLlamaCoinPrice> },
+  cgData: CoinGeckoMcapData,
+  geckoId?: string,
+): { price: number; source: "defillama" | "coingecko" } | null {
+  if (!geckoId) return null;
+
+  const dlPrice = toPositiveFiniteNumber(priceData.coins[`coingecko:${geckoId}`]?.price);
+  if (dlPrice != null) {
+    return { price: dlPrice, source: "defillama" };
+  }
+
+  const cgPrice = toPositiveFiniteNumber(cgData[geckoId]?.usd);
+  if (cgPrice != null) {
+    return { price: cgPrice, source: "coingecko" };
+  }
+
+  return null;
+}
+
 async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal): Promise<PeggedAsset[]> {
   if (SILVER_METAS.length === 0) return [];
   throwIfAborted(signal);
@@ -42,12 +66,13 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
         : Promise.resolve(null),
     ]);
 
+    let priceData: { coins: Record<string, DefiLlamaCoinPrice> } = { coins: {} };
     if (!priceRes || !priceRes.ok) {
-      console.error(`[silver] Price fetch failed: ${priceRes?.status ?? "no response"}`);
-      return [];
+      console.warn(`[silver] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`);
+      priceRes?.body?.cancel();
+    } else {
+      priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
     }
-
-    const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
 
     const cgSupplyMap = new Map<string, number>();
     if (cgMarketsRes?.ok) {
@@ -71,8 +96,8 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
       if (!token.geckoId) continue;
       const cgMcap = cgData[token.geckoId]?.usd_market_cap;
       const circulatingSupply = cgSupplyMap.get(token.geckoId);
-      const priceInfo = priceData.coins[`coingecko:${token.geckoId}`];
-      const price = priceInfo?.price ?? 0;
+      const priceResolution = resolveSupplementalPrice(priceData, cgData, token.geckoId);
+      const price = priceResolution?.price ?? 0;
       const mcap = resolveMarketCap(cgMcap, circulatingSupply, price);
 
       if (mcap > 0) {
@@ -87,8 +112,8 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
 
     return SILVER_METAS
       .map((meta) => {
-        const priceInfo = priceData.coins[`coingecko:${meta.geckoId}`];
-        if (!priceInfo) return null;
+        const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+        if (!priceResolution) return null;
 
         const mcap = mcapMap[meta.id] ?? 0;
         if (!mcap) {
@@ -103,8 +128,8 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
           geckoId: meta.geckoId,
           pegType: pKey,
           pegMechanism: "rwa-backed",
-          price: priceInfo.price,
-          priceSource: "defillama",
+          price: priceResolution.price,
+          priceSource: priceResolution.source,
           circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
@@ -128,12 +153,13 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
     const coinIds = GOLD_METAS.map((token) => `coingecko:${token.geckoId}`).join(",");
     const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined);
 
+    let priceData: { coins: Record<string, DefiLlamaCoinPrice> } = { coins: {} };
     if (!priceRes || !priceRes.ok) {
-      console.error(`[gold] Price fetch failed: ${priceRes?.status ?? "no response"}`);
-      return [];
+      console.warn(`[gold] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`);
+      priceRes?.body?.cancel();
+    } else {
+      priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
     }
-
-    const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
 
     const mcapMap: Record<string, number> = {};
     const tvlHistoryMap: Record<string, { date: number; totalLiquidityUSD: number }[]> = {};
@@ -157,10 +183,10 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
       });
     await Promise.all(protocolFetches);
 
-    const noSlugTokens = GOLD_METAS.filter((token) => !token.protocolSlug && !mcapMap[token.id]);
-    for (const token of noSlugTokens) {
-      const mcap = token.geckoId ? cgData[token.geckoId]?.usd_market_cap : undefined;
-      if (mcap && mcap > 0) mcapMap[token.id] = mcap;
+    for (const token of GOLD_METAS) {
+      if (mcapMap[token.id] != null && mcapMap[token.id] > 0) continue;
+      const mcap = token.geckoId ? toPositiveFiniteNumber(cgData[token.geckoId]?.usd_market_cap) : undefined;
+      if (mcap != null) mcapMap[token.id] = mcap;
     }
 
     const nowSec = Math.floor(Date.now() / 1000);
@@ -190,8 +216,8 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
 
     return GOLD_METAS
       .map((meta) => {
-        const priceInfo = priceData.coins[`coingecko:${meta.geckoId}`];
-        if (!priceInfo) return null;
+        const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+        if (!priceResolution) return null;
 
         const mcap = mcapMap[meta.id] ?? 0;
         if (!mcap) {
@@ -223,8 +249,8 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
           geckoId: meta.geckoId,
           pegType: pKey,
           pegMechanism: "rwa-backed",
-          price: priceInfo.price,
-          priceSource: "defillama",
+          price: priceResolution.price,
+          priceSource: priceResolution.source,
           circulating: { [pKey]: mcap },
           circulatingPrevDay: prevDay != null ? { [pKey]: prevDay } : null,
           circulatingPrevWeek: prevWeek != null ? { [pKey]: prevWeek } : null,
@@ -250,24 +276,24 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: Abor
     const coinIds = FIAT_CG_METAS.map((token) => `coingecko:${token.geckoId}`).join(",");
     const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined);
 
+    let priceData: { coins: Record<string, DefiLlamaCoinPrice> } = { coins: {} };
     if (!priceRes || !priceRes.ok) {
-      console.error(`[fiat-cg] Price fetch failed: ${priceRes?.status ?? "no response"}`);
-      return [];
+      console.warn(`[fiat-cg] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`);
+      priceRes?.body?.cancel();
+    } else {
+      priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
     }
-
-    const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
 
     const mcapMap: Record<string, number> = {};
     for (const token of FIAT_CG_METAS) {
-      const mcap = token.geckoId ? cgData[token.geckoId]?.usd_market_cap : undefined;
+      const mcap = token.geckoId ? toPositiveFiniteNumber(cgData[token.geckoId]?.usd_market_cap) : undefined;
       if (mcap && mcap > 0) mcapMap[token.id] = mcap;
     }
 
     return FIAT_CG_METAS
       .map((meta) => {
-        const priceInfo = priceData.coins[`coingecko:${meta.geckoId}`];
-        const price = priceInfo?.price ?? (meta.geckoId ? cgData[meta.geckoId]?.usd : undefined);
-        if (price == null) return null;
+        const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+        if (!priceResolution) return null;
 
         const mcap = mcapMap[meta.id];
         if (!mcap) {
@@ -283,8 +309,8 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: Abor
           geckoId: meta.geckoId,
           pegType: pKey,
           pegMechanism: meta.flags.backing,
-          price,
-          priceSource: priceInfo ? "defillama" : "coingecko",
+          price: priceResolution.price,
+          priceSource: priceResolution.source,
           circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
           circulatingPrevWeek: null,

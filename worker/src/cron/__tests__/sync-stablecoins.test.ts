@@ -35,11 +35,51 @@ vi.mock("@shared/lib/stablecoins", () => {
       detailProvider: "defillama",
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
+    {
+      id: "usd-dinari",
+      name: "Dinari USD+",
+      symbol: "USD+",
+      geckoId: "dinari-usd",
+      detailProvider: "coingecko",
+      flags: { pegCurrency: "USD", backing: "rwa-backed", yieldBearing: true, navToken: false, governance: "centralized" },
+    },
+    {
+      id: "dgld-gold-token-sa",
+      name: "DGLD Tokenized Gold",
+      symbol: "DGLD",
+      geckoId: "gold-token-sa-dgld-tokenized-gold",
+      detailProvider: "commodity",
+      commodityOunces: 1,
+      flags: { pegCurrency: "GOLD", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+    },
+    {
+      id: "pgold-pleasing",
+      name: "Pleasing Gold",
+      symbol: "PGOLD",
+      geckoId: "pleasing-gold",
+      protocolSlug: "pleasing-gold",
+      detailProvider: "commodity",
+      commodityOunces: 1,
+      flags: { pegCurrency: "GOLD", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+    },
       ...fallbackTrackedTokens,
     ],
     TRACKED_META_BY_ID: new Map([
       ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
       ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
+      ["usd-dinari", { geckoId: "dinari-usd", cmcSlug: undefined, flags: { navToken: false } }],
+      ["dgld-gold-token-sa", {
+        geckoId: "gold-token-sa-dgld-tokenized-gold",
+        cmcSlug: undefined,
+        commodityOunces: 1,
+        flags: { navToken: false },
+      }],
+      ["pgold-pleasing", {
+        geckoId: "pleasing-gold",
+        cmcSlug: undefined,
+        commodityOunces: 1,
+        flags: { navToken: false },
+      }],
       ["ggbr-goldfish-gold", {
         geckoId: "goldfish-gold",
         cmcSlug: undefined,
@@ -673,6 +713,100 @@ describe("syncStablecoins", () => {
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const normalized = payload?.peggedAssets.find((a) => a.id === "ggbr-goldfish-gold");
     expect(normalized?.price).toBe(5.15);
+  });
+
+  it("adds tracked gold supplemental assets when DefiLlama price data is empty but CoinGecko still has price and market cap", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      {
+        match: "api.coingecko.com",
+        body: {
+          "gold-token-sa-dgld-tokenized-gold": {
+            usd: 10_591.46,
+            usd_market_cap: 16_985_391.664749127,
+          },
+          "dinari-usd": {
+            usd: 1.0012,
+            usd_market_cap: 0,
+          },
+        },
+      },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(61);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins"
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const dgld = payload?.peggedAssets.find((asset) => asset.id === "dgld-gold-token-sa");
+    const usdDinari = payload?.peggedAssets.find((asset) => asset.id === "usd-dinari");
+
+    expect(dgld).toBeDefined();
+    expect(dgld?.price).toBe(10_591.46);
+    expect(dgld?.priceSource).toBe("coingecko");
+    expect(dgld?.circulating).toEqual({ peggedGOLD: 16_985_391.664749127 });
+    expect(usdDinari).toBeUndefined();
+  });
+
+  it("falls back to CoinGecko market cap for protocol-backed gold assets when DefiLlama protocol mcap is missing", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      {
+        match: "api.coingecko.com",
+        body: {
+          "pleasing-gold": {
+            usd: 5_122.31,
+            usd_market_cap: 99_913_387.23420689,
+          },
+        },
+      },
+      { match: "stablecoins.llama.fi", body: dlData },
+      {
+        match: "coins.llama.fi/prices",
+        body: {
+          coins: {
+            "coingecko:pleasing-gold": {
+              price: 5_119.117514760049,
+              symbol: "PGOLD",
+              timestamp: 1_773_122_336,
+              confidence: 0.99,
+            },
+          },
+        },
+      },
+      {
+        match: "api.llama.fi/protocol/pleasing-gold",
+        body: {
+          name: "Pleasing Gold",
+          mcap: null,
+          tvl: [{ date: 1_773_125_272, totalLiquidityUSD: 100_095_849 }],
+        },
+      },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(61);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins"
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const pgold = payload?.peggedAssets.find((asset) => asset.id === "pgold-pleasing");
+
+    expect(pgold).toBeDefined();
+    expect(pgold?.price).toBe(5_119.117514760049);
+    expect(pgold?.priceSource).toBe("defillama");
+    expect(pgold?.circulating).toEqual({ peggedGOLD: 99_913_387.23420689 });
   });
 
   it("handles duplicate DefiLlama coin IDs without crashing", async () => {
