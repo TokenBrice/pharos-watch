@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const { sendToChat } = await import("../telegram");
+const { sendToChat, sendBatch } = await import("../telegram");
 
 beforeEach(() => {
   fetchSpy.mockReset();
@@ -42,5 +42,73 @@ describe("sendToChat", () => {
     await sendToChat("12345", "test", "bot-token", { disableNotification: true });
     const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
     expect(body.disable_notification).toBe(true);
+  });
+});
+
+describe("sendBatch", () => {
+  beforeEach(() => {
+    fetchSpy.mockReset();
+  });
+
+  it("sends messages in parallel batches of the given size", async () => {
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const messages = Array.from({ length: 7 }, (_, i) => ({
+      chatId: `chat-${i}`,
+      html: `<b>Alert ${i}</b>`,
+      disableNotification: false,
+    }));
+
+    const results = await sendBatch(messages, "bot-token", 3);
+
+    expect(results).toHaveLength(7);
+    expect(results.every((r) => r.ok)).toBe(true);
+    // 3 batches: [0,1,2], [3,4,5], [6]
+    expect(fetchSpy).toHaveBeenCalledTimes(7);
+  });
+
+  it("reports blocked chats without throwing", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("Forbidden", { status: 403 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const messages = [
+      { chatId: "a", html: "hi", disableNotification: false },
+      { chatId: "b", html: "hi", disableNotification: false },
+      { chatId: "c", html: "hi", disableNotification: false },
+    ];
+
+    const results = await sendBatch(messages, "bot-token", 3);
+    expect(results).toHaveLength(3);
+    expect(results[0]).toEqual({ chatId: "a", ok: true, blocked: false });
+    expect(results[1]).toEqual({ chatId: "b", ok: false, blocked: true });
+    expect(results[2]).toEqual({ chatId: "c", ok: true, blocked: false });
+  });
+
+  it("catches transient errors without crashing the batch", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response("Internal Server Error", { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const messages = [
+      { chatId: "a", html: "hi", disableNotification: false },
+      { chatId: "b", html: "hi", disableNotification: false },
+      { chatId: "c", html: "hi", disableNotification: false },
+    ];
+
+    const results = await sendBatch(messages, "bot-token", 3);
+    expect(results).toHaveLength(3);
+    expect(results[0]).toEqual({ chatId: "a", ok: true, blocked: false });
+    // 500 error: sendToChat throws, sendBatch catches it -> { ok: false, blocked: false }
+    expect(results[1]).toEqual({ chatId: "b", ok: false, blocked: false });
+    expect(results[2]).toEqual({ chatId: "c", ok: true, blocked: false });
+  });
+
+  it("returns empty array for empty input", async () => {
+    const results = await sendBatch([], "bot-token", 5);
+    expect(results).toEqual([]);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

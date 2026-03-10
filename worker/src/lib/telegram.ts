@@ -89,3 +89,47 @@ export async function sendToChat(
   await res.json().catch(() => {});
   return { ok: true, blocked: false };
 }
+
+export interface BatchMessage {
+  chatId: string;
+  html: string;
+  disableNotification: boolean;
+}
+
+export interface BatchResult {
+  chatId: string;
+  ok: boolean;
+  blocked: boolean;
+}
+
+/**
+ * Send messages in parallel batches. Each batch sends up to `batchSize`
+ * messages concurrently (must stay <= 6 to respect Workers connection limit).
+ * Individual send failures are caught — a single 500 error does NOT abort the batch.
+ * Returns one result per input message in the same order.
+ */
+export async function sendBatch(
+  messages: BatchMessage[],
+  botToken: string,
+  batchSize: number,
+): Promise<BatchResult[]> {
+  const results: BatchResult[] = [];
+  for (let i = 0; i < messages.length; i += batchSize) {
+    const batch = messages.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(async (msg) => {
+        try {
+          const result = await sendToChat(msg.chatId, msg.html, botToken, {
+            disableWebPagePreview: true,
+            disableNotification: msg.disableNotification,
+          });
+          return { chatId: msg.chatId, ...result };
+        } catch {
+          return { chatId: msg.chatId, ok: false, blocked: false };
+        }
+      }),
+    );
+    results.push(...batchResults);
+  }
+  return results;
+}
