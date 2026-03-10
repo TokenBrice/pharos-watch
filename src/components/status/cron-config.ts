@@ -27,13 +27,13 @@ export const STATUS_CRON_GROUPS: readonly StatusCronGroupDefinition[] = [
   {
     key: "twenty-minute",
     title: "20-minute slot",
-    badge: ":03 / :23 / :43",
+    badge: "~20 min",
     description: "On-chain intake jobs (blacklist, mint/burn, DEX discovery) on isolated triggers for connection pool separation.",
   },
   {
     key: "half-hourly",
     title: "30-minute slot",
-    badge: ":10 / :40",
+    badge: "~30 min",
     description: "Stablecoin charts, DEX liquidity scoring, and yield refresh.",
   },
   {
