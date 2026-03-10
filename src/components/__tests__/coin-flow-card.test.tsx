@@ -47,8 +47,38 @@ describe("CoinFlowCard", () => {
 
   it("renders pressure shift score for burning coin", () => {
     const html = renderToStaticMarkup(<CoinFlowCard {...burningProps} />);
-    // score is -28, displayed as "-28"
+    // score is -28, badge now shows "Worsening -28"
     expect(html).toContain("-28");
+  });
+
+  it("renders band label in badge for minting coin", () => {
+    const html = renderToStaticMarkup(<CoinFlowCard {...mintingProps} />);
+    // pressureShiftState is "improving" → label is "Improving"
+    expect(html).toContain("Improving");
+  });
+
+  it("renders band label in badge for burning coin", () => {
+    const html = renderToStaticMarkup(<CoinFlowCard {...burningProps} />);
+    // pressureShiftState is "worsening" → label is "Worsening"
+    expect(html).toContain("Worsening");
+  });
+
+  it("renders pressure description narrative for minting improving coin", () => {
+    const html = renderToStaticMarkup(<CoinFlowCard {...mintingProps} />);
+    // direction=minting, state=improving → narrative from buildFlowSummaryNarrative
+    expect(html).toContain("Minting, with issuance running stronger than its usual pace.");
+  });
+
+  it("renders pressure description narrative for burning worsening coin", () => {
+    const html = renderToStaticMarkup(<CoinFlowCard {...burningProps} />);
+    // direction=burning, state=worsening
+    expect(html).toContain("Burning, with pressure worsening versus the baseline.");
+  });
+
+  it("does not render pressure description when pressureShiftScore is null", () => {
+    const html = renderToStaticMarkup(<CoinFlowCard {...nrProps} />);
+    // pressureDisplay is null → description row should not appear
+    expect(html).not.toContain("No current activity");
   });
 
   it("renders a pressure bar track element", () => {
