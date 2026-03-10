@@ -682,6 +682,64 @@ describe("syncYieldData", () => {
     expect(wroteYieldRankings).toBe(false);
   });
 
+  it("tries price-derived as additional source when DL returns 0% APY for navToken", async () => {
+    // sDAI (navToken: true) gets a DL pool with 0% APY.
+    // The resolve logic should also try price-derived and pick the non-zero source.
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      { match: "yield_history", rows: [] },
+      { match: "supply_history", rows: [], first: { price: 1.05 } },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-sdai-zero",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 500_000_000,
+              apy: 0,
+              apyBase: 0,
+              apyReward: null,
+              apyMean30d: 0,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: Math.floor(Date.now() / 1000),
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    // Two source rows: DL (0% APY) + price-derived (4.0% from mock)
+    expect(result.itemCount).toBe(2);
+
+    // Check that batchExecute was called with a price-derived source
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const priceDerivedRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "price-derived",
+    );
+    expect(priceDerivedRow).toBeDefined();
+    // price-derived APY should be > 0 (computeApyFromPrice mock returns 4.0)
+    expect(Number(priceDerivedRow?.boundValues?.[3])).toBeGreaterThan(0);
+    // data_source should be "price-derived"
+    expect(priceDerivedRow?.boundValues?.[12]).toBe("price-derived");
+    // price-derived should be is_best (higher APY than DL's 0%)
+    expect(priceDerivedRow?.boundValues?.[25]).toBe(1);
+  });
+
   it("marks run degraded but still writes yield-rankings cache when safety snapshot coverage is empty", async () => {
     const db = makeDb();
     vi.mocked(getCache).mockResolvedValue(null);

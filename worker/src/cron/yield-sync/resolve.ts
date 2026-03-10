@@ -170,9 +170,21 @@ export async function resolveYieldSources({
       hasAnySource = true;
     }
 
-    if (hasAnySource) continue;
+    // For navToken / PRICE_DERIVED_FALLBACK_IDS coins, also try price-derived
+    // when DL sources all returned 0% APY. DL Layer 3 symbol matching can find
+    // spurious pools (e.g. a tiny Aave lending market) that report 0% and block
+    // the price-derived path. Adding price-derived as an additional source lets
+    // the is_best logic pick the higher-APY winner.
+    const allDlSourcesZero = hasAnySource
+      && resolved
+        .filter((e) => e.id === id && e.yield != null)
+        .every((e) => e.yield!.currentApy === 0);
 
-    if (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(id)) {
+    const shouldTryPriceDerived =
+      (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(id))
+      && (!hasAnySource || allDlSourcesZero);
+
+    if (shouldTryPriceDerived) {
       const apy = await getPriceDerivedApy(db, id);
       if (apy != null) {
         resolved.push({
@@ -189,9 +201,11 @@ export async function resolveYieldSources({
             sourceKey: "price-derived",
           },
         });
-        continue;
+        hasAnySource = true;
       }
     }
+
+    if (hasAnySource) continue;
 
     resolved.push({ id, symbol, yield: null });
   }
