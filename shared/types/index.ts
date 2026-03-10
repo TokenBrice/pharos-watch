@@ -610,7 +610,7 @@ const DexLiquidityDataSchema = z.object({
       poolQuality: z.number(),
       durability: z.number(),
       pairDiversity: z.number(),
-      crossChain: z.number(),
+      crossChain: z.number().optional(),
     })
     .nullable(),
   lockedLiquidityPct: z.number().nullable().optional(),

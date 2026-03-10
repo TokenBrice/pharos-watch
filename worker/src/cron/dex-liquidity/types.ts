@@ -152,7 +152,6 @@ export interface ScoreComponents {
   poolQuality: number;
   durability: number;
   pairDiversity: number;
-  crossChain: number;
 }
 
 export interface CurvePoolEntry {
