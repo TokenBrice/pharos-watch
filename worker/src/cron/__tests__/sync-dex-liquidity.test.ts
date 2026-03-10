@@ -23,6 +23,11 @@ vi.mock("../dex-liquidity/persistence", () => ({
   writeHistoricalSnapshots: vi.fn(async () => {}),
 }));
 
+vi.mock("../dex-liquidity/fetch-fallbacks", () => ({
+  fetchDsFallbackPools: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
+  fetchCgTickersFallback: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
+}));
+
 import { syncDexLiquidity } from "../dex-liquidity";
 import { fetchDataSources } from "../dex-liquidity/fetch-primary";
 

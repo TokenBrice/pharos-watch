@@ -10,7 +10,7 @@ Cron result status semantics:
 - `degraded`: one or more critical non-fatal source families failed (for example DeFiLlama yields/protocol coverage), or coverage falls near the guardrail band.
 - throw/error: catastrophic source failure (for example DL+Curve hard failure) still aborts the run.
 
-Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByAddress`, `stagedPoolsSkippedByFingerprint`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`).
+Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByAddress`, `stagedPoolsSkippedByFingerprint`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`, `priceObservationCoins`, `dsFallbackCoins`, `cgTickerFallbackCoins`).
 
 | Component           | Weight | Source                     | How Computed                                                                                                           |
 | ------------------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -85,9 +85,10 @@ The CG integration extracts three signals unavailable from GeckoTerminal:
 
 ### DexScreener Fallback
 
-DexScreener is now a discovery-stage source rather than an in-cron fallback pass. It populates `dex_pool_staging`, and the scoring cron merges those staged pools after primary-source processing.
+DexScreener runs in two complementary paths:
 
-After the primary pipeline (DeFiLlama + CG/GT + Curve + UniV3 + Aerodrome), any tracked stablecoin that still has zero pools or no usable DEX price observation is queried via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains.
+1. **Discovery cron** (`sync-dex-discovery`): Populates `dex_pool_staging` with pool data for later merge during scoring.
+2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After primary sources and staged-pool merge, any tracked stablecoin that still has zero pools or no usable DEX price observation is queried directly via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains. The fallback shares a 2-minute time budget with the CG tickers fallback.
 
 Address matching uses both canonical `contracts` and optional `tradedContracts` metadata. `tradedContracts` is reserved for wrapper / secondary-market token addresses that are meaningfully used for DEX discovery even when issuer metadata points to a different canonical deployment.
 
@@ -103,9 +104,10 @@ DexScreener pools are merged using the same `mergeGtPools()` logic — no balanc
 
 ### CoinGecko Tickers Fallback (Orderbook DEXes)
 
-CoinGecko Tickers is now a discovery-stage source rather than a direct scoring-cron fallback pass. Its synthetic orderbook pools enter scoring through `dex_pool_staging`.
+CoinGecko Tickers runs in two complementary paths:
 
-After DexScreener, any coin that still has zero pools or no usable DEX price observation and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange).
+1. **Discovery cron** (`sync-dex-discovery`): Synthetic orderbook pools enter scoring through `dex_pool_staging`.
+2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After DexScreener fallback, any coin that still has zero pools or no usable DEX price observation and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange). Shares the 2-minute fallback time budget.
 
 Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-equivalent quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.).
 

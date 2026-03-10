@@ -75,6 +75,8 @@ export const CRAWL_BUDGETS = {
   COINGECKO_ONCHAIN_MS: 5 * 60 * 1000,
   /** Max wall time for GT pool crawl, leaving headroom for persistence before the Worker hard limit. */
   GECKO_TERMINAL_MS: 3 * 60 * 1000,
+  /** Max wall time for DexScreener + CG tickers fallback crawls (shared deadline). */
+  FALLBACK_MS: 2 * 60 * 1000,
 } as const;
 
 async function hashIpWithSalt(ip: string, salt: string): Promise<string> {

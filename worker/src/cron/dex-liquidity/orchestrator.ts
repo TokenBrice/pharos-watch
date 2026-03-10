@@ -1,4 +1,5 @@
 import type { CronResult } from "../../lib/db";
+import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { throwIfAborted } from "../../lib/abort";
 import type { DexPriceObs } from "./types";
 import { buildSymbolLookups } from "./pool-helpers";
@@ -8,6 +9,8 @@ import {
 } from "./fetch-primary";
 import { processPoolMetrics } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
+import { mergeGtPools } from "./fetch-crawlers";
+import { fetchDsFallbackPools, fetchCgTickersFallback } from "./fetch-fallbacks";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 
@@ -118,6 +121,50 @@ export async function syncDexLiquidity(
     priceObservations.set(id, existing);
   }
 
+  // 5b. Fallback crawlers: fill price observation gaps for coins with missing coverage
+  const fallbackDeadlineMs = Date.now() + CRAWL_BUDGETS.FALLBACK_MS;
+  let dsFallbackCoins = 0;
+  let cgTickerFallbackCoins = 0;
+
+  try {
+    const dsFallback = await fetchDsFallbackPools(
+      metrics, priceObservations, knownPoolAddrs, signal, fallbackDeadlineMs,
+    );
+    dsFallbackCoins = dsFallback.newPools.size;
+    if (dsFallback.newPools.size > 0) mergeGtPools(metrics, dsFallback.newPools);
+    for (const [id, obs] of dsFallback.priceObs) {
+      const existing = priceObservations.get(id) ?? [];
+      existing.push(...obs);
+      priceObservations.set(id, existing);
+    }
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    console.warn("[dex-liquidity] DexScreener fallback failed (non-fatal):", err);
+    failedSources.push("dexscreener-fallback");
+  }
+
+  try {
+    const cgFallback = await fetchCgTickersFallback(
+      metrics, priceObservations, signal, fallbackDeadlineMs,
+    );
+    cgTickerFallbackCoins = cgFallback.newPools.size;
+    if (cgFallback.newPools.size > 0) mergeGtPools(metrics, cgFallback.newPools);
+    for (const [id, obs] of cgFallback.priceObs) {
+      const existing = priceObservations.get(id) ?? [];
+      existing.push(...obs);
+      priceObservations.set(id, existing);
+    }
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
+    failedSources.push("cg-tickers-fallback");
+  }
+
+  console.log(
+    `[dex-liquidity] After fallbacks: ${priceObservations.size} coins with price observations ` +
+    `(DS fallback: ${dsFallbackCoins} coins, CG tickers: ${cgTickerFallbackCoins} coins)`,
+  );
+
   // 6. Compute composite scores per stablecoin
   const { scores: scoreResults, globalAgg } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
   const currentCoverage = scoreResults.size;
@@ -168,6 +215,8 @@ export async function syncDexLiquidity(
         minExpectedCoverage,
         nearCoverageGuard,
         priceObservationCoins: priceObservations.size,
+        dsFallbackCoins,
+        cgTickerFallbackCoins,
       },
       failedSources,
       fallbackMode: fallbackSignals,
