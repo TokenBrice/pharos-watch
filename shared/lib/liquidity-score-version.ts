@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "3.4",
+  currentVersion: "4.0",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "4.0",
+    title: "Log-scale volume, cross-chain removal, durability rebalance",
+    date: "2026-03-10",
+    effectiveAt: 1773127850,
+    summary:
+      "Volume activity switched from linear to log-scale. Cross-chain component removed and weight redistributed to TVL depth and pool quality. Durability sub-weights rebalanced: locked liquidity removed, organic fraction reduced to 15% with sqrt curve, history-measured signals raised to 85%.",
+    impact: [
+      "Volume activity now uses log-scale (33.3*log10(V/T/0.005)) — median score rises from 5 to ~35",
+      "Cross-chain component removed; TVL Depth raised to 35%, Pool Quality to 22.5%",
+      "Durability: organic 15% (sqrt curve), TVL stability 35%, volume consistency 25%, maturity 25%",
+      "Locked liquidity sub-component removed from durability (no reliable data source)",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.4",
     title: "Retained-pool score recomputation and trusted staged-price hardening",
