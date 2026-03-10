@@ -184,7 +184,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Price Source Health</h2>
-        <PriceSourceHealthCard health={data.priceSourceHealth} />
+        <PriceSourceHealthCard health={data.priceSourceHealth} shadowComparison={data.shadowComparison} />
       </section>
 
       <section>

@@ -997,6 +997,18 @@ export interface DiscoveryCandidatesResponse {
   total: number;
 }
 
+// --- Shadow comparison ---
+
+export interface ShadowComparisonResult {
+  totalCompared: number;
+  meanDivergenceBps: number;
+  p95DivergenceBps: number;
+  maxDivergenceBps: number;
+  coverageLost: number;
+  coverageGained: number;
+  cgAvailable: boolean;
+}
+
 // --- Price source health ---
 
 export interface PriceSourceHealth {
@@ -1057,6 +1069,7 @@ export interface StatusResponse {
     worstCacheRatio: number;
   };
   priceSourceHealth: PriceSourceHealth | null;
+  shadowComparison: ShadowComparisonResult | null;
   discoveryCandidates: DiscoveryCandidate[] | null;
 }
 

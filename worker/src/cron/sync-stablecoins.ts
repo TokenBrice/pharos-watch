@@ -4,12 +4,13 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import {
   buildPriceReasonablenessOptions,
+  computeShadowComparison,
   enrichMissingPrices,
   hasMissingPrice,
   isReasonablePrice,
   fetchDualPrimaryPrices,
 } from "./enrich-prices";
-import type { PeggedAsset } from "./enrich-prices";
+import type { PeggedAsset, ShadowComparisonResult } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
 import { confirmPendingDepegs } from "./confirm-pending-depegs";
@@ -512,6 +513,39 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     llamaData.peggedAssets, db, signal,
   );
 
+  // Shadow mode: compare CG-as-primary prices against old pipeline's DL-sourced prices
+  let shadowComparison: ShadowComparisonResult | null = null;
+  try {
+    // Extract CG prices from dual-primary results (already fetched — no extra API call)
+    const shadowCgPrices = new Map<string, number>();
+    const oldPrices = new Map<string, number>();
+    for (const asset of llamaData.peggedAssets) {
+      if (!asset.geckoId) continue;
+      const dual = dualPriceResults.get(asset.id);
+      if (dual?.cgPrice != null && dual.cgPrice > 0) {
+        shadowCgPrices.set(asset.geckoId, dual.cgPrice);
+      }
+      // Old pipeline price = DL list endpoint price (what we'd lose if CG becomes primary)
+      if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
+        oldPrices.set(asset.geckoId, asset.price);
+      }
+    }
+
+    if (shadowCgPrices.size > 0) {
+      shadowComparison = computeShadowComparison(oldPrices, shadowCgPrices);
+      console.log(
+        `[shadow] Compared ${shadowComparison.totalCompared} prices: ` +
+        `mean=${shadowComparison.meanDivergenceBps}bps, p95=${shadowComparison.p95DivergenceBps}bps, ` +
+        `max=${shadowComparison.maxDivergenceBps}bps, lost=${shadowComparison.coverageLost}, gained=${shadowComparison.coverageGained}`,
+      );
+    } else {
+      // CG was unavailable (circuit breaker open or fetch failed) — record explicitly
+      shadowComparison = computeShadowComparison(oldPrices, new Map());
+    }
+  } catch (err) {
+    console.warn("[shadow] Shadow comparison failed:", err);
+  }
+
   // Apply dual-primary results — these override the DL list endpoint prices
   for (const asset of llamaData.peggedAssets) {
     const dual = dualPriceResults.get(asset.id);
@@ -778,6 +812,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     rejectedPrices: rejectedCount,
     missingPrices: finalMissing,
     priceSourceHealth,
+    shadowComparison,
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
   if (depegErrorCount > 0) {

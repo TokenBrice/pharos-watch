@@ -28,6 +28,7 @@ import type {
   DataQuality,
   DiscoveryCandidate,
   PriceSourceHealth,
+  ShadowComparisonResult,
   StatusCause,
   StatusResponse,
   TelegramBotStats,
@@ -623,6 +624,20 @@ export const handleStatus = withErrorHandler(
         console.warn("[status] Price source health extraction failed:", err);
       }
 
+      // Shadow comparison from same cron metadata
+      let shadowComparison: ShadowComparisonResult | null = null;
+      try {
+        const syncStablecoinsCron = raw.crons?.["sync-stablecoins"];
+        if (syncStablecoinsCron?.lastRun?.metadata) {
+          const meta = syncStablecoinsCron.lastRun.metadata;
+          if (meta.shadowComparison) {
+            shadowComparison = meta.shadowComparison as ShadowComparisonResult;
+          }
+        }
+      } catch (err) {
+        console.warn("[status] Shadow comparison extraction failed:", err);
+      }
+
       const body: StatusResponse = {
         timestamp: now,
         dbHealthy: raw.dbHealthy,
@@ -648,6 +663,7 @@ export const handleStatus = withErrorHandler(
         datasetFreshness: raw.datasetFreshness,
         summary: raw.summary,
         priceSourceHealth,
+        shadowComparison,
         discoveryCandidates,
       };
 
