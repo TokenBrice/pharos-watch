@@ -136,7 +136,7 @@ export default function MethodologyPage() {
                 name: "How does Pharos measure DEX liquidity?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The liquidity score is a composite 0–100 metric combining TVL depth (30%), volume activity (20%), pool quality (20%), durability (15%), pair diversity (7.5%), and cross-chain presence (7.5%). Pool quality is adjusted for mechanism type, balance health, and pair quality.",
+                  text: "The liquidity score is a composite 0–100 metric combining TVL depth (35%), volume activity (20%), pool quality (22.5%), durability (15%), and pair diversity (7.5%). Volume uses log-scale scoring. Pool quality is adjusted for mechanism type, balance health, and pair quality.",
                 },
               },
             ],
@@ -1025,22 +1025,22 @@ export default function MethodologyPage() {
           </div>
           <WorkedExample summary="Worked example (verified against computeLiquidityScore)">
             <p className="font-mono">
-              Inputs: effectiveTVL=$25M, TVL=$20M, volume24h=$8M, qualityTVL=$18M, durability=68, pools=12, chains=4
+              Inputs: effectiveTVL=$25M, TVL=$20M, volume24h=$8M, qualityTVL=$18M, durability=68, pools=12
             </p>
-            <p className="font-mono">tvlDepth=67.96, volume=80, quality=65.11, pair=60, crossChain=51</p>
-            <p className="font-mono">score=round(0.30*67.96+0.20*80+0.20*65.11+0.15*68+0.075*60+0.075*51)=68</p>
+            <p className="font-mono">tvlDepth=67.96, volume=63.37, quality=65.11, pair=60</p>
+            <p className="font-mono">score=round(0.35*67.96+0.20*63.37+0.225*65.11+0.15*68+0.075*60)=66</p>
             <p>
-              Result: <span className="text-foreground">Liquidity score 68</span>.
+              Result: <span className="text-foreground">Liquidity score 66</span>.
             </p>
           </WorkedExample>
 
           <MethodologyDetails summary="Technical details: component weights, TVL scaling, and quality adjustments">
             {/* Liquidity component diagram — desktop: 3×2 grid */}
             <div className="hidden md:flex flex-col items-center gap-3">
-              <div className="grid grid-cols-3 gap-3 w-full">
+              <div className="grid grid-cols-5 gap-3 w-full">
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">TVL Depth</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">30%</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">35%</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">Volume Activity</p>
@@ -1048,7 +1048,7 @@ export default function MethodologyPage() {
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">Pool Quality</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">20%</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">22.5%</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">Durability</p>
@@ -1056,10 +1056,6 @@ export default function MethodologyPage() {
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">Pair Diversity</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">7.5%</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium">Cross-chain</p>
                   <p className="text-xs text-muted-foreground mt-0.5">7.5%</p>
                 </div>
               </div>
@@ -1075,7 +1071,7 @@ export default function MethodologyPage() {
               <div className="grid grid-cols-2 gap-2 w-full">
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">TVL Depth</p>
-                  <p className="text-xs text-muted-foreground">30%</p>
+                  <p className="text-xs text-muted-foreground">35%</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Vol. Activity</p>
@@ -1083,18 +1079,14 @@ export default function MethodologyPage() {
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Pool Quality</p>
-                  <p className="text-xs text-muted-foreground">20%</p>
+                  <p className="text-xs text-muted-foreground">22.5%</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Durability</p>
                   <p className="text-xs text-muted-foreground">15%</p>
                 </div>
-                <div className="rounded-lg border p-3 text-center">
+                <div className="rounded-lg border p-3 text-center col-span-2">
                   <p className="text-foreground font-medium text-xs">Pair Diversity</p>
-                  <p className="text-xs text-muted-foreground">7.5%</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Cross-chain</p>
                   <p className="text-xs text-muted-foreground">7.5%</p>
                 </div>
               </div>
@@ -1120,7 +1112,7 @@ export default function MethodologyPage() {
                   <tbody className="divide-y">
                     <tr>
                       <td className="py-2 pr-4 text-foreground">TVL Depth</td>
-                      <td className="py-2 pr-4">30%</td>
+                      <td className="py-2 pr-4">35%</td>
                       <td className="py-2">
                         Log-scale effective TVL (quality-adjusted, metapool-deduped): $100K&rarr;20, $1M&rarr;40,
                         $10M&rarr;60, $100M&rarr;80, $1B+&rarr;100
@@ -1129,11 +1121,11 @@ export default function MethodologyPage() {
                     <tr>
                       <td className="py-2 pr-4 text-foreground">Volume Activity</td>
                       <td className="py-2 pr-4">20%</td>
-                      <td className="py-2">Volume/TVL ratio. 0&rarr;0, 0.5+&rarr;100</td>
+                      <td className="py-2">Log-scale V/T ratio: 33.3&times;log10(vtRatio/0.005). ~0.5%&rarr;13, ~5%&rarr;56, ~50%&rarr;100</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 text-foreground">Pool Quality</td>
-                      <td className="py-2 pr-4">20%</td>
+                      <td className="py-2 pr-4">22.5%</td>
                       <td className="py-2">
                         Quality-adjusted TVL using pool mechanism multiplier &times; balance health &times; pair
                         quality. Curve StableSwap (A&ge;500) = 1.0&times;, Uni V3 1bp = 1.1&times;, generic AMM =
@@ -1144,22 +1136,14 @@ export default function MethodologyPage() {
                       <td className="py-2 pr-4 text-foreground">Durability</td>
                       <td className="py-2 pr-4">15%</td>
                       <td className="py-2">
-                        Organic fee fraction (35%), TVL stability (25%), volume consistency (20%), pool maturity (15%),
-                        locked liquidity (5%)
+                        TVL stability (35%), volume consistency (25%), pool maturity (25%),
+                        organic fee fraction with sqrt curve (15%)
                       </td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 text-foreground">Pair Diversity</td>
                       <td className="py-2 pr-4">7.5%</td>
                       <td className="py-2">Pool count with diminishing returns: min(100, poolCount &times; 5)</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4 text-foreground">Cross-chain</td>
-                      <td className="py-2 pr-4">7.5%</td>
-                      <td className="py-2">
-                        Number of chains with liquidity: 1&rarr;15, then +12 per chain, capped at 100 (e.g. 2&rarr;27,
-                        5&rarr;63, 9+&rarr;100)
-                      </td>
                     </tr>
                   </tbody>
                 </table>
