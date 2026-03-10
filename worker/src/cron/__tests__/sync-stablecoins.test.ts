@@ -36,14 +36,6 @@ vi.mock("@shared/lib/stablecoins", () => {
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
     {
-      id: "usd-dinari",
-      name: "Dinari USD+",
-      symbol: "USD+",
-      geckoId: "dinari-usd",
-      detailProvider: "coingecko",
-      flags: { pegCurrency: "USD", backing: "rwa-backed", yieldBearing: true, navToken: false, governance: "centralized" },
-    },
-    {
       id: "dgld-gold-token-sa",
       name: "DGLD Tokenized Gold",
       symbol: "DGLD",
@@ -67,7 +59,6 @@ vi.mock("@shared/lib/stablecoins", () => {
     TRACKED_META_BY_ID: new Map([
       ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
       ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
-      ["usd-dinari", { geckoId: "dinari-usd", cmcSlug: undefined, flags: { navToken: false } }],
       ["dgld-gold-token-sa", {
         geckoId: "gold-token-sa-dgld-tokenized-gold",
         cmcSlug: undefined,
@@ -728,10 +719,6 @@ describe("syncStablecoins", () => {
             usd: 10_591.46,
             usd_market_cap: 16_985_391.664749127,
           },
-          "dinari-usd": {
-            usd: 1.0012,
-            usd_market_cap: 0,
-          },
         },
       },
       { match: "stablecoins.llama.fi", body: dlData },
@@ -746,13 +733,11 @@ describe("syncStablecoins", () => {
     );
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const dgld = payload?.peggedAssets.find((asset) => asset.id === "dgld-gold-token-sa");
-    const usdDinari = payload?.peggedAssets.find((asset) => asset.id === "usd-dinari");
 
     expect(dgld).toBeDefined();
     expect(dgld?.price).toBe(10_591.46);
     expect(dgld?.priceSource).toBe("coingecko");
     expect(dgld?.circulating).toEqual({ peggedGOLD: 16_985_391.664749127 });
-    expect(usdDinari).toBeUndefined();
   });
 
   it("falls back to CoinGecko market cap for protocol-backed gold assets when DefiLlama protocol mcap is missing", async () => {

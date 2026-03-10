@@ -322,7 +322,6 @@ export const PRICE_DERIVED_FALLBACK_IDS = new Set([
   "ylds-figure", // YLDS - Figure Markets (not tracked in DL Yields)
   "usdb-blast", // USDB - Blast native yield (not tracked in DL Yields)
   "mtbill-midas", // mTBILL - Midas (not tracked in DL Yields)
-  "usd-dinari", // USD+ - Dinari (not tracked in DL Yields; symbol collision with Overnight Finance)
   "ustb-superstate", // USTB - Superstate (only USCC tracked in DL, not USTB)
   "usda-avalon", // USDa - Avalon (no DL protocol pool; sUSDa Pendle pool too small at $55K)
 ]);

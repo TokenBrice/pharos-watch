@@ -3170,33 +3170,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USD cash buffer", pct: 3, risk: "very-low" },
     ],
   }),
-  usd("usd-dinari", "Dinari USD+", "USD+", "rwa-backed", "centralized", {
-    detailProvider: "coingecko",
-    geckoId: "dinari-usd",
-    yieldBearing: true, rwa: true,
-    yieldConfig: { yieldSource: "Short-term U.S. Treasury bills", yieldType: "rebase" },
-    collateral: "Short-term U.S. Treasury Bills managed to track the Bloomberg U.S. Treasury Floating Rate Bond Index; held in a bankruptcy-remote Reserves Vault with a third-party custodian (undisclosed)",
-    pegMechanism: "1:1 mint and redemption against USDC or USDT; peg held at $1.00 while yield from T-bill returns is distributed to all holders via on-chain rebasing — balances automatically increase without manual staking",
-    proofOfReserves: { type: "self-reported", url: "https://usd.dinari.com/transparency", provider: "Third-party custodian (undisclosed); Dinari states regular reserve audits but does not publicly name the attestation firm" },
-    links: [
-      { label: "Website", url: "https://usd.dinari.com/" },
-      { label: "Twitter", url: "https://x.com/DinariGlobal" },
-      { label: "Docs", url: "https://docs.dinari.com/" },
-    ],
-    jurisdiction: { country: "United States", regulator: "SEC", license: "Registered Transfer Agent (Section 17A(c)); not available to U.S. persons" },
-    contracts: [
-      { chain: "arbitrum", address: "0xfc90518d5136585ba45e34ed5e1d108bd3950cfa", decimals: 6 },
-    ],
-    collateralQuality: "rwa",
-    custodyModel: "institutional",
-    governanceQuality: "regulated-entity",
-    chainTier: "stage1-l2",
-    deploymentModel: "third-party-bridge",
-    reserves: [
-      { name: "Short-term U.S. Treasury Bills (Bloomberg Floating Rate Index)", pct: 100, risk: "very-low" },
-    ],
-  }),
-
   usd("wsrusd-reservoir", "Wrapped Savings rUSD", "wsrUSD", "rwa-backed", "centralized-dependent", {
     detailProvider: "coingecko",
     geckoId: "wrapped-savings-rusd",

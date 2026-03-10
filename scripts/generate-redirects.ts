@@ -132,7 +132,6 @@ const ID_MAPPING = [
   { oldId: "cg-ustb", newId: "ustb-superstate", symbol: "USTB", name: "Superstate USTB", issuer: "superstate", geckoId: "superstate-short-duration-us-government-securities-fund-ustb" },
   { oldId: "cg-ousg", newId: "ousg-ondo-finance", symbol: "OUSG", name: "Ondo OUSG", issuer: "ondo-finance", geckoId: "ousg" },
   { oldId: "cg-mtbill", newId: "mtbill-midas", symbol: "mTBILL", name: "Midas mTBILL", issuer: "midas", geckoId: "midas-mtbill" },
-  { oldId: "cg-dinari-usd", newId: "usd-dinari", symbol: "USD+", name: "Dinari USD+", issuer: "dinari", geckoId: "dinari-usd" },
   { oldId: "cg-wrapped-savings-rusd", newId: "wsrusd-reservoir", symbol: "wsrUSD", name: "Wrapped Savings rUSD", issuer: "reservoir", geckoId: "wrapped-savings-rusd" },
   { oldId: "289", newId: "xsgd-straitsx", symbol: "XSGD", name: "StraitsX XSGD", issuer: "straitsx", geckoId: "xsgd" },
   { oldId: "122", newId: "gyen-gyen", symbol: "GYEN", name: "GYEN", issuer: "gyen", geckoId: "gyen" },
