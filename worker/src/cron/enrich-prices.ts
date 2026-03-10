@@ -36,19 +36,6 @@ export function hasMissingPrice(a: PeggedAsset): boolean {
   return a.price == null || typeof a.price !== "number" || a.price === 0;
 }
 
-function applyResolvedPrice(
-  asset: PeggedAsset,
-  price: number,
-  source: string,
-  confidence: PriceConfidence,
-  updatedAtSec = Math.floor(Date.now() / 1000),
-): void {
-  asset.price = price;
-  asset.priceSource = source;
-  asset.priceConfidence = confidence;
-  asset.priceUpdatedAt = updatedAtSec;
-}
-
 /** Hardcoded price bounds per peg type — used as fallback when FX rates are unavailable */
 export const PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
   USD: [0.01, 1.19],   // USD stablecoins never legitimately trade above $1.19
@@ -483,7 +470,7 @@ export async function enrichMissingPrices(
         for (const m of withAddress) {
           const price = pass1Prices.get(m.coinId);
           if (price != null) {
-            applyResolvedPrice(assets[m.index], price, "defillama-contract", "single-source");
+            assets[m.index].price = price;
             pass1Count++;
           }
         }
@@ -526,7 +513,7 @@ export async function enrichMissingPrices(
             if (resolved.has(m.index)) continue;
             const price = pass1bPrices.get(m.coinId);
             if (price != null) {
-              applyResolvedPrice(assets[m.index], price, "defillama-contract", "single-source");
+              assets[m.index].price = price;
               pass1bCount++;
               resolved.add(m.index);
             }
@@ -566,7 +553,7 @@ export async function enrichMissingPrices(
         for (const m of geckoPass) {
           const price = pass2Prices.get(`coingecko:${m.geckoId}`);
           if (price != null) {
-            applyResolvedPrice(assets[m.index], price, "defillama", "single-source");
+            assets[m.index].price = price;
             pass2Count++;
           } else {
             afterPass2.push(m);
@@ -599,7 +586,7 @@ export async function enrichMissingPrices(
         for (const m of afterPass2) {
           const price = pass3Prices.get(m.geckoId);
           if (price != null) {
-            applyResolvedPrice(assets[m.index], price, "coingecko", "single-source");
+            assets[m.index].price = price;
             pass3Count++;
           }
         }
@@ -673,7 +660,7 @@ export async function enrichMissingPrices(
                   fxRates,
                   buildPriceReasonablenessOptions(m.asset),
                 )) {
-                  applyResolvedPrice(assets[m.index], cmcEntry.price, "coinmarketcap", "fallback");
+                  assets[m.index].price = cmcEntry.price;
                   passCmcCount++;
                 }
               }
@@ -765,7 +752,7 @@ export async function enrichMissingPrices(
             fxRates,
             buildPriceReasonablenessOptions(m.asset),
           )) {
-            applyResolvedPrice(assets[m.index], price, "dexscreener", "fallback");
+            assets[m.index].price = price;
             pass4Count++;
           }
         } catch (err) {

@@ -87,28 +87,18 @@ type DexLiquidityRow = {
   durability_score: number | null;
   score_components_json: string | null;
   locked_liquidity_pct: number | null;
-  coverage_class: string | null;
-  coverage_confidence: number | null;
-  source_mix_json: string | null;
-  balance_measured_tvl_usd: number | null;
-  organic_measured_tvl_usd: number | null;
   methodology_version: string | null;
 };
 
 type YieldHistoryRow = {
   stablecoin_id: string;
-  source_key: string;
   recorded_at: number;
-  is_best: number;
   apy: number;
   apy_base: number | null;
   apy_reward: number | null;
   exchange_rate: number | null;
   source_tvl_usd: number | null;
   data_source: string;
-  warning_signals?: string | null;
-  yield_source?: string | null;
-  yield_type?: string | null;
 };
 
 type DexLiquidityHistoryRow = {
@@ -117,8 +107,6 @@ type DexLiquidityHistoryRow = {
   total_volume_24h_usd: number;
   liquidity_score: number | null;
   snapshot_date: number;
-  coverage_class: string | null;
-  coverage_confidence: number | null;
   methodology_version: string | null;
 };
 
@@ -257,11 +245,6 @@ export function makeDexLiquidityRow(overrides: Partial<DexLiquidityRow> = {}): D
     durability_score: 75,
     score_components_json: null,
     locked_liquidity_pct: null,
-    coverage_class: "primary",
-    coverage_confidence: 1,
-    source_mix_json: '{"dl":{"poolCount":10,"tvlUsd":500000000}}',
-    balance_measured_tvl_usd: 500_000_000,
-    organic_measured_tvl_usd: 500_000_000,
     methodology_version: "3.2",
   };
   return { ...defaults, ...overrides };
@@ -270,18 +253,13 @@ export function makeDexLiquidityRow(overrides: Partial<DexLiquidityRow> = {}): D
 export function makeYieldHistoryRow(overrides: Partial<YieldHistoryRow> = {}): YieldHistoryRow {
   const defaults: YieldHistoryRow = {
     stablecoin_id: "usdt-tether",
-    source_key: "aave-v3:usdt",
     recorded_at: Math.floor(Date.now() / 1000) - 3600,
-    is_best: 1,
     apy: 5.2,
     apy_base: 4,
     apy_reward: 1.2,
     exchange_rate: 1.05,
     source_tvl_usd: 50_000_000,
     data_source: "defillama",
-    warning_signals: "[]",
-    yield_source: "Aave v3",
-    yield_type: "lending-opportunity",
   };
   return { ...defaults, ...overrides };
 }
@@ -293,8 +271,6 @@ export function makeDexLiquidityHistoryRow(overrides: Partial<DexLiquidityHistor
     total_volume_24h_usd: 10_000_000,
     liquidity_score: 85,
     snapshot_date: Math.floor(Date.now() / 1000) - 86400,
-    coverage_class: "primary",
-    coverage_confidence: 1,
     methodology_version: "3.2",
   };
   return { ...defaults, ...overrides };
