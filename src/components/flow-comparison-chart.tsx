@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -42,20 +43,17 @@ export function FlowComparisonChart({
   onHoursChange,
 }: FlowComparisonChartProps) {
   // Merge all series into flat array keyed by timestamp
-  const mergedData: Record<string, number>[] = (() => {
+  const mergedData = useMemo(() => {
     const tsMap = new Map<number, Record<string, number>>();
     for (const s of series) {
       for (const d of s.data) {
         let entry = tsMap.get(d.ts);
-        if (!entry) {
-          entry = { ts: d.ts };
-          tsMap.set(d.ts, entry);
-        }
+        if (!entry) { entry = { ts: d.ts }; tsMap.set(d.ts, entry); }
         entry[s.id] = d.netFlowUsd;
       }
     }
     return Array.from(tsMap.values()).sort((a, b) => a.ts - b.ts);
-  })();
+  }, [series]);
 
   if (mergedData.length === 0) return null;
 
@@ -70,6 +68,8 @@ export function FlowComparisonChart({
             {HOUR_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
+                type="button"
+                aria-pressed={hours === opt.value}
                 onClick={() => onHoursChange(opt.value)}
                 className={`rounded px-2 py-0.5 text-xs transition-colors ${
                   hours === opt.value
@@ -89,11 +89,18 @@ export function FlowComparisonChart({
             data={mergedData}
             margin={{ top: 4, right: 8, bottom: 0, left: 0 }}
           >
-            <TimeXAxis dataKey="ts" />
+            <TimeXAxis
+              dataKey="ts"
+              tickFormatter={(ts: number) =>
+                hours <= 24
+                  ? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                  : new Date(ts).toLocaleDateString([], { month: "short", day: "numeric" })
+              }
+            />
             <MonoYAxis tickFormatter={formatFlowValue} />
             <ReferenceLine
               y={0}
-              stroke="rgba(255,255,255,0.12)"
+              stroke="var(--color-border)"
               strokeDasharray="4 4"
             />
             <Tooltip
