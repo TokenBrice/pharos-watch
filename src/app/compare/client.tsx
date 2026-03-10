@@ -197,6 +197,8 @@ export function CompareClient() {
     error: reportCardsError,
     refetch: refetchReportCards,
   } = useReportCards();
+  // hours=24 (default); netFlow30dUsd is a fixed 30-day aggregate computed server-side
+  // regardless of the hours param — no need for useMintBurnFlows(720).
   const { data: flowData } = useMintBurnFlows();
   const globalError = listError ?? pegError ?? bluechipError ?? dexError ?? reportCardsError;
 
