@@ -8,8 +8,13 @@ import {
 import { getCache } from "../../lib/db";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import { computeApyFromPrice } from "../yield-helpers";
+import {
+  parseDlStablecoinPoolsCache,
+  parseRiskFreeRateCache,
+} from "./cache";
 import type { DlPool, JsonRpcCallResponse, ResolvedYield } from "./types";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
@@ -27,15 +32,20 @@ const LIQUITY_LQTY_GECKO_ID = "liquity";
 export async function loadDlStablecoinPools(
   db: D1Database,
   signal?: AbortSignal,
-): Promise<DlPool[]> {
+): Promise<{ pools: DlPool[]; meta: YieldSourceInputMeta }> {
+  const nowSec = Math.floor(Date.now() / 1000);
   let dlPools: DlPool[] = [];
+  let fallbackMode: string | null = null;
   const cachedPools = await getCache(db, "dl-stablecoin-pools");
   if (cachedPools) {
-    try {
-      dlPools = JSON.parse(cachedPools.value) as DlPool[];
+    const parsed = parseDlStablecoinPoolsCache(cachedPools.value, cachedPools.updatedAt, nowSec);
+    if (parsed) {
+      dlPools = parsed.pools;
       console.log(`[sync-yield-data] Using ${dlPools.length} cached stablecoin pools from DEX sync`);
-    } catch {
+      return parsed;
+    } else {
       console.warn("[sync-yield-data] Failed to parse cached DL pools, falling back to direct fetch");
+      fallbackMode = "cache-parse-failed";
     }
   }
 
@@ -49,16 +59,39 @@ export async function loadDlStablecoinPools(
         const body = (await res.json()) as { data: DlPool[] };
         dlPools = (body.data ?? []).filter((pool) => pool.stablecoin);
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
+        return {
+          pools: dlPools,
+          meta: {
+            mode: "direct-fetch",
+            updatedAt: nowSec,
+            ageSeconds: 0,
+            poolCount: dlPools.length,
+            fallbackMode,
+          },
+        };
       } else {
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
+        fallbackMode = "direct-fetch-failed";
       }
     } catch (error) {
       console.warn("[sync-yield-data] DL yields direct fetch failed:", error);
       await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
+      fallbackMode = "direct-fetch-exception";
     }
+  } else if (dlPools.length === 0) {
+    fallbackMode = "circuit-open";
   }
 
-  return dlPools;
+  return {
+    pools: dlPools,
+    meta: {
+      mode: "unavailable",
+      updatedAt: cachedPools?.updatedAt ?? null,
+      ageSeconds: cachedPools ? Math.max(0, nowSec - cachedPools.updatedAt) : null,
+      poolCount: dlPools.length,
+      fallbackMode,
+    },
+  };
 }
 
 export async function fetchOnChainRates(
@@ -252,7 +285,20 @@ export async function getPriceDerivedApy(
   return computeApyFromPrice(recentRow.price, oldRow.price, 30);
 }
 
-export async function loadRiskFreeRate(db: D1Database): Promise<number> {
+export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {
   const rfCache = await getCache(db, "risk_free_rate");
-  return rfCache ? parseFloat(rfCache.value) : RISK_FREE_RATE_FALLBACK;
+  if (rfCache) {
+    const parsed = parseRiskFreeRateCache(rfCache.value, rfCache.updatedAt);
+    if (parsed) return parsed;
+  }
+
+  return {
+    rate: RISK_FREE_RATE_FALLBACK,
+    recordDate: null,
+    fetchedAt: null,
+    ageSeconds: null,
+    source: "hardcoded-fallback",
+    isFallback: true,
+    fallbackMode: rfCache ? "invalid-cache" : "missing-cache",
+  };
 }

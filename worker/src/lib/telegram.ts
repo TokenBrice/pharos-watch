@@ -56,38 +56,157 @@ export interface SendToChatOpts {
   disableNotification?: boolean;
 }
 
+export type TelegramSendErrorClass =
+  | "blocked"
+  | "rate_limit"
+  | "server_error"
+  | "bad_request"
+  | "auth_error"
+  | "timeout"
+  | "network"
+  | "unknown";
+
+export interface SendToChatResult {
+  ok: boolean;
+  blocked: boolean;
+  retryable: boolean;
+  permanentFailure: boolean;
+  statusCode: number | null;
+  errorClass: TelegramSendErrorClass | null;
+  delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
+}
+
+function buildResponseFailure(statusCode: number): SendToChatResult {
+  if (statusCode === 403) {
+    return {
+      ok: false,
+      blocked: true,
+      retryable: false,
+      permanentFailure: true,
+      statusCode,
+      errorClass: "blocked",
+      delivery: "blocked",
+    };
+  }
+  if (statusCode === 429) {
+    return {
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode,
+      errorClass: "rate_limit",
+      delivery: "retryable_failure",
+    };
+  }
+  if (statusCode >= 500) {
+    return {
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode,
+      errorClass: "server_error",
+      delivery: "retryable_failure",
+    };
+  }
+  if (statusCode === 400 || statusCode === 404 || statusCode === 413) {
+    return {
+      ok: false,
+      blocked: false,
+      retryable: false,
+      permanentFailure: true,
+      statusCode,
+      errorClass: "bad_request",
+      delivery: "permanent_failure",
+    };
+  }
+  if (statusCode === 401) {
+    return {
+      ok: false,
+      blocked: false,
+      retryable: false,
+      permanentFailure: true,
+      statusCode,
+      errorClass: "auth_error",
+      delivery: "permanent_failure",
+    };
+  }
+  return {
+    ok: false,
+    blocked: false,
+    retryable: true,
+    permanentFailure: false,
+    statusCode,
+    errorClass: "unknown",
+    delivery: "retryable_failure",
+  };
+}
+
+function buildCaughtFailure(error: unknown): SendToChatResult {
+  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
+    return {
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: null,
+      errorClass: "timeout",
+      delivery: "retryable_failure",
+    };
+  }
+
+  return {
+    ok: false,
+    blocked: false,
+    retryable: true,
+    permanentFailure: false,
+    statusCode: null,
+    errorClass: "network",
+    delivery: "retryable_failure",
+  };
+}
+
 /** Send an HTML message to a specific Telegram chat. */
 export async function sendToChat(
   chatId: string,
   text: string,
   botToken: string,
   opts?: SendToChatOpts,
-): Promise<{ ok: boolean; blocked: boolean }> {
-  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "HTML",
-      ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
-      ...(opts?.disableNotification && { disable_notification: true }),
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
+): Promise<SendToChatResult> {
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
+        ...(opts?.disableNotification && { disable_notification: true }),
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
 
-  if (res.status === 403) {
-    await res.text().catch(() => {});
-    return { ok: false, blocked: true };
+    if (!res.ok) {
+      await res.text().catch(() => {});
+      return buildResponseFailure(res.status);
+    }
+    // Consume body to release connection (Workers 6-conn limit)
+    await res.json().catch(() => {});
+    return {
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: res.status,
+      errorClass: null,
+      delivery: "sent",
+    };
+  } catch (error) {
+    return buildCaughtFailure(error);
   }
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Telegram API ${res.status}: ${body.slice(0, 300)}`);
-  }
-  // Consume body to release connection (Workers 6-conn limit)
-  await res.json().catch(() => {});
-  return { ok: true, blocked: false };
 }
 
 export interface BatchMessage {
@@ -100,6 +219,11 @@ export interface BatchResult {
   chatId: string;
   ok: boolean;
   blocked: boolean;
+  retryable: boolean;
+  permanentFailure: boolean;
+  statusCode: number | null;
+  errorClass: TelegramSendErrorClass | null;
+  delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
 }
 
 /**
@@ -118,15 +242,11 @@ export async function sendBatch(
     const batch = messages.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map(async (msg) => {
-        try {
-          const result = await sendToChat(msg.chatId, msg.html, botToken, {
-            disableWebPagePreview: true,
-            disableNotification: msg.disableNotification,
-          });
-          return { chatId: msg.chatId, ...result };
-        } catch {
-          return { chatId: msg.chatId, ok: false, blocked: false };
-        }
+        const result = await sendToChat(msg.chatId, msg.html, botToken, {
+          disableWebPagePreview: true,
+          disableNotification: msg.disableNotification,
+        });
+        return { chatId: msg.chatId, ...result };
       }),
     );
     results.push(...batchResults);

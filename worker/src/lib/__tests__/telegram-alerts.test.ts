@@ -25,6 +25,12 @@ describe("resolveTicker", () => {
     expect(result.matches[0].id).toBe("usdc-circle");
   });
 
+  it("resolves exact coin ids uniquely", () => {
+    const result = resolveTicker("usdc-circle");
+    expect(result.status).toBe("unique");
+    expect(result.matches[0].symbol).toBe("USDC");
+  });
+
   it("returns ambiguous for duplicate tickers", () => {
     const result = resolveTicker("GUSD");
     expect(result.status).toBe("ambiguous");
@@ -183,12 +189,35 @@ describe("formatConsolidatedMessage", () => {
         },
       ],
       depegResolved: [],
+      depegWorsening: [],
       safety: [],
     });
     expect(msg).toContain("DEWS");
     expect(msg).toContain("Depeg Detected");
     expect(msg).toContain("Pharos Alerts");
     expect(msg).toContain("View on Pharos");
+  });
+
+  it("includes depeg worsening when present", () => {
+    const msg = formatConsolidatedMessage({
+      dews: [],
+      depegTriggered: [],
+      depegResolved: [],
+      depegWorsening: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          direction: "below",
+          previousDeviationBps: 120,
+          currentDeviationBps: 260,
+          price: 0.974,
+          pegReference: 1,
+        },
+      ],
+      safety: [],
+    });
+    expect(msg).toContain("Depeg Worsening");
+    expect(msg).toContain("1.2% → 2.6%");
   });
 
   it("links to coin page when all alerts are for a single coin", () => {
@@ -205,6 +234,7 @@ describe("formatConsolidatedMessage", () => {
       ],
       depegTriggered: [],
       depegResolved: [],
+      depegWorsening: [],
       safety: [],
     });
     expect(msg).toContain("https://pharos.watch/stablecoin/usdc-circle");
@@ -233,6 +263,7 @@ describe("formatConsolidatedMessage", () => {
         },
       ],
       depegResolved: [],
+      depegWorsening: [],
       safety: [],
     });
     expect(msg).toContain('href="https://pharos.watch"');

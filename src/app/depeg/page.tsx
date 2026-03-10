@@ -52,7 +52,7 @@ const faqJsonLd = {
       name: "What counts as a depeg event on Pharos?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "A depeg event is triggered when a stablecoin's price deviates from its peg by more than 1% (100 bps) for USD-pegged coins, or 1.5% (150 bps) for non-USD pegs. Large-cap coins (supply above $1 billion) go through a two-stage confirmation process: the deviation must persist for at least 15 minutes and be independently confirmed by a second price source (CoinGecko or DEX data) before a depeg event is recorded.",
+        text: "A depeg event is triggered when a stablecoin's price deviates from its peg by more than 1% (100 bps) for USD-pegged coins, or 1.5% (150 bps) for non-USD pegs. Pharos opens events immediately only when the primary price input is trusted. Large-cap coins, low-confidence price inputs, and extreme moves go through a two-stage confirmation process: the deviation must persist for at least 15 minutes and be independently confirmed by CoinGecko or trusted DEX data before a depeg event is recorded.",
       },
     },
   ],

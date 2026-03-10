@@ -13,9 +13,11 @@ if [ -z "${TELEGRAM_WEBHOOK_SECRET:-}" ]; then
   exit 1
 fi
 
-WEBHOOK_URL="https://api.pharos.watch/api/telegram-webhook?secret=${TELEGRAM_WEBHOOK_SECRET}"
+WEBHOOK_BASE_URL="${WEBHOOK_BASE_URL:-https://api.pharos.watch}"
+WEBHOOK_URL="${WEBHOOK_BASE_URL}/api/telegram-webhook?secret=${TELEGRAM_WEBHOOK_SECRET}"
+REDACTED_WEBHOOK_URL="${WEBHOOK_BASE_URL}/api/telegram-webhook?secret=<redacted>"
 
-echo "Registering webhook: ${WEBHOOK_URL}"
+echo "Registering webhook: ${REDACTED_WEBHOOK_URL}"
 
 RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \

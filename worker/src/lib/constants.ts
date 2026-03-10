@@ -85,6 +85,12 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
 // $1B threshold covers ~top-10 stablecoins where false positives are most damaging.
 export const DEPEG_CONFIRMATION_SUPPLY_THRESHOLD = 1_000_000_000; // $1B
 
+/** Maximum age for a primary price to be trusted directly in depeg detection. */
+export const DEPEG_PRIMARY_PRICE_MAX_AGE_SEC = 1800; // 30 min
+
+/** Extreme-move lane: very large deviations must be second-source confirmed. */
+export const DEPEG_EXTREME_MOVE_BPS = 5000; // 50%
+
 /** Minimum age (seconds) before a pending depeg can be promoted */
 export const DEPEG_PENDING_MIN_AGE_SEC = 900; // 15 min (1 sync cycle)
 

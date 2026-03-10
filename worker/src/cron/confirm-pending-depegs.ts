@@ -10,7 +10,12 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
-import { buildInsertDepegEventStmt, isTrustedDexPriceRow, loadDexPriceRows } from "../lib/depeg-helpers";
+import {
+  buildInsertDepegEventStmt,
+  classifyPrimaryDepegTrust,
+  isTrustedDexPriceRow,
+  loadDexPriceRows,
+} from "../lib/depeg-helpers";
 import type { DepegEvent, PegAssetBase } from "@shared/types";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 
@@ -24,10 +29,11 @@ interface PendingRow {
   first_seen_at: number;
   first_price: number;
   peg_reference: number;
+  reason?: "large-cap" | "low-confidence" | "extreme-move";
 }
 
 /**
- * Process pending depeg records for >$1B coins.
+ * Process pending depeg records that require secondary confirmation.
  * Called after detectDepegEvents() in each sync cycle.
  *
  * For each pending record:
@@ -87,6 +93,7 @@ export async function confirmPendingDepegs(
     const meta = metaById.get(row.stablecoin_id);
     const threshold = getDepegThresholdBps(row.peg_type);
     const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
+    const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
 
     // If an open event was created by another path (e.g. direction change), clean up pending
     if (openSet.has(row.stablecoin_id)) {
@@ -96,7 +103,7 @@ export async function confirmPendingDepegs(
     }
 
     // 1. Check if primary price still exceeds threshold
-    if (asset) {
+    if (asset && primaryTrust === "authoritative") {
       const price = asset.price;
       if (price != null && typeof price === "number" && price > 0) {
         const pegRef = getPegReference(asset.pegType, pegRates, meta?.commodityOunces);
@@ -104,7 +111,7 @@ export async function confirmPendingDepegs(
           const currentBps = Math.abs(Math.round(((price / pegRef) - 1) * 10000));
           if (currentBps < threshold) {
             stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
-            console.log(`[depeg-confirm] Cleared pending for ${row.symbol}: primary recovered to ${currentBps}bps`);
+            console.log(`[depeg-confirm] Cleared pending for ${row.symbol}: authoritative primary recovered to ${currentBps}bps`);
             continue;
           }
         }
@@ -172,9 +179,17 @@ export async function confirmPendingDepegs(
     // 5. Decision
     if (cgAgrees === true || dexAgrees === true) {
       // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
-      const currentPrice = asset?.price ?? row.first_price;
-      const currentBps = asset?.price
-        ? Math.round(((asset.price / row.peg_reference) - 1) * 10000)
+      const authoritativePrice =
+        asset != null &&
+        primaryTrust === "authoritative" &&
+        asset.price != null &&
+        typeof asset.price === "number"
+          ? asset.price
+          : null;
+      const useCurrentPrimary = authoritativePrice != null;
+      const currentPrice = authoritativePrice ?? row.first_price;
+      const currentBps = useCurrentPrimary
+        ? Math.round(((authoritativePrice / row.peg_reference) - 1) * 10000)
         : row.first_seen_bps;
       const event: DepegEvent = {
         id: 0,
@@ -203,7 +218,7 @@ export async function confirmPendingDepegs(
         dexAgrees ? "DEX" : null,
       ].filter(Boolean).join("+");
       console.log(
-        `[depeg-confirm] PROMOTED ${row.symbol}: ${row.first_seen_bps}bps confirmed by ${confirmedBy}`
+        `[depeg-confirm] PROMOTED ${row.symbol}: ${row.first_seen_bps}bps confirmed by ${confirmedBy}${row.reason ? ` (${row.reason})` : ""}`
       );
     } else if (cgAgrees === false && dexAgrees === false) {
       // Both secondary sources disagree -- confirmed false positive

@@ -13,7 +13,14 @@ describe("sendToChat", () => {
   it("sends HTML message and returns ok", async () => {
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const result = await sendToChat("12345", "<b>Test</b>", "bot-token");
-    expect(result).toEqual({ ok: true, blocked: false });
+    expect(result).toMatchObject({
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: 200,
+      delivery: "sent",
+    });
     const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
     expect(body.chat_id).toBe("12345");
     expect(body.parse_mode).toBe("HTML");
@@ -22,12 +29,28 @@ describe("sendToChat", () => {
   it("returns blocked: true on 403", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));
     const result = await sendToChat("12345", "test", "bot-token");
-    expect(result).toEqual({ ok: false, blocked: true });
+    expect(result).toMatchObject({
+      ok: false,
+      blocked: true,
+      retryable: false,
+      permanentFailure: true,
+      statusCode: 403,
+      delivery: "blocked",
+    });
   });
 
-  it("throws on non-403 error", async () => {
+  it("returns retryable failure metadata on non-403 error", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
-    await expect(sendToChat("12345", "test", "bot-token")).rejects.toThrow("Telegram API 500");
+    const result = await sendToChat("12345", "test", "bot-token");
+    expect(result).toMatchObject({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 500,
+      errorClass: "server_error",
+      delivery: "retryable_failure",
+    });
   });
 
   it("passes disable_web_page_preview when set", async () => {
@@ -81,9 +104,9 @@ describe("sendBatch", () => {
 
     const results = await sendBatch(messages, "bot-token", 3);
     expect(results).toHaveLength(3);
-    expect(results[0]).toEqual({ chatId: "a", ok: true, blocked: false });
-    expect(results[1]).toEqual({ chatId: "b", ok: false, blocked: true });
-    expect(results[2]).toEqual({ chatId: "c", ok: true, blocked: false });
+    expect(results[0]).toMatchObject({ chatId: "a", ok: true, blocked: false, delivery: "sent" });
+    expect(results[1]).toMatchObject({ chatId: "b", ok: false, blocked: true, delivery: "blocked" });
+    expect(results[2]).toMatchObject({ chatId: "c", ok: true, blocked: false, delivery: "sent" });
   });
 
   it("catches transient errors without crashing the batch", async () => {
@@ -100,10 +123,15 @@ describe("sendBatch", () => {
 
     const results = await sendBatch(messages, "bot-token", 3);
     expect(results).toHaveLength(3);
-    expect(results[0]).toEqual({ chatId: "a", ok: true, blocked: false });
-    // 500 error: sendToChat throws, sendBatch catches it -> { ok: false, blocked: false }
-    expect(results[1]).toEqual({ chatId: "b", ok: false, blocked: false });
-    expect(results[2]).toEqual({ chatId: "c", ok: true, blocked: false });
+    expect(results[0]).toMatchObject({ chatId: "a", ok: true, blocked: false, delivery: "sent" });
+    expect(results[1]).toMatchObject({
+      chatId: "b",
+      ok: false,
+      blocked: false,
+      retryable: true,
+      delivery: "retryable_failure",
+    });
+    expect(results[2]).toMatchObject({ chatId: "c", ok: true, blocked: false, delivery: "sent" });
   });
 
   it("returns empty array for empty input", async () => {

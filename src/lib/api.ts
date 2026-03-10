@@ -138,6 +138,7 @@ export async function apiFetchWithMeta<T>(
   path: string,
   schema?: ZodType<T>,
   init?: RequestInit,
+  maxAgeSec = 900,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
   const res = await apiRequest(path, init);
   if (!res.ok) throw await buildFetchError(path, res);
@@ -159,9 +160,7 @@ export async function apiFetchWithMeta<T>(
     if (ageHeader) {
       const age = parseInt(ageHeader, 10);
       if (!isNaN(age)) {
-        // Use 900s as default maxAge, compute ratio-based status like worker's buildFreshnessMeta
-        const maxAge = 900;
-        const ratio = age / maxAge;
+        const ratio = age / maxAgeSec;
         const status = ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale";
         meta = { updatedAt: Math.floor(Date.now() / 1000) - age, ageSeconds: age, status };
       }

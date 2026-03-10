@@ -77,6 +77,10 @@ function normalizeStablecoinsPayload(payload: StablecoinsPayload): StablecoinsPa
     peggedAssets: payload.peggedAssets.map((asset) => {
       const { gecko_id: _ignoredSnakeCase, ...rest } = asset as PeggedAsset & { gecko_id?: unknown };
       const confidence = asset.priceConfidence;
+      const priceUpdatedAt =
+        typeof asset.priceUpdatedAt === "number" && Number.isFinite(asset.priceUpdatedAt)
+          ? asset.priceUpdatedAt
+          : null;
       const normalizedConfidence =
         confidence === "high" || confidence === "single-source" || confidence === "low" || confidence === "fallback"
           ? confidence
@@ -86,6 +90,7 @@ function normalizeStablecoinsPayload(payload: StablecoinsPayload): StablecoinsPa
         ...rest,
         geckoId: resolveGeckoId(asset),
         priceConfidence: normalizedConfidence,
+        priceUpdatedAt,
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
         circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
         circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
@@ -192,6 +197,17 @@ function isReasonablePriceForAsset(
   );
 }
 
+function stampPriceMetadata(
+  asset: PeggedAsset,
+  source: string,
+  confidence: PeggedAsset["priceConfidence"],
+  updatedAt: number | null,
+): void {
+  asset.priceSource = source;
+  asset.priceConfidence = confidence ?? null;
+  asset.priceUpdatedAt = updatedAt;
+}
+
 /**
  * CoinGecko supply fallback: when DefiLlama stablecoins API is down,
  * use CG market cap as a proxy for circulating supply.
@@ -227,6 +243,7 @@ async function fallbackToCgSupply(
       price,
       priceSource: "coingecko",
       priceConfidence: "single-source",
+      priceUpdatedAt: syncStartSec,
       supplySource: "coingecko-fallback",
       circulating: { [pKey]: mcap },
       circulatingPrevDay: null,
@@ -551,12 +568,10 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     const dual = dualPriceResults.get(asset.id);
     if (dual && isReasonablePriceForAsset(asset, dual.price, fxRates)) {
       asset.price = dual.price;
-      asset.priceSource = dual.source;
-      asset.priceConfidence = dual.confidence;
+      stampPriceMetadata(asset, dual.source, dual.confidence, syncStartSec);
     } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
       // DL list provided a price but no dual-primary result — single-source
-      asset.priceSource = asset.priceSource || "defillama";
-      asset.priceConfidence = "single-source";
+      stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec);
     }
   }
 
@@ -577,7 +592,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     ) {
       console.warn(`[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
       asset.price = 0; // hasMissingPrice() treats 0 as missing
-      asset.priceConfidence = null;
+      stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
     }
   }
 
@@ -592,7 +607,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Tag enriched assets with fallback confidence
   for (const asset of llamaData.peggedAssets) {
     if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
-      asset.priceConfidence = "fallback";
+      stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", syncStartSec);
     }
   }
 
@@ -603,6 +618,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     if (asset.price != null && typeof asset.price === "number" && !isReasonablePriceForAsset(asset, asset.price, fxRates)) {
       console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
       asset.price = null;
+      asset.priceUpdatedAt = null;
       rejectedCount++;
     }
   }
@@ -638,6 +654,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       const cached = priceCache.get(asset.id);
       if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL && isReasonablePriceForAsset(asset, cached.price, fxRates)) {
         asset.price = cached.price;
+        stampPriceMetadata(asset, "cached", "fallback", cached.updatedAt);
         fallbackCount++;
       }
     }

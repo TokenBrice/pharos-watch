@@ -6,41 +6,63 @@ import {
   validateSubscribeArgs,
   formatDisambiguation,
   parseDisambiguationReply,
-  formatListOutput,
   type ResolvedCoin,
 } from "../lib/telegram-alerts";
 
-const START_MESSAGE = `<b>Welcome to PharosWatcher</b>
+const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
 
-I send you alerts when stablecoin risk signals change for the coins you choose.
+I send opt-in alerts for the stablecoins you follow.
 
-<b>Alert types:</b>
-- <b>dews</b> — DEWS threat level reaches ALERT, WARNING, or DANGER
-- <b>depeg</b> — Depeg event triggered or resolved
+<b>Alert types</b>
+- <b>dews</b> — DEWS reaches ALERT, WARNING, or DANGER
+- <b>depeg</b> — Depeg triggered, worsened, or resolved
 - <b>safety</b> — Safety grade changes
 
-<b>Quick start:</b>
-/subscribe dews depeg USDC BOLD
+<b>Quick start</b>
+<code>/subscribe dews depeg USDC BOLD</code>
+<code>/set USDC depeg-step 250</code>
+<code>/mute 22-07</code>
 
-Use /help for all commands.`;
+Use /help for commands.`;
 
 const HELP_MESSAGE = `<b>Commands</b>
 
-/subscribe &lt;types&gt; &lt;tickers&gt;
-  Subscribe to alerts. Types: dews, depeg, safety
-  Example: /subscribe dews depeg USDC BOLD
+<code>/subscribe &lt;types&gt; &lt;tickers&gt;</code>
+Enable alert types for one or more coins
 
-/unsubscribe &lt;tickers&gt;
-  Remove coins from your subscriptions
-  Example: /unsubscribe BOLD
+<code>/unsubscribe &lt;tickers&gt;</code>
+Remove specific coin subscriptions
 
-/unsubscribe all
-  Remove all subscriptions
+<code>/unsubscribe all</code>
+Remove all subscriptions and clear alert defaults
 
-/list
-  Show your current subscriptions`;
+<code>/set &lt;ticker&gt; &lt;setting&gt; &lt;value&gt;</code>
+Examples:
+<code>/set USDT dews WARNING</code>
+<code>/set DAI safety downgrade-only</code>
+<code>/set USDC depeg-step 250</code>
+
+<code>/mute 22-07</code>
+Quiet hours in UTC (notifications silenced, messages still delivered)
+
+<code>/unmutehours</code>
+Disable quiet hours
+
+<code>/list</code>
+Show current subscriptions and settings
+
+<code>/cancel</code>
+Cancel a pending selection`;
 
 const DISAMBIGUATION_TTL_SEC = 5 * 60;
+
+type PendingActionType = "subscribe" | "unsubscribe" | "set";
+
+type ParsedSetCommand =
+  | { ticker: string; setting: "dews"; enabled: boolean; minBand: "WARNING" | "DANGER" | null }
+  | { ticker: string; setting: "safety"; enabled: boolean; mode: "downgrade-only" | "upgrade-only" | null }
+  | { ticker: string; setting: "depeg"; enabled: boolean }
+  | { ticker: string; setting: "depeg-step"; enabled: true; step: 100 | 250 | 500 | null };
 
 interface TelegramWebhookUpdate {
   update_id?: number;
@@ -54,6 +76,8 @@ interface TelegramWebhookUpdate {
 }
 
 interface PendingDisambiguationRow {
+  action_type?: string | null;
+  action_payload?: string | null;
   alert_types: string;
   resolved_ids: string;
   ambiguous_ticker: string;
@@ -66,13 +90,22 @@ interface SubscriberRow {
   alert_dews: number;
   alert_depeg: number;
   alert_safety: number;
+  quiet_hours_enabled: number | null;
+  quiet_hours_start_utc: number | null;
+  quiet_hours_end_utc: number | null;
 }
 
 interface SubscriptionRow {
   stablecoin_id: string;
+  alert_dews: number;
+  alert_depeg: number;
+  alert_safety: number;
+  dews_min_band: string | null;
+  safety_mode: string | null;
+  depeg_worsening_bps_step: number | null;
 }
 
-type SubscribeResolution =
+type CoinResolution =
   | { kind: "complete"; coins: ResolvedCoin[] }
   | {
       kind: "ambiguous";
@@ -85,6 +118,31 @@ type SubscribeResolution =
       kind: "not_found";
       ticker: string;
       suggestion?: ResolvedCoin;
+    };
+
+type PendingAction =
+  | {
+      actionType: "subscribe";
+      alertTypes: Set<string>;
+      resolvedCoins: ResolvedCoin[];
+      ambiguousTicker: string;
+      candidates: ResolvedCoin[];
+      remainingTickers: string[];
+    }
+  | {
+      actionType: "unsubscribe";
+      resolvedCoins: ResolvedCoin[];
+      ambiguousTicker: string;
+      candidates: ResolvedCoin[];
+      remainingTickers: string[];
+    }
+  | {
+      actionType: "set";
+      command: ParsedSetCommand;
+      resolvedCoins: ResolvedCoin[];
+      ambiguousTicker: string;
+      candidates: ResolvedCoin[];
+      remainingTickers: string[];
     };
 
 const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(
@@ -119,8 +177,6 @@ export async function handleTelegramWebhook(
     return ok();
   }
 
-  // Deduplicate: Telegram may redeliver updates if our response is slow.
-  // Atomic compare-and-swap ensures only the first invocation processes each update.
   const updateId = update.update_id;
   if (typeof updateId === "number") {
     const dedup = await db
@@ -141,38 +197,62 @@ export async function handleTelegramWebhook(
   const username = update.message?.chat?.username ?? null;
   if (!chatId || !text) return ok();
 
-  const reply = async (msg: string) => {
-    await replyToChat(chatId, msg, botToken);
+  const reply = async (message: string) => {
+    await replyToChat(chatId, message, botToken);
   };
 
   try {
-    const pending = await db
+    const pendingRow = await db
       .prepare("SELECT * FROM telegram_pending_disambiguation WHERE chat_id = ?")
       .bind(chatId)
       .first<PendingDisambiguationRow>();
 
-    if (pending) {
-      const now = unixNow();
-      if (now < pending.expires_at) {
-        await handleDisambiguationReply(db, chatId, text, pending, botToken);
+    const pendingAction = pendingRow ? parsePendingDisambiguation(pendingRow) : null;
+    const pendingActive = Boolean(pendingRow && pendingAction && unixNow() < pendingRow.expires_at);
+
+    if (pendingRow && !pendingActive) {
+      await clearPendingDisambiguation(db, chatId);
+    }
+
+    const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
+    if (pendingActive && pendingAction) {
+      if (!parsedCommand) {
+        await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username);
         return ok();
       }
 
-      await db
-        .prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?")
-        .bind(chatId)
-        .run();
+      switch (parsedCommand.command) {
+        case "/cancel":
+          await clearPendingDisambiguation(db, chatId);
+          await reply("Pending selection cleared.");
+          return ok();
+        case "/help":
+          await reply(HELP_MESSAGE);
+          return ok();
+        case "/list":
+          await handleList(db, chatId, botToken);
+          return ok();
+        case "/start":
+          await reply(START_MESSAGE);
+          return ok();
+        case "/subscribe":
+        case "/unsubscribe":
+        case "/set":
+        case "/mute":
+        case "/unmutehours":
+          await clearPendingDisambiguation(db, chatId);
+          break;
+        default:
+          await reply(`You have a pending selection. Reply with the number(s) you want, or use /cancel.
+
+${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.candidates))}`);
+          return ok();
+      }
     }
 
-    if (!text.startsWith("/")) return ok();
+    if (!parsedCommand) return ok();
 
-    const spaceIdx = text.indexOf(" ");
-    const command = (spaceIdx === -1 ? text : text.slice(0, spaceIdx))
-      .toLowerCase()
-      .replace(/@\w+$/, "");
-    const args = spaceIdx === -1 ? "" : text.slice(spaceIdx + 1).trim();
-
-    switch (command) {
+    switch (parsedCommand.command) {
       case "/start":
         await reply(START_MESSAGE);
         break;
@@ -183,10 +263,22 @@ export async function handleTelegramWebhook(
         await handleList(db, chatId, botToken);
         break;
       case "/subscribe":
-        await handleSubscribe(db, chatId, username, args, botToken);
+        await handleSubscribe(db, chatId, username, parsedCommand.args, botToken);
         break;
       case "/unsubscribe":
-        await handleUnsubscribe(db, chatId, args, botToken);
+        await handleUnsubscribe(db, chatId, parsedCommand.args, botToken);
+        break;
+      case "/set":
+        await handleSet(db, chatId, username, parsedCommand.args, botToken);
+        break;
+      case "/mute":
+        await handleMute(db, chatId, username, parsedCommand.args, botToken);
+        break;
+      case "/unmutehours":
+        await handleUnmuteHours(db, chatId, username, botToken);
+        break;
+      case "/cancel":
+        await reply("No pending selection to cancel.");
         break;
       default:
         await reply("Unknown command. Try /help");
@@ -199,50 +291,47 @@ export async function handleTelegramWebhook(
   return ok();
 }
 
+function parseCommand(text: string): { command: string; args: string } {
+  const spaceIdx = text.indexOf(" ");
+  const command = (spaceIdx === -1 ? text : text.slice(0, spaceIdx))
+    .toLowerCase()
+    .replace(/@\w+$/, "");
+  const args = spaceIdx === -1 ? "" : text.slice(spaceIdx + 1).trim();
+  return { command, args };
+}
+
 async function handleList(
   db: D1Database,
   chatId: string,
   botToken: string,
 ): Promise<void> {
   const subscriber = await db
-    .prepare("SELECT alert_dews, alert_depeg, alert_safety FROM telegram_subscribers WHERE chat_id = ?")
+    .prepare(
+      `SELECT alert_dews, alert_depeg, alert_safety, quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
+         FROM telegram_subscribers
+        WHERE chat_id = ?`,
+    )
     .bind(chatId)
     .first<SubscriberRow>();
 
-  if (!subscriber) {
-    await replyToChat(chatId, "No active subscriptions. Use /subscribe to get started.", botToken);
-    return;
-  }
-
   const subscriptions = await db
-    .prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = ? ORDER BY stablecoin_id")
+    .prepare(
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band, safety_mode, depeg_worsening_bps_step
+         FROM telegram_subscriptions
+        WHERE chat_id = ?
+        ORDER BY stablecoin_id`,
+    )
     .bind(chatId)
     .all<SubscriptionRow>();
 
-  const coins = (subscriptions.results ?? [])
-    .map((row) => {
-      const coin = STABLECOIN_BY_ID.get(row.stablecoin_id);
-      return coin ?? { id: row.stablecoin_id, symbol: row.stablecoin_id, name: row.stablecoin_id };
-    })
-    .sort((a, b) => a.symbol.localeCompare(b.symbol) || a.id.localeCompare(b.id));
-
-  if (!subscriber.alert_dews && !subscriber.alert_depeg && !subscriber.alert_safety && coins.length === 0) {
+  const rows = subscriptions.results ?? [];
+  if (!subscriber && rows.length === 0) {
     await replyToChat(chatId, "No active subscriptions. Use /subscribe to get started.", botToken);
     return;
   }
 
-  await replyToChat(
-    chatId,
-    escapeHtml(formatListOutput(
-      {
-        dews: Boolean(subscriber.alert_dews),
-        depeg: Boolean(subscriber.alert_depeg),
-        safety: Boolean(subscriber.alert_safety),
-      },
-      coins.map((coin) => ({ symbol: coin.symbol, id: coin.id })),
-    )),
-    botToken,
-  );
+  const message = buildListMessage(subscriber, rows);
+  await replyToChat(chatId, message, botToken);
 }
 
 async function handleSubscribe(
@@ -267,22 +356,23 @@ async function handleSubscribe(
     return;
   }
 
-  const resolution = resolveSubscribeTickers(parsed.tickers);
+  const resolution = resolveCoinTargets(parsed.tickers);
   if (resolution.kind === "not_found") {
     await replyToChat(chatId, buildNotFoundMessage(resolution.ticker, resolution.suggestion), botToken);
     return;
   }
 
   if (resolution.kind === "ambiguous") {
-    await persistPendingDisambiguation(
-      db,
+    await persistPendingDisambiguation(db, {
       chatId,
-      parsed.alertTypes,
-      resolution.coins,
-      resolution.ticker,
-      resolution.candidates,
-      resolution.remainingTickers,
-    );
+      actionType: "subscribe",
+      actionPayload: { alertTypes: [...parsed.alertTypes] },
+      alertTypes: parsed.alertTypes,
+      resolvedCoins: resolution.coins,
+      ambiguousTicker: resolution.ticker,
+      candidates: resolution.candidates,
+      remainingTickers: resolution.remainingTickers,
+    });
     await replyToChat(chatId, escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)), botToken);
     return;
   }
@@ -295,9 +385,10 @@ async function handleSubscribe(
     resolution.coins.map((coin) => coin.id),
   );
 
+  const subscriptions = await loadSubscriptionsByIds(db, chatId, resolution.coins.map((coin) => coin.id));
   await replyToChat(
     chatId,
-    buildSubscribeSuccessMessage(parsed.alertTypes, resolution.coins),
+    buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions),
     botToken,
   );
 }
@@ -318,6 +409,7 @@ async function handleUnsubscribe(
     const now = unixNow();
     await db.batch([
       db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
+      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
       db.prepare(
         "UPDATE telegram_subscribers SET alert_dews = 0, alert_depeg = 0, alert_safety = 0, last_active_at = ? WHERE chat_id = ?",
       ).bind(now, chatId),
@@ -326,60 +418,152 @@ async function handleUnsubscribe(
     return;
   }
 
-  const coinsToRemove: ResolvedCoin[] = [];
-  const seenIds = new Set<string>();
-
-  for (const ticker of trimmedArgs.split(/\s+/).filter(Boolean)) {
-    const match = resolveTicker(ticker);
-    if (match.status === "not_found") {
-      await replyToChat(chatId, buildNotFoundMessage(ticker, match.suggestion), botToken);
-      return;
-    }
-
-    const matches = match.status === "ambiguous" ? match.matches : [match.matches[0]];
-    for (const coin of matches) {
-      if (seenIds.has(coin.id)) continue;
-      seenIds.add(coin.id);
-      coinsToRemove.push(coin);
-    }
+  const resolution = resolveCoinTargets(trimmedArgs.split(/[\s,]+/).filter(Boolean));
+  if (resolution.kind === "not_found") {
+    await replyToChat(chatId, buildNotFoundMessage(resolution.ticker, resolution.suggestion), botToken);
+    return;
   }
 
-  if (coinsToRemove.length === 0) {
-    await replyToChat(chatId, "No matching subscriptions found.", botToken);
+  if (resolution.kind === "ambiguous") {
+    await persistPendingDisambiguation(db, {
+      chatId,
+      actionType: "unsubscribe",
+      actionPayload: {},
+      resolvedCoins: resolution.coins,
+      ambiguousTicker: resolution.ticker,
+      candidates: resolution.candidates,
+      remainingTickers: resolution.remainingTickers,
+    });
+    await replyToChat(chatId, escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)), botToken);
+    return;
+  }
+
+  await removeSubscriptions(db, chatId, resolution.coins.map((coin) => coin.id));
+  await replyToChat(chatId, buildUnsubscribeSuccessMessage(resolution.coins), botToken);
+}
+
+async function handleSet(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  args: string,
+  botToken: string,
+): Promise<void> {
+  const parsed = parseSetCommand(args);
+  if ("error" in parsed) {
+    await replyToChat(chatId, escapeHtml(parsed.error), botToken);
+    return;
+  }
+
+  const resolution = resolveCoinTargets([parsed.ticker]);
+  if (resolution.kind === "not_found") {
+    await replyToChat(chatId, buildNotFoundMessage(resolution.ticker, resolution.suggestion), botToken);
+    return;
+  }
+
+  if (resolution.kind === "ambiguous") {
+    await persistPendingDisambiguation(db, {
+      chatId,
+      actionType: "set",
+      actionPayload: parsed,
+      resolvedCoins: resolution.coins,
+      ambiguousTicker: resolution.ticker,
+      candidates: resolution.candidates,
+      remainingTickers: resolution.remainingTickers,
+    });
+    await replyToChat(chatId, escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)), botToken);
+    return;
+  }
+
+  await applySettingToSubscriptions(db, chatId, username, resolution.coins, parsed);
+  const subscriptions = await loadSubscriptionsByIds(db, chatId, resolution.coins.map((coin) => coin.id));
+  await replyToChat(
+    chatId,
+    buildSubscriptionSummaryMessage("Updated settings.", subscriptions),
+    botToken,
+  );
+}
+
+async function handleMute(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  args: string,
+  botToken: string,
+): Promise<void> {
+  const parsed = parseQuietHours(args);
+  if ("error" in parsed) {
+    await replyToChat(chatId, escapeHtml(parsed.error), botToken);
     return;
   }
 
   const now = unixNow();
-  const placeholders = coinsToRemove.map(() => "?").join(", ");
-  await db.batch([
-    db.prepare(
-      `DELETE FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id IN (${placeholders})`,
-    ).bind(chatId, ...coinsToRemove.map((coin) => coin.id)),
-    db.prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?").bind(now, chatId),
-  ]);
+  await db
+    .prepare(
+      `INSERT INTO telegram_subscribers (
+         chat_id, username, alert_dews, alert_depeg, alert_safety, created_at, last_active_at,
+         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
+       )
+       VALUES (?, ?, 0, 0, 0, ?, ?, 1, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         username = COALESCE(excluded.username, telegram_subscribers.username),
+         last_active_at = excluded.last_active_at,
+         quiet_hours_enabled = 1,
+         quiet_hours_start_utc = excluded.quiet_hours_start_utc,
+         quiet_hours_end_utc = excluded.quiet_hours_end_utc`,
+    )
+    .bind(chatId, username, now, now, parsed.startHourUtc, parsed.endHourUtc)
+    .run();
 
-  await replyToChat(chatId, buildUnsubscribeSuccessMessage(coinsToRemove), botToken);
+  await replyToChat(
+    chatId,
+    `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)} UTC.
+Messages will still arrive, but Telegram notifications will be silenced in that window.`,
+    botToken,
+  );
+}
+
+async function handleUnmuteHours(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  botToken: string,
+): Promise<void> {
+  const now = unixNow();
+  await db
+    .prepare(
+      `INSERT INTO telegram_subscribers (
+         chat_id, username, alert_dews, alert_depeg, alert_safety, created_at, last_active_at,
+         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
+       )
+       VALUES (?, ?, 0, 0, 0, ?, ?, 0, NULL, NULL)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         username = COALESCE(excluded.username, telegram_subscribers.username),
+         last_active_at = excluded.last_active_at,
+         quiet_hours_enabled = 0,
+         quiet_hours_start_utc = NULL,
+         quiet_hours_end_utc = NULL`,
+    )
+    .bind(chatId, username, now, now)
+    .run();
+
+  await replyToChat(chatId, "Quiet hours disabled.", botToken);
 }
 
 async function handleDisambiguationReply(
   db: D1Database,
   chatId: string,
   text: string,
-  pending: PendingDisambiguationRow,
+  pending: PendingAction,
   botToken: string,
+  username: string | null,
 ): Promise<void> {
-  const parsedPending = parsePendingDisambiguation(pending);
-  if (!parsedPending) {
-    await clearPendingDisambiguation(db, chatId);
-    await replyToChat(chatId, "That selection expired. Run /subscribe again.", botToken);
-    return;
-  }
-
-  const selectedIndices = parseDisambiguationReply(text, parsedPending.candidates.length);
+  const selectedIndices = parseDisambiguationReply(text, pending.candidates.length);
   if (!selectedIndices) {
     const reminder = [
       'Reply with the number(s) you want, e.g. "1" or "1,2".',
-      formatDisambiguation(parsedPending.ambiguousTicker, parsedPending.candidates),
+      "Use /cancel to abandon this selection.",
+      formatDisambiguation(pending.ambiguousTicker, pending.candidates),
     ].join("\n\n");
     await replyToChat(chatId, escapeHtml(reminder), botToken);
     return;
@@ -387,54 +571,128 @@ async function handleDisambiguationReply(
 
   const selectedCoins = dedupeCoins(
     selectedIndices
-      .map((index) => parsedPending.candidates[index])
+      .map((index) => pending.candidates[index])
       .filter((coin): coin is ResolvedCoin => Boolean(coin)),
   );
-  const resolution = resolveSubscribeTickers(
-    parsedPending.remainingTickers,
-    dedupeCoins([...parsedPending.resolvedCoins, ...selectedCoins]),
-  );
 
-  if (resolution.kind === "not_found") {
-    await clearPendingDisambiguation(db, chatId);
-    await replyToChat(chatId, buildNotFoundMessage(resolution.ticker, resolution.suggestion), botToken);
-    return;
+  switch (pending.actionType) {
+    case "subscribe": {
+      const resolution = resolveCoinTargets(
+        pending.remainingTickers,
+        dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
+      );
+
+      if (resolution.kind === "not_found") {
+        await clearPendingDisambiguation(db, chatId);
+        await replyToChat(chatId, buildNotFoundMessage(resolution.ticker, resolution.suggestion), botToken);
+        return;
+      }
+
+      if (resolution.kind === "ambiguous") {
+        await persistPendingDisambiguation(db, {
+          chatId,
+          actionType: "subscribe",
+          actionPayload: { alertTypes: [...pending.alertTypes] },
+          alertTypes: pending.alertTypes,
+          resolvedCoins: resolution.coins,
+          ambiguousTicker: resolution.ticker,
+          candidates: resolution.candidates,
+          remainingTickers: resolution.remainingTickers,
+        });
+        await replyToChat(chatId, escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)), botToken);
+        return;
+      }
+
+      await upsertSubscriberAndSubscriptions(
+        db,
+        chatId,
+        username,
+        pending.alertTypes,
+        resolution.coins.map((coin) => coin.id),
+        { clearPending: true },
+      );
+      const subscriptions = await loadSubscriptionsByIds(db, chatId, resolution.coins.map((coin) => coin.id));
+      await replyToChat(
+        chatId,
+        buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions),
+        botToken,
+      );
+      return;
+    }
+    case "unsubscribe": {
+      const resolution = resolveCoinTargets(
+        pending.remainingTickers,
+        dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
+      );
+
+      if (resolution.kind === "not_found") {
+        await clearPendingDisambiguation(db, chatId);
+        await replyToChat(chatId, buildNotFoundMessage(resolution.ticker, resolution.suggestion), botToken);
+        return;
+      }
+
+      if (resolution.kind === "ambiguous") {
+        await persistPendingDisambiguation(db, {
+          chatId,
+          actionType: "unsubscribe",
+          actionPayload: {},
+          resolvedCoins: resolution.coins,
+          ambiguousTicker: resolution.ticker,
+          candidates: resolution.candidates,
+          remainingTickers: resolution.remainingTickers,
+        });
+        await replyToChat(chatId, escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)), botToken);
+        return;
+      }
+
+      await clearPendingDisambiguation(db, chatId);
+      await removeSubscriptions(db, chatId, resolution.coins.map((coin) => coin.id));
+      await replyToChat(chatId, buildUnsubscribeSuccessMessage(resolution.coins), botToken);
+      return;
+    }
+    case "set": {
+      const resolution = resolveCoinTargets(
+        pending.remainingTickers,
+        dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
+      );
+
+      if (resolution.kind === "not_found") {
+        await clearPendingDisambiguation(db, chatId);
+        await replyToChat(chatId, buildNotFoundMessage(resolution.ticker, resolution.suggestion), botToken);
+        return;
+      }
+
+      if (resolution.kind === "ambiguous") {
+        await persistPendingDisambiguation(db, {
+          chatId,
+          actionType: "set",
+          actionPayload: pending.command,
+          resolvedCoins: resolution.coins,
+          ambiguousTicker: resolution.ticker,
+          candidates: resolution.candidates,
+          remainingTickers: resolution.remainingTickers,
+        });
+        await replyToChat(chatId, escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)), botToken);
+        return;
+      }
+
+      await clearPendingDisambiguation(db, chatId);
+      await applySettingToSubscriptions(db, chatId, username, resolution.coins, pending.command);
+      const subscriptions = await loadSubscriptionsByIds(db, chatId, resolution.coins.map((coin) => coin.id));
+      await replyToChat(
+        chatId,
+        buildSubscriptionSummaryMessage("Updated settings.", subscriptions),
+        botToken,
+      );
+      return;
+    }
   }
-
-  if (resolution.kind === "ambiguous") {
-    await persistPendingDisambiguation(
-      db,
-      chatId,
-      parsedPending.alertTypes,
-      resolution.coins,
-      resolution.ticker,
-      resolution.candidates,
-      resolution.remainingTickers,
-    );
-    await replyToChat(chatId, escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)), botToken);
-    return;
-  }
-
-  await upsertSubscriberAndSubscriptions(
-    db,
-    chatId,
-    null,
-    parsedPending.alertTypes,
-    resolution.coins.map((coin) => coin.id),
-    { clearPending: true },
-  );
-
-  await replyToChat(
-    chatId,
-    buildSubscribeSuccessMessage(parsedPending.alertTypes, resolution.coins),
-    botToken,
-  );
 }
 
-function resolveSubscribeTickers(
+function resolveCoinTargets(
   tickers: string[],
   initialCoins: ResolvedCoin[] = [],
-): SubscribeResolution {
+): CoinResolution {
   const coins = dedupeCoins(initialCoins);
   const seenIds = new Set(coins.map((coin) => coin.id));
 
@@ -467,17 +725,23 @@ function resolveSubscribeTickers(
 
 async function persistPendingDisambiguation(
   db: D1Database,
-  chatId: string,
-  alertTypes: Set<string>,
-  resolvedCoins: ResolvedCoin[],
-  ambiguousTicker: string,
-  candidates: ResolvedCoin[],
-  remainingTickers: string[],
+  input: {
+    chatId: string;
+    actionType: PendingActionType;
+    actionPayload: Record<string, unknown>;
+    resolvedCoins: ResolvedCoin[];
+    ambiguousTicker: string;
+    candidates: ResolvedCoin[];
+    remainingTickers: string[];
+    alertTypes?: Set<string>;
+  },
 ): Promise<void> {
   await db
     .prepare(`
       INSERT INTO telegram_pending_disambiguation (
         chat_id,
+        action_type,
+        action_payload,
         alert_types,
         resolved_ids,
         ambiguous_ticker,
@@ -485,8 +749,10 @@ async function persistPendingDisambiguation(
         remaining_tickers,
         expires_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET
+        action_type = excluded.action_type,
+        action_payload = excluded.action_payload,
         alert_types = excluded.alert_types,
         resolved_ids = excluded.resolved_ids,
         ambiguous_ticker = excluded.ambiguous_ticker,
@@ -495,12 +761,14 @@ async function persistPendingDisambiguation(
         expires_at = excluded.expires_at
     `)
     .bind(
-      chatId,
-      JSON.stringify(Array.from(alertTypes)),
-      JSON.stringify(dedupeCoins(resolvedCoins).map((coin) => coin.id)),
-      ambiguousTicker,
-      JSON.stringify(candidates),
-      JSON.stringify(remainingTickers),
+      input.chatId,
+      input.actionType,
+      JSON.stringify(input.actionPayload),
+      JSON.stringify(Array.from(input.alertTypes ?? [])),
+      JSON.stringify(dedupeCoins(input.resolvedCoins).map((coin) => coin.id)),
+      input.ambiguousTicker,
+      JSON.stringify(input.candidates),
+      JSON.stringify(input.remainingTickers),
       unixNow() + DISAMBIGUATION_TTL_SEC,
     )
     .run();
@@ -540,11 +808,11 @@ async function upsertSubscriberAndSubscriptions(
       )
       VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET
-        username = excluded.username,
-        alert_dews = MAX(alert_dews, ?),
-        alert_depeg = MAX(alert_depeg, ?),
-        alert_safety = MAX(alert_safety, ?),
-        last_active_at = ?
+        username = COALESCE(excluded.username, telegram_subscribers.username),
+        alert_dews = MAX(telegram_subscribers.alert_dews, excluded.alert_dews),
+        alert_depeg = MAX(telegram_subscribers.alert_depeg, excluded.alert_depeg),
+        alert_safety = MAX(telegram_subscribers.alert_safety, excluded.alert_safety),
+        last_active_at = excluded.last_active_at
     `).bind(
       chatId,
       username,
@@ -553,21 +821,156 @@ async function upsertSubscriberAndSubscriptions(
       alertSafety,
       now,
       now,
-      alertDews,
-      alertDepeg,
-      alertSafety,
-      now,
     ),
   );
 
   for (const stablecoinId of uniqueStablecoinIds) {
     statements.push(
-      db.prepare("INSERT OR IGNORE INTO telegram_subscriptions (chat_id, stablecoin_id) VALUES (?, ?)")
-        .bind(chatId, stablecoinId),
+      db.prepare(`
+        INSERT INTO telegram_subscriptions (
+          chat_id,
+          stablecoin_id,
+          alert_dews,
+          alert_depeg,
+          alert_safety
+        )
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+          alert_dews = MAX(telegram_subscriptions.alert_dews, excluded.alert_dews),
+          alert_depeg = MAX(telegram_subscriptions.alert_depeg, excluded.alert_depeg),
+          alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety)
+      `).bind(chatId, stablecoinId, alertDews, alertDepeg, alertSafety),
     );
   }
 
   await db.batch(statements);
+}
+
+async function applySettingToSubscriptions(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coins: ResolvedCoin[],
+  command: ParsedSetCommand,
+): Promise<void> {
+  const now = unixNow();
+  const statements: D1PreparedStatement[] = [
+    db.prepare(`
+      INSERT INTO telegram_subscribers (
+        chat_id,
+        username,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        created_at,
+        last_active_at
+      )
+      VALUES (?, ?, 0, 0, 0, ?, ?)
+      ON CONFLICT(chat_id) DO UPDATE SET
+        username = COALESCE(excluded.username, telegram_subscribers.username),
+        last_active_at = excluded.last_active_at
+    `).bind(chatId, username, now, now),
+  ];
+
+  const enableGlobalTypes = new Set<string>();
+  if (command.setting === "dews" && command.enabled) enableGlobalTypes.add("dews");
+  if (command.setting === "depeg" && command.enabled) enableGlobalTypes.add("depeg");
+  if (command.setting === "depeg-step") enableGlobalTypes.add("depeg");
+  if (command.setting === "safety" && command.enabled) enableGlobalTypes.add("safety");
+
+  if (enableGlobalTypes.size > 0) {
+    statements.push(
+      db.prepare(
+        `UPDATE telegram_subscribers
+            SET alert_dews = MAX(alert_dews, ?),
+                alert_depeg = MAX(alert_depeg, ?),
+                alert_safety = MAX(alert_safety, ?)
+          WHERE chat_id = ?`,
+      ).bind(
+        enableGlobalTypes.has("dews") ? 1 : 0,
+        enableGlobalTypes.has("depeg") ? 1 : 0,
+        enableGlobalTypes.has("safety") ? 1 : 0,
+        chatId,
+      ),
+    );
+  }
+
+  for (const coin of coins) {
+    switch (command.setting) {
+      case "dews":
+        statements.push(
+          db.prepare(`
+            INSERT INTO telegram_subscriptions (
+              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band
+            )
+            VALUES (?, ?, ?, 0, 0, ?)
+            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+              alert_dews = excluded.alert_dews,
+              dews_min_band = excluded.dews_min_band
+          `).bind(chatId, coin.id, command.enabled ? 1 : 0, command.minBand),
+        );
+        break;
+      case "safety":
+        statements.push(
+          db.prepare(`
+            INSERT INTO telegram_subscriptions (
+              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, safety_mode
+            )
+            VALUES (?, ?, 0, 0, ?, ?)
+            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+              alert_safety = excluded.alert_safety,
+              safety_mode = excluded.safety_mode
+          `).bind(chatId, coin.id, command.enabled ? 1 : 0, command.mode),
+        );
+        break;
+      case "depeg":
+        statements.push(
+          db.prepare(`
+            INSERT INTO telegram_subscriptions (
+              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+            )
+            VALUES (?, ?, 0, ?, 0, NULL)
+            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+              alert_depeg = excluded.alert_depeg,
+              depeg_worsening_bps_step = CASE WHEN excluded.alert_depeg = 0 THEN NULL ELSE telegram_subscriptions.depeg_worsening_bps_step END
+          `).bind(chatId, coin.id, command.enabled ? 1 : 0),
+        );
+        break;
+      case "depeg-step":
+        statements.push(
+          db.prepare(`
+            INSERT INTO telegram_subscriptions (
+              chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+            )
+            VALUES (?, ?, 0, 1, 0, ?)
+            ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+              alert_depeg = 1,
+              depeg_worsening_bps_step = excluded.depeg_worsening_bps_step
+          `).bind(chatId, coin.id, command.step),
+        );
+        break;
+    }
+  }
+
+  await db.batch(statements);
+}
+
+async function removeSubscriptions(
+  db: D1Database,
+  chatId: string,
+  stablecoinIds: string[],
+): Promise<void> {
+  const uniqueIds = Array.from(new Set(stablecoinIds));
+  if (uniqueIds.length === 0) return;
+
+  const now = unixNow();
+  const placeholders = uniqueIds.map(() => "?").join(", ");
+  await db.batch([
+    db.prepare(
+      `DELETE FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id IN (${placeholders})`,
+    ).bind(chatId, ...uniqueIds),
+    db.prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?").bind(now, chatId),
+  ]);
 }
 
 async function clearPendingDisambiguation(
@@ -580,33 +983,97 @@ async function clearPendingDisambiguation(
     .run();
 }
 
-function parsePendingDisambiguation(
-  pending: PendingDisambiguationRow,
-): {
-  alertTypes: Set<string>;
-  resolvedCoins: ResolvedCoin[];
-  ambiguousTicker: string;
-  candidates: ResolvedCoin[];
-  remainingTickers: string[];
-} | null {
+function parsePendingDisambiguation(pending: PendingDisambiguationRow): PendingAction | null {
   try {
-    const alertTypes = new Set(parseStringArray(JSON.parse(pending.alert_types)));
+    const actionType = (pending.action_type ?? "subscribe") as PendingActionType;
+    const payload = pending.action_payload ? JSON.parse(pending.action_payload) as Record<string, unknown> : {};
+    const legacyAlertTypes = new Set(parseStringArray(JSON.parse(pending.alert_types)));
     const resolvedIds = parseStringArray(JSON.parse(pending.resolved_ids));
     const candidates = parseResolvedCoins(JSON.parse(pending.candidates));
     const remainingTickers = parseStringArray(JSON.parse(pending.remaining_tickers));
     if (candidates.length === 0) return null;
 
+    const resolvedCoins = dedupeCoins(
+      resolvedIds.map((id) => STABLECOIN_BY_ID.get(id) ?? { id, symbol: id, name: id }),
+    );
+
+    if (actionType === "subscribe") {
+      const actionAlertTypes = new Set(
+        Array.isArray(payload.alertTypes)
+          ? parseStringArray(payload.alertTypes)
+          : Array.from(legacyAlertTypes),
+      );
+      return {
+        actionType,
+        alertTypes: actionAlertTypes,
+        resolvedCoins,
+        ambiguousTicker: pending.ambiguous_ticker,
+        candidates,
+        remainingTickers,
+      };
+    }
+
+    if (actionType === "unsubscribe") {
+      return {
+        actionType,
+        resolvedCoins,
+        ambiguousTicker: pending.ambiguous_ticker,
+        candidates,
+        remainingTickers,
+      };
+    }
+
+    const setCommand = parseStoredSetCommand(payload);
+    if (!setCommand) return null;
     return {
-      alertTypes,
-      resolvedCoins: dedupeCoins(
-        resolvedIds.map((id) => STABLECOIN_BY_ID.get(id) ?? { id, symbol: id, name: id }),
-      ),
+      actionType: "set",
+      command: setCommand,
+      resolvedCoins,
       ambiguousTicker: pending.ambiguous_ticker,
       candidates,
       remainingTickers,
     };
   } catch {
     return null;
+  }
+}
+
+function parseStoredSetCommand(payload: Record<string, unknown>): ParsedSetCommand | null {
+  const ticker = typeof payload.ticker === "string" ? payload.ticker : "unknown";
+  const setting = typeof payload.setting === "string" ? payload.setting : null;
+  switch (setting) {
+    case "dews":
+      return {
+        ticker,
+        setting,
+        enabled: payload.enabled !== false,
+        minBand: payload.minBand === "WARNING" || payload.minBand === "DANGER" ? payload.minBand : null,
+      };
+    case "safety":
+      return {
+        ticker,
+        setting,
+        enabled: payload.enabled !== false,
+        mode:
+          payload.mode === "downgrade-only" || payload.mode === "upgrade-only"
+            ? payload.mode
+            : null,
+      };
+    case "depeg":
+      return {
+        ticker,
+        setting,
+        enabled: payload.enabled !== false,
+      };
+    case "depeg-step":
+      return {
+        ticker,
+        setting,
+        enabled: true,
+        step: payload.step === 100 || payload.step === 250 || payload.step === 500 ? payload.step : null,
+      };
+    default:
+      return null;
   }
 }
 
@@ -647,23 +1114,98 @@ function dedupeCoins(coins: ResolvedCoin[]): ResolvedCoin[] {
   return deduped;
 }
 
+function parseSetCommand(args: string): ParsedSetCommand | { error: string } {
+  const tokens = args.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length < 3) {
+    return { error: "Usage: /set <ticker> <setting> <value>" };
+  }
+
+  const [ticker, rawSetting, ...valueParts] = tokens;
+  const setting = rawSetting.toLowerCase();
+  const value = valueParts.join(" ").toLowerCase();
+
+  switch (setting) {
+    case "dews": {
+      if (value === "off") {
+        return { ticker, setting: "dews", enabled: false, minBand: null };
+      }
+      if (value === "alert") {
+        return { ticker, setting: "dews", enabled: true, minBand: null };
+      }
+      if (value === "warning") {
+        return { ticker, setting: "dews", enabled: true, minBand: "WARNING" };
+      }
+      if (value === "danger") {
+        return { ticker, setting: "dews", enabled: true, minBand: "DANGER" };
+      }
+      return { error: "DEWS values: off, ALERT, WARNING, DANGER" };
+    }
+    case "safety": {
+      if (value === "off") {
+        return { ticker, setting: "safety", enabled: false, mode: null };
+      }
+      if (value === "all") {
+        return { ticker, setting: "safety", enabled: true, mode: null };
+      }
+      if (value === "downgrade-only" || value === "upgrade-only") {
+        return { ticker, setting: "safety", enabled: true, mode: value };
+      }
+      return { error: "Safety values: off, all, downgrade-only, upgrade-only" };
+    }
+    case "depeg": {
+      if (value === "on") {
+        return { ticker, setting: "depeg", enabled: true };
+      }
+      if (value === "off") {
+        return { ticker, setting: "depeg", enabled: false };
+      }
+      return { error: "Depeg values: on, off" };
+    }
+    case "depeg-step": {
+      if (value === "off") {
+        return { ticker, setting: "depeg-step", enabled: true, step: null };
+      }
+      const step = Number(value);
+      if (step === 100 || step === 250 || step === 500) {
+        return { ticker, setting: "depeg-step", enabled: true, step };
+      }
+      return { error: "Depeg-step values: off, 100, 250, 500" };
+    }
+    default:
+      return { error: "Supported settings: dews, safety, depeg, depeg-step" };
+  }
+}
+
+function parseQuietHours(args: string): { startHourUtc: number; endHourUtc: number } | { error: string } {
+  const match = args.trim().match(/^(\d{1,2})-(\d{1,2})$/);
+  if (!match) {
+    return { error: "Usage: /mute <start>-<end> in UTC, e.g. /mute 22-07" };
+  }
+
+  const startHourUtc = Number(match[1]);
+  const endHourUtc = Number(match[2]);
+  if (
+    !Number.isInteger(startHourUtc) ||
+    !Number.isInteger(endHourUtc) ||
+    startHourUtc < 0 ||
+    startHourUtc > 23 ||
+    endHourUtc < 0 ||
+    endHourUtc > 23 ||
+    startHourUtc === endHourUtc
+  ) {
+    return { error: "Quiet hours must be two different UTC hours between 0 and 23." };
+  }
+
+  return { startHourUtc, endHourUtc };
+}
+
 function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
   const lines = [`Ticker "${ticker}" not found.`];
   if (suggestion) {
     lines.push(`Did you mean ${suggestion.symbol} (${suggestion.id})?`);
   }
+  lines.push("You can also use the exact Pharos coin id when a ticker is ambiguous.");
   return escapeHtml(lines.join("\n"));
-}
-
-function buildSubscribeSuccessMessage(
-  alertTypes: Set<string>,
-  coins: ResolvedCoin[],
-): string {
-  return escapeHtml([
-    `Subscribed to ${describeAlertTypes(alertTypes)}.`,
-    `Coins (${coins.length}):`,
-    formatCoinLines(coins),
-  ].join("\n"));
 }
 
 function buildUnsubscribeSuccessMessage(coins: ResolvedCoin[]): string {
@@ -674,16 +1216,110 @@ function buildUnsubscribeSuccessMessage(coins: ResolvedCoin[]): string {
   ].join("\n"));
 }
 
-function describeAlertTypes(alertTypes: Set<string>): string {
+function buildSubscriptionSummaryMessage(
+  header: string,
+  subscriptions: SubscriptionRow[],
+): string {
+  const lines = [header, `Coins (${subscriptions.length}):`];
+  for (const row of subscriptions) {
+    const coin = STABLECOIN_BY_ID.get(row.stablecoin_id);
+    const label = coin ? `${coin.symbol} (${coin.id})` : row.stablecoin_id;
+    lines.push(`- ${label}: ${describeSubscriptionSettings(row)}`);
+  }
+  return escapeHtml(lines.join("\n"));
+}
+
+function buildListMessage(
+  subscriber: SubscriberRow | null,
+  subscriptions: SubscriptionRow[],
+): string {
+  if (!subscriber && subscriptions.length === 0) {
+    return "No active subscriptions. Use /subscribe to get started.";
+  }
+
+  const lines = [
+    `Quiet hours: ${
+      subscriber?.quiet_hours_enabled
+        ? `${formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)} UTC`
+        : "Off"
+    }`,
+    `Coins (${subscriptions.length}):`,
+  ];
+
+  if (subscriptions.length === 0) {
+    lines.push("None");
+  } else {
+    const sorted = [...subscriptions].sort((a, b) => {
+      const aCoin = STABLECOIN_BY_ID.get(a.stablecoin_id);
+      const bCoin = STABLECOIN_BY_ID.get(b.stablecoin_id);
+      const aSymbol = aCoin?.symbol ?? a.stablecoin_id;
+      const bSymbol = bCoin?.symbol ?? b.stablecoin_id;
+      return aSymbol.localeCompare(bSymbol) || a.stablecoin_id.localeCompare(b.stablecoin_id);
+    });
+    for (const row of sorted) {
+      const coin = STABLECOIN_BY_ID.get(row.stablecoin_id);
+      const label = coin ? `${coin.symbol} (${coin.id})` : row.stablecoin_id;
+      lines.push(`- ${label}: ${describeSubscriptionSettings(row)}`);
+    }
+  }
+
+  return escapeHtml(lines.join("\n"));
+}
+
+function describeSubscriptionSettings(row: SubscriptionRow): string {
   const labels: string[] = [];
-  if (alertTypes.has("dews")) labels.push("DEWS");
-  if (alertTypes.has("depeg")) labels.push("Depeg");
-  if (alertTypes.has("safety")) labels.push("Safety");
-  return labels.join(", ") || "None";
+
+  if (row.alert_dews) {
+    labels.push(row.dews_min_band ? `DEWS>=${row.dews_min_band}` : "DEWS");
+  }
+  if (row.alert_depeg) {
+    labels.push(
+      row.depeg_worsening_bps_step != null
+        ? `Depeg +${row.depeg_worsening_bps_step}bps`
+        : "Depeg",
+    );
+  }
+  if (row.alert_safety) {
+    if (row.safety_mode === "downgrade-only") {
+      labels.push("Safety downgrade-only");
+    } else if (row.safety_mode === "upgrade-only") {
+      labels.push("Safety upgrade-only");
+    } else {
+      labels.push("Safety");
+    }
+  }
+
+  return labels.join(", ") || "Muted";
 }
 
 function formatCoinLines(coins: ResolvedCoin[]): string {
   return coins.map((coin) => `- ${coin.symbol} (${coin.id})`).join("\n") || "None";
+}
+
+function formatQuietHours(startHourUtc: number | null | undefined, endHourUtc: number | null | undefined): string {
+  if (startHourUtc == null || endHourUtc == null) return "Off";
+  return `${String(startHourUtc).padStart(2, "0")}-${String(endHourUtc).padStart(2, "0")}`;
+}
+
+async function loadSubscriptionsByIds(
+  db: D1Database,
+  chatId: string,
+  stablecoinIds: string[],
+): Promise<SubscriptionRow[]> {
+  const uniqueIds = Array.from(new Set(stablecoinIds));
+  if (uniqueIds.length === 0) return [];
+  const placeholders = uniqueIds.map(() => "?").join(", ");
+  const result = await db
+    .prepare(
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band, safety_mode, depeg_worsening_bps_step
+         FROM telegram_subscriptions
+        WHERE chat_id = ?
+          AND stablecoin_id IN (${placeholders})
+        ORDER BY stablecoin_id`,
+    )
+    .bind(chatId, ...uniqueIds)
+    .all<SubscriptionRow>();
+  return result.results ?? [];
 }
 
 function unixNow(): number {
@@ -695,9 +1331,5 @@ async function replyToChat(
   message: string,
   botToken: string,
 ): Promise<void> {
-  try {
-    await sendToChat(chatId, message, botToken, { disableWebPagePreview: true });
-  } catch {
-    // Best-effort replies only; webhook processing still succeeds.
-  }
+  await sendToChat(chatId, message, botToken, { disableWebPagePreview: true });
 }

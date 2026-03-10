@@ -34,6 +34,10 @@ const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
     label: "Price-derived",
     badge: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20",
   },
+  "rate-derived": {
+    label: "Rate-derived",
+    badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
+  },
 };
 
 function getPysColor(pys: number | null): string {
@@ -75,7 +79,7 @@ function DetailStatCard({
 }
 
 export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionProps) {
-  const { data, error, isLoading } = useYieldRankings();
+  const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
   const ranking = data?.rankings.find((row) => row.id === stablecoinId);
   const riskFreeRate = data?.riskFreeRate ?? 0;
   const medianApy = data?.medianApy ?? 0;
@@ -172,6 +176,11 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {apiMeta?.warning ? (
+            <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+              {apiMeta.warning}
+            </div>
+          ) : null}
           {singleWarning ? (
             <div className="flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
@@ -241,6 +250,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Yield Source</p>
               <p className="mt-2 text-sm font-medium text-foreground">{ranking.yieldSource}</p>
+              {ranking.provenance?.selectionReason ? (
+                <p className="mt-1 text-xs text-muted-foreground">{ranking.provenance.selectionReason}</p>
+              ) : null}
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Data Source</p>
@@ -249,14 +261,40 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                   {dataSourceMeta.label}
                 </span>
               </div>
+              {ranking.provenance?.sourceAgeSeconds != null ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Source age {Math.round(ranking.provenance.sourceAgeSeconds / 60)}m
+                </p>
+              ) : null}
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">TVL</p>
               <p className="mt-2 font-mono text-sm tabular-nums text-foreground">
                 {ranking.sourceTvlUsd !== null ? formatCurrency(ranking.sourceTvlUsd) : "—"}
               </p>
+              {ranking.provenance?.sourceSwitch ? (
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Current best source recently switched</p>
+              ) : null}
             </div>
           </div>
+
+          {data?.provenance ? (
+            <div className="rounded-xl border border-border/60 bg-muted/15 p-4 text-xs text-muted-foreground">
+              <p>
+                Benchmark:{" "}
+                {data.provenance.benchmark.recordDate
+                  ? `${data.provenance.benchmark.rate.toFixed(2)}% as of ${data.provenance.benchmark.recordDate}`
+                  : `${data.provenance.benchmark.rate.toFixed(2)}%`}
+                {data.provenance.benchmark.isFallback
+                  ? ` (${data.provenance.benchmark.fallbackMode ?? "fallback"})`
+                  : ""}
+              </p>
+              <p className="mt-1">
+                Safety coverage: {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}%
+                {ranking.provenance?.usedDefaultSafety ? " — this row uses default NR safety inputs." : ""}
+              </p>
+            </div>
+          ) : null}
 
           {ranking.altSources.length > 0 ? (
             <div className="rounded-xl border border-border/60 bg-muted/20 p-4">

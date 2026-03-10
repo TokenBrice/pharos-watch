@@ -68,6 +68,7 @@ describe("handlePegSummary", () => {
         medianDeviationBps: number;
         totalTracked: number;
         worstCurrent: { id: string; symbol: string; bps: number } | null;
+        fallbackPegRates?: string[];
       };
       methodology: {
         version: string;
@@ -84,6 +85,34 @@ describe("handlePegSummary", () => {
     expect(body.coins[0].methodologyVersion).toBe(body.methodology.version);
     expect(body.methodology.versionLabel.length).toBeGreaterThan(0);
     expect(body.methodology.changelogPath).toBe("/methodology/depeg-changelog/");
+  });
+
+  it("returns price provenance and trust fields for each coin", async () => {
+    const asset = makeAsset({
+      id: "usdt-tether",
+      symbol: "USDT",
+      priceSource: "cached",
+      priceConfidence: "fallback",
+      priceUpdatedAt: nowSec - 1800,
+    });
+    const db = makePegSummaryDb([asset]);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{
+        id: string;
+        priceSource?: string;
+        priceConfidence?: string | null;
+        priceUpdatedAt?: number | null;
+        primaryTrust?: string;
+      }>;
+    };
+    const coin = body.coins.find((c) => c.id === "usdt-tether");
+    expect(coin).toMatchObject({
+      priceSource: "cached",
+      priceConfidence: "fallback",
+      priceUpdatedAt: nowSec - 1800,
+      primaryTrust: "confirm_required",
+    });
   });
 
   it("includes X-Data-Age header", async () => {
@@ -169,5 +198,28 @@ describe("handlePegSummary", () => {
       sourcePools: 4,
       sourceTvl: 10_000_000,
     });
+  });
+
+  it("counts non-USD coins within the non-USD threshold as at peg", async () => {
+    const asset = makeAsset({
+      id: "eurc-circle",
+      symbol: "EUROC",
+      name: "Euro Coin",
+      geckoId: "euro-coin",
+      pegType: "peggedEUR",
+      price: 1.065,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      priceUpdatedAt: nowSec,
+    });
+    const db = makePegSummaryDb([asset]);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      summary: {
+        coinsAtPeg: number;
+        totalTracked: number;
+      };
+    };
+    expect(body.summary.coinsAtPeg).toBeGreaterThanOrEqual(1);
   });
 });

@@ -1,6 +1,6 @@
 # Yield Intelligence
 
-Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes APY from three sources (direct on-chain reads, DeFiLlama, price history), scores each coin via the Pharos Yield Score (PYS), and serves a dedicated `/yield` page with scatter plot and leaderboard.
+Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curated lending opportunities. Computes APY from deterministic on-chain reads, curated DeFiLlama pools, price history, and benchmark-derived fallbacks; scores each coin via the Pharos Yield Score (PYS); and serves a dedicated `/yield` page plus a stablecoin-detail yield section.
 
 ---
 
@@ -29,9 +29,9 @@ Labels and styles are centralized in `shared/lib/classification.ts` (`YIELD_TYPE
 
 ---
 
-## Three-Tier APY Resolution
+## Source-Aware APY Resolution
 
-The sync cron resolves APY for each coin using a priority-ordered strategy. Tier 1 runs first, Tier 2 still runs afterward to collect additional DeFiLlama source rows, and Tier 3 runs only when neither Tier 1 nor Tier 2 produced any source.
+The sync cron resolves APY for each coin using a priority-ordered strategy. Deterministic and curated rows can coexist; the cron then applies confidence-weighted arbitration to choose the primary row while retaining alternatives.
 
 ### Tier 1: On-Chain Reads
 
@@ -141,7 +141,7 @@ For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token min
 apy = max(0, cachedTbillRate - spreadBps / 100)
 ```
 
-Uses the `risk_free_rate` already cached daily by `fetch-tbill-rate` (FRED DGS3MO). Zero additional API calls.
+Uses the structured `risk_free_rate` cache already refreshed daily by `fetch-tbill-rate` (FRED DGS3MO). If FRED fails, the cron retains the last known good benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded fallback.
 
 **Configured tokens:**
 
@@ -246,13 +246,20 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 
 At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when `updated_at` is older than 90 minutes (`STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
 
-The sync also performs an operational cross-source check after metric computation: if a coin has both native yield (`onchain` / `defillama` / `price-derived` / `rate-derived`) and auto-discovered lending yield (`defillama-auto`), and the APYs diverge by more than 50% (relative to the larger APY), it emits a `[yield-sync] APY divergence ...` `console.warn` log. This is observability-only and does not affect persisted data or ranking behavior.
+The sync also performs a confidence-aware cross-source arbitration pass before `is_best` is chosen:
+
+- deterministic sources (`onchain`, `rate-derived`) outrank curated DeFiLlama rows
+- curated DeFiLlama rows outrank discovered lending opportunities and fallback-derived rows
+- non-positive APY rows cannot outrank positive rows
+- materially divergent discovered or fallback rows can be rejected when a higher-confidence canonical source disagrees by more than 50%
+
+This selection behavior is surfaced in row-level `provenance` metadata on `/api/yield-rankings`.
 
 ---
 
 ## Database Schema
 
-**Migrations:** `worker/migrations/0031_yield_data.sql` (initial), `worker/migrations/0041_yield_data_multi_source.sql` (multi-source PK), `worker/migrations/0056_yield_history_warning_signals.sql` (adds historical warning signal persistence)
+**Migrations:** `worker/migrations/0031_yield_data.sql` (initial), `worker/migrations/0041_yield_data_multi_source.sql` (multi-source PK), `worker/migrations/0056_yield_history_warning_signals.sql` (warning signal persistence), `worker/migrations/0061_yield_history_source_aware.sql` (per-source history rows)
 
 ### `yield_data` — Current Snapshot (one row per coin per source)
 
@@ -298,21 +305,27 @@ CREATE TABLE yield_data (
 ```sql
 CREATE TABLE yield_history (
   stablecoin_id   TEXT NOT NULL,
+  source_key      TEXT NOT NULL,
   recorded_at     INTEGER NOT NULL,  -- Unix seconds
+  is_best         INTEGER NOT NULL DEFAULT 0,
   apy             REAL NOT NULL,
   apy_base        REAL,
   apy_reward      REAL,
   exchange_rate   REAL,
   source_tvl_usd  REAL,
   data_source     TEXT NOT NULL,
-  warning_signals TEXT,              -- JSON array of active signal keys (best-source snapshot)
-  PRIMARY KEY (stablecoin_id, recorded_at)
+  warning_signals TEXT,
+  yield_source    TEXT,
+  yield_type      TEXT,
+  PRIMARY KEY (stablecoin_id, source_key, recorded_at)
 );
 ```
 
-**Index:** `idx_yield_hist_coin` (stablecoin_id, recorded_at DESC).
+**Indices:** `idx_yield_hist_coin` (stablecoin_id, recorded_at DESC), `idx_yield_hist_coin_source` (stablecoin_id, source_key, recorded_at DESC), `idx_yield_hist_best` (stablecoin_id, is_best, recorded_at DESC).
 
 **Retention:** 365 days. Older rows are pruned at the end of each sync run.
+
+**Legacy migration behavior:** historical pre-migration rows are preserved as `source_key = 'legacy-best'`. Same-source trailing metrics only reuse these rows when the coin currently has a single resolved source; otherwise the new source starts a fresh clean series to avoid mixed-history contamination.
 
 **Estimated volume:** ~40 coins × 48 points/day × 365 days ≈ 701K rows/year.
 
@@ -333,15 +346,16 @@ CREATE TABLE yield_history (
 4. Read cached risk-free rate from D1
 5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
 6. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3, potentially multiple sources per coin), then append auto-discovered lending rows for any remaining eligible tracked coins
-7. Determine `is_best` per coin: source with highest `currentApy` wins
-8. Batch preload `yield_history` datasets (7d previous exchange rates, previous TVL rows, and 30d APY history), group in memory, then compute trailing averages and PYS without per-coin query loops
-9. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
-10. Batch upsert `yield_data` (all sources) + insert `yield_history` point (best source only)
-11. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together
-12. Prune `yield_history` older than 365 days
-13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, then cache rankings JSON whenever the payload passes schema validation. Safety-degraded runs still publish fresh rankings but skip `report_card_cache`.
+7. Batch preload source-aware `yield_history` datasets (previous best source, previous TVL by source, 30d APY history by source) and legacy best-history fallbacks
+8. Compute 7d/30d APY, variance, and PYS per resolved source using source-specific history instead of coin-level mixed history
+9. Run confidence-weighted arbitration to select `is_best` per coin and flag source switches vs. the prior best source
+10. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
+11. Batch upsert `yield_data` (all sources) + insert `yield_history` points for every resolved source with `is_best` markers
+12. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together
+13. Prune `yield_history` older than 365 days
+14. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation. Safety-degraded runs still publish fresh rankings but skip `report_card_cache`.
 
-**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"`. Schema-invalid runs still skip cache overwrite. Safety-degraded runs now continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
+**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio, the benchmark falls back or is retained in degraded mode, DeFiLlama pool inputs are unavailable, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"`. Schema-invalid runs still skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 
 Implementation stages:
 - `yield-sync/sources.ts`: DL pool loading, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers
@@ -456,7 +470,7 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 
 Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, alt sources, warning callouts, and embedded `YieldHistoryChart`. Conditional: only renders for coins with yield data.
 
-It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, then passes the shared risk-free rate and peer median into `YieldHistoryChart`.
+It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the shared risk-free rate and peer median into `YieldHistoryChart`.
 
 **Layout (top to bottom):**
 

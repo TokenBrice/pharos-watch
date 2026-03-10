@@ -15,7 +15,7 @@ const YieldClient = dynamic(
 );
 
 const yieldBearingCount = YIELD_BEARING_STABLECOINS.length;
-const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins. Compare APY, safety grades, and the Pharos Yield Score.`;
+const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, and the Pharos Yield Score.`;
 
 export const metadata = buildPageMetadata({
   title: "Yield Intelligence",
@@ -41,7 +41,7 @@ const faqJsonLd = {
       name: "How are stablecoin yields sourced?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yields are resolved through a three-tier priority system updated every 30 minutes. Tier 1 reads on-chain vault exchange rates directly via RPC. Tier 2 pulls pool APY from the DeFiLlama Yields API, matched by a static pool map or symbol search. Tier 3 derives APY from 30-day price appreciation for NAV-appreciation tokens. The displayed APY figures are 30-day trailing averages computed from stored history.",
+        text: "Yields are resolved through deterministic on-chain reads, curated DeFiLlama sources, price-derived or rate-derived fallbacks, and curated lending opportunities. Rankings are refreshed every 30 minutes and now preserve source-specific history so trailing APY metrics stay tied to the active source.",
       },
     },
     {
@@ -73,7 +73,7 @@ export default function YieldPage() {
         />
       }
       leadParagraphs={[
-        `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins. Compare APY, safety grades, and the Pharos Yield Score (PYS).`,
+        `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, and the Pharos Yield Score (PYS).`,
       ]}
     >
       <YieldClient />

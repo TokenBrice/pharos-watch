@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.1",
+  currentVersion: "4.2",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.2",
+    title: "Source-aware history and confidence-weighted arbitration",
+    date: "2026-03-10",
+    effectiveAt: 1773100800,
+    summary:
+      "Yield rankings now preserve per-source history, retain benchmark provenance, and prefer higher-confidence sources when multiple candidates disagree.",
+    impact: [
+      "yield_history now persists per-source rows with best-source markers instead of a single mixed best series",
+      "7d and 30d APY metrics are computed from source-specific history, preventing source-switch contamination",
+      "Rankings now include provenance for benchmark freshness, safety coverage, source-switch state, and selection reasoning",
+      "Cross-source arbitration can reject divergent discovered or fallback sources when canonical sources disagree materially",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.1",
     title: "Conservative LUSD Stability Pool source",

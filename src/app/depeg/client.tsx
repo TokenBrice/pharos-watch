@@ -9,7 +9,7 @@ import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useStressSignals } from "@/hooks/use-stress-signals";
-import { useDepegEvents } from "@/hooks/use-depeg-events";
+import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -46,20 +46,26 @@ export function DepegClient() {
     isLoading: isPegLoading,
     error: pegError,
     dataUpdatedAt: pegUpdatedAt,
+    meta: pegMeta,
     refetch: refetchPeg,
   } = usePegSummary();
   const {
     data: dewsData,
     error: dewsError,
     dataUpdatedAt: dewsUpdatedAt,
+    meta: dewsMeta,
     refetch: refetchDews,
   } = useStressSignals();
   const {
     data: eventsData,
     error: eventsError,
     dataUpdatedAt: eventsUpdatedAt,
+    meta: eventsMeta,
     refetch: refetchEvents,
-  } = useDepegEvents();
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteDepegEvents();
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -144,9 +150,9 @@ export function DepegClient() {
       <QueryErrorNotice error={globalError} hasData={!!pegData?.coins?.length} onRetry={handleRetry} />
       <StaleDataBanner
         queries={[
-          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length },
-          { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals },
-          { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: !!eventsData?.events?.length },
+          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
+          { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
+          { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
         ]}
       />
 
@@ -230,6 +236,9 @@ export function DepegClient() {
         <DepegFeed
           events={eventsData?.events ?? []}
           logos={logos}
+          hasMore={!!hasNextPage}
+          isLoadingMore={isFetchingNextPage}
+          onLoadMore={() => void fetchNextPage()}
         />
       </SectionErrorBoundary>
 
@@ -245,6 +254,7 @@ export function DepegClient() {
           onTypeFilterChange={setTypeFilter}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          fallbackPegTypes={pegData?.summary?.fallbackPegRates}
           hideFilters
         />
       </SectionErrorBoundary>

@@ -1,12 +1,18 @@
-import { getDepegThresholdBps, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
+import {
+  getDepegThresholdBps,
+  DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
+  DEPEG_EXTREME_MOVE_BPS,
+} from "../lib/constants";
 import { SECONDS } from "../lib/time-constants";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import {
   buildInsertDepegEventStmt,
+  classifyPrimaryDepegTrust,
   isTrustedDexPriceRow,
   loadDexPriceRows,
   type DepegRow,
+  type PendingDepegReason,
 } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
@@ -47,6 +53,28 @@ export async function detectDepegEvents(
     pegReference,
     source: "live",
   });
+
+  const buildInsertPendingStmt = (
+    asset: PegAssetBase,
+    direction: "above" | "below",
+    bps: number,
+    eventPrice: number,
+    pegReference: number,
+    reason: PendingDepegReason,
+  ): D1PreparedStatement =>
+    db.prepare(
+      `INSERT INTO depeg_pending (
+         stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference, reason
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(stablecoin_id) DO NOTHING`
+    ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, eventPrice, pegReference, reason);
+
+  const computeDexBps = (assetId: string, pegReference: number): number | null => {
+    const dexRow = dexPriceRows.get(assetId);
+    if (!dexRow || !isTrustedDexPriceRow(dexRow, now, "depeg")) return null;
+    return Math.round(((dexRow.dex_price_usd / pegReference) - 1) * 10000);
+  };
 
   // Load DEX-implied prices for cross-validation.
   // loadDexPriceRows handles missing-table fallbacks and logging.
@@ -118,7 +146,10 @@ export async function detectDepegEvents(
     trackedCoinIds.add(asset.id);
 
     const price = asset.price;
-    if (price == null || typeof price !== "number" || isNaN(price) || price <= 0) continue;
+    const primaryTrust = classifyPrimaryDepegTrust(asset, now);
+    if (primaryTrust === "unusable" || price == null || typeof price !== "number" || isNaN(price) || price <= 0) {
+      continue;
+    }
 
     const supply = sumPegBuckets(asset.circulating);
     if (supply < 1_000_000) continue;
@@ -126,35 +157,48 @@ export async function detectDepegEvents(
     const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
     if (!Number.isFinite(pegRef) || pegRef <= 0) continue;
 
-    // Skip wildly unreasonable prices - data glitch or oracle attack
-    const priceRatio = price / pegRef;
-    if (priceRatio > 2 || priceRatio < 0.5) {
-      console.warn(
-        `[depeg] Skipping ${meta.symbol}: price ${price} is ${(priceRatio * 100).toFixed(0)}% of peg ${pegRef}`
-      );
-      continue;
-    }
-
     const bps = Math.round(((price / pegRef) - 1) * 10000);
     const absBps = Math.abs(bps);
     const direction = bps >= 0 ? "above" : "below";
     const existing = openEvents.get(asset.id);
     const threshold = getDepegThresholdBps(asset.pegType);
+    const dexBps = computeDexBps(asset.id, pegRef);
+    const dexAbsBps = dexBps == null ? null : Math.abs(dexBps);
+    const dexConfirmsDirection =
+      dexBps != null && dexAbsBps != null && dexAbsBps >= threshold && (dexBps >= 0 ? "above" : "below") === direction;
+    const requiresConfirmation =
+      supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD ||
+      primaryTrust === "confirm_required" ||
+      absBps >= DEPEG_EXTREME_MOVE_BPS;
+    const pendingReason: PendingDepegReason =
+      absBps >= DEPEG_EXTREME_MOVE_BPS
+        ? "extreme-move"
+        : primaryTrust === "confirm_required"
+          ? "low-confidence"
+          : "large-cap";
 
     if (absBps >= threshold) {
       if (existing) {
         // Direction change: close old event and open a new one
         if (existing.direction !== direction) {
-          stmts.push(
-            db.prepare(
-              "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-            ).bind(now, price, existing.id)
-          );
-          stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(asset, direction, bps, price, pegRef)));
+          if (primaryTrust === "authoritative" || dexConfirmsDirection) {
+            stmts.push(
+              db.prepare(
+                "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+              ).bind(now, price, existing.id)
+            );
+            if (requiresConfirmation) {
+              stmts.push(buildInsertPendingStmt(asset, direction, bps, price, pegRef, pendingReason));
+            } else {
+              stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(asset, direction, bps, price, pegRef)));
+            }
+          } else {
+            seen.add(existing.id);
+          }
         } else {
           // Same direction — event stays open
           seen.add(existing.id);
-          if (absBps > Math.abs(existing.peak_deviation_bps)) {
+          if ((primaryTrust === "authoritative" || dexConfirmsDirection) && absBps > Math.abs(existing.peak_deviation_bps)) {
             // Update peak if this deviation is worse
             stmts.push(
               db.prepare(
@@ -165,11 +209,8 @@ export async function detectDepegEvents(
 
           // DEX cross-validation for ongoing events
           const dexRow = dexPriceRows.get(asset.id);
-          const dexFresh = dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
-          if (dexFresh && dexRow) {
-            const dexAbsBps = Math.abs(Math.round(
-              ((dexRow.dex_price_usd / pegRef) - 1) * 10000
-            ));
+          const dexFresh = dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
+          if (dexFresh && dexRow && dexAbsBps != null) {
             if (dexAbsBps < threshold) {
               // DEX disagrees with ongoing depeg
               const eventAge = now - existing.started_at;
@@ -201,28 +242,26 @@ export async function detectDepegEvents(
 
         if (coinSupply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) {
           // >=$1B coin: insert into pending table for confirmation next cycle
-          stmts.push(
-            db.prepare(
-              `INSERT INTO depeg_pending (stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-               ON CONFLICT(stablecoin_id) DO NOTHING`
-            ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, price, pegRef)
-          );
+          stmts.push(buildInsertPendingStmt(asset, direction, bps, price, pegRef, pendingReason));
           console.log(
             `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (supply $${(coinSupply / 1e9).toFixed(1)}B)`
           );
+        } else if (requiresConfirmation) {
+          if (pendingReason === "extreme-move" && dexConfirmsDirection) {
+            stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(asset, direction, bps, price, pegRef)));
+          } else {
+            stmts.push(buildInsertPendingStmt(asset, direction, bps, price, pegRef, pendingReason));
+            console.log(`[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (${pendingReason})`);
+          }
         } else {
           // <$1B coin: existing behavior — DEX cross-validation then instant event
           const dexRow = dexPriceRows.get(asset.id);
-          const dexFresh = dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
-          if (dexFresh && dexRow) {
-            const dexBps = Math.abs(Math.round(
-              ((dexRow.dex_price_usd / pegRef) - 1) * 10000
-            ));
-            if (dexBps < threshold) {
+          const dexFresh = dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
+          if (dexFresh && dexRow && dexAbsBps != null) {
+            if (dexAbsBps < threshold) {
               console.log(
                 `[depeg] Suppressed new event for ${asset.symbol}: ` +
-                `primary=${bps}bps but DEX=${dexBps}bps (${dexRow.source_pool_count} pools, ` +
+                `primary=${bps}bps but DEX=${dexAbsBps}bps (${dexRow.source_pool_count} pools, ` +
                 `$${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
               );
               continue;
@@ -232,12 +271,24 @@ export async function detectDepegEvents(
         }
       }
     } else if (existing) {
-      // Price recovered — close the event (not added to seen since it's being closed)
-      stmts.push(
-        db.prepare(
-          "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-        ).bind(now, price, existing.id)
-      );
+      const dexRow = dexPriceRows.get(asset.id);
+      const dexFresh = dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
+      if (primaryTrust === "authoritative") {
+        // Price recovered — close the event
+        stmts.push(
+          db.prepare(
+            "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+          ).bind(now, price, existing.id)
+        );
+      } else if (dexFresh && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+        stmts.push(
+          db.prepare(
+            "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+          ).bind(now, dexRow.dex_price_usd, existing.id)
+        );
+      } else {
+        seen.add(existing.id);
+      }
     }
   }
 

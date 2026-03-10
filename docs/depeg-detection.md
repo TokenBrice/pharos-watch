@@ -1,6 +1,6 @@
 # Depeg Detection Pipeline
 
-Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs every 15 minutes as part of the `sync-stablecoins` cron. Stage 2 (confirmation) runs immediately after, promoting or rejecting candidates for large-cap coins that require multi-source agreement.
+Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs every 15 minutes as part of the `sync-stablecoins` cron. Stage 2 (confirmation) runs immediately after, promoting or rejecting candidates that require multi-source agreement: large-cap coins, low-confidence primary-price inputs, and extreme moves.
 
 ## Thresholds & Constants
 
@@ -12,6 +12,8 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 | `DEPEG_PENDING_MIN_AGE_SEC` | 900 (15 min) | Minimum time before a pending record can be promoted |
 | `DEPEG_PENDING_EXPIRY_SEC` | 2700 (45 min) | Maximum time before a pending record expires |
 | `DEPEG_SECONDARY_THRESHOLD_RATIO` | 0.5 | Secondary source agreement bar (50% of primary threshold) |
+| `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` | 1800 (30 min) | Primary prices older than this require confirmation |
+| `DEPEG_EXTREME_MOVE_BPS` | 5000 (50%) | Severe move threshold routed through dedicated confirmation lane |
 | `DEX_FRESHNESS_SEC` | 1200 (20 min) | DEX prices older than this are ignored |
 | `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | 1,000,000 | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
 
@@ -61,13 +63,14 @@ CREATE TABLE IF NOT EXISTS depeg_pending (
   first_seen_bps INTEGER NOT NULL,
   first_seen_at INTEGER NOT NULL,
   first_price REAL NOT NULL,
-  peg_reference REAL NOT NULL
+  peg_reference REAL NOT NULL,
+  reason TEXT NOT NULL DEFAULT 'large-cap' -- "large-cap" | "low-confidence" | "extreme-move"
 );
 
 CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
 ```
 
-One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation.
+One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation. Migration `0061` adds the `reason` column so operators can distinguish large-cap confirmations from ambiguous-price and extreme-move confirmations.
 
 ### Migration 0016
 
@@ -105,6 +108,12 @@ Validation gates (skip if any fail):
 - Supply >= $1M (via `sumPegBuckets`)
 - Peg reference valid: finite and > 0
 
+Primary-price trust gates:
+
+- `authoritative`: fresh `high` / `single-source` current-sync prices
+- `confirm_required`: cached, fallback, low-confidence, or stale primary prices
+- `unusable`: invalid/missing/non-finite price
+
 Deviation calculation:
 
 ```
@@ -116,26 +125,30 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path A -- Deviation >= threshold AND event already open**
 
-- If direction changed (was above, now below or vice versa): close old event, open new one
-- Same direction: mark as legitimately open (add to `seen` set), update peak if worse
+- If direction changed: only flip the live event when the primary price is authoritative or a trusted DEX row corroborates the new direction
+- Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a trusted DEX row corroborates the move
 - DEX cross-validation for ongoing events: if a **trusted** DEX row disagrees AND event is >= 30 min old, auto-close the event
 
 **Path B -- Deviation >= threshold AND no event open**
 
-- Supply >= $1B: insert into `depeg_pending` (`ON CONFLICT DO NOTHING`) for multi-source confirmation
-- Supply < $1B: check trusted DEX cross-validation. If a trusted DEX row disagrees, suppress (skip). Otherwise, insert into `depeg_events` immediately
+- If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific)
+- If primary trust is `confirm_required`: insert into `depeg_pending` with `reason = "low-confidence"`
+- If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Trusted DEX corroboration may still promote the move immediately for non-large-cap coins
+- Otherwise (authoritative primary input, non-large-cap, non-extreme): use trusted DEX suppression and insert into `depeg_events` immediately
 
 **Path C -- Deviation < threshold AND event open**
 
-- Price recovered: close event with `recovery_price` = current price
+- Close immediately only when the primary price is authoritative
+- If the primary input is ambiguous, close only when a trusted DEX row also shows recovery
+- Otherwise keep the event open rather than letting cached/low-confidence prices silently resolve it
 
 ### Orphan Cleanup
 
-After the main loop, load all open events. Close any that were not in the `seen` set and were not created during the current run. These are "orphans" -- the coin was removed from tracking, has missing price, dropped below $1M supply, or became a NAV token. Orphans are closed with `recovery_price = NULL`.
+After the main loop, load all open events. Close any that were not in the `seen` set and were not created during the current run. These are true "orphans" -- the coin was removed from tracking or exited the PSI-eligible set. Tracked coins are intentionally kept open through transient missing-price or ambiguous-input cycles and are **not** force-closed just because one run lacked a trusted recovery signal. Orphans are closed with `recovery_price = NULL`.
 
 ## Stage 2 -- Confirmation
 
-Processes all rows in `depeg_pending`. Only applies to coins with supply >= $1B.
+Processes all rows in `depeg_pending`. Applies to large-cap coins, low-confidence primary-price candidates, and extreme-move candidates.
 
 ### Per-Record Processing
 
@@ -144,7 +157,7 @@ Guards (delete pending + skip):
 1. Invalid `peg_reference` (<= 0)
 2. Open event already exists for this coin (another path created it)
 
-Recovery check: if current price is valid and deviation now < threshold, delete pending (transient noise).
+Recovery check: if the current **authoritative** primary price is valid and deviation now < threshold, delete pending (transient noise). Ambiguous primary prices do not clear pending rows on their own.
 
 Age checks:
 
@@ -265,10 +278,11 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers based o
 
 - Fetches `/api/depeg-events` with optional `?stablecoin=` filter
 - TanStack Query: `staleTime` = 15 min, `refetchInterval` = 30 min
+- Companion hook `useInfiniteDepegEvents()` pages through `/api/depeg-events?limit=100&offset=...` for `/depeg`
 
 ### Component: DepegFeed (`depeg-feed.tsx`)
 
-- 2-column grid of recent events (page size 20)
+- Responsive recent-events feed with progressive history pagination
 - Sorted by `startedAt` DESC
 - Shows: logo, symbol, peak deviation (red >= 500bps, amber < 500bps), direction badge, LIVE pulsing indicator if ongoing, date, duration
 - Click navigates to `/stablecoin/{id}`

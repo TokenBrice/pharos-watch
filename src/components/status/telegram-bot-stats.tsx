@@ -16,10 +16,23 @@ interface DispatchMetadata {
   cappedAtLimit: boolean;
   snapshotSeeded: boolean;
   skipped: string | null;
+  freshAttempted: number | null;
+  freshSent: number | null;
+  freshRetryQueued: number | null;
+  freshPermanentFailures: number | null;
+  pendingAttempted: number | null;
+  pendingDrained: number | null;
+  pendingRetryQueued: number | null;
+  pendingDropped: number | null;
+  pendingEnqueued: number | null;
   eventsDetected: {
     dews: number | null;
     depeg: number | null;
+    depegTriggered: number | null;
+    depegResolved: number | null;
+    depegWorsening: number | null;
     safety: number | null;
+    suppressedMethodologyChanges: number | null;
   } | null;
 }
 
@@ -48,11 +61,24 @@ function parseDispatchMetadata(value: unknown): DispatchMetadata | null {
     cappedAtLimit: record.cappedAtLimit === true,
     snapshotSeeded: record.snapshotSeeded === true,
     skipped: typeof record.skipped === "string" ? record.skipped : null,
+    freshAttempted: readNumber(record.freshAttempted),
+    freshSent: readNumber(record.freshSent),
+    freshRetryQueued: readNumber(record.freshRetryQueued),
+    freshPermanentFailures: readNumber(record.freshPermanentFailures),
+    pendingAttempted: readNumber(record.pendingAttempted),
+    pendingDrained: readNumber(record.pendingDrained),
+    pendingRetryQueued: readNumber(record.pendingRetryQueued),
+    pendingDropped: readNumber(record.pendingDropped),
+    pendingEnqueued: readNumber(record.pendingEnqueued),
     eventsDetected: eventsRecord
       ? {
           dews: readNumber(eventsRecord.dews),
           depeg: readNumber(eventsRecord.depeg),
+          depegTriggered: readNumber(eventsRecord.depegTriggered),
+          depegResolved: readNumber(eventsRecord.depegResolved),
+          depegWorsening: readNumber(eventsRecord.depegWorsening),
           safety: readNumber(eventsRecord.safety),
+          suppressedMethodologyChanges: readNumber(eventsRecord.suppressedMethodologyChanges),
         }
       : null,
   };
@@ -93,7 +119,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, nowSeconds }: Tele
     {
       label: "Subscribers",
       value: telegramBot.totalChats,
-      detail: `${telegramBot.alertEnabledChats} with alert flags enabled`,
+      detail: `${telegramBot.alertEnabledChats} with active or saved alert defaults`,
     },
     {
       label: "Alert-Ready Chats",
@@ -106,12 +132,12 @@ export function TelegramBotStats({ telegramBot, dispatchCron, nowSeconds }: Tele
       detail: `avg ${formatMetric(telegramBot.avgSubscriptionsPerSubscribedChat)} per subscribed chat`,
     },
     {
-      label: "Pending Replies",
-      value: telegramBot.pendingDisambiguations,
+      label: "Pending Queue",
+      value: telegramBot.pendingDeliveries,
       detail:
         telegramBot.lastSubscriberActivityAt != null
-          ? `last activity ${formatAge(Math.max(0, nowSeconds - telegramBot.lastSubscriberActivityAt))} ago`
-          : "no bot activity yet",
+          ? `${telegramBot.pendingDisambiguations} pending replies, last activity ${formatAge(Math.max(0, nowSeconds - telegramBot.lastSubscriberActivityAt))} ago`
+          : `${telegramBot.pendingDisambiguations} pending replies`,
     },
   ];
 
@@ -140,6 +166,8 @@ export function TelegramBotStats({ telegramBot, dispatchCron, nowSeconds }: Tele
             {renderDelta("Safety enabled", telegramBot.alertTypeChats.safety)}
             {renderDelta("All 3 alert types", telegramBot.alertTypeChats.allTypes)}
             <div className="border-t pt-3">
+              {renderDelta("Custom preference chats", telegramBot.customPreferenceChats)}
+              {renderDelta("Quiet hours enabled", telegramBot.quietHoursEnabledChats)}
               {renderDelta("Flags on, no coins", telegramBot.emptyAlertChats)}
               {renderDelta("Muted with saved coins", telegramBot.mutedChatsWithSubscriptions)}
             </div>
@@ -167,13 +195,23 @@ export function TelegramBotStats({ telegramBot, dispatchCron, nowSeconds }: Tele
                 ) : null}
                 {renderDelta("Subscribers notified", dispatchMeta?.subscribersNotified ?? null)}
                 {renderDelta("Messages sent", dispatchMeta?.messagesSent ?? lastDispatch.itemCount ?? null)}
+                {renderDelta("Fresh attempted", dispatchMeta?.freshAttempted ?? null)}
+                {renderDelta("Fresh retries queued", dispatchMeta?.freshRetryQueued ?? null)}
+                {renderDelta("Fresh permanent failures", dispatchMeta?.freshPermanentFailures ?? null)}
+                {renderDelta("Pending attempted", dispatchMeta?.pendingAttempted ?? null)}
+                {renderDelta("Pending sent", dispatchMeta?.pendingDrained ?? null)}
+                {renderDelta("Pending retries queued", dispatchMeta?.pendingRetryQueued ?? null)}
+                {renderDelta("Pending dropped", dispatchMeta?.pendingDropped ?? null)}
+                {renderDelta("Pending newly enqueued", dispatchMeta?.pendingEnqueued ?? null)}
                 {renderDelta("Blocked cleaned up", dispatchMeta?.blockedUsersCleanedUp ?? null)}
                 {renderDelta("DEWS changes", dispatchMeta?.eventsDetected?.dews ?? null)}
                 {renderDelta("Depeg changes", dispatchMeta?.eventsDetected?.depeg ?? null)}
+                {renderDelta("Depeg worsening", dispatchMeta?.eventsDetected?.depegWorsening ?? null)}
                 {renderDelta("Safety changes", dispatchMeta?.eventsDetected?.safety ?? null)}
+                {renderDelta("Methodology suppressions", dispatchMeta?.eventsDetected?.suppressedMethodologyChanges ?? null)}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {dispatchMeta?.snapshotSeeded ? <Badge variant="secondary">snapshot reseeded</Badge> : null}
-                  {dispatchMeta?.cappedAtLimit ? <Badge variant="secondary">hit 50-message cap</Badge> : null}
+                  {dispatchMeta?.cappedAtLimit ? <Badge variant="secondary">hit message cap</Badge> : null}
                 </div>
               </>
             ) : (

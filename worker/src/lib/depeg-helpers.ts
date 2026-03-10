@@ -1,10 +1,12 @@
 import type { DepegEvent } from "@shared/types";
 import {
+  DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
   DEX_PRICE_CHECK_FRESHNESS_SEC,
   DEX_PRICE_CHECK_UI_MIN_TVL_USD,
 } from "./constants";
+import type { DepegPrimaryTrust, PriceConfidence } from "@shared/types";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {
@@ -33,6 +35,14 @@ export interface DexPriceRow {
 }
 
 export type DexPriceTrustTier = "ui" | "depeg";
+export type PendingDepegReason = "large-cap" | "low-confidence" | "extreme-move";
+
+interface PrimaryPriceTrustInput {
+  price?: number | null;
+  priceSource?: string | null;
+  priceConfidence?: PriceConfidence | null;
+  priceUpdatedAt?: number | null;
+}
 
 export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexPriceRow>> {
   try {
@@ -57,6 +67,35 @@ export function isTrustedDexPriceRow(
   const maxAgeSec = tier === "ui" ? DEX_PRICE_CHECK_FRESHNESS_SEC : DEX_FRESHNESS_SEC;
   const minTvlUsd = tier === "ui" ? DEX_PRICE_CHECK_UI_MIN_TVL_USD : DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD;
   return (nowSec - row.updated_at) < maxAgeSec && row.source_total_tvl >= minTvlUsd;
+}
+
+export function classifyPrimaryDepegTrust(
+  input: PrimaryPriceTrustInput,
+  nowSec: number,
+): DepegPrimaryTrust {
+  if (input.price == null || !Number.isFinite(input.price) || input.price <= 0) {
+    return "unusable";
+  }
+
+  const ageSec =
+    typeof input.priceUpdatedAt === "number" && Number.isFinite(input.priceUpdatedAt)
+      ? Math.max(0, nowSec - input.priceUpdatedAt)
+      : Number.POSITIVE_INFINITY;
+
+  if (
+    input.priceSource === "cached" ||
+    input.priceConfidence === "fallback" ||
+    input.priceConfidence === "low" ||
+    ageSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
+  ) {
+    return "confirm_required";
+  }
+
+  if (input.priceConfidence === "high" || input.priceConfidence === "single-source") {
+    return "authoritative";
+  }
+
+  return "confirm_required";
 }
 
 export function buildInsertDepegEventStmt(

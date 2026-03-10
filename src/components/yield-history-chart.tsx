@@ -40,6 +40,11 @@ interface YieldHistoryChartPoint {
   apyReward: number | null;
   sourceTvlUsd: number | null;
   warningSignals: string[];
+  sourceKey: string | null;
+  yieldSource: string | null;
+  dataSource: string | null;
+  isBest: boolean;
+  sourceSwitch: boolean;
 }
 
 interface AxisTickProps {
@@ -212,6 +217,25 @@ function WarningDot({ cx, cy, payload, active = false }: WarningDotProps) {
   );
 }
 
+function SourceSwitchDot({ cx, cy, payload, active = false }: WarningDotProps) {
+  if (typeof cx !== "number" || typeof cy !== "number" || !payload?.sourceSwitch) {
+    return null;
+  }
+
+  return (
+    <rect
+      x={cx - (active ? 4 : 3)}
+      y={cy - (active ? 4 : 3)}
+      width={active ? 8 : 6}
+      height={active ? 8 : 6}
+      rx={1.5}
+      fill={CHART_BLUE}
+      stroke="var(--color-background)"
+      strokeWidth={active ? 2 : 1.5}
+    />
+  );
+}
+
 function YieldHistoryTooltip({
   active,
   payload,
@@ -243,6 +267,12 @@ function YieldHistoryTooltip({
     >
       <p className="font-medium text-foreground">{formatTooltipDate(labelTimestamp)}</p>
       <div className="mt-2 space-y-1.5 text-muted-foreground">
+        {point.yieldSource ? (
+          <div className="flex items-center justify-between gap-4">
+            <span>Source</span>
+            <span className="max-w-[160px] truncate text-right text-foreground">{point.yieldSource}</span>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between gap-4">
           <span>APY</span>
           <span className="font-mono tabular-nums text-foreground">{formatPercent(point.apy)}%</span>
@@ -264,6 +294,11 @@ function YieldHistoryTooltip({
           </>
         ) : null}
       </div>
+      {point.sourceSwitch ? (
+        <div className="mt-2 rounded-md border border-sky-500/25 bg-sky-500/10 px-2.5 py-2 text-[10px] uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">
+          Source switch
+        </div>
+      ) : null}
       {point.warningSignals.length > 0 ? (
         <div className="mt-2 border-t border-border/60 pt-2">
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">
@@ -305,6 +340,11 @@ export function YieldHistoryChart({
           apyReward: point.apyReward,
           sourceTvlUsd: point.sourceTvlUsd,
           warningSignals: point.warningSignals,
+          sourceKey: point.sourceKey ?? null,
+          yieldSource: point.yieldSource ?? null,
+          dataSource: point.dataSource ?? null,
+          isBest: point.isBest ?? false,
+          sourceSwitch: point.sourceSwitch ?? false,
         };
       })
       .filter((point) => Number.isFinite(point.date))
@@ -404,6 +444,11 @@ export function YieldHistoryChart({
 
   return (
     <div className="space-y-3">
+      {historyQuery.meta?.warning ? (
+        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          {historyQuery.meta.warning}
+        </div>
+      ) : null}
       <Controls
         compact={compact}
         days={days}
@@ -522,6 +567,16 @@ export function YieldHistoryChart({
                 legendType="none"
                 isAnimationActive={false}
               />
+              <Line
+                type="monotone"
+                dataKey="apy"
+                stroke="transparent"
+                strokeWidth={0}
+                dot={<SourceSwitchDot />}
+                activeDot={<SourceSwitchDot active />}
+                legendType="none"
+                isAnimationActive={false}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -540,6 +595,10 @@ export function YieldHistoryChart({
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: CHART_AMBER }} />
           Warning markers
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+          <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: CHART_BLUE }} />
+          Source switches
         </span>
       </div>
     </div>

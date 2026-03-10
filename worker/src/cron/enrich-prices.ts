@@ -24,7 +24,8 @@ export interface PeggedAsset {
   commodityOunces?: number;
   price?: number | null;
   priceSource?: string;
-  priceConfidence?: string | null;
+  priceConfidence?: PriceConfidence | null;
+  priceUpdatedAt?: number | null;
   supplySource?: string;
   pegType?: string;
   circulating?: Record<string, number>;
@@ -33,6 +34,19 @@ export interface PeggedAsset {
 
 export function hasMissingPrice(a: PeggedAsset): boolean {
   return a.price == null || typeof a.price !== "number" || a.price === 0;
+}
+
+function applyResolvedPrice(
+  asset: PeggedAsset,
+  price: number,
+  source: string,
+  confidence: PriceConfidence,
+  updatedAtSec = Math.floor(Date.now() / 1000),
+): void {
+  asset.price = price;
+  asset.priceSource = source;
+  asset.priceConfidence = confidence;
+  asset.priceUpdatedAt = updatedAtSec;
 }
 
 /** Hardcoded price bounds per peg type — used as fallback when FX rates are unavailable */
@@ -469,7 +483,7 @@ export async function enrichMissingPrices(
         for (const m of withAddress) {
           const price = pass1Prices.get(m.coinId);
           if (price != null) {
-            assets[m.index].price = price;
+            applyResolvedPrice(assets[m.index], price, "defillama-contract", "single-source");
             pass1Count++;
           }
         }
@@ -512,7 +526,7 @@ export async function enrichMissingPrices(
             if (resolved.has(m.index)) continue;
             const price = pass1bPrices.get(m.coinId);
             if (price != null) {
-              assets[m.index].price = price;
+              applyResolvedPrice(assets[m.index], price, "defillama-contract", "single-source");
               pass1bCount++;
               resolved.add(m.index);
             }
@@ -552,7 +566,7 @@ export async function enrichMissingPrices(
         for (const m of geckoPass) {
           const price = pass2Prices.get(`coingecko:${m.geckoId}`);
           if (price != null) {
-            assets[m.index].price = price;
+            applyResolvedPrice(assets[m.index], price, "defillama", "single-source");
             pass2Count++;
           } else {
             afterPass2.push(m);
@@ -585,7 +599,7 @@ export async function enrichMissingPrices(
         for (const m of afterPass2) {
           const price = pass3Prices.get(m.geckoId);
           if (price != null) {
-            assets[m.index].price = price;
+            applyResolvedPrice(assets[m.index], price, "coingecko", "single-source");
             pass3Count++;
           }
         }
@@ -659,7 +673,7 @@ export async function enrichMissingPrices(
                   fxRates,
                   buildPriceReasonablenessOptions(m.asset),
                 )) {
-                  assets[m.index].price = cmcEntry.price;
+                  applyResolvedPrice(assets[m.index], cmcEntry.price, "coinmarketcap", "fallback");
                   passCmcCount++;
                 }
               }
@@ -751,7 +765,7 @@ export async function enrichMissingPrices(
             fxRates,
             buildPriceReasonablenessOptions(m.asset),
           )) {
-            assets[m.index].price = price;
+            applyResolvedPrice(assets[m.index], price, "dexscreener", "fallback");
             pass4Count++;
           }
         } catch (err) {

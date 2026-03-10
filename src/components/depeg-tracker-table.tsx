@@ -202,7 +202,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
               sortKey="dexAgrees"
               currentSortKey={sortKey}
               sortDirection={sortDirection}
-              label="DEX Price Check"
+              label="DEX Cross-check"
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
@@ -227,6 +227,15 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
             const absDev = Math.abs(coin.currentDeviationBps ?? 0);
             const accent = rowAccentClass(row);
             const rank = pageStartIndex + i + 1;
+            const provenanceLabel = [coin.priceSource ?? "unknown source", coin.priceConfidence ?? "unknown confidence"].join(" · ");
+            const trustBadge =
+              coin.primaryTrust === "confirm_required"
+                ? coin.priceSource === "cached"
+                  ? "cached"
+                  : coin.priceConfidence === "low"
+                    ? "low conf"
+                    : "verify"
+                : null;
 
             return (
               <InteractiveTableRow
@@ -243,6 +252,14 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                   <div className="flex items-center gap-2 min-w-0">
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
                     <span className="font-medium text-sm truncate">{coin.symbol}</span>
+                    {trustBadge && (
+                      <span
+                        className="rounded-full border border-slate-300/80 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-700 dark:border-slate-600 dark:text-slate-300"
+                        title={`Primary price requires confirmation (${provenanceLabel})`}
+                      >
+                        {trustBadge}
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground truncate hidden xl:inline">{coin.name}</span>
                   </div>
                 </TableCell>
@@ -265,7 +282,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                     <span className="text-muted-foreground text-sm">—</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right font-mono tabular-nums text-sm">
+                <TableCell className="text-right font-mono tabular-nums text-sm" title={provenanceLabel}>
                   {coin.currentDeviationBps !== null ? (
                     <span className={deviationColorClass(absDev)}>
                       {coin.currentDeviationBps > 0 ? "+" : ""}{coin.currentDeviationBps} bps

@@ -40,11 +40,17 @@ function makeAsset(overrides: {
   price: number;
   pegType?: string;
   circulating?: Record<string, number>;
+  priceSource?: string;
+  priceConfidence?: "high" | "single-source" | "low" | "fallback";
+  priceUpdatedAt?: number;
 }) {
   return {
     id: overrides.id,
     symbol: overrides.symbol,
     price: overrides.price,
+    priceSource: overrides.priceSource ?? "defillama",
+    priceConfidence: overrides.priceConfidence ?? "single-source",
+    priceUpdatedAt: overrides.priceUpdatedAt ?? Math.floor(Date.now() / 1000),
     pegType: overrides.pegType ?? "peggedUSD",
     circulating: overrides.circulating ?? { ethereum: 50_000_000 },
   };
@@ -444,7 +450,7 @@ describe("detectDepegEvents", () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it("skips prices more than 2x peg reference", async () => {
+  it("routes extreme upside moves into pending confirmation instead of dropping them", async () => {
     const preparedSqls: string[] = [];
     const db = mockD1([
       { match: "depeg_events", rows: [] },
@@ -462,13 +468,13 @@ describe("detectDepegEvents", () => {
 
     await detectDepegEvents(db, assets);
 
-    const inserts = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_events") || s.includes("INSERT INTO depeg_pending")
+    const pending = preparedSqls.filter(s =>
+      s.includes("INSERT INTO depeg_pending")
     );
-    expect(inserts).toHaveLength(0);
+    expect(pending.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("skips prices less than 0.5x peg reference", async () => {
+  it("routes extreme downside moves into pending confirmation instead of dropping them", async () => {
     const preparedSqls: string[] = [];
     const db = mockD1([
       { match: "depeg_events", rows: [] },
@@ -486,10 +492,10 @@ describe("detectDepegEvents", () => {
 
     await detectDepegEvents(db, assets);
 
-    const inserts = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_events") || s.includes("INSERT INTO depeg_pending")
+    const pending = preparedSqls.filter(s =>
+      s.includes("INSERT INTO depeg_pending")
     );
-    expect(inserts).toHaveLength(0);
+    expect(pending.length).toBeGreaterThanOrEqual(1);
   });
 
   it("allows legitimate depeg prices within bounds", async () => {
@@ -515,6 +521,72 @@ describe("detectDepegEvents", () => {
       s.includes("INSERT INTO depeg_events")
     );
     expect(inserts.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not open a live event from cached fallback prices", async () => {
+    const preparedSqls: string[] = [];
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 0.98,
+        priceSource: "cached",
+        priceConfidence: "fallback",
+        priceUpdatedAt: now - 600,
+      }),
+    ]);
+
+    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_events"))).toBe(false);
+    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_pending"))).toBe(true);
+  });
+
+  it("updates peak for confirmed extreme moves below 50% of peg on an ongoing event", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -4000, started_at: now - 3600,
+          start_price: 0.6, peak_price: 0.6, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      {
+        match: "dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.3,
+          deviation_from_primary_bps: 0,
+          source_pool_count: 4,
+          source_total_tvl: 5_000_000,
+          updated_at: now - 60,
+        }],
+      },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.3 }),
+    ]);
+
+    expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET peak_deviation_bps"))).toBe(true);
   });
 
   it("auto-closes false-positive via DEX cross-validation after 30 min", async () => {
@@ -590,6 +662,9 @@ describe("detectDepegEvents", () => {
         symbol: "USDT",
         pegType: "peggedUSD",
         price: Number.NaN, // missing price this cycle
+        priceSource: "defillama",
+        priceConfidence: "single-source",
+        priceUpdatedAt: now,
         circulating: { ethereum: 10_000_000 },
       } as ReturnType<typeof makeAsset>,
     ]);

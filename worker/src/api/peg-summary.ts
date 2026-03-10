@@ -9,10 +9,10 @@ import {
   jsonResponse,
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
-import { CACHE_PROFILES } from "../lib/constants";
+import { CACHE_PROFILES, getDepegThresholdBps } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
-import { isTrustedDexPriceRow } from "../lib/depeg-helpers";
+import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-helpers";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
@@ -127,10 +127,14 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     name: string;
     pegType: string;
     pegCurrency: string;
-    governance: string;
-    currentDeviationBps: number | null;
-    pegScore: number | null;
-    pegPct: number;
+      governance: string;
+      currentDeviationBps: number | null;
+      pegScore: number | null;
+      priceSource?: string;
+      priceConfidence?: StablecoinData["priceConfidence"];
+      priceUpdatedAt?: number | null;
+      primaryTrust?: "authoritative" | "confirm_required" | "unusable";
+      pegPct: number;
     severityScore: number;
     spreadPenalty: number;
     eventCount: number;
@@ -161,6 +165,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
 
     const asset = priceById.get(meta.id);
     const currentBps = pegData.currentDeviationBps;
+    const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
 
     // Build DEX price check if available (only for coins with meaningful supply)
     let dexPriceCheck: typeof coins[number]["dexPriceCheck"] = null;
@@ -203,6 +208,10 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       governance: meta.flags.governance,
       currentDeviationBps: currentBps,
       pegScore: pegData.pegScore,
+      priceSource: asset?.priceSource,
+      priceConfidence: asset?.priceConfidence ?? null,
+      priceUpdatedAt: asset?.priceUpdatedAt ?? null,
+      primaryTrust,
       pegPct: pegData.pegPct,
       severityScore: pegData.severityScore,
       spreadPenalty: pegData.spreadPenalty,
@@ -220,7 +229,8 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     if (currentBps !== null) {
       const absBps = Math.abs(currentBps);
       allAbsBps.push(absBps);
-      if (absBps < 100) coinsAtPeg++;
+      const pegThreshold = getDepegThresholdBps(pegData.pegType || asset?.pegType);
+      if (absBps < pegThreshold) coinsAtPeg++;
       if (!worstCurrent || absBps > Math.abs(worstCurrent.bps)) {
         worstCurrent = { id: meta.id, symbol: meta.symbol, bps: currentBps };
       }

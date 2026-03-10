@@ -1,6 +1,6 @@
 "use client";
 
-import { useApiQuery, CRON_15MIN } from "./use-api-query";
+import { useApiQueryWithMeta, CRON_15MIN } from "./use-api-query";
 import type {
   StressSignalsAllResponse,
   StressSignalDetailResponse,
@@ -11,7 +11,7 @@ import {
 } from "@shared/types";
 
 export function useStressSignals() {
-  return useApiQuery<StressSignalsAllResponse>(
+  return useApiQueryWithMeta<StressSignalsAllResponse>(
     ["stress-signals"],
     "/api/stress-signals",
     CRON_15MIN,
@@ -20,7 +20,7 @@ export function useStressSignals() {
 }
 
 export function useStressSignalDetail(stablecoinId: string, days = 30) {
-  return useApiQuery<StressSignalDetailResponse>(
+  return useApiQueryWithMeta<StressSignalDetailResponse>(
     ["stress-signals", stablecoinId, days],
     `/api/stress-signals?stablecoin=${stablecoinId}&days=${days}`,
     CRON_15MIN,

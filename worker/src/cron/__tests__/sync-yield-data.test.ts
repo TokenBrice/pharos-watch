@@ -742,6 +742,81 @@ describe("syncYieldData", () => {
     expect(priceDerivedRow?.boundValues?.[25]).toBe(1);
   });
 
+  it("computes trailing APY from source-specific history instead of mixed coin-level history", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "100",
+            source_key: "price-derived",
+            recorded_at: nowSec - 2 * 86400,
+            is_best: 1,
+            apy: 2,
+            source_tvl_usd: null,
+            data_source: "price-derived",
+            yield_source: null,
+            yield_type: null,
+          },
+          {
+            stablecoin_id: "100",
+            source_key: "pool-sdai-zero",
+            recorded_at: nowSec - 2 * 86400,
+            is_best: 0,
+            apy: 9,
+            source_tvl_usd: 500_000_000,
+            data_source: "defillama",
+            yield_source: "DSR",
+            yield_type: "nav-appreciation",
+          },
+        ],
+      },
+      { match: "supply_history", rows: [], first: { price: 1.05 } },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-sdai-zero",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 500_000_000,
+              apy: 0,
+              apyBase: 0,
+              apyReward: null,
+              apyMean30d: 0,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const priceDerivedRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "price-derived",
+    );
+
+    // Source-specific history should average [2, 4] => 3.0 instead of mixing in the DL row's 9% sample.
+    expect(Number(priceDerivedRow?.boundValues?.[7])).toBeCloseTo(3, 3);
+  });
+
   it("resolves rate-derived yield from cached T-bill rate for configured tokens", async () => {
     // Temporarily inject a rate-derived config for sDAI (id "100")
     const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;

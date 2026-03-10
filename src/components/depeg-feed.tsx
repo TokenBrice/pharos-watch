@@ -14,12 +14,15 @@ import type { DepegEvent } from "@shared/types";
 interface DepegFeedProps {
   events: DepegEvent[];
   logos?: Record<string, string>;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 const MOBILE_PAGE_SIZE = 3;
 const DESKTOP_PAGE_SIZE = 6;
 
-export function DepegFeed({ events, logos }: DepegFeedProps) {
+export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = false, onLoadMore }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
   const [pageSize, setPageSize] = useState(MOBILE_PAGE_SIZE);
   const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
@@ -48,7 +51,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
   );
 
   const visible = sorted.slice(0, visibleCount);
-  const hasMore = visibleCount < sorted.length;
+  const hasMoreLoaded = visibleCount < sorted.length;
 
   // Pre-compute new-event animation index (capped at 3 animated entries).
   const newIndexMap = useMemo(() => {
@@ -142,15 +145,27 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
           );
         })}
 
-        {hasMore && (
+        {(hasMoreLoaded || hasMore) && (
           <div className="pt-2 text-center lg:col-span-3">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setVisibleCount((c) => c + pageSize)}
+              onClick={() => {
+                if (hasMoreLoaded) {
+                  setVisibleCount((c) => c + pageSize);
+                  return;
+                }
+                setVisibleCount((c) => c + pageSize);
+                onLoadMore?.();
+              }}
               className="text-xs"
+              disabled={isLoadingMore}
             >
-              Load more ({sorted.length - visibleCount} remaining)
+              {isLoadingMore
+                ? "Loading..."
+                : hasMoreLoaded
+                  ? `Load more (${sorted.length - visibleCount} loaded remaining)`
+                  : "Load more history"}
             </Button>
           </div>
         )}

@@ -61,6 +61,23 @@ describe("deriveDataHealth", () => {
     expect(health.state).toBe("degraded");
   });
 
+  it("prefers backend freshness metadata over a fresh browser fetch timestamp", () => {
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const health = deriveDataHealth({
+      label: "Depeg Events",
+      dataUpdatedAt: now - 30_000,
+      staleTime: 15 * 60_000,
+      hasData: true,
+      meta: {
+        updatedAt: Math.floor((now - 2 * 60 * 60_000) / 1000),
+        ageSeconds: 7200,
+        status: "stale",
+      },
+    });
+    expect(health.state).toBe("stale");
+  });
+
   it("returns unavailable on 503 error with no data", () => {
     const health = deriveDataHealth({
       label: "Digests",
@@ -94,6 +111,18 @@ describe("deriveDataHealth", () => {
       hasData: true,
     });
     expect(health.state).toBe("degraded");
+  });
+
+  it("treats empty successful responses as available when the caller marks hasData true", () => {
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const health = deriveDataHealth({
+      label: "Depeg Events",
+      dataUpdatedAt: now - 30_000,
+      staleTime: 15 * 60_000,
+      hasData: true,
+    });
+    expect(health.state).toBe("fresh");
   });
 });
 

@@ -665,6 +665,9 @@ describe("syncStablecoins", () => {
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const normalized = payload?.peggedAssets.find((a) => a.id === "usdt-tether");
     expect(normalized?.price).toBe(0.999);
+    expect(normalized?.priceSource).toBe("cached");
+    expect(normalized?.priceConfidence).toBe("fallback");
+    expect(normalized?.priceUpdatedAt).toBe(nowSec - 60);
   });
 
   it("passes commodityOunces into price sanity checks for fractional gold tokens", async () => {

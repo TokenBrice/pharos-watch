@@ -378,8 +378,13 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                         )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1" title={row.provenance?.selectionReason ?? row.yieldSource}>
                           <span className="truncate">{row.yieldSource}</span>
+                          {row.provenance?.sourceSwitch ? (
+                            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
+                              switch
+                            </span>
+                          ) : null}
                           {(row.altSources?.length ?? 0) > 0 && <AltSourcesPopover altSources={row.altSources} />}
                         </div>
                       </TableCell>

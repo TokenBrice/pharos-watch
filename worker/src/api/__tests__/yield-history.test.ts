@@ -14,6 +14,10 @@ describe("handleYieldHistory", () => {
       date: number; apy: number; apyBase: number | null;
       apyReward: number | null; exchangeRate: number | null;
       sourceTvlUsd: number | null;
+      sourceKey: string | null;
+      dataSource: string | null;
+      isBest: boolean;
+      sourceSwitch: boolean;
     }>;
     expect(body).toHaveLength(1);
     expect(body[0]).toHaveProperty("date");
@@ -22,6 +26,10 @@ describe("handleYieldHistory", () => {
     expect(body[0]).toHaveProperty("apyReward");
     expect(body[0]).toHaveProperty("exchangeRate");
     expect(body[0]).toHaveProperty("sourceTvlUsd");
+    expect(body[0]).toHaveProperty("sourceKey");
+    expect(body[0]).toHaveProperty("dataSource");
+    expect(body[0]).toHaveProperty("isBest");
+    expect(body[0]).toHaveProperty("sourceSwitch");
   });
 
   it("returns 200 with empty array when no data", async () => {
@@ -55,5 +63,16 @@ describe("handleYieldHistory", () => {
     expect(body[0]).not.toHaveProperty("apy_reward");
     expect(body[0]).not.toHaveProperty("exchange_rate");
     expect(body[0]).not.toHaveProperty("source_tvl_usd");
+  });
+
+  it("supports source-specific history mode", async () => {
+    const db = mockD1([{ match: "yield_history", rows: [row] }]);
+    const res = await handleYieldHistory(
+      db,
+      new URL(`https://x/api/yield-history?stablecoin=usdt-tether&sourceKey=${encodeURIComponent("aave-v3:usdt")}`),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as Array<{ sourceKey: string }>;
+    expect(body[0]?.sourceKey).toBe("aave-v3:usdt");
   });
 });

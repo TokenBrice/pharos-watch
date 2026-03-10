@@ -45,9 +45,20 @@ const SYMBOL_INDEX: Map<string, ResolvedCoin[]> = (() => {
   return map;
 })();
 
+const ID_INDEX: Map<string, ResolvedCoin> = new Map(
+  TRACKED_STABLECOINS.map((meta) => [
+    meta.id.toLowerCase(),
+    { id: meta.id, symbol: meta.symbol, name: meta.name },
+  ]),
+);
+
 /** Resolve a user-provided ticker to matching coin(s). Case-insensitive. */
 export function resolveTicker(ticker: string): TickerMatch {
   const key = ticker.toLowerCase();
+  const exactIdMatch = ID_INDEX.get(key);
+  if (exactIdMatch) {
+    return { status: "unique", matches: [exactIdMatch] };
+  }
   const matches = SYMBOL_INDEX.get(key);
   if (matches && matches.length === 1) {
     return { status: "unique", matches };
@@ -89,7 +100,7 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
     const lower = token.toLowerCase();
     if (ALERT_TYPES.has(lower)) {
       alertTypes.add(lower);
-    } else if (SYMBOL_INDEX.has(lower)) {
+    } else if (SYMBOL_INDEX.has(lower) || ID_INDEX.has(lower)) {
       tickers.push(token);
     } else {
       invalidTypes.push(token);
@@ -175,6 +186,16 @@ export interface DepegResolved {
   recoveryPrice: number;
 }
 
+export interface DepegWorsening {
+  stablecoinId: string;
+  symbol: string;
+  direction: "above" | "below";
+  previousDeviationBps: number;
+  currentDeviationBps: number;
+  price: number;
+  pegReference: number;
+}
+
 export interface SafetyChange {
   stablecoinId: string;
   symbol: string;
@@ -204,6 +225,10 @@ export function formatDepegResolvedLine(e: DepegResolved): string {
   return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\nRecovery price: $${e.recoveryPrice.toFixed(4)}`;
 }
 
+export function formatDepegWorseningLine(e: DepegWorsening): string {
+  return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${(e.previousDeviationBps / 100).toFixed(1)}% → ${(e.currentDeviationBps / 100).toFixed(1)}%\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})`;
+}
+
 export function formatSafetyLine(e: SafetyChange): string {
   const scores = e.oldScore != null && e.newScore != null ? `\nScore: ${e.oldScore} → ${e.newScore}` : "";
   return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldGrade} → ${e.newGrade}${scores}`;
@@ -213,12 +238,14 @@ export interface ConsolidatedAlerts {
   dews: DewsChange[];
   depegTriggered: DepegEvent[];
   depegResolved: DepegResolved[];
+  depegWorsening: DepegWorsening[];
   safety: SafetyChange[];
 }
 
 /** Build a consolidated HTML message for one subscriber. */
 export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   const sections: string[] = [];
+  const depegWorsening = alerts.depegWorsening ?? [];
 
   if (alerts.dews.length > 0) {
     sections.push(`<b>DEWS</b>\n${alerts.dews.map(formatDewsLine).join("\n\n")}`);
@@ -229,6 +256,9 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   if (alerts.depegResolved.length > 0) {
     sections.push(`<b>Depeg Resolved</b>\n${alerts.depegResolved.map(formatDepegResolvedLine).join("\n\n")}`);
   }
+  if (depegWorsening.length > 0) {
+    sections.push(`<b>Depeg Worsening</b>\n${depegWorsening.map(formatDepegWorseningLine).join("\n\n")}`);
+  }
   if (alerts.safety.length > 0) {
     sections.push(`<b>Safety Grade Change</b>\n${alerts.safety.map(formatSafetyLine).join("\n\n")}`);
   }
@@ -238,6 +268,7 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
     ...alerts.dews.map((e) => e.stablecoinId),
     ...alerts.depegTriggered.map((e) => e.stablecoinId),
     ...alerts.depegResolved.map((e) => e.stablecoinId),
+    ...depegWorsening.map((e) => e.stablecoinId),
     ...alerts.safety.map((e) => e.stablecoinId),
   ];
   const uniqueIds = new Set(allIds);
@@ -251,8 +282,40 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
 /** Split a message into chunks under the given character limit. */
 export function splitMessage(html: string, limit = 4000): string[] {
   if (html.length <= limit) return [html];
-  // Split on double-newline boundaries to preserve structure.
-  const sections = html.split("\n\n");
+
+  const splitOversizedSection = (section: string): string[] => {
+    if (section.length <= limit) return [section];
+
+    const parts: string[] = [];
+    let current = "";
+    for (const line of section.split("\n")) {
+      const candidate = current ? `${current}\n${line}` : line;
+      if (candidate.length <= limit) {
+        current = candidate;
+        continue;
+      }
+
+      if (current) {
+        parts.push(current);
+        current = "";
+      }
+
+      if (line.length <= limit) {
+        current = line;
+        continue;
+      }
+
+      for (let index = 0; index < line.length; index += limit) {
+        parts.push(line.slice(index, index + limit));
+      }
+    }
+
+    if (current) parts.push(current);
+    return parts;
+  };
+
+  // Split on double-newline boundaries to preserve structure where possible.
+  const sections = html.split("\n\n").flatMap(splitOversizedSection);
   const chunks: string[] = [];
   let current = "";
   for (const section of sections) {

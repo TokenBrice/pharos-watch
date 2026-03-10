@@ -1,6 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v4.5` (2026-02-18 -> 2026-03-09).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v4.6` (2026-02-18 -> 2026-03-10).
+
+---
+
+## v4.6 — Confidence-aware routing, extreme-move confirmation, and provenance surfacing (Mar 10, 2026)
+
+**Commit:** `unreleased`
+
+- Cached, fallback, low-confidence, and stale primary prices now require confirmation before they can directly mutate live depeg state
+- Extreme moves no longer get dropped simply for crossing the old `<0.5x` / `>2x` peg guardrail; they enter a dedicated confirmation lane instead
+- `/api/peg-summary` and `/depeg` now surface primary price provenance/trust plus backend freshness metadata, and `/depeg` can page beyond the first 100 events
 
 ---
 

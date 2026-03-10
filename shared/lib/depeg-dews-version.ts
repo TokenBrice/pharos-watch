@@ -4,9 +4,24 @@ import {
 } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "4.5",
+  currentVersion: "4.6",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "4.6",
+    title: "Confidence-aware depeg routing, extreme-move confirmation, and provenance surfacing",
+    date: "2026-03-10",
+    effectiveAt: 1773144000,
+    summary:
+      "Depeg detection stopped treating every non-null price as equally trustworthy and now routes ambiguous or catastrophic moves through explicit confirmation paths.",
+    impact: [
+      "Cached, fallback, low-confidence, and stale primary prices now require confirmation before they can open or close live depeg state",
+      "Extreme moves no longer get dropped just for crossing the old <0.5x or >2x peg guardrail; they enter a dedicated confirmation lane instead",
+      "peg-summary now exposes price provenance and trust state, and the depeg page consumes backend freshness metadata plus real event-history pagination",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.5",
     title: "Trusted DEX-price gating for depeg suppression, confirmation, and UI checks",

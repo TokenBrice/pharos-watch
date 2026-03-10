@@ -46,7 +46,15 @@ beforeEach(() => {
   mockShouldAttemptFetch.mockResolvedValue(true);
   mockSetCache.mockResolvedValue(undefined);
   mockRecordOutcome.mockResolvedValue(undefined);
-  mockSendToChat.mockResolvedValue({ ok: true, blocked: false });
+  mockSendToChat.mockResolvedValue({
+    ok: true,
+    blocked: false,
+    retryable: false,
+    permanentFailure: false,
+    statusCode: 200,
+    errorClass: null,
+    delivery: "sent",
+  });
 
   // Default sendBatch: delegate each message to mockSendToChat
   mockSendBatch.mockImplementation(
@@ -149,14 +157,14 @@ describe("dispatchTelegramAlerts", () => {
       // Phase 1: pending queue drain (empty)
       { match: "SELECT id, chat_id, message_html", rows: [] },
       // Phase 3: batched subscriber lookups
-      { match: "u.alert_dews = 1", matchBinds: ["usdc-circle"], rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle"], rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
       {
-        match: "u.alert_depeg = 1",
+        match: "sub.alert_depeg = 1",
         matchBinds: ["usdc-circle"],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
       },
       {
-        match: "u.alert_safety = 1",
+        match: "sub.alert_safety = 1",
         matchBinds: ["usdc-circle"],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
       },
@@ -171,7 +179,15 @@ describe("dispatchTelegramAlerts", () => {
       messagesSent: number;
     };
 
-    expect(metadata.eventsDetected).toEqual({ dews: 1, depeg: 1, safety: 1 });
+    expect(metadata.eventsDetected).toMatchObject({
+      dews: 1,
+      depeg: 1,
+      depegTriggered: 1,
+      depegResolved: 0,
+      depegWorsening: 0,
+      safety: 1,
+      suppressedMethodologyChanges: 0,
+    });
     expect(metadata.subscribersNotified).toBe(1);
     expect(metadata.messagesSent).toBe(1);
     expect(mockSendToChat).toHaveBeenCalledTimes(1);
@@ -226,7 +242,7 @@ describe("dispatchTelegramAlerts", () => {
       // Phase 1: pending queue drain (empty)
       { match: "SELECT id, chat_id, message_html", rows: [] },
       {
-        match: "u.alert_safety = 1",
+        match: "sub.alert_safety = 1",
         matchBinds: ["bold-liquity"],
         rows: [{ stablecoin_id: "bold-liquity", chat_id: "12345", last_active_at: now }],
       },
@@ -359,7 +375,15 @@ describe("dispatchTelegramAlerts", () => {
   it("deactivates subscriber on blocked telegram response", async () => {
     const now = Math.floor(Date.now() / 1000);
 
-    mockSendToChat.mockResolvedValue({ ok: false, blocked: true });
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: true,
+      retryable: false,
+      permanentFailure: true,
+      statusCode: 403,
+      errorClass: "blocked",
+      delivery: "blocked",
+    });
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "alert:dews-snapshot") {
         return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
@@ -383,7 +407,7 @@ describe("dispatchTelegramAlerts", () => {
       // Phase 1: pending queue drain (empty)
       { match: "SELECT id, chat_id, message_html", rows: [] },
       {
-        match: "u.alert_dews = 1",
+        match: "sub.alert_dews = 1",
         matchBinds: ["usdc-circle"],
         rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }],
       },
@@ -463,7 +487,7 @@ describe("dispatchTelegramAlerts", () => {
       // No pending queue items
       { match: "SELECT id, chat_id, message_html", rows: [] },
       // Batched subscriber lookup returns all 250
-      { match: "u.alert_dews = 1", rows: subscribers },
+      { match: "sub.alert_dews = 1", rows: subscribers },
       // INSERT for overflow (db.batch call)
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       // Cleanup expired
@@ -507,7 +531,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "SELECT id, chat_id, message_html", rows: [] },
-      { match: "u.alert_dews = 1", rows: subscribers },
+      { match: "sub.alert_dews = 1", rows: subscribers },
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
@@ -544,5 +568,145 @@ describe("dispatchTelegramAlerts", () => {
     const metadata = JSON.parse(result.metadata) as { pendingExpired: number };
 
     expect(metadata.pendingExpired).toBe(5);
+  });
+
+  it("queues retryable fresh-send failures instead of dropping them", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 500,
+      errorClass: "server_error",
+      delivery: "retryable_failure",
+    });
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: "{}", updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [{ stablecoin_id: "usdc-circle", score: 55, band: "WARNING", signals_json: "{}" }] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_dews = 1", rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }] },
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      freshRetryQueued: number;
+      pendingEnqueued: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.freshRetryQueued).toBe(1);
+    expect(metadata.pendingEnqueued).toBe(1);
+    expect(metadata.messagesSent).toBe(0);
+  });
+
+  it("emits worsening depeg alerts when the configured bps step is crossed", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") {
+        return {
+          value: JSON.stringify({
+            "usdc-circle": {
+              stablecoinId: "usdc-circle",
+              symbol: "USDC",
+              direction: "below",
+              deviationBps: 120,
+              price: 0.988,
+              pegReference: 1,
+            },
+          }),
+          updatedAt: now - 60,
+        };
+      }
+      if (key === "alert:safety-snapshot") return { value: "{}", updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [{ stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 260, start_price: 0.974, peg_reference: 1 }],
+      },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      {
+        match: "sub.alert_depeg = 1",
+        rows: [{
+          stablecoin_id: "usdc-circle",
+          chat_id: "12345",
+          last_active_at: now,
+          depeg_worsening_bps_step: 100,
+        }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as { eventsDetected: { depegWorsening: number } };
+
+    expect(metadata.eventsDetected.depegWorsening).toBe(1);
+    expect(mockSendToChat.mock.calls[0]?.[1]).toContain("worsening");
+  });
+
+  it("suppresses safety alerts when only the methodology version changed", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") {
+        return {
+          value: JSON.stringify({
+            "usdc-circle": { grade: "B", score: 78, methodologyVersion: "v1" },
+          }),
+          updatedAt: now - 60,
+        };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      {
+        match: "FROM safety_grade_history",
+        rows: [{
+          stablecoin_id: "usdc-circle",
+          grade: "C",
+          score: 61,
+          prev_grade: "B",
+          prev_score: 78,
+          recorded_at: now,
+          methodology_version: "v2",
+        }],
+      },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { safety: number; suppressedMethodologyChanges: number };
+      messagesSent: number;
+    };
+
+    expect(metadata.eventsDetected.safety).toBe(0);
+    expect(metadata.eventsDetected.suppressedMethodologyChanges).toBe(1);
+    expect(metadata.messagesSent).toBe(0);
   });
 });

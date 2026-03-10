@@ -130,7 +130,7 @@ export async function resolveYieldSources({
             sourceTvlUsd: null,
             dataSource: "onchain",
             exchangeRate: rate,
-            sourceKey: nativePoolId ?? "price-derived",
+            sourceKey: nativePoolId ?? `onchain:${id}`,
           },
         });
         hasAnySource = true;

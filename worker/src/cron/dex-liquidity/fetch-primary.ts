@@ -3,6 +3,7 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { setCache } from "../../lib/db";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import {
   fetchCgTokensBatch, onchainRateLimit, CG_CHAIN_MAP,
 } from "../../lib/coingecko-onchain";
@@ -68,12 +69,12 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
           const minimalPools = pools
             .filter((p) => p.stablecoin && p.exposure === "single")
             .map((p) => ({
-              pool: p.pool, project: p.project, symbol: p.symbol,
+              pool: p.pool, chain: p.chain, project: p.project, symbol: p.symbol,
               tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
-              apyReward: p.apyReward, stablecoin: true, exposure: "single",
+              apyReward: p.apyReward, apyMean30d: p.apy, stablecoin: true, exposure: "single",
               underlyingTokens: p.underlyingTokens ?? null,
             }));
-          await setCache(db, "dl-stablecoin-pools", JSON.stringify(minimalPools));
+          await setCache(db, "dl-stablecoin-pools", buildDlStablecoinPoolsCache(minimalPools));
         } catch (e) {
           console.warn("[dex-liquidity] Failed to cache stablecoin pools for yield sync:", e);
         }

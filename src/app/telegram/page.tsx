@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Telegram Alerts & Digest: Real-Time Stablecoin Notifications",
+  title: "Telegram Alerts & Digest: Stablecoin Notifications on Telegram",
   description:
-    "Set up per-coin Telegram alerts for depeg events, DEWS threat level changes, and safety grade shifts. Plus get the daily Pharos stablecoin digest straight to your feed.",
+    "Set up per-coin Telegram alerts for depeg events, depeg worsening, DEWS threat level changes, and daily safety grade shifts. Plus get the Pharos digest straight in Telegram.",
   canonical: "/telegram/",
 });
 
@@ -23,13 +23,13 @@ const ALERT_TYPES = [
     key: "depeg",
     label: "Depeg Events",
     description:
-      "Fires on depeg trigger and resolution, includes deviation in bps and price",
+      "Fires on trigger, worsening milestones, and resolution with deviation and price context",
   },
   {
     key: "safety",
     label: "Safety Grade Changes",
     description:
-      "Fires on letter grade changes, delivered daily after snapshot",
+      "Fires on grade changes after the daily safety snapshot, with methodology-only regrades suppressed",
   },
 ] as const;
 
@@ -50,8 +50,28 @@ const COMMANDS = [
     example: null,
   },
   {
+    command: "/set <ticker> <setting> <value>",
+    description: "Tune per-coin thresholds and modes",
+    example: "/set USDC depeg-step 250",
+  },
+  {
+    command: "/mute <start>-<end>",
+    description: "Silence Telegram notifications during UTC quiet hours",
+    example: "/mute 22-07",
+  },
+  {
+    command: "/unmutehours",
+    description: "Disable quiet hours",
+    example: null,
+  },
+  {
     command: "/list",
-    description: "Show your enabled alert types and subscribed coins",
+    description: "Show subscribed coins, per-coin settings, and quiet hours",
+    example: null,
+  },
+  {
+    command: "/cancel",
+    description: "Cancel a pending disambiguation prompt",
     example: null,
   },
   {
@@ -83,6 +103,14 @@ Price: $0.9888
 View on Pharos: pharos.watch/stablecoin/usdc-circle`,
   },
   {
+    label: "Depeg worsening",
+    content: `Depeg Worsening: USDC
+Deviation: -120 bps -> -260 bps
+Price: $0.9740
+
+View on Pharos: pharos.watch/stablecoin/usdc-circle`,
+  },
+  {
     label: "Safety grade change",
     content: `Safety Grade Change: DAI
 Grade: A- -> B+
@@ -100,7 +128,7 @@ export default function TelegramPage() {
       title="Telegram Alerts & Digest"
       containerClassName="mx-auto max-w-4xl"
       leadParagraphs={[
-        "Two ways to get Pharos data in Telegram: a public channel for the daily digest, and a bot for per-coin real-time alerts on depeg events, DEWS threat levels, and safety grade changes.",
+        "Two ways to get Pharos data in Telegram: a public channel for the daily digest, and a bot for per-coin alerts on DEWS changes, depegs, worsening depegs, and daily safety-grade moves.",
       ]}
     >
       <div className="space-y-6">
@@ -162,8 +190,8 @@ export default function TelegramPage() {
               >
                 @PharosWatchBot
               </a>{" "}
-              sends you real-time alerts for the stablecoins you care about.
-              Subscribe to any combination of alert types and coins.
+              sends you cron-driven alerts for the stablecoins you care about.
+              DEWS and depeg alerts are near-real-time within the bot&apos;s cron cadence. Safety alerts are checked after the daily safety snapshot. Subscriptions are per coin, with per-coin settings and optional quiet hours.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {ALERT_TYPES.map((alert) => (
@@ -238,18 +266,26 @@ export default function TelegramPage() {
                   </div>
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
-                      /subscribe safety USDS,frxUSD,fxUSD
+                      /set USDC depeg-step 250
                     </code>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Get notified when USDS, frxUSD or fxUSD safety score changes
+                      Add worsening-depeg follow-ups every additional 250 bps
                     </p>
                   </div>
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
-                      /subscribe dews,depeg,safety USDT,USDC,DAI,FRAX,GHO
+                      /set DAI safety downgrade-only
                     </code>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      All alert types for a diversified watchlist
+                      Ignore safety upgrades and only notify on downgrades
+                    </p>
+                  </div>
+                  <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
+                      /mute 22-07
+                    </code>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Keep messages flowing while silencing Telegram notifications overnight
                     </p>
                   </div>
                 </div>
@@ -337,9 +373,7 @@ export default function TelegramPage() {
               </table>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ticker matching is case-insensitive and requires an exact symbol
-              match. If an unknown ticker is close to a known symbol, the bot
-              will suggest the closest match.
+              Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Unknown tickers get a closest-match suggestion when possible.
             </p>
           </CardContent>
         </Card>

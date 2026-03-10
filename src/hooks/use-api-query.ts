@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchWithMeta, type ApiMeta } from "@/lib/api";
 export {
   CRON_1MIN,
   CRON_15MIN,
@@ -23,6 +23,7 @@ interface PollingQueryControlOptions {
 interface ApiQueryOptions<T> extends PollingQueryControlOptions {
   schema?: ZodType<T>;
   fetchInit?: RequestInit;
+  metaMaxAgeSec?: number;
 }
 
 export function createApiQueryFn<T>(
@@ -35,6 +36,20 @@ export function createApiQueryFn<T>(
       return apiFetch<T>(path, schema, fetchInit);
     }
     return apiFetch<T>(path, schema);
+  };
+}
+
+export function createApiQueryFnWithMeta<T>(
+  path: string,
+  schema?: ZodType<T>,
+  fetchInit?: RequestInit,
+  metaMaxAgeSec?: number,
+): () => Promise<{ data: T; meta: ApiMeta | null }> {
+  return () => {
+    if (fetchInit) {
+      return apiFetchWithMeta<T>(path, schema, fetchInit, metaMaxAgeSec);
+    }
+    return apiFetchWithMeta<T>(path, schema, undefined, metaMaxAgeSec);
   };
 }
 
@@ -110,4 +125,35 @@ export function useApiQuery<T>(
       retryDelay: opts?.retryDelay,
     },
   );
+}
+
+export interface ApiQueryWithMetaResult<T>
+  extends Omit<UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>, "data"> {
+  data: T | undefined;
+  meta: ApiMeta | null;
+}
+
+export function useApiQueryWithMeta<T>(
+  key: readonly unknown[],
+  path: string,
+  cronInterval: number,
+  opts?: ApiQueryOptions<T>,
+): ApiQueryWithMetaResult<T> {
+  const query = usePollingQuery(
+    key,
+    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, opts?.metaMaxAgeSec),
+    cronInterval,
+    {
+      enabled: opts?.enabled,
+      retry: opts?.retry,
+      retryDelay: opts?.retryDelay,
+    },
+  );
+
+  const { data, ...rest } = query;
+  return {
+    ...rest,
+    data: data?.data,
+    meta: data?.meta ?? null,
+  };
 }

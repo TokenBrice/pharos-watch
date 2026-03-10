@@ -130,14 +130,14 @@ The live `/price/` endpoint requires no API key and is called every 15-minute sy
 
 For stablecoins with >$1B circulating supply, depeg detection uses a two-phase confirmation system:
 
-1. **Phase 1** (`detect-depegs.ts`): When a large coin crosses the depeg threshold, instead of immediately opening an event, a record is inserted into `depeg_pending` (migration 0023)
-2. **Phase 2** (`confirm-pending-depegs.ts`): On the next cron cycle, pending records are re-checked. If the depeg persists, a real depeg event is opened. If the price recovered, the pending record is deleted
+1. **Phase 1** (`detect-depegs.ts`): When a coin requires confirmation instead of direct mutation, a record is inserted into `depeg_pending` (migration 0023 + reason column in migration 0061). This now covers three cases: `>$1B` supply, low-confidence/cached/stale primary prices, and extreme moves (`abs(bps) >= 5000`)
+2. **Phase 2** (`confirm-pending-depegs.ts`): On the next cron cycle, pending records are re-checked. If the depeg persists and a secondary source agrees, a real depeg event is opened. If an **authoritative** primary price recovered, the pending record is deleted
 
 This prevents false positive depeg events for systemically important stablecoins during brief price feed glitches.
 
 ## Stale Data Monitoring (Frontend)
 
-The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from any critical query exceeds 2x its `staleTime`. Each page monitors all TanStack Query hooks that feed its content:
+The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from any critical query exceeds 2x its `staleTime`. When a hook uses `apiFetchWithMeta()`, backend freshness metadata (`X-Data-Age`, stale `Warning`) takes precedence over browser fetch time so a fresh client refetch cannot mask stale server data. Each page monitors all TanStack Query hooks that feed its content:
 
 | Page | Queries monitored | staleTime constants |
 |------|------------------|---------------------|
@@ -154,7 +154,7 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 
 Constants defined in `src/hooks/use-api-query.ts`: `CRON_15MIN` (15 min), `CRON_20MIN` (20 min), `CRON_30MIN` (30 min), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
 
-The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. The banner triggers at 2x `staleTime` (i.e., 4x the cron interval), so it only appears when data is genuinely stale, not during normal cron gaps.
+The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. The banner triggers at 2x `staleTime` (i.e., 4x the cron interval), but hook-level freshness metadata can mark data degraded/stale sooner when the worker explicitly reports old cache age or stale-table warnings.
 
 ## Blacklist Sync State Semantics
 

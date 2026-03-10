@@ -13,7 +13,6 @@ import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { deviationBgClass } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@shared/types";
-import type { PegRateSource } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 
 interface PegHeatmapProps {
@@ -26,7 +25,7 @@ interface PegHeatmapProps {
   onTypeFilterChange: (v: GovernanceType | "all") => void;
   searchQuery?: string;
   onSearchChange?: (v: string) => void;
-  pegRateSources?: Record<string, PegRateSource>;
+  fallbackPegTypes?: string[];
   hideFilters?: boolean;
 }
 
@@ -91,18 +90,11 @@ export function PegHeatmap({
   onTypeFilterChange,
   searchQuery,
   onSearchChange,
-  pegRateSources,
+  fallbackPegTypes,
   hideFilters,
 }: PegHeatmapProps) {
   const prefetch = usePrefetchStablecoin();
-  const fallbackPegs = useMemo(() => {
-    if (!pegRateSources) return new Set<string>();
-    return new Set(
-      Object.entries(pegRateSources)
-        .filter(([, src]) => src === "fallback")
-        .map(([peg]) => peg)
-    );
-  }, [pegRateSources]);
+  const fallbackPegs = useMemo(() => new Set(fallbackPegTypes ?? []), [fallbackPegTypes]);
   const sorted = useMemo(() => {
     return [...coins]
       .filter((c) => c.currentDeviationBps !== null)
@@ -175,6 +167,8 @@ export function PegHeatmap({
                 const sign = coin.currentDeviationBps! >= 0 ? "+" : "";
                 const dex = coin.dexPriceCheck;
                 const dexDisagrees = dex && !dex.agrees;
+                const confirmRequired = coin.primaryTrust === "confirm_required";
+                const provenance = [coin.priceSource ?? "unknown source", coin.priceConfidence ?? "unknown confidence"].join(" · ");
                 return (
                   <Link
                     key={coin.id}
@@ -182,11 +176,20 @@ export function PegHeatmap({
                     className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border hover:bg-muted/40 transition-colors ${deviationTileClass(absBps)}`}
                     title={dexDisagrees
                       ? `DEX price disagrees: ${formatNativePrice(dex.dexPrice, "USD", 1)} (${dex.dexDeviationBps >= 0 ? "+" : ""}${dex.dexDeviationBps}bps) from ${dex.sourcePools} pool${dex.sourcePools !== 1 ? "s" : ""} (${formatCurrency(dex.sourceTvl)} TVL)`
-                      : undefined}
+                      : provenance}
                     onMouseEnter={() => prefetch(coin.id)}
                   >
                     {dexDisagrees && (
                       <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[8px] font-bold text-white" aria-label="DEX price disagrees">!</span>
+                    )}
+                    {confirmRequired && (
+                      <span
+                        className="absolute -top-1 -left-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-slate-700 px-1 text-[8px] font-bold text-white"
+                        aria-label="Primary price requires confirmation"
+                        title={`Primary price requires confirmation (${provenance})`}
+                      >
+                        ?
+                      </span>
                     )}
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
                     <span className="text-xs font-medium truncate max-w-full">{coin.symbol}</span>

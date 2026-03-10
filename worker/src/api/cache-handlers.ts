@@ -17,5 +17,5 @@ export const handleYieldRankings = createCacheHandler(
   "yield-rankings",
   "yield-rankings",
   CACHE_PROFILES.standard,
-  3600,
+  1800,
 );

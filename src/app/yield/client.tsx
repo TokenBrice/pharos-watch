@@ -14,7 +14,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 
 export function YieldClient() {
-  const { data, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
+  const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -88,7 +88,67 @@ export function YieldClient() {
           void refetch();
         }}
       />
-      <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data }]} />
+      <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]} />
+
+      {data?.provenance ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Card className="rounded-xl">
+            <CardHeader className="pb-1">
+              <span className="text-xs text-muted-foreground">Benchmark Provenance</span>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              <p className="font-medium">
+                {data.provenance.benchmark.recordDate
+                  ? `T-Bill as of ${data.provenance.benchmark.recordDate}`
+                  : "T-Bill record date unavailable"}
+              </p>
+              <p className="text-muted-foreground">
+                {data.provenance.benchmark.isFallback
+                  ? `Fallback benchmark in use${data.provenance.benchmark.fallbackMode ? ` (${data.provenance.benchmark.fallbackMode})` : ""}`
+                  : data.provenance.benchmark.ageSeconds != null
+                    ? `Benchmark age ${Math.round(data.provenance.benchmark.ageSeconds / 3600)}h`
+                    : "Benchmark age unavailable"}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl">
+            <CardHeader className="pb-1">
+              <span className="text-xs text-muted-foreground">Yield Input Freshness</span>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              <p className="font-medium">
+                {data.provenance.dlPools.mode === "dex-cache"
+                  ? "Using DEX-sync cached DeFiLlama pools"
+                  : data.provenance.dlPools.mode === "direct-fetch"
+                    ? "Using direct DeFiLlama pool fetch"
+                    : "DeFiLlama pool input unavailable"}
+              </p>
+              <p className="text-muted-foreground">
+                {data.provenance.dlPools.ageSeconds != null
+                  ? `Pool input age ${Math.round(data.provenance.dlPools.ageSeconds / 60)}m`
+                  : data.provenance.dlPools.fallbackMode
+                    ? `Reason: ${data.provenance.dlPools.fallbackMode}`
+                    : "Pool input age unavailable"}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl">
+            <CardHeader className="pb-1">
+              <span className="text-xs text-muted-foreground">Safety Coverage</span>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              <p className="font-medium">
+                {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}% of tracked coins scored
+              </p>
+              <p className="text-muted-foreground">
+                {data.provenance.safetySnapshot.kind === "ok"
+                  ? "Confidence-weighted source arbitration active"
+                  : data.provenance.safetySnapshot.reason ?? "Safety snapshot degraded"}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
 
       {/* Summary stat cards */}
       {stats && (
@@ -196,8 +256,8 @@ export function YieldClient() {
       {/* Disclaimer */}
       <p className="text-xs text-muted-foreground leading-relaxed">
         The Pharos Yield Score (PYS) is for informational purposes only and does not constitute financial advice. APY
-        figures are sourced from DeFiLlama and may fluctuate. Past yields do not guarantee future returns. Always do
-        your own research before allocating capital to any stablecoin.
+        figures blend deterministic on-chain, benchmark-derived, DeFiLlama, and price-derived sources with
+        confidence-aware arbitration. Past yields do not guarantee future returns.
       </p>
     </div>
   );

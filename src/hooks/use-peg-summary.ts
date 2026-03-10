@@ -1,10 +1,10 @@
 "use client";
 
 import { PegSummaryResponseSchema, type PegSummaryResponse } from "@shared/types";
-import { useApiQuery, CRON_15MIN } from "./use-api-query";
+import { useApiQueryWithMeta, CRON_15MIN } from "./use-api-query";
 
 export function usePegSummary() {
-  return useApiQuery<PegSummaryResponse>(
+  return useApiQueryWithMeta<PegSummaryResponse>(
     ["peg-summary"], "/api/peg-summary", CRON_15MIN,
     { schema: PegSummaryResponseSchema },
   );
