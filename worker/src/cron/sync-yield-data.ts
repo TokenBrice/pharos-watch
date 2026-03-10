@@ -169,6 +169,7 @@ function resolveYieldTypeLabel(params: {
 function pickHistoryRowsForSource(
   stablecoinId: string,
   sourceKey: string,
+  dataSource: string,
   sourceHistory: Map<string, YieldHistorySnapshotRow[]>,
   legacyHistoryById: Map<string, YieldHistorySnapshotRow[]>,
   resolvedCountByCoin: Map<string, number>,
@@ -179,7 +180,20 @@ function pickHistoryRowsForSource(
   }
 
   const legacyRows = legacyHistoryById.get(stablecoinId) ?? [];
-  if (legacyRows.length > 0 && (resolvedCountByCoin.get(stablecoinId) ?? 0) <= 1) {
+  const legacyDataSources = new Set(
+    legacyRows
+      .map((row) => row.data_source)
+      .filter((value): value is string => typeof value === "string" && value.length > 0),
+  );
+  const legacyMatchesCurrentSourceFamily =
+    legacyDataSources.size === 1 &&
+    legacyDataSources.has(dataSource);
+
+  if (
+    legacyRows.length > 0 &&
+    (resolvedCountByCoin.get(stablecoinId) ?? 0) <= 1 &&
+    legacyMatchesCurrentSourceFamily
+  ) {
     return { rows: legacyRows, usedLegacyHistory: true };
   }
 
@@ -398,6 +412,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       const historySelection = pickHistoryRowsForSource(
         stablecoinId,
         sourceKey,
+        y.dataSource,
         sourceHistory,
         legacyHistoryById,
         resolvedCountByCoin,

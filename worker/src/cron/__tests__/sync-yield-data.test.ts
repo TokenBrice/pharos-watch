@@ -817,6 +817,57 @@ describe("syncYieldData", () => {
     expect(Number(priceDerivedRow?.boundValues?.[7])).toBeCloseTo(3, 3);
   });
 
+  it("does not carry forward legacy history when the current source family changed", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+    configs.push({ stablecoinId: "100", spreadBps: 25, label: "T-bill proxy (net of 0.25% fee)" });
+
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "100",
+            source_key: "legacy-best",
+            recorded_at: nowSec - 2 * 86400,
+            is_best: 1,
+            apy: 0,
+            source_tvl_usd: null,
+            data_source: "price-derived",
+            yield_source: null,
+            yield_type: null,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: nowSec };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const rateDerivedRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "rate-derived",
+    );
+
+    // The current row should stand on its own source-specific history rather than averaging with legacy price-derived rows.
+    expect(Number(rateDerivedRow?.boundValues?.[7])).toBeCloseTo(3.75, 3);
+
+    configs.length = 0;
+  });
+
   it("resolves rate-derived yield from cached T-bill rate for configured tokens", async () => {
     // Temporarily inject a rate-derived config for sDAI (id "100")
     const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;

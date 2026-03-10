@@ -73,8 +73,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     const sourceSwitch =
       mode === "best" &&
       previousSourceKey != null &&
-      previousSourceKey !== normalizedSourceKey &&
-      previousSourceKey !== "legacy-best";
+      previousSourceKey !== normalizedSourceKey;
     previousSourceKey = normalizedSourceKey;
 
     return {

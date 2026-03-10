@@ -75,4 +75,28 @@ describe("handleYieldHistory", () => {
     const body = await res.json() as Array<{ sourceKey: string }>;
     expect(body[0]?.sourceKey).toBe("aave-v3:usdt");
   });
+
+  it("marks the transition from legacy-best to a source-aware row as a source switch", async () => {
+    const legacyRow = makeYieldHistoryRow({
+      source_key: "legacy-best",
+      recorded_at: 1_771_000_000,
+      data_source: "price-derived",
+      yield_source: null,
+      yield_type: null,
+    });
+    const newRow = makeYieldHistoryRow({
+      source_key: "rate-derived",
+      recorded_at: 1_771_086_400,
+      data_source: "rate-derived",
+      yield_source: "T-bill proxy",
+      yield_type: "nav-appreciation",
+    });
+    const db = mockD1([{ match: "yield_history", rows: [legacyRow, newRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    expect(res.status).toBe(200);
+    const body = await res.json() as Array<{ sourceKey: string; sourceSwitch: boolean }>;
+    expect(body[0]).toMatchObject({ sourceKey: "legacy-best", sourceSwitch: false });
+    expect(body[1]).toMatchObject({ sourceKey: "rate-derived", sourceSwitch: true });
+  });
 });

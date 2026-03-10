@@ -325,7 +325,7 @@ CREATE TABLE yield_history (
 
 **Retention:** 365 days. Older rows are pruned at the end of each sync run.
 
-**Legacy migration behavior:** historical pre-migration rows are preserved as `source_key = 'legacy-best'`. Same-source trailing metrics only reuse these rows when the coin currently has a single resolved source; otherwise the new source starts a fresh clean series to avoid mixed-history contamination.
+**Legacy migration behavior:** historical pre-migration rows are preserved as `source_key = 'legacy-best'`. Same-source trailing metrics only reuse these rows when the coin currently has a single resolved source **and** the legacy source family matches the current source family. If the current winner changed source family (for example price-derived → rate-derived), the new source starts a clean series instead of inheriting mixed legacy history.
 
 **Estimated volume:** ~40 coins × 48 points/day × 365 days ≈ 701K rows/year.
 
