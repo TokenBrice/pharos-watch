@@ -202,9 +202,6 @@ export function StablecoinTable({
           <p className="text-xs text-muted-foreground sm:hidden">
             Name, price, and market cap stay readable first. Columns and export stay above the table.
           </p>
-          <p className="hidden text-xs text-muted-foreground sm:block">
-            Scroll horizontally for secondary metrics without leaving the table context.
-          </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <ColumnVisibilityDropdown
