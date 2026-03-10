@@ -19,6 +19,8 @@ import {
   getPressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 
+const MINT_BURN_META_MAX_AGE_SEC = CRON_20MIN / 1000;
+
 function inferHas24hActivity(
   coin: MintBurnFlowsResponse["coins"][number],
 ): boolean {
@@ -95,7 +97,7 @@ export function useMintBurnFlows(hours = 24) {
     ["mint-burn-flows", "all", hours],
     `/api/mint-burn-flows${qs}`,
     CRON_20MIN,
-    { schema: MintBurnFlowsResponseSchema },
+    { schema: MintBurnFlowsResponseSchema, metaMaxAgeSec: MINT_BURN_META_MAX_AGE_SEC },
   );
   const normalizedData = useMemo(
     () => (query.data ? normalizeMintBurnFlowsResponse(query.data) : undefined),
@@ -119,7 +121,11 @@ export function useMintBurnFlowsCoin(
     ["mint-burn-flows", stablecoinId, hours],
     `/api/mint-burn-flows?${params}`,
     CRON_20MIN,
-    { enabled: !!stablecoinId && (opts?.enabled ?? true), schema: MintBurnPerCoinResponseSchema },
+    {
+      enabled: !!stablecoinId && (opts?.enabled ?? true),
+      schema: MintBurnPerCoinResponseSchema,
+      metaMaxAgeSec: MINT_BURN_META_MAX_AGE_SEC,
+    },
   );
 }
 
