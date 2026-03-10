@@ -80,10 +80,13 @@ Source: `worker/src/api/status.ts`
 
 `CRON_INTERVALS` defines expected cadence per job (seconds). A cron is healthy when:
 
+- A fresh non-stale `crons[*].inFlight` heartbeat exists for the job, or
 - Last run exists within `2 * expectedIntervalSec`
 - Last run status is `ok`, or
 - Last run status is `degraded` (warning-only fallback mode), or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window
+
+Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
 
 For the split DEX pipeline:
 
@@ -266,6 +269,8 @@ The UI now uses these actions in two ways:
 - contextual recommendations derived from active causes and unhealthy cron lanes (`Recommended now`)
 
 Each action execution is confirmed, logged locally in the page, and triggers a status/probe/history refresh on completion.
+
+`POST /api/backfill-mint-burn` is operator-safe from the status page even without an explicit `configKey`: the worker auto-selects the most behind Ethereum config with a critical-first / major-symbol-first policy and returns the selected config in the response payload.
 
 Mutating admin paths are protected by method guardrails:
 

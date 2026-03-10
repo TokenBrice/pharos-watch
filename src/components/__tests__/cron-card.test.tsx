@@ -129,4 +129,39 @@ describe("CronCard", () => {
     expect(html).toContain("fallback mode dl-yields-unavailable");
     expect(html).toContain("coverage near guardrail band");
   });
+
+  it("keeps healthy metadata summaries neutral instead of warning-colored", () => {
+    const html = renderToStaticMarkup(
+      <CronCard
+        job="sync-mint-burn"
+        nowSeconds={1_772_100_000}
+        cron={{
+          lastRun: {
+            startedAt: 1_772_099_100,
+            durationMs: 16_000,
+            status: "ok",
+            itemCount: 47,
+            metadata: {
+              lane: "critical",
+              contractsProcessed: 7,
+              contractsSkipped: 0,
+              budgetUsed: 50,
+              budgetLimit: 200,
+              criticalCoverage: {
+                contractsEnabled: 7,
+                contractsSatisfied: 7,
+              },
+              laggingConfigs: [{ key: "ethereum-0xabc" }],
+            },
+          },
+          recentRuns: [{ startedAt: 1_772_099_100, durationMs: 16_000, status: "ok" }],
+          expectedIntervalSec: 1200,
+          healthy: true,
+        }}
+      />,
+    );
+
+    expect(html).toContain("bg-muted/30");
+    expect(html).not.toContain("border-amber-500/20 bg-amber-500/5");
+  });
 });

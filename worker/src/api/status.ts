@@ -264,19 +264,22 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
   for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
     const runs = cronByJob.get(job) ?? [];
     const lastRun = runs.length > 0 ? runs[0] : null;
+    const inFlight = cronProgressByJob.get(job);
+    const inFlightFresh = inFlight != null && now - inFlight.updatedAt <= Math.max(300, interval);
     const isFresh = lastRun != null && now - lastRun.startedAt <= interval * 2;
     const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
-    const availabilityUnhealthy =
-      !isFresh || lastRun == null || lastRun.status === "error" || (lastRun.status === "skipped_locked" && !hasFreshOk);
-    const healthy =
+    const availabilityHealthyFromLastRun =
       isFresh &&
-      (lastRun!.status === "ok" ||
-        lastRun!.status === "degraded" ||
-        (lastRun!.status === "skipped_locked" && hasFreshOk));
+      lastRun != null &&
+      (lastRun.status === "ok" ||
+        lastRun.status === "degraded" ||
+        (lastRun.status === "skipped_locked" && hasFreshOk));
+    const healthy = inFlightFresh || availabilityHealthyFromLastRun;
+    const availabilityUnhealthy = !healthy;
 
     if (availabilityUnhealthy) unhealthyCrons++;
     if (lastRun?.status === "degraded" && isFresh) degradedCronRuns++;
-    if (lastRun?.status === "error") {
+    if (lastRun?.status === "error" && !inFlightFresh) {
       anyCronError = true;
       cronErrorCount++;
     }
@@ -287,7 +290,6 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       expectedIntervalSec: interval,
       healthy,
       inFlight: (() => {
-        const inFlight = cronProgressByJob.get(job);
         if (!inFlight) return null;
         return {
           ...inFlight,

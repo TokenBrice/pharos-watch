@@ -161,6 +161,15 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
     ...group,
     entries: cronEntries.filter(([job]) => getStatusCronDisplay(job).group === group.key),
   })).filter((group) => group.entries.length > 0);
+  const healthDiffersFromStatus = healthData != null && healthData.status !== data.overallStatus;
+  const publicHealthNeedsCallout =
+    healthData != null &&
+    (healthData.status !== "healthy" || healthDiffersFromStatus || healthData.mintBurn.majorStaleCount > 0);
+  const publicHealthTone = healthData?.status === "stale"
+    ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+    : healthData?.status === "degraded"
+      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+      : "border-border/60 bg-muted/30 text-muted-foreground";
 
   return (
     <div className="space-y-6">
@@ -200,6 +209,23 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       {historyError && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
           Status history unavailable: {historyError.message}
+        </div>
+      )}
+      {publicHealthNeedsCallout && healthData && (
+        <div className={`rounded-lg border px-4 py-3 text-sm ${publicHealthTone}`}>
+          <div className="font-medium">
+            Public <code>/api/health</code> reports {healthData.status}.
+            {healthDiffersFromStatus ? ` This differs from /api/status (${data.overallStatus}).` : ""}
+          </div>
+          <div className="mt-1 text-xs">
+            {healthData.mintBurn.majorStaleCount > 0
+              ? `Mint/burn stale majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}. `
+              : ""}
+            {healthData.mintBurn.freshnessAgeSec != null
+              ? `Latest mint/burn event age: ${healthData.mintBurn.freshnessAgeSec}s. `
+              : ""}
+            Blacklist gaps tracked by /api/health: {healthData.blacklist.missingAmounts}.
+          </div>
         </div>
       )}
 

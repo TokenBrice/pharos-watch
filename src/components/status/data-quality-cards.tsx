@@ -51,7 +51,11 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
         ? "red"
         : dq.stablecoinsCacheStatus === "degraded"
           ? "amber"
-          : dq.missingPrices > 5 ? "red" : dq.missingPrices > 0 ? "amber" : "green",
+          : missingPriceRatio > 0.4
+            ? "red"
+            : missingPriceRatio > 0.15
+              ? "amber"
+              : "green",
     },
     {
       label: "Blacklist Gaps",
@@ -76,8 +80,8 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
     {
       label: "Active Depegs",
       value: dq.activeDepegs,
-      detail: "open events",
-      severity: dq.activeDepegs > 5 ? "red" : dq.activeDepegs > 0 ? "amber" : "green",
+      detail: "informational only; active depegs do not change /status health",
+      severity: "neutral",
     },
     {
       label: "Stale On-chain",

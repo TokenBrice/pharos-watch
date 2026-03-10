@@ -1721,6 +1721,7 @@ Validates DEWS against historical depeg events. Reports true-positive rate and a
 ### `POST /api/backfill-mint-burn`
 
 Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
+If `configKey` is omitted, the worker auto-selects one Ethereum config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
@@ -1728,7 +1729,7 @@ Backfills mint/burn event ingestion for a specific contract config using the sam
 
 | Param       | Type      | Default         | Description                                                                  |
 | ----------- | --------- | --------------- | ---------------------------------------------------------------------------- |
-| `configKey` | `string`  | —               | Required config key: `{chainId}-{contractAddress}` (currently Ethereum-only) |
+| `configKey` | `string`  | auto-selected   | Optional config key: `{chainId}-{contractAddress}` (currently Ethereum-only) |
 | `fromBlock` | `integer` | from sync state | Start block override                                                         |
 | `toBlock`   | `integer` | chain head      | End block override (clamped to chain head)                                   |
 | `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                       |

@@ -453,12 +453,13 @@ Returns: `{ totalUpdated, coins: [{ id, updated }] }`
 
 ### POST /api/backfill-mint-burn (admin)
 
-Controlled ingestion backfill by explicit config/range/chunk.
+Controlled ingestion backfill by explicit config/range/chunk, or by automatic config selection when `configKey` is omitted.
 
 - Auth: `X-Admin-Key`
 - Idempotency: `Idempotency-Key` supported via admin idempotency middleware
 - Parameters: `configKey`, `fromBlock`, `toBlock`, `chunkSize`, `maxChunks`
 - Behavior:
+  - If `configKey` is omitted, the worker auto-selects one Ethereum config using a critical-first / major-symbol-first / most-behind ordering and returns `selectionMode="auto"` plus the chosen `configKey`.
   - Uses the same shared parse/classification/context/persistence helpers as cron ingestion.
   - Advances `mint_burn_sync_state` with monotonic max semantics (never regresses on partial backfills).
   - Returns `done=false` with `nextFromBlock` when additional calls are needed.

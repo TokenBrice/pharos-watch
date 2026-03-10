@@ -1097,7 +1097,14 @@ export interface HealthResponse {
   timestamp: number;
   caches: Record<string, CacheStatus>;
   blacklist: { totalEvents: number; missingAmounts: number };
-  mintBurn: { totalEvents: number };
+  mintBurn: {
+    totalEvents: number;
+    latestEventTs: number | null;
+    latestHourlyTs: number | null;
+    freshnessAgeSec: number | null;
+    majorStaleCount: number;
+    staleMajorSymbols: string[];
+  };
   circuits: Record<string, CircuitRecord>;
 }
 

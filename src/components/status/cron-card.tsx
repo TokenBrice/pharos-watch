@@ -286,6 +286,11 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
     skipped_locked: "bg-muted text-muted-foreground",
     error: "bg-red-500/15 text-red-700 dark:text-red-400",
   };
+  const metadataSummaryClass = !cron.healthy || latestStatus === "error"
+    ? "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-300"
+    : latestStatus === "degraded"
+      ? "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-300"
+      : "border-border/60 bg-muted/30 text-muted-foreground";
 
   return (
     <Card className={`border-2 ${borderColor}`}>
@@ -359,7 +364,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
               </details>
             )}
             {metadataSummary.length > 0 && (
-              <div className="space-y-1 rounded border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300">
+              <div className={`space-y-1 rounded border p-2 text-xs ${metadataSummaryClass}`}>
                 {metadataSummary.map((line) => (
                   <div key={line}>{line}</div>
                 ))}

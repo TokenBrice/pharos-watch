@@ -10,7 +10,6 @@ import type {
 import {
   computeGroupedExposure,
   computeUpstreamExposure,
-  categorizeCollateral,
   type UpstreamExposure,
 } from "@/lib/portfolio-analysis";
 import {

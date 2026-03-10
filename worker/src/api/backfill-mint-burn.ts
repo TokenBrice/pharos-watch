@@ -26,11 +26,14 @@ import {
 } from "../lib/mint-burn-pipeline/persistence";
 import { detectAtomicRoundtrips } from "../lib/mint-burn-pipeline/roundtrip-detection";
 import {
+  ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
   readMintBurnSyncState,
+  readMintBurnSyncStateBatch,
   upsertMintBurnSyncState,
 } from "../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipeline/types";
+import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
 const ETHEREUM_CHUNK_SIZE = 50_000;
@@ -40,6 +43,66 @@ const DEFAULT_MAX_CHUNKS = 24;
 
 function configKey(config: MintBurnContractConfig): string {
   return mintBurnConfigKey(config);
+}
+
+async function resolveBackfillConfig(
+  db: D1Database,
+  chainHead: number,
+  requestedConfigKey: string | null,
+): Promise<{
+  config: MintBurnContractConfig;
+  selectionMode: "explicit" | "auto";
+  autoSelectedReason: string | null;
+}> {
+  if (requestedConfigKey) {
+    const config = MINT_BURN_CONFIGS.find(
+      (entry) => configKey(entry).toLowerCase() === requestedConfigKey,
+    );
+    if (!config) {
+      throw errorResponse(404, "Unknown mint/burn configKey");
+    }
+    return {
+      config,
+      selectionMode: "explicit",
+      autoSelectedReason: null,
+    };
+  }
+
+  const eligibleConfigs = MINT_BURN_CONFIGS.filter(
+    (entry) => entry.enabled !== false && entry.chain.chainId === ETHEREUM_CHAIN_ID,
+  );
+  if (eligibleConfigs.length === 0) {
+    throw errorResponse(400, "No eligible Ethereum mint/burn configs are enabled");
+  }
+
+  await ensureMintBurnSyncStateRows(db, eligibleConfigs);
+  const syncStateByKey = await readMintBurnSyncStateBatch(db, eligibleConfigs);
+  const majorSymbols = new Set(
+    resolveMintBurnFreshnessConfig().majorSymbols.map((symbol) => symbol.trim().toUpperCase()),
+  );
+
+  const config = [...eligibleConfigs].sort((a, b) => {
+    const aTier = a.tier === "extended" ? 1 : 0;
+    const bTier = b.tier === "extended" ? 1 : 0;
+    if (aTier !== bTier) return aTier - bTier;
+
+    const aMajor = majorSymbols.has(a.symbol.toUpperCase()) ? 0 : 1;
+    const bMajor = majorSymbols.has(b.symbol.toUpperCase()) ? 0 : 1;
+    if (aMajor !== bMajor) return aMajor - bMajor;
+
+    const aLag = Math.max(0, chainHead - (syncStateByKey.get(configKey(a)) ?? (a.startBlock - 1)));
+    const bLag = Math.max(0, chainHead - (syncStateByKey.get(configKey(b)) ?? (b.startBlock - 1)));
+    return bLag - aLag;
+  })[0];
+  if (!config) {
+    throw errorResponse(400, "No eligible Ethereum mint/burn configs are enabled");
+  }
+
+  return {
+    config,
+    selectionMode: "auto",
+    autoSelectedReason: "critical-first-most-behind",
+  };
 }
 
 async function readBodyJson(request?: Request): Promise<Record<string, unknown>> {
@@ -71,23 +134,7 @@ export const handleBackfillMintBurn = withErrorHandler(
     const configKeyParamRaw =
       (typeof body.configKey === "string" ? body.configKey : null) ??
       url.searchParams.get("configKey");
-    const configKeyParam = configKeyParamRaw?.trim().toLowerCase();
-
-    if (!configKeyParam) {
-      return errorResponse(400, "configKey is required");
-    }
-
-    const config = MINT_BURN_CONFIGS.find(
-      (entry) => configKey(entry).toLowerCase() === configKeyParam,
-    );
-
-    if (!config) {
-      return errorResponse(404, "Unknown mint/burn configKey");
-    }
-
-    if (config.chain.chainId !== ETHEREUM_CHAIN_ID) {
-      return errorResponse(400, "Selected config is outside Ethereum-only mint/burn scope");
-    }
+    const configKeyParam = configKeyParamRaw?.trim().toLowerCase() ?? null;
 
     const chunkMax = ETHEREUM_CHUNK_SIZE;
     const defaultChunkSize = chunkMax;
@@ -145,15 +192,9 @@ export const handleBackfillMintBurn = withErrorHandler(
       (typeof body.maxChunks === "number" ? Math.trunc(body.maxChunks) : null) ??
       parsedMaxChunks;
 
-    const currentLastBlock = await readMintBurnSyncState(db, configKey(config));
-
-    const fromBlock = fromBlockParam >= 0
-      ? fromBlockParam
-      : (currentLastBlock ?? (config.startBlock - 1)) + 1;
-
-    const alchemyUrl = buildAlchemyUrl(config.chain.chainId, alchemyApiKey);
+    const alchemyUrl = buildAlchemyUrl(ETHEREUM_CHAIN_ID, alchemyApiKey);
     if (!alchemyUrl) {
-      return errorResponse(400, `Alchemy URL is not configured for chain ${config.chain.chainId}`);
+      return errorResponse(400, `Alchemy URL is not configured for chain ${ETHEREUM_CHAIN_ID}`);
     }
 
     const budget = createBudget(BACKFILL_BUDGET_LIMIT);
@@ -162,10 +203,35 @@ export const handleBackfillMintBurn = withErrorHandler(
       return errorResponse(502, "Failed to fetch chain head for backfill range");
     }
 
+    let selectedConfig: Awaited<ReturnType<typeof resolveBackfillConfig>>;
+    try {
+      selectedConfig = await resolveBackfillConfig(db, chainHead, configKeyParam);
+    } catch (response) {
+      if (response instanceof Response) {
+        return response;
+      }
+      throw response;
+    }
+
+    const { config, selectionMode, autoSelectedReason } = selectedConfig;
+
+    if (config.chain.chainId !== ETHEREUM_CHAIN_ID) {
+      return errorResponse(400, "Selected config is outside Ethereum-only mint/burn scope");
+    }
+
+    const currentLastBlock = await readMintBurnSyncState(db, configKey(config));
+
+    const fromBlock = fromBlockParam >= 0
+      ? fromBlockParam
+      : (currentLastBlock ?? (config.startBlock - 1)) + 1;
+
     const toBlock = toBlockParam >= 0 ? Math.min(toBlockParam, chainHead) : chainHead;
     if (toBlock < fromBlock) {
       return jsonResponse({
         configKey: configKey(config),
+        selectedSymbol: config.symbol,
+        selectionMode,
+        autoSelectedReason,
         fromBlock,
         toBlock,
         done: true,
@@ -312,6 +378,9 @@ export const handleBackfillMintBurn = withErrorHandler(
 
     return jsonResponse({
       configKey: configKey(config),
+      selectedSymbol: config.symbol,
+      selectionMode,
+      autoSelectedReason,
       fromBlock,
       toBlock,
       chunkSize,

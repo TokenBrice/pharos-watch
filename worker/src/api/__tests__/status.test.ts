@@ -236,6 +236,88 @@ describe("handleStatus", () => {
     });
   });
 
+  it("treats a fresh in-flight recovery run as healthy even if the last completed run errored", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const jobs = [
+      "sync-stablecoins",
+      "sync-stablecoin-charts",
+      "sync-blacklist",
+      "sync-mint-burn",
+      "sync-mint-burn-extended",
+      "sync-dex-discovery",
+      "sync-dex-liquidity",
+      "sync-usds-status",
+      "sync-bluechip",
+      "sync-fx-rates",
+      "daily-digest",
+      "snapshot-supply",
+      "snapshot-safety-grade-history",
+      "stability-index",
+      "snapshot-psi",
+      "sync-yield-data",
+      "fetch-tbill-rate",
+      "compute-dews",
+      "status-self-check",
+      "dispatch-telegram-alerts",
+      "discovery-scan",
+    ];
+    const cronRows = jobs.map((job) => makeCronRow(job, job === "sync-blacklist" ? "error" : "ok", 30));
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("fx-rates"),
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "cron_run_progress",
+        rows: [{
+          job: "sync-blacklist",
+          started_at: now - 120,
+          updated_at: now - 10,
+          stage: "scan-config",
+          items_done: 4,
+          items_total: 7,
+          message: "Scanning USDT on Ethereum",
+          lease_owner: "lease-456",
+          metadata: JSON.stringify({ budgetUsed: 31, budgetLimit: 900 }),
+        }],
+      },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 1000, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      summary: { unhealthyCrons: number; cronErrors: number };
+      crons: Record<string, { healthy: boolean }>;
+    };
+
+    expect(body.crons["sync-blacklist"]?.healthy).toBe(true);
+    expect(body.summary.unhealthyCrons).toBe(0);
+    expect(body.summary.cronErrors).toBe(0);
+    expect(body.availabilityStatus).toBe("healthy");
+  });
+
   it("includes Telegram bot subscriber stats when Telegram tables are present", async () => {
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [] },

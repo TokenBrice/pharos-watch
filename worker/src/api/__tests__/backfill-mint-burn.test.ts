@@ -54,7 +54,7 @@ describe("handleBackfillMintBurn", () => {
     expect(response.status).toBe(401);
   });
 
-  it("validates configKey", async () => {
+  it("auto-selects a config when configKey is omitted", async () => {
     const response = await handleBackfillMintBurn(
       makeDb(),
       makeApiUrl("/api/backfill-mint-burn"),
@@ -68,9 +68,36 @@ describe("handleBackfillMintBurn", () => {
       "alchemy-key",
     );
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      configKey: string;
+      selectedSymbol: string;
+      selectionMode: string;
+      autoSelectedReason: string | null;
+    };
+    expect(body.configKey).toBe("ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7");
+    expect(body.selectedSymbol).toBe("USDT");
+    expect(body.selectionMode).toBe("auto");
+    expect(body.autoSelectedReason).toBe("critical-first-most-behind");
+  });
+
+  it("returns 404 for an unknown configKey", async () => {
+    const response = await handleBackfillMintBurn(
+      makeDb(),
+      makeApiUrl("/api/backfill-mint-burn"),
+      "secret",
+      makeApiRequest("/api/backfill-mint-burn", {
+        method: "POST",
+        adminKey: "secret",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ configKey: "ethereum-0xdeadbeef" }),
+      }),
+      "alchemy-key",
+    );
+
+    expect(response.status).toBe(404);
     const body = (await response.json()) as { error: string };
-    expect(body.error).toContain("configKey");
+    expect(body.error).toContain("Unknown mint/burn configKey");
   });
 
   it("returns done when requested range is empty", async () => {
