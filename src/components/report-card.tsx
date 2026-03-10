@@ -26,7 +26,6 @@ interface ReportCardDetailProps {
     poolQuality: number;
     durability: number;
     pairDiversity: number;
-    crossChain: number;
   } | null;
 }
 
@@ -192,12 +191,11 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                       </summary>
                       <div className="mt-2 ml-4 space-y-1">
                         {[
-                          { label: "TVL Depth", key: "tvlDepth" as const, weight: 30 },
+                          { label: "TVL Depth", key: "tvlDepth" as const, weight: 35 },
                           { label: "Volume Activity", key: "volumeActivity" as const, weight: 20 },
-                          { label: "Pool Quality", key: "poolQuality" as const, weight: 20 },
+                          { label: "Pool Quality", key: "poolQuality" as const, weight: 22.5 },
                           { label: "Durability", key: "durability" as const, weight: 15 },
                           { label: "Pair Diversity", key: "pairDiversity" as const, weight: 7.5 },
-                          { label: "Cross-chain", key: "crossChain" as const, weight: 7.5 },
                         ].map(({ label, key: k, weight }) => {
                           const value = liquidityComponents[k];
                           return value != null ? (

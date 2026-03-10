@@ -284,38 +284,32 @@ function ScoreBreakdown({ components }: { components: DexLiquidityData["scoreCom
     {
       label: "TVL Depth",
       value: components.tvlDepth,
-      weight: "30%",
-      tooltip: "Total value locked in DEX pools, quality-adjusted",
+      weight: "35%",
+      tooltip: "Log-scale effective TVL (quality-adjusted, metapool-deduped)",
     },
     {
       label: "Volume",
       value: components.volumeActivity,
       weight: "20%",
-      tooltip: "Trading volume relative to pool TVL",
+      tooltip: "Log-scale volume/TVL ratio",
     },
     {
       label: "Pool Quality",
       value: components.poolQuality,
-      weight: "20%",
+      weight: "22.5%",
       tooltip: "Mechanism quality \u00d7 balance health \u00d7 pair quality",
     },
     {
       label: "Durability",
       value: components.durability,
       weight: "15%",
-      tooltip: "Organic fees, TVL stability, volume consistency, maturity",
+      tooltip: "TVL stability, volume consistency, maturity, organic fees",
     },
     {
       label: "Diversity",
       value: components.pairDiversity,
       weight: "7.5%",
       tooltip: "Number of distinct liquidity pools",
-    },
-    {
-      label: "Cross-chain",
-      value: components.crossChain,
-      weight: "7.5%",
-      tooltip: "Number of chains with active pools",
     },
   ];
   return (
