@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { GradeBadge } from "@/components/grade-badge";
 import { formatCurrency } from "@shared/lib/format";
 import type { StressTestState } from "@/hooks/use-stress-test";
 import type { ReportCardGrade } from "@shared/types";
-import { Network, Play } from "lucide-react";
+import { Network, Play, ChevronDown } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 
 // ---------------------------------------------------------------------------
@@ -38,32 +39,36 @@ interface StressTestPanelProps {
 // ---------------------------------------------------------------------------
 
 export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <Card>
       {/* Header */}
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Network className="h-5 w-5 text-rose-700 dark:text-rose-400 shrink-0" />
-              <CardTitle as="h2" className="text-lg">
-                Contagion Map
-              </CardTitle>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Simulate how a downgrade in one stablecoin propagates through shared dependencies and report-card logic.
-            </p>
+      <CardHeader
+        className="cursor-pointer select-none"
+        onClick={() => setIsOpen((v) => !v)}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Network className="h-5 w-5 text-rose-700 dark:text-rose-400 shrink-0" />
+            <CardTitle as="h2" className="text-lg">
+              Contagion Map
+            </CardTitle>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+            />
           </div>
           <Link
             href="/dependency-map/"
             className="pharos-focus-ring rounded-full border border-border/60 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+            onClick={(e) => e.stopPropagation()}
           >
             Full dependency map
           </Link>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 pt-0">
+      {isOpen && <CardContent className="space-y-4 pt-0">
         {/* Systemic Risk Scoreboard */}
         {stressTest.systemicRisks.length > 0 && (
           <div className="space-y-3">
@@ -239,7 +244,7 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
             Grades recomputed client-side using the same algorithm. Only the Dependency Risk dimension is affected.
           </p>
         )}
-      </CardContent>
+      </CardContent>}
     </Card>
   );
 }
