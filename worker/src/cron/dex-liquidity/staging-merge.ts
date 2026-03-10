@@ -180,28 +180,18 @@ export async function mergeStagedPools(
       stagedPool.quoteToken ?? "",
     ]);
 
-    const addressKnown = knownPoolAddrs.has(stagedPool.poolId);
-    const fingerprintKnown = fingerprint != null && knownPoolAddrs.has(fingerprint);
-    if (addressKnown || fingerprintKnown) {
-      skippedCount++;
-      if (addressKnown) {
-        addressSkipped++;
-      } else if (fingerprintKnown) {
-        fingerprintSkipped++;
-      }
-      continue;
-    }
-
+    // Compute confidence and adjusted TVL early — needed for price observation gate
     const ageHours = (nowSec - stagedPool.refreshedAt) / 3600;
     const confidence = stagedPoolConfidence(ageHours);
     if (confidence === 0) continue;
 
     const adjustedTvl = (stagedPool.tvlUsd ?? 0) * confidence;
-    const adjustedVolume = (stagedPool.volume24h ?? 0) * confidence;
-    const address = stagedPool.poolId.split(":")[1] ?? stagedPool.poolId;
-    const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
 
-    // Extract price observations from staged pools with plausible prices
+    // Extract price observations BEFORE dedup check.
+    // DL yields pools provide pool metrics but never prices; CG/GT staged pools
+    // carry priceUsd. Dedup correctly prevents double-counting TVL in dex_liquidity,
+    // but price observations feed a separate table (dex_prices) via TVL-weighted
+    // median that handles multiple observations gracefully.
     if (
       stagedPool.priceUsd != null &&
       stagedPool.priceUsd > 0 &&
@@ -217,6 +207,23 @@ export async function mergeStagedPools(
       });
       stagedPriceObs.set(stagedPool.stablecoinId, obs);
     }
+
+    // Dedup check — skip pool metrics merge for known pools
+    const addressKnown = knownPoolAddrs.has(stagedPool.poolId);
+    const fingerprintKnown = fingerprint != null && knownPoolAddrs.has(fingerprint);
+    if (addressKnown || fingerprintKnown) {
+      skippedCount++;
+      if (addressKnown) {
+        addressSkipped++;
+      } else if (fingerprintKnown) {
+        fingerprintSkipped++;
+      }
+      continue;
+    }
+
+    const adjustedVolume = (stagedPool.volume24h ?? 0) * confidence;
+    const address = stagedPool.poolId.split(":")[1] ?? stagedPool.poolId;
+    const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
 
     if (stagedPool.source === "cg_onchain") {
       pushPool(cgPoolMap, stagedPool.stablecoinId, {

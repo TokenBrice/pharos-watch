@@ -253,4 +253,124 @@ describe("mergeStagedPools", () => {
     expect(metric.topPools[0]?.extra?.balanceRatio).toBe(0.8);
     expect(metric.topPools[0]?.extra?.feeTier).toBe(500);
   });
+
+  it("extracts price observations from pools skipped by address dedup", async () => {
+    const now = 1710000000;
+    const mockDb = createMockDb([{
+      pool_id: "ethereum:0xknown",
+      stablecoin_id: "usdt-tether",
+      source: "cg_onchain",
+      chain: "ethereum",
+      protocol: "uniswap-v3",
+      dex_id: "uniswap_v3",
+      symbol: "USDT/USDC",
+      tvl_usd: 100000,
+      volume_24h: 50000,
+      fee_tier: 5,
+      balance_ratio: null,
+      is_stable: 1,
+      base_token: "0xbase",
+      quote_token: "0xquote",
+      quote_symbol: "USDC",
+      price_usd: 0.9998,
+      locked_liq_pct: null,
+      discovered_at: now - 86400 * 10,
+      refreshed_at: now,
+    }]);
+    const metrics = new Map();
+    // Pool address is already known (from DL yields) — will be deduped for metrics
+    const knownPoolAddrs = new Set(["ethereum:0xknown"]);
+
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolAddrs, now);
+
+    // Metrics dedup still works — pool was NOT merged into metrics
+    expect(result.skippedCount).toBe(1);
+    expect(result.skippedByAddressCount).toBe(1);
+    expect(result.mergedCount).toBe(0);
+    expect(metrics.size).toBe(0);
+
+    // But price observation WAS extracted
+    const obs = result.priceObservations.get("usdt-tether");
+    expect(obs).toHaveLength(1);
+    expect(obs![0].price).toBe(0.9998);
+    expect(obs![0].tvl).toBe(100000);
+    expect(obs![0].chain).toBe("ethereum");
+  });
+
+  it("extracts price observations from pools skipped by fingerprint dedup", async () => {
+    const now = 1710000000;
+    const mockDb = createMockDb([{
+      pool_id: "ethereum:0xnewaddr",
+      stablecoin_id: "usdt-tether",
+      source: "gecko_terminal",
+      chain: "ethereum",
+      protocol: "pancakeswap",
+      dex_id: "pancakeswap-v3",
+      symbol: "USDT/USDC",
+      tvl_usd: 80000,
+      volume_24h: 40000,
+      quality_multiplier: 0.5,
+      pool_type: "gt-concentrated",
+      fee_tier: null,
+      balance_ratio: null,
+      is_stable: 1,
+      base_token: "0xbase",
+      quote_token: "0xquote",
+      quote_symbol: "USDC",
+      price_usd: 1.0001,
+      locked_liq_pct: null,
+      discovered_at: now - 86400 * 5,
+      refreshed_at: now,
+    }]);
+    const metrics = new Map();
+    // Fingerprint is known (from DL yields) — will be deduped for metrics
+    const knownPoolAddrs = new Set(["fp:ethereum:pancakeswap:0xbase:0xquote"]);
+
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolAddrs, now);
+
+    // Metrics dedup still works
+    expect(result.skippedCount).toBe(1);
+    expect(result.skippedByFingerprintCount).toBe(1);
+    expect(result.mergedCount).toBe(0);
+    expect(metrics.size).toBe(0);
+
+    // Price observation WAS extracted
+    const obs = result.priceObservations.get("usdt-tether");
+    expect(obs).toHaveLength(1);
+    expect(obs![0].price).toBe(1.0001);
+    expect(obs![0].tvl).toBe(80000);
+  });
+
+  it("does NOT extract price observation from deduped pool with sub-threshold TVL", async () => {
+    const now = 1710000000;
+    const mockDb = createMockDb([{
+      pool_id: "ethereum:0xknown",
+      stablecoin_id: "usdt-tether",
+      source: "cg_onchain",
+      chain: "ethereum",
+      protocol: "uniswap-v3",
+      dex_id: "uniswap_v3",
+      symbol: "USDT/USDC",
+      tvl_usd: 30000,
+      volume_24h: 5000,
+      fee_tier: 5,
+      balance_ratio: null,
+      is_stable: 1,
+      base_token: "0xbase",
+      quote_token: "0xquote",
+      quote_symbol: "USDC",
+      price_usd: 1.0,
+      locked_liq_pct: null,
+      discovered_at: now - 86400 * 10,
+      refreshed_at: now,
+    }]);
+    const metrics = new Map();
+    const knownPoolAddrs = new Set(["ethereum:0xknown"]);
+
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolAddrs, now);
+
+    expect(result.skippedCount).toBe(1);
+    // TVL $30K × confidence 1.0 = $30K < $50K threshold — no price observation
+    expect(result.priceObservations.get("usdt-tether")).toBeUndefined();
+  });
 });

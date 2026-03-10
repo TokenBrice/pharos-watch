@@ -82,17 +82,30 @@ export async function fetchDsFallbackPools(
         const vol24h = pair.volume?.h24 ?? 0;
         if (vol24h === 0 && tvl < 10_000) continue;
 
+        // Ensure our token is the base token (not some random meme pairing)
+        const baseAddr = pair.baseToken.address.toLowerCase();
+        const isBase = baseAddr === contract.address.toLowerCase();
+        if (!isBase) continue;
+
+        // Parse price early — needed for price observation extraction
+        const price = parseFloat(pair.priceUsd ?? "") || 0;
+
+        // Extract price observation BEFORE dedup check.
+        // DL yields pools provide pool metrics but never prices; DexScreener pairs
+        // carry priceUsd. Dedup correctly prevents double-counting TVL in dex_liquidity,
+        // but price observations feed dex_prices via TVL-weighted median.
+        if (isPlausibleDexObservationPrice(meta.id, price) && tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
+          const obs = priceObs.get(meta.id) ?? [];
+          obs.push({ price, tvl, chain: contract.chain, protocol: `dexscreener-${pair.dexId}` });
+          priceObs.set(meta.id, obs);
+        }
+
         // Dedup against known pool addresses + token-pair fingerprints
         const poolKey = `${contract.chain}:${pair.pairAddress.toLowerCase()}`;
-        const baseAddr = pair.baseToken.address.toLowerCase();
         const quoteAddr = pair.quoteToken.address.toLowerCase();
         const fpKey = buildPoolFingerprint(contract.chain, pair.dexId, [baseAddr, quoteAddr]);
         if (knownPoolAddrs.has(poolKey) || (fpKey != null && knownPoolAddrs.has(fpKey))) continue;
         knownPoolAddrs.add(poolKey);
-
-        // Ensure our token is the base token (not some random meme pairing)
-        const isBase = baseAddr === contract.address.toLowerCase();
-        if (!isBase) continue;
 
         // Compute maturity
         let maturityDays = 0;
@@ -113,9 +126,6 @@ export async function fetchDsFallbackPools(
 
         const symbolStr = `${pair.baseToken.symbol} / ${pair.quoteToken.symbol}`;
 
-        // Parse price for the GtNewPool price field
-        const price = parseFloat(pair.priceUsd ?? "") || 0;
-
         const poolList = newPools.get(meta.id) ?? [];
         poolList.push({
           address: pair.pairAddress.toLowerCase(),
@@ -132,13 +142,6 @@ export async function fetchDsFallbackPools(
         });
         newPools.set(meta.id, poolList);
         poolsFound++;
-
-        // Price observation
-        if (isPlausibleDexObservationPrice(meta.id, price) && tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
-          const obs = priceObs.get(meta.id) ?? [];
-          obs.push({ price, tvl, chain: contract.chain, protocol: `dexscreener-${pair.dexId}` });
-          priceObs.set(meta.id, obs);
-        }
       }
     }
   }
