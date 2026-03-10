@@ -11,9 +11,9 @@ The status dashboard combines six signals:
 1. Cache freshness (`/api/status` -> `caches`)
 2. Cron health (`/api/status` -> `crons`)
 3. Data quality (`/api/status` -> `dataQuality`)
-4. Status state machine (`/api/status` -> `state`, `timeline`)
+4. Status state machine (`/api/status` -> `state`, `timeline`, `causes`, `summary`)
 5. Synthetic status probes (`/api/status` -> `probe`, `discrepancy`)
-6. Live endpoint probing (`useEndpointProbes`)
+6. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
 
 This page is **auth-gated in practice** because `/api/status` plus the admin probe/action paths require `X-Admin-Key`.
 
@@ -38,16 +38,24 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups every 60s
   - Manual/admin mutation actions are listed but intentionally not auto-probed
+- `src/hooks/use-status-history.ts`
+  - Calls `GET /api/status-history` with `X-Admin-Key`
+  - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
 - `src/components/status/telegram-bot-stats.tsx`
   - Renders Telegram subscriber adoption metrics, top subscribed coins, and the latest `dispatch-telegram-alerts` delivery summary
 - Cron cards are grouped by trigger slot on the page:
   - 15-minute core ingestion / score recompute
-  - 20-minute intake + critical mint/burn + `sync-dex-discovery`
-  - offset 20-minute extended mint/burn lane
-  - 30-minute scoring + downstream `sync-yield-data`
-  - daily snapshot / digest jobs
-  - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup
+  - 20-minute on-chain intake jobs shown together, but labeled as isolated triggers (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`, `sync-dex-discovery`)
+  - 30-minute charts / liquidity / yield jobs
+  - daily snapshot / digest / coverage-discovery jobs
+  - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup, plus the exact cron expression and whether the trigger is shared vs isolated
   - When a leased job is still running, cards surface `running` / `running-stale` state from `crons[*].inFlight`
+  - Shared display metadata now comes from `shared/lib/cron-jobs.ts`, which also feeds worker interval expectations
+- Status-specific sections now include:
+  - `Status Facts`: summary counters + machine-readable causes with optional inline remediation actions
+  - `Status Diagnostics`: worker-side self-check, browser-side probe loop, divergence, and state-machine counters
+  - `Dataset Freshness`: last-writer timestamps by dataset domain and expected freshness based on owning cron cadence
+  - `Incident Timeline`: filtered history windows with expandable persisted causes per transition
 
 ### Endpoint groups
 
@@ -150,6 +158,8 @@ Additional response fields:
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
+- `datasetFreshness`: last-write timestamps for key operational datasets (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `yield`, `depegs`, `dews`, `digest`)
+- `summary`: compact availability rollup (`unhealthyCrons`, `degradedCrons`, `cronErrors`, `worstCacheRatio`)
 
 `dataQuality` now also exposes:
 
@@ -223,6 +233,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 - Probe timeout: 5s per endpoint
 - Parallel probing with `Promise.all`
 - Admin probe paths include `X-Admin-Key`
+- The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
 - Parameterized routes probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses.
 - Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest.
 - Returned result shape: `{ path, status, latencyMs, error? }`
@@ -248,6 +259,13 @@ Status-page manual actions are router-dispatched from shared endpoint metadata (
 - `GET /api/audit-depeg-history?dry-run=true`
 - `GET /api/backfill-dews`
 
+The UI now uses these actions in two ways:
+
+- a complete operator tool shelf (`All actions`)
+- contextual recommendations derived from active causes and unhealthy cron lanes (`Recommended now`)
+
+Each action execution is confirmed, logged locally in the page, and triggers a status/probe/history refresh on completion.
+
 Mutating admin paths are protected by method guardrails:
 
 - `GET` on mutating admin path -> `405` with `Allow: POST`
@@ -266,9 +284,11 @@ Renders after the Admin Actions section. Shows stablecoins tracked by CoinGecko 
 
 Renders after the Circuit Breakers section. Shows the current price confidence distribution across all tracked stablecoins:
 
-- **Confidence tiles** — colored metric tiles for `High`, `Single-source`, `Low`, and `Missing` counts
+- **Confidence tiles** — colored metric tiles for `High`, `Single-source`, `Low`, `Fallback`, and `Missing` counts
 - **Source breakdown line** — which price sources contributed to the current sync
 - **Divergences list** — collapsible list of assets where dual-primary sources disagreed by more than 50 bps
+- **Last sync age** — how old the price-health snapshot is
+- **Shadow pipeline stats** — divergence summary, coverage deltas, and compared-asset count
 
 Data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row — no extra DB query required.
 
@@ -279,12 +299,14 @@ Data is sourced from `sync-stablecoins` cron metadata stored in the most recent 
 | File                                           | Role                                                                                                                                                                                                                                                                                                       |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/status/client.tsx`                    | Auth gate + status dashboard orchestration shell                                                                                                                                                                                                                                                           |
-| `src/components/status/*`                      | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards are grouped by trigger slot, surface structured metadata for warning/error runs, show textual recent-run counts alongside history dots, and expose full raw metadata in a collapsible panel. |
+| `src/components/status/*`                      | Decomposed status UI modules (banner, facts, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards are grouped by trigger slot, surface trigger expressions + isolation mode, show last-good/error-skip context, and expose full raw metadata in collapsible panels. |
 | `src/components/status/telegram-bot-stats.tsx` | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                                              |
 | `src/components/status/discovery-candidates.tsx` | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                                               |
 | `src/components/status/price-source-health.tsx` | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                                        |
 | `src/hooks/use-status.ts`                      | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                                                                                                      |
 | `src/hooks/use-endpoint-probes.ts`             | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                                                                                                                    |
+| `src/hooks/use-status-history.ts`              | Shared polling policy for `/api/status-history` + dashboard time-window filters                                                                                                                                                                                                                           |
+| `shared/lib/cron-jobs.ts`                      | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                                            |
 | `shared/lib/api-endpoints.ts`                  | Shared endpoint registry for probe groups + status-page actions                                                                                                                                                                                                                                            |
 | `worker/src/router.ts`                         | Static route dispatch for status, probes, and shared admin action endpoints (`trigger-digest`, `reset-blacklist-sync`, `debug-sync-state`, mint/burn backfills, DEWS audit/backfill)                                                                                                                       |
 | `worker/src/api/status.ts`                     | Raw status synthesis + effective state response                                                                                                                                                                                                                                                            |

@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { EndpointProbeResult } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Button } from "@/components/ui/button";
 import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { useHealth } from "@/hooks/use-health";
+import { useStatusHistory, type StatusHistoryWindow } from "@/hooks/use-status-history";
 import { useStatus } from "@/hooks/use-status";
 import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
 import { AdminKeyForm } from "@/components/status/admin-key-form";
@@ -12,9 +14,11 @@ import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { CronCard } from "@/components/status/cron-card";
 import { DataQualityCards } from "@/components/status/data-quality-cards";
+import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { StatusBanner } from "@/components/status/status-banner";
+import { StatusFacts } from "@/components/status/status-facts";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
@@ -23,6 +27,30 @@ import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidate
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 
 const SESSION_KEY = "pharos-admin-key";
+
+function percentile(values: number[], p: number): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+  return sorted[index] ?? null;
+}
+
+function buildBrowserProbeSummary(
+  probes: EndpointProbeResult[] | undefined,
+  updatedAtMs: number,
+) {
+  if (!probes || probes.length === 0) return null;
+  const passCount = probes.filter((probe) => probe.status != null && probe.status >= 200 && probe.status < 300).length;
+  const latencies = probes.map((probe) => probe.latencyMs).filter((latency) => Number.isFinite(latency));
+
+  return {
+    sampleCount: probes.length,
+    passCount,
+    failCount: probes.length - passCount,
+    p95LatencyMs: percentile(latencies, 95),
+    updatedAt: updatedAtMs > 0 ? Math.floor(updatedAtMs / 1000) : null,
+  };
+}
 
 export default function StatusClient() {
   const [adminKey, setAdminKey] = useState(() => {
@@ -81,11 +109,19 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
     refetch: refetchProbes,
     dataUpdatedAt: probesUpdatedAt,
   } = useEndpointProbes(adminKey);
+  const [historyWindow, setHistoryWindow] = useState<StatusHistoryWindow>("24h");
+  const {
+    data: historyData,
+    isLoading: historyLoading,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useStatusHistory(adminKey, historyWindow);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const lastUpdated = Math.max(statusUpdatedAt ?? 0, healthUpdatedAt ?? 0, probesUpdatedAt ?? 0);
   const clientDataAgeSec = Math.max(0, Math.floor((nowMs - lastUpdated) / 1000));
   const clientDataStale = lastUpdated > 0 && clientDataAgeSec > 120;
+  const browserProbeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
 
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 5000);
@@ -96,7 +132,8 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
     refetchStatus();
     refetchHealth();
     refetchProbes();
-  }, [refetchStatus, refetchHealth, refetchProbes]);
+    refetchHistory();
+  }, [refetchStatus, refetchHealth, refetchProbes, refetchHistory]);
 
   if (isLoading) {
     return (
@@ -160,6 +197,22 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
           Endpoint probe checks unavailable: {probesError.message}
         </div>
       )}
+      {historyError && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+          Status history unavailable: {historyError.message}
+        </div>
+      )}
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Status Facts</h2>
+        <StatusFacts
+          adminKey={adminKey}
+          dbHealthy={data.dbHealthy}
+          summary={data.summary}
+          causes={data.causes}
+          onActionFinished={handleRefresh}
+        />
+      </section>
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Status Diagnostics</h2>
@@ -168,12 +221,13 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
           staleness={data.staleness}
           probe={data.probe}
           discrepancy={data.discrepancy}
+          browserProbe={browserProbeSummary}
           nowSeconds={data.timestamp}
         />
       </section>
 
       <section>
-        <h2 className="mb-3 text-xl font-semibold">Endpoint Health</h2>
+        <h2 className="mb-3 text-xl font-semibold">Browser Endpoint Probes</h2>
         <EndpointHealthGrid probes={probes} isLoading={probesLoading} />
       </section>
 
@@ -184,17 +238,26 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Price Source Health</h2>
-        <PriceSourceHealthCard health={data.priceSourceHealth} shadowComparison={data.shadowComparison} />
+        <PriceSourceHealthCard
+          health={data.priceSourceHealth}
+          shadowComparison={data.shadowComparison}
+          nowSeconds={data.timestamp}
+        />
       </section>
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Admin Actions</h2>
-        <AdminActionsPanel adminKey={adminKey} />
+        <AdminActionsPanel
+          adminKey={adminKey}
+          status={{ causes: data.causes, crons: data.crons }}
+          nowSeconds={data.timestamp}
+          onActionFinished={handleRefresh}
+        />
       </section>
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Coverage Discovery</h2>
-        <DiscoveryCandidatesCard candidates={data.discoveryCandidates} adminKey={adminKey} />
+        <DiscoveryCandidatesCard candidates={data.discoveryCandidates} adminKey={adminKey} nowSeconds={data.timestamp} />
       </section>
 
       <section>
@@ -232,12 +295,19 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Data Quality</h2>
-        <DataQualityCards dq={data.dataQuality} />
+        <DataQualityCards dq={{ ...data.dataQuality, nowSeconds: data.timestamp }} />
       </section>
+
+      <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Incident Timeline</h2>
-        <TransitionTimeline transitions={data.timeline} />
+        <TransitionTimeline
+          transitions={historyData?.transitions ?? data.timeline}
+          window={historyWindow}
+          onWindowChange={setHistoryWindow}
+          isLoading={historyLoading}
+        />
       </section>
 
       <CacheFreshnessTable caches={data.caches} />

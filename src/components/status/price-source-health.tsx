@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PriceSourceHealth, ShadowComparisonResult } from "@shared/types";
 import { useState } from "react";
+import { formatAge } from "./format";
 
 function MetricCard({ label, value, pct, severity }: { label: string; value: number; pct: string; severity: string }) {
   const colors: Record<string, string> = {
@@ -33,9 +34,11 @@ function confidenceSeverity(label: string, value: number, total: number): string
 export function PriceSourceHealthCard({
   health,
   shadowComparison,
+  nowSeconds,
 }: {
   health: PriceSourceHealth | null;
   shadowComparison?: ShadowComparisonResult | null;
+  nowSeconds: number;
 }) {
   const [showDivergences, setShowDivergences] = useState(false);
   const [showShadow, setShowShadow] = useState(false);
@@ -55,11 +58,13 @@ export function PriceSourceHealthCard({
 
   const { confidenceDistribution: cd, sourceDistribution: sd, divergences, totalAssets } = health;
   const pct = (n: number) => totalAssets > 0 ? `${((n / totalAssets) * 100).toFixed(1)}%` : "—";
+  const lastSyncAgeSeconds = Math.max(0, nowSeconds - health.lastSync);
 
   const metrics: { label: string; key: keyof typeof cd }[] = [
     { label: "High", key: "high" },
     { label: "Single", key: "single-source" },
     { label: "Low", key: "low" },
+    { label: "Fallback", key: "fallback" },
   ];
 
   return (
@@ -67,11 +72,13 @@ export function PriceSourceHealthCard({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Price Source Health</CardTitle>
-          <span className="text-xs text-muted-foreground">{totalAssets} assets</span>
+          <span className="text-xs text-muted-foreground">
+            {totalAssets} assets · synced {formatAge(lastSyncAgeSeconds)} ago
+          </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {metrics.map((m) => (
             <MetricCard
               key={m.key}
@@ -123,7 +130,7 @@ export function PriceSourceHealthCard({
               {showShadow ? "▾" : "▸"} Shadow Pipeline {shadowComparison.cgAvailable ? "" : "(CG unavailable)"}
             </button>
             {showShadow && (
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <div className="rounded-md border border-border/50 p-2">
                   <div className="text-[10px] text-muted-foreground">Mean</div>
                   <div className="font-mono text-sm">{shadowComparison.meanDivergenceBps} bps</div>
@@ -139,6 +146,10 @@ export function PriceSourceHealthCard({
                 <div className="rounded-md border border-border/50 p-2">
                   <div className="text-[10px] text-muted-foreground">Coverage</div>
                   <div className="font-mono text-sm">+{shadowComparison.coverageGained} / -{shadowComparison.coverageLost}</div>
+                </div>
+                <div className="rounded-md border border-border/50 p-2">
+                  <div className="text-[10px] text-muted-foreground">Compared</div>
+                  <div className="font-mono text-sm">{shadowComparison.totalCompared}</div>
                 </div>
               </div>
             )}

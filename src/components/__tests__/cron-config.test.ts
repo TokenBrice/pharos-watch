@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { getStatusCronDisplay, STATUS_CRON_GROUPS } from "@/components/status/cron-config";
+import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 
 describe("status cron config", () => {
   it("maps the split DEX pipeline onto separate cron groups", () => {
     expect(getStatusCronDisplay("sync-dex-discovery")).toEqual({
       group: "twenty-minute",
       label: "DEX pool discovery",
+      schedule: "6,26,46 * * * *",
+      triggerMode: "isolated",
     });
     expect(getStatusCronDisplay("sync-dex-liquidity")).toEqual({
       group: "half-hourly",
       label: "DEX liquidity scoring",
+      schedule: "10,40 * * * *",
+      triggerMode: "shared",
     });
   });
 
@@ -17,12 +22,40 @@ describe("status cron config", () => {
     expect(getStatusCronDisplay("sync-stablecoin-charts")).toEqual({
       group: "half-hourly",
       label: "Stablecoin charts",
+      schedule: "5,35 * * * *",
+      triggerMode: "isolated",
+    });
+  });
+
+  it("keeps daily chained jobs in the daily group", () => {
+    expect(getStatusCronDisplay("dispatch-telegram-alerts-daily")).toEqual({
+      group: "daily",
+      label: "Telegram alerts (daily)",
+      schedule: "0 8 * * *",
+      triggerMode: "shared",
+    });
+    expect(getStatusCronDisplay("discovery-scan")).toEqual({
+      group: "daily",
+      label: "Coverage discovery",
+      schedule: "0 8 * * *",
+      triggerMode: "shared",
     });
   });
 
   it("keeps the 20-minute slot description aligned with isolated on-chain triggers", () => {
     expect(STATUS_CRON_GROUPS.find((group) => group.key === "twenty-minute")?.description).toContain(
-      "On-chain intake",
+      "isolated trigger",
     );
+  });
+
+  it("provides display metadata for every known cron job", () => {
+    for (const cron of CRON_JOB_DEFINITIONS) {
+      expect(getStatusCronDisplay(cron.job)).toEqual({
+        group: cron.group,
+        label: cron.label,
+        schedule: cron.schedule,
+        triggerMode: cron.triggerMode,
+      });
+    }
   });
 });

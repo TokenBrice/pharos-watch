@@ -7,6 +7,17 @@ interface SystemDiagnosticsProps {
     rawStatus: "healthy" | "degraded" | "stale";
     lastEvaluatedAt: number;
     lastChangedAt: number;
+    consecutiveRaw: {
+      healthy: number;
+      degraded: number;
+      stale: number;
+    };
+    thresholds: {
+      escalateToDegraded: number;
+      escalateToStale: number;
+      recoverToDegraded: number;
+      recoverToHealthy: number;
+    };
   };
   staleness: { ageSeconds: number; maxAgeSec: number; isStale: boolean };
   probe: {
@@ -15,6 +26,7 @@ interface SystemDiagnosticsProps {
     sampleCount: number;
     passCount: number;
     failCount: number;
+    bootstrapMissCount?: number;
     p95LatencyMs: number | null;
   };
   discrepancy: {
@@ -24,6 +36,13 @@ interface SystemDiagnosticsProps {
     probeAgeSeconds: number | null;
     consecutiveDivergent: number;
   };
+  browserProbe?: {
+    sampleCount: number;
+    passCount: number;
+    failCount: number;
+    p95LatencyMs: number | null;
+    updatedAt: number | null;
+  } | null;
   nowSeconds: number;
 }
 
@@ -32,13 +51,17 @@ export function SystemDiagnostics({
   staleness,
   probe,
   discrepancy,
+  browserProbe,
   nowSeconds,
 }: SystemDiagnosticsProps) {
   const evalAge = Math.max(0, nowSeconds - state.lastEvaluatedAt);
   const changedAge = Math.max(0, nowSeconds - state.lastChangedAt);
+  const browserProbeAgeSeconds = browserProbe?.updatedAt != null
+    ? Math.max(0, nowSeconds - browserProbe.updatedAt)
+    : null;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
       <Card>
         <CardContent className="pt-4">
           <div className="text-xs text-muted-foreground">State Machine</div>
@@ -47,6 +70,9 @@ export function SystemDiagnostics({
           </div>
           <div className="text-xs text-muted-foreground">evaluated {formatAge(evalAge)} ago</div>
           <div className="text-xs text-muted-foreground">changed {formatAge(changedAge)} ago</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            raw streak h/d/s {state.consecutiveRaw.healthy}/{state.consecutiveRaw.degraded}/{state.consecutiveRaw.stale}
+          </div>
         </CardContent>
       </Card>
       <Card>
@@ -62,7 +88,7 @@ export function SystemDiagnostics({
       </Card>
       <Card>
         <CardContent className="pt-4">
-          <div className="text-xs text-muted-foreground">Synthetic Probe</div>
+          <div className="text-xs text-muted-foreground">Worker Self-Check</div>
           <div className="font-mono text-sm">
             {probe.status} ({probe.passCount}/{probe.sampleCount})
           </div>
@@ -70,6 +96,26 @@ export function SystemDiagnostics({
           <div className="text-xs text-muted-foreground">
             {probe.timestamp ? `${formatAge(Math.max(0, nowSeconds - probe.timestamp))} ago` : "no probe yet"}
           </div>
+          {probe.bootstrapMissCount != null && probe.bootstrapMissCount > 0 && (
+            <div className="text-xs text-muted-foreground">bootstrap misses {probe.bootstrapMissCount}</div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="pt-4">
+          <div className="text-xs text-muted-foreground">Browser Probe Loop</div>
+          <div className="font-mono text-sm">
+            {browserProbe ? `${browserProbe.passCount}/${browserProbe.sampleCount}` : "—"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            p95 {browserProbe?.p95LatencyMs != null ? `${browserProbe.p95LatencyMs}ms` : "—"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {browserProbeAgeSeconds != null ? `${formatAge(browserProbeAgeSeconds)} ago` : "not sampled yet"}
+          </div>
+          {browserProbe && browserProbe.failCount > 0 && (
+            <div className="text-xs text-muted-foreground">failures {browserProbe.failCount}</div>
+          )}
         </CardContent>
       </Card>
       <Card>
@@ -83,6 +129,9 @@ export function SystemDiagnostics({
             {discrepancy.hasDivergence ? "detected" : "none"}
           </div>
           <div className="text-xs text-muted-foreground">streak: {discrepancy.consecutiveDivergent}</div>
+          <div className="text-xs text-muted-foreground">
+            delta {discrepancy.severityDelta} • probe age {discrepancy.probeAgeSeconds != null ? formatAge(discrepancy.probeAgeSeconds) : "—"}
+          </div>
           {discrepancy.details && <div className="text-xs text-muted-foreground">{discrepancy.details}</div>}
         </CardContent>
       </Card>

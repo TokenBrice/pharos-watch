@@ -651,7 +651,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 22 cron jobs across 8 triggers via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 22 cron jobs across 8 triggers via `CRON_INTERVALS` in `worker/src/lib/cron-schedule.ts`, which is derived from the shared `shared/lib/cron-jobs.ts` source of truth:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -716,7 +716,8 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/auth.ts` | Admin auth: timing-safe `X-Admin-Key` comparison |
 | `worker/src/lib/alerts.ts` | Webhook alerts: auto-detects Discord/Slack format |
 | `worker/src/lib/constants.ts` | Shared constants: API URLs, thresholds, cache profiles |
-| `worker/src/lib/cron-schedule.ts` | Canonical cron expressions + per-job expected intervals (`CRON_INTERVALS`) |
+| `worker/src/lib/cron-schedule.ts` | Worker-facing `CRON_INTERVALS` export derived from shared cron metadata |
+| `shared/lib/cron-jobs.ts` | Shared cron expressions, per-job intervals, and status-page grouping/trigger metadata |
 | `worker/src/lib/status-thresholds.ts` | Shared status threshold constants for blacklist/on-chain quality bands |
 | `worker/src/lib/blacklist-gaps.ts` | Shared blacklist gap query helper (Tron null-amount exclusion + recent window) |
 | `worker/src/lib/chain-registry.ts` | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains |

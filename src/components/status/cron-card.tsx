@@ -249,10 +249,31 @@ function summarizeMetadata(job: string, metadata: Record<string, unknown> | unde
   return [];
 }
 
+function countConsecutiveStatus(
+  runs: CronCardProps["cron"]["recentRuns"],
+  status: string,
+): number {
+  let count = 0;
+  for (const run of runs) {
+    if (run.status !== status) break;
+    count += 1;
+  }
+  return count;
+}
+
+function getLastSuccessfulRun(
+  runs: CronCardProps["cron"]["recentRuns"],
+): CronCardProps["cron"]["recentRuns"][number] | null {
+  return runs.find((run) => run.status === "ok" || run.status === "degraded") ?? null;
+}
+
 export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
   const display = getStatusCronDisplay(job);
   const latestStatus = cron.lastRun?.status;
   const metadataSummary = summarizeMetadata(job, cron.lastRun?.metadata);
+  const lastSuccessfulRun = getLastSuccessfulRun(cron.recentRuns);
+  const errorStreak = countConsecutiveStatus(cron.recentRuns, "error");
+  const skippedStreak = countConsecutiveStatus(cron.recentRuns, "skipped_locked");
   const borderColor = !cron.healthy
     ? "border-red-500/30"
     : latestStatus === "degraded"
@@ -273,6 +294,11 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
           <div className="space-y-1">
             <CardTitle className="text-sm">{display.label}</CardTitle>
             {display.label !== job && <CardDescription className="font-mono text-xs">{job}</CardDescription>}
+            {display.schedule && (
+              <CardDescription className="text-xs text-muted-foreground">
+                {display.triggerMode === "isolated" ? "isolated trigger" : "shared trigger"} · {display.schedule}
+              </CardDescription>
+            )}
           </div>
           <span className="text-xs text-muted-foreground">every {formatInterval(cron.expectedIntervalSec)}</span>
         </div>
@@ -318,6 +344,13 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
               {cron.lastRun.itemCount != null && (
                 <span className="text-muted-foreground">{cron.lastRun.itemCount} items</span>
               )}
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {lastSuccessfulRun && (
+                <span>last good {formatAge(nowSeconds - lastSuccessfulRun.startedAt)} ago</span>
+              )}
+              {errorStreak > 0 && <span>error streak {errorStreak}</span>}
+              {skippedStreak > 0 && <span>lease skips {skippedStreak}</span>}
             </div>
             {cron.lastRun.error && (
               <details className="text-xs">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { buildApiUrl } from "@/lib/api";
 import type { DiscoveryCandidate } from "@shared/types";
 import { useState } from "react";
+import { formatAge } from "./format";
 
 function formatMcap(mcap: number | null): string {
   if (mcap == null) return "—";
@@ -29,11 +30,14 @@ function SourceBadge({ source }: { source: string }) {
 export function DiscoveryCandidatesCard({
   candidates,
   adminKey,
+  nowSeconds,
 }: {
   candidates: DiscoveryCandidate[] | null;
   adminKey: string;
+  nowSeconds: number;
 }) {
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+  const [dismissError, setDismissError] = useState<string | null>(null);
 
   if (!candidates || candidates.length === 0) {
     return (
@@ -49,16 +53,20 @@ export function DiscoveryCandidatesCard({
   }
 
   const handleDismiss = async (id: number) => {
+    setDismissError(null);
     try {
       const res = await fetch(buildApiUrl(`/api/discovery-candidates/${id}/dismiss`), {
         method: "POST",
-        headers: { Authorization: `Bearer ${adminKey}` },
+        headers: { "X-Admin-Key": adminKey },
       });
       if (res.ok) {
         setDismissed((prev) => new Set([...prev, id]));
+      } else {
+        const text = await res.text();
+        setDismissError(`${res.status}: ${text}`);
       }
-    } catch {
-      // silent — will show again on next refresh
+    } catch (err) {
+      setDismissError(err instanceof Error ? err.message : "Unknown error");
     }
   };
 
@@ -73,6 +81,11 @@ export function DiscoveryCandidatesCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
+        {dismissError && (
+          <div className="rounded-md border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-700 dark:text-red-400">
+            Dismiss failed: {dismissError}
+          </div>
+        )}
         {visible.map((c) => (
           <div key={c.id} className="flex items-center justify-between gap-2 rounded-md border border-border/50 px-3 py-2">
             <div className="flex items-center gap-2 overflow-hidden">
@@ -82,7 +95,10 @@ export function DiscoveryCandidatesCard({
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <span className="font-mono text-xs">{formatMcap(c.marketCap)}</span>
-              <span className="text-[10px] text-muted-foreground">{c.daysSeen}d</span>
+              <span className="text-[10px] text-muted-foreground">{c.daysSeen}d seen</span>
+              <span className="text-[10px] text-muted-foreground">
+                seen {formatAge(Math.max(0, nowSeconds - c.lastSeen))} ago
+              </span>
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleDismiss(c.id)}>
                 Dismiss
               </Button>

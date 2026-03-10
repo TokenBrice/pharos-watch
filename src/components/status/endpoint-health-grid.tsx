@@ -19,7 +19,7 @@ export function EndpointHealthGrid({ probes, isLoading }: EndpointHealthGridProp
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Endpoint Health</CardTitle>
+          <CardTitle className="text-base">Browser Endpoint Probes</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">Probing endpoints...</p>
@@ -33,15 +33,22 @@ export function EndpointHealthGrid({ probes, isLoading }: EndpointHealthGridProp
     for (const p of probes) probeMap.set(p.path, p);
   }
 
+  const probeList = probes ?? [];
+  const passCount = probeList.filter((probe) => probe.status != null && probe.status >= 200 && probe.status < 300).length;
+  const failCount = probeList.filter((probe) => probe.status == null || probe.status >= 400).length;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Endpoint Health</CardTitle>
+        <CardTitle className="text-base">Browser Endpoint Probes</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-xs text-muted-foreground">
-          Probe coverage skips routes that require volatile parameters or a known dated snapshot, such as digest
-          snapshots.
+          Browser-origin probe loop from this admin session. Compare it with the worker self-check above when diagnosing
+          divergence.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {probeList.length > 0 ? `${passCount}/${probeList.length} passing, ${failCount} failing or unreachable.` : "No browser probe samples yet."} Probe coverage skips routes that require volatile parameters or a known dated snapshot, such as digest snapshots.
         </p>
         {GROUP_LABELS.map(({ key, label }) => {
           const paths = [...ENDPOINT_GROUPS[key]];
