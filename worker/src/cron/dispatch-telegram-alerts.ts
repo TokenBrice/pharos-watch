@@ -27,6 +27,8 @@ interface DispatchResult {
 
 const MAX_MESSAGES_PER_RUN = 50;
 const SNAPSHOT_MAX_AGE_SEC = 86400; // 24h
+const PENDING_TTL_SEC = 3600; // 1 hour — stale alerts are worse than no alert
+const SEND_BATCH_SIZE = 5; // Parallel sends per batch (stay under Workers 6-conn limit)
 
 const SNAPSHOT_KEYS = {
   dews: "alert:dews-snapshot",
@@ -274,6 +276,142 @@ async function loadSubscriberRowsBatch(
     map.set(row.stablecoin_id, existing);
   }
   return map;
+}
+
+interface PendingAlertRow {
+  id: number;
+  chat_id: string;
+  message_html: string;
+  disable_notification: number;
+  created_at: number;
+  attempts: number;
+}
+
+/** Drain pending alerts, oldest first, up to `limit`. Returns count sent + blocked. */
+async function drainPendingQueue(
+  db: D1Database,
+  botToken: string,
+  limit: number,
+  signal?: AbortSignal,
+): Promise<{ sent: number; blocked: number; failed: number }> {
+  const rows = await db
+    .prepare(
+      `SELECT id, chat_id, message_html, disable_notification, created_at, attempts
+         FROM telegram_pending_alerts
+        ORDER BY created_at ASC
+        LIMIT ?`,
+    )
+    .bind(limit)
+    .all<PendingAlertRow>();
+
+  const pending = rows.results ?? [];
+  if (pending.length === 0) return { sent: 0, blocked: 0, failed: 0 };
+
+  let sent = 0;
+  let blocked = 0;
+  let failed = 0;
+  const idsToDelete: number[] = [];
+  const idsToRetry: number[] = [];
+
+  for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
+    if (signal?.aborted) break;
+    const batch = pending.slice(i, i + SEND_BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map(async (row) => {
+        try {
+          const result = await sendToChat(row.chat_id, row.message_html, botToken, {
+            disableWebPagePreview: true,
+            disableNotification: row.disable_notification === 1,
+          });
+          return { id: row.id, chatId: row.chat_id, attempts: row.attempts, ...result };
+        } catch {
+          // Transient failure (500, timeout, etc.) — don't crash the batch
+          return { id: row.id, chatId: row.chat_id, attempts: row.attempts, ok: false, blocked: false };
+        }
+      }),
+    );
+
+    for (const result of results) {
+      if (result.ok) {
+        sent++;
+        idsToDelete.push(result.id);
+      } else if (result.blocked) {
+        blocked++;
+        idsToDelete.push(result.id);
+        // Disable alerts for blocked user (best-effort)
+        await db
+          .prepare(
+            "UPDATE telegram_subscribers SET alert_dews=0, alert_depeg=0, alert_safety=0 WHERE chat_id=?",
+          )
+          .bind(result.chatId)
+          .run()
+          .catch(() => {});
+      } else {
+        // Transient failure — retry up to 2 more times (3 attempts total)
+        if (result.attempts >= 2) {
+          failed++;
+          idsToDelete.push(result.id);
+        } else {
+          idsToRetry.push(result.id);
+        }
+      }
+    }
+  }
+
+  // Delete delivered/expired/failed rows
+  if (idsToDelete.length > 0) {
+    const placeholders = idsToDelete.map(() => "?").join(",");
+    await db
+      .prepare(`DELETE FROM telegram_pending_alerts WHERE id IN (${placeholders})`)
+      .bind(...idsToDelete)
+      .run();
+  }
+
+  // Increment attempts for retryable rows
+  if (idsToRetry.length > 0) {
+    const placeholders = idsToRetry.map(() => "?").join(",");
+    await db
+      .prepare(
+        `UPDATE telegram_pending_alerts SET attempts = attempts + 1 WHERE id IN (${placeholders})`,
+      )
+      .bind(...idsToRetry)
+      .run();
+  }
+
+  return { sent, blocked, failed };
+}
+
+/** Enqueue pre-split message chunks for delivery in subsequent runs. */
+async function enqueuePendingAlerts(
+  db: D1Database,
+  messages: Array<{ chatId: string; html: string; disableNotification: boolean }>,
+  nowSec: number,
+): Promise<void> {
+  if (messages.length === 0) return;
+
+  // D1 batch — all-or-nothing
+  const stmts = messages.map((msg) =>
+    db
+      .prepare(
+        `INSERT INTO telegram_pending_alerts (chat_id, message_html, disable_notification, created_at)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .bind(msg.chatId, msg.html, msg.disableNotification ? 1 : 0, nowSec),
+  );
+  await db.batch(stmts);
+}
+
+/** Remove pending alerts older than TTL. */
+async function cleanupExpiredPendingAlerts(
+  db: D1Database,
+  nowSec: number,
+): Promise<number> {
+  const cutoff = nowSec - PENDING_TTL_SEC;
+  const result = await db
+    .prepare("DELETE FROM telegram_pending_alerts WHERE created_at < ?")
+    .bind(cutoff)
+    .run();
+  return result.meta?.changes ?? 0;
 }
 
 export async function dispatchTelegramAlerts(
