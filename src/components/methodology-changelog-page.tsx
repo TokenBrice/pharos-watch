@@ -84,7 +84,7 @@ export function MethodologyChangelogPage({
                     <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs font-medium text-foreground">
                       {`v${latestEntry.version}`}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs font-medium text-foreground">
                       {new Date(`${latestEntry.date}T00:00:00Z`).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
