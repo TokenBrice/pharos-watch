@@ -3082,6 +3082,62 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
 
+  // ── dTRINITY ──────────────────────────────────────────────────────
+  usd("dusd-dtrinity", "dTRINITY dUSD", "dUSD", "crypto-backed", "centralized-dependent", {
+    detailProvider: "coingecko",
+    geckoId: "dtrinity-usd",
+    yieldBearing: false, rwa: false, navToken: false,
+    collateral: "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves: USDC (Circle), USDT (Tether), USDS and sUSDS (Sky/MakerDAO), frxUSD and sfrxUSD (Frax Finance); reserve composition may also include Curve AMO liquidity positions. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
+    pegMechanism: "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
+    links: [
+      { label: "Website", url: "https://dtrinity.org" },
+      { label: "Twitter", url: "https://x.com/dtrinity_defi" },
+      { label: "Docs", url: "https://docs.dtrinity.org" },
+      { label: "App", url: "https://app.dtrinity.org/mint/dusd/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x07fff99e1664d9b116fbc158c0e99785f81ca236", decimals: 18 },
+      { chain: "fraxtal", address: "0x788d96f655735f52c676a133f4dfc53cec614d4a", decimals: 6 },
+      { chain: "katana", address: "0xca52d08737e6af8763a2bf6034b3b03868f24dda", decimals: 18 },
+      { chain: "sonic", address: "0x53a6abb52b2f968fa80df6a894e4f1b1020da975", decimals: 18 },
+    ],
+    collateralQuality: "exotic",
+    custodyModel: "onchain",
+    governanceQuality: "multisig",
+    dependencies: [
+      { id: "usdc-circle", weight: 0.3 },
+      { id: "usdt-tether", weight: 0.3 },
+      { id: "usds-sky", weight: 0.25 },
+      { id: "frxusd-frax", weight: 0.15 },
+    ],
+  }),
+
+  usd("sdusd-dtrinity", "dTRINITY Staked dUSD", "sdUSD", "crypto-backed", "centralized-dependent", {
+    detailProvider: "coingecko",
+    geckoId: "dtrinity-staked-dusd",
+    yieldBearing: true, rwa: false, navToken: true,
+    yieldConfig: { yieldSource: "dTRINITY dStake vault (sdUSD)", yieldType: "lending-vault" },
+    collateral: "dUSD deposited in the dSTAKE ERC-4626 vault, automatically supplied to dLEND (Aave V3 fork) where it earns lending yield from borrowers; sdUSD receipt tokens represent a pro-rata share of the growing dUSD pool plus accrued lending yield.",
+    pegMechanism: "ERC-4626 vault: dUSD deposited mints sdUSD at the current exchange rate; sdUSD appreciates vs dUSD as dLEND lending yield accrues; redemption available at any time when liquidity is present (0.10% unstaking fee distributed to remaining stakers); yield funded by dLEND borrower interest, supplemented by dTRINITY float revenue from dUSD reserves.",
+    links: [
+      { label: "Website", url: "https://dtrinity.org" },
+      { label: "Twitter", url: "https://x.com/dtrinity_defi" },
+      { label: "Docs", url: "https://docs.dtrinity.org/protocol-components/sdusd" },
+      { label: "App", url: "https://app.dtrinity.org/dstake/vault/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x7cb20517776636ed76b68edb3d99dcce356abf02", decimals: 18 },
+      { chain: "fraxtal", address: "0x58acc2600835211dcb5847c5fa422791fd492409", decimals: 6 },
+      { chain: "sonic", address: "0x41a5477364bf60d8936b90310fecfda79593304e", decimals: 18 },
+    ],
+    collateralQuality: "exotic",
+    custodyModel: "onchain",
+    governanceQuality: "multisig",
+    dependencies: [
+      { id: "dusd-dtrinity", weight: 1.0 },
+    ],
+  }),
+
   // ── Tokenized treasury / RWA fund tokens ──────────────────────────
   usd("ustb-superstate", "Superstate USTB", "USTB", "rwa-backed", "centralized", {
     detailProvider: "coingecko",

@@ -753,5 +753,15 @@
     "title": "Ashes to APY",
     "text": "Reservoir's rUSD processed $285M in redemptions 'without failure' in November 2025, then flatlined below $700K — the protocol's precise way of surviving a bank run while losing the patient. The protocol reincarnated as wsrUSD, an ERC-4626 NAV vault now at ~$96M, backing its stablecoin with an unusually varied diet: T-bills for bear-market floors, overcollateralized Morpho and Euler lending for DeFi rates, and crypto funding-rate strategies to capture bull-market upside. That flexibility is genuine; consistently beating benchmark yields through conditions that crushed simpler peers is not nothing. The catch is the governance label: allocations are voted by token holders, executed via multisig, and managed by named curators like Steakhouse and Gauntlet — all defensible arrangements, just a different thing from the 'permissionless and decentralized' framing that opens every piece of Reservoir marketing.",
     "updatedAt": "2026-03-03"
+  },
+  "dusd-dtrinity": {
+    "title": "The Borrower's Stablecoin",
+    "text": "dUSD inverts the usual stablecoin economic model: instead of rewarding passive holders, it redirects float revenue from its USDC/USDT/sUSDS reserve to subsidize borrowers who take dUSD loans through dLEND, its Aave V3 fork. The mechanism is coherent — higher subsidized demand means higher utilization, which means higher yields for lenders, which attracts more reserves, which funds more subsidies — a flywheel that looks elegant at $2M circulating supply and unproven at any larger scale. Being backed entirely by other stablecoins creates a dependency stack: the peg inherits the counterparty risk of Circle, Tether, Sky, and Frax simultaneously, while the AMO and SMO add operational complexity that most comparably sized protocols don't carry. Deployed across Ethereum, Fraxtal, Katana, and Sonic with chain-isolated reserves, dTRINITY has built a sophisticated protocol for a market that has not yet shown up.",
+    "updatedAt": "2026-03-10"
+  },
+  "sdusd-dtrinity": {
+    "title": "Subsidized Yield, Compounded",
+    "text": "sdUSD is an ERC-4626 vault that deposits dUSD into dLEND and returns a NAV-appreciating receipt token — structurally similar to sDAI or sUSDS, except the underlying lending market is subsidized by dTRINITY's own float revenue. The protocol reported an average 8.7% APY since inception on Fraxtal as of January 2026, which is either evidence that subsidized credit demand genuinely works or evidence that it works at small scale when the protocol is actively pumping incentives. The vault TVL sits at roughly $313K, which means the yield figures are currently the output of a protocol incentivizing itself in a low-liquidity environment. sdUSD is the honest version of what dTRINITY is building toward — a yield-bearing savings layer for dUSD — but the dependency chain running through dUSD, dLEND, and four centralized reserve stablecoins makes it a high-structure, high-trust product for a sub-$1M market.",
+    "updatedAt": "2026-03-10"
   }
 }
