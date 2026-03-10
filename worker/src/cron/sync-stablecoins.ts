@@ -30,6 +30,7 @@ import { upsertDiscoveryCandidates } from "./discovery-scan";
 import { DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { StablecoinListResponseSchema } from "@shared/types";
+import type { PriceSourceHealth } from "@shared/types";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { sendAlert } from "../lib/alerts";
 
@@ -734,6 +735,36 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
 
   const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
+
+  // Build price source health from dual-primary + enrichment stats
+  const priceSourceHealth: PriceSourceHealth = {
+    sourceDistribution: {
+      coingecko: enrichStats.pass3, // CG direct (enrichment pass 3)
+      "defillama+coingecko": dualPriceStats.high,
+      defillama: dualPriceStats.singleSource,
+      "defillama-contract": enrichStats.pass1 + enrichStats.pass1b,
+      coinmarketcap: enrichStats.passCmc,
+      dexscreener: enrichStats.pass4,
+      cached: enrichStats.pass2, // DL coins API proxy (pass 2) — effectively a cache of CG
+      missing: enrichStats.finalMissing,
+    },
+    confidenceDistribution: {
+      high: dualPriceStats.high,
+      "single-source": dualPriceStats.singleSource,
+      low: dualPriceStats.low,
+      fallback: enrichStats.passCmc + enrichStats.pass4,
+    },
+    divergences: dualPriceStats.divergences.slice(0, 10).map((d) => ({
+      id: d.id,
+      symbol: d.symbol,
+      cgPrice: d.cgPrice,
+      dlPrice: d.dlPrice,
+      bps: d.bps,
+    })),
+    totalAssets: llamaData.peggedAssets.length,
+    lastSync: Math.floor(Date.now() / 1000),
+  };
+
   const metadata: Record<string, unknown> = {
     rowsRead: rawAssetCount,
     rowsWritten: llamaData.peggedAssets.length,
@@ -746,6 +777,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     dualPrimary: dualPriceStats,
     rejectedPrices: rejectedCount,
     missingPrices: finalMissing,
+    priceSourceHealth,
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
   if (depegErrorCount > 0) {
