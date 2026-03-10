@@ -1147,4 +1147,31 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceUrl: "https://www.theblock.co/press-releases/378989/palm-usd-launches-pusd-a-global-free-stablecoin-backed-by-aed-and-sar",
     sourceLabel: "The Block",
   },
+  {
+    name: "Angle EURA",
+    symbol: "EURA",
+    logo: "eura.png",
+    pegCurrency: "EUR",
+    causeOfDeath: "abandoned",
+    deathDate: "2026-03",
+    peakMcap: 200_000_000,
+    epitaph: "DeFi's first Euro, last out",
+    obituary:
+      "Launched in late 2021 as agEUR — the first fully decentralized euro stablecoin — it briefly held the #1 spot among euro stablecoins with over 180 million tokens in circulation (~$200M). Tether's EURT overtook it in January 2022, and four years of slow erosion followed. A rebrand to EURA in March 2024 barely registered. By the time the team called it, EURA had fallen 98% to under $4M, ranking 10th among euro stablecoins. AIP-112 passed with just four voters — one casting 98% of the votes — a final measure of how few were still watching. The Angle team has moved on to Merkl, their DeFi incentive platform. Holders can redeem 1:1 for EURC until March 1, 2027.",
+    sourceUrl: "https://www.dlnews.com/articles/markets/angle-to-shutter-euro-stablecoin-eura/",
+    sourceLabel: "DL News",
+  },
+  {
+    name: "Angle USDA",
+    symbol: "USDA",
+    logo: "usda-angle.png",
+    pegCurrency: "USD",
+    causeOfDeath: "abandoned",
+    deathDate: "2026-03",
+    epitaph: "Late arrival, early exit",
+    obituary:
+      "Launched in April 2024 as Angle's yield-bearing USD stablecoin — backed by T-bills and DeFi lending — USDA arrived just as yield-bearing stablecoins became a commodity. It never found meaningful adoption. Wound down alongside EURA via AIP-112 in March 2026; holders can redeem 1:1 for USDC through the Angle Transmuter until March 1, 2027.",
+    sourceUrl: "https://blockonomi.com/angle-protocol-winds-down-eura-and-usda-stablecoins-after-community-governance-vote/",
+    sourceLabel: "Blockonomi",
+  },
 ];
