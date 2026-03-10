@@ -14,13 +14,13 @@ Most endpoints use the Pharos stablecoin ID in `ticker-issuer` format (e.g. `usd
 
 Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated with the issuer/protocol name:
 
-| Example | Asset |
-|---------|-------|
-| `"usdt-tether"` | Tether (USDT) |
-| `"usdc-circle"` | USD Coin (USDC) |
-| `"paxg-paxos"` | PAX Gold (PAXG) |
+| Example             | Asset           |
+| ------------------- | --------------- |
+| `"usdt-tether"`     | Tether (USDT)   |
+| `"usdc-circle"`     | USD Coin (USDC) |
+| `"paxg-paxos"`      | PAX Gold (PAXG) |
 | `"ustb-superstate"` | Superstate USTB |
-| `"gyen-gyen"` | GYEN |
+| `"gyen-gyen"`       | GYEN            |
 
 The full list is in `shared/lib/stablecoins.ts`. The ID registry (`shared/lib/stablecoin-id-registry.ts`) resolves canonical IDs and legacy aliases.
 
@@ -30,22 +30,22 @@ The full list is in `shared/lib/stablecoins.ts`. The ID registry (`shared/lib/st
 
 Endpoints backed by the cron cache include these additional headers:
 
-| Header | Description |
-|--------|-------------|
-| `X-Data-Age` | Seconds elapsed since the cron last wrote this data to D1 |
-| `Warning` | RFC 7234 stale-data warning, present when `X-Data-Age` exceeds the endpoint's max age |
+| Header       | Description                                                                           |
+| ------------ | ------------------------------------------------------------------------------------- |
+| `X-Data-Age` | Seconds elapsed since the cron last wrote this data to D1                             |
+| `Warning`    | RFC 7234 stale-data warning, present when `X-Data-Age` exceeds the endpoint's max age |
 
 ---
 
 ## Cache-Control Profiles
 
-| Profile | `Cache-Control` | Used by |
-|---------|----------------|---------|
-| realtime | `public, s-maxage=60, max-age=10` | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events |
-| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
-| per-coin | `public, s-maxage=300, max-age=10` | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1) |
-| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot |
-| no-store | `no-store` | health, status |
+| Profile  | `Cache-Control`                      | Used by                                                                                                                                                     |
+| -------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                     |
+| standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
+| per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                  |
+| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot                                               |
+| no-store | `no-store`                           | health, status                                                                                                                                              |
 
 ---
 
@@ -53,15 +53,16 @@ Endpoints backed by the cron cache include these additional headers:
 
 Recommended minimum polling cadence for external integrations:
 
-| Cache profile | Minimum poll interval | Notes |
-|---------------|-----------------------|-------|
-| realtime | 60 seconds | Polling faster usually re-fetches the same edge-cached payload |
-| standard | 300 seconds | Preferred baseline for most dashboards |
-| per-coin | 300 seconds | `GET /api/stablecoin/:id` is history-heavy; avoid short loops |
-| slow | 3600 seconds | Historical/timeline endpoints should generally be polled hourly |
-| no-store | On-demand only | Health/admin diagnostics; avoid high-frequency polling |
+| Cache profile | Minimum poll interval | Notes                                                           |
+| ------------- | --------------------- | --------------------------------------------------------------- |
+| realtime      | 60 seconds            | Polling faster usually re-fetches the same edge-cached payload  |
+| standard      | 300 seconds           | Preferred baseline for most dashboards                          |
+| per-coin      | 300 seconds           | `GET /api/stablecoin/:id` is history-heavy; avoid short loops   |
+| slow          | 3600 seconds          | Historical/timeline endpoints should generally be polled hourly |
+| no-store      | On-demand only        | Health/admin diagnostics; avoid high-frequency polling          |
 
 Client best practices:
+
 - Add interval jitter (`±10%`) to avoid synchronized bursts.
 - Read `X-Data-Age` + `Warning` for freshness/stale decisions.
 - Back off exponentially on `429` and `5xx` responses.
@@ -72,15 +73,15 @@ Client best practices:
 
 All error responses use `{ "error": "message" }` JSON format.
 
-| Status | Meaning | When |
-|--------|---------|------|
-| 400 | Bad Request | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input) |
-| 401 | Unauthorized | Admin endpoint called without valid `X-Admin-Key` header |
-| 404 | Not Found | Unknown stablecoin ID or missing resource |
-| 429 | Too Many Requests | Rate limit exceeded (global public API limiter or feedback-specific limiter) |
-| 500 | Internal Server Error | Unhandled exception (caught by `withErrorHandler`) |
-| 502 | Bad Gateway | Upstream (DefiLlama / CoinGecko) fetch failed |
-| 503 | Service Unavailable | Cache-passthrough endpoint where cache has never been populated |
+| Status | Meaning               | When                                                                                                     |
+| ------ | --------------------- | -------------------------------------------------------------------------------------------------------- |
+| 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input) |
+| 401    | Unauthorized          | Admin endpoint called without valid `X-Admin-Key` header                                                 |
+| 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                |
+| 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                             |
+| 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                       |
+| 502    | Bad Gateway           | Upstream (DefiLlama / CoinGecko) fetch failed                                                            |
+| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated                                          |
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`).
 
@@ -120,24 +121,24 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 
 **`StablecoinData` fields**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Pharos stablecoin ID |
-| `name` | `string` | Full name (e.g. `"Tether"`) |
-| `symbol` | `string` | Ticker (e.g. `"USDT"`) |
-| `geckoId` | `string \| null` | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`) |
-| `pegType` | `string` | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`) |
-| `pegMechanism` | `string` | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc. |
-| `priceSource` | `string` | Source of the current price (`"defillama"`, `"coingecko"`, `"defillama+coingecko"`, `"dexscreener"`) |
-| `priceConfidence` | `string \| null` | Price confidence level: `"high"` (dual-source agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline) |
-| `supplySource` | `string \| undefined` | Supply data source: `"defillama"` or `"coingecko-fallback"` |
-| `price` | `number \| null` | Current price in USD |
-| `circulating` | `Record<string, number>` | Current supply in USD, keyed by pegType (e.g. `{ "peggedUSD": 138000000 }`) |
-| `circulatingPrevDay` | `Record<string, number>` | Supply 24 h ago |
-| `circulatingPrevWeek` | `Record<string, number>` | Supply 7 days ago |
-| `circulatingPrevMonth` | `Record<string, number>` | Supply ~30 days ago |
-| `chainCirculating` | `Record<string, ChainCirculating>` | Per-chain breakdown |
-| `chains` | `string[]` | List of chain names where the token is deployed |
+| Field                  | Type                               | Description                                                                                                                                |
+| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                   | `string`                           | Pharos stablecoin ID                                                                                                                       |
+| `name`                 | `string`                           | Full name (e.g. `"Tether"`)                                                                                                                |
+| `symbol`               | `string`                           | Ticker (e.g. `"USDT"`)                                                                                                                     |
+| `geckoId`              | `string \| null`                   | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)                                                                   |
+| `pegType`              | `string`                           | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`)                                                                                     |
+| `pegMechanism`         | `string`                           | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc.                                                                                       |
+| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"defillama+coingecko"`, `"dexscreener"`)                                       |
+| `priceConfidence`      | `string \| null`                   | Price confidence level: `"high"` (dual-source agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline) |
+| `supplySource`         | `string \| undefined`              | Supply data source: `"defillama"` or `"coingecko-fallback"`                                                                                |
+| `price`                | `number \| null`                   | Current price in USD                                                                                                                       |
+| `circulating`          | `Record<string, number>`           | Current supply in USD, keyed by pegType (e.g. `{ "peggedUSD": 138000000 }`)                                                                |
+| `circulatingPrevDay`   | `Record<string, number>`           | Supply 24 h ago                                                                                                                            |
+| `circulatingPrevWeek`  | `Record<string, number>`           | Supply 7 days ago                                                                                                                          |
+| `circulatingPrevMonth` | `Record<string, number>`           | Supply ~30 days ago                                                                                                                        |
+| `chainCirculating`     | `Record<string, ChainCirculating>` | Per-chain breakdown                                                                                                                        |
+| `chains`               | `string[]`                         | List of chain names where the token is deployed                                                                                            |
 
 **`ChainCirculating`**
 
@@ -157,7 +158,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 ### `GET /api/stablecoin/:id`
 
 Historical price and supply chart data for a single stablecoin. Proxies DefiLlama (or CoinGecko for commodity/CG-only tokens) with a 5-minute server-side cache.
-All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on upstream/parse failures, logs include source tags and stablecoin ID before stale-cache fallback.
+All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on upstream/parse failures, logs include source tags and stablecoin ID before stale-cache fallback or `supply_history` reconstruction.
 
 **Path parameter:** `:id` — Pharos stablecoin ID.
 
@@ -173,17 +174,17 @@ All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on u
 
 **`TokenPoint`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `date` | `number` | Unix timestamp (seconds) |
-| `totalCirculatingUSD` | `Record<string, number>` | Supply in USD per pegType key |
-| `totalCirculating` | `Record<string, number>` | Supply in native units per pegType key |
+| Field                 | Type                     | Description                            |
+| --------------------- | ------------------------ | -------------------------------------- |
+| `date`                | `number`                 | Unix timestamp (seconds)               |
+| `totalCirculatingUSD` | `Record<string, number>` | Supply in USD per pegType key          |
+| `totalCirculating`    | `Record<string, number>` | Supply in native units per pegType key |
 
 For regular stablecoins the response is the raw DefiLlama stablecoin detail shape (it includes additional fields). For commodity and CG-only tokens the response is normalized to the shape above.
 
 Non-USD pegs have their `totalCirculatingUSD` values converted to USD using the current token price before caching, so the `totalCirculatingUSD` field always reflects the USD market cap regardless of peg type.
 
-**Error responses:** `502` when DefiLlama/CoinGecko is unavailable and no cached value exists; stale cache is returned in preference to an error.
+**Error responses:** `502` when DefiLlama/CoinGecko is unavailable and neither cached detail nor `supply_history` fallback data exists; stale cache is returned in preference to an error.
 
 For integrations that only need current per-coin metrics (without full historical arrays), prefer `GET /api/stablecoin-summary/:id`.
 
@@ -227,21 +228,21 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Pharos stablecoin ID |
-| `name` | `string` | Asset name |
-| `symbol` | `string` | Ticker symbol |
-| `pegType` | `string` | Peg type key (`peggedUSD`, `peggedEUR`, etc.) |
-| `pegMechanism` | `string` | Backing/mechanism classification |
-| `priceUsd` | `number \| null` | Current price in USD |
-| `priceSource` | `string` | Price source identifier |
-| `priceConfidence` | `string \| null` | Price confidence label |
-| `supplySource` | `string \| null` | Supply source identifier |
-| `supplyByPegUsd` | `Record<string, number>` | Current supply by peg bucket (USD) |
-| `supplyUsd` | `object` | Aggregate USD supply values and deltas (`current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d`) |
-| `chainCount` | `number` | Number of chains where the asset is deployed |
-| `updatedAt` | `number` | Unix seconds of the stablecoins snapshot used for this response |
+| Field             | Type                     | Description                                                                                                                 |
+| ----------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | `string`                 | Pharos stablecoin ID                                                                                                        |
+| `name`            | `string`                 | Asset name                                                                                                                  |
+| `symbol`          | `string`                 | Ticker symbol                                                                                                               |
+| `pegType`         | `string`                 | Peg type key (`peggedUSD`, `peggedEUR`, etc.)                                                                               |
+| `pegMechanism`    | `string`                 | Backing/mechanism classification                                                                                            |
+| `priceUsd`        | `number \| null`         | Current price in USD                                                                                                        |
+| `priceSource`     | `string`                 | Price source identifier                                                                                                     |
+| `priceConfidence` | `string \| null`         | Price confidence label                                                                                                      |
+| `supplySource`    | `string \| null`         | Supply source identifier                                                                                                    |
+| `supplyByPegUsd`  | `Record<string, number>` | Current supply by peg bucket (USD)                                                                                          |
+| `supplyUsd`       | `object`                 | Aggregate USD supply values and deltas (`current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d`) |
+| `chainCount`      | `number`                 | Number of chains where the asset is deployed                                                                                |
+| `updatedAt`       | `number`                 | Unix seconds of the stablecoins snapshot used for this response                                                             |
 
 ---
 
@@ -265,9 +266,9 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 ]
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `date` | `string` | Unix timestamp as a string |
+| Field                 | Type                     | Description                          |
+| --------------------- | ------------------------ | ------------------------------------ |
+| `date`                | `string`                 | Unix timestamp as a string           |
 | `totalCirculatingUSD` | `Record<string, number>` | Aggregate supply in USD per peg type |
 
 ---
@@ -280,13 +281,13 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, EURC, PAXG, and 
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Filter by token symbol: `USDC`, `USDT`, `EURC`, `PAXG`, `XAUT` |
-| `chain` | `string` | — | Filter by chain name (e.g. `Ethereum`, `Tron`) |
-| `eventType` | `string` | — | Filter by type: `blacklist`, `unblacklist`, `destroy` |
-| `limit` | `integer` | `1000` | Max results (1–1000; `0` maps to default `1000`) |
-| `offset` | `integer` | `0` | Pagination offset |
+| Param        | Type      | Default | Description                                                    |
+| ------------ | --------- | ------- | -------------------------------------------------------------- |
+| `stablecoin` | `string`  | —       | Filter by token symbol: `USDC`, `USDT`, `EURC`, `PAXG`, `XAUT` |
+| `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
+| `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
+| `limit`      | `integer` | `1000`  | Max results (1–1000; `0` maps to default `1000`)               |
+| `offset`     | `integer` | `0`     | Pagination offset                                              |
 
 **Response**
 
@@ -308,33 +309,33 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, EURC, PAXG, and 
 
 **`BlacklistEvent`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Composite ID: `{chainId}-{txHash}-{logIndex}` |
-| `stablecoin` | `string` | Token symbol (`USDC`, `USDT`, etc.) |
-| `chainId` | `string` | Chain identifier (e.g. `"ethereum"`, `"tron"`) |
-| `chainName` | `string` | Human-readable chain name (e.g. `"Ethereum"`) |
-| `eventType` | `string` | `"blacklist"`, `"unblacklist"`, or `"destroy"` |
-| `address` | `string` | Affected address (EVM `0x…` or Tron `T…`) |
-| `amount` | `number \| null` | USD value for `destroy` events; `null` otherwise |
-| `txHash` | `string` | Transaction hash |
-| `blockNumber` | `number` | Block number |
-| `timestamp` | `number` | Unix seconds |
-| `methodologyVersion` | `string` | Methodology version attributed to this event row |
-| `explorerTxUrl` | `string` | Block explorer URL for the transaction |
-| `explorerAddressUrl` | `string` | Block explorer URL for the address |
+| Field                | Type             | Description                                      |
+| -------------------- | ---------------- | ------------------------------------------------ |
+| `id`                 | `string`         | Composite ID: `{chainId}-{txHash}-{logIndex}`    |
+| `stablecoin`         | `string`         | Token symbol (`USDC`, `USDT`, etc.)              |
+| `chainId`            | `string`         | Chain identifier (e.g. `"ethereum"`, `"tron"`)   |
+| `chainName`          | `string`         | Human-readable chain name (e.g. `"Ethereum"`)    |
+| `eventType`          | `string`         | `"blacklist"`, `"unblacklist"`, or `"destroy"`   |
+| `address`            | `string`         | Affected address (EVM `0x…` or Tron `T…`)        |
+| `amount`             | `number \| null` | USD value for `destroy` events; `null` otherwise |
+| `txHash`             | `string`         | Transaction hash                                 |
+| `blockNumber`        | `number`         | Block number                                     |
+| `timestamp`          | `number`         | Unix seconds                                     |
+| `methodologyVersion` | `string`         | Methodology version attributed to this event row |
+| `explorerTxUrl`      | `string`         | Block explorer URL for the transaction           |
+| `explorerAddressUrl` | `string`         | Block explorer URL for the address               |
 
 **`methodology`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `version` | `string` | Methodology version of the latest returned event in this response |
-| `versionLabel` | `string` | Display label (e.g. `"v3.1"`) |
-| `currentVersion` | `string` | Latest methodology version |
-| `currentVersionLabel` | `string` | Display label for latest methodology version |
-| `changelogPath` | `string` | Relative URL to the methodology changelog page |
-| `asOf` | `number` | Unix timestamp of latest event used for freshness |
-| `isCurrent` | `boolean` | Whether `version` matches `currentVersion` |
+| Field                 | Type      | Description                                                       |
+| --------------------- | --------- | ----------------------------------------------------------------- |
+| `version`             | `string`  | Methodology version of the latest returned event in this response |
+| `versionLabel`        | `string`  | Display label (e.g. `"v3.1"`)                                     |
+| `currentVersion`      | `string`  | Latest methodology version                                        |
+| `currentVersionLabel` | `string`  | Display label for latest methodology version                      |
+| `changelogPath`       | `string`  | Relative URL to the methodology changelog page                    |
+| `asOf`                | `number`  | Unix timestamp of latest event used for freshness                 |
+| `isCurrent`           | `boolean` | Whether `version` matches `currentVersion`                        |
 
 ---
 
@@ -346,12 +347,12 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Filter by Pharos stablecoin ID |
-| `active` | `"true"` | — | When `"true"`, return only ongoing (unresolved) depeg events |
-| `limit` | `integer` | `100` | Max results (1–1000) |
-| `offset` | `integer` | `0` | Pagination offset |
+| Param        | Type      | Default | Description                                                  |
+| ------------ | --------- | ------- | ------------------------------------------------------------ |
+| `stablecoin` | `string`  | —       | Filter by Pharos stablecoin ID                               |
+| `active`     | `"true"`  | —       | When `"true"`, return only ongoing (unresolved) depeg events |
+| `limit`      | `integer` | `100`   | Max results (1–1000)                                         |
+| `offset`     | `integer` | `0`     | Pagination offset                                            |
 
 **Response**
 
@@ -375,33 +376,33 @@ Results are ordered by `startedAt` descending (most recent first).
 
 **`DepegEvent`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `number` | Auto-increment DB ID |
-| `stablecoinId` | `string` | Pharos stablecoin ID |
-| `symbol` | `string` | Token symbol |
-| `pegType` | `string` | DefiLlama peg type (e.g. `"peggedUSD"`) |
-| `direction` | `"above" \| "below"` | Whether the price was above or below the peg |
-| `peakDeviationBps` | `number` | Largest deviation observed (basis points, signed; negative = below peg, positive = above peg) |
-| `startedAt` | `number` | Unix seconds when depeg was first detected |
-| `endedAt` | `number \| null` | Unix seconds when price returned to peg; `null` if still active |
-| `startPrice` | `number` | Price at event start (USD) |
-| `peakPrice` | `number \| null` | Price at worst deviation |
-| `recoveryPrice` | `number \| null` | Price at recovery |
-| `pegReference` | `number` | Reference peg value used (USD) |
-| `source` | `"live" \| "backfill"` | Detection method |
+| Field              | Type                   | Description                                                                                   |
+| ------------------ | ---------------------- | --------------------------------------------------------------------------------------------- |
+| `id`               | `number`               | Auto-increment DB ID                                                                          |
+| `stablecoinId`     | `string`               | Pharos stablecoin ID                                                                          |
+| `symbol`           | `string`               | Token symbol                                                                                  |
+| `pegType`          | `string`               | DefiLlama peg type (e.g. `"peggedUSD"`)                                                       |
+| `direction`        | `"above" \| "below"`   | Whether the price was above or below the peg                                                  |
+| `peakDeviationBps` | `number`               | Largest deviation observed (basis points, signed; negative = below peg, positive = above peg) |
+| `startedAt`        | `number`               | Unix seconds when depeg was first detected                                                    |
+| `endedAt`          | `number \| null`       | Unix seconds when price returned to peg; `null` if still active                               |
+| `startPrice`       | `number`               | Price at event start (USD)                                                                    |
+| `peakPrice`        | `number \| null`       | Price at worst deviation                                                                      |
+| `recoveryPrice`    | `number \| null`       | Price at recovery                                                                             |
+| `pegReference`     | `number`               | Reference peg value used (USD)                                                                |
+| `source`           | `"live" \| "backfill"` | Detection method                                                                              |
 
 **`methodology`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `version` | `string` | Methodology version attributed from the latest returned event timestamp |
-| `versionLabel` | `string` | Display label (e.g. `"v4.5"`) |
-| `currentVersion` | `string` | Latest methodology version |
-| `currentVersionLabel` | `string` | Display label for latest methodology version |
-| `changelogPath` | `string` | Relative URL to the methodology changelog page |
-| `asOf` | `number` | Unix timestamp used for methodology attribution |
-| `isCurrent` | `boolean` | Whether `version` matches `currentVersion` |
+| Field                 | Type      | Description                                                             |
+| --------------------- | --------- | ----------------------------------------------------------------------- |
+| `version`             | `string`  | Methodology version attributed from the latest returned event timestamp |
+| `versionLabel`        | `string`  | Display label (e.g. `"v4.5"`)                                           |
+| `currentVersion`      | `string`  | Latest methodology version                                              |
+| `currentVersionLabel` | `string`  | Display label for latest methodology version                            |
+| `changelogPath`       | `string`  | Relative URL to the methodology changelog page                          |
+| `asOf`                | `number`  | Unix timestamp used for methodology attribution                         |
+| `isCurrent`           | `boolean` | Whether `version` matches `currentVersion`                              |
 
 ---
 
@@ -431,49 +432,49 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 
 **`PegSummaryCoin`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Pharos stablecoin ID |
-| `symbol` | `string` | Token symbol |
-| `name` | `string` | Full name |
-| `pegType` | `string` | DefiLlama peg type |
-| `pegCurrency` | `string` | Peg currency code (`USD`, `EUR`, `GOLD`, etc.) |
-| `governance` | `string` | `"centralized"`, `"centralized-dependent"`, `"decentralized"` |
-| `currentDeviationBps` | `number \| null` | Live price deviation from peg (basis points, signed). `null` for coins with supply < $1M or missing price. |
-| `pegScore` | `number \| null` | Composite peg score 0–100 (higher = more stable) |
-| `pegPct` | `number` | % of tracked time within ±100 bps |
-| `severityScore` | `number` | Severity sub-score (0–100) |
-| `spreadPenalty` | `number` | Spread/liquidity penalty applied to score |
-| `eventCount` | `number` | Number of depeg events in the 4-year window |
-| `worstDeviationBps` | `number \| null` | Worst single deviation seen (basis points) |
-| `activeDepeg` | `boolean` | Whether a depeg event is currently open |
-| `lastEventAt` | `number \| null` | Unix seconds of most recent depeg event |
-| `trackingSpanDays` | `number` | Days of history used for score computation |
-| `methodologyVersion` | `string` | Methodology version attributed to this coin snapshot |
-| `dexPriceCheck` | `DexPriceCheck \| null` | Optional cross-validation against DEX price (shown when coin supply ≥ $1M, DEX data is ≤ 60 minutes old, and aggregate source TVL is ≥ $250K) |
+| Field                 | Type                    | Description                                                                                                                                   |
+| --------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                  | `string`                | Pharos stablecoin ID                                                                                                                          |
+| `symbol`              | `string`                | Token symbol                                                                                                                                  |
+| `name`                | `string`                | Full name                                                                                                                                     |
+| `pegType`             | `string`                | DefiLlama peg type                                                                                                                            |
+| `pegCurrency`         | `string`                | Peg currency code (`USD`, `EUR`, `GOLD`, etc.)                                                                                                |
+| `governance`          | `string`                | `"centralized"`, `"centralized-dependent"`, `"decentralized"`                                                                                 |
+| `currentDeviationBps` | `number \| null`        | Live price deviation from peg (basis points, signed). `null` for coins with supply < $1M or missing price.                                    |
+| `pegScore`            | `number \| null`        | Composite peg score 0–100 (higher = more stable)                                                                                              |
+| `pegPct`              | `number`                | % of tracked time within ±100 bps                                                                                                             |
+| `severityScore`       | `number`                | Severity sub-score (0–100)                                                                                                                    |
+| `spreadPenalty`       | `number`                | Spread/liquidity penalty applied to score                                                                                                     |
+| `eventCount`          | `number`                | Number of depeg events in the 4-year window                                                                                                   |
+| `worstDeviationBps`   | `number \| null`        | Worst single deviation seen (basis points)                                                                                                    |
+| `activeDepeg`         | `boolean`               | Whether a depeg event is currently open                                                                                                       |
+| `lastEventAt`         | `number \| null`        | Unix seconds of most recent depeg event                                                                                                       |
+| `trackingSpanDays`    | `number`                | Days of history used for score computation                                                                                                    |
+| `methodologyVersion`  | `string`                | Methodology version attributed to this coin snapshot                                                                                          |
+| `dexPriceCheck`       | `DexPriceCheck \| null` | Optional cross-validation against DEX price (shown when coin supply ≥ $1M, DEX data is ≤ 60 minutes old, and aggregate source TVL is ≥ $250K) |
 
 **`DexPriceCheck`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `dexPrice` | `number` | DEX-derived price (USD) |
-| `dexDeviationBps` | `number` | DEX price deviation from peg (basis points, signed) |
-| `agrees` | `boolean` | Whether primary and DEX prices are within 50 bps |
-| `sourcePools` | `number` | Number of DEX pools contributing to the price |
-| `sourceTvl` | `number` | Combined TVL of those pools (USD) |
+| Field             | Type      | Description                                         |
+| ----------------- | --------- | --------------------------------------------------- |
+| `dexPrice`        | `number`  | DEX-derived price (USD)                             |
+| `dexDeviationBps` | `number`  | DEX price deviation from peg (basis points, signed) |
+| `agrees`          | `boolean` | Whether primary and DEX prices are within 50 bps    |
+| `sourcePools`     | `number`  | Number of DEX pools contributing to the price       |
+| `sourceTvl`       | `number`  | Combined TVL of those pools (USD)                   |
 
 **`PegSummaryStats`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `activeDepegCount` | `number` | Coins with an open depeg event |
-| `medianDeviationBps` | `number` | Median absolute deviation across all tracked coins |
-| `worstCurrent` | `{ id, symbol, bps } \| null` | Coin with the largest current deviation |
-| `coinsAtPeg` | `number` | Coins with current deviation < 100 bps |
-| `totalTracked` | `number` | Total coins in the response |
-| `depegEventsToday` | `number` | Number of depeg events whose `startedAt` is in the current UTC day |
-| `depegEventsYesterday` | `number` | Number of depeg events whose `startedAt` is in the previous UTC day |
-| `fallbackPegRates` | `string[]` | *(optional)* pegType keys using stale FX fallback rates |
+| Field                  | Type                          | Description                                                         |
+| ---------------------- | ----------------------------- | ------------------------------------------------------------------- |
+| `activeDepegCount`     | `number`                      | Coins with an open depeg event                                      |
+| `medianDeviationBps`   | `number`                      | Median absolute deviation across all tracked coins                  |
+| `worstCurrent`         | `{ id, symbol, bps } \| null` | Coin with the largest current deviation                             |
+| `coinsAtPeg`           | `number`                      | Coins with current deviation < 100 bps                              |
+| `totalTracked`         | `number`                      | Total coins in the response                                         |
+| `depegEventsToday`     | `number`                      | Number of depeg events whose `startedAt` is in the current UTC day  |
+| `depegEventsYesterday` | `number`                      | Number of depeg events whose `startedAt` is in the previous UTC day |
+| `fallbackPegRates`     | `string[]`                    | _(optional)_ pegType keys using stale FX fallback rates             |
 
 **`methodology`** — same fields and semantics as `/api/depeg-events`
 
@@ -495,11 +496,11 @@ Sky/USDS protocol status — whether the freeze module is currently active.
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `freezeActive` | `boolean` | Whether the USDS freeze module is currently enabled |
-| `implementationAddress` | `string` | Address of the current USDS implementation contract |
-| `lastChecked` | `number` | Unix seconds when this was last fetched on-chain |
+| Field                   | Type      | Description                                         |
+| ----------------------- | --------- | --------------------------------------------------- |
+| `freezeActive`          | `boolean` | Whether the USDS freeze module is currently enabled |
+| `implementationAddress` | `string`  | Address of the current USDS implementation contract |
+| `lastChecked`           | `number`  | Unix seconds when this was last fetched on-chain    |
 
 ---
 
@@ -520,26 +521,26 @@ Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins
 
 **`BluechipRating`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `grade` | `string` | Letter grade: `"A+"`, `"A"`, `"A-"`, `"B+"` … `"F"` |
-| `slug` | `string` | Bluechip report slug (e.g. `"usdt"`) |
-| `collateralization` | `number` | Collateralization percentage |
-| `smartContractAudit` | `boolean` | Whether an audit exists |
-| `dateOfRating` | `string` | ISO 8601 date of rating |
-| `dateLastChange` | `string \| null` | ISO 8601 date of last grade change |
-| `smidge` | `BluechipSmidge` | Plain-text evaluation summaries (HTML stripped) |
+| Field                | Type             | Description                                         |
+| -------------------- | ---------------- | --------------------------------------------------- |
+| `grade`              | `string`         | Letter grade: `"A+"`, `"A"`, `"A-"`, `"B+"` … `"F"` |
+| `slug`               | `string`         | Bluechip report slug (e.g. `"usdt"`)                |
+| `collateralization`  | `number`         | Collateralization percentage                        |
+| `smartContractAudit` | `boolean`        | Whether an audit exists                             |
+| `dateOfRating`       | `string`         | ISO 8601 date of rating                             |
+| `dateLastChange`     | `string \| null` | ISO 8601 date of last grade change                  |
+| `smidge`             | `BluechipSmidge` | Plain-text evaluation summaries (HTML stripped)     |
 
 **`BluechipSmidge`** — each field is `string | null`:
 
-| Field | Description |
-|-------|-------------|
-| `stability` | Reserves management and stabilization mechanisms |
-| `management` | Personnel restrictions and track records |
-| `implementation` | Smart contract implementation assessment |
-| `decentralization` | Decentralization posture |
-| `governance` | Governance and redemption terms |
-| `externals` | External risk factors |
+| Field              | Description                                      |
+| ------------------ | ------------------------------------------------ |
+| `stability`        | Reserves management and stabilization mechanisms |
+| `management`       | Personnel restrictions and track records         |
+| `implementation`   | Smart contract implementation assessment         |
+| `decentralization` | Decentralization posture                         |
+| `governance`       | Governance and redemption terms                  |
+| `externals`        | External risk factors                            |
 
 ---
 
@@ -560,68 +561,68 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 
 **`DexLiquidityData`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `totalTvlUsd` | `number` | Total DEX TVL (USD) |
-| `totalVolume24hUsd` | `number` | 24 h trading volume (USD) |
-| `totalVolume7dUsd` | `number` | 7-day trading volume (USD) |
-| `poolCount` | `number` | Number of liquidity pools |
-| `pairCount` | `number` | Number of unique trading pairs |
-| `chainCount` | `number` | Number of chains with active pools |
-| `protocolTvl` | `Record<string, number>` | TVL per DEX protocol (e.g. `{ "uniswap-v3": 100000 }`) |
-| `chainTvl` | `Record<string, number>` | TVL per chain (e.g. `{ "Ethereum": 500000 }`) |
-| `topPools` | `DexLiquidityPool[]` | Top 10 retained pools sorted by 24h volume, then TVL |
-| `liquidityScore` | `number \| null` | Composite liquidity score 0–100 |
-| `concentrationHhi` | `number \| null` | Herfindahl–Hirschman Index for pool concentration (0–1; lower = more distributed), computed from the full retained pool set before top-10 truncation |
-| `depthStability` | `number \| null` | Pool depth stability metric |
-| `tvlChange24h` | `number \| null` | % TVL change vs. 24 h ago |
-| `tvlChange7d` | `number \| null` | % TVL change vs. 7 days ago |
-| `updatedAt` | `number` | Unix seconds of last cron update |
-| `dexPriceUsd` | `number \| null` | DEX-derived price (USD) |
-| `dexDeviationBps` | `number \| null` | DEX price deviation from peg (basis points, signed) |
-| `priceSourceCount` | `number \| null` | Number of pools used for DEX price (all must meet the shared $50K observation floor) |
-| `priceSourceTvl` | `number \| null` | Combined TVL of price-source pools (USD) |
-| `priceSources` | `DexPriceSource[] \| null` | Detailed per-pool price sources |
-| `effectiveTvlUsd` | `number` | TVL after applying quality multipliers |
-| `avgPoolStress` | `number \| null` | Average pool stress index (0 = balanced, 1 = fully imbalanced) |
-| `weightedBalanceRatio` | `number \| null` | TVL-weighted balance ratio across pools |
-| `organicFraction` | `number \| null` | Fraction of TVL from organic (non-incentivized) pools |
-| `durabilityScore` | `number \| null` | Score for pool maturity and reliability |
-| `scoreComponents` | `ScoreComponents \| null` | Breakdown of the composite liquidity score |
-| `lockedLiquidityPct` | `number \| null` | TVL-weighted fraction of liquidity reported as locked by source pools |
-| `methodologyVersion` | `string` | Methodology version attributed to this row |
+| Field                  | Type                       | Description                                                                                                                                          |
+| ---------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `totalTvlUsd`          | `number`                   | Total DEX TVL (USD)                                                                                                                                  |
+| `totalVolume24hUsd`    | `number`                   | 24 h trading volume (USD)                                                                                                                            |
+| `totalVolume7dUsd`     | `number`                   | 7-day trading volume (USD)                                                                                                                           |
+| `poolCount`            | `number`                   | Number of liquidity pools                                                                                                                            |
+| `pairCount`            | `number`                   | Number of unique trading pairs                                                                                                                       |
+| `chainCount`           | `number`                   | Number of chains with active pools                                                                                                                   |
+| `protocolTvl`          | `Record<string, number>`   | TVL per DEX protocol (e.g. `{ "uniswap-v3": 100000 }`)                                                                                               |
+| `chainTvl`             | `Record<string, number>`   | TVL per chain (e.g. `{ "Ethereum": 500000 }`)                                                                                                        |
+| `topPools`             | `DexLiquidityPool[]`       | Top 10 retained pools sorted by 24h volume, then TVL                                                                                                 |
+| `liquidityScore`       | `number \| null`           | Composite liquidity score 0–100                                                                                                                      |
+| `concentrationHhi`     | `number \| null`           | Herfindahl–Hirschman Index for pool concentration (0–1; lower = more distributed), computed from the full retained pool set before top-10 truncation |
+| `depthStability`       | `number \| null`           | Pool depth stability metric                                                                                                                          |
+| `tvlChange24h`         | `number \| null`           | % TVL change vs. 24 h ago                                                                                                                            |
+| `tvlChange7d`          | `number \| null`           | % TVL change vs. 7 days ago                                                                                                                          |
+| `updatedAt`            | `number`                   | Unix seconds of last cron update                                                                                                                     |
+| `dexPriceUsd`          | `number \| null`           | DEX-derived price (USD)                                                                                                                              |
+| `dexDeviationBps`      | `number \| null`           | DEX price deviation from peg (basis points, signed)                                                                                                  |
+| `priceSourceCount`     | `number \| null`           | Number of pools used for DEX price (all must meet the shared $50K observation floor)                                                                 |
+| `priceSourceTvl`       | `number \| null`           | Combined TVL of price-source pools (USD)                                                                                                             |
+| `priceSources`         | `DexPriceSource[] \| null` | Detailed per-pool price sources                                                                                                                      |
+| `effectiveTvlUsd`      | `number`                   | TVL after applying quality multipliers                                                                                                               |
+| `avgPoolStress`        | `number \| null`           | Average pool stress index (0 = balanced, 1 = fully imbalanced)                                                                                       |
+| `weightedBalanceRatio` | `number \| null`           | TVL-weighted balance ratio across pools                                                                                                              |
+| `organicFraction`      | `number \| null`           | Fraction of TVL from organic (non-incentivized) pools                                                                                                |
+| `durabilityScore`      | `number \| null`           | Score for pool maturity and reliability                                                                                                              |
+| `scoreComponents`      | `ScoreComponents \| null`  | Breakdown of the composite liquidity score                                                                                                           |
+| `lockedLiquidityPct`   | `number \| null`           | TVL-weighted fraction of liquidity reported as locked by source pools                                                                                |
+| `methodologyVersion`   | `string`                   | Methodology version attributed to this row                                                                                                           |
 
 **`ScoreComponents`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `tvlDepth` | `number` | TVL depth sub-score |
-| `volumeActivity` | `number` | Volume activity sub-score |
-| `poolQuality` | `number` | Pool quality sub-score |
-| `durability` | `number` | Durability sub-score |
-| `pairDiversity` | `number` | Pair diversity sub-score |
-| `crossChain` | `number` | Cross-chain distribution sub-score |
+| Field            | Type     | Description                        |
+| ---------------- | -------- | ---------------------------------- |
+| `tvlDepth`       | `number` | TVL depth sub-score                |
+| `volumeActivity` | `number` | Volume activity sub-score          |
+| `poolQuality`    | `number` | Pool quality sub-score             |
+| `durability`     | `number` | Durability sub-score               |
+| `pairDiversity`  | `number` | Pair diversity sub-score           |
+| `crossChain`     | `number` | Cross-chain distribution sub-score |
 
 **`DexLiquidityPool`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `project` | `string` | Protocol slug (e.g. `"curve-dex"`, `"uniswap-v3"`) |
-| `chain` | `string` | Chain name |
-| `tvlUsd` | `number` | Pool TVL (USD) |
-| `symbol` | `string` | Pool pair name (e.g. `"USDC-USDT"`) |
-| `volumeUsd1d` | `number` | 24 h volume (USD) |
-| `poolType` | `string` | Pool type (e.g. `"curve-stableswap"`, `"uniswap-v3-5bp"`) |
-| `extra` | `object \| undefined` | Optional detailed pool metrics (A-factor, balance ratio, etc.) |
+| Field         | Type                  | Description                                                    |
+| ------------- | --------------------- | -------------------------------------------------------------- |
+| `project`     | `string`              | Protocol slug (e.g. `"curve-dex"`, `"uniswap-v3"`)             |
+| `chain`       | `string`              | Chain name                                                     |
+| `tvlUsd`      | `number`              | Pool TVL (USD)                                                 |
+| `symbol`      | `string`              | Pool pair name (e.g. `"USDC-USDT"`)                            |
+| `volumeUsd1d` | `number`              | 24 h volume (USD)                                              |
+| `poolType`    | `string`              | Pool type (e.g. `"curve-stableswap"`, `"uniswap-v3-5bp"`)      |
+| `extra`       | `object \| undefined` | Optional detailed pool metrics (A-factor, balance ratio, etc.) |
 
 **`DexPriceSource`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `protocol` | `string` | DEX protocol name |
-| `chain` | `string` | Chain name |
-| `price` | `number` | Price from this source |
-| `tvl` | `number` | TVL of this pool (USD) |
+| Field      | Type     | Description            |
+| ---------- | -------- | ---------------------- |
+| `protocol` | `string` | DEX protocol name      |
+| `chain`    | `string` | Chain name             |
+| `price`    | `number` | Price from this source |
+| `tvl`      | `number` | TVL of this pool (USD) |
 
 ---
 
@@ -633,15 +634,15 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 
 **Required query parameter**
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param        | Type     | Description                     |
+| ------------ | -------- | ------------------------------- |
 | `stablecoin` | `string` | Pharos stablecoin ID (required) |
 
 **Optional query parameters**
 
-| Param | Type | Default | Bounds | Description |
-|-------|------|---------|--------|-------------|
-| `days` | `integer` | `90` | 1–365 | Lookback window in days |
+| Param  | Type      | Default | Bounds | Description             |
+| ------ | --------- | ------- | ------ | ----------------------- |
+| `days` | `integer` | `90`    | 1–365  | Lookback window in days |
 
 **Response:** Array sorted by `date` ascending.
 
@@ -657,13 +658,13 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 ]
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `tvl` | `number` | Total DEX TVL snapshot (USD) |
-| `volume24h` | `number` | 24 h volume at time of snapshot (USD) |
-| `score` | `number \| null` | Liquidity score at time of snapshot |
-| `date` | `number` | Unix seconds |
-| `methodologyVersion` | `string` | Methodology version attributed to this snapshot |
+| Field                | Type             | Description                                     |
+| -------------------- | ---------------- | ----------------------------------------------- |
+| `tvl`                | `number`         | Total DEX TVL snapshot (USD)                    |
+| `volume24h`          | `number`         | 24 h volume at time of snapshot (USD)           |
+| `score`              | `number \| null` | Liquidity score at time of snapshot             |
+| `date`               | `number`         | Unix seconds                                    |
+| `methodologyVersion` | `string`         | Methodology version attributed to this snapshot |
 
 ---
 
@@ -675,15 +676,15 @@ Per-coin circulating supply and price history, snapshotted once daily at 08:00 U
 
 **Required query parameter**
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param        | Type     | Description                     |
+| ------------ | -------- | ------------------------------- |
 | `stablecoin` | `string` | Pharos stablecoin ID (required) |
 
 **Optional query parameters**
 
-| Param | Type | Default | Bounds | Description |
-|-------|------|---------|--------|-------------|
-| `days` | `integer` | `365` | 1–1825 | Lookback window in days |
+| Param  | Type      | Default | Bounds | Description             |
+| ------ | --------- | ------- | ------ | ----------------------- |
+| `days` | `integer` | `365`   | 1–1825 | Lookback window in days |
 
 **Response:** Array sorted by `date` ascending.
 
@@ -697,11 +698,11 @@ Per-coin circulating supply and price history, snapshotted once daily at 08:00 U
 ]
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `date` | `number` | Unix seconds |
-| `circulatingUsd` | `number` | Circulating supply in USD |
-| `price` | `number \| null` | Price at snapshot time (USD); may be `null` for older records |
+| Field            | Type             | Description                                                   |
+| ---------------- | ---------------- | ------------------------------------------------------------- |
+| `date`           | `number`         | Unix seconds                                                  |
+| `circulatingUsd` | `number`         | Circulating supply in USD                                     |
+| `price`          | `number \| null` | Price at snapshot time (USD); may be `null` for older records |
 
 ---
 
@@ -721,12 +722,12 @@ Latest AI-generated market summary, produced daily at 08:00 UTC via the Claude A
 
 If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `digest` | `string \| null` | Tweet-ready summary (≤ 240 characters). `null` if no digest has been generated yet. |
-| `digestTitle` | `string \| null` | Short headline for the digest |
-| `digestExtended` | `string \| null` | Extended commentary for the website view |
-| `generatedAt` | `number` | Unix seconds when this digest was generated (present only when `digest` is non-null) |
+| Field            | Type             | Description                                                                          |
+| ---------------- | ---------------- | ------------------------------------------------------------------------------------ |
+| `digest`         | `string \| null` | Tweet-ready summary (≤ 240 characters). `null` if no digest has been generated yet.  |
+| `digestTitle`    | `string \| null` | Short headline for the digest                                                        |
+| `digestExtended` | `string \| null` | Extended commentary for the website view                                             |
+| `generatedAt`    | `number`         | Unix seconds when this digest was generated (present only when `digest` is non-null) |
 
 ---
 
@@ -756,15 +757,15 @@ All daily digests, newest-first.
 
 Each element uses `digestText` (note: differs from the singular `/api/daily-digest` which uses `digest`).
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `digestText` | `string` | Tweet-ready summary |
-| `digestTitle` | `string \| null` | Short headline |
-| `digestExtended` | `string \| null` | Extended commentary |
-| `generatedAt` | `number` | Unix seconds of generation time |
-| `psiScore` | `number \| null` | PSI score parsed from archived digest input data |
-| `psiBand` | `string \| null` | PSI condition band parsed from archived digest input data |
-| `totalMcapUsd` | `number \| null` | Ecosystem market cap parsed from archived digest input data |
+| Field            | Type             | Description                                                 |
+| ---------------- | ---------------- | ----------------------------------------------------------- |
+| `digestText`     | `string`         | Tweet-ready summary                                         |
+| `digestTitle`    | `string \| null` | Short headline                                              |
+| `digestExtended` | `string \| null` | Extended commentary                                         |
+| `generatedAt`    | `number`         | Unix seconds of generation time                             |
+| `psiScore`       | `number \| null` | PSI score parsed from archived digest input data            |
+| `psiBand`        | `string \| null` | PSI condition band parsed from archived digest input data   |
+| `totalMcapUsd`   | `number \| null` | Ecosystem market cap parsed from archived digest input data |
 
 ---
 
@@ -776,8 +777,8 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 
 **Required query parameter**
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param  | Type     | Description                            |
+| ------ | -------- | -------------------------------------- |
 | `date` | `string` | Date in `YYYY-MM-DD` format (required) |
 
 **Response**
@@ -792,13 +793,13 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `date` | `string` | The requested date |
-| `inputData` | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI) for this date |
-| `prevInputData` | `object \| null` | Previous day's input data for delta computation |
-| `depegEvents` | `array` | Up to 20 depeg events active on that date, ordered by severity |
-| `blacklistEvents` | `array` | Up to 50 blacklist events on that date |
+| Field             | Type             | Description                                                         |
+| ----------------- | ---------------- | ------------------------------------------------------------------- |
+| `date`            | `string`         | The requested date                                                  |
+| `inputData`       | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI) for this date |
+| `prevInputData`   | `object \| null` | Previous day's input data for delta computation                     |
+| `depegEvents`     | `array`          | Up to 20 depeg events active on that date, ordered by severity      |
+| `blacklistEvents` | `array`          | Up to 50 blacklist events on that date                              |
 
 **Error responses:** `400` for missing/invalid date, `404` if no digest exists for that date.
 
@@ -843,30 +844,31 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | `string` | `"healthy"` / `"degraded"` / `"stale"` |
-| `timestamp` | `number` | Unix seconds at time of response |
-| `caches` | `Record<string, CacheStatus>` | Per-cache freshness status |
-| `blacklist.totalEvents` | `number` | Total events in blacklist table |
-| `blacklist.missingAmounts` | `number` | Events where `amount` is null (should be 0) |
-| `mintBurn.totalEvents` | `number` | Total mint+burn event count (aggregated from `mint_burn_hourly`) |
-| `mintBurn.latestEventTs` | `number \| null` | Latest raw event timestamp from `mint_burn_events` |
-| `mintBurn.latestHourlyTs` | `number \| null` | Latest hourly bucket timestamp from `mint_burn_hourly` |
-| `mintBurn.freshnessAgeSec` | `number \| null` | Seconds since latest mint/burn event |
-| `mintBurn.majorStaleCount` | `number` | Number of configured major symbols currently stale |
-| `mintBurn.staleMajorSymbols` | `string[]` | Symbol list currently marked stale |
-| `circuits` | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api` |
+| Field                        | Type                            | Description                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                     | `string`                        | `"healthy"` / `"degraded"` / `"stale"`                                                                                                                                                                                                                                                                                                                          |
+| `timestamp`                  | `number`                        | Unix seconds at time of response                                                                                                                                                                                                                                                                                                                                |
+| `caches`                     | `Record<string, CacheStatus>`   | Per-cache freshness status                                                                                                                                                                                                                                                                                                                                      |
+| `blacklist.totalEvents`      | `number`                        | Total events in blacklist table                                                                                                                                                                                                                                                                                                                                 |
+| `blacklist.missingAmounts`   | `number`                        | Events where `amount` is null (should be 0)                                                                                                                                                                                                                                                                                                                     |
+| `mintBurn.totalEvents`       | `number`                        | Total mint+burn event count (aggregated from `mint_burn_hourly`)                                                                                                                                                                                                                                                                                                |
+| `mintBurn.latestEventTs`     | `number \| null`                | Latest raw event timestamp from `mint_burn_events`                                                                                                                                                                                                                                                                                                              |
+| `mintBurn.latestHourlyTs`    | `number \| null`                | Latest hourly bucket timestamp from `mint_burn_hourly`                                                                                                                                                                                                                                                                                                          |
+| `mintBurn.freshnessAgeSec`   | `number \| null`                | Seconds since latest mint/burn event                                                                                                                                                                                                                                                                                                                            |
+| `mintBurn.majorStaleCount`   | `number`                        | Number of configured major symbols currently stale                                                                                                                                                                                                                                                                                                              |
+| `mintBurn.staleMajorSymbols` | `string[]`                      | Symbol list currently marked stale                                                                                                                                                                                                                                                                                                                              |
+| `circuits`                   | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api` |
 
 **`CacheStatus`**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field        | Type             | Description                                               |
+| ------------ | ---------------- | --------------------------------------------------------- |
 | `ageSeconds` | `number \| null` | Seconds since last cron update; `null` if never populated |
-| `maxAge` | `number` | Expected max-age in seconds for this cache key |
-| `healthy` | `boolean` | `true` when `ageSeconds / maxAge ≤ 1.5` |
+| `maxAge`     | `number`         | Expected max-age in seconds for this cache key            |
+| `healthy`    | `boolean`        | `true` when `ageSeconds / maxAge ≤ 1.5`                   |
 
 **Overall status logic:**
+
 - `healthy` — worst cache ratio ≤ 1.5, no open circuits, and no stale major mint/burn symbols
 - `degraded` — worst ratio between 1.5 and 2, or any circuit is open, or at least 1 major mint/burn symbol is stale
 - `stale` — worst ratio > 2, or 3+ major mint/burn symbols are stale
@@ -881,9 +883,9 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 
 **Optional query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `detail` | `"true"` | — | When `"true"`, returns full history with per-day component breakdowns instead of last 91 days |
+| Param    | Type     | Default | Description                                                                                   |
+| -------- | -------- | ------- | --------------------------------------------------------------------------------------------- |
+| `detail` | `"true"` | —       | When `"true"`, returns full history with per-day component breakdowns instead of last 91 days |
 
 **Response**
 
@@ -896,9 +898,7 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
     "computedAt": 1771977600,
     "methodologyVersion": "3.0"
   },
-  "history": [
-    { "date": 1771891200, "score": 81.0, "band": "STEADY", "methodologyVersion": "2.1" }
-  ],
+  "history": [{ "date": 1771891200, "score": 81.0, "band": "STEADY", "methodologyVersion": "2.1" }],
   "methodology": {
     "version": "3.0",
     "versionLabel": "v3.0",
@@ -911,23 +911,23 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `current` | `object \| null` | Latest PSI score and components. `null` if cron has not yet run |
-| `current.score` | `number` | PSI score 0–100 |
-| `current.band` | `string` | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"` |
-| `current.avg24h` | `number \| undefined` | Rolling 24 h average PSI score |
-| `current.avg24hBand` | `string \| undefined` | Condition band for `avg24h` |
-| `current.components` | `object` | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend` |
-| `current.contributors` | `array` | Top per-coin contributors from `input_snapshot.contributors` (empty when unavailable) |
-| `current.totalMcapUsd` | `number` | Total ecosystem market cap from the latest input snapshot (`0` when unavailable) |
-| `current.computedAt` | `number` | Unix seconds of computation |
-| `current.methodologyVersion` | `string` | Methodology version used to compute the current score |
-| `history` | `array` | Historical scores, newest first. With `detail=true`, each entry includes `components` |
-| `history[].methodologyVersion` | `string` | Methodology version used for that history point |
-| `methodology` | `object` | Version metadata for current PSI methodology context |
-| `methodology.version` | `string` | Methodology version used by current score |
-| `methodology.changelogPath` | `string` | Relative path to full methodology changelog |
+| Field                          | Type                  | Description                                                                                 |
+| ------------------------------ | --------------------- | ------------------------------------------------------------------------------------------- |
+| `current`                      | `object \| null`      | Latest PSI score and components. `null` if cron has not yet run                             |
+| `current.score`                | `number`              | PSI score 0–100                                                                             |
+| `current.band`                 | `string`              | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"` |
+| `current.avg24h`               | `number \| undefined` | Rolling 24 h average PSI score                                                              |
+| `current.avg24hBand`           | `string \| undefined` | Condition band for `avg24h`                                                                 |
+| `current.components`           | `object`              | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend`                        |
+| `current.contributors`         | `array`               | Top per-coin contributors from `input_snapshot.contributors` (empty when unavailable)       |
+| `current.totalMcapUsd`         | `number`              | Total ecosystem market cap from the latest input snapshot (`0` when unavailable)            |
+| `current.computedAt`           | `number`              | Unix seconds of computation                                                                 |
+| `current.methodologyVersion`   | `string`              | Methodology version used to compute the current score                                       |
+| `history`                      | `array`               | Historical scores, newest first. With `detail=true`, each entry includes `components`       |
+| `history[].methodologyVersion` | `string`              | Methodology version used for that history point                                             |
+| `methodology`                  | `object`              | Version metadata for current PSI methodology context                                        |
+| `methodology.version`          | `string`              | Methodology version used by current score                                                   |
+| `methodology.changelogPath`    | `string`              | Relative path to full methodology changelog                                                 |
 
 ---
 
@@ -983,41 +983,41 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 
 **`ReportCard`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Pharos stablecoin ID |
-| `name` | `string` | Full name |
-| `symbol` | `string` | Ticker |
-| `overallGrade` | `string` | Letter grade: `"A+"` through `"F"`, or `"NR"` |
-| `overallScore` | `number \| null` | Weighted score 0–100. `null` for unrated coins |
-| `dimensions` | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text |
-| `ratedDimensions` | `number` | Number of dimensions with data (max 5) |
-| `dependencies` | `DependencyWeight[] \| undefined` | Upstream stablecoin dependencies with collateral weights (for CeFi-Dependent coins) |
-| `rawInputs` | `RawDimensionInputs` | Raw scoring inputs for client-side grade recomputation (stress testing) |
-| `isDefunct` | `boolean` | `true` for cemetery coins (permanent F grade) |
+| Field             | Type                                   | Description                                                                         |
+| ----------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `id`              | `string`                               | Pharos stablecoin ID                                                                |
+| `name`            | `string`                               | Full name                                                                           |
+| `symbol`          | `string`                               | Ticker                                                                              |
+| `overallGrade`    | `string`                               | Letter grade: `"A+"` through `"F"`, or `"NR"`                                       |
+| `overallScore`    | `number \| null`                       | Weighted score 0–100. `null` for unrated coins                                      |
+| `dimensions`      | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text                                         |
+| `ratedDimensions` | `number`                               | Number of dimensions with data (max 5)                                              |
+| `dependencies`    | `DependencyWeight[] \| undefined`      | Upstream stablecoin dependencies with collateral weights (for CeFi-Dependent coins) |
+| `rawInputs`       | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)             |
+| `isDefunct`       | `boolean`                              | `true` for cemetery coins (permanent F grade)                                       |
 
 **`DependencyWeight`**: `{ id: string, weight: number }` — upstream stablecoin ID + fraction of collateral from that source (0–1). Weights sum to ≤ 1.0; the remainder represents non-stablecoin collateral.
 
 **`RawDimensionInputs`**
 
-| Field | Type |
-|-------|------|
-| `pegScore` | `number \| null` |
-| `activeDepeg` | `boolean` |
-| `depegEventCount` | `number` |
-| `lastEventAt` | `number \| null` |
-| `liquidityScore` | `number \| null` |
-| `concentrationHhi` | `number \| null` |
-| `bluechipGrade` | `BluechipGrade \| null` |
-| `canBeBlacklisted` | `boolean \| "possible" \| "possible-inherited"` |
-| `chainTier` | `ChainTier` |
-| `deploymentModel` | `DeploymentModel` |
-| `collateralQuality` | `CollateralQuality` |
-| `custodyModel` | `CustodyModel` |
-| `governanceTier` | `GovernanceType` |
-| `governanceQuality` | `GovernanceQuality` |
-| `dependencies` | `DependencyWeight[]` |
-| `navToken` | `boolean` |
+| Field               | Type                                            |
+| ------------------- | ----------------------------------------------- |
+| `pegScore`          | `number \| null`                                |
+| `activeDepeg`       | `boolean`                                       |
+| `depegEventCount`   | `number`                                        |
+| `lastEventAt`       | `number \| null`                                |
+| `liquidityScore`    | `number \| null`                                |
+| `concentrationHhi`  | `number \| null`                                |
+| `bluechipGrade`     | `BluechipGrade \| null`                         |
+| `canBeBlacklisted`  | `boolean \| "possible" \| "possible-inherited"` |
+| `chainTier`         | `ChainTier`                                     |
+| `deploymentModel`   | `DeploymentModel`                               |
+| `collateralQuality` | `CollateralQuality`                             |
+| `custodyModel`      | `CustodyModel`                                  |
+| `governanceTier`    | `GovernanceType`                                |
+| `governanceQuality` | `GovernanceQuality`                             |
+| `dependencies`      | `DependencyWeight[]`                            |
+| `navToken`          | `boolean`                                       |
 
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
 
@@ -1031,15 +1031,15 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 **Required query parameter**
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param        | Type     | Description                     |
+| ------------ | -------- | ------------------------------- |
 | `stablecoin` | `string` | Pharos stablecoin ID (required) |
 
 **Optional query parameters**
 
-| Param | Type | Default | Bounds | Description |
-|-------|------|---------|--------|-------------|
-| `days` | `integer` | `365` | 1–3650 | Lookback window in days |
+| Param  | Type      | Default | Bounds | Description             |
+| ------ | --------- | ------- | ------ | ----------------------- |
+| `days` | `integer` | `365`   | 1–3650 | Lookback window in days |
 
 **Response:** Array sorted by `date` ascending.
 
@@ -1056,14 +1056,14 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 ]
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `date` | `number` | UTC day bucket (Unix seconds) when the event was recorded |
-| `grade` | `string` | Current Safety Score letter grade at `date` |
-| `score` | `number \| null` | Current numeric score (0–100); `null` when grade is `NR` |
-| `prevGrade` | `string \| null` | Previous grade before this event; `null` for the seed row |
-| `prevScore` | `number \| null` | Previous score before this event; `null` for the seed row |
-| `methodologyVersion` | `string` | Safety Score methodology version used for this event row |
+| Field                | Type             | Description                                               |
+| -------------------- | ---------------- | --------------------------------------------------------- |
+| `date`               | `number`         | UTC day bucket (Unix seconds) when the event was recorded |
+| `grade`              | `string`         | Current Safety Score letter grade at `date`               |
+| `score`              | `number \| null` | Current numeric score (0–100); `null` when grade is `NR`  |
+| `prevGrade`          | `string \| null` | Previous grade before this event; `null` for the seed row |
+| `prevScore`          | `number \| null` | Previous score before this event; `null` for the seed row |
+| `methodologyVersion` | `string`         | Safety Score methodology version used for this event row  |
 
 ---
 
@@ -1085,39 +1085,39 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `rankings` | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending |
-| `riskFreeRate` | `number` | Current 3-month Treasury yield proxy (%) from FRED `DGS3MO`, used as the risk-free benchmark |
-| `scalingFactor` | `number` | Scaling factor applied in yield score computation |
-| `medianApy` | `number` | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics |
-| `updatedAt` | `number` | Unix seconds when the rankings were last computed |
+| Field           | Type             | Description                                                                                           |
+| --------------- | ---------------- | ----------------------------------------------------------------------------------------------------- |
+| `rankings`      | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending                                       |
+| `riskFreeRate`  | `number`         | Current 3-month Treasury yield proxy (%) from FRED `DGS3MO`, used as the risk-free benchmark          |
+| `scalingFactor` | `number`         | Scaling factor applied in yield score computation                                                     |
+| `medianApy`     | `number`         | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics |
+| `updatedAt`     | `number`         | Unix seconds when the rankings were last computed                                                     |
 
 **`YieldRanking`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Pharos stablecoin ID |
-| `symbol` | `string` | Token symbol |
-| `name` | `string` | Full name |
-| `currentApy` | `number` | Current APY (%) |
-| `apy7d` | `number` | 7-day average APY (%) |
-| `apy30d` | `number` | 30-day average APY (%) |
-| `apyBase` | `number` | Base APY component (%) |
-| `apyReward` | `number \| null` | Reward APY component (%), `null` if none |
-| `yieldSource` | `string` | Human-readable yield source description |
-| `yieldType` | `string` | Yield type classification (e.g. `"lending-vault"`, `"staking"`) |
-| `dataSource` | `string` | Data source identifier (e.g. `"defillama"`) |
-| `sourceTvlUsd` | `number` | TVL of the yield source pool (USD) |
-| `pharosYieldScore` | `number` | Composite Pharos Yield Score (0–100) |
-| `safetyScore` | `number` | Safety score from report cards (0–100) |
-| `safetyGrade` | `string` | Letter grade (`"A+"` through `"F"`, or `"NR"`) |
-| `yieldToRisk` | `number` | Yield-to-risk ratio (excess yield / safety penalty) |
-| `excessYield` | `number` | APY above risk-free rate (percentage points) |
-| `yieldStability` | `number` | Yield stability metric (0–1; higher = more stable) |
-| `apyVariance30d` | `number` | 30-day APY variance |
-| `apyMin30d` | `number` | Minimum APY in last 30 days (%) |
-| `apyMax30d` | `number` | Maximum APY in last 30 days (%) |
+| Field              | Type             | Description                                                     |
+| ------------------ | ---------------- | --------------------------------------------------------------- |
+| `id`               | `string`         | Pharos stablecoin ID                                            |
+| `symbol`           | `string`         | Token symbol                                                    |
+| `name`             | `string`         | Full name                                                       |
+| `currentApy`       | `number`         | Current APY (%)                                                 |
+| `apy7d`            | `number`         | 7-day average APY (%)                                           |
+| `apy30d`           | `number`         | 30-day average APY (%)                                          |
+| `apyBase`          | `number`         | Base APY component (%)                                          |
+| `apyReward`        | `number \| null` | Reward APY component (%), `null` if none                        |
+| `yieldSource`      | `string`         | Human-readable yield source description                         |
+| `yieldType`        | `string`         | Yield type classification (e.g. `"lending-vault"`, `"staking"`) |
+| `dataSource`       | `string`         | Data source identifier (e.g. `"defillama"`)                     |
+| `sourceTvlUsd`     | `number`         | TVL of the yield source pool (USD)                              |
+| `pharosYieldScore` | `number`         | Composite Pharos Yield Score (0–100)                            |
+| `safetyScore`      | `number`         | Safety score from report cards (0–100)                          |
+| `safetyGrade`      | `string`         | Letter grade (`"A+"` through `"F"`, or `"NR"`)                  |
+| `yieldToRisk`      | `number`         | Yield-to-risk ratio (excess yield / safety penalty)             |
+| `excessYield`      | `number`         | APY above risk-free rate (percentage points)                    |
+| `yieldStability`   | `number`         | Yield stability metric (0–1; higher = more stable)              |
+| `apyVariance30d`   | `number`         | 30-day APY variance                                             |
+| `apyMin30d`        | `number`         | Minimum APY in last 30 days (%)                                 |
+| `apyMax30d`        | `number`         | Maximum APY in last 30 days (%)                                 |
 
 ---
 
@@ -1129,15 +1129,15 @@ Historical yield data for a single stablecoin.
 
 **Required query parameter**
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param        | Type     | Description                     |
+| ------------ | -------- | ------------------------------- |
 | `stablecoin` | `string` | Pharos stablecoin ID (required) |
 
 **Optional query parameters**
 
-| Param | Type | Default | Bounds | Description |
-|-------|------|---------|--------|-------------|
-| `days` | `integer` | `90` | 1–365 | Lookback window in days |
+| Param  | Type      | Default | Bounds | Description             |
+| ------ | --------- | ------- | ------ | ----------------------- |
+| `days` | `integer` | `90`    | 1–365  | Lookback window in days |
 
 **Response:** Array sorted by `date` ascending.
 
@@ -1154,14 +1154,14 @@ Historical yield data for a single stablecoin.
 ]
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `date` | `number` | Unix seconds |
-| `apy` | `number` | Total APY at snapshot time (%) |
-| `apyBase` | `number` | Base APY component (%) |
-| `apyReward` | `number \| null` | Reward APY component (%); `null` if none |
+| Field          | Type             | Description                                                                |
+| -------------- | ---------------- | -------------------------------------------------------------------------- |
+| `date`         | `number`         | Unix seconds                                                               |
+| `apy`          | `number`         | Total APY at snapshot time (%)                                             |
+| `apyBase`      | `number`         | Base APY component (%)                                                     |
+| `apyReward`    | `number \| null` | Reward APY component (%); `null` if none                                   |
 | `exchangeRate` | `number \| null` | Exchange rate at snapshot time (e.g. sUSDe/USDe); `null` if not applicable |
-| `sourceTvlUsd` | `number` | TVL of the yield source pool at snapshot time (USD) |
+| `sourceTvlUsd` | `number`         | TVL of the yield source pool at snapshot time (USD)                        |
 
 ---
 
@@ -1173,10 +1173,10 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 
 **Optional query parameters**
 
-| Param | Type | Default | Bounds | Description |
-|-------|------|---------|--------|-------------|
-| `stablecoin` | `string` | — | — | Filter to a single stablecoin ID. Changes response shape to per-coin mode |
-| `hours` | `integer` | `24` | 1–720 | Lookback window in hours |
+| Param        | Type      | Default | Bounds | Description                                                               |
+| ------------ | --------- | ------- | ------ | ------------------------------------------------------------------------- |
+| `stablecoin` | `string`  | —       | —      | Filter to a single stablecoin ID. Changes response shape to per-coin mode |
+| `hours`      | `integer` | `24`    | 1–720  | Lookback window in hours                                                  |
 
 **Response (aggregate mode — no `stablecoin` param)**
 
@@ -1198,45 +1198,45 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 
 **`gauge`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `score` | `number \| null` | Market-cap-weighted pressure-shift composite (-100 to +100). `null` when insufficient data |
-| `band` | `string \| null` | Gauge band: `"CRISIS"`, `"STRESS"`, `"CAUTIOUS"`, `"NEUTRAL"`, `"HEALTHY"`, `"CONFIDENT"`, `"SURGE"` |
-| `flightToQuality` | `boolean` | Whether flight-to-quality conditions are active |
-| `flightIntensity` | `number` | Flight-to-quality intensity (0–100). 0 when not active |
-| `trackedCoins` | `number` | Number of stablecoins tracked for mint/burn flows |
-| `trackedMcapUsd` | `number` | Combined market cap of tracked coins (USD) |
+| Field             | Type             | Description                                                                                          |
+| ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `score`           | `number \| null` | Market-cap-weighted pressure-shift composite (-100 to +100). `null` when insufficient data           |
+| `band`            | `string \| null` | Gauge band: `"CRISIS"`, `"STRESS"`, `"CAUTIOUS"`, `"NEUTRAL"`, `"HEALTHY"`, `"CONFIDENT"`, `"SURGE"` |
+| `flightToQuality` | `boolean`        | Whether flight-to-quality conditions are active                                                      |
+| `flightIntensity` | `number`         | Flight-to-quality intensity (0–100). 0 when not active                                               |
+| `trackedCoins`    | `number`         | Number of stablecoins tracked for mint/burn flows                                                    |
+| `trackedMcapUsd`  | `number`         | Combined market cap of tracked coins (USD)                                                           |
 
 **`CoinFlow`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `stablecoinId` | `string` | Pharos stablecoin ID |
-| `symbol` | `string` | Token symbol |
-| `flowIntensity` | `number \| null` | Deprecated alias for `pressureShiftScore`; retained for compatibility |
-| `pressureShiftScore` | `number \| null` | Canonical baseline-relative pressure score (-100 to +100). `null` if < 7 days of data or no current activity |
-| `pressureShiftState` | `"improving" \| "stable" \| "worsening" \| "nr"` | Interpreted pressure state from `pressureShiftScore` |
-| `netFlowDirection24h` | `"minting" \| "burning" \| "flat" \| "inactive"` | Current 24h direction derived from raw net flow + activity |
-| `has24hActivity` | `boolean` | Whether any 24h mint/burn events were recorded for the coin |
-| `baselineDailyNetUsd` | `number \| null` | Average daily net flow over the baseline window used for scoring |
-| `baselineDailyAbsUsd` | `number \| null` | Average daily absolute flow over the baseline window used for scoring |
-| `baselineDataDays` | `number \| null` | Number of tracked days contributing to the baseline window |
-| `netFlow24hUsd` | `number` | Raw 24h net flow (USD, positive = net minting, negative = net burning) |
-| `mintVolume24hUsd` | `number` | Total mint volume (USD) |
-| `burnVolume24hUsd` | `number` | Total burn volume (USD) |
-| `mintCount24h` | `number` | Number of mint events |
-| `burnCount24h` | `number` | Number of burn events |
-| `netFlow7dUsd` | `number` | 7-day net flow (USD) |
-| `netFlow30dUsd` | `number` | 30-day net flow (USD) |
-| `netFlow90dUsd` | `number` | 90-day net flow (USD) |
-| `largestEvent24h` | `object \| null` | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }` |
+| Field                 | Type                                             | Description                                                                                                  |
+| --------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `stablecoinId`        | `string`                                         | Pharos stablecoin ID                                                                                         |
+| `symbol`              | `string`                                         | Token symbol                                                                                                 |
+| `flowIntensity`       | `number \| null`                                 | Deprecated alias for `pressureShiftScore`; retained for compatibility                                        |
+| `pressureShiftScore`  | `number \| null`                                 | Canonical baseline-relative pressure score (-100 to +100). `null` if < 7 days of data or no current activity |
+| `pressureShiftState`  | `"improving" \| "stable" \| "worsening" \| "nr"` | Interpreted pressure state from `pressureShiftScore`                                                         |
+| `netFlowDirection24h` | `"minting" \| "burning" \| "flat" \| "inactive"` | Current 24h direction derived from raw net flow + activity                                                   |
+| `has24hActivity`      | `boolean`                                        | Whether any 24h mint/burn events were recorded for the coin                                                  |
+| `baselineDailyNetUsd` | `number \| null`                                 | Average daily net flow over the baseline window used for scoring                                             |
+| `baselineDailyAbsUsd` | `number \| null`                                 | Average daily absolute flow over the baseline window used for scoring                                        |
+| `baselineDataDays`    | `number \| null`                                 | Number of tracked days contributing to the baseline window                                                   |
+| `netFlow24hUsd`       | `number`                                         | Raw 24h net flow (USD, positive = net minting, negative = net burning)                                       |
+| `mintVolume24hUsd`    | `number`                                         | Total mint volume (USD)                                                                                      |
+| `burnVolume24hUsd`    | `number`                                         | Total burn volume (USD)                                                                                      |
+| `mintCount24h`        | `number`                                         | Number of mint events                                                                                        |
+| `burnCount24h`        | `number`                                         | Number of burn events                                                                                        |
+| `netFlow7dUsd`        | `number`                                         | 7-day net flow (USD)                                                                                         |
+| `netFlow30dUsd`       | `number`                                         | 30-day net flow (USD)                                                                                        |
+| `netFlow90dUsd`       | `number`                                         | 90-day net flow (USD)                                                                                        |
+| `largestEvent24h`     | `object \| null`                                 | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }`                                 |
 
 **`HourlyFlow`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `hourTs` | `number` | Unix seconds (start of hour) |
-| `netFlowUsd` | `number` | Net flow for this hour (USD) |
+| Field           | Type     | Description                     |
+| --------------- | -------- | ------------------------------- |
+| `hourTs`        | `number` | Unix seconds (start of hour)    |
+| `netFlowUsd`    | `number` | Net flow for this hour (USD)    |
 | `mintVolumeUsd` | `number` | Mint volume for this hour (USD) |
 | `burnVolumeUsd` | `number` | Burn volume for this hour (USD) |
 
@@ -1269,21 +1269,21 @@ Paginated list of individual mint/burn events for a specific stablecoin. Events 
 
 **Required query parameter**
 
-| Param | Type | Description |
-|-------|------|-------------|
+| Param        | Type     | Description                     |
+| ------------ | -------- | ------------------------------- |
 | `stablecoin` | `string` | Pharos stablecoin ID (required) |
 
 **Optional query parameters**
 
-| Param | Type | Default | Bounds | Description |
-|-------|------|---------|--------|-------------|
-| `direction` | `string` | — | `"mint"` or `"burn"` | Filter by direction |
-| `chain` | `string` | — | `"ethereum"` | Filter by chain ID (current production scope is Ethereum only) |
-| `burnType` | `string` | — | `"effective_burn"`, `"bridge_burn"`, `"review_required"` | Filter burn rows by classification |
-| `scope` | `string` | `"all"` | `"all"` or `"counted"` | `counted` returns only rows used in economic-flow aggregates (`flow_type='standard'` and mint/effective-burn semantics) |
-| `minAmount` | `number` | — | — | Minimum USD amount; unpriced rows are excluded when this filter is used |
-| `limit` | `integer` | `50` | 1–500 | Max results |
-| `offset` | `integer` | `0` | — | Pagination offset |
+| Param       | Type      | Default | Bounds                                                   | Description                                                                                                             |
+| ----------- | --------- | ------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `direction` | `string`  | —       | `"mint"` or `"burn"`                                     | Filter by direction                                                                                                     |
+| `chain`     | `string`  | —       | `"ethereum"`                                             | Filter by chain ID (current production scope is Ethereum only)                                                          |
+| `burnType`  | `string`  | —       | `"effective_burn"`, `"bridge_burn"`, `"review_required"` | Filter burn rows by classification                                                                                      |
+| `scope`     | `string`  | `"all"` | `"all"` or `"counted"`                                   | `counted` returns only rows used in economic-flow aggregates (`flow_type='standard'` and mint/effective-burn semantics) |
+| `minAmount` | `number`  | —       | —                                                        | Minimum USD amount; unpriced rows are excluded when this filter is used                                                 |
+| `limit`     | `integer` | `50`    | 1–500                                                    | Max results                                                                                                             |
+| `offset`    | `integer` | `0`     | —                                                        | Pagination offset                                                                                                       |
 
 **Response**
 
@@ -1298,26 +1298,26 @@ Results are ordered by `timestamp` descending (most recent first).
 
 **`MintBurnEvent`**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Composite ID: `{chainId}-{txHash}-{logIndex}` |
-| `stablecoinId` | `string` | Pharos stablecoin ID |
-| `symbol` | `string` | Token symbol |
-| `chainId` | `string` | Chain identifier (e.g. `"ethereum"`) |
-| `direction` | `"mint" \| "burn"` | Whether tokens were minted or burned |
-| `flowType` | `"standard" \| "atomic_roundtrip"` | Flow-noise classification; `atomic_roundtrip` rows are excluded from aggregate flow metrics |
-| `amount` | `number` | Amount in native token units |
-| `amountUsd` | `number \| null` | USD value at time of event |
-| `burnType` | `"effective_burn" \| "bridge_burn" \| "review_required" \| null` | Burn classification; `null` for mint rows |
-| `burnReviewReason` | `string \| null` | Reason emitted when a burn requires manual review classification |
-| `counterparty` | `string \| null` | Non-zero address (recipient for mint, sender for burn) |
-| `txHash` | `string` | Transaction hash |
-| `blockNumber` | `number` | Block number |
-| `timestamp` | `number` | Unix seconds |
-| `explorerTxUrl` | `string` | Block explorer URL for the transaction |
-| `priceUsed` | `number \| null` | Price used to derive `amountUsd` |
-| `priceTimestamp` | `number \| null` | Unix seconds of the price snapshot used |
-| `priceSource` | `string \| null` | Valuation provenance (`supply_history`, `price_cache`, `price_cache_heal`, etc.) |
+| Field              | Type                                                             | Description                                                                                 |
+| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `id`               | `string`                                                         | Composite ID: `{chainId}-{txHash}-{logIndex}`                                               |
+| `stablecoinId`     | `string`                                                         | Pharos stablecoin ID                                                                        |
+| `symbol`           | `string`                                                         | Token symbol                                                                                |
+| `chainId`          | `string`                                                         | Chain identifier (e.g. `"ethereum"`)                                                        |
+| `direction`        | `"mint" \| "burn"`                                               | Whether tokens were minted or burned                                                        |
+| `flowType`         | `"standard" \| "atomic_roundtrip"`                               | Flow-noise classification; `atomic_roundtrip` rows are excluded from aggregate flow metrics |
+| `amount`           | `number`                                                         | Amount in native token units                                                                |
+| `amountUsd`        | `number \| null`                                                 | USD value at time of event                                                                  |
+| `burnType`         | `"effective_burn" \| "bridge_burn" \| "review_required" \| null` | Burn classification; `null` for mint rows                                                   |
+| `burnReviewReason` | `string \| null`                                                 | Reason emitted when a burn requires manual review classification                            |
+| `counterparty`     | `string \| null`                                                 | Non-zero address (recipient for mint, sender for burn)                                      |
+| `txHash`           | `string`                                                         | Transaction hash                                                                            |
+| `blockNumber`      | `number`                                                         | Block number                                                                                |
+| `timestamp`        | `number`                                                         | Unix seconds                                                                                |
+| `explorerTxUrl`    | `string`                                                         | Block explorer URL for the transaction                                                      |
+| `priceUsed`        | `number \| null`                                                 | Price used to derive `amountUsd`                                                            |
+| `priceTimestamp`   | `number \| null`                                                 | Unix seconds of the price snapshot used                                                     |
+| `priceSource`      | `string \| null`                                                 | Valuation provenance (`supply_history`, `price_cache`, `price_cache_heal`, etc.)            |
 
 ---
 
@@ -1335,10 +1335,10 @@ Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Single coin mode: return latest + daily history |
-| `days` | `integer` | `30` | History lookback (max 365) |
+| Param        | Type      | Default | Description                                     |
+| ------------ | --------- | ------- | ----------------------------------------------- |
+| `stablecoin` | `string`  | —       | Single coin mode: return latest + daily history |
+| `days`       | `integer` | `30`    | History lookback (max 365)                      |
 
 Aggregate responses are filtered to tracked stablecoin IDs only, even if stale rows for de-tracked IDs still exist in storage.
 
@@ -1420,6 +1420,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 **Cache:** no edge cache (POST passthrough)
 
 **Rate limits**
+
 - Global public API limiter: best-effort per-IP in-memory limiter (`60 requests / 60 seconds`) for non-admin requests.
 - Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
 
@@ -1439,14 +1440,14 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 }
 ```
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `type` | `"bug" \| "data-correction" \| "feature-request"` | Yes | Submission category |
-| `title` | `string` | Conditional | Required for `bug` and `feature-request` (3–100 chars); optional for `data-correction` |
-| `description` | `string` | Yes | 10–2000 chars |
-| `pageUrl` | `string` | Yes | Relative app path (must start with `/`) |
-| `website` | `string` | No | Honeypot field; non-empty is silently accepted/dropped |
-| `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string` | No | Optional metadata |
+| Field                                                         | Type                                              | Required    | Notes                                                                                  |
+| ------------------------------------------------------------- | ------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------- |
+| `type`                                                        | `"bug" \| "data-correction" \| "feature-request"` | Yes         | Submission category                                                                    |
+| `title`                                                       | `string`                                          | Conditional | Required for `bug` and `feature-request` (3–100 chars); optional for `data-correction` |
+| `description`                                                 | `string`                                          | Yes         | 10–2000 chars                                                                          |
+| `pageUrl`                                                     | `string`                                          | Yes         | Relative app path (must start with `/`)                                                |
+| `website`                                                     | `string`                                          | No          | Honeypot field; non-empty is silently accepted/dropped                                 |
+| `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string`                                          | No          | Optional metadata                                                                      |
 
 **Response**
 
@@ -1478,6 +1479,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 **Response:** Always `200 OK` (Telegram retries on non-2xx).
 
 **Commands handled:**
+
 - `/start` — Welcome message
 - `/subscribe <types> <tickers>` — Subscribe to alerts (types: dews, depeg, safety)
 - `/unsubscribe <tickers>` — Remove coin subscriptions
@@ -1634,11 +1636,11 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `limit` | `integer` | `50` | Number of transitions to return (1–200) |
-| `from` | `integer \| ISO date` | — | Optional lower bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
-| `to` | `integer \| ISO date` | — | Optional upper bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
+| Param   | Type                  | Default | Description                                                                              |
+| ------- | --------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `limit` | `integer`             | `50`    | Number of transitions to return (1–200)                                                  |
+| `from`  | `integer \| ISO date` | —       | Optional lower bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
+| `to`    | `integer \| ISO date` | —       | Optional upper bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
 
 **Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`)
 
@@ -1650,10 +1652,10 @@ Backfills historical depeg events from stored price data.
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Process a single stablecoin ID |
-| `batch` | `integer` | `0` | Batch offset (3 coins per batch) |
+| Param        | Type      | Default | Description                      |
+| ------------ | --------- | ------- | -------------------------------- |
+| `stablecoin` | `string`  | —       | Process a single stablecoin ID   |
+| `batch`      | `integer` | `0`     | Batch offset (3 coins per batch) |
 
 ### `POST /api/backfill-supply-history`
 
@@ -1663,12 +1665,12 @@ Backfills per-coin supply history snapshots.
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Process a single stablecoin ID |
-| `batch` | `integer` | `0` | Batch offset for chunked processing |
-| `batchSize` | `integer` | `10` | Coins per batch |
-| `allow-constant-price-fallback` | `"true"` | — | Allow current-price fallback when historical non-USD prices are missing |
+| Param                           | Type      | Default | Description                                                             |
+| ------------------------------- | --------- | ------- | ----------------------------------------------------------------------- |
+| `stablecoin`                    | `string`  | —       | Process a single stablecoin ID                                          |
+| `batch`                         | `integer` | `0`     | Batch offset for chunked processing                                     |
+| `batchSize`                     | `integer` | `10`    | Coins per batch                                                         |
+| `allow-constant-price-fallback` | `"true"`  | —       | Allow current-price fallback when historical non-USD prices are missing |
 
 ### `POST /api/backfill-stability-index`
 
@@ -1684,11 +1686,11 @@ Backfills CoinGecko historical prices into the price_cache table for more accura
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Process a single stablecoin ID |
-| `batchSize` | `integer` | `10` | Coins per batch |
-| `batch` | `integer` | `0` | Batch offset for chunked processing |
+| Param        | Type      | Default | Description                         |
+| ------------ | --------- | ------- | ----------------------------------- |
+| `stablecoin` | `string`  | —       | Process a single stablecoin ID      |
+| `batchSize`  | `integer` | `10`    | Coins per batch                     |
+| `batch`      | `integer` | `0`     | Batch offset for chunked processing |
 
 ### `POST /api/backfill-mint-burn-prices`
 
@@ -1724,13 +1726,13 @@ Backfills mint/burn event ingestion for a specific contract config using the sam
 
 **Request body or query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `configKey` | `string` | — | Required config key: `{chainId}-{contractAddress}` (currently Ethereum-only) |
-| `fromBlock` | `integer` | from sync state | Start block override |
-| `toBlock` | `integer` | chain head | End block override (clamped to chain head) |
-| `chunkSize` | `integer` | `50000` | Block span per fetch chunk (max 50000) |
-| `maxChunks` | `integer` | `24` | Maximum chunks to process per request |
+| Param       | Type      | Default         | Description                                                                  |
+| ----------- | --------- | --------------- | ---------------------------------------------------------------------------- |
+| `configKey` | `string`  | —               | Required config key: `{chainId}-{contractAddress}` (currently Ethereum-only) |
+| `fromBlock` | `integer` | from sync state | Start block override                                                         |
+| `toBlock`   | `integer` | chain head      | End block override (clamped to chain head)                                   |
+| `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                       |
+| `maxChunks` | `integer` | `24`            | Maximum chunks to process per request                                        |
 
 ### `POST /api/reclassify-atomic-roundtrips`
 
@@ -1759,13 +1761,13 @@ Dry-run preview for the depeg audit endpoint. This is the only supported `GET` m
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `limit` | `integer` | `200` | Max events to audit |
-| `offset` | `integer` | `0` | Pagination offset |
-| `dry-run` | `"true"` | required | Must be exactly `"true"` for `GET` |
-| `min-supply` | `number` | `0` | Minimum supply (USD) to include in audit |
-| `symbol` | `string` | — | Filter by symbol (case-insensitive) |
+| Param        | Type      | Default  | Description                              |
+| ------------ | --------- | -------- | ---------------------------------------- |
+| `limit`      | `integer` | `200`    | Max events to audit                      |
+| `offset`     | `integer` | `0`      | Pagination offset                        |
+| `dry-run`    | `"true"`  | required | Must be exactly `"true"` for `GET`       |
+| `min-supply` | `number`  | `0`      | Minimum supply (USD) to include in audit |
+| `symbol`     | `string`  | —        | Filter by symbol (case-insensitive)      |
 
 ### `POST /api/audit-depeg-history`
 
@@ -1777,14 +1779,14 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `limit` | `integer` | `200` | Max events to audit |
-| `offset` | `integer` | `0` | Pagination offset |
-| `delete` | `string` | — | Comma-separated event IDs to delete directly (skips CG audit) |
-| `dry-run` | `"true"` | — | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives |
-| `min-supply` | `number` | `0` | Minimum supply (USD) to include in audit |
-| `symbol` | `string` | — | Filter by symbol (case-insensitive) |
+| Param        | Type      | Default | Description                                                                                    |
+| ------------ | --------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `limit`      | `integer` | `200`   | Max events to audit                                                                            |
+| `offset`     | `integer` | `0`     | Pagination offset                                                                              |
+| `delete`     | `string`  | —       | Comma-separated event IDs to delete directly (skips CG audit)                                  |
+| `dry-run`    | `"true"`  | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives |
+| `min-supply` | `number`  | `0`     | Minimum supply (USD) to include in audit                                                       |
+| `symbol`     | `string`  | —       | Filter by symbol (case-insensitive)                                                            |
 
 ### `POST /api/trigger-digest`
 
@@ -1842,11 +1844,11 @@ Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet m
 
 **Query parameters**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
+| Param    | Type                               | Default    | Description                |
+| -------- | ---------------------------------- | ---------- | -------------------------- |
 | `status` | `"active" \| "dismissed" \| "all"` | `"active"` | Filter by candidate status |
-| `limit` | `integer` | `50` | Max results (max 200) |
-| `offset` | `integer` | `0` | Pagination offset |
+| `limit`  | `integer`                          | `50`       | Max results (max 200)      |
+| `offset` | `integer`                          | `0`        | Pagination offset          |
 
 **Response**
 
@@ -1859,19 +1861,19 @@ Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet m
 
 **`DiscoveryCandidate` fields**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Internal candidate ID |
-| `geckoId` | `string \| null` | CoinGecko coin ID |
-| `llamaId` | `string \| null` | DefiLlama stablecoin ID |
-| `name` | `string` | Asset name |
-| `symbol` | `string` | Ticker symbol |
-| `marketCap` | `number` | Latest known market cap (USD) |
-| `source` | `"coingecko" \| "defillama" \| "both"` | Which discovery source detected this asset |
-| `firstSeen` | `number` | Unix seconds when first discovered |
-| `lastSeen` | `number` | Unix seconds of most recent detection |
-| `daysSeen` | `number` | Number of days the candidate has been observed |
-| `dismissed` | `boolean` | Whether this candidate has been dismissed |
+| Field       | Type                                   | Description                                    |
+| ----------- | -------------------------------------- | ---------------------------------------------- |
+| `id`        | `string`                               | Internal candidate ID                          |
+| `geckoId`   | `string \| null`                       | CoinGecko coin ID                              |
+| `llamaId`   | `string \| null`                       | DefiLlama stablecoin ID                        |
+| `name`      | `string`                               | Asset name                                     |
+| `symbol`    | `string`                               | Ticker symbol                                  |
+| `marketCap` | `number`                               | Latest known market cap (USD)                  |
+| `source`    | `"coingecko" \| "defillama" \| "both"` | Which discovery source detected this asset     |
+| `firstSeen` | `number`                               | Unix seconds when first discovered             |
+| `lastSeen`  | `number`                               | Unix seconds of most recent detection          |
+| `daysSeen`  | `number`                               | Number of days the candidate has been observed |
+| `dismissed` | `boolean`                              | Whether this candidate has been dismissed      |
 
 ### `POST /api/discovery-candidates/:id/dismiss`
 

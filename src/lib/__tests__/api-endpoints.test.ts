@@ -13,7 +13,7 @@ describe("api endpoint registry", () => {
   it("keeps probe path groups stable", () => {
     expect(getProbePaths("public")).toEqual([
       "/api/stablecoins",
-      "/api/stablecoin/usdt-tether",
+      "/api/stablecoin/pyusd-paypal",
       "/api/stablecoin-summary/usdt-tether",
       "/api/stablecoin-charts",
       "/api/peg-summary",
@@ -37,7 +37,12 @@ describe("api endpoint registry", () => {
       "/api/stress-signals",
     ]);
 
-    expect(getProbePaths("admin")).toEqual(["/api/status", "/api/status-history?limit=10", "/api/debug-sync-state", "/api/discovery-candidates"]);
+    expect(getProbePaths("admin")).toEqual([
+      "/api/status",
+      "/api/status-history?limit=10",
+      "/api/debug-sync-state",
+      "/api/discovery-candidates",
+    ]);
 
     expect(getProbePaths("manual")).toEqual([
       "/api/trigger-digest",

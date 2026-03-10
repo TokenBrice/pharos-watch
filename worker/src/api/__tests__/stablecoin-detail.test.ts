@@ -9,22 +9,19 @@ vi.stubGlobal("fetch", fetchSpy);
 // Keep detail tests deterministic and fast: we validate handler behavior,
 // not fetch-retry backoff timing.
 vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (
-    url: string,
-    init?: RequestInit,
-    _maxRetries?: number,
-    options?: { passthrough404?: boolean },
-  ) => {
-    try {
-      const res = await fetch(url, init);
-      if (res.ok) return res;
-      if (res.status === 404 && options?.passthrough404) return res;
-      await res.body?.cancel();
-      return null;
-    } catch {
-      return null;
-    }
-  }),
+  fetchWithRetry: vi.fn(
+    async (url: string, init?: RequestInit, _maxRetries?: number, options?: { passthrough404?: boolean }) => {
+      try {
+        const res = await fetch(url, init);
+        if (res.ok) return res;
+        if (res.status === 404 && options?.passthrough404) return res;
+        await res.body?.cancel();
+        return null;
+      } catch {
+        return null;
+      }
+    },
+  ),
 }));
 
 const { handleStablecoinDetail } = await import("../stablecoin-detail");
@@ -60,9 +57,7 @@ describe("handleStablecoinDetail", () => {
     const dlBody = makeDLDetailBody();
 
     // No cache hit
-    const db = mockD1([
-      { match: "cache", rows: [] },
-    ]);
+    const db = mockD1([{ match: "cache", rows: [] }]);
 
     fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
 
@@ -112,6 +107,27 @@ describe("handleStablecoinDetail", () => {
     expect(res.status).toBe(502);
     const body = (await res.json()) as { error: string };
     expect(body).toHaveProperty("error");
+  });
+
+  it("falls back to supply_history when DefiLlama fails and no detail cache exists", async () => {
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      {
+        match: "supply_history",
+        rows: [{ snapshot_date: 1700000000, circulating_usd: 123_000_000, price: 1.0 }],
+      },
+    ]);
+
+    fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
+    expect(body.tokens).toHaveLength(1);
+    expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(123_000_000);
+    expect(ctx.waitUntil).toHaveBeenCalled();
   });
 
   it("returns stale cache when upstream fails but cache exists", async () => {
@@ -200,9 +216,7 @@ describe("handleStablecoinDetail", () => {
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("source=defillama-stablecoin-detail-parse"),
-    );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("source=defillama-stablecoin-detail-parse"));
     errorSpy.mockRestore();
   });
 
@@ -219,16 +233,12 @@ describe("handleStablecoinDetail", () => {
       { match: "cache", rows: [] },
       {
         match: "supply_history",
-        rows: [
-          { snapshot_date: 1700000000, circulating_usd: 50_000_000, price: 1.0 },
-        ],
+        rows: [{ snapshot_date: 1700000000, circulating_usd: 50_000_000, price: 1.0 }],
       },
     ]);
 
     // CoinGecko returns empty market_caps
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ market_caps: [], prices: [] }), { status: 200 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ market_caps: [], prices: [] }), { status: 200 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, geckoOnlyId!, ctx);

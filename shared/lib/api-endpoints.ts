@@ -56,6 +56,8 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: false,
     handlerKey: "stablecoin-probe-detail",
     probeGroup: "public",
+    // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
+    probePath: "/api/stablecoin/pyusd-paypal",
   },
   {
     path: "/api/stablecoin-summary/usdt-tether",
@@ -508,9 +510,7 @@ const STRICT_CONTRACT_PATHS = ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint
 const ROUTER_HANDLED_ENDPOINTS = ENDPOINT_DEFINITIONS.filter(
   (endpoint) => endpoint.routerHandled !== false && endpoint.handlerKey,
 );
-const ROUTER_HANDLED_PATHS = ROUTER_HANDLED_ENDPOINTS.map(
-  (endpoint) => endpoint.path,
-);
+const ROUTER_HANDLED_PATHS = ROUTER_HANDLED_ENDPOINTS.map((endpoint) => endpoint.path);
 
 export function isMutatingAdminPath(path: string): boolean {
   return MUTATING_ADMIN_PATHS.has(path);

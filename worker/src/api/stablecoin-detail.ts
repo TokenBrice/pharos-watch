@@ -19,126 +19,157 @@ import {
   logUpstreamFailure,
 } from "./stablecoin-detail/shared";
 
-export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", async (
-  db: D1Database,
-  id: string,
-  ctx: ExecutionContext,
-): Promise<Response> => {
-  const cacheKey = `detail:${id}`;
-  const cached = await getCache(db, cacheKey);
-  const safeRecordOutcome = async (source: string, success: boolean): Promise<void> => {
-    try {
-      await recordOutcome(db, source, success);
-    } catch {
-      // Non-blocking for detail endpoint.
-    }
-  };
-
-  if (cached) {
-    const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
-    if (age < CACHE_TTL_SECONDS) {
-      return createFreshCacheHitResponse(cached.value, age);
-    }
-  }
-
-  const meta = TRACKED_META_BY_ID.get(id);
-  const isCommodity =
-    !!meta &&
-    (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") &&
-    !!meta.geckoId;
-
-  if (isCommodity) {
-    const config = {
-      stablecoinId: id,
-      geckoId: meta.geckoId!,
-      protocolSlug: meta.protocolSlug ?? "",
-      pegType: `pegged${meta.flags.pegCurrency}`,
+export const handleStablecoinDetail = withErrorHandler(
+  "stablecoin-detail",
+  async (db: D1Database, id: string, ctx: ExecutionContext): Promise<Response> => {
+    const cacheKey = `detail:${id}`;
+    const cached = await getCache(db, cacheKey);
+    const meta = TRACKED_META_BY_ID.get(id);
+    const queueCacheWrite = (body: string): void => {
+      ctx.waitUntil(
+        (async () => {
+          try {
+            await setCache(db, cacheKey, body);
+          } catch (err) {
+            console.error(
+              `[detail] cache write failed stablecoin=${id} bytes=${body.length} error=${String(err).slice(0, 300)}`,
+            );
+          }
+        })(),
+      );
+    };
+    const safeRecordOutcome = async (source: string, success: boolean): Promise<void> => {
+      try {
+        await recordOutcome(db, source, success);
+      } catch {
+        // Non-blocking for detail endpoint.
+      }
+    };
+    const pegType = `pegged${meta?.flags.pegCurrency ?? "USD"}`;
+    const trySupplyHistoryFallback = async (reason: string): Promise<Response | null> => {
+      const tokens = await fetchSupplyHistoryFallback(db, id, pegType);
+      if (tokens.length === 0) return null;
+      console.warn(`[detail] fallback source=supply_history stablecoin=${id} reason=${reason} points=${tokens.length}`);
+      const body = JSON.stringify({ tokens });
+      queueCacheWrite(body);
+      return createFreshUpstreamResponse(body);
     };
 
-    try {
-      let tokens = await fetchCommodityTokens(config);
-      if (tokens.length === 0) {
-        const fallbackTokens = await fetchSupplyHistoryFallback(db, id, config.pegType);
-        if (fallbackTokens.length > 0) {
-          tokens = fallbackTokens;
-        }
+    if (cached) {
+      const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
+      if (age < CACHE_TTL_SECONDS) {
+        return createFreshCacheHitResponse(cached.value, age);
       }
-
-      const body = JSON.stringify({ tokens });
-      ctx.waitUntil(setCache(db, cacheKey, body));
-      return createFreshUpstreamResponse(body);
-    } catch (err) {
-      logUpstreamException("commodity-detail", id, err);
-      return staleCacheOrError(cached, 502, "Failed to fetch commodity token data");
-    }
-  }
-
-  const isCgOnly = meta?.detailProvider === "coingecko" && !!meta?.geckoId;
-  if (isCgOnly) {
-    const cgDetailAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS);
-    if (!cgDetailAllowed) {
-      return staleCacheOrError(cached, 503, "CoinGecko detail circuit open");
     }
 
-    const pegType = `pegged${meta.flags.pegCurrency}`;
+    const isCommodity =
+      !!meta && (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") && !!meta.geckoId;
 
-    try {
-      let tokens = await fetchCoinGeckoOnlyTokens({
+    if (isCommodity) {
+      const config = {
         stablecoinId: id,
         geckoId: meta.geckoId!,
+        protocolSlug: meta.protocolSlug ?? "",
         pegType,
-      });
-      await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, tokens.length > 0);
-      if (tokens.length === 0) {
-        tokens = await fetchSupplyHistoryFallback(db, id, pegType);
+      };
+
+      try {
+        let tokens = await fetchCommodityTokens(config);
+        if (tokens.length === 0) {
+          const fallbackTokens = await fetchSupplyHistoryFallback(db, id, config.pegType);
+          if (fallbackTokens.length > 0) {
+            tokens = fallbackTokens;
+          }
+        }
+
+        const body = JSON.stringify({ tokens });
+        queueCacheWrite(body);
+        return createFreshUpstreamResponse(body);
+      } catch (err) {
+        logUpstreamException("commodity-detail", id, err);
+        const fallback = await trySupplyHistoryFallback("commodity-upstream-failure");
+        if (fallback) return fallback;
+        return staleCacheOrError(cached, 502, "Failed to fetch commodity token data");
+      }
+    }
+
+    const isCgOnly = meta?.detailProvider === "coingecko" && !!meta?.geckoId;
+    if (isCgOnly) {
+      const cgDetailAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS);
+      if (!cgDetailAllowed) {
+        const fallback = await trySupplyHistoryFallback("coingecko-circuit-open");
+        if (fallback) return fallback;
+        return staleCacheOrError(cached, 503, "CoinGecko detail circuit open");
       }
 
-      const body = JSON.stringify({ tokens });
-      ctx.waitUntil(setCache(db, cacheKey, body));
+      try {
+        let tokens = await fetchCoinGeckoOnlyTokens({
+          stablecoinId: id,
+          geckoId: meta.geckoId!,
+          pegType,
+        });
+        await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, tokens.length > 0);
+        if (tokens.length === 0) {
+          tokens = await fetchSupplyHistoryFallback(db, id, pegType);
+        }
+
+        const body = JSON.stringify({ tokens });
+        queueCacheWrite(body);
+        return createFreshUpstreamResponse(body);
+      } catch (err) {
+        await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, false);
+        logUpstreamException("coingecko-detail", id, err);
+        const fallback = await trySupplyHistoryFallback("coingecko-upstream-failure");
+        if (fallback) return fallback;
+        return staleCacheOrError(cached, 502, "Failed to fetch CoinGecko data");
+      }
+    }
+
+    const dlId = meta?.llamaId ?? id;
+    const dlDetailAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL);
+    if (!dlDetailAllowed) {
+      const fallback = await trySupplyHistoryFallback("defillama-circuit-open");
+      if (fallback) return fallback;
+      return staleCacheOrError(cached, 503, "DefiLlama detail circuit open");
+    }
+
+    try {
+      const res = await fetchWithRetry(
+        `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
+        undefined,
+        DETAIL_UPSTREAM_MAX_RETRIES,
+        { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
+      );
+
+      if (!res?.ok) {
+        await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+        logUpstreamFailure("defillama-stablecoin-detail", id, res?.status ?? "no-response");
+        const fallback = await trySupplyHistoryFallback("defillama-upstream-failure");
+        if (fallback) return fallback;
+        return staleCacheOrError(cached, 502, `Failed to fetch stablecoin ${id}`);
+      }
+
+      const upstreamBody = await res.text();
+      let body: string;
+      try {
+        body = normalizeDefiLlamaDetailBody(upstreamBody, meta);
+      } catch (err) {
+        await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+        logUpstreamException("defillama-stablecoin-detail-parse", id, err);
+        const fallback = await trySupplyHistoryFallback("defillama-parse-failure");
+        if (fallback) return fallback;
+        return staleCacheOrError(cached, 502, `Invalid upstream data for stablecoin ${id}`);
+      }
+
+      queueCacheWrite(body);
+      await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, true);
       return createFreshUpstreamResponse(body);
     } catch (err) {
-      await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, false);
-      logUpstreamException("coingecko-detail", id, err);
-      return staleCacheOrError(cached, 502, "Failed to fetch CoinGecko data");
-    }
-  }
-
-  const dlId = meta?.llamaId ?? id;
-  const dlDetailAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL);
-  if (!dlDetailAllowed) {
-    return staleCacheOrError(cached, 503, "DefiLlama detail circuit open");
-  }
-
-  try {
-    const res = await fetchWithRetry(
-      `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
-      undefined,
-      DETAIL_UPSTREAM_MAX_RETRIES,
-      { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
-    );
-
-    if (!res?.ok) {
       await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
-      logUpstreamFailure("defillama-stablecoin-detail", id, res?.status ?? "no-response");
+      logUpstreamException("defillama-stablecoin-detail", id, err);
+      const fallback = await trySupplyHistoryFallback("defillama-exception");
+      if (fallback) return fallback;
       return staleCacheOrError(cached, 502, `Failed to fetch stablecoin ${id}`);
     }
-
-    const upstreamBody = await res.text();
-    let body: string;
-    try {
-      body = normalizeDefiLlamaDetailBody(upstreamBody, meta);
-    } catch (err) {
-      await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
-      logUpstreamException("defillama-stablecoin-detail-parse", id, err);
-      return staleCacheOrError(cached, 502, `Invalid upstream data for stablecoin ${id}`);
-    }
-
-    ctx.waitUntil(setCache(db, cacheKey, body));
-    await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, true);
-    return createFreshUpstreamResponse(body);
-  } catch (err) {
-    await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
-    logUpstreamException("defillama-stablecoin-detail", id, err);
-    return staleCacheOrError(cached, 502, `Failed to fetch stablecoin ${id}`);
-  }
-});
+  },
+);
