@@ -14,7 +14,7 @@ The entire backend runs on a single Cloudflare Worker script.
 | **Included CPU time/month** | 30 M CPU-ms | $0.02/M over |
 | **CPU time per HTTP request** | 30 s default (up to 5 min configurable) | |
 | **CPU time per Cron Trigger** | 30 s if the schedule runs more than once per hour; 15 min otherwise | Platform default. This repo additionally sets `cpu_ms = 5000` in `worker/wrangler.toml`, so our effective per-invocation CPU cap is 5 s unless reconfigured |
-| **Cron Triggers** | No current per-worker cap; account quota applies | Cloudflare removed the old per-worker trigger cap. This repo currently uses 5 cron expressions: `*/15`, `3,23,43`, `13,33,53`, `10,40`, `0 8 * * *` |
+| **Cron Triggers** | No current per-worker cap; account quota applies | Cloudflare removed the old per-worker trigger cap. This repo currently uses 9 cron expressions |
 | **Concurrent outbound fetch() per invocation** | **6** | ⚠️ Hard platform limit. DEX liquidity already batches (2 DL fetches, then 4 Curve) to stay within budget |
 | **Subrequests per invocation (Workers Standard default)** | 10,000 | Configurable higher on Workers Paid; the old 1,000-subrequest cap was removed |
 | **D1 connections per invocation** | 6 simultaneous | |
@@ -247,7 +247,11 @@ Used to post the daily digest to a channel.
 | **Messages/sec (global, all chats)** | 30 msgs/s |
 | **Authentication** | Bot token (free) |
 
-**Current usage**: 1 message/day. No risk of hitting any limit.
+**Current usage**: Subscriber alerts dispatch every 5 minutes on a dedicated cron slot.
+Up to 200 messages per run, sent in parallel batches of 5. Overflow enqueued to D1
+for subsequent runs. At full capacity (200 sends/run, 12 runs/hour), theoretical
+throughput is 2,400 messages/hour — well within the 30 msgs/sec global limit.
+Daily digest posting adds 1 message/day on top.
 
 ---
 
@@ -326,7 +330,7 @@ Used to extend FX coverage beyond Frankfurter, including CNH, and as the seconda
 
 | Constraint | Current headroom | Risk |
 |---|---|---|
-| Cloudflare cron expressions | 4 configured in this repo; no current per-worker cap | 🟢 Scheduling headroom exists, but piggyback existing slots unless cadence truly differs |
+| Cloudflare cron expressions | 9 configured in this repo; no current per-worker cap | 🟢 Scheduling headroom exists, but piggyback existing slots unless cadence truly differs |
 | Cloudflare concurrent fetch() (6/invocation) | Already batching to avoid | 🔴 Cannot add more parallel fetches without refactoring |
 | CoinGecko monthly quota (500K calls) | Medium — pool crawl can spike | 🟡 Monitor `/key` endpoint for usage |
 | D1 storage (10 GB hard cap) | Plenty now, but supply history + liquidity history grows | 🟡 Add periodic pruning if tables grow fast |
@@ -336,4 +340,5 @@ Used to extend FX coverage beyond Frankfurter, including CNH, and as the seconda
 | CoinGecko onchain crawl budget (5 min/run) | Enforced by code — partial CG coverage per run is acceptable | 🟢 Accepted tradeoff |
 | GeckoTerminal crawl budget (3 min/run) | Enforced by code — GT-only chains get partial coverage per run | 🟢 Accepted tradeoff |
 | Twitter Free tier (500 posts/month) | 1/day = ~30/month | 🟢 |
-| Telegram / GitHub / Frankfurter / gold-api | No meaningful limits | 🟢 |
+| Telegram subscriber alerts | 200/run, 12 runs/hour, pending overflow queue | 🟢 1,000+ subscribers comfortable |
+| GitHub / Frankfurter / gold-api | No meaningful limits | 🟢 |

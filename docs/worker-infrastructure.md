@@ -1,8 +1,8 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 22 named runtime jobs across 8 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 21 named runtime jobs across 9 trigger slots.
 
-Execution note: `dispatch-telegram-alerts-daily` runs on the `0 8 * * *` (08:00 UTC) trigger, while the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
+Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -194,7 +194,7 @@ Current consumers:
 
 ## Cron Scheduling
 
-This worker declares 8 cron expressions in `worker/wrangler.toml`. The paid Workers plan allows up to 250 cron triggers. Fetch-heavy jobs (blacklist, mint/burn, DEX discovery, stablecoin charts) each run on dedicated triggers to get independent 6-connection pools and CPU budgets.
+This worker declares 9 cron expressions in `worker/wrangler.toml`. The paid Workers plan allows up to 250 cron triggers. Fetch-heavy jobs (blacklist, mint/burn, DEX discovery, stablecoin charts) and Telegram alerts each run on dedicated triggers to get independent 6-connection pools and CPU budgets.
 
 ### wrangler.toml Triggers
 
@@ -207,6 +207,7 @@ crons = [
   "6,26,46 * * * *",
   "13,33,53 * * * *",
   "10,40 * * * *",
+  "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   "0 8 * * *",
   "5 8 * * *",
 ]
@@ -222,7 +223,6 @@ crons = [
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
 | `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
 | `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
-| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
 | *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled.ts` | This doc (below) |
 
 **Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `sync-stablecoins` now reports explicit capability metadata:
@@ -230,7 +230,7 @@ crons = [
 - `capabilities.stablecoinsCache`
 - `capabilities.depegPipeline`
 
-`snapshot-supply` retry and `compute-dews` require the stablecoins-cache capability. `stability-index` and `dispatch-telegram-alerts` additionally require the depeg-pipeline capability, which prevents depeg-stage regressions from propagating as fresh PSI or alert state.
+`snapshot-supply` retry and `compute-dews` require the stablecoins-cache capability. `stability-index` additionally requires the depeg-pipeline capability, which prevents depeg-stage regressions from propagating as fresh PSI state.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -276,20 +276,27 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 **Execution model:** All three jobs are chained sequentially: charts → dex-liquidity → yield-data. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `sync-yield-data` is chained after `sync-dex-liquidity` for safety-score dependencies. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency.
 
-### Trigger 7: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
+### Trigger 7: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram alerts — dedicated, every 5 min)
+
+| Job | Function | File | Documentation |
+|-----|----------|------|---------------|
+| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
+
+Dedicated trigger for Telegram subscriber alert dispatch. Isolated from the quarter-hourly pipeline so alert fan-out gets its own 6-connection pool and CPU budget. Uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber deliveries per run; overflow is enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
+
+### Trigger 8: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `snapshot-supply` | `snapshotSupply()` | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
 | `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
-| `dispatch-telegram-alerts-daily` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
 | `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED), `sync-usds-status` (Etherscan), and `dispatch-telegram-alerts-daily` (Telegram) use ≤3 concurrent external connections. `dispatch-telegram-alerts-daily` chains off `snapshot-safety-grade-history` so safety diffs use fresh daily grades.
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED) and `sync-usds-status` (Etherscan) use ≤2 concurrent external connections.
 
-### Trigger 8: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
+### Trigger 9: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -302,9 +309,9 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 ## Telegram Alert Bot
 
 - Webhook ingress (`POST /api/telegram-webhook`) receives Telegram commands and writes subscriber/subscription state into D1.
-- `dispatch-telegram-alerts` and `dispatch-telegram-alerts-daily` diff DEWS/depeg/safety state against cached snapshots before fan-out.
+- `dispatch-telegram-alerts` diffs DEWS/depeg/safety state against cached snapshots before fan-out on a dedicated 5-minute cron slot.
 - Telegram sends are gated by the `telegram-api` circuit breaker to avoid hammering the Bot API during upstream issues.
-- Each dispatch run sends at most 50 Telegram messages.
+- Each dispatch run sends up to 200 subscriber deliveries in parallel batches of 5. Overflow is enqueued to `telegram_pending_alerts` for subsequent runs.
 
 See `docs/telegram-alerts.md` for command syntax, D1 tables, snapshot seeding behavior, and operational setup.
 
@@ -651,7 +658,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 22 cron jobs across 8 triggers via `CRON_INTERVALS` in `worker/src/lib/cron-schedule.ts`, which is derived from the shared `shared/lib/cron-jobs.ts` source of truth:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 21 cron jobs across 9 triggers via `CRON_INTERVALS` in `worker/src/lib/cron-schedule.ts`, which is derived from the shared `shared/lib/cron-jobs.ts` source of truth:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -661,7 +668,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `stability-index` | 900s (15min) | `*/15 * * * *` |
 | `compute-dews` | 900s (15min) | `*/15 * * * *` |
 | `status-self-check` | 900s (15min) | `*/15 * * * *` |
-| `dispatch-telegram-alerts` | 900s (15min) | `*/15 * * * *` |
+| `dispatch-telegram-alerts` | 300s (5min) | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` |
 | `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-mint-burn` | 1,200s (20min) | `4,24,44 * * * *` |
 | `sync-dex-discovery` | 1,200s (20min) | `6,26,46 * * * *` |
@@ -670,7 +677,6 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `sync-yield-data` | 1,800s (30min) | `10,40 * * * *` |
 | `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-safety-grade-history` | 86,400s (24h) | `0 8 * * *` |
-| `dispatch-telegram-alerts-daily` | 86,400s (24h) | `0 8 * * *` |
 | `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |

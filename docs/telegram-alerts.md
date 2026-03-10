@@ -30,6 +30,7 @@ Migration `worker/migrations/0054_telegram_subscribers.sql` creates three tables
 | `telegram_subscribers` | Per-chat subscriber preferences | `chat_id`, `username`, `alert_dews`, `alert_depeg`, `alert_safety`, `created_at`, `last_active_at` |
 | `telegram_subscriptions` | Per-chat stablecoin subscriptions | composite PK `chat_id, stablecoin_id` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `alert_types`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at` |
+| `telegram_pending_alerts` | Overflow delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts` |
 
 The webhook also uses the generic `cache` table key `telegram:last-update-id` to deduplicate Telegram update re-delivery.
 
@@ -83,12 +84,11 @@ Telegram may redeliver the same `update_id`. The webhook stores the highest proc
 
 ## Dispatch Cron
 
-`dispatchTelegramAlerts(db, botToken, signal?)` runs in two places:
+`dispatchTelegramAlerts(db, botToken, signal?)` runs on a dedicated 5-minute cron slot
+(`2,7,12,17,22,27,32,37,42,47,52,57 * * * *`), isolated from the quarter-hourly pipeline.
 
-- Quarter-hourly slot: `dispatch-telegram-alerts`
-- Daily chained pass after `snapshot-safety-grade-history`: `dispatch-telegram-alerts-daily`
-
-The daily pass is not a separate cron definition in `CRON_INTERVALS`; it is chained in `worker/src/handlers/scheduled.ts` so safety diffs use fresh daily grade history.
+It no longer runs inside the quarter-hourly or daily slots. Safety-grade changes from the
+daily `snapshot-safety-grade-history` job are detected within 5 minutes of the snapshot completing.
 
 ### Snapshot Inputs
 
@@ -144,10 +144,26 @@ Each alert type checks the corresponding boolean flag column:
 
 - Messages are HTML-formatted via `formatConsolidatedMessage()`.
 - Long messages are split with `splitMessage(html, 4000)`.
-- `sendToChat()` posts with `parse_mode: "HTML"`.
-- Hard cap: `50 messages per dispatch run`.
+- `sendBatch()` posts in parallel batches of 5 (staying under Workers 6-connection limit).
+- Hard cap: `200 subscriber deliveries per dispatch run`.
+- Overflow subscribers are enqueued to `telegram_pending_alerts` and drained in subsequent runs.
+- Pending alerts expire after `1 hour` (3600s) — stale alerts are cleaned up automatically.
 
-When Telegram returns `403`, the send helper reports `{ blocked: true }` and the dispatcher disables that user's alert flags to stop repeated failures.
+When Telegram returns `403`, the send helper reports `{ blocked: true }` and the dispatcher
+disables that user's alert flags to stop repeated failures.
+
+### Pending Delivery Queue
+
+When the subscriber queue exceeds the per-run cap (200), overflow messages are written
+to `telegram_pending_alerts` in D1 as pre-split HTML chunks. Each subsequent dispatch run
+drains up to 25% of its budget from the pending queue before processing fresh events,
+ensuring eventual delivery.
+
+Pending alerts have a 1-hour TTL. Rows older than the TTL are deleted at the end of each
+run. Failed sends retry up to 2 times (3 attempts total) before being dropped.
+
+This design ensures snapshots always stay current (events are never "held back") while
+guaranteeing delivery for large subscriber populations.
 
 ## Admin Visibility
 
