@@ -51,18 +51,18 @@ export function getGtDexQuality(dexId: string): number {
 
 /**
  * Compute durability score for a stablecoin (0-100).
- * 35% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity, 5% locked liquidity.
+ * 15% organic fraction (sqrt curve), 35% TVL stability, 25% volume consistency, 25% maturity.
  */
 export function computeDurabilityScore(
   m: LiquidityMetrics,
   tvlStability: number | null,
   volumeStability: number | null,
 ): number {
-  // Organic fraction sub-score
+  // Organic fraction sub-score (sqrt curve — less punishing at low end)
   const organicFraction = m.totalTvlForOrganic > 0
     ? m.organicTvlWeightedSum / m.totalTvlForOrganic
     : 0.5;
-  const organicScore = Math.min(100, organicFraction * 125);
+  const organicScore = Math.min(100, Math.sqrt(organicFraction) * 100);
 
   // TVL stability sub-score (from depth_stability, 0-1)
   const tvlStabilityScore = tvlStability != null ? tvlStability * 100 : 50;
@@ -73,18 +73,11 @@ export function computeDurabilityScore(
   // Maturity sub-score
   const maturityScore = Math.min(100, (m.oldestPoolDays / 365) * 100);
 
-  // Locked liquidity sub-score (0-100)
-  const lockedLiqFraction = m.totalTvlForLocked > 0
-    ? m.lockedLiqWeightedSum / m.totalTvlForLocked
-    : 0;
-  const lockedLiqScore = Math.min(100, lockedLiqFraction * 125);
-
   return Math.max(0, Math.min(100, Math.round(
-    organicScore * 0.35 +
-    tvlStabilityScore * 0.25 +
-    volumeConsistencyScore * 0.20 +
-    maturityScore * 0.15 +
-    lockedLiqScore * 0.05
+    organicScore * 0.15 +
+    tvlStabilityScore * 0.35 +
+    volumeConsistencyScore * 0.25 +
+    maturityScore * 0.25
   )));
 }
 

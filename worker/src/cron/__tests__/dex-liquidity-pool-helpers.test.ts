@@ -58,17 +58,23 @@ describe("dex-liquidity pool helpers", () => {
   });
 
   it("computes durability and liquidity scores for default and healthy cases", () => {
+    // Default durability: organic defaults to 0.5 -> sqrt(0.5)*100=70.7,
+    // tvlStab/volConsist default to 50 each, maturity=0, no locked liq
+    // 70.7*0.15 + 50*0.35 + 50*0.25 + 0*0.25 = 10.6+17.5+12.5+0 = 41
     const empty = initMetrics("usdt-tether", "USDT");
-    expect(computeDurabilityScore(empty, null, null)).toBe(44);
+    expect(computeDurabilityScore(empty, null, null)).toBe(41);
 
     const rich = initMetrics("usdc-circle", "USDC");
     rich.organicTvlWeightedSum = 80;
     rich.totalTvlForOrganic = 100;
     rich.oldestPoolDays = 730;
+    // lockedLiq fields ignored now — set them to verify they don't affect score
     rich.lockedLiqWeightedSum = 60;
     rich.totalTvlForLocked = 100;
 
-    expect(computeDurabilityScore(rich, 0.9, 0.8)).toBe(92);
+    // organic=0.8 -> sqrt(0.8)*100=89.4, tvlStab=0.9*100=90, volConsist=0.8*100=80, maturity=min(100,730/365*100)=100
+    // 89.4*0.15 + 90*0.35 + 80*0.25 + 100*0.25 = 13.4+31.5+20+25 = 90
+    expect(computeDurabilityScore(rich, 0.9, 0.8)).toBe(90);
 
     const zeroLiquidity = computeLiquidityScore(empty, 44);
     expect(zeroLiquidity.score).toBe(8);
