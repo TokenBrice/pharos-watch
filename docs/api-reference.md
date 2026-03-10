@@ -1833,3 +1833,58 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
   { "config_key": "tron-usdt", "last_block": 1740000000000 }
 ]
 ```
+
+### `GET /api/discovery-candidates`
+
+Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor, surfaced by the daily discovery scan.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `status` | `"active" \| "dismissed" \| "all"` | `"active"` | Filter by candidate status |
+| `limit` | `integer` | `50` | Max results (max 200) |
+| `offset` | `integer` | `0` | Pagination offset |
+
+**Response**
+
+```json
+{
+  "candidates": [DiscoveryCandidate, ...],
+  "total": 12
+}
+```
+
+**`DiscoveryCandidate` fields**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Internal candidate ID |
+| `geckoId` | `string \| null` | CoinGecko coin ID |
+| `llamaId` | `string \| null` | DefiLlama stablecoin ID |
+| `name` | `string` | Asset name |
+| `symbol` | `string` | Ticker symbol |
+| `marketCap` | `number` | Latest known market cap (USD) |
+| `source` | `"coingecko" \| "defillama" \| "both"` | Which discovery source detected this asset |
+| `firstSeen` | `number` | Unix seconds when first discovered |
+| `lastSeen` | `number` | Unix seconds of most recent detection |
+| `daysSeen` | `number` | Number of days the candidate has been observed |
+| `dismissed` | `boolean` | Whether this candidate has been dismissed |
+
+### `POST /api/discovery-candidates/:id/dismiss`
+
+Dismisses a discovery candidate so it no longer appears in the active list. Dismissed candidates will not resurface unless their market cap crosses 10× the value at dismissal time.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Path parameter:** `:id` — candidate ID from `GET /api/discovery-candidates`
+
+**Response**
+
+```json
+{ "ok": true }
+```
+
+**Error responses:** `404` if the candidate is not found or is already dismissed.

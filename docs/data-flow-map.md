@@ -22,6 +22,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Daily digest | Anthropic Claude + PSI snapshot context | `worker/src/cron/daily-digest.ts` | `daily_digest` + static build sync to `data/digests.json` | `GET /api/daily-digest`, `GET /api/digest-archive`, `GET /api/digest-snapshot` | `useDailyDigest`, `useDigestArchive`, `useDigestSnapshot` | Digest page + archive |
 | Report cards + dependency graph | Peg summary + liquidity + bluechip + stablecoin metadata/dependencies | `worker/src/api/report-cards.ts` compute on read | cache-driven upstream + in-memory compute | `GET /api/report-cards` | `useReportCards` | Safety Scores, Portfolio, Dependency Map, homepage safety snapshot |
 | Status reliability | Real-HTTP self probes + status synthesis | `worker/src/cron/status-self-check.ts`, `worker/src/api/status.ts` | `status_state`, `status_transitions`, `status_probe_runs`, `status_discrepancy_state` | `GET /api/status`, `GET /api/status-history` | `useStatus`, `useEndpointProbes`, `useHealth` | `/status` admin dashboard |
+| Coverage discovery | CoinGecko category API, DL stablecoins residuals | `worker/src/cron/discovery-scan.ts`, `worker/src/cron/sync-stablecoins.ts` (Source A) | `discovery_candidates` | `GET /api/discovery-candidates`, `POST /api/discovery-candidates/:id/dismiss` | — (admin only) | `/status` admin page |
 
 ## Scheduling Backbone
 

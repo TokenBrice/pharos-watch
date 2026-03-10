@@ -254,6 +254,26 @@ Mutating admin paths are protected by method guardrails:
 
 ---
 
+## Coverage Discovery Card
+
+**Component:** `DiscoveryCandidatesCard` (`src/components/status/discovery-candidates.tsx`)
+
+Renders after the Admin Actions section. Shows stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor. Each row displays symbol, name, a source badge (`CG` / `DL` / `Both`), market cap, days seen, and a dismiss button. Admin auth is required for the dismiss action (`POST /api/discovery-candidates/:id/dismiss`). Data is sourced from `GET /api/discovery-candidates` (admin endpoint, active candidates only).
+
+## Price Source Health Card
+
+**Component:** `PriceSourceHealthCard` (`src/components/status/price-source-health.tsx`)
+
+Renders after the Circuit Breakers section. Shows the current price confidence distribution across all tracked stablecoins:
+
+- **Confidence tiles** — colored metric tiles for `High`, `Single-source`, `Low`, and `Missing` counts
+- **Source breakdown line** — which price sources contributed to the current sync
+- **Divergences list** — collapsible list of assets where dual-primary sources disagreed by more than 50 bps
+
+Data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row — no extra DB query required.
+
+---
+
 ## Related Files
 
 | File                                           | Role                                                                                                                                                                                                                                                                                                       |
@@ -261,6 +281,8 @@ Mutating admin paths are protected by method guardrails:
 | `src/app/status/client.tsx`                    | Auth gate + status dashboard orchestration shell                                                                                                                                                                                                                                                           |
 | `src/components/status/*`                      | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards are grouped by trigger slot, surface structured metadata for warning/error runs, show textual recent-run counts alongside history dots, and expose full raw metadata in a collapsible panel. |
 | `src/components/status/telegram-bot-stats.tsx` | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                                              |
+| `src/components/status/discovery-candidates.tsx` | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                                               |
+| `src/components/status/price-source-health.tsx` | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                                        |
 | `src/hooks/use-status.ts`                      | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                                                                                                      |
 | `src/hooks/use-endpoint-probes.ts`             | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                                                                                                                    |
 | `shared/lib/api-endpoints.ts`                  | Shared endpoint registry for probe groups + status-page actions                                                                                                                                                                                                                                            |

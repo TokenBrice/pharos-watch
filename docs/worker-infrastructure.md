@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 21 named runtime jobs across 8 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 22 named runtime jobs across 8 trigger slots.
 
 Execution note: `dispatch-telegram-alerts-daily` runs on the `0 8 * * *` (08:00 UTC) trigger, while the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -295,6 +295,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
 | `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
+| `discovery-scan` | `runDiscoveryScan()` | `worker/src/cron/discovery-scan.ts` | `docs/data-pipeline.md` |
 
 **Dependencies:** `dispatch-telegram-alerts-daily` is chained off `snapshot-safety-grade-history` (`safetyGradePromise.then(...)`) so safety diffs use fresh daily grades. Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
 
@@ -650,7 +651,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 21 cron jobs across 8 triggers via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 22 cron jobs across 8 triggers via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -675,6 +676,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
 | `sync-bluechip` | 86,400s (24h) | `0 8 * * *` |
 | `daily-digest` | 86,400s (24h) | `0 8 * * *` |
+| `discovery-scan` | 86,400s (24h) | `0 8 * * *` |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating.
 
