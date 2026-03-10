@@ -260,6 +260,7 @@ export function CompareClient() {
           pegScore: pegCoin?.pegScore ?? null,
           liquidityScore: dexCoin?.liquidityScore ?? null,
           safetyGrade,
+          netFlow30d: null,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);

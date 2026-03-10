@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { formatCurrency, formatNativePrice, formatScore } from "@shared/lib/format";
+import { formatCurrency, formatNativePrice, formatScore, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 
@@ -32,6 +32,7 @@ interface ComparisonCoin {
   pegScore: number | null;
   liquidityScore: number | null;
   safetyGrade: ReportCardGrade | null;
+  netFlow30d: number | null;
 }
 
 interface ComparisonTableProps {
@@ -129,12 +130,15 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
     const safetyGrades = coins.map((c) => c.safetyGrade);
 
+    const netFlow30dValues = coins.map((c) => c.netFlow30d);
+
     // Best indices
     const bestPrice = bestPriceIndex(coins, pegRates);
     const bestPegScore = bestHighestIndex(pegScores);
 
     const bestLiquidity = bestHighestIndex(liquidityScores);
     const bestGrade = bestGradeIndex(safetyGrades);
+    const bestNetFlow30d = bestHighestIndex(netFlow30dValues);
 
     return {
       prices,
@@ -146,11 +150,13 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
       backingLabels,
       pegCurrencies,
       safetyGrades,
+      netFlow30dValues,
       bestPrice,
       bestPegScore,
 
       bestLiquidity,
       bestGrade,
+      bestNetFlow30d,
     };
   }, [coins, pegRates]);
 
@@ -206,6 +212,12 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dt className="text-muted-foreground">Safety Rating</dt>
               <dd className={`text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`}>
                 {rowData.safetyGrades[i] ?? "—"}
+              </dd>
+              <dt className="text-muted-foreground">Net Flow 30D</dt>
+              <dd className={`text-right font-mono tabular-nums ${i === rowData.bestNetFlow30d ? BEST_CLASS : rowData.netFlow30dValues[i] != null ? getNetColor(rowData.netFlow30dValues[i]!) : ""}`}>
+                {rowData.netFlow30dValues[i] != null
+                  ? `${getNetPrefix(rowData.netFlow30dValues[i]!)}${formatCurrency(rowData.netFlow30dValues[i]!)}`
+                  : "—"}
               </dd>
             </dl>
           </div>
@@ -352,6 +364,22 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                   {rowData.safetyGrades[i] ?? "—"}
                 </TableCell>
               ))}
+            </TableRow>
+
+            {/* Net Flow 30D */}
+            <TableRow>
+              <TableCell className="font-medium">Net Flow 30D</TableCell>
+              {coins.map((coin, i) => {
+                const val = rowData.netFlow30dValues[i];
+                return (
+                  <TableCell
+                    key={coin.id}
+                    className={`text-center font-mono tabular-nums ${i === rowData.bestNetFlow30d ? BEST_CLASS : val != null ? getNetColor(val) : ""}`}
+                  >
+                    {val != null ? `${getNetPrefix(val)}${formatCurrency(val)}` : "—"}
+                  </TableCell>
+                );
+              })}
             </TableRow>
           </TableBody>
         </Table>
