@@ -201,7 +201,6 @@ export async function handleScheduledEvent(
 
         await runQuarterHourlyJob("sync-fx-rates", (signal) => syncFxRates(db, signal));
 
-        let dewsResult: CronResult | null = null;
         if (stablecoinsCacheSafe && depegPipelineSafe) {
           // PSI depends on stablecoins cache + fresh depeg events.
           await runQuarterHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(db, signal));
@@ -211,7 +210,7 @@ export async function handleScheduledEvent(
 
         if (stablecoinsCacheSafe) {
           // DEWS depends on stablecoins cache + dex data — run after sync
-          dewsResult = await runQuarterHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(db, signal));
+          await runQuarterHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(db, signal));
         }
 
         // Status system self-check: persists hysteresis state and probes critical endpoints.
@@ -226,13 +225,6 @@ export async function handleScheduledEvent(
             mintBurnFreshnessConfig,
           ),
         );
-
-        // Telegram alert dispatch — must run LAST, after sync-stablecoins + compute-dews
-        if (env.TELEGRAM_BOT_TOKEN && stablecoinsCacheSafe && depegPipelineSafe && dewsResult !== null) {
-          await runQuarterHourlyJob("dispatch-telegram-alerts", (signal) =>
-            dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
-          );
-        }
 
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         try {
@@ -398,18 +390,21 @@ export async function handleScheduledEvent(
       ));
       break;
     }
+    // Telegram alert dispatch on dedicated 5-min trigger (:02/:07/:12/.../:57)
+    case CRON_SCHEDULES.fiveMinuteTelegramAlerts: {
+      if (env.TELEGRAM_BOT_TOKEN) {
+        ctx.waitUntil(
+          runLeasedCron("dispatch-telegram-alerts", (signal) =>
+            dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
+          ),
+        );
+      }
+      break;
+    }
     // Daily A (08:00): D1-only snapshots + lightweight external fetchers (≤3 connections)
     case CRON_SCHEDULES.daily0800Utc: {
       ctx.waitUntil(runLeasedCron("snapshot-supply", (signal) => snapshotSupply(db, signal)));
-      const safetyGradePromise = runLeasedCron("snapshot-safety-grade-history", (signal) => snapshotSafetyGradeHistory(db, signal));
-      ctx.waitUntil(safetyGradePromise);
-      if (env.TELEGRAM_BOT_TOKEN) {
-        ctx.waitUntil(safetyGradePromise.then(() =>
-          runLeasedCron("dispatch-telegram-alerts-daily", (signal) =>
-            dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
-          ),
-        ));
-      }
+      ctx.waitUntil(runLeasedCron("snapshot-safety-grade-history", (signal) => snapshotSafetyGradeHistory(db, signal)));
       ctx.waitUntil(runLeasedCron("fetch-tbill-rate", (signal) => fetchTbillRate(db, signal)));
       ctx.waitUntil(runLeasedCron("snapshot-psi", (signal) => snapshotPsiDaily(db, signal)));
       ctx.waitUntil(runLeasedCron("sync-usds-status", (signal) => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null, signal)));

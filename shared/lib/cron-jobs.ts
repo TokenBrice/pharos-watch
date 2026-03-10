@@ -1,5 +1,6 @@
 export type CronGroupKey =
   | "quarter-hourly"
+  | "five-minute"
   | "twenty-minute"
   | "half-hourly"
   | "daily"
@@ -12,6 +13,7 @@ export const CRON_SCHEDULES = {
   twentyMinuteDexDiscovery: "6,26,46 * * * *",
   twentyMinuteExtendedOffset: "13,33,53 * * * *",
   halfHourlyOffset: "10,40 * * * *",
+  fiveMinuteTelegramAlerts: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   daily0800Utc: "0 8 * * *",
   daily0805Utc: "5 8 * * *",
 } as const;
@@ -45,7 +47,13 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "quarter-hourly",
     title: "15-minute slot",
     badge: "*/15",
-    description: "Core ingestion, FX rates, derived score recompute, operator self-checks, and alert fan-out.",
+    description: "Core ingestion, FX rates, derived score recompute, and operator self-checks.",
+  },
+  {
+    key: "five-minute",
+    title: "5-minute slot",
+    badge: "~5 min",
+    description: "Telegram alert dispatch with dedicated connection pool and pending-queue drain.",
   },
   {
     key: "twenty-minute",
@@ -125,10 +133,10 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "dispatch-telegram-alerts",
     label: "Telegram alerts",
-    group: "quarter-hourly",
-    intervalSec: 900,
-    scheduleKey: "quarterHourly",
-    triggerMode: "shared",
+    group: "five-minute",
+    intervalSec: 300,
+    scheduleKey: "fiveMinuteTelegramAlerts",
+    triggerMode: "isolated",
   },
   {
     job: "sync-blacklist",
@@ -189,14 +197,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "snapshot-safety-grade-history",
     label: "Safety grade snapshot",
-    group: "daily",
-    intervalSec: 86400,
-    scheduleKey: "daily0800Utc",
-    triggerMode: "shared",
-  },
-  {
-    job: "dispatch-telegram-alerts-daily",
-    label: "Telegram alerts (daily)",
     group: "daily",
     intervalSec: 86400,
     scheduleKey: "daily0800Utc",
