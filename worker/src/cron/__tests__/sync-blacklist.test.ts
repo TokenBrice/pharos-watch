@@ -79,7 +79,11 @@ vi.mock("../../lib/alchemy-logs", () => ({
 vi.mock("../../lib/evm-logs", () => ({
   createBudget: vi.fn((limit = 900) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((b: { count: number; limit: number }) => b.count >= b.limit),
-  createRateLimiter: vi.fn(() => async <T>(fn: () => Promise<T>) => fn()),
+  createRateLimiter: vi.fn(
+    () =>
+      async <T>(fn: () => Promise<T>) =>
+        fn(),
+  ),
   decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
   decodeUint256: vi.fn(() => 1000000),
   getEvmBlockNumber: vi.fn(async () => 20000000),
@@ -97,7 +101,7 @@ vi.mock("../../lib/chain-registry", () => ({
           rpcUrl: "https://base-rpc.example",
           explorerUrl: "https://basescan.org",
         }
-      : undefined
+      : undefined,
   ),
 }));
 
@@ -113,7 +117,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
     ...orig,
     getLastBlock: vi.fn(async () => 0),
     setLastBlock: vi.fn(async () => {}),
-    batchExecute: vi.fn(async () => {}),
+    batchExecute: vi.fn(async (_db, stmts: D1PreparedStatement[]) => stmts.length),
   };
 });
 
@@ -128,11 +132,7 @@ vi.mock("@shared/lib/chains", () => ({
 import { syncBlacklist } from "../sync-blacklist";
 import { fetchEvmLogsForTopic, getEvmBlockNumber } from "../../lib/evm-logs";
 import { getLastBlock, setLastBlock, batchExecute } from "../../lib/db";
-import {
-  fetchAlchemyLogs,
-  getAlchemyBlockNumber,
-  resolveBlockTimestamps,
-} from "../../lib/alchemy-logs";
+import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { getChainRpc } from "../../lib/chain-registry";
 
 // --- Helpers ---
@@ -151,7 +151,7 @@ describe("syncBlacklist", () => {
     // Reset mocks to defaults
     vi.mocked(getLastBlock).mockResolvedValue(0);
     vi.mocked(setLastBlock).mockResolvedValue(undefined);
-    vi.mocked(batchExecute).mockResolvedValue(0);
+    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => stmts.length);
     vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
     vi.mocked(fetchAlchemyLogs).mockResolvedValue({
@@ -172,7 +172,7 @@ describe("syncBlacklist", () => {
             rpcUrl: "https://base-rpc.example",
             explorerUrl: "https://basescan.org",
           }
-        : undefined
+        : undefined,
     );
   });
 
@@ -203,12 +203,13 @@ describe("syncBlacklist", () => {
     // Stub global fetch for Tron API (returns empty events)
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
     );
 
     const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
@@ -217,6 +218,8 @@ describe("syncBlacklist", () => {
     expect(result.itemCount).toBe(1);
     const meta = JSON.parse(result.metadata);
     expect(meta.apiErrors).toBe(0);
+    expect(meta.rowsWritten).toBe(1);
+    expect(meta.eventsFetched).toBe(1);
     // batchExecute should have been called to insert the event row
     expect(batchExecute).toHaveBeenCalled();
   });
@@ -246,33 +249,30 @@ describe("syncBlacklist", () => {
             ],
             meta: {},
           }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
+          { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
       if (urlStr.includes("trongrid.io/v1/contracts")) {
         // Other Tron event names return empty
-        return new Response(
-          JSON.stringify({ success: true, data: [] }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ success: true, data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       // Etherscan balance/block fetches — success with dummy data
       if (urlStr.includes("etherscan.io")) {
-        return new Response(
-          JSON.stringify({ result: "0x1312d00" }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ result: "0x1312d00" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       // Default: TronGrid account lookups
-      return new Response(
-        JSON.stringify({ success: true, data: [{ trc20: [] }] }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true, data: [{ trc20: [] }] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     });
-    vi.stubGlobal(
-      "fetch",
-      fetchMock
-    );
+    vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
 
@@ -292,12 +292,13 @@ describe("syncBlacklist", () => {
     // Tron API returns empty
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
     );
 
     const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
@@ -305,6 +306,8 @@ describe("syncBlacklist", () => {
     expect(result.itemCount).toBe(0);
     const meta = JSON.parse(result.metadata);
     expect(meta.apiErrors).toBe(0);
+    expect(meta.rowsWritten).toBe(0);
+    expect(meta.eventsFetched).toBe(0);
   });
 
   it("stops cleanly before the cron wrapper timeout when runtime budget is nearly exhausted", async () => {
@@ -319,12 +322,13 @@ describe("syncBlacklist", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
     );
 
     const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
@@ -343,12 +347,13 @@ describe("syncBlacklist", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
     );
 
     await syncBlacklist(db, "etherscan-key", "tron-key", null);
@@ -386,12 +391,13 @@ describe("syncBlacklist", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
     );
 
     const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
@@ -405,9 +411,9 @@ describe("syncBlacklist", () => {
   it("advances the cursor after partial RPC coverage instead of restarting from zero", async () => {
     const db = makeDb();
 
-    vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) => (
-      configKey.startsWith("base-") ? 0 : 100
-    ));
+    vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) =>
+      configKey.startsWith("base-") ? 0 : 100,
+    );
     vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
     vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
       logs: [],
@@ -419,12 +425,13 @@ describe("syncBlacklist", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      )
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
     );
 
     const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
@@ -432,6 +439,15 @@ describe("syncBlacklist", () => {
     expect(result.itemCount).toBe(0);
     const meta = JSON.parse(result.metadata);
     expect(meta.apiErrors).toBe(1);
+    expect(meta.apiErrorConfigs).toEqual([
+      expect.objectContaining({
+        configKey: "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        stablecoin: "USDC",
+        chainId: "base",
+        reason: "partial-coverage",
+      }),
+    ]);
+    expect(meta.zeroCursorConfigs).toContain("base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
     expect(setLastBlock).toHaveBeenCalledWith(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 12345);
   });
 });

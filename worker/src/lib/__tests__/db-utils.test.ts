@@ -5,10 +5,12 @@ import {
   getCache,
   getFirstSeenDates,
   getLastBlock,
+  normalizeBlacklistSyncStateKey,
   getPriceCache,
   savePriceCache,
   setCache,
   setCacheIfNewer,
+  setLastBlock,
 } from "../db";
 
 type CacheRow = { value: string; updated_at: number };
@@ -35,7 +37,7 @@ function makeDb(opts?: {
       const firstForSql = async <T>(args: unknown[]) => {
         if (sql.includes("SELECT value, updated_at FROM cache")) {
           const key = String(args[0] ?? "");
-          return ((opts?.cache?.get(key) ?? null) as T | null);
+          return (opts?.cache?.get(key) ?? null) as T | null;
         }
         if (sql.includes("SELECT last_block FROM blacklist_sync_state")) {
           const key = String(args[0] ?? "");
@@ -45,7 +47,16 @@ function makeDb(opts?: {
         return null as T | null;
       };
 
-      const allForSql = async <T>() => {
+      const allForSql = async <T>(args: unknown[]) => {
+        if (sql.includes("FROM blacklist_sync_state") && sql.includes("IN (")) {
+          const rows = (args as string[])
+            .map((key) => {
+              const last = opts?.lastBlocks?.get(key);
+              return last == null ? null : ({ config_key: key, last_block: last } as T);
+            })
+            .filter((row): row is T => row != null);
+          return { results: rows, success: true, meta: {} };
+        }
         if (sql.includes("SELECT asset_id, price, updated_at FROM price_cache")) {
           return { results: (opts?.priceRows ?? []) as T[], success: true, meta: {} };
         }
@@ -57,17 +68,17 @@ function makeDb(opts?: {
 
       return {
         bind: (...args: unknown[]) => {
-        calls.push({ sql, args });
-        return {
-          run: runForSql,
-          first: () => firstForSql(args),
-          all: allForSql,
-        };
-      },
-      run: runForSql,
-      first: () => firstForSql([]),
-      all: allForSql,
-    };
+          calls.push({ sql, args });
+          return {
+            run: runForSql,
+            first: () => firstForSql(args),
+            all: () => allForSql(args),
+          };
+        },
+        run: runForSql,
+        first: () => firstForSql([]),
+        all: () => allForSql([]),
+      };
     },
     batch: async (stmts: D1PreparedStatement[]) => {
       batchCalls.push(stmts);
@@ -124,10 +135,10 @@ describe("db utility helpers", () => {
 
   it("maps cache row to camelCase and returns null when missing", async () => {
     const withCache = makeDb({
-      cache: new Map([["stablecoins", { value: "{\"ok\":true}", updated_at: 1700000000 }]]),
+      cache: new Map([["stablecoins", { value: '{"ok":true}', updated_at: 1700000000 }]]),
     });
     await expect(getCache(withCache.db, "stablecoins")).resolves.toEqual({
-      value: "{\"ok\":true}",
+      value: '{"ok":true}',
       updatedAt: 1700000000,
     });
 
@@ -137,12 +148,12 @@ describe("db utility helpers", () => {
 
   it("setCache writes updated_at using current unix seconds", async () => {
     const { db, calls } = makeDb();
-    await setCache(db, "stablecoins", "{\"x\":1}");
+    await setCache(db, "stablecoins", '{"x":1}');
 
     const write = calls.find((c) => c.sql.includes("INSERT OR REPLACE INTO cache"));
     expect(write).toBeDefined();
     expect(write?.args[0]).toBe("stablecoins");
-    expect(write?.args[1]).toBe("{\"x\":1}");
+    expect(write?.args[1]).toBe('{"x":1}');
     expect(write?.args[2]).toBe(Math.floor(Date.now() / 1000));
   });
 
@@ -150,11 +161,9 @@ describe("db utility helpers", () => {
     const { db } = makeDb({ setCacheIfNewerChanges: 0 });
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    await setCacheIfNewer(db, "stablecoins", "{\"x\":1}", 1700000000);
+    await setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000);
 
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Skipped write for "stablecoins"')
-    );
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Skipped write for "stablecoins"'));
     logSpy.mockRestore();
   });
 
@@ -164,6 +173,29 @@ describe("db utility helpers", () => {
 
     const withoutRow = makeDb();
     await expect(getLastBlock(withoutRow.db, "eth")).resolves.toBe(0);
+  });
+
+  it("merges blacklist cursor variants by choosing the highest matching block", async () => {
+    const { db } = makeDb({
+      lastBlocks: new Map([
+        ["ethereum-0xabc", 100],
+        ["ethereum-0xAbC", 75],
+      ]),
+    });
+
+    await expect(getLastBlock(db, "ethereum-0xAbC")).resolves.toBe(100);
+  });
+
+  it("normalizes EVM blacklist cursor keys on write but preserves Tron keys", async () => {
+    const { db, calls } = makeDb();
+
+    await setLastBlock(db, "ethereum-0xAbCDEF", 123);
+    await setLastBlock(db, "tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", 456);
+
+    const writes = calls.filter((call) => call.sql.includes("INSERT OR REPLACE INTO blacklist_sync_state"));
+    expect(writes[0]?.args).toEqual(["ethereum-0xabcdef", 123]);
+    expect(writes[1]?.args).toEqual(["tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", 456]);
+    expect(normalizeBlacklistSyncStateKey("ethereum-0xAbCDEF")).toBe("ethereum-0xabcdef");
   });
 
   it("returns price cache map and supports empty save fast-path", async () => {

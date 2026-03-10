@@ -1,8 +1,4 @@
-import {
-  CONTRACT_CONFIGS,
-  type ContractEventConfig,
-  type ChainConfig,
-} from "../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS, type ContractEventConfig, type ChainConfig } from "../lib/blacklist-contracts";
 import { ETHERSCAN_V2_BASE } from "../lib/constants";
 import type { BlacklistEventType } from "@shared/types";
 import { bigIntToDecimal } from "../lib/bigint";
@@ -50,13 +46,13 @@ const TRON_SAFETY_MS = INDEXING_SAFETY_SEC * 1000;
 
 // Approximate block times (seconds) per EVM chain — used to compute safety margin in blocks.
 const EVM_BLOCK_TIME: Record<number, number> = {
-  1: 12,        // Ethereum
-  42161: 0.25,  // Arbitrum
-  8453: 2,      // Base
-  10: 2,        // Optimism
-  137: 2,       // Polygon
-  43114: 2,     // Avalanche
-  56: 3,        // BSC
+  1: 12, // Ethereum
+  42161: 0.25, // Arbitrum
+  8453: 2, // Base
+  10: 2, // Optimism
+  137: 2, // Polygon
+  43114: 2, // Avalanche
+  56: 3, // BSC
 };
 
 function evmSafetyMarginBlocks(evmChainId: number): number {
@@ -126,10 +122,7 @@ async function fetchEvmBalanceAtTag(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetchWithRetry(
-        `${ETHERSCAN_V2_BASE}?${params}`,
-        signal ? { signal } : undefined,
-      );
+      const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, signal ? { signal } : undefined);
       if (!res) return null;
       return res.json() as Promise<{ result?: string; error?: unknown }>;
     });
@@ -179,20 +172,17 @@ async function fetchBalanceViaDrpc(
 
   try {
     budget.count++;
-    const res = await fetchWithRetry(
-      `https://lb.drpc.org/ogrpc?network=${network}&dkey=${drpcApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "eth_call",
-          params: [{ to: contractAddress, data }, blockTag],
-        }),
-        signal,
-      }
-    );
+    const res = await fetchWithRetry(`https://lb.drpc.org/ogrpc?network=${network}&dkey=${drpcApiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_call",
+        params: [{ to: contractAddress, data }, blockTag],
+      }),
+      signal,
+    });
     if (!res) return null;
     const json = (await res.json()) as { result?: string; error?: unknown };
 
@@ -221,13 +211,30 @@ async function fetchEvmTokenBalance(
   // Etherscan v2 free plan doesn't support eth_call on L2s.
   if (config.chain.evmChainId !== 1 && drpcApiKey) {
     return fetchBalanceViaDrpc(
-      config.chain.chainId, config.contractAddress, address, blockNumber, drpcApiKey, config.decimals, budget, signal
+      config.chain.chainId,
+      config.contractAddress,
+      address,
+      blockNumber,
+      drpcApiKey,
+      config.decimals,
+      budget,
+      signal,
     );
   }
 
   // Ethereum mainnet: use Etherscan eth_call with historical block tag
   const blockTag = "0x" + blockNumber.toString(16);
-  return fetchEvmBalanceAtTag(config.chain.evmChainId!, config.contractAddress, address, blockTag, etherscanApiKey, rateLimit, config.decimals, budget, signal);
+  return fetchEvmBalanceAtTag(
+    config.chain.evmChainId!,
+    config.contractAddress,
+    address,
+    blockTag,
+    etherscanApiKey,
+    rateLimit,
+    config.decimals,
+    budget,
+    signal,
+  );
 }
 
 // --- EVM log fetching imported from evm-logs.ts ---
@@ -262,43 +269,45 @@ function parseEvmLogs(
   logs: EvmLogLike[],
   blockTimestamps?: Map<number, number>,
 ): BlacklistRow[] {
-  return logs.map((log) => {
-    const addressIndexed = log.topics.length > 1;
-    const affectedAddress = addressIndexed
-      ? decodeAddress(log.topics[1])
-      : decodeAddress(log.data.slice(0, 66));
+  return logs
+    .map((log) => {
+      const addressIndexed = log.topics.length > 1;
+      const affectedAddress = addressIndexed ? decodeAddress(log.topics[1]) : decodeAddress(log.data.slice(0, 66));
 
-    // When address is indexed (in topics), amount is the first data field.
-    // When address is non-indexed (in data), amount is the second data field.
-    const amount = hasAmount
-      ? addressIndexed
-        ? log.data.length >= 66 ? decodeUint256(log.data, config.decimals) : null
-        : log.data.length > 66 ? decodeUint256("0x" + log.data.slice(66), config.decimals) : null
-      : null;
+      // When address is indexed (in topics), amount is the first data field.
+      // When address is non-indexed (in data), amount is the second data field.
+      const amount = hasAmount
+        ? addressIndexed
+          ? log.data.length >= 66
+            ? decodeUint256(log.data, config.decimals)
+            : null
+          : log.data.length > 66
+            ? decodeUint256("0x" + log.data.slice(66), config.decimals)
+            : null
+        : null;
 
-    const blockNumber = parseInt(log.blockNumber, 16);
-    const timestamp = log.timeStamp
-      ? parseInt(log.timeStamp, 16)
-      : (blockTimestamps?.get(blockNumber) ?? Number.NaN);
-    if (isNaN(blockNumber) || isNaN(timestamp)) return null;
-    const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
+      const blockNumber = parseInt(log.blockNumber, 16);
+      const timestamp = log.timeStamp ? parseInt(log.timeStamp, 16) : (blockTimestamps?.get(blockNumber) ?? Number.NaN);
+      if (isNaN(blockNumber) || isNaN(timestamp)) return null;
+      const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
 
-    return {
-      id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}`,
-      stablecoin: config.stablecoin,
-      chain_id: config.chain.chainId,
-      chain_name: config.chain.chainName,
-      event_type: eventType,
-      address: affectedAddress,
-      amount,
-      tx_hash: log.transactionHash,
-      block_number: blockNumber,
-      timestamp,
-      methodology_version: methodologyVersion,
-      explorer_tx_url: buildExplorerTxUrl(config.chain, log.transactionHash),
-      explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
-    };
-  }).filter((r): r is NonNullable<typeof r> => r !== null) as BlacklistRow[];
+      return {
+        id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}`,
+        stablecoin: config.stablecoin,
+        chain_id: config.chain.chainId,
+        chain_name: config.chain.chainName,
+        event_type: eventType,
+        address: affectedAddress,
+        amount,
+        tx_hash: log.transactionHash,
+        block_number: blockNumber,
+        timestamp,
+        methodology_version: methodologyVersion,
+        explorer_tx_url: buildExplorerTxUrl(config.chain, log.transactionHash),
+        explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null) as BlacklistRow[];
 }
 
 async function resolveRpcLogTarget(
@@ -423,21 +432,20 @@ async function fetchEvmEventsIncremental(
         if (fetchedLogs) {
           const uniqueBlocks = [
             ...new Set(
-              fetchedLogs.logs
-                .map((log) => parseInt(log.blockNumber, 16))
-                .filter((block) => Number.isFinite(block)),
+              fetchedLogs.logs.map((log) => parseInt(log.blockNumber, 16)).filter((block) => Number.isFinite(block)),
             ),
           ];
-          const blockTimestamps = uniqueBlocks.length > 0
-            ? await resolveBlockTimestamps(rpcTarget.rpcUrl, uniqueBlocks, budget, {
-                signal,
-                localCache: timestampCache,
-                persistentCache: {
-                  db,
-                  chainId: config.chain.chainId,
-                },
-              })
-            : new Map<number, number>();
+          const blockTimestamps =
+            uniqueBlocks.length > 0
+              ? await resolveBlockTimestamps(rpcTarget.rpcUrl, uniqueBlocks, budget, {
+                  signal,
+                  localCache: timestampCache,
+                  persistentCache: {
+                    db,
+                    chainId: config.chain.chainId,
+                  },
+                })
+              : new Map<number, number>();
           let eventScannedToBlock = fetchedLogs.scannedToBlock;
           if (uniqueBlocks.length > blockTimestamps.size) {
             const earliestMissingBlock = uniqueBlocks
@@ -447,9 +455,7 @@ async function fetchEvmEventsIncremental(
               eventScannedToBlock = Math.min(eventScannedToBlock, earliestMissingBlock - 1);
             }
           }
-          scannedToBlock = scannedToBlock == null
-            ? eventScannedToBlock
-            : Math.min(scannedToBlock, eventScannedToBlock);
+          scannedToBlock = scannedToBlock == null ? eventScannedToBlock : Math.min(scannedToBlock, eventScannedToBlock);
 
           rows = parseEvmLogs(
             config,
@@ -460,8 +466,7 @@ async function fetchEvmEventsIncremental(
           );
           fetched = true;
           sourceHadGap =
-            !fetchedLogs.complete ||
-            (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length);
+            !fetchedLogs.complete || (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length);
         }
       }
     }
@@ -548,7 +553,8 @@ async function fetchTronEventsIncremental(
     if (budgetExhausted(budget)) break;
 
     const tsFilter = lastTimestampMs > 0 ? `&min_block_timestamp=${lastTimestampMs}` : "";
-    let url: string | null = `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${eventName}&limit=200&order_by=block_timestamp,desc${tsFilter}`;
+    let url: string | null =
+      `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${eventName}&limit=200&order_by=block_timestamp,desc${tsFilter}`;
 
     while (url) {
       throwIfAborted(signal);
@@ -638,7 +644,14 @@ async function enrichRowBalances(
       continue;
     } else if (config.chain.evmChainId != null) {
       row.amount = await fetchEvmTokenBalance(
-        config, row.address, blockForBalance, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
+        config,
+        row.address,
+        blockForBalance,
+        etherscanApiKey,
+        drpcApiKey,
+        etherscanLimiter,
+        budget,
+        signal,
       );
     }
   }
@@ -672,10 +685,7 @@ async function fetchDestroyAmountFromLog(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetchWithRetry(
-        `${ETHERSCAN_V2_BASE}?${params}`,
-        signal ? { signal } : undefined,
-      );
+      const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, signal ? { signal } : undefined);
       if (!res) return null;
       return res.json() as Promise<{ result?: { logs?: EtherscanLogEntry[] } }>;
     });
@@ -723,10 +733,18 @@ async function backfillAmounts(
        FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
          AND amount IS NULL
-       LIMIT ?`
+       LIMIT ?`,
     )
     .bind(BACKFILL_BATCH_SIZE)
-    .all<{ id: string; chain_id: string; event_type: string; address: string; block_number: number; stablecoin: string; tx_hash: string }>();
+    .all<{
+      id: string;
+      chain_id: string;
+      event_type: string;
+      address: string;
+      block_number: number;
+      stablecoin: string;
+      tx_hash: string;
+    }>();
 
   if (!result.results?.length) return { runtimeBudgetReached: false };
 
@@ -750,12 +768,26 @@ async function backfillAmounts(
       // For destroy events, re-fetch the event log to get the amount from event data.
       // This is more reliable than balanceOf, especially on L2s without archive state.
       amount = await fetchDestroyAmountFromLog(
-        config.chain.evmChainId, config.contractAddress, row.tx_hash, config, etherscanApiKey, etherscanLimiter, budget, signal
+        config.chain.evmChainId,
+        config.contractAddress,
+        row.tx_hash,
+        config,
+        etherscanApiKey,
+        etherscanLimiter,
+        budget,
+        signal,
       );
       // Fall back to balanceOf at block-1 only if log parsing failed
       if (amount == null) {
         amount = await fetchEvmTokenBalance(
-          config, row.address, row.block_number - 1, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
+          config,
+          row.address,
+          row.block_number - 1,
+          etherscanApiKey,
+          drpcApiKey,
+          etherscanLimiter,
+          budget,
+          signal,
         );
       }
     } else if (config.chain.type === "tron") {
@@ -764,14 +796,19 @@ async function backfillAmounts(
       continue;
     } else if (config.chain.evmChainId != null) {
       amount = await fetchEvmTokenBalance(
-        config, row.address, row.block_number - 1, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
+        config,
+        row.address,
+        row.block_number - 1,
+        etherscanApiKey,
+        drpcApiKey,
+        etherscanLimiter,
+        budget,
+        signal,
       );
     }
 
     if (amount != null) {
-      stmts.push(
-        db.prepare("UPDATE blacklist_events SET amount = ? WHERE id = ?").bind(amount, row.id)
-      );
+      stmts.push(db.prepare("UPDATE blacklist_events SET amount = ? WHERE id = ?").bind(amount, row.id));
     }
   }
 
@@ -785,15 +822,15 @@ async function backfillAmounts(
 
 // --- Orchestrator ---
 
-async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<void> {
-  if (rows.length === 0) return;
+async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
 
   const stmts = rows.map((row) =>
     db
       .prepare(
         `INSERT OR IGNORE INTO blacklist_events
          (id, stablecoin, chain_id, chain_name, event_type, address, amount, tx_hash, block_number, timestamp, methodology_version, explorer_tx_url, explorer_address_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         row.id,
@@ -808,10 +845,10 @@ async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<void> {
         row.timestamp,
         row.methodology_version,
         row.explorer_tx_url,
-        row.explorer_address_url
-      )
+        row.explorer_address_url,
+      ),
   );
-  await batchExecute(db, stmts);
+  return batchExecute(db, stmts);
 }
 
 export async function syncBlacklist(
@@ -827,12 +864,19 @@ export async function syncBlacklist(
   const tronLimiter = createRateLimiter(3);
   const budget = createBudget(900);
   const deadlineMs = Date.now() + SYNC_BLACKLIST_RUNTIME_BUDGET_MS;
-  let totalNewEvents = 0;
+  let totalFetchedEvents = 0;
+  let totalInsertedRows = 0;
   let contractsSkipped = 0;
   let apiErrors = 0;
   let rpcLogConfigs = 0;
   let runtimeBudgetHit = false;
   const apiErrorClasses: Record<string, number> = {};
+  const apiErrorConfigs: Array<{
+    configKey: string;
+    stablecoin: string;
+    chainId: string;
+    reason: string;
+  }> = [];
   const chainTimestampCaches = new Map<string, Map<number, number>>();
   const getChainTimestampCache = (chainId: string): Map<number, number> => {
     let cache = chainTimestampCaches.get(chainId);
@@ -848,8 +892,13 @@ export async function syncBlacklist(
       const configKey = `${config.chain.chainId}-${config.contractAddress}`;
       const lastBlock = await getLastBlock(db, configKey);
       return { config, configKey, lastBlock };
-    })
+    }),
   );
+  const zeroCursorConfigs = configStates.filter((state) => state.lastBlock === 0).map((state) => state.configKey);
+  const recordApiErrorConfig = (configKey: string, stablecoin: string, chainId: string, reason: string): void => {
+    if (apiErrorConfigs.length >= 10) return;
+    apiErrorConfigs.push({ configKey, stablecoin, chainId, reason });
+  };
 
   // Backfill NULL amounts first — this has priority over new event scanning
   // because the worker may time out before completing the full config loop.
@@ -890,9 +939,7 @@ export async function syncBlacklist(
     if (shouldStopBeforeNextConfig(deadlineMs)) {
       runtimeBudgetHit = true;
       contractsSkipped = configStates.length - ci;
-      console.warn(
-        `[sync-blacklist] Runtime budget reached, skipping ${contractsSkipped} remaining contracts`
-      );
+      console.warn(`[sync-blacklist] Runtime budget reached, skipping ${contractsSkipped} remaining contracts`);
       break;
     }
     const { config, configKey, lastBlock } = configStates[ci];
@@ -911,7 +958,9 @@ export async function syncBlacklist(
     });
     if (budgetExhausted(budget)) {
       contractsSkipped = configStates.length - ci;
-      console.log(`[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping ${contractsSkipped} remaining contracts`);
+      console.log(
+        `[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping ${contractsSkipped} remaining contracts`,
+      );
       break;
     }
 
@@ -947,12 +996,12 @@ export async function syncBlacklist(
           deadlineMs,
           signal,
         );
-        await insertRows(db, result.rows);
+        totalInsertedRows += await insertRows(db, result.rows);
 
         if (result.incomplete) {
           runtimeBudgetHit = true;
           console.warn(
-            `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at ts ${lastBlock}`
+            `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at ts ${lastBlock}`,
           );
         } else {
           // When no events found, advance toward current time but leave a safety margin
@@ -992,25 +1041,33 @@ export async function syncBlacklist(
           deadlineMs,
           signal,
         );
-        await insertRows(db, result.rows);
+        totalInsertedRows += await insertRows(db, result.rows);
 
         let newBlock: number;
         if (result.incomplete) {
           runtimeBudgetHit = true;
           newBlock = lastBlock;
           console.warn(
-            `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`
+            `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`,
           );
         } else if (result.apiError) {
           const partialAdvance = result.scannedToBlock;
           apiErrors++;
+          recordApiErrorConfig(
+            configKey,
+            config.stablecoin,
+            config.chain.chainId,
+            partialAdvance != null && partialAdvance > lastBlock ? "partial-coverage" : "no-coverage",
+          );
           if (partialAdvance != null && partialAdvance > lastBlock) {
             newBlock = partialAdvance;
             console.warn(
-              `[sync-blacklist] Partial coverage scanning ${config.stablecoin} on ${config.chain.chainName}, advancing sync from ${lastBlock} to ${newBlock}`
+              `[sync-blacklist] Partial coverage scanning ${config.stablecoin} on ${config.chain.chainName}, advancing sync from ${lastBlock} to ${newBlock}`,
             );
           } else {
-            console.warn(`[sync-blacklist] API error scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`);
+            console.warn(
+              `[sync-blacklist] API error scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`,
+            );
             newBlock = lastBlock;
           }
         } else if (result.rows.length > 0) {
@@ -1019,13 +1076,15 @@ export async function syncBlacklist(
           // Genuine no events — advance sync state toward chain head, but leave a safety
           // margin to avoid permanently skipping events that the explorer hasn't indexed yet.
           if (!chainHeadCache.has(evmChainId)) {
-            const head = result.chainHead ?? await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget, signal);
+            const head =
+              result.chainHead ??
+              (await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget, signal));
             if (head) chainHeadCache.set(evmChainId, head);
           }
           const head = chainHeadCache.get(evmChainId);
           const margin = evmSafetyMarginBlocks(evmChainId);
           // Fall back: if sentinel was reset, use 0 rather than staying stuck at sentinel
-          newBlock = head ? Math.max(head - margin, lastBlock) : (wasReset ? 0 : lastBlock);
+          newBlock = head ? Math.max(head - margin, lastBlock) : wasReset ? 0 : lastBlock;
         }
 
         if (newBlock !== lastBlock) {
@@ -1033,15 +1092,16 @@ export async function syncBlacklist(
         }
       }
 
-      totalNewEvents += result.rows.length;
+      totalFetchedEvents += result.rows.length;
       const syncLabel = config.chain.type === "tron" ? "ts" : "block";
       console.log(
-        `[sync-blacklist] ${config.stablecoin} on ${config.chain.chainName}: ${result.rows.length} new events, ${syncLabel} ${result.maxBlock}`
+        `[sync-blacklist] ${config.stablecoin} on ${config.chain.chainName}: ${result.rows.length} new events, ${syncLabel} ${result.maxBlock}`,
       );
     } catch (err) {
       apiErrors++;
       const errorClass = err instanceof Error ? err.name : "UnknownError";
       apiErrorClasses[errorClass] = (apiErrorClasses[errorClass] ?? 0) + 1;
+      recordApiErrorConfig(configKey, config.stablecoin, config.chain.chainId, `exception:${errorClass}`);
       console.warn(`[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
     }
   }
@@ -1053,21 +1113,33 @@ export async function syncBlacklist(
     itemsTotal: configStates.length,
     message: "Completed blacklist sync",
     metadata: {
+      rowsWritten: totalInsertedRows,
+      eventsFetched: totalFetchedEvents,
       budgetUsed: budget.count,
       budgetLimit: budget.limit,
       contractsSkipped,
       apiErrors,
     },
   });
-  const status: SyncBlacklistResult["status"] = apiErrors > 0
-    ? (apiErrors > CONTRACT_CONFIGS.length / 2 ? "error" : "degraded")
-    : runtimeBudgetHit ? "degraded" : "ok";
+  const status: SyncBlacklistResult["status"] =
+    apiErrors > 0
+      ? apiErrors > CONTRACT_CONFIGS.length / 2
+        ? "error"
+        : "degraded"
+      : runtimeBudgetHit
+        ? "degraded"
+        : "ok";
   return {
     status,
-    itemCount: totalNewEvents,
+    itemCount: totalInsertedRows,
     metadata: JSON.stringify({
+      rowsWritten: totalInsertedRows,
+      eventsFetched: totalFetchedEvents,
       contractsSkipped,
       apiErrors,
+      apiErrorConfigs,
+      zeroCursorConfigCount: zeroCursorConfigs.length,
+      zeroCursorConfigs: zeroCursorConfigs.slice(0, 10),
       rpcLogConfigs,
       apiErrorClasses,
       budgetUsed: budget.count,

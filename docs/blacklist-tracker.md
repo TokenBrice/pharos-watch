@@ -11,7 +11,9 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 - **Pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
 - **Function:** `syncBlacklist(db, etherscanApiKey, trongridApiKey, drpcApiKey)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
-- **Returns:** `{ itemCount, metadata: JSON { contractsSkipped, apiErrors, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit, runtimeBudgetReached, runtimeBudgetMs } }`
+- **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit, runtimeBudgetReached, runtimeBudgetMs } }`
+
+`itemCount` now reflects the number of rows actually inserted into `blacklist_events`. `metadata.eventsFetched` tracks fetched/parsed rows before `INSERT OR IGNORE` deduplication, which is useful when diagnosing repeated rescans.
 
 ---
 
@@ -237,6 +239,8 @@ CREATE TABLE blacklist_sync_state (
 | EVM        | `{chainId}-{contractAddress}` | `ethereum-0xa0b86991...`                  |
 | Tron       | `tron-{contractAddress}`      | `tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t` |
 
+For EVM configs, the stored contract-address segment is canonicalized to lowercase on write. Reads merge both lowercase and legacy mixed-case keys so older cursor rows keep working after contract metadata switches to checksum casing.
+
 **Important:** For EVM chains, `last_block` stores block numbers. For Tron, it stores millisecond timestamps (NOT block numbers).
 For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` coverage now advances `last_block` to the highest contiguous block that was fully scanned so backlogs catch up across runs instead of restarting from `0`.
 
@@ -415,11 +419,11 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 
 ## Environment Variables
 
-| Variable            | Type   | Required | Description                                                   |
-| ------------------- | ------ | -------- | ------------------------------------------------------------- |
-| `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key for supported-chain log scans + L1 calls |
-| `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)                   |
-| `DRPC_API_KEY`      | Secret | No       | dRPC key for L2 archive node balance lookups                  |
+| Variable            | Type   | Required | Description                                                          |
+| ------------------- | ------ | -------- | -------------------------------------------------------------------- |
+| `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key for supported-chain log scans + L1 calls        |
+| `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)                          |
+| `DRPC_API_KEY`      | Secret | No       | dRPC key for L2 archive node balance lookups                         |
 | `ALCHEMY_API_KEY`   | Secret | No       | Preferred chain RPC source for Base/Optimism/Avalanche/BSC log scans |
 
 ---
@@ -438,6 +442,7 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 10. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
 11. **Partial RPC scans now preserve progress:** incomplete Base/Optimism/Avalanche/BSC log scans still advance to the highest safely covered block, so large first-sync backlogs drain over multiple cron runs instead of re-scanning genesis every time.
 12. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
+13. **Legacy mixed-case cursor rows:** older runs may have stored checksum-cased EVM addresses in `blacklist_sync_state`; current reads merge those with lowercase canonical keys to avoid duplicate cursors and redundant rescans.
 
 ---
 
@@ -446,7 +451,7 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 | File                                                       | Role                                                                                       |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `worker/src/cron/sync-blacklist.ts`                        | Main cron: incremental scan, backfill, balance enrichment, sync state                      |
-| `worker/src/lib/blacklist-contracts.ts`                    | Blacklist event configs: chains, event signatures, and shared-contract resolution rules     |
+| `worker/src/lib/blacklist-contracts.ts`                    | Blacklist event configs: chains, event signatures, and shared-contract resolution rules    |
 | `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
 | `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
 | `worker/src/router.ts`                                     | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |
