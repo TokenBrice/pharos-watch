@@ -553,6 +553,12 @@ export const LiquidityPoolSourceFamilySchema = z.enum([
 ]);
 export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamilySchema>;
 
+const LegacyLiquidityPoolSourceSchema = z.enum([
+  "cg",
+  "gt",
+  "ds",
+]);
+
 export const LiquidityCoverageClassSchema = z.enum([
   "primary",
   "mixed",
@@ -578,7 +584,7 @@ const DexLiquidityPoolSchema = z.object({
   symbol: z.string(),
   volumeUsd1d: z.number(),
   poolType: z.string(),
-  source: LiquidityPoolSourceFamilySchema.optional(),
+  source: z.union([LiquidityPoolSourceFamilySchema, LegacyLiquidityPoolSourceSchema]).optional(),
   extra: z
     .object({
       amplificationCoefficient: z.number().optional(),

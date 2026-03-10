@@ -1,6 +1,13 @@
-import { withErrorHandler, safeParse, addFreshnessHeaders, jsonResponse } from "../lib/api-utils";
+import {
+  withErrorHandler,
+  safeParse,
+  addFreshnessHeaders,
+  jsonResponse,
+  getLatestSuccessfulCronTimestamp,
+} from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
+import type { LiquidityPoolSourceFamily } from "@shared/types";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;
@@ -57,6 +64,37 @@ interface DexPriceRow {
 interface DexLiquidityCronRow {
   status: string;
   metadata: string | null;
+}
+
+type DexLiquidityPoolResponse = {
+  source?: string;
+} & Record<string, unknown>;
+
+function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undefined {
+  if (typeof source !== "string" || source.length === 0) return undefined;
+  if (source === "cg") return "cg_onchain";
+  if (source === "gt") return "gecko_terminal";
+  if (source === "ds") return "dexscreener";
+  if (
+    source === "dl" ||
+    source === "cg_onchain" ||
+    source === "gecko_terminal" ||
+    source === "dexscreener" ||
+    source === "cg_tickers"
+  ) {
+    return source;
+  }
+  return undefined;
+}
+
+function normalizeTopPools(json: string | null): DexLiquidityPoolResponse[] {
+  const parsed = safeParse<DexLiquidityPoolResponse[]>(json, []);
+  return parsed.map((pool) => {
+    const normalizedSource = normalizePoolSource(pool.source);
+    return normalizedSource == null
+      ? { ...pool, source: undefined }
+      : { ...pool, source: normalizedSource };
+  });
 }
 
 function selectTrendBaseline(
@@ -196,7 +234,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       chainCount: row.chain_count,
       protocolTvl: safeParse<Record<string, number>>(row.protocol_tvl_json, {}),
       chainTvl: safeParse<Record<string, number>>(row.chain_tvl_json, {}),
-      topPools: safeParse<unknown[]>(row.top_pools_json, []),
+      topPools: normalizeTopPools(row.top_pools_json),
       liquidityScore: row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
       depthStability: row.depth_stability,
@@ -226,13 +264,14 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
   }
 
   const rows = result.results ?? [];
-  const oldestUpdate = rows.length > 0
-    ? rows.reduce((m, r) => Math.min(m, r.updated_at), Infinity)
+  const latestRowUpdate = rows.length > 0
+    ? rows.reduce((m, r) => Math.max(m, r.updated_at), 0)
     : Math.floor(Date.now() / 1000);
+  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-dex-liquidity", latestRowUpdate);
 
   const headers = addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.standard,
-  }, oldestUpdate, 3600);
+  }, freshnessTs, 3600);
   const degradedWarning = buildDexLiquidityWarning(latestCron);
   if (degradedWarning) {
     headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;
