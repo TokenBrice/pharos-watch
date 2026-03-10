@@ -16,7 +16,7 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { apiFetch } from "@/lib/api";
-import { CRON_1H } from "@/hooks/use-api-query";
+import { CRON_1H, CRON_20MIN } from "@/hooks/use-api-query";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { CoinSelector } from "@/components/coin-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -251,7 +251,7 @@ export function CompareClient() {
         const raw = await apiFetch(`/api/mint-burn-flows?stablecoin=${encodeURIComponent(id)}&hours=${flowHours}`);
         return MintBurnPerCoinResponseSchema.parse(raw);
       },
-      staleTime: CRON_1H,
+      staleTime: CRON_20MIN,
       enabled: !!id,
     })),
   });
@@ -362,8 +362,9 @@ export function CompareClient() {
       refetchLiquidity(),
       refetchReportCards(),
       ...detailQueries.map((q) => q.refetch()),
+      ...flowCoinQueries.map((q) => q.refetch()),
     ]);
-  }, [detailQueries, refetchBluechip, refetchLiquidity, refetchList, refetchPeg, refetchReportCards]);
+  }, [detailQueries, flowCoinQueries, refetchBluechip, refetchLiquidity, refetchList, refetchPeg, refetchReportCards]);
 
   const handleSelect = (slotIndex: number, coin: CoinOption) => {
     setSelectedIds((prev) => {
@@ -627,6 +628,13 @@ export function CompareClient() {
           <ComparisonTable coins={comparisonCoins} pegRates={pegRates} logos={logos} detailErrors={detailErrors} />
 
           {/* Live Flow Signals */}
+          {flowCoinQueries.length > 0 && flowCoinQueries.every((q) => q.isError) && (
+            <QueryErrorNotice
+              error={flowCoinQueries[0]?.error as Error | null}
+              hasData={false}
+              onRetry={() => flowCoinQueries.forEach((q) => void q.refetch())}
+            />
+          )}
           {(flowCardData.length > 0 || flowSeries.length > 0) && (
             <div className="rounded-2xl border border-border/60 bg-card/50 p-4 space-y-4">
               <div className="flex items-center justify-between gap-2">

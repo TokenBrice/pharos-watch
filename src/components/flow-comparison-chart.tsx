@@ -33,8 +33,10 @@ const HOUR_OPTIONS = [
 
 function formatFlowValue(v: number): string {
   const abs = Math.abs(v);
-  if (abs >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
-  return `$${(v / 1e6).toFixed(0)}M`;
+  const sign = v < 0 ? "-" : "";
+  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(1)}B`;
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M`;
+  return `${sign}$${(abs / 1e3).toFixed(0)}K`;
 }
 
 export function FlowComparisonChart({
@@ -109,7 +111,7 @@ export function FlowComparisonChart({
                 return (
                   <div className="rounded-lg border border-border/60 bg-card px-3 py-2 text-xs shadow-md space-y-1">
                     <p className="text-muted-foreground">
-                      {formatChartDate(label as number, "short")}
+                      {formatChartDate(label as number, hours <= 24 ? "with-time" : "short")}
                     </p>
                     {payload.map((p) => {
                       const val = p.value as number | null | undefined;
