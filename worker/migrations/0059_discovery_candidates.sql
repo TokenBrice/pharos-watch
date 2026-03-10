@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS discovery_candidates (
   name            TEXT NOT NULL,
   symbol          TEXT NOT NULL,
   market_cap      REAL,
-  source          TEXT NOT NULL,
+  source          TEXT NOT NULL CHECK (source IN ('defillama', 'coingecko', 'both')),
   first_seen      INTEGER NOT NULL,
   last_seen       INTEGER NOT NULL,
   dismissed       INTEGER DEFAULT 0,

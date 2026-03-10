@@ -608,6 +608,8 @@ export const handleStatus = withErrorHandler(
         telegramBot: raw.telegramBot,
         datasetFreshness: raw.datasetFreshness,
         summary: raw.summary,
+        priceSourceHealth: null,
+        discoveryCandidates: null,
       };
 
       return jsonResponse(body, { "Cache-Control": "no-store" });
