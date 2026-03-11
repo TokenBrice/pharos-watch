@@ -21,11 +21,11 @@ function toDomId(value: string) {
 }
 
 const HERO_GOAL_OFFSETS = [
-  "lg:-translate-x-3",
-  "lg:translate-x-3 lg:translate-y-5",
-  "lg:-translate-x-5 lg:-translate-y-3",
-  "lg:translate-x-2 lg:translate-y-6",
-  "lg:-translate-y-4",
+  "",
+  "xl:translate-y-3",
+  "xl:-translate-y-2 xl:-translate-x-2",
+  "xl:translate-y-4",
+  "xl:-translate-y-3",
 ] as const;
 
 function resolveGoalTone(borderClass: string) {
@@ -154,7 +154,7 @@ function GoalCard({
   );
 }
 
-function HeroFactGrid({ className }: { className?: string }) {
+function HeroFactGrid({ className, mode = "stacked" }: { className?: string; mode?: "stacked" | "row" }) {
   return (
     <div className={cn("grid gap-3 sm:grid-cols-2", className)}>
       {START_HERE_FACTS.map((fact, index) => (
@@ -162,7 +162,7 @@ function HeroFactGrid({ className }: { className?: string }) {
           key={fact.label}
           className={cn(
             "group relative overflow-hidden rounded-[1.2rem] border border-white/10 bg-[linear-gradient(180deg,oklch(0.15_0.016_248_/_0.92),oklch(0.11_0.012_248_/_0.98))] px-4 py-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.04)]",
-            index % 2 === 0 ? "lg:-translate-y-2" : "lg:translate-y-3",
+            mode === "stacked" && (index % 2 === 0 ? "lg:-translate-y-2" : "lg:translate-y-3"),
           )}
         >
           <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
@@ -177,7 +177,7 @@ function HeroFactGrid({ className }: { className?: string }) {
   );
 }
 
-function HeroSupportCluster({ className, factGridClassName }: { className?: string; factGridClassName?: string }) {
+function HeroSupportCluster({ className }: { className?: string }) {
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex flex-wrap items-center gap-3">
@@ -208,8 +208,6 @@ function HeroSupportCluster({ className, factGridClassName }: { className?: stri
           the shortest path into Pharos before touching the full product map.
         </div>
       </div>
-
-      <HeroFactGrid className={factGridClassName} />
     </div>
   );
 }
@@ -228,7 +226,7 @@ export function StartHerePage() {
         <div className="pointer-events-none absolute inset-y-0 left-[48.75%] hidden w-px bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
         <div className="pointer-events-none absolute -left-12 top-8 h-40 w-40 rounded-full bg-frost-blue/16 blur-[110px]" />
 
-        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.88fr)_minmax(25rem,1fr)] lg:items-start lg:gap-8">
+        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(25rem,1.05fr)] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,0.9fr)_minmax(27rem,1.1fr)]">
           <div className="space-y-6 lg:space-y-7">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -239,15 +237,15 @@ export function StartHerePage() {
                 </p>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(11rem,0.72fr)] lg:items-end">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(12rem,0.68fr)] lg:items-end">
                 <div className="space-y-4">
-                  <h2 className="max-w-[9ch] text-[clamp(2.95rem,8vw,6.2rem)] font-extrabold leading-[0.86] tracking-[-0.055em] text-white sm:max-w-[10ch]">
+                  <h2 className="max-w-[9ch] text-[clamp(2.85rem,6.2vw,5.35rem)] font-extrabold leading-[0.86] tracking-[-0.055em] text-white sm:max-w-[10ch] lg:max-w-none">
                     <span className="sm:hidden">Pick the fastest route into Pharos.</span>
                     <span className="hidden sm:inline">
                       Chart your route through the stablecoin market before the jargon slows you down.
                     </span>
                   </h2>
-                  <p className="max-w-xl text-[0.98rem] leading-8 text-white/66">
+                  <p className="max-w-xl text-[0.98rem] leading-8 text-white/66 lg:max-w-[42ch]">
                     <span className="sm:hidden">
                       Start with one route, learn the core terms, then branch into monitoring, research, yield, or
                       alerts only when you need more.
@@ -269,7 +267,7 @@ export function StartHerePage() {
               </div>
             </div>
 
-            <HeroSupportCluster className="hidden lg:block" factGridClassName="lg:grid-cols-2" />
+            <HeroSupportCluster className="hidden lg:block" />
           </div>
 
           <div className="relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,oklch(0.15_0.016_248_/_0.72),oklch(0.1_0.012_248_/_0.94))] p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.04),0_24px_48px_oklch(0_0_0_/0.2)] sm:p-4">
@@ -334,7 +332,12 @@ export function StartHerePage() {
           </div>
         </div>
 
-        <HeroSupportCluster className="mt-6 border-t border-white/10 pt-5 lg:hidden" />
+        <HeroFactGrid className="mt-6 hidden lg:grid lg:grid-cols-4" mode="row" />
+
+        <div className="mt-6 space-y-5 border-t border-white/10 pt-5 lg:hidden">
+          <HeroSupportCluster />
+          <HeroFactGrid className="sm:grid-cols-2" />
+        </div>
       </section>
 
       <section className="space-y-4">
