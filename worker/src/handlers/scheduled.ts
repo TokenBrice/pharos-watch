@@ -26,6 +26,7 @@ import { syncYieldData } from "../cron/sync-yield-data";
 import { fetchTbillRate } from "../cron/fetch-tbill-rate";
 import { computeAndStoreDEWS } from "../cron/compute-dews";
 import { dispatchTelegramAlerts } from "../cron/dispatch-telegram-alerts";
+import { announceCemeteryAdditions } from "../cron/announce-cemetery-additions";
 import { runStatusSelfCheck } from "../cron/status-self-check";
 import { runDiscoveryScan } from "../cron/discovery-scan";
 import { initChainRpcs } from "../lib/chain-registry";
@@ -393,11 +394,25 @@ export async function handleScheduledEvent(
     // Telegram alert dispatch on dedicated 5-min trigger (:02/:07/:12/.../:57)
     case CRON_SCHEDULES.fiveMinuteTelegramAlerts: {
       if (env.TELEGRAM_BOT_TOKEN) {
-        ctx.waitUntil(
-          runLeasedCron("dispatch-telegram-alerts", (signal) =>
-            dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
-          ),
-        );
+        ctx.waitUntil((async () => {
+          try {
+            await runLeasedCron("dispatch-telegram-alerts", (signal) =>
+              dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
+            );
+          } catch (err) {
+            console.error("[cron] dispatch-telegram-alerts failed:", err);
+          }
+
+          if (!env.TELEGRAM_CHAT_ID) return;
+
+          try {
+            await runLeasedCron("announce-cemetery-additions", () =>
+              announceCemeteryAdditions(db, env.TELEGRAM_BOT_TOKEN!, env.TELEGRAM_CHAT_ID!),
+            );
+          } catch (err) {
+            console.error("[cron] announce-cemetery-additions failed:", err);
+          }
+        })());
       }
       break;
     }

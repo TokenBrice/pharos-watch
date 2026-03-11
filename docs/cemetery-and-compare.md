@@ -29,6 +29,18 @@ Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such a
 
 Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`.
 
+### Telegram channel notifications
+
+The cemetery dataset now has a worker-side notification path:
+
+- `worker/src/cron/announce-cemetery-additions.ts`
+- runs on the dedicated 5-minute Telegram trigger
+- diffs the deployed `DEAD_STABLECOINS` list against a cached snapshot in D1
+- seeds silently on first run so existing graves do not backfill into Telegram
+- posts one consolidated channel message when a deploy adds one or more new cemetery entries
+
+Each notification includes the epitaph for every newly added coin, plus a rotating darkly editorial footer line and a link to `/cemetery/`.
+
 ### UI behavior
 
 - `CemeteryClient` maintains an `expanded` symbol set for obituary panels.
@@ -80,4 +92,5 @@ Compare includes client-side share/export rendering:
 
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/lib/dead-stablecoins.ts`).
+- Cemetery channel notifications depend on the 5-minute Telegram cron plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
 - Compare reliability depends on six independent API datasets plus per-coin detail fetches; partial failures are surfaced via query error/stale-data UI components.

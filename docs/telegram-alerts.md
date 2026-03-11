@@ -2,12 +2,13 @@
 
 ## Overview
 
-Pharos runs a Telegram bot for opt-in stablecoin alerts.
+Pharos runs a Telegram bot for opt-in stablecoin alerts and channel posts.
 
-The subsystem has three moving parts:
+The subsystem has four moving parts:
 
 - `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret in the query string, and stores subscriber state in D1.
 - `worker/src/cron/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, and safety-grade snapshots against cached prior snapshots, then fans out consolidated messages to matching subscribers.
+- `worker/src/cron/announce-cemetery-additions.ts` diffs the deployed `DEAD_STABLECOINS` list against a cached snapshot and posts one consolidated channel message when new cemetery entries appear after a deploy.
 - `worker/src/lib/telegram.ts` and `worker/src/lib/telegram-alerts.ts` handle Bot API sends, ticker parsing, message formatting, and HTML escaping.
 
 This is a worker-only feature. The frontend does not call it directly.
@@ -16,6 +17,7 @@ This is a worker-only feature. The frontend does not call it directly.
 
 - `worker/src/api/telegram-webhook.ts`
 - `worker/src/cron/dispatch-telegram-alerts.ts`
+- `worker/src/cron/announce-cemetery-additions.ts`
 - `worker/src/lib/telegram.ts`
 - `worker/src/lib/telegram-alerts.ts`
 - `worker/migrations/0054_telegram_subscribers.sql`
@@ -40,9 +42,9 @@ The webhook also uses the generic `cache` table key `telegram:last-update-id` to
 
 | Binding | Required | Used by |
 |---------|----------|---------|
-| `TELEGRAM_BOT_TOKEN` | Yes | Webhook replies, digest posting, subscriber alert fan-out |
+| `TELEGRAM_BOT_TOKEN` | Yes | Webhook replies, digest posting, cemetery channel posts, subscriber alert fan-out |
 | `TELEGRAM_WEBHOOK_SECRET` | Yes | Query-string secret validation for `POST /api/telegram-webhook` |
-| `TELEGRAM_CHAT_ID` | No | Daily digest channel posting only |
+| `TELEGRAM_CHAT_ID` | No | Daily digest channel posting and cemetery channel notifications |
 
 Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which calls Telegram `setWebhook` for:
 
@@ -197,6 +199,32 @@ run. Retryable sends retry up to 2 times (3 attempts total) before being dropped
 This design ensures snapshots always stay current (events are never "held back") while
 guaranteeing delivery for large subscriber populations.
 
+## Cemetery Channel Cron
+
+`announceCemeteryAdditions(db, botToken, chatId)` runs on the same dedicated 5-minute Telegram trigger, but after subscriber fan-out so both features share the isolated Bot API connection pool without overlapping send bursts.
+
+### Snapshot Behavior
+
+- Cache key: `telegram:cemetery-snapshot`
+- Footer rotation key: `telegram:cemetery-footer-index`
+- First run seeds the current `DEAD_STABLECOINS` identity set and sends nothing.
+- Invalid snapshot payloads are reseeded and also send nothing.
+- A successful post advances both the cemetery snapshot and the rotating editorial footer index.
+- Failed posts do **not** advance the snapshot, so the same additions are retried on the next run.
+
+Stablecoin identity uses `llamaId` when present; otherwise the fallback key is `symbol|deathDate|name`. This keeps the diff stable across deploys without needing a dedicated D1 table.
+
+### Message Shape
+
+When one new entry appears, the channel gets:
+
+- header: `🪦 A stablecoin has fallen!`
+- body: symbol, name, italic epitaph, cause of death, death month, optional peak mcap
+- footer: one rotating editorial line from a fixed pool
+- CTA: `Enter the cemetery →` linking to `https://pharos.watch/cemetery/`
+
+When multiple entries are added in the same deploy, they are consolidated into a single message with the plural header `🪦 N stablecoins have fallen!`. Each entry still includes its epitaph.
+
 ## Admin Visibility
 
 `GET /api/status` now exposes a `telegramBot` block for the private `/status` dashboard. It aggregates:
@@ -234,20 +262,23 @@ Formatting helpers in `worker/src/lib/telegram-alerts.ts` emit:
 - Depeg-worsening messages with previous vs current deviation
 - Depeg-resolved messages with duration, peak deviation, and recovery price
 - Safety-grade changes with old/new grade and score when present
+- Cemetery-entry channel posts with epitaphs and rotating footers
 
-Every consolidated message ends with a `View on Pharos` link.
+Subscriber alert messages end with a `View on Pharos` link. Cemetery channel posts end with `Enter the cemetery →`.
 
 ## Digest vs Subscriber Alerts
 
 The same bot token can be used for both:
 
 - Channel-style digest posting via `postDigestToTelegram(...)`
+- Channel-style cemetery posting via `announceCemeteryAdditions(...)`
 - Direct chat replies and subscriber alerts via `sendToChat(...)`
 
-Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs stored in `telegram_subscribers`.
+Digest and cemetery posting use `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs stored in `telegram_subscribers`.
 
 ## Operational Notes
 
 - Run `scripts/register-telegram-webhook.sh` after rotating `TELEGRAM_BOT_TOKEN` or `TELEGRAM_WEBHOOK_SECRET`.
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
+- The dedicated 5-minute Telegram trigger now runs sequentially: subscriber fan-out first, cemetery channel diff second.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.

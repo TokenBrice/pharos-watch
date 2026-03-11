@@ -278,13 +278,14 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 `sync-dex-liquidity` metadata now tracks both row coverage and value coverage. In addition to `currentCoverage` / `previousCoverage`, the cron records `currentGlobalTvl`, `previousGlobalTvl`, top-10 covered TVL, row/value guard flags, and current/previous coverage-class distribution. `/status` surfaces this through the Liquidity Health card.
 
-### Trigger 7: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram alerts — dedicated, every 5 min)
+### Trigger 7: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
+| `announce-cemetery-additions` | `announceCemeteryAdditions()` | `worker/src/cron/announce-cemetery-additions.ts` | `docs/telegram-alerts.md`, `docs/cemetery-and-compare.md` |
 
-Dedicated trigger for Telegram subscriber alert dispatch. Isolated from the quarter-hourly pipeline so alert fan-out gets its own 6-connection pool and CPU budget. Uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 Telegram message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
+Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out and channel posting get their own 6-connection pool and CPU budget. The scheduled handler runs the two jobs sequentially: subscriber alerts first, cemetery channel diff second. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
 ### Trigger 8: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
@@ -312,6 +313,7 @@ Dedicated trigger for Telegram subscriber alert dispatch. Isolated from the quar
 
 - Webhook ingress (`POST /api/telegram-webhook`) receives Telegram commands and writes subscriber/subscription state into D1.
 - `dispatch-telegram-alerts` diffs DEWS/depeg/safety state against cached snapshots before fan-out on a dedicated 5-minute cron slot.
+- `announce-cemetery-additions` diffs the static cemetery dataset against a cached snapshot and posts one channel message when a deploy adds new entries.
 - Telegram sends are gated by the `telegram-api` circuit breaker to avoid hammering the Bot API during upstream issues.
 - Each dispatch run sends up to 200 Telegram message attempts in parallel batches of 5. Overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` for subsequent runs.
 - Subscriber state now supports quiet hours plus per-subscription controls such as `dews_min_band`, `safety_mode`, and `depeg_worsening_bps_step`.
