@@ -10,6 +10,7 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useHomepageFilters } from "@/hooks/use-homepage-filters";
+import { useStartHereCallout } from "@/hooks/use-start-here-callout";
 import { MarketHighlights } from "@/components/market-highlights";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -115,7 +116,7 @@ function PegBrowseSection({
   );
 }
 
-function StartHereCallout() {
+function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
   return (
     <section className="pharos-card-shell overflow-hidden border border-black/7 bg-[linear-gradient(135deg,oklch(0.985_0.01_248_/_0.98),oklch(0.95_0.018_248_/_0.98))] px-4 py-4 shadow-[0_16px_34px_oklch(0_0_0_/0.08)] sm:px-5 dark:border-white/10 dark:bg-[linear-gradient(135deg,oklch(0.21_0.03_250_/_0.92),oklch(0.16_0.02_250_/_0.98))] dark:shadow-[0_20px_42px_oklch(0_0_0_/0.16)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -136,7 +137,7 @@ function StartHereCallout() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild className="h-10 rounded-full bg-slate-950 px-5 text-white hover:bg-slate-900 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90">
-            <Link href="/start/">
+            <Link href="/start/" onClick={onOpenStartHere}>
               Open Start Here
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -157,6 +158,7 @@ function StartHereCallout() {
 }
 
 export function HomepageClient() {
+  const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
   const { data: logos } = useLogos();
   const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg } = usePegSummary();
@@ -217,7 +219,7 @@ export function HomepageClient() {
         ]}
       />
 
-      <StartHereCallout />
+      {startHereReady && shouldShowStartHereCallout ? <StartHereCallout onOpenStartHere={retireCallout} /> : null}
 
       <SectionErrorBoundary name="highlights">
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />

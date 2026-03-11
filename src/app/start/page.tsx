@@ -1,4 +1,5 @@
 import { StartHerePage } from "@/components/start-here-page";
+import { StartHereVisitMarker } from "@/components/start-here-visit-marker";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const metadata = buildPageMetadata({
@@ -9,5 +10,10 @@ export const metadata = buildPageMetadata({
 });
 
 export default function StartPage() {
-  return <StartHerePage />;
+  return (
+    <>
+      <StartHereVisitMarker />
+      <StartHerePage />
+    </>
+  );
 }

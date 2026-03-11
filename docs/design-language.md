@@ -101,6 +101,7 @@ The `/start/` orientation route keeps the shared breadcrumb/title shell, then sh
 Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top fold composed of:
 
 - Desktop masthead strip: `pharos-card-shell hidden lg:flex ... px-5 py-5`
+- Start Here onboarding callout: large CTA card appears only during a browser's first homepage session and retires once `/start/` has been opened, so repeat visitors drop straight into live data
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card hides the `Live market health`, `24h`, and `7d` pills from the desktop switch (`lg`, `1024px`) through `1599px` to protect the score/band lockup; outside that band it keeps the full desktop treatment
 
