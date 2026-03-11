@@ -1148,6 +1148,20 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "The Block",
   },
   {
+    name: "Tether CNH",
+    symbol: "CNHT",
+    logo: "cnht.png",
+    pegCurrency: "CNH",
+    causeOfDeath: "abandoned",
+    deathDate: "2026-02",
+    peakMcap: 2_970_000,
+    epitaph: "Low demand, long goodbye",
+    obituary:
+      "Tether's offshore yuan experiment never became more than a footnote beside USD₮. On February 20, 2026, Tether stopped all new CNH₮ issuance and put the token on a one-year redemption clock, citing low interest, limited sustained demand, and the operational burden of keeping it alive. CNH₮ was supposed to give crypto a yuan rail; instead it spent most of its life as a thinly used side product. Holders can still redeem until February 20, 2027, but the decision itself was the death certificate.",
+    sourceUrl: "https://tether.io/news/tether-updates-users-on-a-strategic-transition-for-cnht-to-better-support-community-driven-product-focus/",
+    sourceLabel: "Tether",
+  },
+  {
     name: "Angle EURA",
     symbol: "EURA",
     logo: "eura.png",
