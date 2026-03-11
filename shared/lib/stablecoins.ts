@@ -928,6 +928,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/CurveFinance" },
       { label: "Docs", url: "https://resources.curve.finance/" },
       { label: "GitHub", url: "https://github.com/curvefi/curve-stablecoin" },
+      { label: "Dune crvUSD Balance Sheet", url: "https://dune.com/warshine/crvusd-balance-sheet" },
     ],
     jurisdiction: { country: "Switzerland" },
     contracts: [
