@@ -19,6 +19,7 @@ export interface TickerMatch {
 
 export interface ParsedSubscribeArgs {
   alertTypes: Set<string>;
+  subscribeAll: boolean;
   tickers: string[];
   invalidTypes: string[];
 }
@@ -26,6 +27,7 @@ export interface ParsedSubscribeArgs {
 // ---------- Constants ----------
 
 const ALERT_TYPES = new Set(["dews", "depeg", "safety"]);
+const GLOBAL_SUBSCRIBE_TOKEN = "all";
 
 // ---------- Ticker Resolution ----------
 
@@ -93,6 +95,7 @@ function findClosestMatch(lowerTicker: string): ResolvedCoin | null {
 export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
   const tokens = argsText.trim().split(/[\s,]+/).filter(Boolean);
   const alertTypes = new Set<string>();
+  let subscribeAll = false;
   const tickers: string[] = [];
   const invalidTypes: string[] = [];
 
@@ -100,6 +103,8 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
     const lower = token.toLowerCase();
     if (ALERT_TYPES.has(lower)) {
       alertTypes.add(lower);
+    } else if (lower === GLOBAL_SUBSCRIBE_TOKEN) {
+      subscribeAll = true;
     } else if (SYMBOL_INDEX.has(lower) || ID_INDEX.has(lower)) {
       tickers.push(token);
     } else {
@@ -107,7 +112,7 @@ export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
     }
   }
 
-  return { alertTypes, tickers, invalidTypes };
+  return { alertTypes, subscribeAll, tickers, invalidTypes };
 }
 
 /**
@@ -122,14 +127,17 @@ export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | nul
     }
     return `Unknown ticker: ${unknown}. Check spelling — use the coin's symbol (e.g. USDC, BOLD).`;
   }
-  if (parsed.alertTypes.size === 0 && parsed.tickers.length === 0) {
+  if (parsed.subscribeAll && parsed.tickers.length > 0) {
+    return 'Use either "all" or specific tickers in one command, not both.';
+  }
+  if (parsed.alertTypes.size === 0 && parsed.tickers.length === 0 && !parsed.subscribeAll) {
     return "Specify alert types and tickers. Example: /subscribe dews USDC BOLD";
   }
   if (parsed.alertTypes.size === 0) {
     return "Specify at least one alert type: dews, depeg, safety. Example: /subscribe dews USDC";
   }
-  if (parsed.tickers.length === 0) {
-    return "Specify at least one ticker. Example: /subscribe dews USDC BOLD";
+  if (parsed.tickers.length === 0 && !parsed.subscribeAll) {
+    return "Specify at least one ticker, or use all. Example: /subscribe dews all";
   }
   return null;
 }

@@ -193,6 +193,117 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockSendToChat).toHaveBeenCalledTimes(1);
   });
 
+  it("fans out global all-stablecoin alert subscriptions without per-coin rows", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            score: 42,
+            band: "ALERT",
+            signals_json: JSON.stringify({ supply: { value: 45, available: true } }),
+          },
+        ],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle"], rows: [] },
+      {
+        match: "WHERE global_alert_dews = 1",
+        rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
+      },
+      { match: "WHERE global_alert_depeg = 1", rows: [] },
+      { match: "WHERE global_alert_safety = 1", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { dews: number };
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.eventsDetected.dews).toBe(1);
+    expect(metadata.subscribersNotified).toBe(1);
+    expect(metadata.messagesSent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockSendToChat.mock.calls[0]?.[0]).toBe("777");
+  });
+
+  it("lets a per-coin DEWS threshold override a global all-stablecoin follow", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            score: 42,
+            band: "ALERT",
+            signals_json: JSON.stringify({ supply: { value: 45, available: true } }),
+          },
+        ],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      {
+        match: "sub.alert_dews = 1",
+        matchBinds: ["usdc-circle"],
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "777", last_active_at: now, dews_min_band: "WARNING" }],
+      },
+      {
+        match: "WHERE global_alert_dews = 1",
+        rows: [{ chat_id: "777", last_active_at: now, quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null }],
+      },
+      { match: "WHERE global_alert_depeg = 1", rows: [] },
+      { match: "WHERE global_alert_safety = 1", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.subscribersNotified).toBe(0);
+    expect(metadata.messagesSent).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
   it("uses per-coin latest safety rows and prev_grade when repairing a partial legacy snapshot", async () => {
     const now = 1_778_150_000;
     const snapshotUpdatedAt = now - 3600;

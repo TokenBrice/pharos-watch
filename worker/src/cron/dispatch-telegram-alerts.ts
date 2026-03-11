@@ -62,6 +62,12 @@ const ALERT_COLUMN_BY_TYPE = {
   safety: "alert_safety",
 } as const;
 
+const GLOBAL_ALERT_COLUMN_BY_TYPE = {
+  dews: "global_alert_dews",
+  depeg: "global_alert_depeg",
+  safety: "global_alert_safety",
+} as const;
+
 const SAFETY_GRADE_RANK: Record<string, number> = {
   NR: 0,
   F: 1,
@@ -395,13 +401,60 @@ async function loadSubscriberRowsBatch(
   return map;
 }
 
+async function loadGlobalSubscriberRows(
+  db: D1Database,
+  type: AlertType,
+): Promise<SubscriberRow[]> {
+  const alertColumn = GLOBAL_ALERT_COLUMN_BY_TYPE[type];
+  const result = await db
+    .prepare(
+      `SELECT chat_id,
+              last_active_at,
+              quiet_hours_enabled,
+              quiet_hours_start_utc,
+              quiet_hours_end_utc
+         FROM telegram_subscribers
+        WHERE ${alertColumn} = 1`,
+    )
+    .all<SubscriberRow>();
+
+  return (result.results ?? []).map((row) => ({
+    chat_id: row.chat_id,
+    last_active_at: row.last_active_at,
+    dews_min_band: null,
+    safety_mode: null,
+    depeg_worsening_bps_step: null,
+    quiet_hours_enabled: row.quiet_hours_enabled ?? 0,
+    quiet_hours_start_utc: row.quiet_hours_start_utc ?? null,
+    quiet_hours_end_utc: row.quiet_hours_end_utc ?? null,
+  }));
+}
+
 async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<void> {
   await db
-    .prepare(
-      "UPDATE telegram_subscribers SET alert_dews=0, alert_depeg=0, alert_safety=0 WHERE chat_id=?",
-    )
-    .bind(chatId)
-    .run()
+    .batch([
+      db
+        .prepare(
+          `UPDATE telegram_subscribers
+              SET alert_dews=0,
+                  alert_depeg=0,
+                  alert_safety=0,
+                  global_alert_dews=0,
+                  global_alert_depeg=0,
+                  global_alert_safety=0
+            WHERE chat_id=?`,
+        )
+        .bind(chatId),
+      db
+        .prepare(
+          `UPDATE telegram_subscriptions
+              SET alert_dews=0,
+                  alert_depeg=0,
+                  alert_safety=0
+            WHERE chat_id=?`,
+        )
+        .bind(chatId),
+    ])
     .catch(() => {});
 }
 
@@ -717,10 +770,13 @@ export async function dispatchTelegramAlerts(
     ];
     const safetyIds = safetyChanges.map((c) => c.stablecoinId);
 
-    const [dewsSubs, depegSubs, safetySubs] = await Promise.all([
+    const [dewsSubs, depegSubs, safetySubs, globalDewsSubs, globalDepegSubs, globalSafetySubs] = await Promise.all([
       loadSubscriberRowsBatch(db, dewsIds, "dews"),
       loadSubscriberRowsBatch(db, depegIds, "depeg"),
       loadSubscriberRowsBatch(db, safetyIds, "safety"),
+      loadGlobalSubscriberRows(db, "dews"),
+      loadGlobalSubscriberRows(db, "depeg"),
+      loadGlobalSubscriberRows(db, "safety"),
     ]);
 
     throwIfAborted(signal);
@@ -750,23 +806,54 @@ export async function dispatchTelegramAlerts(
     };
 
     for (const change of dewsChanges) {
-      for (const sub of dewsSubs.get(change.stablecoinId) ?? []) {
+      const specificSubscribers = dewsSubs.get(change.stablecoinId) ?? [];
+      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
+      for (const sub of specificSubscribers) {
         if (!meetsDewsThreshold(change.newBand, sub.dews_min_band)) continue;
+        addToChat(sub, (alerts) => alerts.dews, change);
+      }
+      for (const sub of globalDewsSubs) {
+        if (specificChatIds.has(sub.chat_id)) continue;
         addToChat(sub, (alerts) => alerts.dews, change);
       }
     }
     for (const event of depegTriggered) {
-      for (const sub of depegSubs.get(event.stablecoinId) ?? []) {
+      const specificSubscribers = depegSubs.get(event.stablecoinId) ?? [];
+      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
+      for (const sub of specificSubscribers) {
+        addToChat(sub, (alerts) => alerts.depegTriggered, event);
+      }
+      for (const sub of globalDepegSubs) {
+        if (specificChatIds.has(sub.chat_id)) continue;
         addToChat(sub, (alerts) => alerts.depegTriggered, event);
       }
     }
     for (const event of depegResolved) {
-      for (const sub of depegSubs.get(event.stablecoinId) ?? []) {
+      const specificSubscribers = depegSubs.get(event.stablecoinId) ?? [];
+      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
+      for (const sub of specificSubscribers) {
+        addToChat(sub, (alerts) => alerts.depegResolved, event);
+      }
+      for (const sub of globalDepegSubs) {
+        if (specificChatIds.has(sub.chat_id)) continue;
         addToChat(sub, (alerts) => alerts.depegResolved, event);
       }
     }
     for (const event of depegWorsening) {
-      for (const sub of depegSubs.get(event.stablecoinId) ?? []) {
+      const specificSubscribers = depegSubs.get(event.stablecoinId) ?? [];
+      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
+      for (const sub of specificSubscribers) {
+        if (!crossesDepegWorseningStep(
+          event.previousDeviationBps,
+          event.currentDeviationBps,
+          sub.depeg_worsening_bps_step,
+        )) {
+          continue;
+        }
+        addToChat(sub, (alerts) => alerts.depegWorsening, event);
+      }
+      for (const sub of globalDepegSubs) {
+        if (specificChatIds.has(sub.chat_id)) continue;
         if (!crossesDepegWorseningStep(
           event.previousDeviationBps,
           event.currentDeviationBps,
@@ -778,7 +865,14 @@ export async function dispatchTelegramAlerts(
       }
     }
     for (const change of safetyChanges) {
-      for (const sub of safetySubs.get(change.stablecoinId) ?? []) {
+      const specificSubscribers = safetySubs.get(change.stablecoinId) ?? [];
+      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
+      for (const sub of specificSubscribers) {
+        if (!shouldIncludeSafetyChange(change, sub.safety_mode)) continue;
+        addToChat(sub, (alerts) => alerts.safety, change);
+      }
+      for (const sub of globalSafetySubs) {
+        if (specificChatIds.has(sub.chat_id)) continue;
         if (!shouldIncludeSafetyChange(change, sub.safety_mode)) continue;
         addToChat(sub, (alerts) => alerts.safety, change);
       }

@@ -193,7 +193,7 @@ The `/status` payload now includes a `telegramBot` block derived from:
 The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata` to show:
 
 - total known chats
-- alert-enabled and alert-ready chats
+- alert-enabled and alert-ready chats (including global all-stablecoin follows)
 - total coin follows and average follows per subscribed chat
 - pending disambiguation replies
 - pending delivery backlog

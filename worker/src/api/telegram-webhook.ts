@@ -11,7 +11,7 @@ import {
 
 const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
 
-I send opt-in alerts for the stablecoins you follow.
+I send opt-in alerts for the stablecoins you follow, or for all tracked stablecoins by alert type.
 
 <b>Alert types</b>
 - <b>dews</b> — DEWS reaches ALERT, WARNING, or DANGER
@@ -20,6 +20,7 @@ I send opt-in alerts for the stablecoins you follow.
 
 <b>Quick start</b>
 <code>/subscribe dews depeg USDC BOLD</code>
+<code>/subscribe safety all</code>
 <code>/set USDC depeg-step 250</code>
 <code>/mute 22-07</code>
 
@@ -30,15 +31,19 @@ const HELP_MESSAGE = `<b>Commands</b>
 <code>/subscribe &lt;types&gt; &lt;tickers&gt;</code>
 Enable alert types for one or more coins
 
+<code>/subscribe &lt;types&gt; all</code>
+Enable alert types across all tracked stablecoins
+
 <code>/unsubscribe &lt;tickers&gt;</code>
 Remove specific coin subscriptions
 
 <code>/unsubscribe all</code>
-Remove all subscriptions and clear alert defaults
+Remove all per-coin and all-stablecoin subscriptions
 
 <code>/set &lt;ticker&gt; &lt;setting&gt; &lt;value&gt;</code>
 Examples:
 <code>/set USDT dews WARNING</code>
+<code>/set all depeg off</code>
 <code>/set DAI safety downgrade-only</code>
 <code>/set USDC depeg-step 250</code>
 
@@ -90,6 +95,9 @@ interface SubscriberRow {
   alert_dews: number;
   alert_depeg: number;
   alert_safety: number;
+  global_alert_dews?: number | null;
+  global_alert_depeg?: number | null;
+  global_alert_safety?: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
@@ -305,14 +313,7 @@ async function handleList(
   chatId: string,
   botToken: string,
 ): Promise<void> {
-  const subscriber = await db
-    .prepare(
-      `SELECT alert_dews, alert_depeg, alert_safety, quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
-         FROM telegram_subscribers
-        WHERE chat_id = ?`,
-    )
-    .bind(chatId)
-    .first<SubscriberRow>();
+  const subscriber = await loadSubscriberByChat(db, chatId);
 
   const subscriptions = await db
     .prepare(
@@ -353,6 +354,17 @@ async function handleSubscribe(
     }
 
     await replyToChat(chatId, escapeHtml(validationError), botToken);
+    return;
+  }
+
+  if (parsed.subscribeAll) {
+    await upsertGlobalAlertTypes(db, chatId, username, parsed.alertTypes);
+    const subscriber = await loadSubscriberByChat(db, chatId);
+    await replyToChat(
+      chatId,
+      buildGlobalAlertSummaryMessage("Updated all-stablecoin subscriptions.", subscriber),
+      botToken,
+    );
     return;
   }
 
@@ -411,7 +423,15 @@ async function handleUnsubscribe(
       db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
       db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
       db.prepare(
-        "UPDATE telegram_subscribers SET alert_dews = 0, alert_depeg = 0, alert_safety = 0, last_active_at = ? WHERE chat_id = ?",
+        `UPDATE telegram_subscribers
+            SET alert_dews = 0,
+                alert_depeg = 0,
+                alert_safety = 0,
+                global_alert_dews = 0,
+                global_alert_depeg = 0,
+                global_alert_safety = 0,
+                last_active_at = ?
+          WHERE chat_id = ?`,
       ).bind(now, chatId),
     ]);
     await replyToChat(chatId, "Removed all subscriptions.", botToken);
@@ -452,6 +472,23 @@ async function handleSet(
   const parsed = parseSetCommand(args);
   if ("error" in parsed) {
     await replyToChat(chatId, escapeHtml(parsed.error), botToken);
+    return;
+  }
+
+  if (parsed.ticker.toLowerCase() === "all") {
+    const globalError = validateGlobalSetCommand(parsed);
+    if (globalError) {
+      await replyToChat(chatId, escapeHtml(globalError), botToken);
+      return;
+    }
+
+    await applyGlobalSetting(db, chatId, username, parsed);
+    const subscriber = await loadSubscriberByChat(db, chatId);
+    await replyToChat(
+      chatId,
+      buildGlobalAlertSummaryMessage("Updated all-stablecoin alerts.", subscriber),
+      botToken,
+    );
     return;
   }
 
@@ -774,6 +811,70 @@ async function persistPendingDisambiguation(
     .run();
 }
 
+async function loadSubscriberByChat(
+  db: D1Database,
+  chatId: string,
+): Promise<SubscriberRow | null> {
+  return db
+    .prepare(
+      `SELECT
+         alert_dews,
+         alert_depeg,
+         alert_safety,
+         global_alert_dews,
+         global_alert_depeg,
+         global_alert_safety,
+         quiet_hours_enabled,
+         quiet_hours_start_utc,
+         quiet_hours_end_utc
+       FROM telegram_subscribers
+      WHERE chat_id = ?`,
+    )
+    .bind(chatId)
+    .first<SubscriberRow>();
+}
+
+async function upsertGlobalAlertTypes(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  alertTypes: Set<string>,
+): Promise<void> {
+  const now = unixNow();
+  await db
+    .prepare(`
+      INSERT INTO telegram_subscribers (
+        chat_id,
+        username,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        global_alert_dews,
+        global_alert_depeg,
+        global_alert_safety,
+        created_at,
+        last_active_at
+      )
+      VALUES (?, ?, 0, 0, 0, ?, ?, ?, ?, ?)
+      ON CONFLICT(chat_id) DO UPDATE SET
+        username = COALESCE(excluded.username, telegram_subscribers.username),
+        global_alert_dews = MAX(telegram_subscribers.global_alert_dews, excluded.global_alert_dews),
+        global_alert_depeg = MAX(telegram_subscribers.global_alert_depeg, excluded.global_alert_depeg),
+        global_alert_safety = MAX(telegram_subscribers.global_alert_safety, excluded.global_alert_safety),
+        last_active_at = excluded.last_active_at
+    `)
+    .bind(
+      chatId,
+      username,
+      alertTypes.has("dews") ? 1 : 0,
+      alertTypes.has("depeg") ? 1 : 0,
+      alertTypes.has("safety") ? 1 : 0,
+      now,
+      now,
+    )
+    .run();
+}
+
 async function upsertSubscriberAndSubscriptions(
   db: D1Database,
   chatId: string,
@@ -803,10 +904,13 @@ async function upsertSubscriberAndSubscriptions(
         alert_dews,
         alert_depeg,
         alert_safety,
+        global_alert_dews,
+        global_alert_depeg,
+        global_alert_safety,
         created_at,
         last_active_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, 0, 0, 0, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET
         username = COALESCE(excluded.username, telegram_subscribers.username),
         alert_dews = MAX(telegram_subscribers.alert_dews, excluded.alert_dews),
@@ -862,10 +966,13 @@ async function applySettingToSubscriptions(
         alert_dews,
         alert_depeg,
         alert_safety,
+        global_alert_dews,
+        global_alert_depeg,
+        global_alert_safety,
         created_at,
         last_active_at
       )
-      VALUES (?, ?, 0, 0, 0, ?, ?)
+      VALUES (?, ?, 0, 0, 0, 0, 0, 0, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET
         username = COALESCE(excluded.username, telegram_subscribers.username),
         last_active_at = excluded.last_active_at
@@ -953,6 +1060,73 @@ async function applySettingToSubscriptions(
   }
 
   await db.batch(statements);
+}
+
+function validateGlobalSetCommand(command: ParsedSetCommand): string | null {
+  if (command.setting === "depeg-step") {
+    return "Global all-stablecoin alerts do not support depeg-step. Use /set <ticker> depeg-step <value> for per-coin worsening alerts.";
+  }
+  if (command.setting === "dews" && command.enabled && command.minBand != null) {
+    return "Global DEWS alerts only support the default ALERT threshold. Use /subscribe dews all or /set all dews off; WARNING/DANGER remain per-coin.";
+  }
+  if (command.setting === "safety" && command.enabled && command.mode != null) {
+    return "Global safety alerts support all/off only. Upgrade-only and downgrade-only remain per-coin settings.";
+  }
+  return null;
+}
+
+async function applyGlobalSetting(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  command: ParsedSetCommand,
+): Promise<void> {
+  const now = unixNow();
+  const current = await loadSubscriberByChat(db, chatId);
+  const next = {
+    dews: current?.global_alert_dews ?? 0,
+    depeg: current?.global_alert_depeg ?? 0,
+    safety: current?.global_alert_safety ?? 0,
+  };
+
+  switch (command.setting) {
+    case "dews":
+      next.dews = command.enabled ? 1 : 0;
+      break;
+    case "depeg":
+      next.depeg = command.enabled ? 1 : 0;
+      break;
+    case "safety":
+      next.safety = command.enabled ? 1 : 0;
+      break;
+    case "depeg-step":
+      throw new Error("Global depeg-step is not supported");
+  }
+
+  await db
+    .prepare(`
+      INSERT INTO telegram_subscribers (
+        chat_id,
+        username,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        global_alert_dews,
+        global_alert_depeg,
+        global_alert_safety,
+        created_at,
+        last_active_at
+      )
+      VALUES (?, ?, 0, 0, 0, ?, ?, ?, ?, ?)
+      ON CONFLICT(chat_id) DO UPDATE SET
+        username = COALESCE(excluded.username, telegram_subscribers.username),
+        global_alert_dews = excluded.global_alert_dews,
+        global_alert_depeg = excluded.global_alert_depeg,
+        global_alert_safety = excluded.global_alert_safety,
+        last_active_at = excluded.last_active_at
+    `)
+    .bind(chatId, username, next.dews, next.depeg, next.safety, now, now)
+    .run();
 }
 
 async function removeSubscriptions(
@@ -1229,6 +1403,21 @@ function buildSubscriptionSummaryMessage(
   return escapeHtml(lines.join("\n"));
 }
 
+function buildGlobalAlertSummaryMessage(
+  header: string,
+  subscriber: SubscriberRow | null,
+): string {
+  return escapeHtml([
+    header,
+    `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
+    `Quiet hours: ${
+      subscriber?.quiet_hours_enabled
+        ? `${formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)} UTC`
+        : "Off"
+    }`,
+  ].join("\n"));
+}
+
 function buildListMessage(
   subscriber: SubscriberRow | null,
   subscriptions: SubscriptionRow[],
@@ -1238,6 +1427,7 @@ function buildListMessage(
   }
 
   const lines = [
+    `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
     `Quiet hours: ${
       subscriber?.quiet_hours_enabled
         ? `${formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc)} UTC`
@@ -1290,6 +1480,23 @@ function describeSubscriptionSettings(row: SubscriptionRow): string {
   }
 
   return labels.join(", ") || "Muted";
+}
+
+function describeGlobalAlertSettings(subscriber: SubscriberRow | null): string {
+  if (!subscriber) return "None";
+  const labels: string[] = [];
+
+  if (subscriber.global_alert_dews) {
+    labels.push("DEWS");
+  }
+  if (subscriber.global_alert_depeg) {
+    labels.push("Depeg");
+  }
+  if (subscriber.global_alert_safety) {
+    labels.push("Safety");
+  }
+
+  return labels.join(", ") || "None";
 }
 
 function formatCoinLines(coins: ResolvedCoin[]): string {

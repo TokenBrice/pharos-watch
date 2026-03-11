@@ -119,12 +119,12 @@ export function TelegramBotStats({ telegramBot, dispatchCron, nowSeconds }: Tele
     {
       label: "Subscribers",
       value: telegramBot.totalChats,
-      detail: `${telegramBot.alertEnabledChats} with active or saved alert defaults`,
+      detail: `${telegramBot.alertEnabledChats} with active per-coin, global, or saved alert defaults`,
     },
     {
       label: "Alert-Ready Chats",
       value: telegramBot.deliverableChats,
-      detail: `${telegramBot.subscribedChats} chats currently have tracked coins`,
+      detail: `${telegramBot.subscribedChats} chats currently have saved coin follows`,
     },
     {
       label: "Coin Follows",

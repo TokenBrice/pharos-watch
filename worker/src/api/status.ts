@@ -800,20 +800,33 @@ async function getTelegramBotStats(db: D1Database, now: number): Promise<Telegra
              COUNT(*) AS total_chats,
              SUM(
                CASE
-                 WHEN COALESCE(sub.active_sub_count, 0) > 0 OR s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1
+                 WHEN COALESCE(sub.active_sub_count, 0) > 0
+                   OR s.global_alert_dews = 1
+                   OR s.global_alert_depeg = 1
+                   OR s.global_alert_safety = 1
+                   OR s.alert_dews = 1
+                   OR s.alert_depeg = 1
+                   OR s.alert_safety = 1
                  THEN 1 ELSE 0
                END
              ) AS alert_enabled_chats,
              SUM(
                CASE
                  WHEN COALESCE(sub.active_sub_count, 0) > 0
+                   OR s.global_alert_dews = 1
+                   OR s.global_alert_depeg = 1
+                   OR s.global_alert_safety = 1
                  THEN 1 ELSE 0
                END
              ) AS deliverable_chats,
              SUM(CASE WHEN COALESCE(sub.sub_count, 0) > 0 THEN 1 ELSE 0 END) AS subscribed_chats,
              SUM(
                CASE
-                 WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1) AND COALESCE(sub.sub_count, 0) = 0
+                 WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1)
+                   AND s.global_alert_dews = 0
+                   AND s.global_alert_depeg = 0
+                   AND s.global_alert_safety = 0
+                   AND COALESCE(sub.sub_count, 0) = 0
                  THEN 1 ELSE 0
                END
              ) AS empty_alert_chats,
@@ -823,14 +836,14 @@ async function getTelegramBotStats(db: D1Database, now: number): Promise<Telegra
                  THEN 1 ELSE 0
                END
              ) AS muted_chats_with_subscriptions,
-             SUM(CASE WHEN COALESCE(sub.dews_enabled, 0) = 1 THEN 1 ELSE 0 END) AS dews_chats,
-             SUM(CASE WHEN COALESCE(sub.depeg_enabled, 0) = 1 THEN 1 ELSE 0 END) AS depeg_chats,
-             SUM(CASE WHEN COALESCE(sub.safety_enabled, 0) = 1 THEN 1 ELSE 0 END) AS safety_chats,
+             SUM(CASE WHEN COALESCE(sub.dews_enabled, 0) = 1 OR s.global_alert_dews = 1 THEN 1 ELSE 0 END) AS dews_chats,
+             SUM(CASE WHEN COALESCE(sub.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_chats,
+             SUM(CASE WHEN COALESCE(sub.safety_enabled, 0) = 1 OR s.global_alert_safety = 1 THEN 1 ELSE 0 END) AS safety_chats,
              SUM(
                CASE
-                 WHEN COALESCE(sub.dews_enabled, 0) = 1
-                  AND COALESCE(sub.depeg_enabled, 0) = 1
-                  AND COALESCE(sub.safety_enabled, 0) = 1
+                 WHEN (COALESCE(sub.dews_enabled, 0) = 1 OR s.global_alert_dews = 1)
+                  AND (COALESCE(sub.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1)
+                  AND (COALESCE(sub.safety_enabled, 0) = 1 OR s.global_alert_safety = 1)
                  THEN 1 ELSE 0
                END
              ) AS all_types_chats,

@@ -126,6 +126,34 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("USDC");
   });
 
+  it("handles /subscribe for all stablecoins by alert type", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: {
+          alert_dews: 0,
+          alert_depeg: 0,
+          alert_safety: 0,
+          global_alert_dews: 1,
+          global_alert_depeg: 0,
+          global_alert_safety: 1,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews safety all"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("global_alert_dews"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
+    expect(sentMessageBody().text).toContain("All stablecoins: DEWS, Safety");
+  });
+
   it("handles /subscribe with unknown ticker", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews XYZZY"), "test-secret", "bot-token");
@@ -170,6 +198,77 @@ describe("handleTelegramWebhook", () => {
 
     expect(sentMessageBody().text).toContain("Updated settings");
     expect(sentMessageBody().text).toContain("DEWS&gt;=WARNING");
+  });
+
+  it("handles /set all for global alert flags", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: {
+          alert_dews: 0,
+          alert_depeg: 0,
+          alert_safety: 0,
+          global_alert_dews: 1,
+          global_alert_depeg: 0,
+          global_alert_safety: 0,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        },
+      },
+      {
+        match: "FROM telegram_subscribers",
+        matchBinds: ["123"],
+        rows: [],
+        first: {
+          alert_dews: 0,
+          alert_depeg: 0,
+          alert_safety: 0,
+          global_alert_dews: 1,
+          global_alert_depeg: 0,
+          global_alert_safety: 0,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/set all depeg off"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("global_alert_depeg = excluded.global_alert_depeg"))).toBe(true);
+    expect(sentMessageBody().text).toContain("Updated all-stablecoin alerts");
+  });
+
+  it("shows global alert coverage in /list", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscribers",
+        rows: [],
+        first: {
+          alert_dews: 0,
+          alert_depeg: 0,
+          alert_safety: 0,
+          global_alert_dews: 0,
+          global_alert_depeg: 1,
+          global_alert_safety: 1,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+        },
+      },
+      { match: "FROM telegram_subscriptions", rows: [] },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
+
+    const text = sentMessageBody().text;
+    expect(text).toContain("All stablecoins: Depeg, Safety");
+    expect(text).toContain("Coins (0):");
   });
 
   it("handles /mute quiet hours", async () => {

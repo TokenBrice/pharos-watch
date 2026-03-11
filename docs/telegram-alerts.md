@@ -24,6 +24,7 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 - `worker/migrations/0054_telegram_subscribers.sql`
 - `worker/migrations/0060_telegram_pending_alerts.sql`
 - `worker/migrations/0061_telegram_bot_tightening.sql`
+- `worker/migrations/0063_telegram_global_alerts.sql`
 - `scripts/register-telegram-webhook.sh`
 
 ## Frontend Landing Page
@@ -36,11 +37,11 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 
 ## D1 Schema
 
-`worker/migrations/0054_telegram_subscribers.sql` creates the subscriber/subscription/disambiguation tables, and `worker/migrations/0060_telegram_pending_alerts.sql` adds the overflow delivery queue:
+`worker/migrations/0054_telegram_subscribers.sql` creates the subscriber/subscription/disambiguation tables, `worker/migrations/0060_telegram_pending_alerts.sql` adds the overflow delivery queue, and `worker/migrations/0063_telegram_global_alerts.sql` adds explicit all-stablecoin alert flags:
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
-| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `created_at`, `last_active_at` |
+| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `created_at`, `last_active_at` |
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at` |
 | `telegram_pending_alerts` | Overflow delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts` |
@@ -71,9 +72,11 @@ Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which
 | `/help` | Sends command reference |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat |
 | `/subscribe <types> <tickers>` | Enables one or more alert types and subscribes the chat to one or more coins |
+| `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins |
 | `/unsubscribe <tickers>` | Removes specific coin subscriptions |
 | `/unsubscribe all` | Clears all subscriptions and disables all alert-type flags |
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, or depeg worsening step |
+| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`) |
 | `/mute <start>-<end>` | Enables quiet hours in UTC (messages still deliver, notifications are silenced) |
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
@@ -89,7 +92,10 @@ Additional alert controls:
 - `dews_min_band`: optional per-coin floor (`ALERT` default, or `WARNING` / `DANGER`)
 - `safety_mode`: `all`, `downgrade-only`, or `upgrade-only`
 - `depeg_worsening_bps_step`: optional per-coin worsening follow-up step (`100`, `250`, `500`)
+- `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type
 - quiet hours: subscriber-level UTC hour window that forces `disable_notification = true`
+
+Global subscriptions are additive, but explicit per-coin rows take precedence for that coin and alert type. That means a per-coin DEWS threshold or safety mode overrides the global default fan-out for the same chat/coin pair.
 
 ### Ticker Resolution
 
@@ -158,16 +164,22 @@ The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `wo
 
 ### Subscriber Filtering
 
-Subscribers are selected by joining:
+Subscribers are selected from two sources:
 
 - `telegram_subscriptions`
 - `telegram_subscribers`
 
-Each alert type now checks the corresponding boolean on `telegram_subscriptions`:
+Per-coin rows check the corresponding boolean on `telegram_subscriptions`:
 
 - `alert_dews`
 - `alert_depeg`
 - `alert_safety`
+
+Global all-stablecoin follows use the matching `telegram_subscribers` flags:
+
+- `global_alert_dews`
+- `global_alert_depeg`
+- `global_alert_safety`
 
 Filtering is subscription-aware:
 
@@ -175,6 +187,8 @@ Filtering is subscription-aware:
 - Safety changes respect the coin's `safety_mode`
 - Depeg worsening follows the coin's `depeg_worsening_bps_step`
 - Quiet hours force `disable_notification = true`
+
+When the same chat has both a global alert type and a per-coin subscription for the same alert type, the per-coin row wins. This lets coin-specific thresholds or modes override the global default.
 
 ### Message Formatting and Limits
 
@@ -193,7 +207,7 @@ Delivery semantics are explicit:
 - `permanent_failure`
 
 Fresh retryable failures are enqueued into `telegram_pending_alerts` instead of being dropped.
-`403` responses disable the subscriber's legacy default flags to stop repeated failures.
+`403` responses disable both the subscriber's global flags and all per-coin alert booleans to stop repeated failures.
 
 ### Pending Delivery Queue
 
@@ -239,7 +253,7 @@ When multiple entries are added in the same deploy, they are consolidated into a
 `GET /api/status` now exposes a `telegramBot` block for the private `/status` dashboard. It aggregates:
 
 - total known chats in `telegram_subscribers`
-- alert-enabled chats vs deliverable chats (enabled + at least one subscribed coin)
+- alert-enabled chats vs deliverable chats (per-coin follows and global all-stablecoin follows both count)
 - total `telegram_subscriptions` rows and average follows per subscribed chat
 - pending disambiguation replies still within TTL
 - per-alert-type enablement counts (`dews`, `depeg`, `safety`, all three)

@@ -48,12 +48,14 @@ describe("parseSubscribeArgs", () => {
   it("separates alert types from tickers", () => {
     const result = parseSubscribeArgs("dews depeg USDC BOLD");
     expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
+    expect(result.subscribeAll).toBe(false);
     expect(result.tickers).toEqual(["USDC", "BOLD"]);
   });
 
   it("is order-independent", () => {
     const result = parseSubscribeArgs("USDC dews BOLD depeg");
     expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
+    expect(result.subscribeAll).toBe(false);
     expect(result.tickers).toEqual(["USDC", "BOLD"]);
   });
 
@@ -62,9 +64,18 @@ describe("parseSubscribeArgs", () => {
     expect(result.alertTypes).toEqual(new Set(["dews", "depeg", "safety"]));
   });
 
+  it("recognizes the all-stablecoin token", () => {
+    const result = parseSubscribeArgs("dews all");
+    expect(result.alertTypes).toEqual(new Set(["dews"]));
+    expect(result.subscribeAll).toBe(true);
+    expect(result.tickers).toEqual([]);
+    expect(result.invalidTypes).toEqual([]);
+  });
+
   it("classifies unknown tokens as invalidTypes", () => {
     const result = parseSubscribeArgs("foo dews USDC");
     expect(result.alertTypes).toEqual(new Set(["dews"]));
+    expect(result.subscribeAll).toBe(false);
     expect(result.tickers).toEqual(["USDC"]);
     expect(result.invalidTypes).toEqual(["foo"]);
   });
@@ -72,6 +83,7 @@ describe("parseSubscribeArgs", () => {
   it("classifies completely unknown tokens when no types present", () => {
     const result = parseSubscribeArgs("foo USDC");
     expect(result.alertTypes.size).toBe(0);
+    expect(result.subscribeAll).toBe(false);
     expect(result.tickers).toEqual(["USDC"]);
     expect(result.invalidTypes).toEqual(["foo"]);
   });
@@ -88,6 +100,7 @@ describe("validateSubscribeArgs", () => {
   it("returns null for valid args", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(["dews"]),
+      subscribeAll: false,
       tickers: ["USDC"],
       invalidTypes: [],
     });
@@ -97,6 +110,7 @@ describe("validateSubscribeArgs", () => {
   it("returns error when no types", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(),
+      subscribeAll: false,
       tickers: ["USDC"],
       invalidTypes: [],
     });
@@ -106,6 +120,7 @@ describe("validateSubscribeArgs", () => {
   it("returns error when no tickers", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(["dews"]),
+      subscribeAll: false,
       tickers: [],
       invalidTypes: [],
     });
@@ -115,6 +130,7 @@ describe("validateSubscribeArgs", () => {
   it("returns unknown alert type error when no types and invalidTypes present", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(),
+      subscribeAll: false,
       tickers: ["USDC"],
       invalidTypes: ["foo"],
     });
@@ -125,10 +141,21 @@ describe("validateSubscribeArgs", () => {
   it("returns unknown ticker error when types present and invalidTypes present", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(["dews"]),
+      subscribeAll: false,
       tickers: [],
       invalidTypes: ["XYZZY"],
     });
     expect(result).toContain("Unknown ticker: XYZZY");
+  });
+
+  it("rejects mixing all with explicit tickers", () => {
+    const result = validateSubscribeArgs({
+      alertTypes: new Set(["dews"]),
+      subscribeAll: true,
+      tickers: ["USDC"],
+      invalidTypes: [],
+    });
+    expect(result).toContain('either "all" or specific tickers');
   });
 });
 

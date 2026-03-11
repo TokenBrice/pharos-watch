@@ -8,7 +8,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 export const metadata: Metadata = buildPageMetadata({
   title: "Telegram Alerts & Digest: Stablecoin Notifications on Telegram",
   description:
-    "Set up per-coin Telegram alerts for depeg events, depeg worsening, DEWS threat level changes, and daily safety grade shifts. Plus get the Pharos digest straight in Telegram.",
+    "Set up Telegram alerts for specific stablecoins or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, and daily safety grade shifts. Plus get the Pharos digest straight in Telegram.",
   canonical: "/telegram/",
 });
 
@@ -35,6 +35,11 @@ const ALERT_TYPES = [
 
 const COMMANDS = [
   {
+    command: "/subscribe <types> all",
+    description: "Enable alert types across all tracked stablecoins",
+    example: "/subscribe depeg,safety all",
+  },
+  {
     command: "/subscribe <types> <tickers>",
     description: "Enable alert types and subscribe to coins",
     example: "/subscribe dews,depeg USDT,USDC",
@@ -53,6 +58,11 @@ const COMMANDS = [
     command: "/set <ticker> <setting> <value>",
     description: "Tune per-coin thresholds and modes",
     example: "/set USDC depeg-step 250",
+  },
+  {
+    command: "/set all <setting> <value>",
+    description: "Turn global all-stablecoin alert types on or off",
+    example: "/set all depeg off",
   },
   {
     command: "/mute <start>-<end>",
@@ -128,7 +138,7 @@ export default function TelegramPage() {
       title="Telegram Alerts & Digest"
       containerClassName="mx-auto max-w-4xl"
       leadParagraphs={[
-        "Two ways to get Pharos data in Telegram: a public channel for the daily digest, and a bot for per-coin alerts on DEWS changes, depegs, worsening depegs, and daily safety-grade moves.",
+        "Two ways to get Pharos data in Telegram: a public channel for the daily digest, and a bot for per-coin alerts or all-stablecoin alert-type follows covering DEWS changes, depegs, worsening depegs, and daily safety-grade moves.",
       ]}
     >
       <div className="space-y-6">
@@ -191,7 +201,7 @@ export default function TelegramPage() {
                 @PharosWatchBot
               </a>{" "}
               sends you cron-driven alerts for the stablecoins you care about.
-              DEWS and depeg alerts are near-real-time within the bot&apos;s cron cadence. Safety alerts are checked after the daily safety snapshot. Subscriptions are per coin, with per-coin settings and optional quiet hours.
+              DEWS and depeg alerts are near-real-time within the bot&apos;s cron cadence. Safety alerts are checked after the daily safety snapshot. You can subscribe per coin or follow all tracked stablecoins by alert type, with optional per-coin settings and quiet hours.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {ALERT_TYPES.map((alert) => (
@@ -262,6 +272,14 @@ export default function TelegramPage() {
                     </code>
                     <p className="mt-1 text-xs text-muted-foreground">
                       DEWS + depeg alerts for the two largest stablecoins
+                    </p>
+                  </div>
+                  <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
+                      /subscribe safety all
+                    </code>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Safety-grade alerts for every tracked stablecoin
                     </p>
                   </div>
                   <div>
@@ -373,7 +391,7 @@ export default function TelegramPage() {
               </table>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Unknown tickers get a closest-match suggestion when possible.
+              Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Use `all` to follow an alert type across every tracked stablecoin. Unknown tickers get a closest-match suggestion when possible.
             </p>
           </CardContent>
         </Card>
