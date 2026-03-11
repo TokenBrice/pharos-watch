@@ -4,7 +4,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-All responses are `Content-Type: application/json`. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` setting (production: `https://pharos.watch`).
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` setting (production: `https://pharos.watch`).
 
 ---
 
@@ -39,13 +39,13 @@ Endpoints backed by the cron cache include these additional headers:
 
 ## Cache-Control Profiles
 
-| Profile  | `Cache-Control`                      | Used by                                                                                                                                                     |
-| -------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                     |
-| standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
-| per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                  |
-| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot                                               |
-| no-store | `no-store`                           | health, status                                                                                                                                              |
+| Profile  | `Cache-Control`                      | Used by                                                                                                                                                                                                 |
+| -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                                                               |
+| standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                         |
+| per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                              |
+| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot                                                                                           |
+| no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`)                     |
 
 ---
 
@@ -92,7 +92,7 @@ All error responses use `{ "error": "message" }` JSON format.
 HTTP method allowance is defined centrally in `shared/lib/api-endpoints.ts` and enforced by `worker/src/router.ts` (`validateEndpointMethod`).
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints and `GET /api/backfill-dews`).
-- `POST` is accepted for mutating admin endpoints and `POST /api/feedback`.
+- `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, and `POST /api/telegram-webhook`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - Unknown `POST` paths return `405` with `Allow: GET`; unsupported verbs return `405` with `Allow: GET, POST`.
 
@@ -162,7 +162,7 @@ All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on u
 
 **Path parameter:** `:id` — Pharos stablecoin ID.
 
-**Cache:** realtime
+**Cache:** per-coin — custom `Cache-Control` with a 5-minute server-side D1 TTL (`public, s-maxage<=300, max-age=10`)
 
 **Response**
 
@@ -1125,21 +1125,23 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 | `currentApy`       | `number`         | Current APY (%)                                                 |
 | `apy7d`            | `number`         | 7-day average APY (%)                                           |
 | `apy30d`           | `number`         | 30-day average APY (%)                                          |
-| `apyBase`          | `number`         | Base APY component (%)                                          |
+| `apyBase`          | `number \| null` | Base APY component (%)                                          |
 | `apyReward`        | `number \| null` | Reward APY component (%), `null` if none                        |
 | `yieldSource`      | `string`         | Human-readable yield source description                         |
 | `yieldType`        | `string`         | Yield type classification (e.g. `"lending-vault"`, `"staking"`) |
 | `dataSource`       | `string`         | Data source identifier (e.g. `"defillama"`)                     |
-| `sourceTvlUsd`     | `number`         | TVL of the yield source pool (USD)                              |
-| `pharosYieldScore` | `number`         | Composite Pharos Yield Score (0–100)                            |
-| `safetyScore`      | `number`         | Safety score from report cards (0–100)                          |
-| `safetyGrade`      | `string`         | Letter grade (`"A+"` through `"F"`, or `"NR"`)                  |
-| `yieldToRisk`      | `number`         | Yield-to-risk ratio (excess yield / safety penalty)             |
-| `excessYield`      | `number`         | APY above risk-free rate (percentage points)                    |
-| `yieldStability`   | `number`         | Yield stability metric (0–1; higher = more stable)              |
-| `apyVariance30d`   | `number`         | 30-day APY variance                                             |
-| `apyMin30d`        | `number`         | Minimum APY in last 30 days (%)                                 |
-| `apyMax30d`        | `number`         | Maximum APY in last 30 days (%)                                 |
+| `sourceTvlUsd`     | `number \| null` | TVL of the yield source pool (USD)                              |
+| `pharosYieldScore` | `number \| null` | Composite Pharos Yield Score (0–100)                            |
+| `safetyScore`      | `number \| null` | Safety score from report cards (0–100)                          |
+| `safetyGrade`      | `string \| null` | Letter grade (`"A+"` through `"F"`, or `"NR"`)                  |
+| `yieldToRisk`      | `number \| null` | Yield-to-risk ratio (excess yield / safety penalty)             |
+| `excessYield`      | `number \| null` | APY above risk-free rate (percentage points)                    |
+| `yieldStability`   | `number \| null` | Yield stability metric (0–1; higher = more stable)              |
+| `apyVariance30d`   | `number \| null` | 30-day APY variance                                             |
+| `apyMin30d`        | `number \| null` | Minimum APY in last 30 days (%)                                 |
+| `apyMax30d`        | `number \| null` | Maximum APY in last 30 days (%)                                 |
+| `warningSignals`   | `string[]`       | Active warning-signal flags for the selected best source        |
+| `altSources`       | `AltYieldSource[]` | Additional non-selected source rows for the same coin         |
 | `provenance`       | `object \| null` | Source-level provenance: confidence tier, selection reason, benchmark state, and source-switch metadata |
 
 ---
@@ -1175,6 +1177,7 @@ Historical yield data for a single stablecoin.
     "apyReward": 2.2,
     "exchangeRate": 1.052,
     "sourceTvlUsd": 5200000000,
+    "warningSignals": [],
     "sourceKey": "rate-derived",
     "yieldSource": "T-bill proxy",
     "yieldType": "nav-appreciation",
@@ -1189,10 +1192,11 @@ Historical yield data for a single stablecoin.
 | -------------- | ---------------- | -------------------------------------------------------------------------- |
 | `date`         | `number`         | Unix seconds                                                               |
 | `apy`          | `number`         | Total APY at snapshot time (%)                                             |
-| `apyBase`      | `number`         | Base APY component (%)                                                     |
+| `apyBase`      | `number \| null` | Base APY component (%)                                                     |
 | `apyReward`    | `number \| null` | Reward APY component (%); `null` if none                                   |
 | `exchangeRate` | `number \| null` | Exchange rate at snapshot time (e.g. sUSDe/USDe); `null` if not applicable |
-| `sourceTvlUsd` | `number`         | TVL of the yield source pool at snapshot time (USD)                        |
+| `sourceTvlUsd` | `number \| null` | TVL of the yield source pool at snapshot time (USD)                        |
+| `warningSignals` | `string[]`     | Active warning-signal flags at that snapshot                               |
 | `sourceKey`    | `string \| null` | Stable source identifier for this history row                              |
 | `yieldSource`  | `string \| null` | Human-readable source label at that snapshot                               |
 | `yieldType`    | `string \| null` | Yield type classification at that snapshot                                 |
@@ -1473,7 +1477,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 **Rate limits**
 
-- Global public API limiter: best-effort per-IP in-memory limiter (`60 requests / 60 seconds`) for non-admin requests.
+- Global public API limiter: best-effort per-IP in-memory limiter (`300 requests / 60 seconds`) for non-admin requests.
 - Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
 
 **Request body**
@@ -1524,11 +1528,11 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 
 **Rate limiting:** Exempt from IP rate limiter (Telegram sends from fixed IPs).
 
-**Cache:** no-store
+**Cache:** no edge cache (POST passthrough)
 
 **Request body:** Telegram Update object (JSON, sent by Telegram servers).
 
-**Response:** Always `200 OK` (Telegram retries on non-2xx).
+**Response:** Always `200 OK` with plain-text body `ok` (Telegram retries on non-2xx).
 
 **Commands handled:**
 

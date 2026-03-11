@@ -336,7 +336,7 @@ CREATE TABLE yield_history (
 ### `sync-yield-data`
 
 **Schedule:** `10,40 * * * *` (every 30 min, Trigger 6)
-**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + `worker/src/cron/yield-sync/{sources,resolve,rankings}.ts`
+**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + `worker/src/cron/yield-sync/{cache,sources,resolve,rankings}.ts`
 
 **Execution flow:**
 
@@ -411,6 +411,7 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
       "apyVariance30d": 2.1,
       "apyMin30d": 7.5,
       "apyMax30d": 15.3,
+      "warningSignals": [],
       "altSources": [
         {
           "sourceKey": "ee0b7069-...",
@@ -421,7 +422,12 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
           "sourceTvlUsd": 31000000,
           "dataSource": "defillama"
         }
-      ]
+      ],
+      "provenance": {
+        "confidenceTier": "curated",
+        "selectionReason": "curated canonical source selected by confidence-weighted arbitration",
+        "sourceSwitch": false
+      }
     }
   ],
   "riskFreeRate": 3.76,
@@ -445,8 +451,24 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 | ------------ | ------- | -------- | ------ | -------------------- |
 | `stablecoin` | string  | required | —      | Pharos stablecoin ID |
 | `days`       | integer | 90       | 1–365  | Lookback window      |
+| `mode`       | string  | best     | —      | `best` for historically selected best-source rows |
+| `sourceKey`  | string  | —        | —      | When present, returns source-specific history for that source key |
 
-**Response:** Array of `{ date, apy, apyBase, apyReward, exchangeRate, sourceTvlUsd, warningSignals }` sorted by `date` ASC.
+**Response:** Array sorted by `date` ASC. Each row includes:
+
+- `date`
+- `apy`
+- `apyBase`
+- `apyReward`
+- `exchangeRate`
+- `sourceTvlUsd`
+- `warningSignals`
+- `sourceKey`
+- `yieldSource`
+- `yieldType`
+- `dataSource`
+- `isBest`
+- `sourceSwitch`
 
 `warningSignals` type: `string[]`.
 

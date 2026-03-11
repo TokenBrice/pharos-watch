@@ -141,6 +141,8 @@ src/                              # Next.js frontend (static export)
 │   ├── yield/                    # Yield intelligence leaderboard
 │   │   ├── page.tsx
 │   │   └── client.tsx
+│   ├── telegram/                 # Telegram alerts + digest landing page
+│   │   └── page.tsx
 │   ├── about/                    # About & methodology
 │   │   ├── page.tsx
 │   │   └── error.tsx
@@ -171,9 +173,10 @@ src/                              # Next.js frontend (static export)
 │   ├── footer.tsx                # Site footer with data attribution
 │   ├── providers.tsx             # TanStack Query + theme providers
 │   ├── start-here-page.tsx       # Static onboarding/orientation page composition
+│   ├── start-here-visit-marker.tsx # Client marker that retires the homepage Start Here callout after /start/ is visited
 │   ├── command-palette.tsx       # ⌘K command palette for quick navigation
 │   ├── scroll-to-top.tsx         # Scroll-to-top button
-│   ├── homepage-client.tsx       # Homepage interactive wrapper
+│   ├── homepage-client.tsx       # Homepage interactive wrapper + first-session Start Here callout gating
 │   ├── homepage-flow-overview.tsx # Homepage mint/burn snapshot block (FlowBrrrOverview wrapper)
 │   ├── homepage-safety-overview.tsx # Homepage safety snapshot block (report-card distribution + largest coins)
 │   ├── stablecoin-filtered-table.tsx # Shared hydrated table wrapper for peg/backing/governance landing pages
@@ -283,9 +286,10 @@ src/                              # Next.js frontend (static export)
 │   ├── use-sorted-paginated-table.ts # Shared table scaffold combining sorting + pagination state
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
 │   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
+│   ├── use-start-here-callout.ts # Homepage-only first-session onboarding callout visibility + retirement
 │   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover
 │   ├── use-stablecoin-detail-view-model.ts # Stablecoin detail query wiring; delegates pure derivation to src/lib/stablecoin-detail-view-model.ts
-│   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 18 data hooks)
+│   ├── use-api-query.ts          # Generic typed fetch + polling helper wrapping TanStack Query
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
 │   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
 │   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
@@ -303,6 +307,7 @@ src/                              # Next.js frontend (static export)
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
     ├── chart-export.ts           # Chart export utilities (PNG download)
     ├── compare-pages.ts          # Finite static comparison landing page registry + helpers
+    ├── start-here-callout.ts     # Browser-persisted Start Here callout state helpers (first-session exposure + /start/ retirement)
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
     ├── cron-intervals.ts         # Shared cron interval constants for frontend polling policy + health config
@@ -497,7 +502,7 @@ data/
   - `/stablecoins/backing/[backing]/`
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
-  - major feature pages with standalone static copy (`/start/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/about/`, `/methodology/`)
+  - major feature pages with standalone static copy (`/start/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/about/`, `/methodology/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`

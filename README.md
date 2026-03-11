@@ -7,7 +7,7 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 ## Features
 
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
-- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, UAH, ARS, gold, silver, CPI-linked, and other peg currencies with cross-currency FX-adjusted totals
+- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, EURC, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, diversity, and cross-chain coverage
@@ -15,7 +15,7 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 80 dead stablecoins documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 81 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Detail pages** — price chart, supply history, chain distribution, liquidity card, and safety ratings for each stablecoin
 - **Status dashboard** — cron health, cache freshness, and system monitoring
@@ -98,15 +98,24 @@ src/                              Frontend (Next.js static export)
 │   ├── blacklist/                Freeze & blacklist event tracker
 │   ├── cemetery/                 Dead stablecoin graveyard
 │   ├── compare/                  Side-by-side stablecoin comparison
+│   ├── depeg/                    Live peg monitoring + event feed
 │   ├── dependency-map/           Collateral dependency graph visualization
 │   ├── digest/                   AI-generated daily market digest (+ digest/[date]/)
+│   ├── flows/                    Mint/burn flow tracker
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
+│   ├── methodology/              Detailed methodology + changelog routes
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
+│   ├── privacy/                  Privacy policy
 │   ├── safety-scores/            Stablecoin safety grade cards with radar charts
+│   ├── start/                    First-time-user orientation route
 │   ├── stability-index/          Pharos Stability Index (ecosystem health)
 │   ├── stablecoin/[id]/          Detail page per stablecoin
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
+│   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
+│   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
 │   ├── status/                   System health and cron monitoring
+│   ├── telegram/                 Telegram alerts + digest landing page
+│   ├── yield/                    Yield intelligence leaderboard
 │   └── about/                    About & methodology
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)

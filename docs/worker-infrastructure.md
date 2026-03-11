@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 21 named runtime jobs across 9 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 22 named runtime jobs across 9 trigger slots.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -93,7 +93,7 @@ This pattern exists because `Env` bindings are only available inside handler fun
 | Method | Handling |
 |--------|----------|
 | `OPTIONS` | Returns 204 with CORS headers (preflight) |
-| `POST` | `/api/feedback` and mutating admin endpoints from `shared/lib/api-endpoints.ts` |
+| `POST` | `/api/feedback`, `/api/telegram-webhook`, and mutating admin endpoints from `shared/lib/api-endpoints.ts` |
 | `GET` | Read endpoints + admin debug routes; mutating admin routes return 405 except `/api/audit-depeg-history?dry-run=true` |
 | Other | Returns 405 `{ error: "Method not allowed" }` |
 
@@ -102,7 +102,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 ### Public API Rate Limiting
 
 - `worker/src/handlers/http.ts` applies a best-effort per-IP in-memory limiter for non-admin requests before router dispatch.
-- Default threshold: `60 requests / 60 seconds` per IP (isolate-local, not globally shared across all isolates/PoPs).
+- Default threshold: `300 requests / 60 seconds` per IP (isolate-local, not globally shared across all isolates/PoPs).
 - Admin requests authenticated with `X-Admin-Key` bypass this limiter.
 
 ### CORS Headers
@@ -138,8 +138,11 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | Profile | `Cache-Control` header | Used by |
 |---------|----------------------|---------|
 | Realtime | `public, s-maxage=60, max-age=10` | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events |
+| Per-coin | `public, s-maxage=300, max-age=10` | stablecoin detail (`/api/stablecoin/:id`) |
 | Standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | Slow | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, digest-snapshot |
+
+Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetNoStoreHeader()` in `worker/src/router.ts`.
 
 ### External API Monitoring Baseline
 
@@ -162,6 +165,7 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 **File:** `worker/src/lib/auth.ts`
 
 - Reads `X-Admin-Key` header from request
+- Also accepts `Authorization: Bearer <key>` for non-browser callers
 - Compares against `ADMIN_KEY` env var using timing-safe comparison: both values are SHA-256 hashed via `crypto.subtle.digest()`, then compared with `crypto.subtle.timingSafeEqual()`
 - Returns `null` if authorized, 401 Response if not
 

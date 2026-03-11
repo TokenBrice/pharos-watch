@@ -11,7 +11,7 @@ The subsystem has four moving parts:
 - `worker/src/cron/announce-cemetery-additions.ts` diffs the deployed `DEAD_STABLECOINS` list against a cached snapshot and posts one consolidated channel message when new cemetery entries appear after a deploy.
 - `worker/src/lib/telegram.ts` and `worker/src/lib/telegram-alerts.ts` handle Bot API sends, ticker parsing, message formatting, and HTML escaping.
 
-This is a worker-only feature. The frontend does not call it directly.
+The delivery system is worker-owned. The frontend exposes a static `/telegram/` landing page, but it does not call the bot APIs directly.
 
 ## Files
 
@@ -20,10 +20,19 @@ This is a worker-only feature. The frontend does not call it directly.
 - `worker/src/cron/announce-cemetery-additions.ts`
 - `worker/src/lib/telegram.ts`
 - `worker/src/lib/telegram-alerts.ts`
+- `src/app/telegram/page.tsx`
 - `worker/migrations/0054_telegram_subscribers.sql`
 - `worker/migrations/0060_telegram_pending_alerts.sql`
 - `worker/migrations/0061_telegram_bot_tightening.sql`
 - `scripts/register-telegram-webhook.sh`
+
+## Frontend Landing Page
+
+`src/app/telegram/page.tsx` is a static product-facing explainer for the Telegram feature set.
+
+- Route: `/telegram/`
+- Covers both the public `@pharoswatch` digest channel and the `@PharosWatchBot` subscription bot
+- Does not call worker APIs; it links users to Telegram plus the on-site digest archive
 
 ## D1 Schema
 
