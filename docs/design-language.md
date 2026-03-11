@@ -89,9 +89,10 @@ Most routes use:
 The `/start/` orientation route keeps the shared breadcrumb/title shell, then shifts into a broader planning-board layout:
 
 - Wrapper: `mx-auto max-w-6xl space-y-8`
-- Hero shell: large rounded token-gradient surface with left-aligned onboarding copy and a right-side route board
-- Route board: staggered grid of CTA cards, with the dominant top and bottom routes spanning two columns on `sm+`
+- Hero shell: large rounded plotting-board surface with editorial onboarding copy on the left and a route board on the right
+- Route board: staggered CTA cards over subtle route-trace lines, with the dominant top and bottom routes spanning two columns on `sm+`
 - Mobile top fold compresses the hero copy so the first route card stays visible above the fold
+- Desktop hero splits into a two-stage composition: headline + route board first, then a full-width fact row beneath
 - Follow-up sections use glossary cards, flattened feature-atlas groups, and shortcut cards instead of one long prose stream
 
 ### Home Dashboard (Special)
