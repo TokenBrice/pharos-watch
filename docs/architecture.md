@@ -323,7 +323,6 @@ src/                              # Next.js frontend (static export)
     └── utils.ts                  # cn() helper for Tailwind class merging
 
 shared/                           # Runtime-neutral boundary (import via `@shared/*`)
-├── index.ts                      # Curated exports for shared boundary consumers
 ├── types/
 │   └── index.ts                  # Shared TypeScript types + Zod schemas
 └── lib/
@@ -340,7 +339,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (63 total)
+├── migrations/                   # D1 SQL migration files (68 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/

@@ -422,6 +422,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CG_PRICES` | `coingecko-prices` | `enrich-prices` |
 | `CG_DETAIL_PLATFORMS` | `coingecko-detail-platforms` | `GET /api/stablecoin/:id` (CoinGecko-only detail provider) |
 | `CG_MCAP` | `coingecko-mcap` | `sync-stablecoins` (CG supply fallback) |
+| `CG_DISCOVERY` | `coingecko-discovery` | `discovery-scan` |
 | `CMC_PRICES` | `coinmarketcap-prices` | `enrich-prices` pass 3.5 fallback |
 | `DEXSCREENER_PRICES` | `dexscreener-prices` | `enrich-prices` pass 4 fallback |
 | `TREASURY_RATES` | `treasury-rates` | `fetch-tbill-rate` |

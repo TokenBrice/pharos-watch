@@ -93,7 +93,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 | `description` | 10–2000 characters after trim |
 | `title` | 3–100 characters after trim; required for `bug` / `feature-request` |
 | `pageUrl` | Must start with `"/"` |
-| `stablecoinId` | Resolved with `resolveStablecoinId(..., { allowLegacy: true })`; invalid values are silently stripped and legacy aliases are canonicalized internally |
+| `stablecoinId` | Checked with `resolveStablecoinId(...)`; unknown or non-canonical values are silently stripped |
 | `website` | Non-empty → silent 200 OK, no GitHub call |
 
 #### Rate limiting

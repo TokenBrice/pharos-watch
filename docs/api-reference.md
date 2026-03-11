@@ -10,7 +10,7 @@ All responses are `Content-Type: application/json`. CORS headers are added to ev
 
 ## Stablecoin IDs
 
-Most endpoints use the Pharos stablecoin ID in `ticker-issuer` format (e.g. `usdt-tether`). IDs are resolved through the shared stablecoin-ID registry (`shared/lib/stablecoin-id-registry.ts`). Unknown IDs return `404`.
+Most endpoints use the Pharos stablecoin ID in `ticker-issuer` format (e.g. `usdt-tether`). IDs are checked through the shared stablecoin-ID registry (`shared/lib/stablecoin-id-registry.ts`). Unknown or non-canonical IDs return `404`.
 
 Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated with the issuer/protocol name:
 
@@ -22,7 +22,7 @@ Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated 
 | `"ustb-superstate"` | Superstate USTB |
 | `"gyen-gyen"`       | GYEN            |
 
-The full list is in `shared/lib/stablecoins.ts`. The ID registry (`shared/lib/stablecoin-id-registry.ts`) resolves canonical IDs and legacy aliases.
+The full list is in `shared/lib/stablecoins.ts`. The API currently accepts canonical IDs only; legacy route redirects are handled at the frontend/static-export layer, not by the worker ID resolver.
 
 ---
 
@@ -872,7 +872,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `mintBurn.freshnessAgeSec`   | `number \| null`                | Seconds since latest mint/burn event                                                                                                                                                                                                                                                                                                                            |
 | `mintBurn.majorStaleCount`   | `number`                        | Number of configured major symbols currently stale                                                                                                                                                                                                                                                                                                              |
 | `mintBurn.staleMajorSymbols` | `string[]`                      | Symbol list currently marked stale                                                                                                                                                                                                                                                                                                                              |
-| `circuits`                   | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api` |
+| `circuits`                   | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api` |
 
 **`CacheStatus`**
 

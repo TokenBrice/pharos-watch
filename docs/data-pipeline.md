@@ -20,7 +20,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Alerts**: Webhook alert fires on open and close transitions
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-Sources tracked: `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`.
+Sources tracked: `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`.
 
 ### DefiLlama list vs detail API
 
@@ -180,7 +180,7 @@ Untracked coins with market cap > $5M are upserted. Coins found by both sources 
 
 ### Circuit Breaker
 
-Uses `CG_DISCOVERY` — independent from `CG_PRICES`. Open after 5 consecutive failures, probe after 24 hours.
+Uses `CG_DISCOVERY` — independent from `CG_PRICES`, but it still follows the shared circuit-breaker defaults: open after 3 consecutive failures and probe again after 30 minutes.
 
 ### Candidate Lifecycle
 

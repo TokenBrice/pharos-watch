@@ -59,7 +59,7 @@ Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interfa
 
 ### Bluechip Grade
 
-`BluechipGrade` is a union type in `types.ts`: `"A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F"`. Used by `GRADE_COLORS` in `classification.ts` and `GRADE_ORDER` in `bluechip.ts` for compile-time completeness checking.
+`BluechipGrade` is a union type in `shared/types/index.ts`: `"A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F"`. It is used by `GRADE_ORDER` in `src/lib/bluechip.ts` for compile-time completeness checking.
 
 ## Non-USD Peg Handling
 

@@ -59,7 +59,7 @@ Primary source for token prices, market caps, and DEX pool discovery.
 
 **Rate limit in code**: `RATE_LIMITS.COINGECKO_ONCHAIN_MS = 250` ms in `worker/src/lib/rate-limit.ts` (used by `worker/src/lib/coingecko-onchain.ts`)
 
-**Crawl budget**: 5 min max wall-time for CoinGecko onchain pool discovery (`CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS`). This prevents the paid onchain crawl from consuming the entire `sync-dex-liquidity` runtime before scoring and persistence.
+**Crawl budget**: 5 min max wall-time for CoinGecko onchain pool discovery (`CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS`). This keeps the paid onchain crawl inside the dedicated `sync-dex-discovery` runtime budget so later discovery stages and persistence still complete before the Worker wall-clock limit.
 
 **Discovery budget**: Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on the independent `sync-dex-discovery` cron (every 20 min) with a 13-minute in-app budget (14-min cron timeout, 15-min Workers hard limit). Crawl errors count as misses for backoff demotion. `sync-dex-liquidity` no longer calls discovery APIs directly — it reads staged results from `dex_pool_staging`.
 

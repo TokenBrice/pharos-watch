@@ -274,7 +274,7 @@ Users enter stablecoin holdings (coin + USD amount). Derived computations (all c
 
 State: `usePortfolio` hook. Sources (priority): URL `?p=usdc:50000,dai:5000` → `localStorage` → empty. Shared links don't overwrite saved portfolio.
 
-`localStorage` migration behavior: on read, holdings are validated, then legacy DefiLlama-style IDs are resolved to canonical IDs via `resolveStablecoinId(..., { allowLegacy: true })`. Unknown IDs are dropped, duplicate canonical IDs are merged by amount, and migrated data is written back once.
+`localStorage` migration behavior: on read, holdings are validated, then IDs are migrated through the shared registries used by `src/lib/portfolio-codec.ts` (`REGISTRY_BY_ID` first, `REGISTRY_BY_LLAMA_ID` second). Unknown IDs are dropped, duplicate canonical IDs are merged by amount, and migrated data is written back once.
 
 ### Interactive Stress Test
 
@@ -282,7 +282,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. ~233 cards (155 tracked + 78 cemetery) × 5 dimensions = <1ms, no debouncing needed.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. The current snapshot size is ~236 cards (156 tracked + 80 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 

@@ -51,7 +51,6 @@ Primary files:
 - Query param `coins` accepts:
   - canonical ticker-issuer IDs (primary format, e.g. `usdt-tether`)
   - lowercase symbols (legacy fallback)
-  - legacy stablecoin IDs that resolve through `resolveStablecoinId(..., { allowLegacy: true })`
 
 Selected state is normalized back to canonical IDs in the URL to avoid duplicate-symbol collisions and preserve shareable links.
 
@@ -64,6 +63,7 @@ Compare combines multiple query sources:
 - `/api/bluechip-ratings` (`useBluechipRatings`)
 - `/api/dex-liquidity` (`useDexLiquidity`)
 - `/api/report-cards` (`useReportCards`)
+- `/api/mint-burn-flows` (`useMintBurnFlows`)
 - per-coin detail `/api/stablecoin/:id` (via `useQueries`) for supply history charts
 
 It also derives live peg references with `derivePegRates(...)` for commodity/non-USD normalization in displayed prices.
@@ -80,4 +80,4 @@ Compare includes client-side share/export rendering:
 
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/lib/dead-stablecoins.ts`).
-- Compare reliability depends on five independent API datasets plus per-coin detail fetches; partial failures are surfaced via query error/stale-data UI components.
+- Compare reliability depends on six independent API datasets plus per-coin detail fetches; partial failures are surfaced via query error/stale-data UI components.
