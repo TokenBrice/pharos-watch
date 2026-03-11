@@ -1,34 +1,83 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { EndpointProbeResult } from "@shared/types";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { Button } from "@/components/ui/button";
-import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
-import { useHealth } from "@/hooks/use-health";
-import { useStatusHistory, type StatusHistoryWindow } from "@/hooks/use-status-history";
-import { useStatus } from "@/hooks/use-status";
+import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
+import { deriveStatusActionRecommendations } from "@/components/status/action-recommendations";
 import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
 import { AdminKeyForm } from "@/components/status/admin-key-form";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { CronCard } from "@/components/status/cron-card";
+import { getStatusCronDisplay, STATUS_CRON_GROUPS } from "@/components/status/cron-config";
 import { DataQualityCards } from "@/components/status/data-quality-cards";
 import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
+import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
+import { formatAge } from "@/components/status/format";
+import { LiquidityHealthCard } from "@/components/status/liquidity-health";
+import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
+import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { StatusBanner } from "@/components/status/status-banner";
 import { StatusFacts } from "@/components/status/status-facts";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
-import { getStatusCronDisplay, STATUS_CRON_GROUPS } from "@/components/status/cron-config";
-import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
-import { LiquidityHealthCard } from "@/components/status/liquidity-health";
-import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
-import { PriceSourceHealthCard } from "@/components/status/price-source-health";
+import { Button } from "@/components/ui/button";
+import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
+import { useHealth } from "@/hooks/use-health";
+import { useStatusHistory, type StatusHistoryWindow } from "@/hooks/use-status-history";
+import { useStatus } from "@/hooks/use-status";
+import { cn } from "@/lib/utils";
 
 const SESSION_KEY = "pharos-admin-key";
+
+type DashboardSectionId = "overview" | "pipeline" | "reliability" | "crons" | "control" | "history";
+
+interface DashboardSection {
+  id: DashboardSectionId;
+  label: string;
+  kicker: string;
+  title: string;
+  description: string;
+  accentClassName: string;
+  value: string;
+  valueClassName?: string;
+  summary: string;
+}
+
+interface DashboardNotice {
+  id: string;
+  title: string;
+  detail: string;
+  tone: "neutral" | "warning" | "critical";
+}
+
+const STATUS_TONE = {
+  healthy: {
+    label: "Healthy",
+    badgeClassName: "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300",
+    valueClassName: "text-green-700 dark:text-green-400",
+  },
+  degraded: {
+    label: "Degraded",
+    badgeClassName: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    valueClassName: "text-amber-700 dark:text-amber-400",
+  },
+  stale: {
+    label: "Stale",
+    badgeClassName: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+    valueClassName: "text-red-700 dark:text-red-400",
+  },
+} as const;
+
+const SEVERITY_RANK = {
+  critical: 0,
+  warning: 1,
+  info: 2,
+} as const;
 
 function percentile(values: number[], p: number): number | null {
   if (values.length === 0) return null;
@@ -52,6 +101,179 @@ function buildBrowserProbeSummary(
     p95LatencyMs: percentile(latencies, 95),
     updatedAt: updatedAtMs > 0 ? Math.floor(updatedAtMs / 1000) : null,
   };
+}
+
+function formatTimestampSeconds(seconds: number | null | undefined): string {
+  if (seconds == null) return "—";
+  return new Date(seconds * 1000).toLocaleString();
+}
+
+function formatTimestampMs(ms: number): string {
+  if (!ms) return "—";
+  return new Date(ms).toLocaleString();
+}
+
+function formatTransitionLabel(transition: StatusResponse["timeline"][number] | null): string {
+  if (!transition) return "No transition history";
+  return `${transition.from ?? "init"} -> ${transition.to}`;
+}
+
+function getStatusTone(status: StatusResponse["overallStatus"]) {
+  return STATUS_TONE[status];
+}
+
+function getSeverityBadgeClass(severity: StatusCause["severity"]): string {
+  if (severity === "critical") return "bg-red-500/15 text-red-700 dark:text-red-400";
+  if (severity === "warning") return "bg-amber-500/15 text-amber-700 dark:text-amber-400";
+  return "bg-muted text-muted-foreground";
+}
+
+function getNoticeTone(tone: DashboardNotice["tone"]): string {
+  if (tone === "critical") return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+  if (tone === "warning") return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  return "border-border/60 bg-muted/30 text-muted-foreground";
+}
+
+function getTopCauses(causes: StatusResponse["causes"], limit: number): StatusCause[] {
+  const deduped = new Map<string, StatusCause>();
+
+  for (const cause of [...causes.overall, ...causes.availability, ...causes.dataQuality]) {
+    const key = `${cause.layer}:${cause.code}:${cause.message}`;
+    if (!deduped.has(key)) {
+      deduped.set(key, cause);
+    }
+  }
+
+  return [...deduped.values()]
+    .sort((a, b) => {
+      const severityDelta = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+      if (severityDelta !== 0) return severityDelta;
+      return a.code.localeCompare(b.code);
+    })
+    .slice(0, limit);
+}
+
+function SummaryBadge({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("rounded-full border border-border/60 bg-background/45 px-3 py-1.5 text-xs", className)}>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="ml-1.5 font-mono tabular-nums text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function OverviewStat({
+  label,
+  value,
+  detail,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-background/40 p-3.5">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={cn("mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground", valueClassName)}>
+        {value}
+      </div>
+      <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</div>
+    </div>
+  );
+}
+
+function StatusSection({
+  id,
+  kicker,
+  title,
+  description,
+  accentClassName,
+  summary,
+  children,
+}: {
+  id: DashboardSectionId;
+  kicker: string;
+  title: string;
+  description: string;
+  accentClassName: string;
+  summary?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className={cn(
+        "scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] bg-card/82 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28 sm:px-5 lg:px-6",
+        accentClassName,
+      )}
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-2">
+          <p className="pharos-kicker">{kicker}</p>
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]">{title}</h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        {summary ? <div className="flex flex-wrap gap-2 lg:justify-end">{summary}</div> : null}
+      </div>
+      <div className="mt-5 space-y-5">{children}</div>
+    </section>
+  );
+}
+
+function QuickJumpCard({ section }: { section: DashboardSection }) {
+  return (
+    <a
+      href={`#${section.id}`}
+      className={cn(
+        "pharos-focus-ring pharos-card-shell pharos-interactive-card group flex h-full flex-col gap-3 border-l-[3px] bg-gradient-to-b from-background/35 to-transparent p-4",
+        section.accentClassName,
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="pharos-kicker">{section.label}</p>
+          <h3 className="text-base font-semibold tracking-tight text-foreground">{section.title}</h3>
+        </div>
+        <span
+          className={cn(
+            "rounded-full border border-border/60 bg-background/55 px-2.5 py-1 text-[11px] font-medium text-foreground",
+            section.valueClassName,
+          )}
+        >
+          {section.value}
+        </span>
+      </div>
+      <p className="text-sm leading-relaxed text-muted-foreground">{section.summary}</p>
+      <div className="text-xs text-muted-foreground transition-colors group-hover:text-foreground">Open section →</div>
+    </a>
+  );
+}
+
+function NoticeRail({ notices }: { notices: DashboardNotice[] }) {
+  if (notices.length === 0) return null;
+
+  return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      {notices.map((notice) => (
+        <div key={notice.id} className={cn("rounded-xl border px-4 py-3", getNoticeTone(notice.tone))}>
+          <div className="text-sm font-medium">{notice.title}</div>
+          <div className="mt-1 text-xs leading-relaxed opacity-90">{notice.detail}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function StatusClient() {
@@ -163,87 +385,339 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
     ...group,
     entries: cronEntries.filter(([job]) => getStatusCronDisplay(job).group === group.key),
   })).filter((group) => group.entries.length > 0);
+
+  const runningCrons = cronEntries.filter(([, cron]) => cron.inFlight && !cron.inFlight.stale).length;
   const healthDiffersFromStatus = healthData != null && healthData.status !== data.overallStatus;
   const publicHealthNeedsCallout =
     healthData != null &&
     (healthData.status !== "healthy" || healthDiffersFromStatus || healthData.mintBurn.majorStaleCount > 0);
-  const publicHealthTone = healthData?.status === "stale"
-    ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
-    : healthData?.status === "degraded"
-      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-      : "border-border/60 bg-muted/30 text-muted-foreground";
+  const allTransitions = historyData?.transitions ?? data.timeline;
+  const latestTransition = allTransitions[0] ?? null;
+  const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
+  const topCauses = getTopCauses(data.causes, 4);
+  const overallCauseCount = data.causes.availability.length + data.causes.dataQuality.length;
+  const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);
+  const overallTone = getStatusTone(data.overallStatus);
+
+  const notices: DashboardNotice[] = [];
+  if (clientDataStale) {
+    notices.push({
+      id: "client-stale",
+      title: "Client view is lagging",
+      detail: `This browser is ${clientDataAgeSec}s behind the last fetch cycle. Refresh before treating the dashboard as current.`,
+      tone: "warning",
+    });
+  }
+  if (healthError) {
+    notices.push({
+      id: "health-error",
+      title: "Public health endpoint unavailable",
+      detail: healthError.message,
+      tone: "warning",
+    });
+  }
+  if (probesError) {
+    notices.push({
+      id: "probe-error",
+      title: "Browser probe loop unavailable",
+      detail: probesError.message,
+      tone: "warning",
+    });
+  }
+  if (historyError) {
+    notices.push({
+      id: "history-error",
+      title: "Status history unavailable",
+      detail: historyError.message,
+      tone: "warning",
+    });
+  }
+  if (publicHealthNeedsCallout && healthData) {
+    const divergence = healthDiffersFromStatus ? `Public /api/health differs from /api/status (${data.overallStatus}). ` : "";
+    const mintBurn =
+      healthData.mintBurn.majorStaleCount > 0
+        ? `Mint/burn stale majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}. `
+        : "";
+    const freshness =
+      healthData.mintBurn.freshnessAgeSec != null
+        ? `Latest mint/burn event age: ${healthData.mintBurn.freshnessAgeSec}s. `
+        : "";
+
+    notices.push({
+      id: "public-health",
+      title: `Public /api/health reports ${healthData.status}`,
+      detail: `${divergence}${mintBurn}${freshness}Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`,
+      tone: healthData.status === "stale" ? "critical" : healthData.status === "degraded" ? "warning" : "neutral",
+    });
+  }
+
+  const sections: DashboardSection[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      kicker: "Command Center",
+      title: "Current incident picture",
+      description: "State machine counters, root causes, and the operator-facing view of what changed last.",
+      accentClassName: "border-l-frost-blue",
+      value: overallTone.label,
+      valueClassName: overallTone.valueClassName,
+      summary: `${overallCauseCount} active causes, confidence ${(data.confidence * 100).toFixed(1)}%, last change ${formatAge(statusHoldingAge)} ago`,
+    },
+    {
+      id: "pipeline",
+      label: "Pipeline",
+      kicker: "Data Pipeline",
+      title: "Freshness and coverage",
+      description: "Dataset recency, price coverage, supply drift, liquidity coverage, and discovery backlog.",
+      accentClassName: "border-l-cyan-500",
+      value: getStatusTone(data.dataQualityStatus).label,
+      valueClassName: getStatusTone(data.dataQualityStatus).valueClassName,
+      summary: `${data.dataQuality.missingPrices} missing prices, ${data.dataQuality.staleOnchainSupply} stale on-chain feeds, ${data.dataQuality.blacklistMissingAmounts} blacklist gaps`,
+    },
+    {
+      id: "reliability",
+      label: "Reliability",
+      kicker: "Service Health",
+      title: "Probes, breakers, and cache pressure",
+      description: "Browser endpoint probes, public route health, circuit state, and stale cache detection.",
+      accentClassName: "border-l-amber-500",
+      value: browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "No probes",
+      valueClassName:
+        browserProbeSummary && browserProbeSummary.failCount > 0
+          ? "text-amber-700 dark:text-amber-400"
+          : "text-foreground",
+      summary: `${data.summary.cronErrors} cron errors, ${browserProbeSummary?.failCount ?? 0} failing browser probes, worst cache ${data.summary.worstCacheRatio.toFixed(2)}x`,
+    },
+    {
+      id: "crons",
+      label: "Cron Lanes",
+      kicker: "Schedulers",
+      title: "Worker job lanes",
+      description: "Grouped by trigger theme so failures, degraded runs, and in-flight leases are easier to scan.",
+      accentClassName: "border-l-orange-500",
+      value: `${data.summary.unhealthyCrons} unhealthy`,
+      valueClassName:
+        data.summary.unhealthyCrons > 0 ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400",
+      summary: `${cronGroups.length} groups, ${data.summary.degradedCrons} degraded jobs, ${runningCrons} running now`,
+    },
+    {
+      id: "control",
+      label: "Control Plane",
+      kicker: "Operations",
+      title: "Manual response and delivery systems",
+      description: "Recommended actions, manual triggers, and Telegram alert delivery telemetry.",
+      accentClassName: "border-l-emerald-500",
+      value: recommendedActions.length > 0 ? `${recommendedActions.length} suggested` : "Clear",
+      valueClassName:
+        recommendedActions.length > 0 ? "text-amber-700 dark:text-amber-400" : "text-green-700 dark:text-green-400",
+      summary: `${recommendedActions.length} recommended actions, ${data.telegramBot?.deliverableChats ?? 0} alert-ready chats, ${data.telegramBot?.pendingDeliveries ?? 0} pending deliveries`,
+    },
+    {
+      id: "history",
+      label: "History",
+      kicker: "Incident Log",
+      title: "Timeline and recovery trail",
+      description: "Persisted transitions for drills, regressions, and dwell-state validation.",
+      accentClassName: "border-l-rose-500",
+      value: latestTransition ? formatTransitionLabel(latestTransition) : "No transitions",
+      summary: `${allTransitions.length} transitions in view, latest ${latestTransition ? formatAge(Math.max(0, data.timestamp - latestTransition.at)) : "—"} ago`,
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <div className="flex items-center gap-3">
-          <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
-          <Button variant="outline" size="sm" onClick={onSignOut}>
-            Sign out
-          </Button>
-        </div>
-      </div>
+      <section className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-card/90 px-4 py-5 shadow-[0_22px_48px_oklch(0_0_0_/0.16)] sm:px-5 lg:px-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-frost-blue/45 to-transparent" />
+        <div className="pointer-events-none absolute -left-10 top-4 h-32 w-32 rounded-full bg-frost-blue/16 blur-[100px]" />
+        <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-sky-500/8 blur-[110px]" />
+        <div className="relative grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(19rem,0.95fr)]">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">Operator Command Center</p>
+                <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
+              </div>
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
+                Status organized by response path, not by widget order.
+              </h2>
+              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                Start with the active signals, move into the affected lane, then drop into cron-by-cron detail only
+                when a lane actually needs intervention.
+              </p>
+            </div>
 
-      <StatusBanner
-        status={data.overallStatus}
-        timestamp={data.timestamp}
-        availabilityStatus={data.availabilityStatus}
-        dataQualityStatus={data.dataQualityStatus}
-        rawStatus={data.rawOverallStatus}
-        confidence={data.confidence}
-      />
+            <StatusBanner
+              status={data.overallStatus}
+              timestamp={data.timestamp}
+              availabilityStatus={data.availabilityStatus}
+              dataQualityStatus={data.dataQualityStatus}
+              rawStatus={data.rawOverallStatus}
+              confidence={data.confidence}
+            />
 
-      {clientDataStale && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
-          Status page data is stale on the client ({clientDataAgeSec}s since last refresh). Signals may be outdated.
-        </div>
-      )}
-      {healthError && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-          Health endpoint unavailable: {healthError.message}
-        </div>
-      )}
-      {probesError && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-          Endpoint probe checks unavailable: {probesError.message}
-        </div>
-      )}
-      {historyError && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-          Status history unavailable: {historyError.message}
-        </div>
-      )}
-      {publicHealthNeedsCallout && healthData && (
-        <div className={`rounded-lg border px-4 py-3 text-sm ${publicHealthTone}`}>
-          <div className="font-medium">
-            Public <code>/api/health</code> reports {healthData.status}.
-            {healthDiffersFromStatus ? ` This differs from /api/status (${data.overallStatus}).` : ""}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <OverviewStat
+                label="Confidence"
+                value={`${(data.confidence * 100).toFixed(1)}%`}
+                detail={`raw ${data.rawOverallStatus} -> effective ${data.overallStatus}`}
+                valueClassName={overallTone.valueClassName}
+              />
+              <OverviewStat
+                label="Active Causes"
+                value={String(overallCauseCount)}
+                detail={`${data.causes.availability.length} availability, ${data.causes.dataQuality.length} data quality`}
+                valueClassName={
+                  overallCauseCount > 0 ? "text-amber-700 dark:text-amber-400" : "text-green-700 dark:text-green-400"
+                }
+              />
+              <OverviewStat
+                label="Public /api/health"
+                value={healthData?.status ?? "—"}
+                detail={
+                  healthData
+                    ? healthDiffersFromStatus
+                      ? `Differs from admin status (${data.overallStatus})`
+                      : "Matches admin status surface"
+                    : "Health endpoint not loaded"
+                }
+                valueClassName={
+                  healthData
+                    ? getStatusTone(healthData.status).valueClassName
+                    : "text-muted-foreground"
+                }
+              />
+              <OverviewStat
+                label="Running Lanes"
+                value={String(runningCrons)}
+                detail={`${data.summary.cronErrors} cron errors, ${data.summary.degradedCrons} degraded`}
+                valueClassName={
+                  data.summary.cronErrors > 0
+                    ? "text-red-700 dark:text-red-400"
+                    : data.summary.degradedCrons > 0
+                      ? "text-amber-700 dark:text-amber-400"
+                      : "text-green-700 dark:text-green-400"
+                }
+              />
+            </div>
           </div>
-          <div className="mt-1 text-xs">
-            {healthData.mintBurn.majorStaleCount > 0
-              ? `Mint/burn stale majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}. `
-              : ""}
-            {healthData.mintBurn.freshnessAgeSec != null
-              ? `Latest mint/burn event age: ${healthData.mintBurn.freshnessAgeSec}s. `
-              : ""}
-            Blacklist gaps tracked by /api/health: {healthData.blacklist.missingAmounts}.
+
+          <div className="grid gap-4">
+            <div className="rounded-[1.25rem] border border-border/70 bg-background/35 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="pharos-kicker">Session Controls</p>
+                  <h3 className="text-base font-semibold tracking-tight text-foreground">Refresh and auth state</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    This browser session stores the admin key in session storage and polls the status surfaces on an
+                    operator cadence.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={onSignOut}>
+                  Sign out
+                </Button>
+              </div>
+              <div className="mt-4 rounded-xl border border-border/60 bg-background/45 px-3 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">Client refresh loop</div>
+                    <div className="text-xs text-muted-foreground">Last synced {formatTimestampMs(lastUpdated)}.</div>
+                  </div>
+                  <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <SummaryBadge label="Worker Check" value={formatTimestampSeconds(data.timestamp)} />
+                <SummaryBadge
+                  label="Client Age"
+                  value={`${clientDataAgeSec}s`}
+                  className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[1.25rem] border border-border/70 bg-background/35 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="pharos-kicker">Watchlist</p>
+                  <h3 className="text-base font-semibold tracking-tight text-foreground">What needs attention now</h3>
+                </div>
+                <span className="rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-[11px] text-muted-foreground">
+                  {topCauses.length > 0 ? `${topCauses.length} signals` : "clear"}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-2.5">
+                {topCauses.length > 0 ? (
+                  topCauses.map((cause) => (
+                    <div key={`${cause.layer}-${cause.code}-${cause.message}`} className="rounded-xl border border-border/60 bg-background/45 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", getSeverityBadgeClass(cause.severity))}>
+                          {cause.severity}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">{cause.layer}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground">{cause.code}</span>
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-foreground">{cause.message}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-border/60 bg-background/45 p-3 text-sm leading-relaxed text-muted-foreground">
+                    No active causes. Current state has held for {formatAge(statusHoldingAge)}.
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
+                <SummaryBadge label="Last Transition" value={formatTransitionLabel(latestTransition)} />
+                <SummaryBadge
+                  label="Changed"
+                  value={latestTransition ? `${formatAge(Math.max(0, data.timestamp - latestTransition.at))} ago` : "—"}
+                />
+              </div>
+            </div>
           </div>
         </div>
-      )}
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Status Facts</h2>
-        <StatusFacts
-          adminKey={adminKey}
-          dbHealthy={data.dbHealthy}
-          summary={data.summary}
-          causes={data.causes}
-          onActionFinished={handleRefresh}
-        />
       </section>
 
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Status Diagnostics</h2>
+      <NoticeRail notices={notices} />
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <p className="pharos-kicker">Section Map</p>
+          <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {sections.map((section) => (
+            <QuickJumpCard key={section.id} section={section} />
+          ))}
+        </div>
+      </section>
+
+      <LongformScrollspyNav
+        sections={sections.map((section) => ({ id: section.id, label: section.label }))}
+        navAriaLabel="System status sections"
+        railLabel="Jump to Lane"
+        rightSlot={
+          <span className="text-xs text-muted-foreground">
+            Latest worker check {formatTimestampSeconds(data.timestamp)}
+          </span>
+        }
+      />
+
+      <StatusSection
+        id="overview"
+        kicker="Command Center"
+        title="Current incident picture"
+        description="Read this section first. It explains whether the status machine is stable, why it is in this state, and what changed recently."
+        accentClassName="border-l-frost-blue"
+        summary={
+          <>
+            <SummaryBadge label="Overall" value={overallTone.label} className={overallTone.badgeClassName} />
+            <SummaryBadge label="Raw" value={data.rawOverallStatus} />
+            <SummaryBadge label="Confidence" value={`${(data.confidence * 100).toFixed(1)}%`} />
+          </>
+        }
+      >
         <SystemDiagnostics
           state={data.state}
           staleness={data.staleness}
@@ -252,76 +726,128 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
           browserProbe={browserProbeSummary}
           nowSeconds={data.timestamp}
         />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Browser Endpoint Probes</h2>
-        <EndpointHealthGrid probes={probes} isLoading={probesLoading} />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Circuit Breakers</h2>
-        <CircuitBreakerTable circuits={healthData?.circuits} />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Price Source Health</h2>
-        <PriceSourceHealthCard
-          health={data.priceSourceHealth}
-          shadowComparison={data.shadowComparison}
-          nowSeconds={data.timestamp}
-        />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Liquidity Health</h2>
-        <LiquidityHealthCard health={data.liquidityHealth} />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Mint/Burn Reconciliation</h2>
-        <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Admin Actions</h2>
-        <AdminActionsPanel
+        <StatusFacts
           adminKey={adminKey}
-          status={{ causes: data.causes, crons: data.crons }}
-          nowSeconds={data.timestamp}
+          dbHealthy={data.dbHealthy}
+          summary={data.summary}
+          causes={data.causes}
           onActionFinished={handleRefresh}
         />
-      </section>
+      </StatusSection>
 
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Coverage Discovery</h2>
+      <StatusSection
+        id="pipeline"
+        kicker="Data Pipeline"
+        title="Freshness and coverage"
+        description="Use this lane when the issue is data quality rather than routing or cron execution. It groups quality thresholds, dataset recency, source quality, and backlog discovery."
+        accentClassName="border-l-cyan-500"
+        summary={
+          <>
+            <SummaryBadge
+              label="Data Quality"
+              value={getStatusTone(data.dataQualityStatus).label}
+              className={getStatusTone(data.dataQualityStatus).badgeClassName}
+            />
+            <SummaryBadge label="Missing Prices" value={String(data.dataQuality.missingPrices)} />
+            <SummaryBadge label="Stale On-chain" value={String(data.dataQuality.staleOnchainSupply)} />
+          </>
+        }
+      >
+        <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold tracking-tight text-foreground">Quality threshold board</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Stablecoins cache health, blacklist amount gaps, on-chain drift, active depegs, and stale supply
+                samples summarized against the status thresholds.
+              </p>
+            </div>
+            <span
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                getStatusTone(data.dataQualityStatus).badgeClassName,
+              )}
+            >
+              {getStatusTone(data.dataQualityStatus).label}
+            </span>
+          </div>
+          <div className="mt-4">
+            <DataQualityCards dq={{ ...data.dataQuality, nowSeconds: data.timestamp }} />
+          </div>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-2">
+          <PriceSourceHealthCard
+            health={data.priceSourceHealth}
+            shadowComparison={data.shadowComparison}
+            nowSeconds={data.timestamp}
+          />
+          <LiquidityHealthCard health={data.liquidityHealth} />
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-2">
+          <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
+          <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
+        </div>
+
         <DiscoveryCandidatesCard candidates={data.discoveryCandidates} adminKey={adminKey} nowSeconds={data.timestamp} />
-      </section>
+      </StatusSection>
 
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Telegram Bot</h2>
-        <TelegramBotStats
-          telegramBot={data.telegramBot}
-          dispatchCron={data.crons["dispatch-telegram-alerts"]}
-          nowSeconds={data.timestamp}
-        />
-      </section>
+      <StatusSection
+        id="reliability"
+        kicker="Service Health"
+        title="Probes, breakers, and cache pressure"
+        description="Use this lane when the issue looks like routing, availability, or public-service degradation rather than ingestion quality."
+        accentClassName="border-l-amber-500"
+        summary={
+          <>
+            <SummaryBadge
+              label="Public Health"
+              value={healthData?.status ?? "—"}
+              className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
+            />
+            <SummaryBadge
+              label="Browser Probes"
+              value={browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "—"}
+            />
+            <SummaryBadge label="Worst Cache" value={`${data.summary.worstCacheRatio.toFixed(2)}x`} />
+          </>
+        }
+      >
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <EndpointHealthGrid probes={probes} isLoading={probesLoading} />
+          <CircuitBreakerTable circuits={healthData?.circuits} />
+        </div>
+        <CacheFreshnessTable caches={data.caches} />
+      </StatusSection>
 
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Cron Jobs</h2>
-        <div className="space-y-6">
+      <StatusSection
+        id="crons"
+        kicker="Schedulers"
+        title="Worker job lanes"
+        description="Cron cards stay grouped by operational theme so you can scan the affected lane before diving into an individual job."
+        accentClassName="border-l-orange-500"
+        summary={
+          <>
+            <SummaryBadge label="Unhealthy" value={String(data.summary.unhealthyCrons)} />
+            <SummaryBadge label="Degraded" value={String(data.summary.degradedCrons)} />
+            <SummaryBadge label="Running" value={String(runningCrons)} />
+          </>
+        }
+      >
+        <div className="space-y-4">
           {cronGroups.map((group) => (
-            <div key={group.key} className="space-y-3">
+            <div key={group.key} className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-semibold">{group.title}</h3>
-                  <span className="rounded-full border border-border/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <h3 className="text-base font-semibold tracking-tight text-foreground">{group.title}</h3>
+                  <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                     {group.badge}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">{group.description}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{group.description}</p>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
                 {group.entries.map(([job, cron]) => (
                   <CronCard key={job} job={job} cron={cron} nowSeconds={data.timestamp} />
                 ))}
@@ -329,26 +855,56 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
             </div>
           ))}
         </div>
-      </section>
+      </StatusSection>
 
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Data Quality</h2>
-        <DataQualityCards dq={{ ...data.dataQuality, nowSeconds: data.timestamp }} />
-      </section>
+      <StatusSection
+        id="control"
+        kicker="Operations"
+        title="Manual response and delivery systems"
+        description="Manual triggers and alert-delivery telemetry live together here so recovery actions and downstream operator comms are easy to cross-check."
+        accentClassName="border-l-emerald-500"
+        summary={
+          <>
+            <SummaryBadge label="Suggested Actions" value={String(recommendedActions.length)} />
+            <SummaryBadge label="Alert-ready Chats" value={String(data.telegramBot?.deliverableChats ?? 0)} />
+            <SummaryBadge label="Pending Deliveries" value={String(data.telegramBot?.pendingDeliveries ?? 0)} />
+          </>
+        }
+      >
+        <AdminActionsPanel
+          adminKey={adminKey}
+          status={{ causes: data.causes, crons: data.crons }}
+          nowSeconds={data.timestamp}
+          onActionFinished={handleRefresh}
+        />
+        <TelegramBotStats
+          telegramBot={data.telegramBot}
+          dispatchCron={data.crons["dispatch-telegram-alerts"]}
+          nowSeconds={data.timestamp}
+        />
+      </StatusSection>
 
-      <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
-
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Incident Timeline</h2>
+      <StatusSection
+        id="history"
+        kicker="Incident Log"
+        title="Timeline and recovery trail"
+        description="Use the persisted transition history to validate dwell behavior, correlate incidents, and confirm recovery paths over different windows."
+        accentClassName="border-l-rose-500"
+        summary={
+          <>
+            <SummaryBadge label="Window" value={historyWindow} />
+            <SummaryBadge label="Transitions" value={String(allTransitions.length)} />
+            <SummaryBadge label="Latest" value={latestTransition ? formatTransitionLabel(latestTransition) : "—"} />
+          </>
+        }
+      >
         <TransitionTimeline
-          transitions={historyData?.transitions ?? data.timeline}
+          transitions={allTransitions}
           window={historyWindow}
           onWindowChange={setHistoryWindow}
           isLoading={historyLoading}
         />
-      </section>
-
-      <CacheFreshnessTable caches={data.caches} />
+      </StatusSection>
     </div>
   );
 }

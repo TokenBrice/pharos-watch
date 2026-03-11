@@ -26,6 +26,11 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - Page: `src/app/status/page.tsx`
 - Client implementation: `src/app/status/client.tsx`
 - Decomposed UI components: `src/components/status/*`
+- The page shell now adds a command-center top fold above the widget stack:
+  - consolidated overall-status hero (`StatusBanner`) + operator watchlist
+  - session controls (`RefreshCountdown`, sign-out, worker/client timestamp chips)
+  - a quick-jump card grid that mirrors the major operational lanes
+  - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
 - Metadata disables indexing (`robots: { index: false, follow: false }`)
 
 ### Data hooks
@@ -51,12 +56,14 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup, plus the exact cron expression and whether the trigger is shared vs isolated
   - When a leased job is still running, cards surface `running` / `running-stale` state from `crons[*].inFlight`
   - Shared display metadata now comes from `shared/lib/cron-jobs.ts`, which also feeds worker interval expectations
-- Status-specific sections now include:
-  - `Status Facts`: summary counters + machine-readable causes with optional inline remediation actions
-  - `Status Diagnostics`: worker-side self-check, browser-side probe loop, divergence, and state-machine counters
-  - `Mint/Burn Reconciliation`: 24h Ethereum flow-vs-chain-supply delta comparison for tracked flow coins
-  - `Dataset Freshness`: last-writer timestamps by dataset domain and expected freshness based on owning cron cadence
-  - `Incident Timeline`: filtered history windows with expandable persisted causes per transition
+- The client now groups widgets into six operational lanes instead of one flat vertical list:
+  - `Overview`: state machine, divergence counters, summary facts, and remediation-linked causes
+  - `Pipeline`: data-quality threshold board, price-source health, liquidity health, dataset freshness, mint/burn reconciliation, and discovery backlog
+  - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, and cache freshness
+  - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers
+  - `Control Plane`: admin actions and Telegram delivery telemetry
+  - `History`: filtered incident timeline windows
+- Runtime warnings (`client stale`, `/api/health` divergence, hook fetch failures) are collapsed into a shared notice rail above the section map instead of rendering as separate free-floating banners.
 
 ### Endpoint groups
 
