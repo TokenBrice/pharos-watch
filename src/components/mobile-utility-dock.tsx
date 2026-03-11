@@ -7,10 +7,12 @@ import { cn } from "@/lib/utils";
 
 export function MobileUtilityDock() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     function onScroll() {
+      setShowFeedback(window.scrollY > 24);
       setShowScrollTop(window.scrollY > 400);
     }
 
@@ -21,12 +23,21 @@ export function MobileUtilityDock() {
 
   return (
     <>
-      <div className="pointer-events-none fixed inset-x-0 bottom-[max(0.875rem,env(safe-area-inset-bottom))] z-50 flex justify-end px-4 sm:hidden">
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-[max(0.875rem,env(safe-area-inset-bottom))] z-50 flex justify-end px-4 transition-[opacity,transform] duration-200 sm:hidden",
+          showFeedback
+            ? "pointer-events-none visible translate-y-0 opacity-100"
+            : "pointer-events-none invisible translate-y-2 opacity-0",
+        )}
+      >
         <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/92 p-1 shadow-[0_14px_38px_oklch(0_0_0_/0.28)] backdrop-blur-md">
           <button
             type="button"
             onClick={() => setFeedbackOpen(true)}
             aria-label="Send feedback"
+            aria-hidden={!showFeedback}
+            tabIndex={showFeedback ? 0 : -1}
             className="pharos-focus-ring flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_18px_oklch(0_0_0_/0.22)]"
           >
             <MessageSquarePlus className="h-4 w-4" />

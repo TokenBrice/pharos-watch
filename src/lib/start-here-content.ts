@@ -26,6 +26,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 export interface StartHereGoal {
   title: string;
   description: string;
+  mobileDescription?: string;
   href: string;
   cta: string;
   destinations: readonly string[];
@@ -43,16 +44,6 @@ export interface StartHereFact {
 export interface StartHereGlossaryItem {
   term: string;
   meaning: string;
-}
-
-export interface StartHerePath {
-  title: string;
-  audience: string;
-  outcome: string;
-  href: string;
-  cta: string;
-  borderClass: string;
-  steps: readonly string[];
 }
 
 export interface StartHereAtlasItem {
@@ -83,6 +74,7 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
   {
     title: "Check market health",
     description: "Start with the dashboard, then read PSI and current peg stress before you zoom into any one asset.",
+    mobileDescription: "Start with the dashboard, PSI, and current depeg stress.",
     href: "/",
     cta: "Open dashboard",
     destinations: ["Dashboard", "Stability Index", "Depeg Tracker"],
@@ -92,7 +84,9 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
   },
   {
     title: "Research one stablecoin",
-    description: "Use the directory as your launch point, then open the coin page, safety grade, liquidity view, and dependency context.",
+    description:
+      "Use the directory as your launch point, then open the coin page, safety grade, liquidity view, and dependency context.",
+    mobileDescription: "Open the directory, then jump to detail, safety, and liquidity.",
     href: "/stablecoins/usd/",
     cta: "Browse the directory",
     destinations: ["Directory", "Detail page", "Safety + Liquidity"],
@@ -103,6 +97,7 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
   {
     title: "Compare several coins",
     description: "Build a shortlist side by side and pressure-test it with the portfolio lens before you commit size.",
+    mobileDescription: "Build a shortlist side by side, then pressure-test it in portfolio view.",
     href: "/compare/",
     cta: "Open compare",
     destinations: ["Compare", "Portfolio", "Safety Scores"],
@@ -112,7 +107,9 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
   },
   {
     title: "Find safer yield",
-    description: "Start from ranked opportunities, then verify the underlying stablecoin risk instead of optimizing for APY alone.",
+    description:
+      "Start from ranked opportunities, then verify the underlying stablecoin risk instead of optimizing for APY alone.",
+    mobileDescription: "Rank opportunities first, then verify the stablecoin before chasing APY.",
     href: "/yield/",
     cta: "Open yield intelligence",
     destinations: ["Yield", "Safety Scores", "Coin detail"],
@@ -123,6 +120,7 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
   {
     title: "Set up alerts",
     description: "Use Telegram if you want Pharos to watch depegs, DEWS band shifts, and daily grade changes for you.",
+    mobileDescription: "Use Telegram for depegs, DEWS shifts, and daily grade changes.",
     href: "/telegram/",
     cta: "Set up Telegram alerts",
     destinations: ["Telegram", "Depeg alerts", "Daily updates"],
@@ -166,7 +164,8 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   },
   {
     term: "Safety score",
-    meaning: "The composite risk grade that rolls peg behavior, liquidity, resilience, decentralization, and dependency into one view.",
+    meaning:
+      "The composite risk grade that rolls peg behavior, liquidity, resilience, decentralization, and dependency into one view.",
   },
   {
     term: "Liquidity score",
@@ -183,45 +182,6 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   {
     term: "PSI",
     meaning: "Pharos Stability Index. It is the market-wide stress barometer for the whole stablecoin system.",
-  },
-] as const;
-
-export const START_HERE_PATHS: readonly StartHerePath[] = [
-  {
-    title: "In 60 seconds",
-    audience: "Best for first-time visitors and quick morning scans.",
-    outcome: "You leave knowing whether the market is calm, where stress is showing up, and whether to dig deeper.",
-    href: "/",
-    cta: "Run the fast scan",
-    borderClass: "border-l-cyan-500",
-    steps: ["Dashboard", "Stability Index", "Depeg Tracker"],
-  },
-  {
-    title: "Research one coin",
-    audience: "Best for due diligence before using a new stablecoin.",
-    outcome: "You see structure, risk grade, liquidity support, and hidden upstream dependencies before you size in.",
-    href: "/stablecoins/usd/",
-    cta: "Start from the directory",
-    borderClass: "border-l-sky-500",
-    steps: ["Directory or search", "Coin detail", "Safety, liquidity, dependency"],
-  },
-  {
-    title: "Build a shortlist",
-    audience: "Best when choosing between two to five candidates.",
-    outcome: "You compare metrics side by side, then test what your mix still concentrates into.",
-    href: "/compare/",
-    cta: "Build a comparison set",
-    borderClass: "border-l-emerald-500",
-    steps: ["Compare", "Portfolio", "Telegram alerts"],
-  },
-  {
-    title: "Yield with guardrails",
-    audience: "Best for users who care about APY but do not want to lose risk context.",
-    outcome: "You rank opportunities by risk-adjusted yield, then confirm the stablecoin itself deserves trust.",
-    href: "/yield/",
-    cta: "Review yield opportunities",
-    borderClass: "border-l-amber-500",
-    steps: ["Yield Intelligence", "Safety Scores", "Coin detail"],
   },
 ] as const;
 
@@ -368,7 +328,8 @@ export const START_HERE_SHORTCUTS: readonly StartHereShortcut[] = [
   },
   {
     title: "Browse by taxonomy",
-    description: "Use the peg, backing, and governance landing pages when you want to scan a category instead of a ticker.",
+    description:
+      "Use the peg, backing, and governance landing pages when you want to scan a category instead of a ticker.",
     detail: "Good for questions like 'show me EUR stablecoins' or 'which DeFi names are crypto-backed'.",
     href: "/stablecoins/usd/",
     cta: "Open the directory",

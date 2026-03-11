@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import {
-  FeatureStatusBadge,
-  type FeatureStatus,
-} from "@/components/feature-status-badge";
+import { FeatureStatusBadge, type FeatureStatus } from "@/components/feature-status-badge";
 import { cn } from "@/lib/utils";
 
 interface FeaturePageShellProps {
@@ -54,18 +51,19 @@ export function FeaturePageShell({
       {preface}
       <div className="space-y-2.5">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
-          <Link href="/" className="pharos-focus-ring rounded-sm hover:text-foreground">Dashboard</Link>
+          <Link
+            href="/"
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-3 text-foreground hover:text-foreground sm:min-h-0 sm:rounded-sm sm:border-0 sm:bg-transparent sm:px-0 sm:text-inherit"
+          >
+            Dashboard
+          </Link>
           <span>/</span>
           <span className="text-foreground">{breadcrumbLabel ?? breadcrumbName}</span>
         </nav>
         <div className="flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-2">
           <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
-            <h1 className="min-w-0 text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">
-              {title}
-            </h1>
-            {statusBadge && (
-              <FeatureStatusBadge status={statusBadge.status} version={statusBadge.version} />
-            )}
+            <h1 className="min-w-0 text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">{title}</h1>
+            {statusBadge && <FeatureStatusBadge status={statusBadge.status} version={statusBadge.version} />}
           </div>
           {headerActions}
         </div>

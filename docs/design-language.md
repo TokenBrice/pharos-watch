@@ -55,7 +55,7 @@ Public pages use this shell:
 
 - Desktop sidebar width: `220px`
 - Mobile header height: `h-14`
-- Mobile utility dock: fixed bottom-right dock on `<640px` with shared feedback + scroll-to-top placement
+- Mobile utility dock: fixed bottom-right dock on `<640px` with shared feedback + scroll-to-top placement; the dock stays hidden until the first scroll so it does not cover top-fold content
 - Main content and footer reserve bottom safe space via `pharos-mobile-utility-safe` + `--mobile-utility-safe-offset`
 - Main container padding:
   - Mobile: `px-4`
@@ -89,9 +89,10 @@ Most routes use:
 The `/start/` orientation route keeps the shared breadcrumb/title shell, then shifts into a broader planning-board layout:
 
 - Wrapper: `mx-auto max-w-6xl space-y-8`
-- Hero shell: large rounded gradient surface with left-aligned onboarding copy and a right-side route board
+- Hero shell: large rounded token-gradient surface with left-aligned onboarding copy and a right-side route board
 - Route board: staggered grid of CTA cards, with the dominant top and bottom routes spanning two columns on `sm+`
-- Follow-up sections use glossary cards, workflow cards, grouped feature-atlas cards, and shortcut cards instead of one long prose stream
+- Mobile top fold compresses the hero copy so the first route card stays visible above the fold
+- Follow-up sections use glossary cards, flattened feature-atlas groups, and shortcut cards instead of one long prose stream
 
 ### Home Dashboard (Special)
 
@@ -187,8 +188,8 @@ The dedicated `/start/` route extends the same language into a full-page onboard
 
 - large hero shell with route-selection cards instead of a single preview panel
 - compact fact blocks embedded in the copy column
-- glossary and workflow sections beneath the hero
-- grouped feature-atlas and shortcut cards for optional progressive discovery
+- glossary cards beneath the hero
+- flattened feature-atlas groups plus shortcut cards for optional progressive discovery
 
 ---
 
