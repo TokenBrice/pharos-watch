@@ -3087,7 +3087,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("dusd-dtrinity", "dTRINITY dUSD", "dUSD", "crypto-backed", "centralized-dependent", {
     detailProvider: "coingecko",
     geckoId: "dtrinity-usd",
-    yieldBearing: false, rwa: false, navToken: false,
+    yieldBearing: true, rwa: false, navToken: false,
     collateral: "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
     pegMechanism: "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
     links: [
