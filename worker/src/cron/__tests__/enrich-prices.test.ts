@@ -439,6 +439,55 @@ describe("enrichMissingPrices", () => {
     expect(stats.pass3).toBe(0);
     expect(stats.pass4).toBe(0);
   });
+
+  it("still uses stale FX cache for DexScreener fallback in enrichment (characterization)", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedJPY: 0.0067 }),
+          updated_at: nowSec - (8 * 3600),
+        },
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    const assets: PeggedAsset[] = [
+      {
+        id: "jpyc-jpyc",
+        name: "JPYC",
+        symbol: "JPYC",
+        price: 0,
+        pegType: "peggedJPY",
+        circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "dexscreener.com",
+        body: {
+          pairs: [
+            {
+              baseToken: { symbol: "JPYC" },
+              quoteToken: { symbol: "USDT" },
+              priceUsd: "0.0005",
+              liquidity: { usd: 100_000 },
+              chainId: "ethereum",
+            },
+          ],
+        },
+      },
+    ]);
+
+    const stats = await enrichMissingPrices(assets, undefined, db);
+
+    expect(stats.pass4).toBe(1);
+    expect(assets[0].price).toBe(0.0005);
+  });
 });
 
 // --- fetchDualPrimaryPrices tests ---
@@ -511,6 +560,37 @@ describe("fetchDualPrimaryPrices", () => {
     expect(result.confidence).toBe("low");
     expect(stats.low).toBe(1);
     expect(stats.divergences.length).toBe(1);
+  });
+
+  it("currently defaults non-USD divergences to DefiLlama rather than the peg-closer value", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "eurc-circle", name: "EURC", symbol: "EURC", geckoId: "euro-coin", pegType: "peggedEUR", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coins.llama.fi")) {
+        return new Response(JSON.stringify({
+          coins: { "coingecko:euro-coin": { price: 1.8 } },
+        }), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "euro-coin": { usd: 1.08 },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const db = makeTestDb();
+    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+
+    expect(results.size).toBe(1);
+    const result = results.get("eurc-circle")!;
+    expect(result.confidence).toBe("low");
+    expect(result.source).toBe("defillama");
+    expect(result.price).toBe(1.8);
+    expect(result.cgPrice).toBe(1.08);
+    expect(stats.low).toBe(1);
   });
 
   it("does not force closer-to-$1 selection for NAV tokens during divergence", async () => {

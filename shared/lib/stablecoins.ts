@@ -3969,6 +3969,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("apxusd-apyx", "apxUSD", "apxUSD", "rwa-backed", "centralized", {
     llamaId: "354",
+    geckoId: "apxusd",
     rwa: true,
     collateral: "Preferred shares issued by Digital Asset Treasuries (DATs) — publicly traded preferred equity from companies holding digital assets (e.g., Strategy STRC); variable-rate instruments designed to trade near par value",
     pegMechanism: "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",

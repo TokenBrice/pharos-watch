@@ -34,6 +34,12 @@ import { StablecoinListResponseSchema } from "@shared/types";
 import type { PriceSourceHealth } from "@shared/types";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { sendAlert } from "../lib/alerts";
+import {
+  buildPriceValidationContext,
+  validatePriceCandidate,
+  type PriceValidationDecision,
+  type PriceValidationReferences,
+} from "../lib/price-validation";
 
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
@@ -42,6 +48,24 @@ type StablecoinsPayload = {
   peggedAssets: PeggedAsset[];
   fxFallbackRates?: Record<string, number>;
 };
+
+interface PriceValidationShadowMetadata {
+  compared: number;
+  matched: number;
+  mismatched: number;
+  mismatchRate: number;
+  mismatchBreakdown: Record<string, number>;
+  sampleMismatches: Array<{
+    stage: string;
+    id: string;
+    symbol: string;
+    price: number;
+    legacyAccepted: boolean;
+    newAccepted: boolean;
+    reasonCode: string;
+    referenceType: string;
+  }>;
+}
 
 type SyncCacheWriteMode = "main-write" | "fallback-write" | "blocked-invalid-payload" | "no-write";
 interface SyncCapabilities {
@@ -102,6 +126,55 @@ function normalizeStablecoinsPayload(payload: StablecoinsPayload): StablecoinsPa
 function summarizeValidationIssues(issues: string): string {
   if (issues.length <= VALIDATION_ISSUES_MAX_CHARS) return issues;
   return `${issues.slice(0, VALIDATION_ISSUES_MAX_CHARS)}...`;
+}
+
+function createPriceValidationShadowMetadata(): PriceValidationShadowMetadata {
+  return {
+    compared: 0,
+    matched: 0,
+    mismatched: 0,
+    mismatchRate: 0,
+    mismatchBreakdown: {},
+    sampleMismatches: [],
+  };
+}
+
+function shadowDecisionModeForAsset(asset: PeggedAsset): "primary_authoritative" | "fallback_enrichment" {
+  return asset.priceConfidence === "fallback" ||
+    asset.priceSource === "coinmarketcap" ||
+    asset.priceSource === "dexscreener" ||
+    asset.priceSource === "cached"
+    ? "fallback_enrichment"
+    : "primary_authoritative";
+}
+
+function recordPriceValidationShadow(
+  stats: PriceValidationShadowMetadata,
+  stage: string,
+  asset: PeggedAsset,
+  price: number,
+  legacyAccepted: boolean,
+  decision: PriceValidationDecision,
+): void {
+  stats.compared += 1;
+  if (legacyAccepted === decision.accepted) {
+    stats.matched += 1;
+  } else {
+    stats.mismatched += 1;
+    stats.mismatchBreakdown[stage] = (stats.mismatchBreakdown[stage] ?? 0) + 1;
+    if (stats.sampleMismatches.length < 10) {
+      stats.sampleMismatches.push({
+        stage,
+        id: String(asset.id),
+        symbol: asset.symbol,
+        price,
+        legacyAccepted,
+        newAccepted: decision.accepted,
+        reasonCode: decision.reasonCode,
+        referenceType: decision.referenceType,
+      });
+    }
+  }
 }
 
 function buildSyncMetadata(
@@ -521,6 +594,10 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       console.warn(`[sync-stablecoins] Ignoring stale FX cache (${fxAgeSec}s old)`);
     }
   }
+  const validationReferences: PriceValidationReferences | undefined = fxRates
+    ? { rates: fxRates, type: "fresh", updatedAt: fxCacheEarly?.updatedAt ?? syncStartSec }
+    : undefined;
+  const priceValidationShadow = createPriceValidationShadowMetadata();
 
   // --- Dual-primary price validation ---
   // Cross-validate DL coins API and CG prices for higher confidence
@@ -566,9 +643,24 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Apply dual-primary results — these override the DL list endpoint prices
   for (const asset of llamaData.peggedAssets) {
     const dual = dualPriceResults.get(asset.id);
-    if (dual && isReasonablePriceForAsset(asset, dual.price, fxRates)) {
-      asset.price = dual.price;
-      stampPriceMetadata(asset, dual.source, dual.confidence, syncStartSec);
+    if (dual) {
+      const legacyAccepted = isReasonablePriceForAsset(asset, dual.price, fxRates);
+      const decision = validatePriceCandidate(
+        dual.price,
+        buildPriceValidationContext({
+          stablecoinId: String(asset.id),
+          pegType: asset.pegType as string | undefined,
+          navToken: asset.navToken,
+          commodityOunces: asset.commodityOunces,
+        }),
+        "primary_authoritative",
+        validationReferences,
+      );
+      recordPriceValidationShadow(priceValidationShadow, "dual_primary_apply", asset, dual.price, legacyAccepted, decision);
+      if (legacyAccepted) {
+        asset.price = dual.price;
+        stampPriceMetadata(asset, dual.source, dual.confidence, syncStartSec);
+      }
     } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
       // DL list provided a price but no dual-primary result — single-source
       stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec);
@@ -587,12 +679,26 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     if (
       asset.price != null &&
       typeof asset.price === "number" &&
-      asset.price !== 0 &&
-      !isReasonablePriceForAsset(asset, asset.price, fxRates)
+      asset.price !== 0
     ) {
-      console.warn(`[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
-      asset.price = 0; // hasMissingPrice() treats 0 as missing
-      stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
+      const legacyAccepted = isReasonablePriceForAsset(asset, asset.price, fxRates);
+      const decision = validatePriceCandidate(
+        asset.price,
+        buildPriceValidationContext({
+          stablecoinId: String(asset.id),
+          pegType: asset.pegType as string | undefined,
+          navToken: asset.navToken,
+          commodityOunces: asset.commodityOunces,
+        }),
+        "primary_authoritative",
+        validationReferences,
+      );
+      recordPriceValidationShadow(priceValidationShadow, "pre_reject", asset, asset.price, legacyAccepted, decision);
+      if (!legacyAccepted) {
+        console.warn(`[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
+        asset.price = 0; // hasMissingPrice() treats 0 as missing
+        stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
+      }
     }
   }
 
@@ -615,11 +721,26 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Must run before savePriceCache so bad prices don't persist for 24h
   let rejectedCount = 0;
   for (const asset of llamaData.peggedAssets) {
-    if (asset.price != null && typeof asset.price === "number" && !isReasonablePriceForAsset(asset, asset.price, fxRates)) {
-      console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
-      asset.price = null;
-      asset.priceUpdatedAt = null;
-      rejectedCount++;
+    if (asset.price != null && typeof asset.price === "number") {
+      const legacyAccepted = isReasonablePriceForAsset(asset, asset.price, fxRates);
+      const decision = validatePriceCandidate(
+        asset.price,
+        buildPriceValidationContext({
+          stablecoinId: String(asset.id),
+          pegType: asset.pegType as string | undefined,
+          navToken: asset.navToken,
+          commodityOunces: asset.commodityOunces,
+        }),
+        shadowDecisionModeForAsset(asset),
+        validationReferences,
+      );
+      recordPriceValidationShadow(priceValidationShadow, "post_enrichment_reject", asset, asset.price, legacyAccepted, decision);
+      if (!legacyAccepted) {
+        console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
+        asset.price = null;
+        asset.priceUpdatedAt = null;
+        rejectedCount++;
+      }
     }
   }
   if (rejectedCount > 0) {
@@ -652,10 +773,25 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     let fallbackCount = 0;
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
-      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL && isReasonablePriceForAsset(asset, cached.price, fxRates)) {
-        asset.price = cached.price;
-        stampPriceMetadata(asset, "cached", "fallback", cached.updatedAt);
-        fallbackCount++;
+      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL) {
+        const legacyAccepted = isReasonablePriceForAsset(asset, cached.price, fxRates);
+        const decision = validatePriceCandidate(
+          cached.price,
+          buildPriceValidationContext({
+            stablecoinId: String(asset.id),
+            pegType: asset.pegType as string | undefined,
+            navToken: asset.navToken,
+            commodityOunces: asset.commodityOunces,
+          }),
+          "fallback_enrichment",
+          validationReferences,
+        );
+        recordPriceValidationShadow(priceValidationShadow, "cached_fallback", asset, cached.price, legacyAccepted, decision);
+        if (legacyAccepted) {
+          asset.price = cached.price;
+          stampPriceMetadata(asset, "cached", "fallback", cached.updatedAt);
+          fallbackCount++;
+        }
       }
     }
     if (fallbackCount > 0) {
@@ -830,6 +966,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     missingPrices: finalMissing,
     priceSourceHealth,
     shadowComparison,
+    priceValidationShadow: {
+      ...priceValidationShadow,
+      mismatchRate: priceValidationShadow.compared > 0
+        ? priceValidationShadow.mismatched / priceValidationShadow.compared
+        : 0,
+    },
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
   if (depegErrorCount > 0) {

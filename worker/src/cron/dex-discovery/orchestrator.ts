@@ -3,6 +3,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
+import { getDexPriceValidationShadowStats, resetDexPriceValidationShadowStats } from "../dex-liquidity/price-sanity";
 import type { DiscoveryMeta } from "./types";
 import { DISCOVERY_TIERS } from "./types";
 import { crawlCoin } from "./crawl-sources";
@@ -141,6 +142,7 @@ export async function syncDexDiscovery(
   const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
 
   try {
+    resetDexPriceValidationShadowStats();
     throwIfAborted(signal);
 
     const liquidityCoverage = await readLiquidityCoverage(db);
@@ -270,6 +272,7 @@ export async function syncDexDiscovery(
         runSeq,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
+        priceValidationShadow: getDexPriceValidationShadowStats(),
       }),
     };
   } catch (err) {
@@ -286,6 +289,7 @@ export async function syncDexDiscovery(
         runSeq,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
+        priceValidationShadow: getDexPriceValidationShadowStats(),
         error,
       }),
     };

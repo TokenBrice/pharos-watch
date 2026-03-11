@@ -99,6 +99,15 @@ vi.mock("../enrich-prices", () => ({
     results: new Map(),
     stats: { attempted: 0, high: 0, singleSource: 0, low: 0, divergences: [] },
   })),
+  computeShadowComparison: vi.fn(() => ({
+    totalCompared: 0,
+    meanDivergenceBps: 0,
+    p95DivergenceBps: 0,
+    maxDivergenceBps: 0,
+    coverageLost: 0,
+    coverageGained: 0,
+    cgAvailable: false,
+  })),
 }));
 
 // Stub detect-depegs and confirm-pending-depegs
@@ -707,6 +716,89 @@ describe("syncStablecoins", () => {
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const normalized = payload?.peggedAssets.find((a) => a.id === "ggbr-goldfish-gold");
     expect(normalized?.price).toBe(5.15);
+  });
+
+  it("ignores stale FX cache in sync-time sanity checks (characterization)", async () => {
+    const actual = await vi.importActual<typeof import("../enrich-prices")>("../enrich-prices");
+    vi.mocked(isReasonablePrice).mockImplementation(actual.isReasonablePrice);
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedJPY: 0.0067 }),
+          updated_at: nowSec - (8 * 3600),
+        },
+      },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+      { match: "cache", rows: [] },
+    ]);
+
+    const dlData = makeDlResponse(60);
+    const target = dlData.peggedAssets[0] as Record<string, unknown>;
+    target.id = "jpyc-jpyc";
+    target.name = "JPYC";
+    target.symbol = "JPYC";
+    target.price = 0.0005;
+    target.pegType = "peggedJPY";
+
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      priceValidationShadow?: { mismatched: number; mismatchBreakdown?: Record<string, number> };
+    };
+    expect(metadata.priceValidationShadow?.mismatched).toBeGreaterThan(0);
+    expect(metadata.priceValidationShadow?.mismatchBreakdown?.pre_reject).toBeGreaterThan(0);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins"
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const normalized = payload?.peggedAssets.find((a) => a.id === "jpyc-jpyc");
+    expect(normalized?.price).toBeNull();
+  });
+
+  it("caps sync shadow mismatch samples at 10 entries", async () => {
+    const actual = await vi.importActual<typeof import("../enrich-prices")>("../enrich-prices");
+    vi.mocked(isReasonablePrice).mockImplementation(actual.isReasonablePrice);
+
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    for (let i = 0; i < 12; i++) {
+      const asset = dlData.peggedAssets[i] as Record<string, unknown>;
+      asset.id = `jpy-shadow-${i}`;
+      asset.symbol = `JP${i}`;
+      asset.price = 0.0005;
+      asset.pegType = "peggedJPY";
+    }
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      priceValidationShadow?: { mismatched: number; sampleMismatches?: Array<unknown> };
+    };
+    expect(metadata.priceValidationShadow?.mismatched).toBeGreaterThanOrEqual(12);
+    expect(metadata.priceValidationShadow?.sampleMismatches).toHaveLength(10);
   });
 
   it("adds tracked gold supplemental assets when DefiLlama price data is empty but CoinGecko still has price and market cap", async () => {

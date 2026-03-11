@@ -99,10 +99,13 @@ describe("syncDexLiquidity", () => {
       stagedPoolsSkippedByAddress?: number;
       stagedPoolsSkippedByFingerprint?: number;
       sourceCoverage?: { nearCoverageGuard?: boolean };
+      priceValidationShadow?: { comparedObs?: number; deltaAccepted?: number };
     };
     expect(metadata.failedSources).toEqual([]);
     expect(metadata.stagedPoolsSkippedByAddress).toBe(0);
     expect(metadata.stagedPoolsSkippedByFingerprint).toBe(0);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
+    expect(metadata.priceValidationShadow?.comparedObs).toBe(0);
+    expect(metadata.priceValidationShadow?.deltaAccepted).toBe(0);
   });
 });
