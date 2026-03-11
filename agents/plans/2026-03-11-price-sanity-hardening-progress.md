@@ -8,7 +8,7 @@
 **Current gate:** Gate B pending deploy + observation  
 **Next action:** Deploy the current branch, observe shadow validation metadata for at least 24 hours, then decide whether TICKET-004 can begin
 **Current branch:** `main`
-**Last verified commit:** `6952d4ef`
+**Last verified commit:** `e7f4a5f9`
 
 ## Ticket Checklist
 
@@ -125,6 +125,7 @@ Use this section to record actual outcomes for the required canaries:
 - TICKET-001: characterization tests added for BRL alias, KAU/CGO/ GGBR commodity canaries, OUSG/FPI behavior, non-USD dual-primary divergence, and stale-FX sync vs enrichment contrast
 - TICKET-002: additive `worker/src/lib/price-validation.ts` core added with canonical context builder, reference loader, structured validator, and pure unit coverage
 - TICKET-003: sync and DEX shadow-validation metadata added without changing live acceptance; sync sample mismatches capped, DEX shadow counters emitted into cron metadata
+- Deployment commit: `e7f4a5f9 feat(worker): add price-sanity shadow validation telemetry`
 - TICKET-004:
 - TICKET-005:
 - TICKET-006:
