@@ -640,8 +640,8 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           </div>
         </CardHeader>
       )}
-      <CardContent className={showHeader ? "flex flex-col pb-4" : "flex h-full min-h-0 flex-col gap-2.5 p-3 sm:p-4"}>
-        <div className={cn(showHeader ? undefined : "flex min-h-0 flex-1 items-start justify-center")}>
+      <CardContent className={showHeader ? "flex flex-col pb-4" : "flex flex-col gap-2.5 p-3 sm:p-4"}>
+        <div className={cn(showHeader ? undefined : "flex items-start justify-center")}>
           <DEWSRadar
             elevated={elevated}
             calmDots={calmDots}

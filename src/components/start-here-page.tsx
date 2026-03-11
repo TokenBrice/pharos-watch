@@ -20,7 +20,56 @@ function toDomId(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+const HERO_GOAL_OFFSETS = [
+  "lg:-translate-x-3",
+  "lg:translate-x-3 lg:translate-y-5",
+  "lg:-translate-x-5 lg:-translate-y-3",
+  "lg:translate-x-2 lg:translate-y-6",
+  "lg:-translate-y-4",
+] as const;
+
+function resolveGoalTone(borderClass: string) {
+  if (borderClass.includes("amber")) {
+    return {
+      badge: "border-amber-400/35 bg-amber-400/10 text-amber-100",
+      kicker: "text-amber-200/88",
+      chip: "border-amber-400/25 bg-amber-400/10 text-amber-100/92",
+      glow: "bg-amber-400/12",
+      line: "via-amber-300/80",
+    };
+  }
+
+  if (borderClass.includes("emerald")) {
+    return {
+      badge: "border-emerald-400/35 bg-emerald-400/10 text-emerald-100",
+      kicker: "text-emerald-200/84",
+      chip: "border-emerald-400/25 bg-emerald-400/10 text-emerald-100/92",
+      glow: "bg-emerald-400/12",
+      line: "via-emerald-300/80",
+    };
+  }
+
+  if (borderClass.includes("violet")) {
+    return {
+      badge: "border-violet-400/35 bg-violet-400/10 text-violet-100",
+      kicker: "text-violet-200/84",
+      chip: "border-violet-400/25 bg-violet-400/10 text-violet-100/92",
+      glow: "bg-violet-400/14",
+      line: "via-violet-300/80",
+    };
+  }
+
+  return {
+    badge: "border-frost-blue/35 bg-frost-blue/10 text-white",
+    kicker: "text-frost-blue/88",
+    chip: "border-frost-blue/25 bg-frost-blue/10 text-white/92",
+    glow: "bg-frost-blue/14",
+    line: "via-frost-blue/80",
+  };
+}
+
 function GoalCard({
+  order,
   title,
   description,
   mobileDescription,
@@ -30,43 +79,65 @@ function GoalCard({
   borderClass,
   spanClass,
   icon: Icon,
-}: (typeof START_HERE_GOALS)[number]) {
+}: (typeof START_HERE_GOALS)[number] & { order: number }) {
   const goalId = toDomId(title);
   const titleId = `start-goal-${goalId}-title`;
+  const tone = resolveGoalTone(borderClass);
 
   return (
     <Link
       href={href}
       aria-labelledby={titleId}
       className={cn(
-        "pharos-focus-ring pharos-interactive-card group flex min-w-0 flex-col gap-3 rounded-[1.25rem] border border-border/65 border-l-[3px] bg-background/58 p-3.5 text-left shadow-sm sm:p-4",
-        borderClass,
+        "pharos-focus-ring group relative flex min-w-0 flex-col gap-3 overflow-hidden rounded-[1.4rem] border border-white/10 bg-[linear-gradient(180deg,oklch(0.16_0.018_248_/_0.92),oklch(0.11_0.012_248_/_0.98))] p-4 text-left shadow-[0_22px_40px_oklch(0_0_0_/0.22)] transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-white/16 hover:shadow-[0_28px_56px_oklch(0_0_0_/0.3)] sm:p-5",
         spanClass,
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <p className="pharos-kicker">Route</p>
-          <h3 id={titleId} className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r from-transparent to-transparent",
+          tone.line,
+        )}
+      />
+      <div className={cn("pointer-events-none absolute -right-6 top-8 h-24 w-24 rounded-full blur-3xl", tone.glow)} />
+
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-3">
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "rounded-full border px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.16em]",
+                tone.badge,
+              )}
+            >
+              {String(order + 1).padStart(2, "0")}
+            </span>
+            <p className={cn("text-[10px] font-semibold uppercase tracking-[0.18em]", tone.kicker)}>Route</p>
+          </div>
+          <h3
+            id={titleId}
+            className="max-w-[12ch] text-[1.35rem] font-semibold tracking-tight text-white sm:text-[1.5rem] sm:leading-[1.15]"
+          >
             {title}
           </h3>
         </div>
-        <span className="inline-flex rounded-full border border-border/60 bg-background/75 p-2 text-muted-foreground transition-colors group-hover:text-foreground">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/72 transition-colors group-hover:text-white">
           <Icon className="h-4 w-4" aria-hidden="true" />
         </span>
       </div>
 
-      <p className="max-w-[34ch] text-sm leading-relaxed text-muted-foreground sm:max-w-[46ch]">
+      <p className="relative max-w-[32ch] text-[0.95rem] leading-7 text-white/70 sm:max-w-[36ch]">
         <span className="sm:hidden">{mobileDescription ?? description}</span>
         <span className="hidden sm:inline">{description}</span>
       </p>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="relative flex flex-wrap gap-2">
         {destinations.map((destination, index) => (
           <span
             key={destination}
             className={cn(
-              "rounded-full border border-border/60 bg-background/68 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground",
+              "rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/54",
+              index === 0 && tone.chip,
               index > 1 && "hidden sm:inline-flex",
             )}
           >
@@ -75,9 +146,9 @@ function GoalCard({
         ))}
       </div>
 
-      <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-foreground">
+      <span className="relative mt-auto inline-flex items-center gap-1 text-sm font-medium text-white">
         {cta}
-        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+        <ArrowRight className="h-4 w-4 text-white/60 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
       </span>
     </Link>
   );
@@ -86,13 +157,20 @@ function GoalCard({
 function HeroFactGrid({ className }: { className?: string }) {
   return (
     <div className={cn("grid gap-3 sm:grid-cols-2", className)}>
-      {START_HERE_FACTS.map((fact) => (
-        <div key={fact.label} className="rounded-[1.15rem] border border-border/60 bg-background/55 px-4 py-3">
-          <p className="text-[1.5rem] font-mono font-semibold tracking-tight text-foreground sm:text-[1.65rem]">
+      {START_HERE_FACTS.map((fact, index) => (
+        <div
+          key={fact.label}
+          className={cn(
+            "group relative overflow-hidden rounded-[1.2rem] border border-white/10 bg-[linear-gradient(180deg,oklch(0.15_0.016_248_/_0.92),oklch(0.11_0.012_248_/_0.98))] px-4 py-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.04)]",
+            index % 2 === 0 ? "lg:-translate-y-2" : "lg:translate-y-3",
+          )}
+        >
+          <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+          <p className="text-[1.6rem] font-mono font-semibold tracking-tight text-white sm:text-[1.8rem]">
             {fact.value}
           </p>
-          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{fact.label}</p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{fact.detail}</p>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">{fact.label}</p>
+          <p className="mt-2 text-sm leading-relaxed text-white/66">{fact.detail}</p>
         </div>
       ))}
     </div>
@@ -103,17 +181,32 @@ function HeroSupportCluster({ className, factGridClassName }: { className?: stri
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex flex-wrap items-center gap-3">
-        <Button asChild className="h-11 rounded-full px-5 sm:h-10">
+        <Button
+          asChild
+          className="h-11 rounded-full bg-white px-5 text-slate-950 shadow-[0_14px_30px_oklch(0_0_0_/0.24)] hover:bg-white/92 sm:h-10"
+        >
           <Link href="/">Skip straight to the dashboard</Link>
         </Button>
-        <Button asChild variant="outline" className="h-11 rounded-full border-border/60 bg-background/65 px-5 sm:h-10">
+        <Button
+          asChild
+          variant="outline"
+          className="h-11 rounded-full border-white/10 bg-white/[0.03] px-5 text-white hover:bg-white/[0.08] hover:text-white sm:h-10"
+        >
           <Link href="/methodology/">Need the formulas instead?</Link>
         </Button>
       </div>
 
-      <div className="rounded-[1.15rem] border border-border/60 bg-background/42 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-        <span className="font-medium text-foreground">Experienced users can skip this entirely.</span> Use the
-        dashboard, search, or command palette if you already know where you want to go.
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(12rem,0.8fr)]">
+        <div className="rounded-[1.2rem] border border-white/10 bg-black/20 px-4 py-3">
+          <p className="pharos-kicker text-frost-blue/78">Signal brief</p>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-white">
+            Monitor first. Research second. Move only when the signal is clear.
+          </p>
+        </div>
+        <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-relaxed text-white/70">
+          <span className="font-medium text-white">Experienced users can skip this entirely.</span> Everyone else gets
+          the shortest path into Pharos before touching the full product map.
+        </div>
       </div>
 
       <HeroFactGrid className={factGridClassName} />
@@ -129,61 +222,119 @@ export function StartHerePage() {
       title="Start Here"
       containerClassName="mx-auto max-w-6xl space-y-8"
     >
-      <section className="pharos-card-shell relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-background/82 via-card to-muted/32 px-4 py-5 shadow-[0_18px_44px_oklch(0_0_0_/0.12)] sm:px-6 sm:py-7">
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[36%] bg-gradient-to-l from-primary/8 to-transparent lg:block" />
-        <div className="pointer-events-none absolute left-5 top-5 h-20 w-20 rounded-full bg-primary/10 blur-3xl" />
+      <section className="pharos-card-shell relative overflow-hidden rounded-[2rem] border border-white/8 bg-[linear-gradient(128deg,oklch(0.19_0.03_248_/_0.98),oklch(0.11_0.016_248_/_0.99)_56%,oklch(0.15_0.02_40_/_0.98))] px-4 py-5 text-white shadow-[0_34px_90px_oklch(0_0_0_/0.32)] sm:px-6 sm:py-7 lg:px-7 lg:py-8">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(oklch(1_0_0_/_0.06)_1px,transparent_1px),linear-gradient(90deg,oklch(1_0_0_/_0.05)_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.18]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,oklch(0.72_0.14_248_/_0.18),transparent_32%),radial-gradient(circle_at_bottom_right,oklch(0.77_0.16_70_/_0.12),transparent_28%)]" />
+        <div className="pointer-events-none absolute inset-y-0 left-[48.75%] hidden w-px bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
+        <div className="pointer-events-none absolute -left-12 top-8 h-40 w-40 rounded-full bg-frost-blue/16 blur-[110px]" />
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(24rem,1.1fr)] lg:items-start lg:gap-6">
-          <div className="space-y-5 lg:space-y-6">
-            <div className="space-y-3">
-              <p className="pharos-kicker text-primary/80">New to Pharos?</p>
-              <div className="space-y-3">
-                <h2 className="max-w-[11ch] text-[clamp(1.75rem,8vw,3.6rem)] font-extrabold leading-[0.98] tracking-[-0.03em] text-foreground sm:max-w-2xl">
-                  <span className="sm:hidden">Pick the fastest route into Pharos.</span>
-                  <span className="hidden sm:inline">
-                    Chart your route through the stablecoin market before the jargon slows you down.
-                  </span>
-                </h2>
-                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                  <span className="sm:hidden">
-                    Start with a route, learn the core terms, then branch into monitoring, research, yield, or alerts
-                    only when you need more.
-                  </span>
-                  <span className="hidden sm:inline">
-                    Pharos helps you monitor market stress, research individual stablecoins, compare risk, and set up
-                    ongoing surveillance. This page shows the shortest route to value instead of asking you to decode
-                    the whole product first.
-                  </span>
+        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.88fr)_minmax(25rem,1fr)] lg:items-start lg:gap-8">
+          <div className="space-y-6 lg:space-y-7">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <p className="pharos-kicker text-frost-blue/82">New to Pharos?</p>
+                <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
+                <p className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38 lg:block">
+                  Route deck / active surveillance
                 </p>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(11rem,0.72fr)] lg:items-end">
+                <div className="space-y-4">
+                  <h2 className="max-w-[9ch] text-[clamp(2.95rem,8vw,6.2rem)] font-extrabold leading-[0.86] tracking-[-0.055em] text-white sm:max-w-[10ch]">
+                    <span className="sm:hidden">Pick the fastest route into Pharos.</span>
+                    <span className="hidden sm:inline">
+                      Chart your route through the stablecoin market before the jargon slows you down.
+                    </span>
+                  </h2>
+                  <p className="max-w-xl text-[0.98rem] leading-8 text-white/66">
+                    <span className="sm:hidden">
+                      Start with one route, learn the core terms, then branch into monitoring, research, yield, or
+                      alerts only when you need more.
+                    </span>
+                    <span className="hidden sm:inline">
+                      Pharos helps you monitor market stress, research individual stablecoins, compare risk, and set up
+                      ongoing surveillance. This page gives you the shortest path into the product instead of asking you
+                      to memorize the entire map first.
+                    </span>
+                  </p>
+                </div>
+
+                <div className="rounded-[1.2rem] border border-white/10 bg-black/18 px-4 py-3">
+                  <p className="pharos-kicker text-white/42">Route planner</p>
+                  <p className="mt-2 text-sm font-medium leading-relaxed text-white">
+                    Start with a live surface, then move deeper only when the signal demands it.
+                  </p>
+                </div>
               </div>
             </div>
 
             <HeroSupportCluster className="hidden lg:block" factGridClassName="lg:grid-cols-2" />
           </div>
 
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-1">
-                <p className="pharos-kicker text-primary/80">Choose your goal</p>
-                <p className="text-sm text-muted-foreground">Pick one route. You can explore the rest later.</p>
-              </div>
-              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/65 px-3 py-1 text-xs text-muted-foreground">
-                <Compass className="h-3.5 w-3.5" />
-                Optional guide
-              </span>
+          <div className="relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,oklch(0.15_0.016_248_/_0.72),oklch(0.1_0.012_248_/_0.94))] p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.04),0_24px_48px_oklch(0_0_0_/0.2)] sm:p-4">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,oklch(0.72_0.14_248_/_0.08),transparent_42%)]" />
+            <div className="pointer-events-none absolute inset-0 hidden lg:block">
+              <svg viewBox="0 0 640 520" className="h-full w-full" aria-hidden="true" preserveAspectRatio="none">
+                <path
+                  d="M88 136C160 112 214 118 278 162C340 204 422 210 520 172"
+                  fill="none"
+                  stroke="rgba(121, 193, 255, 0.36)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 7"
+                />
+                <path
+                  d="M172 310C246 258 326 246 394 274C454 298 505 356 552 418"
+                  fill="none"
+                  stroke="rgba(137, 226, 177, 0.28)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 7"
+                />
+                <path
+                  d="M76 412C136 374 224 360 304 392C374 420 442 430 520 420"
+                  fill="none"
+                  stroke="rgba(198, 162, 255, 0.28)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 7"
+                />
+              </svg>
             </div>
 
-            <div className="pharos-stagger-entrance grid gap-3 sm:grid-cols-2">
-              {START_HERE_GOALS.map((goal, index) => (
-                <div key={goal.title} style={{ "--stagger-index": index } as CSSProperties}>
-                  <GoalCard {...goal} />
+            <div className="relative space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="pharos-kicker text-frost-blue/82">Choose your goal</p>
+                    <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/42">
+                      5 live routes
+                    </span>
+                  </div>
+                  <p className="max-w-sm text-sm leading-relaxed text-white/66">
+                    Pick one route. The rest can stay peripheral until you need them.
+                  </p>
                 </div>
-              ))}
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-white/58">
+                  <Compass className="h-3.5 w-3.5" />
+                  Optional guide
+                </span>
+              </div>
+
+              <div className="pharos-stagger-entrance grid gap-3 sm:grid-cols-2">
+                {START_HERE_GOALS.map((goal, index) => (
+                  <div
+                    key={goal.title}
+                    style={{ "--stagger-index": index } as CSSProperties}
+                    className={HERO_GOAL_OFFSETS[index]}
+                  >
+                    <GoalCard {...goal} order={index} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        <HeroSupportCluster className="mt-5 border-t border-border/50 pt-5 lg:hidden" />
+        <HeroSupportCluster className="mt-6 border-t border-white/10 pt-5 lg:hidden" />
       </section>
 
       <section className="space-y-4">

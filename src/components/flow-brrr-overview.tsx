@@ -37,6 +37,7 @@ interface FlowBrrrOverviewProps {
   weeklyHourly?: MintBurnHourlyBucket[];
   isLoading?: boolean;
   className?: string;
+  variant?: "default" | "compact";
 }
 
 interface FlowSnapshot {
@@ -157,10 +158,13 @@ function LoadingState() {
 function IterationOne({
   snapshot,
   gauge,
+  variant = "default",
 }: {
   snapshot: FlowSnapshot;
   gauge: MintBurnGauge | null;
+  variant?: "default" | "compact";
 }) {
+  const isCompact = variant === "compact";
   const totalFlow24h = snapshot.mint24h + snapshot.burn24h;
   const netDominance = snapshot.has24hActivity
     ? Math.abs(snapshot.net24h) / Math.max(totalFlow24h, 1)
@@ -179,7 +183,7 @@ function IterationOne({
     : getPressureShiftDisplay(snapshot.score);
 
   return (
-    <article className="relative h-full overflow-hidden rounded-2xl border bg-card p-4 sm:p-6">
+    <article className={cn("relative h-full overflow-hidden rounded-2xl border bg-card", isCompact ? "p-4 sm:p-5" : "p-4 sm:p-6")}>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-55"
@@ -214,17 +218,17 @@ function IterationOne({
           )}
         </header>
 
-        <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
+        <div className={cn("grid", isCompact ? "gap-4 2xl:grid-cols-[minmax(0,1.12fr)_minmax(15rem,0.88fr)]" : "gap-5 lg:grid-cols-[1.2fr_1fr]")}>
           <div className="flex h-full flex-col gap-4">
             <h3
               className={cn(
-                "text-3xl font-black tracking-tight sm:text-5xl",
+                isCompact ? "text-3xl font-black leading-[0.94] tracking-tight md:text-4xl 2xl:text-5xl" : "text-3xl font-black tracking-tight sm:text-5xl",
                 snapshot.pressureUi.headlineClass,
               )}
             >
               {snapshot.headline}
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className={cn("text-sm text-muted-foreground", isCompact ? "max-w-[34rem]" : undefined)}>
               {snapshot.description}
             </p>
 
@@ -263,7 +267,7 @@ function IterationOne({
               </div>
             </div>
 
-            <div className="hidden gap-2 sm:grid-cols-3 lg:grid">
+            <div className={cn(isCompact ? "hidden 2xl:grid 2xl:grid-cols-3 2xl:gap-2" : "hidden gap-2 sm:grid-cols-3 lg:grid")}>
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Minted 7d
@@ -330,50 +334,52 @@ function IterationOne({
 
           <div className="flex h-full flex-col gap-3">
             <FlowMachineScene
-              size="full"
+              size={isCompact ? "mini" : "full"}
               mode={snapshot.directionUi.sceneMode}
               intensity={sceneIntensity}
               statusText={snapshot.directionUi.label}
-              title={snapshot.directionUi.sceneTitle}
-              subText={`Tracking ${snapshot.trackedCoins} stablecoins`}
+              title={isCompact ? undefined : snapshot.directionUi.sceneTitle}
+              subText={isCompact ? undefined : `Tracking ${snapshot.trackedCoins} stablecoins`}
               accentHex={snapshot.directionUi.accentHex}
               stress={sceneStress}
             />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Top minter
-                </p>
-                <p className="mt-1 font-mono text-xs">
-                  {snapshot.topMint ? (
-                    <span className="text-emerald-700 dark:text-emerald-400">
-                      {snapshot.topMint.symbol} +{formatCurrency(snapshot.topMint.netFlow24hUsd)}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">None in this window</span>
-                  )}
-                </p>
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Top minter
+                  </p>
+                  <p className="mt-1 font-mono text-xs">
+                    {snapshot.topMint ? (
+                      <span className="text-emerald-700 dark:text-emerald-400">
+                        {snapshot.topMint.symbol} +{formatCurrency(snapshot.topMint.netFlow24hUsd)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">None in this window</span>
+                    )}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Top burner
+                  </p>
+                  <p className="mt-1 font-mono text-xs">
+                    {snapshot.topBurn ? (
+                      <span className="text-red-700 dark:text-red-400">
+                        {snapshot.topBurn.symbol} {formatCurrency(snapshot.topBurn.netFlow24hUsd)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">None in this window</span>
+                    )}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Top burner
-                </p>
-                <p className="mt-1 font-mono text-xs">
-                  {snapshot.topBurn ? (
-                    <span className="text-red-700 dark:text-red-400">
-                      {snapshot.topBurn.symbol} {formatCurrency(snapshot.topBurn.netFlow24hUsd)}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">None in this window</span>
-                  )}
-                </p>
-              </div>
+              <MintingPressureGauge
+                mintVolume24hUsd={snapshot.mint24h}
+                burnVolume24hUsd={snapshot.burn24h}
+                className={isCompact ? undefined : "mt-auto"}
+              />
             </div>
-            <MintingPressureGauge
-              mintVolume24hUsd={snapshot.mint24h}
-              burnVolume24hUsd={snapshot.burn24h}
-              className="mt-auto"
-            />
           </div>
         </div>
       </div>
@@ -387,6 +393,7 @@ export function FlowBrrrOverview({
   weeklyHourly,
   isLoading,
   className,
+  variant = "default",
 }: FlowBrrrOverviewProps) {
   const snapshot = useMemo(
     () => buildSnapshot(gauge, coins, weeklyHourly),
@@ -399,7 +406,7 @@ export function FlowBrrrOverview({
 
   return (
     <div className={cn("h-full space-y-4", className)}>
-      <IterationOne snapshot={snapshot} gauge={gauge} />
+      <IterationOne snapshot={snapshot} gauge={gauge} variant={variant} />
     </div>
   );
 }

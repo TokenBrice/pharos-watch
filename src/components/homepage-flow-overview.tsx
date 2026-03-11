@@ -23,7 +23,7 @@ export function HomepageFlowOverview() {
   const hasData = !!summaryData;
 
   return (
-    <section className="flex h-full flex-col space-y-3">
+    <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-semibold tracking-tight">Mint/Burn Flow Snapshot</h2>
         <Link
@@ -45,15 +45,13 @@ export function HomepageFlowOverview() {
       />
 
       {(hasData || isSummaryLoading) && (
-        <div className="flex-1">
-          <FlowBrrrOverview
-            gauge={summaryData?.gauge ?? null}
-            coins={summaryData?.coins ?? []}
-            weeklyHourly={weeklyData?.hourly}
-            isLoading={!summaryData && isSummaryLoading}
-            className="h-full"
-          />
-        </div>
+        <FlowBrrrOverview
+          gauge={summaryData?.gauge ?? null}
+          coins={summaryData?.coins ?? []}
+          weeklyHourly={weeklyData?.hourly}
+          isLoading={!summaryData && isSummaryLoading}
+          variant="compact"
+        />
       )}
     </section>
   );

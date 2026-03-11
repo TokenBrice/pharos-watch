@@ -250,9 +250,9 @@ export function HomepageClient() {
         </section>
       </SectionErrorBoundary>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
         <SectionErrorBoundary name="dews-radar">
-          <section className="flex h-full flex-col space-y-3">
+          <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
               <Link
@@ -263,9 +263,7 @@ export function HomepageClient() {
                 <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <div className="flex-1">
-              <DEWSSummary logos={logos} showHeader={false} className="h-full" />
-            </div>
+            <DEWSSummary logos={logos} showHeader={false} />
           </section>
         </SectionErrorBoundary>
         <SectionErrorBoundary name="mint-burn-snapshot">
