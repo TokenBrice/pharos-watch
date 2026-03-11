@@ -11,6 +11,7 @@ export const dynamic = "force-static";
 /** Actual last-edited dates for static pages (avoid misleading Google with build-time dates). */
 const LAST_EDITED: Record<string, string> = {
   "/about/": "2026-03-10",
+  "/start/": "2026-03-11",
   "/cemetery/": "2026-02-26",
   "/privacy/": "2026-02-26",
   "/compare/": "2026-02-26",
@@ -44,6 +45,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "hourly",
       priority: 1.0,
+    },
+    {
+      url: "https://pharos.watch/start/",
+      lastModified: new Date(LAST_EDITED["/start/"]!),
+      changeFrequency: "monthly",
+      priority: 0.6,
     },
     {
       url: "https://pharos.watch/blacklist/",

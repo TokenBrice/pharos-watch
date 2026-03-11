@@ -1,6 +1,6 @@
 # Design Language Reference (Live Baseline)
 
-This document reflects the current UI baseline in the codebase and was re-verified on **March 8, 2026**.
+This document reflects the current UI baseline in the codebase and was re-verified on **March 11, 2026**.
 
 Use this as the visual source of truth for product-facing design decisions. For token definitions (primitive, semantic, component), see [`design-tokens.md`](design-tokens.md).
 
@@ -83,6 +83,15 @@ Most routes use:
 - Methodology: `mx-auto w-full max-w-[76rem] space-y-8`
 - Digest archive: `mx-auto max-w-4xl`
 - Digest detail shell: `mx-auto max-w-4xl`, with editorial body copy constrained to `max-w-[68ch]`
+
+### Start Here (Special)
+
+The `/start/` orientation route keeps the shared breadcrumb/title shell, then shifts into a broader planning-board layout:
+
+- Wrapper: `mx-auto max-w-6xl space-y-8`
+- Hero shell: large rounded gradient surface with left-aligned onboarding copy and a right-side route board
+- Route board: staggered grid of CTA cards, with the dominant top and bottom routes spanning two columns on `sm+`
+- Follow-up sections use glossary cards, workflow cards, grouped feature-atlas cards, and shortcut cards instead of one long prose stream
 
 ### Home Dashboard (Special)
 
@@ -173,6 +182,13 @@ First-run compare, portfolio, and gated status states now share a structured onb
 - CTA row using rounded-full buttons
 - Preview panel shell on the right at desktop, stacked on mobile
 - Optional footnote/support panel at the bottom of the text column
+
+The dedicated `/start/` route extends the same language into a full-page onboarding pattern:
+
+- large hero shell with route-selection cards instead of a single preview panel
+- compact fact blocks embedded in the copy column
+- glossary and workflow sections beneath the hero
+- grouped feature-atlas and shortcut cards for optional progressive discovery
 
 ---
 

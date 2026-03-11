@@ -3,6 +3,7 @@ import { CATEGORY_LINKS } from "@/lib/constants";
 
 const FOOTER_PRIMARY_LINKS = [
   { href: "/", label: "Dashboard" },
+  { href: "/start/", label: "Start Here" },
   { href: "/stablecoins/usd/", label: "Stablecoins" },
   { href: "/compare/", label: "Compare" },
   { href: "/portfolio/", label: "Portfolio" },

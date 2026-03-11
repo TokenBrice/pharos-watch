@@ -104,6 +104,7 @@ Read these when working on related code:
 - **`docs/data-flow-map.md`** — End-to-end external source → cron → D1 → API → hook → page map
 - **`docs/cemetery-and-compare.md`** — Cemetery dataset + compare-page URL/data contracts
 - **`docs/dependency-map.md`** — Dependency graph data model, contagion rendering, interaction model
+- **`docs/design-context.md`** — Users, brand personality, aesthetic direction, anti-references, design principles
 - **`docs/design-tokens.md`** — 3-layer design token architecture (primitives, semantic, component tokens)
 - **`docs/design-language.md`** — Typography, spacing, cards, tables, charts, interactive states, loading/error patterns
 - **`docs/testing.md`** — Test & lint setup, conventions, CI pipeline, adding new tests
@@ -126,36 +127,4 @@ Read these when working on related code:
 
 ## Design Context
 
-### Users
-
-Crypto/DeFi participants who actively monitor stablecoin health — checking market conditions, peg stability, and risk signals regularly to inform financial decisions. They value density, precision, and speed-to-insight over polish.
-
-### Brand Personality
-
-**Vigilant, precise, authoritative.** Pharos is a lighthouse — it watches every peg so you don't have to. The tone is practitioner-built, not corporate. It earns trust through completeness and specificity, not visual polish.
-
-### Emotional Design
-
-**Calm by default, urgent when needed.** The steady state is composed and analytical — the user feels informed and in control. When risk signals fire (depeg events, DEWS alerts, PSI band shifts), the interface shifts tone to communicate urgency without panic.
-
-### Aesthetic Direction
-
-- **Theme**: Dark-first financial dashboard (light mode supported)
-- **References**: DefiLlama, Token Terminal — clean DeFi dashboards with good data density and practical crypto analytics
-- **Brand accent**: Frost-blue `oklch(0.72 0.14 248)` — used sparingly for navigation active states and brand touches
-- **Fonts**: Geist Sans (UI) + Geist Mono (all numbers) — monospace numbers signal precision and trust
-- **Color use**: Semantic only — color communicates state (health, risk, trend direction), never decoration
-
-### Anti-References (what Pharos must NOT look like)
-
-- **Web3 marketing pages**: Purple gradients, glassmorphism, buzzword-heavy, style over substance
-- **Corporate fintech**: Sterile, over-polished, feels like a bank app — no personality
-- **Generic SaaS dashboards**: Cookie-cutter admin panels with big empty cards and pastel gradients
-
-### Design Principles
-
-1. **Data density over decoration** — every pixel earns its place by communicating information
-2. **Calm authority, not loud urgency** — steady state is composed; risk signals shift the tone
-3. **Precision as personality** — monospace numbers, exact percentages, named bands — trust through specificity
-4. **Semantic color only** — color communicates state (health, risk, trend), never decoration
-5. **DeFi-native, not corporate** — practical, practitioner-built feel; personality through substance not style
+See **`docs/design-context.md`** for users, brand personality, aesthetic direction, anti-references, and design principles. Read before any frontend/UI work.

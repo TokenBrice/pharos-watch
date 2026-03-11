@@ -122,6 +122,8 @@ src/                              # Next.js frontend (static export)
 │   ├── safety-scores/            # Risk Lab: stablecoin safety grade cards with radar charts
 │   │   ├── page.tsx
 │   │   └── client.tsx
+│   ├── start/                    # First-time-user orientation route ("Start Here")
+│   │   └── page.tsx
 │   ├── stability-index/          # Pharos Stability Index (ecosystem health)
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -168,6 +170,7 @@ src/                              # Next.js frontend (static export)
 │   ├── sidebar.tsx               # Sidebar navigation menu
 │   ├── footer.tsx                # Site footer with data attribution
 │   ├── providers.tsx             # TanStack Query + theme providers
+│   ├── start-here-page.tsx       # Static onboarding/orientation page composition
 │   ├── command-palette.tsx       # ⌘K command palette for quick navigation
 │   ├── scroll-to-top.tsx         # Scroll-to-top button
 │   ├── homepage-client.tsx       # Homepage interactive wrapper
@@ -315,6 +318,7 @@ src/                              # Next.js frontend (static export)
     ├── mint-burn-timeframes.ts   # Mint/burn timeframe constants/utilities
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
     ├── page-metadata.ts          # Shared metadata builder + sentence-aware SEO description helpers
+    ├── start-here-content.ts     # Curated onboarding copy + route mapping for the Start Here page
     ├── peg-landing.ts            # Peg currency landing page data helpers
     ├── peg-stability.ts          # Per-coin peg stability metrics
     ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red)
@@ -493,7 +497,7 @@ data/
   - `/stablecoins/backing/[backing]/`
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
-  - major feature pages with standalone static copy (`/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/about/`, `/methodology/`)
+  - major feature pages with standalone static copy (`/start/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/about/`, `/methodology/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`

@@ -3,6 +3,7 @@ import {
   Activity,
   LayoutDashboard,
   Droplets,
+  Compass,
   ShieldBan,
   Skull,
   Info,
@@ -83,4 +84,6 @@ export const NAV_GROUPS: NavGroup[] = [
 export const NAV_ITEMS: NavItem[] = [DASHBOARD_NAV_ITEM, ...NAV_GROUPS.flatMap((g) => g.items)];
 
 /** Bottom items (always shown at sidebar bottom) */
-export const BOTTOM_NAV_ITEMS: NavItem[] = [];
+export const BOTTOM_NAV_ITEMS: NavItem[] = [
+  { href: "/start", label: "Start Here", icon: Compass, description: "Orientation for new users" },
+];

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Compass, Search } from "lucide-react";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary } from "@/hooks/use-peg-summary";
@@ -16,6 +16,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
@@ -114,6 +115,47 @@ function PegBrowseSection({
   );
 }
 
+function StartHereCallout() {
+  return (
+    <section className="pharos-card-shell overflow-hidden border border-black/7 bg-[linear-gradient(135deg,oklch(0.985_0.01_248_/_0.98),oklch(0.95_0.018_248_/_0.98))] px-4 py-4 shadow-[0_16px_34px_oklch(0_0_0_/0.08)] sm:px-5 dark:border-white/10 dark:bg-[linear-gradient(135deg,oklch(0.21_0.03_250_/_0.92),oklch(0.16_0.02_250_/_0.98))] dark:shadow-[0_20px_42px_oklch(0_0_0_/0.16)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center gap-2 text-sky-700 dark:text-sky-200/82">
+            <Compass className="h-4 w-4" aria-hidden="true" />
+            <p className="pharos-kicker text-sky-700 dark:text-sky-200/82">New to Pharos?</p>
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-white sm:text-xl">
+              Start with the route that matches your job, not the full feature list.
+            </h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-slate-700 dark:text-slate-200/74">
+              The new Start Here page explains what the core signals mean and points you to the right surface for
+              market monitoring, single-coin research, yield, comparison, or alerts.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild className="h-10 rounded-full bg-slate-950 px-5 text-white hover:bg-slate-900 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90">
+            <Link href="/start/">
+              Open Start Here
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 rounded-full border-black/10 bg-white/70 px-5 text-slate-900 hover:bg-white hover:text-slate-950 dark:border-white/15 dark:bg-white/[0.05] dark:text-slate-100 dark:hover:bg-white/[0.1] dark:hover:text-white"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+          >
+            <Search className="h-4 w-4" />
+            Search a coin
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function HomepageClient() {
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
   const { data: logos } = useLogos();
@@ -174,6 +216,8 @@ export function HomepageClient() {
           },
         ]}
       />
+
+      <StartHereCallout />
 
       <SectionErrorBoundary name="highlights">
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />

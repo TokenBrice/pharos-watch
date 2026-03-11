@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { NAV_GROUPS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
+import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { Menu, Search, X } from "lucide-react";
 
@@ -124,6 +124,22 @@ export function Header() {
                   </div>
                 );
               })}
+
+              {BOTTOM_NAV_ITEMS.length > 0 ? (
+                <div
+                  className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
+                    BOTTOM_NAV_ITEMS.some((item) => isActive(item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
+                  }`}
+                  style={{ animationDelay: `${(NAV_GROUPS.length + 1) * 50}ms`, animationDuration: "200ms" }}
+                >
+                  <div className="mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65">
+                    Quick Start
+                  </div>
+                  {BOTTOM_NAV_ITEMS.map((item) => (
+                    <MobileNavLink key={item.href} item={item} active={isActive(item.href)} onNavigate={() => setOpen(false)} />
+                  ))}
+                </div>
+              ) : null}
             </nav>
 
             {/* Footer */}
