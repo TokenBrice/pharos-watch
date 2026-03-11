@@ -92,7 +92,8 @@ The `/start/` orientation route keeps the shared breadcrumb/title shell, then sh
 - Hero shell: large rounded plotting-board surface with editorial onboarding copy on the left and a route board on the right
 - Route board: staggered CTA cards over subtle route-trace lines, with the dominant top and bottom routes spanning two columns on `sm+`
 - Mobile top fold compresses the hero copy so the first route card stays visible above the fold
-- Desktop hero splits into a two-stage composition: headline + route board first, then a full-width fact row beneath
+- Desktop hero keeps the route board on the right while the left column stacks headline, utility band, and a 2x2 fact grid beneath
+- Desktop support content under the headline now stays in a clean vertical stack: CTA row first, then experienced-user note, signal brief, and route-planner note
 - Follow-up sections use glossary cards, flattened feature-atlas groups, and shortcut cards instead of one long prose stream
 
 ### Home Dashboard (Special)
