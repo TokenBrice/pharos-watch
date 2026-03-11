@@ -192,6 +192,18 @@ Age checks:
 
 Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, peak = worst of current vs `first_seen`, then deletes from `depeg_pending`.
 
+## Historical Backfill Validation
+
+Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment.
+
+Instead, `extractDepegEvents()` now validates each price point in `historical_backfill` mode against the **direct peg reference for that timestamp**:
+
+- USD and other fixed pegs can preserve catastrophic downside moves when the historical peg reference itself is valid
+- low-nominal FX pegs such as JPY are judged against the actual historical FX reference, not a generic live-only fallback
+- commodity tokens use `commodityOunces` when converting the historical gold/silver peg reference into per-token units
+
+This keeps confirmed historical crashes visible without weakening the stricter live-source filters used to protect sync and DEX ingestion.
+
 ## Event Lifecycle
 
 ```

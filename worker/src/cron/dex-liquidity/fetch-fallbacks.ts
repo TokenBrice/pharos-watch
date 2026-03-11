@@ -2,6 +2,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
+import type { PriceValidationReferences } from "../../lib/price-validation";
 import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
@@ -38,6 +39,7 @@ export async function fetchDsFallbackPools(
   knownPoolAddrs: Set<string>,
   signal?: AbortSignal,
   deadlineMs?: number,
+  references?: PriceValidationReferences,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -93,7 +95,7 @@ export async function fetchDsFallbackPools(
         // but price observations feed dex_prices via TVL-weighted median.
         if (
           priceUsd != null &&
-          isPlausibleDexObservationPrice(meta.id, priceUsd) &&
+          isPlausibleDexObservationPrice(meta.id, priceUsd, references) &&
           tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
         ) {
           const obs = priceObs.get(meta.id) ?? [];
@@ -168,6 +170,7 @@ export async function fetchCgTickersFallback(
   priceObservations: Map<string, DexPriceObs[]>,
   signal?: AbortSignal,
   deadlineMs?: number,
+  references?: PriceValidationReferences,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -239,7 +242,7 @@ export async function fetchCgTickersFallback(
         const price = exch.volume > 0 ? exch.priceVolumeWeightedSum / exch.volume : 0;
 
         // Price observation (only if price is plausible — skip if near 0)
-        if (syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(meta.id, price)) {
+        if (syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(meta.id, price, references)) {
           const obs = priceObs.get(meta.id) ?? [];
           obs.push({
             price,

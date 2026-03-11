@@ -5,6 +5,11 @@ import { shouldAttemptFetch, recordOutcome, recordOutcomeSafe } from "../lib/cir
 import { getCache, setCache } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import type { PriceConfidence } from "@shared/types";
+import {
+  buildPriceValidationContext,
+  getReferencePriceForContext,
+  type PriceValidationReferences,
+} from "../lib/price-validation";
 
 export interface DefiLlamaCoinPrice {
   price: number;
@@ -215,6 +220,7 @@ export async function fetchDualPrimaryPrices(
   assets: PeggedAsset[],
   db: D1Database,
   signal?: AbortSignal,
+  references?: PriceValidationReferences,
 ): Promise<{ results: Map<string, DualPriceResult>; stats: DualPriceStats }> {
   throwIfAborted(signal);
   const results = new Map<string, DualPriceResult>();
@@ -333,8 +339,13 @@ export async function fetchDualPrimaryPrices(
         results.set(asset.id, { price: dl, source: "defillama+coingecko", confidence: "high", dlPrice: dl, cgPrice: cg });
         stats.high++;
       } else {
-        // Disagree — low confidence, use closer-to-peg if true USD peg, else DL
-        const pegRef = !asset.navToken && asset.pegType?.includes("USD") ? 1.0 : null;
+        const context = buildPriceValidationContext({
+          stablecoinId: String(asset.id),
+          pegType: asset.pegType,
+          navToken: asset.navToken,
+          commodityOunces: asset.commodityOunces,
+        });
+        const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
         const chosen = pegRef != null ? (Math.abs(dl - pegRef) <= Math.abs(cg - pegRef) ? dl : cg) : dl;
         const chosenSource = chosen === dl ? "defillama" : "coingecko";
         results.set(asset.id, { price: chosen, source: chosenSource, confidence: "low", dlPrice: dl, cgPrice: cg });

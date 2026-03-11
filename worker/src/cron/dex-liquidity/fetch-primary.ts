@@ -28,6 +28,7 @@ import {
 } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { fetchSubgraphEntities, mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
+import type { PriceValidationReferences } from "../../lib/price-validation";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
 export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
@@ -158,6 +159,7 @@ export async function buildCurveLookups(
   curveResponses: (Response | null)[],
   symbolToIds: Map<string, string[]>,
   addressToId: Map<string, string>,
+  references?: PriceValidationReferences,
 ): Promise<CurveLookups> {
   const curvePoolMap = new Map<string, CurvePoolEntry>();
   const priceObservations = new Map<string, DexPriceObs[]>();
@@ -263,7 +265,7 @@ export async function buildCurveLookups(
             }
             if (!resolvedIds) continue;
             for (const id of resolvedIds) {
-              if (!isPlausibleDexObservationPrice(id, coin.usdPrice)) continue;
+              if (!isPlausibleDexObservationPrice(id, coin.usdPrice, references)) continue;
               const obs = priceObservations.get(id) ?? [];
               obs.push({
                 price: coin.usdPrice,
@@ -316,6 +318,7 @@ export async function fetchUniV3Data(
   symbolToIds: Map<string, string[]>,
   addressToId: Map<string, string>,
   signal?: AbortSignal,
+  references?: PriceValidationReferences,
 ): Promise<UniV3Lookups> {
   const uniV3PoolFees = new Map<string, number>(); // "chain:address" → feeTier
   const uniV3SymbolFees = new Map<string, number>(); // "chain:SYM0:SYM1" → lowest feeTier
@@ -390,7 +393,7 @@ export async function fetchUniV3Data(
           if (!resolvedIds) continue;
 
           for (const stablecoinId of resolvedIds) {
-            if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice)) continue;
+            if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice, references)) continue;
             mapped.push({
               stablecoinId,
               obs: { price: usdPrice, tvl, chain, protocol: "uniswap-v3" },
@@ -417,6 +420,7 @@ export async function fetchAerodromeData(
   symbolToIds: Map<string, string[]>,
   addressToId: Map<string, string>,
   signal?: AbortSignal,
+  references?: PriceValidationReferences,
 ): Promise<AerodromeLookups> {
   const priceObs = new Map<string, DexPriceObs[]>();
   const isStableMap = new Map<string, boolean>();
@@ -476,7 +480,7 @@ export async function fetchAerodromeData(
           if (!resolvedIds) continue;
 
           for (const stablecoinId of resolvedIds) {
-            if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice)) continue;
+            if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice, references)) continue;
             mapped.push({
               stablecoinId,
               obs: { price: usdPrice, tvl: reserveUSD, chain, protocol: "aerodrome" },
@@ -579,6 +583,7 @@ export async function fetchGtTokenBatch(
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(GT_CHAIN_MAP),
   deadlineMs?: number,
+  references?: PriceValidationReferences,
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
   let requestCount = 0;
@@ -621,7 +626,7 @@ export async function fetchGtTokenBatch(
           const price = parseFloat(a.price_usd ?? "");
           const tvl = parseFloat(a.total_reserve_in_usd ?? "");
           if (!price || price <= 0 || isNaN(price)) continue;
-          if (!isPlausibleDexObservationPrice(stablecoinId, price)) continue;
+          if (!isPlausibleDexObservationPrice(stablecoinId, price, references)) continue;
           if (!tvl || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) continue;
 
           const obs = priceObs.get(stablecoinId) ?? [];
@@ -646,6 +651,7 @@ export async function fetchCgTokenBatchPrices(
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
   deadlineMs?: number,
+  references?: PriceValidationReferences,
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
   let requestCount = 0;
@@ -677,7 +683,7 @@ export async function fetchCgTokenBatchPrices(
           const price = parseFloat(a.price_usd ?? "");
           const tvl = parseFloat(a.total_reserve_in_usd ?? "");
           if (!price || price <= 0 || isNaN(price)) continue;
-          if (!isPlausibleDexObservationPrice(stablecoinId, price)) continue;
+          if (!isPlausibleDexObservationPrice(stablecoinId, price, references)) continue;
           if (!tvl || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) continue;
 
           const obs = priceObs.get(stablecoinId) ?? [];

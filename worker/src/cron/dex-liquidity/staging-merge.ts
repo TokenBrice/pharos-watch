@@ -2,6 +2,7 @@ import type { StagedPool } from "../dex-discovery/types";
 import { stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import { buildPoolFingerprint, getGtDexQuality } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
@@ -134,6 +135,7 @@ export async function mergeStagedPools(
   metrics: Map<string, LiquidityMetrics>,
   knownPoolAddrs: Set<string>,
   nowSec: number,
+  references?: PriceValidationReferences,
 ): Promise<{
   mergedCount: number;
   skippedCount: number;
@@ -196,7 +198,7 @@ export async function mergeStagedPools(
       stagedPool.priceUsd != null &&
       stagedPool.priceUsd > 0 &&
       adjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
-      isPlausibleDexObservationPrice(stagedPool.stablecoinId, stagedPool.priceUsd)
+      isPlausibleDexObservationPrice(stagedPool.stablecoinId, stagedPool.priceUsd, references)
     ) {
       const obs = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
       obs.push({

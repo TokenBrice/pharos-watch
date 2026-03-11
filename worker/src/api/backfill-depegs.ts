@@ -4,9 +4,9 @@ import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "@sha
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import {
   buildPriceReasonablenessOptions,
-  isReasonablePrice,
   type PriceReasonablenessOptions,
 } from "../cron/enrich-prices";
+import { buildPriceValidationContext, validatePriceCandidateAgainstReference } from "../lib/price-validation";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
@@ -849,6 +849,11 @@ export function extractDepegEvents(
   const threshold = getDepegThresholdBps(pegType);
   const events: BackfillEvent[] = [];
   let current: BackfillEvent | null = null;
+  const validationContext = buildPriceValidationContext({
+    pegType,
+    navToken: priceValidationOpts?.navToken,
+    commodityOunces: priceValidationOpts?.commodityOunces,
+  });
 
   // Pending state for large-cap confirmation (mirrors live pending → confirm flow)
   let pending: {
@@ -882,7 +887,6 @@ export function extractDepegEvents(
   for (const point of prices) {
     const { timestamp, price } = point;
     if (price <= 0) continue;
-    if (!isReasonablePrice(price, pegType, fxRates, priceValidationOpts)) continue;
 
     if (supplyByDate.length > 0) {
       const supply = findNearestSupply(supplyByDate, timestamp);
@@ -891,6 +895,13 @@ export function extractDepegEvents(
 
     const pegRef = getPegRef(timestamp);
     if (pegRef <= 0) continue;
+    const decision = validatePriceCandidateAgainstReference(
+      price,
+      validationContext,
+      "historical_backfill",
+      { price: pegRef, type: fxRates ? "fresh" : "none" },
+    );
+    if (!decision.accepted) continue;
 
     const bps = Math.round(((price / pegRef) - 1) * 10000);
     const absBps = Math.abs(bps);

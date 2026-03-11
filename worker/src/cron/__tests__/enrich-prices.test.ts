@@ -562,7 +562,7 @@ describe("fetchDualPrimaryPrices", () => {
     expect(stats.divergences.length).toBe(1);
   });
 
-  it("currently defaults non-USD divergences to DefiLlama rather than the peg-closer value", async () => {
+  it("chooses the peg-closer candidate for non-USD divergences when references are available", async () => {
     const assets: PeggedAsset[] = [
       { id: "eurc-circle", name: "EURC", symbol: "EURC", geckoId: "euro-coin", pegType: "peggedEUR", circulating: {} },
     ];
@@ -582,20 +582,25 @@ describe("fetchDualPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+    const { results, stats } = await fetchDualPrimaryPrices(
+      assets,
+      db,
+      undefined,
+      { rates: { peggedEUR: 1.08 }, type: "fresh", updatedAt: Math.floor(Date.now() / 1000) },
+    );
 
     expect(results.size).toBe(1);
     const result = results.get("eurc-circle")!;
     expect(result.confidence).toBe("low");
-    expect(result.source).toBe("defillama");
-    expect(result.price).toBe(1.8);
+    expect(result.source).toBe("coingecko");
+    expect(result.price).toBe(1.08);
     expect(result.cgPrice).toBe(1.08);
     expect(stats.low).toBe(1);
   });
 
   it("does not force closer-to-$1 selection for NAV tokens during divergence", async () => {
     const assets: PeggedAsset[] = [
-      { id: "usdt-tether", name: "OUSG", symbol: "OUSG", geckoId: "ousg", pegType: "peggedUSD", navToken: true, circulating: {} },
+      { id: "ousg-ondo-finance", name: "OUSG", symbol: "OUSG", geckoId: "ousg", pegType: "peggedUSD", navToken: true, circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
@@ -616,7 +621,7 @@ describe("fetchDualPrimaryPrices", () => {
     const { results, stats } = await fetchDualPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
-    const result = results.get("usdt-tether")!;
+    const result = results.get("ousg-ondo-finance")!;
     expect(result.confidence).toBe("low");
     expect(result.source).toBe("defillama");
     expect(result.price).toBe(110);

@@ -175,7 +175,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 - **Freshness header** — `/api/stablecoins` returns `X-Data-Age` so consumers can detect stale data
 - **Atomic backfill** — depeg event backfills use transactional batch operations to prevent data loss on worker crashes
 - **Retry logic** — all external API fetches use exponential backoff with configurable 404 handling
-- **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering downed APIs; dual-primary price validation cross-checks DefiLlama and CoinGecko within 50 bps; CoinGecko supply fallback activates when DefiLlama is unavailable
+- **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering downed APIs; dual-primary price validation cross-checks DefiLlama and CoinGecko within 50 bps and now chooses the peg-closer candidate for fixed non-NAV pegs when sources diverge; CoinGecko supply fallback activates when DefiLlama is unavailable
 - **Mint/burn reliability controls** — rotating config scheduling, per-chain request quotas, adaptive `eth_getLogs` range splitting, timestamp caching, degraded-run escalation, and admin-controlled chunked backfill (`/api/backfill-mint-burn`)
 
 ## Deployment

@@ -264,7 +264,7 @@ describe("syncStablecoins", () => {
     );
     expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
     expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "defillama-stablecoins");
-    expect(fetchDualPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined);
+    expect(fetchDualPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined);
     expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
     expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
@@ -718,7 +718,7 @@ describe("syncStablecoins", () => {
     expect(normalized?.price).toBe(5.15);
   });
 
-  it("ignores stale FX cache in sync-time sanity checks (characterization)", async () => {
+  it("allows deep downside prices in sync-time primary validation when FX cache is stale", async () => {
     const actual = await vi.importActual<typeof import("../enrich-prices")>("../enrich-prices");
     vi.mocked(isReasonablePrice).mockImplementation(actual.isReasonablePrice);
 
@@ -768,7 +768,7 @@ describe("syncStablecoins", () => {
     );
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const normalized = payload?.peggedAssets.find((a) => a.id === "jpyc-jpyc");
-    expect(normalized?.price).toBeNull();
+    expect(normalized?.price).toBe(0.0005);
   });
 
   it("caps sync shadow mismatch samples at 10 entries", async () => {

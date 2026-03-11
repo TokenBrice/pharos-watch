@@ -37,6 +37,7 @@ import { sendAlert } from "../lib/alerts";
 import {
   buildPriceValidationContext,
   validatePriceCandidate,
+  type PriceValidationContext,
   type PriceValidationDecision,
   type PriceValidationReferences,
 } from "../lib/price-validation";
@@ -146,6 +147,27 @@ function shadowDecisionModeForAsset(asset: PeggedAsset): "primary_authoritative"
     asset.priceSource === "cached"
     ? "fallback_enrichment"
     : "primary_authoritative";
+}
+
+function createValidationContextResolver(): {
+  get: (asset: PeggedAsset) => PriceValidationContext;
+} {
+  const cache = new Map<string, PriceValidationContext>();
+  return {
+    get(asset: PeggedAsset): PriceValidationContext {
+      const key = String(asset.id);
+      const existing = cache.get(key);
+      if (existing) return existing;
+      const context = buildPriceValidationContext({
+        stablecoinId: key,
+        pegType: asset.pegType as string | undefined,
+        navToken: asset.navToken,
+        commodityOunces: asset.commodityOunces,
+      });
+      cache.set(key, context);
+      return context;
+    },
+  };
 }
 
 function recordPriceValidationShadow(
@@ -598,13 +620,14 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     ? { rates: fxRates, type: "fresh", updatedAt: fxCacheEarly?.updatedAt ?? syncStartSec }
     : undefined;
   const priceValidationShadow = createPriceValidationShadowMetadata();
+  const validationContexts = createValidationContextResolver();
 
   // --- Dual-primary price validation ---
   // Cross-validate DL coins API and CG prices for higher confidence
   const dualPrimaryAbort = returnIfAborted(signal, "dual-primary-prices");
   if (dualPrimaryAbort) return dualPrimaryAbort;
   const { results: dualPriceResults, stats: dualPriceStats } = await fetchDualPrimaryPrices(
-    llamaData.peggedAssets, db, signal,
+    llamaData.peggedAssets, db, signal, validationReferences,
   );
 
   // Shadow mode: compare CG-as-primary prices against old pipeline's DL-sourced prices
@@ -647,19 +670,16 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       const legacyAccepted = isReasonablePriceForAsset(asset, dual.price, fxRates);
       const decision = validatePriceCandidate(
         dual.price,
-        buildPriceValidationContext({
-          stablecoinId: String(asset.id),
-          pegType: asset.pegType as string | undefined,
-          navToken: asset.navToken,
-          commodityOunces: asset.commodityOunces,
-        }),
+        validationContexts.get(asset),
         "primary_authoritative",
         validationReferences,
       );
       recordPriceValidationShadow(priceValidationShadow, "dual_primary_apply", asset, dual.price, legacyAccepted, decision);
-      if (legacyAccepted) {
+      if (decision.accepted) {
         asset.price = dual.price;
         stampPriceMetadata(asset, dual.source, dual.confidence, syncStartSec);
+      } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
+        stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec);
       }
     } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
       // DL list provided a price but no dual-primary result — single-source
@@ -684,17 +704,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       const legacyAccepted = isReasonablePriceForAsset(asset, asset.price, fxRates);
       const decision = validatePriceCandidate(
         asset.price,
-        buildPriceValidationContext({
-          stablecoinId: String(asset.id),
-          pegType: asset.pegType as string | undefined,
-          navToken: asset.navToken,
-          commodityOunces: asset.commodityOunces,
-        }),
+        validationContexts.get(asset),
         "primary_authoritative",
         validationReferences,
       );
       recordPriceValidationShadow(priceValidationShadow, "pre_reject", asset, asset.price, legacyAccepted, decision);
-      if (!legacyAccepted) {
+      if (!decision.accepted) {
         console.warn(`[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
         asset.price = 0; // hasMissingPrice() treats 0 as missing
         stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
@@ -725,17 +740,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       const legacyAccepted = isReasonablePriceForAsset(asset, asset.price, fxRates);
       const decision = validatePriceCandidate(
         asset.price,
-        buildPriceValidationContext({
-          stablecoinId: String(asset.id),
-          pegType: asset.pegType as string | undefined,
-          navToken: asset.navToken,
-          commodityOunces: asset.commodityOunces,
-        }),
+        validationContexts.get(asset),
         shadowDecisionModeForAsset(asset),
         validationReferences,
       );
       recordPriceValidationShadow(priceValidationShadow, "post_enrichment_reject", asset, asset.price, legacyAccepted, decision);
-      if (!legacyAccepted) {
+      if (!decision.accepted) {
         console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
         asset.price = null;
         asset.priceUpdatedAt = null;
@@ -777,17 +787,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
         const legacyAccepted = isReasonablePriceForAsset(asset, cached.price, fxRates);
         const decision = validatePriceCandidate(
           cached.price,
-          buildPriceValidationContext({
-            stablecoinId: String(asset.id),
-            pegType: asset.pegType as string | undefined,
-            navToken: asset.navToken,
-            commodityOunces: asset.commodityOunces,
-          }),
+          validationContexts.get(asset),
           "fallback_enrichment",
           validationReferences,
         );
         recordPriceValidationShadow(priceValidationShadow, "cached_fallback", asset, cached.price, legacyAccepted, decision);
-        if (legacyAccepted) {
+        if (decision.accepted) {
           asset.price = cached.price;
           stampPriceMetadata(asset, "cached", "fallback", cached.updatedAt);
           fallbackCount++;

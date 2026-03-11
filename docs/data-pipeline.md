@@ -37,7 +37,7 @@ Do **not** multiply list endpoint values by price — that would double-convert 
 Before the enrichment pipeline runs, `fetchDualPrimaryPrices()` fetches prices from both the DefiLlama coins API and CoinGecko `/simple/price` **in parallel** for all assets with a valid `geckoId`. It cross-validates within 50 basis points:
 
 - **Both agree (≤50 bps)** → `priceConfidence: "high"`, use DL price
-- **Disagree (>50 bps)** → `priceConfidence: "low"`, use closer-to-peg value for true pegs (NAV tokens default to DL), log divergence
+- **Disagree (>50 bps)** → `priceConfidence: "low"`, use the candidate closer to the asset's canonical peg reference for fixed pegs (USD, fiat FX, gold, silver). NAV tokens still default to DL because they are intentionally not anchored to a fixed `$1` face value
 - **One source down** → `priceConfidence: "single-source"`, use available
 - **Both down** → skip, falls through to enrichment pipeline
 
@@ -52,18 +52,18 @@ Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) 
 3. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
 4. **Pass 3:** CoinGecko ID -> CoinGecko direct API
 5. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp)
-6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price bounds via `isReasonablePrice()`: e.g. $0.01–$1.19 for true USD pegs, per-currency thresholds for other fiat pegs, and gold/silver bounds scaled by `commodityOunces` for fractional tokens such as gram- or 1/1000-ounce assets; NAV tokens bypass tight peg bounds and only require positive finite prices under $100K; capped at 10 searches per run)
+6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-aware fallback validation. Primary sync paths now allow deep downside failures for fixed pegs when the move is being evaluated as an authoritative price, while fallback enrichment still rejects isolated bad prints below the lower bound. Commodity tokens still scale gold/silver references by `commodityOunces` for gram- and 1/1000-ounce assets; capped at 10 searches per run)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
 
-**Price validation ordering:** `isReasonablePrice()` runs **before** `savePriceCache()` so that unreasonable enriched prices never enter the 24-hour cache. This prevents a single bad API response from poisoning the cache across multiple sync cycles.
+**Price validation ordering:** sync-time price validation runs **before** `savePriceCache()` so that unreasonable enriched prices never enter the 24-hour cache. This prevents a single bad API response from poisoning the cache across multiple sync cycles. The worker now distinguishes between authoritative primary validation, fallback enrichment validation, DEX observation validation, and historical-backfill validation instead of using one identical rule for every context.
 
 ## Data Integrity Guardrails
 
 The sync pipeline includes multiple layers of validation to prevent bad data from reaching users:
 
 1. **Structural validation**: DefiLlama response must contain `MIN_VALID_ASSET_COUNT` (50) assets with valid `id`, `name`, `symbol`, and `circulating` fields. Malformed objects are dropped before caching
-2. **Price validation ordering**: `isReasonablePrice()` rejects prices outside peg-type bounds **before** `savePriceCache()`, not after (`flags.navToken` assets are exempt from tight peg bounds and use broad positive-price sanity checks; commodity tokens scale gold/silver bounds by `commodityOunces` so fractional-ounce assets are validated against their actual unit size)
+2. **Price validation ordering**: sync-time validation rejects prices before `savePriceCache()`, not after. Fixed pegs use canonical tracked metadata (`pegType`, `navToken`, `commodityOunces`) during validation, NAV tokens still use broad positive-price checks, and fractional commodity tokens are always scaled by `commodityOunces`
 3. **Concurrent cron guard**: `setCacheIfNewer()` uses a compare-and-swap pattern — a slow sync run can't overwrite a newer run's data. Uses `syncStartSec` as CAS guard. Applied to cache-writing crons such as stablecoins, stablecoin-charts, FX rates, bluechip ratings, and USDS status.
 4. **Detail JSON validation**: `stablecoin-detail.ts` parses response JSON before caching; skips cache on parse failure
 5. **fetchWithRetry**: Default 15s timeout prevents hanging Workers. Retries on 404 by default (configurable via `{ passthrough404: true }`, `{ timeoutMs: N }`)
@@ -113,6 +113,7 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 - Fiat backfill uses Frankfurter historical ranges for ECB-covered currencies and date-addressed `fawazahmed0/exchange-api` snapshots for non-ECB currencies such as CNH, RUB, UAH, and ARS.
 - Secondary historical FX snapshots are cached in D1 by year (`fx-history-secondary:<year>`) so repeated admin backfills do not re-fetch the same daily files.
 - Fallback behavior: if series data is sparse/missing for a timestamp, `buildFxLookup()` falls back to the current peg reference derived from live rates.
+- Historical depeg extraction validates each price point against the **direct peg reference for that timestamp** (`historical_backfill` mode). That preserves confirmed catastrophic downside moves without weakening the tighter fallback/DEX filters used for noisy live sources.
 
 ### Budget
 

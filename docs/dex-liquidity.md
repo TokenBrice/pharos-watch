@@ -218,9 +218,9 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 | Source               | Chains                            | Method                                                                | Filter                                                                                                                                               |
 | -------------------- | --------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin                                 | TVL >= $50K, balance ratio >= 0.3                                                                                                                    |
-| **Uniswap V3**       | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. (after alias normalization such as `USD₮0` -> `USDT`), peg-aware price sanity (`isReasonablePrice`) |
-| **Aerodrome**        | Base                              | Subgraph `token0Price`/`token1Price` + `reserveUSD`                   | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity                                                                                            |
-| **DexScreener**      | 30+ chains (universal fallback)   | Token pools API `priceUsd`                                            | Pair liquidity >= $50K for price observations, >= $1K for pool discovery, peg-aware price sanity                                                     |
+| **Uniswap V3**       | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. (after alias normalization such as `USD₮0` -> `USDT`), peg-aware price sanity against the shared validation engine |
+| **Aerodrome**        | Base                              | Subgraph `token0Price`/`token1Price` + `reserveUSD`                   | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity against the shared validation engine                                                        |
+| **DexScreener**      | 30+ chains (universal fallback)   | Token pools API `priceUsd`                                            | Pair liquidity >= $50K for price observations, >= $1K for pool discovery, peg-aware price sanity against the shared validation engine                |
 
 **Price extraction pipeline:**
 
@@ -228,6 +228,12 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 2. Merge all observations into a single map keyed by stablecoin ID
 3. Compute TVL-weighted median per stablecoin (robust against distorted pools from any single source)
 4. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
+
+DEX observation validation now loads the current FX / gold / silver references **once per cron entrypoint** and passes them through the scoring and discovery paths. In normal operation this means:
+
+- fiat pegs validate against live FX references, not only hardcoded fallback ranges
+- gold/silver pegs validate against live spot references, scaled by `commodityOunces` for fractional tokens
+- the cron still records shadow counters (`priceValidationShadow`) comparing the old DEX gate vs the new shared validator
 5. Store in `dex_prices` with top 5 source pools as JSON (shows mixed protocols)
 
 Every source family now uses the same minimum liquidity rule for DEX prices: a pool must contribute at least `$50K` of liquidity at observation time. For staged discovery rows, the floor is applied after freshness confidence decay.

@@ -2,6 +2,7 @@ import type { CronResult } from "../../lib/db";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { throwIfAborted } from "../../lib/abort";
+import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs } from "./types";
 import { buildSymbolLookups } from "./pool-helpers";
 import {
@@ -38,6 +39,7 @@ export async function syncDexLiquidity(
   console.log(`[dex-liquidity] Starting sync`);
   throwIfAborted(signal);
   resetDexPriceValidationShadowStats();
+  const validationReferences = await loadPriceValidationReferences(db);
 
   // 1. Fetch all external data sources
   const dataSources = await fetchDataSources(graphApiKey, db, signal);
@@ -61,12 +63,12 @@ export async function syncDexLiquidity(
 
   // 3. Parse Curve data into pool lookups and price observations
   const { curvePoolMap, priceObservations } = await buildCurveLookups(
-    dataSources.curveResponses, symbolToIds, addressToId,
+    dataSources.curveResponses, symbolToIds, addressToId, validationReferences,
   );
 
   // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations
   const { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs } = await fetchUniV3Data(
-    graphApiKey, symbolToIds, addressToId, signal,
+    graphApiKey, symbolToIds, addressToId, signal, validationReferences,
   );
   if (addressToId.size > 0) {
     console.log(`[dex-liquidity] Learned ${addressToId.size} token addresses for disambiguation`);
@@ -76,7 +78,7 @@ export async function syncDexLiquidity(
   let aerodromePriceObs = new Map<string, DexPriceObs[]>();
   let aerodromeIsStable = new Map<string, boolean>();
   try {
-    const aeroData = await fetchAerodromeData(graphApiKey, symbolToIds, addressToId, signal);
+    const aeroData = await fetchAerodromeData(graphApiKey, symbolToIds, addressToId, signal, validationReferences);
     aerodromePriceObs = aeroData.aerodromePriceObs;
     aerodromeIsStable = aeroData.aerodromeIsStable;
   } catch (err) {
@@ -117,7 +119,7 @@ export async function syncDexLiquidity(
     skippedByFingerprintCount: stagedSkippedByFingerprintCount,
     priceObservations: stagedPriceObs,
   } =
-    await mergeStagedPools(db, metrics, knownPoolAddrs, syncStartSec);
+    await mergeStagedPools(db, metrics, knownPoolAddrs, syncStartSec, validationReferences);
   for (const [id, obs] of stagedPriceObs) {
     const existing = priceObservations.get(id) ?? [];
     existing.push(...obs);
@@ -131,7 +133,7 @@ export async function syncDexLiquidity(
 
   try {
     const dsFallback = await fetchDsFallbackPools(
-      metrics, priceObservations, knownPoolAddrs, signal, fallbackDeadlineMs,
+      metrics, priceObservations, knownPoolAddrs, signal, fallbackDeadlineMs, validationReferences,
     );
     dsFallbackCoins = dsFallback.newPools.size;
     if (dsFallback.newPools.size > 0) mergeGtPools(metrics, dsFallback.newPools);
@@ -148,7 +150,7 @@ export async function syncDexLiquidity(
 
   try {
     const cgFallback = await fetchCgTickersFallback(
-      metrics, priceObservations, signal, fallbackDeadlineMs,
+      metrics, priceObservations, signal, fallbackDeadlineMs, validationReferences,
     );
     cgTickerFallbackCoins = cgFallback.newPools.size;
     if (cgFallback.newPools.size > 0) mergeGtPools(metrics, cgFallback.newPools);

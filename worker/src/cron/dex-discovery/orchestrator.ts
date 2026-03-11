@@ -4,6 +4,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
 import { getDexPriceValidationShadowStats, resetDexPriceValidationShadowStats } from "../dex-liquidity/price-sanity";
+import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DiscoveryMeta } from "./types";
 import { DISCOVERY_TIERS } from "./types";
 import { crawlCoin } from "./crawl-sources";
@@ -144,6 +145,7 @@ export async function syncDexDiscovery(
   try {
     resetDexPriceValidationShadowStats();
     throwIfAborted(signal);
+    const validationReferences = await loadPriceValidationReferences(db);
 
     const liquidityCoverage = await readLiquidityCoverage(db);
     const metaById = await readDiscoveryMeta(db);
@@ -215,6 +217,7 @@ export async function syncDexDiscovery(
           knownPoolIds,
           signal,
           deadlineMs,
+          validationReferences,
         );
 
         await upsertStagedPools(db, result.pools);

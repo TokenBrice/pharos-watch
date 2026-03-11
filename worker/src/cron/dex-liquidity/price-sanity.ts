@@ -100,5 +100,5 @@ export function isPlausibleDexObservationPrice(
     });
   }
 
-  return legacyAccepted;
+  return decision.accepted;
 }

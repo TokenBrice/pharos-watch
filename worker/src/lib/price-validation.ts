@@ -36,6 +36,11 @@ export interface PriceValidationDecision {
   boundsUsed: { min: number; max: number } | null;
 }
 
+export interface DirectPriceValidationReference {
+  price: number;
+  type: PriceReferenceType;
+}
+
 export interface BuildPriceValidationContextInput {
   stablecoinId?: string;
   pegCurrency?: string;
@@ -205,11 +210,15 @@ export async function loadPriceValidationReferences(
   }
 }
 
-function getReferencePrice(
+export function getReferencePriceForContext(
   context: PriceValidationContext,
   references: PriceValidationReferences | undefined,
 ): number | null {
-  if (!context.pegType || !references) return null;
+  if (!context.pegType) return null;
+  if (context.pegType.includes("USD")) {
+    return 1;
+  }
+  if (!references) return null;
   const rate = references.rates[context.pegType];
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
   return rate * getCommodityScale(context.pegType, context.commodityOunces);
@@ -269,7 +278,7 @@ export function validatePriceCandidate(
       accepted: true,
       reasonCode: "nav_positive_price",
       referenceType: references?.type ?? "none",
-      referencePrice: getReferencePrice(context, references),
+      referencePrice: getReferencePriceForContext(context, references),
       candidateRatio: null,
       boundsUsed: { min: 0, max: MAX_PRICE },
     };
@@ -280,13 +289,13 @@ export function validatePriceCandidate(
       accepted: true,
       reasonCode: "non_fixed_positive_price",
       referenceType: references?.type ?? "none",
-      referencePrice: getReferencePrice(context, references),
+      referencePrice: getReferencePriceForContext(context, references),
       candidateRatio: null,
       boundsUsed: { min: 0, max: MAX_PRICE },
     };
   }
 
-  const referencePrice = getReferencePrice(context, references);
+  const referencePrice = getReferencePriceForContext(context, references);
   if (referencePrice != null && referencePrice > 0) {
     const lowerBound =
       mode === "primary_authoritative" || mode === "historical_backfill"
@@ -380,4 +389,89 @@ export function validatePriceCandidate(
     candidateRatio: null,
     boundsUsed: { min: 0, max: MAX_PRICE },
   };
+}
+
+export function validatePriceCandidateAgainstReference(
+  price: number,
+  context: PriceValidationContext,
+  mode: PriceValidationMode,
+  reference: DirectPriceValidationReference | null,
+): PriceValidationDecision {
+  if (!Number.isFinite(price) || price <= 0) {
+    return {
+      accepted: false,
+      reasonCode: "non_finite_or_non_positive",
+      referenceType: reference?.type ?? "none",
+      referencePrice: reference?.price ?? null,
+      candidateRatio: null,
+      boundsUsed: null,
+    };
+  }
+
+  if (price >= MAX_PRICE) {
+    return {
+      accepted: false,
+      reasonCode: "hard_cap_exceeded",
+      referenceType: reference?.type ?? "none",
+      referencePrice: reference?.price ?? null,
+      candidateRatio: null,
+      boundsUsed: { min: 0, max: MAX_PRICE },
+    };
+  }
+
+  if (context.pegClass === "nav" || context.pegClass === "variable" || context.pegClass === "unknown") {
+    return {
+      accepted: true,
+      reasonCode: context.pegClass === "nav" ? "nav_positive_price" : "non_fixed_positive_price",
+      referenceType: reference?.type ?? "none",
+      referencePrice: reference?.price ?? null,
+      candidateRatio: null,
+      boundsUsed: { min: 0, max: MAX_PRICE },
+    };
+  }
+
+  if (reference && Number.isFinite(reference.price) && reference.price > 0) {
+    const lowerBound =
+      mode === "primary_authoritative" || mode === "historical_backfill"
+        ? 0
+        : 0.01 * reference.price;
+    const upperBound = 2 * reference.price;
+    const candidateRatio = price / reference.price;
+
+    if (price >= upperBound) {
+      return {
+        accepted: false,
+        reasonCode: "reference_upper_bound_exceeded",
+        referenceType: reference.type,
+        referencePrice: reference.price,
+        candidateRatio,
+        boundsUsed: { min: lowerBound, max: upperBound },
+      };
+    }
+
+    if (lowerBound > 0 && price <= lowerBound) {
+      return {
+        accepted: false,
+        reasonCode: "reference_lower_bound_exceeded",
+        referenceType: reference.type,
+        referencePrice: reference.price,
+        candidateRatio,
+        boundsUsed: { min: lowerBound, max: upperBound },
+      };
+    }
+
+    return {
+      accepted: true,
+      reasonCode:
+        lowerBound === 0 && candidateRatio < 0.01
+          ? "authoritative_downside_allowed"
+          : "within_reference_band",
+      referenceType: reference.type,
+      referencePrice: reference.price,
+      candidateRatio,
+      boundsUsed: { min: lowerBound, max: upperBound },
+    };
+  }
+
+  return validatePriceCandidate(price, context, mode);
 }

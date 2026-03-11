@@ -12,6 +12,7 @@ import { fetchCgTokenPools, parseCgPoolVolume } from "../../lib/coingecko-onchai
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import type { GtPool, DexPriceObs, GtNewPool } from "../dex-liquidity/types";
 import type { StagedPool } from "./types";
@@ -34,6 +35,7 @@ export async function crawlCoin(
   knownPoolIds: Set<string>,
   signal?: AbortSignal,
   deadlineMs?: number,
+  references?: PriceValidationReferences,
 ): Promise<CrawlResult> {
   const pools: StagedPool[] = [];
   const priceObs: CrawlResult["priceObs"] = [];
@@ -160,7 +162,7 @@ export async function crawlCoin(
 
           if (
             stagedPool.priceUsd != null &&
-            isPlausibleDexObservationPrice(stablecoinId, stagedPool.priceUsd) &&
+            isPlausibleDexObservationPrice(stablecoinId, stagedPool.priceUsd, references) &&
             tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
           ) {
             addPriceObs({
@@ -211,6 +213,7 @@ export async function crawlCoin(
       protocolTvlCaps: new Map(),
       newPools: gtNewPools,
       priceObs: gtPriceObs,
+      references,
       stats: {
         requests: 0,
         poolsSeen: 0,
@@ -406,7 +409,7 @@ export async function crawlCoin(
           if (
             priceUsd != null &&
             tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
-            isPlausibleDexObservationPrice(stablecoinId, priceUsd)
+            isPlausibleDexObservationPrice(stablecoinId, priceUsd, references)
           ) {
             addPriceObs({
               stablecoinId,
@@ -505,7 +508,7 @@ export async function crawlCoin(
 
             if (
               syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
-              isPlausibleDexObservationPrice(stablecoinId, price)
+              isPlausibleDexObservationPrice(stablecoinId, price, references)
             ) {
               addPriceObs({
                 stablecoinId,

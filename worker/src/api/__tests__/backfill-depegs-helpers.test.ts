@@ -210,4 +210,47 @@ describe("extractDepegEvents", () => {
       recoveryPrice: 2.9,
     });
   });
+
+  it("preserves severe downside moves in historical mode when the peg reference is valid", () => {
+    const events = extractDepegEvents(
+      [
+        { timestamp: 1_000, price: 0.0001 },
+        { timestamp: 2_000, price: 1.0 },
+      ],
+      () => 1,
+      "peggedUSD",
+      [{ ts: 1_000, supply: 2_000_000 }],
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      direction: "below",
+      startedAt: 1_000,
+      endedAt: 2_000,
+      startPrice: 0.0001,
+      recoveryPrice: 1.0,
+    });
+  });
+
+  it("preserves low-nominal FX downside moves when validated against the historical peg reference", () => {
+    const events = extractDepegEvents(
+      [
+        { timestamp: 1_000, price: 0.0005 },
+        { timestamp: 2_000, price: 0.0067 },
+      ],
+      () => 0.0067,
+      "peggedJPY",
+      [{ ts: 1_000, supply: 2_000_000 }],
+      { peggedJPY: 0.0067 },
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      direction: "below",
+      startedAt: 1_000,
+      endedAt: 2_000,
+      startPrice: 0.0005,
+      recoveryPrice: 0.0067,
+    });
+  });
 });
