@@ -53,6 +53,7 @@ function FlowsPageInner() {
   const hasData = !!summaryData || !!chartData;
   const scopeLabel = summaryData?.scope?.label ?? "Ethereum-only";
   const syncWarning = summaryData?.sync?.warning ?? chartData?.sync?.warning ?? null;
+  const showDataHealthBanner = !syncWarning;
 
   return (
     <div className="space-y-6">
@@ -118,26 +119,28 @@ function FlowsPageInner() {
           }
         }}
       />
-      <StaleDataBanner
-        queries={[
-          {
-            preset: "mintBurnFlows",
-            dataUpdatedAt: summaryUpdatedAt,
-            error: summaryError,
-            hasData: !!summaryData,
-            meta: summaryMeta,
-          },
-          ...(hours !== 24
-            ? [{
-              label: "Mint/Burn Flows (Chart)",
-              dataUpdatedAt: chartUpdatedAt,
-              error: chartError,
-              hasData: !!chartData,
-              meta: chartMeta,
-            }]
-            : []),
-        ]}
-      />
+      {showDataHealthBanner && (
+        <StaleDataBanner
+          queries={[
+            {
+              preset: "mintBurnFlows",
+              dataUpdatedAt: summaryUpdatedAt,
+              error: summaryError,
+              hasData: !!summaryData,
+              meta: summaryMeta,
+            },
+            ...(hours !== 24
+              ? [{
+                label: "Mint/Burn Flows (Chart)",
+                dataUpdatedAt: chartUpdatedAt,
+                error: chartError,
+                hasData: !!chartData,
+                meta: chartMeta,
+              }]
+              : []),
+          ]}
+        />
+      )}
 
       <section aria-label="Mint/burn overview">
         <FlowBrrrOverview

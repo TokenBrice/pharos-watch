@@ -125,11 +125,11 @@ interface EventRow {
 
 const DAY_SEC = 86400;
 const BASELINE_WINDOW_DAYS = 30;
-const FLOW_MAX_AGE_SEC = 20 * 60;
 const FLOW_CACHE_PREFIX = "mint-burn-flows:v2";
 const ETHEREUM_CHAIN_ID = "ethereum";
 const FLOW_DEFAULT_WINDOW_HOURS = 24;
 const FLOW_CRON_INTERVAL_SEC = 20 * 60;
+const FLOW_FRESHNESS_MAX_AGE_SEC = FLOW_CRON_INTERVAL_SEC * 2;
 const MINT_BURN_CRON_JOB = "sync-mint-burn";
 const ETH_BLOCK_TIME_SEC = 12;
 const WINDOW_24H_BLOCKS = Math.ceil(24 * 3600 / ETH_BLOCK_TIME_SEC);
@@ -171,7 +171,7 @@ function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }
   const headers = addFreshnessHeaders({
     "Content-Type": "application/json",
     "Cache-Control": CACHE_PROFILES.standard,
-  }, freshnessTs, FLOW_MAX_AGE_SEC);
+  }, freshnessTs, FLOW_FRESHNESS_MAX_AGE_SEC);
   const fallbackWarning = "199 - \"Served cached mint/burn flows due transient backend error\"";
   headers.Warning = headers.Warning
     ? `${headers.Warning}, ${fallbackWarning}`
@@ -185,8 +185,9 @@ function computeFlowFreshnessStatus(
 ): "fresh" | "degraded" | "stale" {
   if (lastSuccessfulSyncAt == null) return "stale";
   const ageSec = Math.max(0, nowSec - lastSuccessfulSyncAt);
-  if (ageSec <= FLOW_CRON_INTERVAL_SEC) return "fresh";
-  if (ageSec <= FLOW_CRON_INTERVAL_SEC * 2) return "degraded";
+  const ratio = ageSec / FLOW_FRESHNESS_MAX_AGE_SEC;
+  if (ratio <= 1) return "fresh";
+  if (ratio <= 1.5) return "degraded";
   return "stale";
 }
 
@@ -828,7 +829,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
     return jsonResponse(body, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, latestSuccessfulSyncAt, FLOW_MAX_AGE_SEC));
+    }, latestSuccessfulSyncAt, FLOW_FRESHNESS_MAX_AGE_SEC));
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {
@@ -960,7 +961,7 @@ async function handlePerCoin(
     await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
     return jsonResponse(body, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, latestSuccessfulSyncAt, FLOW_MAX_AGE_SEC));
+    }, latestSuccessfulSyncAt, FLOW_FRESHNESS_MAX_AGE_SEC));
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {

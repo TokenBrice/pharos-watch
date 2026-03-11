@@ -1,0 +1,136 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
+import FlowsPage from "@/app/flows/page";
+import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+
+vi.mock("next/link", () => ({
+  default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a>,
+}));
+
+vi.mock("@/hooks/use-mint-burn-flows", () => ({
+  useMintBurnFlows: vi.fn(),
+}));
+
+vi.mock("@/components/flow-chart", () => ({
+  FlowChart: () => <div>chart</div>,
+}));
+
+vi.mock("@/components/flow-table", () => ({
+  FlowTable: () => <div>table</div>,
+}));
+
+vi.mock("@/components/flow-brrr-overview", () => ({
+  FlowBrrrOverview: () => <div>overview</div>,
+}));
+
+vi.mock("@/components/query-error-notice", () => ({
+  QueryErrorNotice: () => null,
+}));
+
+vi.mock("@/components/feature-status-badge", () => ({
+  FeatureStatusBadge: () => <div>badge</div>,
+}));
+
+vi.mock("@/components/ui/toggle-group", () => ({
+  ToggleGroup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  ToggleGroupItem: ({ children }: { children: ReactNode }) => <button type="button">{children}</button>,
+}));
+
+const mockUseMintBurnFlows = vi.mocked(useMintBurnFlows);
+
+function makeQueryResult(overrides: Record<string, unknown> = {}) {
+  return {
+    data: undefined,
+    meta: null,
+    isLoading: false,
+    error: null,
+    dataUpdatedAt: Date.now(),
+    refetch: vi.fn(),
+    ...overrides,
+  };
+}
+
+function buildFlowData(syncWarning: string | null) {
+  return {
+    gauge: {
+      score: 0,
+      band: "NEUTRAL",
+      intensitySemantics: "signed-v2",
+      flightToQuality: false,
+      flightIntensity: 0,
+      trackedCoins: 1,
+      trackedMcapUsd: 100_000_000_000,
+    },
+    coins: [],
+    hourly: [],
+    updatedAt: Math.floor(Date.now() / 1000),
+    windowHours: 24,
+    scope: {
+      chainIds: ["ethereum"],
+      label: "Ethereum-only",
+    },
+    sync: {
+      lastSuccessfulSyncAt: Math.floor(Date.now() / 1000) - 3_000,
+      freshnessStatus: "degraded",
+      warning: syncWarning,
+      criticalLaneHealthy: false,
+    },
+  };
+}
+
+describe("FlowsPage", () => {
+  beforeEach(() => {
+    mockUseMintBurnFlows.mockReset();
+  });
+
+  it("suppresses the generic stale-data banner when a specific sync warning is present", () => {
+    const syncWarning = "Mint/burn sync freshness is degraded versus the 20-minute cron cadence.";
+
+    mockUseMintBurnFlows.mockImplementation((hours = 24) => {
+      if (hours === 168) {
+        return makeQueryResult({
+          data: buildFlowData(syncWarning),
+        }) as ReturnType<typeof useMintBurnFlows>;
+      }
+
+      return makeQueryResult({
+        data: buildFlowData(syncWarning),
+        meta: {
+          updatedAt: Math.floor(Date.now() / 1000) - 3_000,
+          ageSeconds: 3_000,
+          status: "degraded",
+        },
+      }) as ReturnType<typeof useMintBurnFlows>;
+    });
+
+    const html = renderToStaticMarkup(<FlowsPage />);
+
+    expect(html).toContain(syncWarning);
+    expect(html).not.toContain("Data may be delayed");
+  });
+
+  it("still shows the generic stale-data banner when no sync-specific warning exists", () => {
+    mockUseMintBurnFlows.mockImplementation((hours = 24) => {
+      if (hours === 168) {
+        return makeQueryResult({
+          data: buildFlowData(null),
+        }) as ReturnType<typeof useMintBurnFlows>;
+      }
+
+      return makeQueryResult({
+        data: buildFlowData(null),
+        meta: {
+          updatedAt: Math.floor(Date.now() / 1000) - 3_000,
+          ageSeconds: 3_000,
+          status: "degraded",
+        },
+      }) as ReturnType<typeof useMintBurnFlows>;
+    });
+
+    const html = renderToStaticMarkup(<FlowsPage />);
+
+    expect(html).not.toContain("Mint/burn sync freshness is degraded");
+    expect(html).toContain("Data may be delayed");
+  });
+});

@@ -11,6 +11,8 @@ Operational freshness configuration is shared via `worker/src/lib/mint-burn-heal
 
 Scheduled/http handlers apply env overrides on top of these defaults (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/http.ts`), and `/api/health` uses the same resolved config for status evaluation.
 
+Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intentionally allow one missed 20-minute critical-lane slot before warning. User-facing freshness is `fresh <= 40m`, `degraded <= 60m`, `stale > 60m`, which keeps the public warning surface aligned with `/status` cron-health grace windows instead of flagging a single late slot as an incident.
+
 ---
 
 ## Methodology Versioning
@@ -36,6 +38,8 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 Lane policy:
 - `sync-mint-burn` = critical lane. Uses the existing job id so freshness alerts and API freshness remain keyed to the major-symbol path.
 - `sync-mint-burn-extended` = extended lane. Uses its own `mint_burn_run_state.job` key and warning-only coverage semantics so long-tail backlog churn does not escalate the critical lane to `error`.
+
+UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders that targeted banner and suppresses the generic stale-data banner for the same query so users do not see duplicate amber warnings describing the same freshness condition.
 
 ---
 

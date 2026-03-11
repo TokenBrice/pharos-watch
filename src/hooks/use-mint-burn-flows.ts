@@ -19,7 +19,7 @@ import {
   getPressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 
-const MINT_BURN_META_MAX_AGE_SEC = CRON_20MIN / 1000;
+const MINT_BURN_META_MAX_AGE_SEC = (CRON_20MIN * 2) / 1000;
 
 function inferHas24hActivity(
   coin: MintBurnFlowsResponse["coins"][number],
