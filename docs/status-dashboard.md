@@ -43,7 +43,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards`, `GET /api/yield-rankings`, and related read endpoints
   - Legacy per-hook files (`src/hooks/use-health.ts`, `src/hooks/use-peg-summary.ts`, etc.) now re-export from this module so existing imports and tests stay stable
 - `src/hooks/use-endpoint-probes.ts`
-  - Probes **public + admin** endpoint probe groups every 60s
+  - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
   - Manual/admin mutation actions are listed but intentionally not auto-probed
 - `src/hooks/use-status-history.ts`
   - Calls `GET /api/status-history` with `X-Admin-Key`
