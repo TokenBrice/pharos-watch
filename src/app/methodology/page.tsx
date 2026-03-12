@@ -5,6 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
 import {
@@ -35,6 +36,28 @@ const METHODOLOGY_SECTIONS = [
   { id: "contagion-stress-test-methodology", label: "Contagion Test" },
   { id: "blacklist-tracker-methodology", label: "Blacklist Tracker" },
 ];
+
+const METHODOLOGY_READING_STEPS = [
+  {
+    label: "Summary",
+    description: "Model purpose and the core signal to scan first.",
+  },
+  {
+    label: "Quick Facts",
+    description: "Cadence, score range, dependencies, and failure behavior.",
+  },
+  {
+    label: "Worked Examples",
+    description: "Real inputs run through the same functions used in production.",
+  },
+  {
+    label: "Technical Notes",
+    description: "Expanded formulas, caveats, and changelog links when you need them.",
+  },
+] as const;
+
+const READER_GUIDE_COPY =
+  "Reader mode keeps summaries up front. Switch to Analyst for formulas, caveats, and worked examples.";
 
 function MethodologyDetails({
   children,
@@ -154,18 +177,32 @@ export default function MethodologyPage() {
           <span className="text-foreground">Methodology</span>
         </nav>
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)] xl:items-end">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.4rem]">Methodology</h1>
-            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              How Pharos grades stablecoins: transparent scoring across safety, peg stability, liquidity, yield, and
-              contagion risk. Treat this page like a reference manual, not a marketing explainer.
-            </p>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.4rem]">Methodology</h1>
+              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                How Pharos grades stablecoins: transparent scoring across safety, peg stability, liquidity, yield, and
+                contagion risk. Treat this page like a reference manual, not a marketing explainer.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4 md:hidden">
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <p className="pharos-kicker">Reader Guide</p>
+                  <p className="text-sm text-foreground">{READER_GUIDE_COPY}</p>
+                </div>
+                <MethodologyModeToggle className="w-full justify-between border-border/70 bg-background/90" />
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Page rhythm: <span className="text-foreground">summary</span>, quick facts, worked example, technical
+                  notes.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-card/72 px-4 py-4">
+          <div className="hidden rounded-2xl border border-border/60 bg-card/72 px-4 py-4 md:block">
             <p className="pharos-kicker">Reader Guide</p>
             <p className="mt-2 text-sm text-foreground">
-              Reader mode keeps the summaries up front. Analyst mode expands the technical details and worked examples
-              across every section.
+              {READER_GUIDE_COPY} Use the jump rail toggle to switch modes without losing your place in the page.
             </p>
           </div>
         </div>
@@ -182,35 +219,28 @@ export default function MethodologyPage() {
         }
       />
 
-      <Card className="rounded-[1.5rem] border border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-        <CardHeader className="space-y-2">
+      <Card className="hidden rounded-[1.5rem] border border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:block">
+        <CardHeader className="space-y-3 pb-2">
           <CardTitle as="h2">How to Read This Page</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Each section follows the same rhythm: summary first, quick facts second, worked example third, and the full
-            technical notes behind an expandable panel.
+            Each section follows the same rhythm so you can skim first, then expand only the parts that need a deeper
+            read.
           </p>
         </CardHeader>
-        <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-4">
-          <div className="rounded-2xl border border-border/60 bg-background px-4 py-3">
-            <p className="pharos-kicker">Summary</p>
-            <p className="mt-2 text-foreground">Start here for the model purpose and its core signal.</p>
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-background px-4 py-3">
-            <p className="pharos-kicker">Quick Facts</p>
-            <p className="mt-2 text-foreground">
-              Cadence, score range, dependencies, and failure behavior at a glance.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-background px-4 py-3">
-            <p className="pharos-kicker">Worked Examples</p>
-            <p className="mt-2 text-foreground">Real inputs run through the same functions used in production.</p>
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-background px-4 py-3">
-            <p className="pharos-kicker">Changelog</p>
-            <p className="mt-2 text-foreground">
-              Every major model has version history linked from the section header.
-            </p>
-          </div>
+        <CardContent className="grid gap-4 border-t border-border/40 pt-5 text-sm text-muted-foreground md:grid-cols-2 xl:grid-cols-4">
+          {METHODOLOGY_READING_STEPS.map((step, index) => (
+            <div
+              key={step.label}
+              className={cn(
+                "space-y-2 border-border/50",
+                index % 2 === 1 ? "md:border-l md:pl-4" : "md:pl-0",
+                index > 0 ? "xl:border-l xl:pl-4" : "xl:border-l-0 xl:pl-0",
+              )}
+            >
+              <p className="pharos-kicker">{step.label}</p>
+              <p className="text-foreground">{step.description}</p>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
@@ -263,7 +293,8 @@ export default function MethodologyPage() {
                 { label: "Required sources", value: "Market-cap totals + active depeg inputs (DEWS breadth optional)" },
                 {
                   label: "Failure behavior",
-                  value: "Returns null when market-cap input is missing/<=0; cron skips that sample and API serves last valid value",
+                  value:
+                    "Returns null when market-cap input is missing/<=0; cron skips that sample and API serves last valid value",
                 },
               ]}
             />
@@ -911,8 +942,8 @@ export default function MethodologyPage() {
                 <li>Cemetery (defunct) coins receive a permanent F</li>
                 <li>Decentralization score is structural, not a value judgment</li>
                 <li>
-                  Blacklist inheritance: stablecoins where &ge;25% of reserves (by weight) are backed
-                  by first-order blacklistable coins are flagged as &ldquo;possible-inherited&rdquo; blacklist risk
+                  Blacklist inheritance: stablecoins where &ge;25% of reserves (by weight) are backed by first-order
+                  blacklistable coins are flagged as &ldquo;possible-inherited&rdquo; blacklist risk
                 </li>
               </ul>
             </div>
@@ -921,8 +952,8 @@ export default function MethodologyPage() {
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Dependency Ceilings</h3>
               <p>
-                When a stablecoin depends on another (wrapper, mechanism, or collateral relationship),
-                its dependency risk score is capped relative to its upstream:
+                When a stablecoin depends on another (wrapper, mechanism, or collateral relationship), its dependency
+                risk score is capped relative to its upstream:
               </p>
               <ul className="list-disc list-inside space-y-1">
                 <li>
@@ -936,8 +967,8 @@ export default function MethodologyPage() {
                 </li>
               </ul>
               <p>
-                If any upstream dependency scores below 75, a 10-point penalty is applied.
-                These ceilings prevent a wrapped token from outscoring its underlying asset.
+                If any upstream dependency scores below 75, a 10-point penalty is applied. These ceilings prevent a
+                wrapped token from outscoring its underlying asset.
               </p>
             </div>
 
@@ -1121,7 +1152,9 @@ export default function MethodologyPage() {
                     <tr>
                       <td className="py-2 pr-4 text-foreground">Volume Activity</td>
                       <td className="py-2 pr-4">20%</td>
-                      <td className="py-2">Log-scale V/T ratio: 33.3&times;log10(vtRatio/0.005). ~0.5%&rarr;13, ~5%&rarr;56, ~50%&rarr;100</td>
+                      <td className="py-2">
+                        Log-scale V/T ratio: 33.3&times;log10(vtRatio/0.005). ~0.5%&rarr;13, ~5%&rarr;56, ~50%&rarr;100
+                      </td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 text-foreground">Pool Quality</td>
@@ -1136,8 +1169,8 @@ export default function MethodologyPage() {
                       <td className="py-2 pr-4 text-foreground">Durability</td>
                       <td className="py-2 pr-4">15%</td>
                       <td className="py-2">
-                        TVL stability (35%), volume consistency (25%), pool maturity (25%),
-                        organic fee fraction with sqrt curve (15%)
+                        TVL stability (35%), volume consistency (25%), pool maturity (25%), organic fee fraction with
+                        sqrt curve (15%)
                       </td>
                     </tr>
                     <tr>
@@ -1545,11 +1578,13 @@ export default function MethodologyPage() {
               facts={[
                 {
                   label: "Minimum data",
-                  value: "Need one resolved APY source; deterministic exchange-rate sources additionally need prior source-specific history",
+                  value:
+                    "Need one resolved APY source; deterministic exchange-rate sources additionally need prior source-specific history",
                 },
                 {
                   label: "Required sources",
-                  value: "Direct on-chain reads, curated DeFiLlama pools, rate-derived benchmark inputs, or 30d price history",
+                  value:
+                    "Direct on-chain reads, curated DeFiLlama pools, rate-derived benchmark inputs, or 30d price history",
                 },
                 {
                   label: "Failure behavior",
@@ -1782,9 +1817,9 @@ export default function MethodologyPage() {
             event severity, active depegs, and unstable event spread.
           </p>
           <p>
-            DEX cross-validation uses explicit trust gates. Detection and pending confirmation only trust fresh DEX
-            rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but
-            still non-trivial floor of $250K.
+            DEX cross-validation uses explicit trust gates. Detection and pending confirmation only trust fresh DEX rows
+            with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still
+            non-trivial floor of $250K.
           </p>
           <p>
             DEWS (Depeg Early Warning System) computes forward-looking stress every 15 minutes from market, liquidity,
@@ -2116,7 +2151,9 @@ export default function MethodologyPage() {
               <p className="font-mono text-xs bg-muted rounded px-3 py-2">
                 DEWS = round(clamp(0, 100, sum(W_i &times; S_i) / sum(W_i)))
               </p>
-              <p>At least 2 available signal sources (total weight &ge; 0.30) are required; otherwise DEWS returns null.</p>
+              <p>
+                At least 2 available signal sources (total weight &ge; 0.30) are required; otherwise DEWS returns null.
+              </p>
             </div>
 
             {/* Sub-signals */}

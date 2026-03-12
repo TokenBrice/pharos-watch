@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 type MethodologyMode = "reader" | "analyst";
 
@@ -17,7 +18,7 @@ function applyMethodologyMode(mode: MethodologyMode) {
   }
 }
 
-export function MethodologyModeToggle() {
+export function MethodologyModeToggle({ className }: { className?: string }) {
   const [mode, setMode] = useState<MethodologyMode>(() => {
     if (typeof window === "undefined") {
       return "reader";
@@ -36,13 +37,21 @@ export function MethodologyModeToggle() {
   }, []);
 
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/85 px-2 py-1 text-xs shadow-sm">
-      <span className="pharos-kicker text-[10px]">View</span>
+    <div
+      className={cn(
+        "inline-flex flex-wrap items-center gap-1.5 rounded-[1.1rem] border border-border/60 bg-background/85 p-1.5 text-xs shadow-sm md:gap-2 md:rounded-full md:px-2 md:py-1",
+        className,
+      )}
+    >
+      <span className="pharos-kicker px-1 text-[10px]">View</span>
       <button
         type="button"
         aria-pressed={mode === "reader"}
         onClick={() => setAndApplyMode("reader")}
-        className={`rounded-full px-3 py-1.5 transition-colors ${mode === "reader" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        className={cn(
+          "pharos-focus-ring inline-flex min-h-11 items-center justify-center rounded-full px-3.5 py-2 transition-colors md:min-h-8 md:px-3 md:py-1.5",
+          mode === "reader" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
       >
         Reader
       </button>
@@ -50,7 +59,10 @@ export function MethodologyModeToggle() {
         type="button"
         aria-pressed={mode === "analyst"}
         onClick={() => setAndApplyMode("analyst")}
-        className={`rounded-full px-3 py-1.5 transition-colors ${mode === "analyst" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        className={cn(
+          "pharos-focus-ring inline-flex min-h-11 items-center justify-center rounded-full px-3.5 py-2 transition-colors md:min-h-8 md:px-3 md:py-1.5",
+          mode === "analyst" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
       >
         Analyst
       </button>

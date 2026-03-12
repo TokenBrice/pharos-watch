@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface LongformSection {
@@ -25,14 +25,32 @@ export function LongformScrollspyNav({
   className,
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
+  const railRef = useRef<HTMLDivElement | null>(null);
   const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
 
   useEffect(() => {
+    const railNode = railRef.current;
     const sectionNodes = sections
       .map((section) => document.getElementById(section.id))
       .filter((node): node is HTMLElement => node !== null);
 
-    if (sectionNodes.length === 0) return;
+    if (!railNode || sectionNodes.length === 0) return;
+
+    const applyScrollMargins = () => {
+      const railRect = railNode.getBoundingClientRect();
+      const scrollMarginTop = Math.ceil(railRect.height + Math.max(railRect.top, 0) + 16);
+      for (const node of sectionNodes) {
+        node.style.scrollMarginTop = `${scrollMarginTop}px`;
+      }
+    };
+
+    applyScrollMargins();
+
+    const resizeObserver = new ResizeObserver(() => {
+      applyScrollMargins();
+    });
+    resizeObserver.observe(railNode);
+    window.addEventListener("resize", applyScrollMargins);
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -54,13 +72,29 @@ export function LongformScrollspyNav({
       observer.observe(node);
     }
 
-    return () => observer.disconnect();
+    const activeHash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    if (activeHash.length > 0 && sectionNodes.some((node) => node.id === activeHash)) {
+      requestAnimationFrame(() => {
+        applyScrollMargins();
+        document.getElementById(activeHash)?.scrollIntoView({ block: "start" });
+      });
+    }
+
+    return () => {
+      observer.disconnect();
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", applyScrollMargins);
+      for (const node of sectionNodes) {
+        node.style.scrollMarginTop = "";
+      }
+    };
   }, [sections]);
 
   if (sections.length === 0) return null;
 
   return (
     <div
+      ref={railRef}
       className={cn(
         "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-2xl border border-border/60 bg-background/95 px-4 py-3 shadow-[0_16px_40px_oklch(0_0_0_/0.12)] backdrop-blur supports-[backdrop-filter]:bg-background/85 md:top-0",
         className,
@@ -68,22 +102,25 @@ export function LongformScrollspyNav({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center justify-between gap-3">
-          <p className="pharos-kicker">{railLabel}</p>
-          <span className="text-xs text-muted-foreground">
-            {sections.find((section) => section.id === effectiveActiveId)?.label}
-          </span>
+          <div className="flex min-w-0 items-center gap-3">
+            <p className="pharos-kicker">{railLabel}</p>
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              {sections.find((section) => section.id === effectiveActiveId)?.label}
+            </span>
+          </div>
+          <span className="text-[11px] text-muted-foreground sm:hidden">Swipe to jump</span>
         </div>
         {rightSlot}
       </div>
-      <nav aria-label={navAriaLabel} className="mt-3 overflow-x-auto scrollbar-none">
-        <div className="flex min-w-max items-center gap-2">
+      <nav aria-label={navAriaLabel} className="scroll-shadow mt-3 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex min-w-max snap-x snap-mandatory items-center gap-2 pr-4 sm:pr-0">
           {sections.map((section) => (
             <a
               key={section.id}
               href={`#${section.id}`}
               onClick={() => setActiveId(section.id)}
               className={cn(
-                "pharos-focus-ring shrink-0 whitespace-nowrap rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
+                "pharos-focus-ring inline-flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors md:min-h-9 md:px-3.5",
                 effectiveActiveId === section.id
                   ? "border-foreground/35 bg-muted text-foreground"
                   : "border-border/60 bg-background text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",

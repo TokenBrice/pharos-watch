@@ -8,6 +8,8 @@
 
 - **Route:** `src/app/methodology/page.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
+- **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail
+- **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps the dedicated "How to Read This Page" overview card
 - **Version badges:** imported from per-system version modules in `shared/lib/*-version.ts`
 - **Changelog wrappers:** config-driven route wrappers via `src/app/methodology/changelog-route-factory.tsx`
 
@@ -15,16 +17,16 @@
 
 ## Section → Source Mapping
 
-| Methodology Section | Primary Runtime Source(s) |
-|---|---|
-| Stability Index | `worker/src/lib/stability-index.ts`, `shared/lib/stability-index-version.ts` |
-| Safety Scores | `shared/lib/report-cards.ts`, `shared/lib/safety-score-version.ts` |
-| Liquidity Score | `worker/src/cron/dex-liquidity/pool-helpers.ts`, `shared/lib/liquidity-score-version.ts` |
-| Mint/Burn Flow | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/mint-burn-flow-version.ts` |
-| Yield Intelligence | `worker/src/cron/yield-helpers.ts`, `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/{cache,resolve,rankings,sources}.ts`, `worker/src/lib/constants.ts` (PYS constants), `shared/lib/yield-methodology-version.ts` |
-| PegScore + DEWS | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-dews-version.ts` |
-| Contagion Stress Test | `shared/lib/report-cards.ts` (`computeStressedGrades`) |
-| Blacklist Tracker | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/blacklist-tracker-version.ts` |
+| Methodology Section   | Primary Runtime Source(s)                                                                                                                                                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/stability-index-version.ts`                                                                                                                                                         |
+| Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/safety-score-version.ts`                                                                                                                                                                   |
+| Liquidity Score       | `worker/src/cron/dex-liquidity/pool-helpers.ts`, `shared/lib/liquidity-score-version.ts`                                                                                                                                             |
+| Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/mint-burn-flow-version.ts`                                                                                                                     |
+| Yield Intelligence    | `worker/src/cron/yield-helpers.ts`, `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/{cache,resolve,rankings,sources}.ts`, `worker/src/lib/constants.ts` (PYS constants), `shared/lib/yield-methodology-version.ts` |
+| PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-dews-version.ts`                                                                                                                                              |
+| Contagion Stress Test | `shared/lib/report-cards.ts` (`computeStressedGrades`)                                                                                                                                                                               |
+| Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/blacklist-tracker-version.ts`                                                                                                              |
 
 ---
 
