@@ -110,7 +110,7 @@ export async function fetchEvmCallHexAtBlock(
   );
 
   if (!isHexResult(result ?? undefined) || result === "0x") return null;
-  return result;
+  return result as `0x${string}`;
 }
 
 export async function fetchEvmBlockNumber(
