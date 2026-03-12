@@ -9,15 +9,16 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
 - **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
-- **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, EURC, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
+- **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, and DexScreener pools used to suppress false depeg alerts
+- **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 81 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Detail pages** — price chart, supply history, chain distribution, liquidity card, and safety ratings for each stablecoin
+- **Detail pages** — price chart, supply history, chain distribution, reserve card, liquidity card, and safety ratings for each stablecoin
 - **Status dashboard** — cron health, cache freshness, and system monitoring
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
@@ -106,6 +107,7 @@ src/                              Frontend (Next.js static export)
 │   ├── blacklist/                Freeze & blacklist event tracker
 │   ├── cemetery/                 Dead stablecoin graveyard
 │   ├── compare/                  Side-by-side stablecoin comparison
+│   ├── coverage/                 Per-coin feature coverage matrix
 │   ├── depeg/                    Live peg monitoring + event feed
 │   ├── dependency-map/           Collateral dependency graph visualization
 │   ├── digest/                   AI-generated daily market digest (+ digest/[date]/)
@@ -176,6 +178,8 @@ Cloudflare D1 (SQLite database)
   ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, DexScreener
   ├── onchain_supply       → per-stablecoin on-chain supply by chain (contract calls)
   ├── supply_history       → daily per-coin supply snapshots from cached stablecoins data (08:00 UTC + retry upserts)
+  ├── reserve_composition  → live reserve slices per coin for live-enabled assets
+  ├── reserve_sync_state   → per-coin reserve-sync freshness, status, and warnings
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
   ├── stability_index_samples → high-frequency PSI samples (sub-daily granularity)
   ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs

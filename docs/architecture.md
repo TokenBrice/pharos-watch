@@ -9,6 +9,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/stablecoins` | Full stablecoin list with supply, price, chains. Returns `X-Data-Age` header |
 | `GET /api/stablecoin/:id` | Per-coin detail (cache-aside, 5min TTL) |
 | `GET /api/stablecoin-summary/:id` | Lightweight per-coin snapshot (price + aggregate supply/deltas) |
+| `GET /api/stablecoin-reserves/:id` | Live or fallback reserve composition for live-enabled assets |
 | `GET /api/stablecoin-charts` | Historical total supply chart data |
 | `GET /api/blacklist` | Freeze/blacklist events (filterable by token, chain) |
 | `GET /api/depeg-events` | Depeg events (`?stablecoin=ID`, `?active=true`, `?limit=N&offset=M`) |
@@ -415,6 +416,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── cache-handlers.ts     # Cache-backed handlers: stablecoins, stablecoin-charts, bluechip-ratings, usds-status, yield-rankings
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id (orchestrator + branch routing)
     │   ├── stablecoin-summary.ts # GET /api/stablecoin-summary/:id (lightweight per-coin snapshot)
+    │   ├── stablecoin-reserves.ts # GET /api/stablecoin-reserves/:id (live reserve composition + fallback modes)
     │   ├── stablecoin-detail/    # Stablecoin detail handler internals (focused modules)
     │   │   ├── shared.ts         # Shared cache/logging/response helpers + supply_history fallback
     │   │   ├── commodity.ts      # Commodity token upstream assembly (DL + CG fallback)

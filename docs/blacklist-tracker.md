@@ -2,7 +2,11 @@
 
 Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 16 contract configurations on 8 chains. Runs every 20 minutes, incrementally scanning from the last processed block.
 
-**Tracked stablecoins surfaced in the API/UI:** USDC, USDT, EURC, PAXG, XAUT.
+**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT.
+
+**Shared API/UI enum:** USDC, USDT, EURC, PAXG, XAUT via `BLACKLIST_STABLECOINS` in `shared/types/index.ts`.
+
+Implementation note: `worker/src/lib/blacklist-contracts.ts` currently defines no dedicated EURC contract configuration, so live `blacklist_events` rows come from the four cron-backed assets above even though the shared enum still accepts `EURC`.
 
 ---
 
@@ -336,6 +340,8 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"EURC"`, `"PAXG"`, `"XAUT"`)    |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
+
+`"EURC"` is accepted here because the shared API schema includes it, but current cron-backed event rows are produced only for USDC, USDT, PAXG, and XAUT until an EURC contract config is added.
 
 **Response:**
 
