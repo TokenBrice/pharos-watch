@@ -2,10 +2,11 @@
 
 ## Overview
 
-This document covers two frontend-only feature pages that are not backed by dedicated worker endpoints:
+This document covers two frontend-only feature surfaces that are not backed by dedicated page-specific worker endpoints:
 
 - `/cemetery` — static memorial dataset + interactive UI
-- `/compare` — multi-source side-by-side stablecoin analysis
+- `/compare` — multi-source live compare tool
+- `/compare/[slug]` — static comparison landing pages generated from tracked metadata
 
 ## Stablecoin Cemetery (`/cemetery`)
 
@@ -50,13 +51,16 @@ Each notification includes the epitaph for every newly added coin, plus a rotati
 - `StablecoinCemetery` renders collapsible rows with source links and cause badges, using the same order as the tombstone field above.
 - `CemeteryCharts` computes all chart series directly from `DEAD_STABLECOINS` (no API fetch).
 
-## Compare (`/compare`)
+## Compare (`/compare` + `/compare/[slug]`)
 
 Primary files:
 - `src/app/compare/page.tsx`
+- `src/app/compare/[slug]/page.tsx`
 - `src/app/compare/client.tsx`
 - `src/components/comparison-table.tsx`
 - `src/components/comparison-chart.tsx`
+- `src/lib/compare-pages.ts`
+- `src/lib/compare-share-image.ts`
 
 ### Selection and URL contract
 
@@ -65,6 +69,7 @@ Primary files:
 - Query param `coins` accepts:
   - canonical ticker-issuer IDs (primary format, e.g. `usdt-tether`)
   - lowercase symbols (legacy fallback)
+- Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 
 Selected state is normalized back to canonical IDs in the URL to avoid duplicate-symbol collisions and preserve shareable links.
 

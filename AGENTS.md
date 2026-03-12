@@ -24,7 +24,7 @@ Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn
 ## Directory Overview
 
 ```
-src/app/         — Pages (homepage, blacklist, cemetery, compare, dependency-map, depeg, digest, flows, liquidity, methodology, portfolio, privacy, safety-scores, stability-index, start, status, telegram, about, yield, stablecoin/[id], stablecoins/[peg], stablecoins/backing/[backing], stablecoins/governance/[governance])
+src/app/         — Pages (homepage, blacklist, cemetery, compare, coverage, dependency-map, depeg, digest, flows, liquidity, methodology, portfolio, privacy, safety-scores, stability-index, start, status, telegram, about, yield, stablecoin/[id], stablecoins/[peg], stablecoins/backing/[backing], stablecoins/governance/[governance])
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
@@ -85,12 +85,13 @@ Read these when working on related code:
 - **`docs/depeg-detection.md`** — Two-stage depeg detection, thresholds, confirmation flow, event lifecycle, peg score formula
 - **`docs/shadow-stablecoins.md`** — Shadow stablecoin metadata, PSI eligibility boundary, and UI exclusion rules
 - **`docs/supply-snapshot.md`** — Daily supply snapshot cron, supply_history schema, supply helpers, backfill endpoint
+- **`docs/live-reserves.md`** — Live reserve sync config, adapter registry, storage, API modes, and detail/status consumers
 - **`docs/blacklist-tracker.md`** — Multi-chain blacklist/freeze tracking, contract configs, balance enrichment, sync flow
 - **`docs/mint-burn-flows.md`** — Mint/burn flow tracker: on-chain event sync, Flow Intensity Score, Bank Run Gauge, flight-to-quality detection, contract configs, scoring, API endpoints, frontend
 - **`docs/yield-intelligence.md`** — Yield pipeline: three-tier APY resolution, PYS formula, T-bill rate, warning signals, DB schema, API endpoints, frontend
 - **`docs/dews.md`** — DEWS formula, 8 sub-signals, threat bands, normalization, API endpoint
 - **`docs/report-cards-timeline.md`** — Report card history tracking, grade change persistence, timeline UI
-- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (9 trigger slots, 22 scheduled jobs / 21 status-tracked jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
+- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (10 trigger slots, 23 scheduled jobs / 22 status-tracked jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
 - **`docs/telegram-alerts.md`** — Telegram webhook commands, D1 subscription tables, alert dispatch snapshots, bot ops
 - **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
 - **`docs/scripts.md`** — Operational and CI helper scripts in `scripts/`

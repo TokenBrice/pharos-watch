@@ -374,7 +374,7 @@ Implementation stages:
 
 ### `fetch-tbill-rate`
 
-**Schedule:** `0 8 * * *` (daily, Trigger 8)
+**Schedule:** `0 8 * * *` (daily, Trigger 9)
 **File:** `worker/src/cron/fetch-tbill-rate.ts`
 
 Fetches the latest T-bill proxy rate from FRED (`DGS3MO`). Validates the rate (must be 0–20%), stores in cache. Falls back to `RISK_FREE_RATE_FALLBACK` on any failure.

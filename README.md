@@ -149,6 +149,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 - [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
 - [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior
+- [docs/live-reserves.md](./docs/live-reserves.md) - live reserve-sync config, adapter registry, API modes, and status/detail consumers
 - [docs/deployment-process.md](./docs/deployment-process.md) - local merge gate and CI deploy sequence
 - [docs/methodology-page.md](./docs/methodology-page.md) - `/methodology` section-to-source mapping and update contract
 

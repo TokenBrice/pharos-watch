@@ -18,6 +18,7 @@ Verified entry point for the `/docs` corpus. Use this file to find the authorita
 - [worker-infrastructure.md](./worker-infrastructure.md) - runtime model, env interface, cron orchestration, and observability
 - [worker-and-api-limits.md](./worker-and-api-limits.md) - upstream and platform hard limits that constrain worker design
 - [data-flow-map.md](./data-flow-map.md) - external source -> cron -> D1 -> API -> hook -> page mapping
+- [live-reserves.md](./live-reserves.md) - live reserve-sync config, adapter registry, storage, API modes, and frontend/status consumers
 - [data-pipeline.md](./data-pipeline.md) - stablecoin sync, price enrichment, FX/metal rates, and integrity guardrails
 - [deployment-process.md](./deployment-process.md) - production deploy workflow and merge-gate policy
 - [testing.md](./testing.md) - lint/test/coverage workflow and test inventory
