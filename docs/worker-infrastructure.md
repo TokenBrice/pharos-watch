@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 23 scheduled runtime jobs across 10 trigger slots. `CRON_INTERVALS` / `/api/status` track 22 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally not part of the shared status metadata set.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 23 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track 22 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally not part of the shared status metadata set.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -198,7 +198,7 @@ Current consumers:
 
 ## Cron Scheduling
 
-This worker declares 9 cron expressions in `worker/wrangler.toml`. The paid Workers plan allows up to 250 cron triggers. Fetch-heavy jobs (blacklist, mint/burn, DEX discovery, stablecoin charts) and Telegram alerts each run on dedicated triggers to get independent 6-connection pools and CPU budgets.
+This worker declares 10 cron expressions in `worker/wrangler.toml`. The paid Workers plan allows up to 250 cron triggers. Fetch-heavy jobs (blacklist, mint/burn, DEX discovery, stablecoin charts) and Telegram alerts each run on dedicated triggers to get independent 6-connection pools and CPU budgets.
 
 ### wrangler.toml Triggers
 
@@ -211,6 +211,7 @@ crons = [
   "6,26,46 * * * *",
   "13,33,53 * * * *",
   "10,40 * * * *",
+  "11 * * * *",
   "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   "0 8 * * *",
   "5 8 * * *",
@@ -319,7 +320,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
 | `discovery-scan` | `runDiscoveryScan()` | `worker/src/cron/discovery-scan.ts` | `docs/data-pipeline.md` |
 
-**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` (1 long-lived Anthropic API call), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 8 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` (1 long-lived Anthropic API call), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 9 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency.
 
 ## Telegram Alert Bot
 

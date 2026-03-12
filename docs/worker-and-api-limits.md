@@ -14,7 +14,7 @@ The entire backend runs on a single Cloudflare Worker script.
 | **Included CPU time/month** | 30 M CPU-ms | $0.02/M over |
 | **CPU time per HTTP request** | 30 s default (up to 5 min configurable) | |
 | **CPU time per Cron Trigger** | 30 s if the schedule runs more than once per hour; 15 min otherwise | Platform default. This repo additionally sets `cpu_ms = 30000` in `worker/wrangler.toml`, so our effective per-invocation CPU cap is 30 s unless reconfigured |
-| **Cron Triggers** | No current per-worker cap; account quota applies | Cloudflare removed the old per-worker trigger cap. This repo currently uses 9 cron expressions |
+| **Cron Triggers** | No current per-worker cap; account quota applies | Cloudflare removed the old per-worker trigger cap. This repo currently uses 10 cron expressions |
 | **Concurrent outbound fetch() per invocation** | **6** | ⚠️ Hard platform limit. DEX liquidity already batches (2 DL fetches, then 4 Curve) to stay within budget |
 | **Subrequests per invocation (Workers Standard default)** | 10,000 | Configurable higher on Workers Paid; the old 1,000-subrequest cap was removed |
 | **D1 connections per invocation** | 6 simultaneous | |

@@ -48,6 +48,7 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [DexScreener](https://dexscreener.com/) | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment | Varies by pipeline (15/20/30 min) |
 | [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 15 min (as fallback) |
 | [CoinMarketCap](https://coinmarketcap.com/) | Fallback price enrichment for assets with CMC slugs | 15 min (rate-limited to 1/hour) |
+| Protocol reserve APIs, dashboards, and on-chain accounting reads | Live reserve composition for live-enabled assets | Hourly |
 | [Etherscan v2](https://etherscan.io/) | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains) | 20 min |
 | [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 20 min |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | 20 min |
@@ -137,7 +138,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migration files (69 total)
+└── migrations/                   D1 SQL migration files (71 total)
 ```
 
 ## Documentation
@@ -159,6 +160,7 @@ Cloudflare Worker (API layer)
   ├── Cron: 6,26,46 * * * *                     → DEX discovery staging
   ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
   ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + yield sync
+  ├── Cron: 11 * * * *                          → live reserve sync
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
   └── Cron: 5 8 * * *                           → Bluechip sync + daily digest + discovery scan
