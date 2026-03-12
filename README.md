@@ -43,9 +43,9 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 30 min |
 | [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 30 min |
 | [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 30 min |
-| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Primary DEX pool discovery (16 chains), locked liquidity %, fee tiers, balance approximation | 30 min |
-| [GeckoTerminal](https://www.geckoterminal.com/) | Fallback pool crawl for DEX liquidity when no CoinGecko API key is configured | 30 min |
-| [DexScreener](https://dexscreener.com/) | Batch token API for implied prices + search API for price fallback | 30 min |
+| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation | 20 min |
+| [GeckoTerminal](https://www.geckoterminal.com/) | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs | 20 min |
+| [DexScreener](https://dexscreener.com/) | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment | Varies by pipeline (15/20/30 min) |
 | [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 15 min (as fallback) |
 | [CoinMarketCap](https://coinmarketcap.com/) | Fallback price enrichment for assets with CMC slugs | 15 min (rate-limited to 1/hour) |
 | [Etherscan v2](https://etherscan.io/) | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains) | 20 min |
@@ -58,20 +58,27 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [Bluechip](https://bluechip.org/) | Independent stablecoin safety ratings (SMIDGE framework) | Daily |
 | [Anthropic](https://anthropic.com/) | AI-generated daily market digest | Daily |
 
+DEX discovery sources write to `dex_pool_staging` every 20 minutes on the dedicated discovery cron; `syncDexLiquidity()` then merges staged rows on its separate 30-minute scoring cron. DexScreener also participates in the 15-minute stablecoin price-enrichment path.
+
 ## Getting Started
+
+Requires Node 20+ (`package.json#engines.node`). Install both package trees first:
+
+```bash
+npm install
+cd worker && npm install
+```
 
 ### Frontend
 
 ```bash
-npm install
 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
 ```
 
 ### Worker API
 
 ```bash
-cd worker
-npx wrangler dev
+cd worker && npx wrangler dev
 ```
 
 To trigger crons manually:
@@ -130,8 +137,17 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migration files (68 total)
+└── migrations/                   D1 SQL migration files (69 total)
 ```
+
+## Documentation
+
+- [docs/README.md](./docs/README.md) - verified documentation index and topic map
+- [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
+- [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
+- [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior
+- [docs/deployment-process.md](./docs/deployment-process.md) - local merge gate and CI deploy sequence
+- [docs/methodology-page.md](./docs/methodology-page.md) - `/methodology` section-to-source mapping and update contract
 
 ## Infrastructure
 
@@ -191,12 +207,13 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 
 Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push to `main`, the daily scheduled rebuild, or manual `workflow_dispatch`:
 
-For the full operator runbook (including worktree merge flow and pre-push merge gate), see `docs/deployment-process.md`.
+For the full operator runbook (including worktree merge flow and pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
+For the full Worker binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
 1. **Validate gate:** `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`
-3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE_URL` (or `API_BASE_URL` fallback)
+3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`)
 4. **Pages deploy:** `npm ci` → `npx tsx scripts/sync-digests.ts` → `npm run build` → `npm run seo:check` → `wrangler pages deploy out`
 5. **Post-deploy UI smoke:** `npm run test:smoke-ui` against `SMOKE_UI_URL` (or `https://pharos.watch` fallback)
 
@@ -205,7 +222,7 @@ Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variable: `SMOKE_UI_URL` (for non-default frontend smoke target)
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `GITHUB_REPO_NODE_ID`, `GITHUB_DISCUSSION_CATEGORY_ID`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `GITHUB_REPO_NODE_ID`, `GITHUB_DISCUSSION_CATEGORY_ID`
 
 Optional mint/burn freshness env overrides (secret or plain env): `MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`, `MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`
 

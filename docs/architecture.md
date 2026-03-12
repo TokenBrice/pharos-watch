@@ -2,7 +2,7 @@
 
 ## API Endpoints
 
-Curated architecture-significant routes. For the exhaustive HTTP contract, see `docs/api-reference.md`.
+Curated architecture-significant routes. Start with the [Documentation Index](./README.md) for the full docs map, or go straight to the [API Reference](./api-reference.md) for the exhaustive HTTP contract.
 
 | Endpoint | Description |
 |----------|-------------|
@@ -349,7 +349,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (68 total)
+├── migrations/                   # D1 SQL migration files (69 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
