@@ -1,5 +1,5 @@
 import { fetchInfiniFiReserves } from "./infinifi";
-import type { ReserveSlice } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
 export interface AdapterContext {
@@ -9,11 +9,16 @@ export interface AdapterContext {
 
 export interface AdapterResult {
   slices: ReserveSlice[];
-  /** Position/farm names not in the adapter's risk map (for operator awareness). */
-  unknownFarms?: string[];
+  warnings?: LiveReserveWarning[];
+  metadata?: Record<string, unknown>;
 }
 
-type AdapterFn = (url: string, signal: AbortSignal, ctx?: AdapterContext) => Promise<AdapterResult>;
+type AdapterFn = (
+  coin: StablecoinMeta,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+) => Promise<AdapterResult>;
 
 const ADAPTERS: Record<string, AdapterFn> = {
   infinifi: fetchInfiniFiReserves,

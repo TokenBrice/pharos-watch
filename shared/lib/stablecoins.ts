@@ -1120,8 +1120,18 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://eth-api.infinifi.xyz/api/protocol/data", provider: "infiniFi" },
     liveReservesConfig: {
       adapter: "infinifi",
-      url: "https://eth-api.infinifi.xyz/api/protocol/data",
-      displayUrl: "https://stats.infinifi.xyz/",
+      version: 1,
+      semantics: "collateral-mix",
+      display: {
+        url: "https://stats.infinifi.xyz/",
+        label: "Stats",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://eth-api.infinifi.xyz/api/protocol/data",
+        },
+      },
     },
     collateralQuality: "exotic",
     collateral: "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",

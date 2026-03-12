@@ -31,6 +31,10 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 const DATA_SOURCE_GROUPS = [
   { label: "Supply & Price", sources: "DefiLlama, CoinGecko, CoinMarketCap, DexScreener" },
   {
+    label: "Reserve Transparency",
+    sources: "Issuer and protocol reserve APIs, dashboards, and proof-of-reserve portals (including live reserve composition feeds where available)",
+  },
+  {
     label: "On-chain Reads & Events",
     sources:
       "Etherscan v2 (freeze events), TronGrid, Alchemy & dRPC (EVM RPCs, including Ethereum mint/burn flows and direct Liquity/B.Protocol reads)",
@@ -365,7 +369,7 @@ export default function AboutPage() {
                   name: "Where does Pharos get its data?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2 and TronGrid for freeze-event tracking; Alchemy and dRPC for EVM RPCs including Ethereum mint/burn flow tracking and direct contract calls such as Liquity/B.Protocol yield reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/exchange-api for live FX rates including CNH and other non-ECB coverage; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
+                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; issuer and protocol reserve APIs, dashboards, and proof-of-reserve portals for live reserve composition where available; Etherscan v2 and TronGrid for freeze-event tracking; Alchemy and dRPC for EVM RPCs including Ethereum mint/burn flow tracking and direct contract calls such as Liquity/B.Protocol yield reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/exchange-api for live FX rates including CNH and other non-ECB coverage; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
                   },
                 },
               ],

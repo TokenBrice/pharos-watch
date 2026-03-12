@@ -3,10 +3,14 @@ import { mockD1 } from "./helpers/mock-d1";
 import { handleStablecoinReserves } from "../stablecoin-reserves";
 
 describe("handleStablecoinReserves", () => {
-  it("returns 404 when no live data exists in D1", async () => {
+  it("returns a curated fallback payload when no live data exists in D1 yet", async () => {
     const db = mockD1();
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    const body = await res.json() as { mode: string; estimated: boolean; sync?: { bootstrap?: boolean } };
+    expect(body.mode).toBe("curated-fallback");
+    expect(body.estimated).toBe(false);
+    expect(body.sync?.bootstrap).toBe(true);
   });
 
   it("returns live slices when D1 has data", async () => {
@@ -25,10 +29,11 @@ describe("handleStablecoinReserves", () => {
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.status).toBe(200);
-    const body = await res.json() as { slices: unknown[]; estimated: boolean; source: string };
-    expect(body.slices).toEqual(slices);
+    const body = await res.json() as { reserves: unknown[]; estimated: boolean; source: string; mode: string };
+    expect(body.reserves).toEqual(slices);
     expect(body.estimated).toBe(false);
     expect(body.source).toBe("infinifi");
+    expect(body.mode).toBe("live");
   });
 
   it("returns 404 for unknown stablecoin IDs", async () => {

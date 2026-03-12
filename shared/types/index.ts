@@ -138,14 +138,74 @@ export interface CoinNotice {
   message: string;
 }
 
+export type LiveReserveSemantics =
+  | "collateral-mix"
+  | "protocol-reserve"
+  | "attestation-mix"
+  | "single-asset";
+
+export type LiveReserveInput =
+  | { kind: "http-json"; url: string }
+  | { kind: "http-html"; url: string }
+  | { kind: "indexer"; url: string }
+  | { kind: "onchain-evm"; chain: string; rpcMode: "etherscan-proxy" | "alchemy" | "public-rpc" };
+
+export interface LiveReserveWarning {
+  code: string;
+  message: string;
+  severity: "info" | "warning";
+}
+
 /** Configuration for live reserve composition sync. */
 export interface LiveReservesConfig {
   /** Registered adapter key (e.g., "infinifi", "circle", "bold-onchain"). */
   adapter: string;
-  /** Machine-readable URL the cron adapter fetches. Empty string for on-chain adapters. */
-  url: string;
-  /** Human-readable URL for the "source" link shown in the UI (e.g. stats page). */
+  /** Increment when adapter parsing or semantics change materially. */
+  version: number;
+  /** What the source actually represents. */
+  semantics: LiveReserveSemantics;
+  /** Optional circuit-breaker grouping key. Defaults to the adapter key. */
+  breakerScope?: string;
+  /** Human-readable destination for UI links. */
+  display?: {
+    url?: string;
+    label?: string;
+  };
+  /** Source inputs consumed by the adapter. */
+  inputs: {
+    primary: LiveReserveInput;
+    fallbacks?: LiveReserveInput[];
+  };
+  /** Adapter-specific validated settings. */
+  params?: Record<string, unknown>;
+}
+
+export type ReservePresentationMode =
+  | "live"
+  | "live-stale"
+  | "curated-fallback"
+  | "template-fallback"
+  | "unavailable";
+
+export interface ReserveSyncStateView {
+  enabled: boolean;
+  status: "ok" | "degraded" | "error" | "skipped";
+  stale: boolean;
+  bootstrap: boolean;
+  lastAttemptedAt?: number;
+  lastSuccessAt?: number;
+  warnings?: string[];
+}
+
+export interface StablecoinReservesResponse {
+  stablecoinId: string;
+  mode: ReservePresentationMode;
+  reserves: ReserveSlice[];
+  estimated: boolean;
+  liveAt?: number;
+  source?: string;
   displayUrl?: string;
+  sync?: ReserveSyncStateView;
 }
 
 export interface StablecoinMeta {
@@ -1280,6 +1340,15 @@ export interface StatusResponse {
   priceSourceHealth: PriceSourceHealth | null;
   discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
+  reserveComposition: {
+    configuredCoins: number;
+    freshCoins: number;
+    staleCoins: number;
+    missingCoins: number;
+    degradedCoins: number;
+    lastSuccessAt: number | null;
+    oldestFreshAgeSec: number | null;
+  };
 }
 
 export interface StatusHistoryResponse {

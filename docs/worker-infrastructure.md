@@ -438,7 +438,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `ALCHEMY` | `alchemy` | `sync-mint-burn` |
 | `TWITTER_API` | `twitter-api` | `daily-digest` social posting |
 | `TELEGRAM_API` | `telegram-api` | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
-| `LIVE_RESERVES` | `live-reserves` | `sync-live-reserves` |
+| Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured source/family |
 
 ---
 
@@ -619,7 +619,7 @@ The three crons below were previously only listed by filename in `docs/architect
 **Schedule:** `0 8 * * *` (daily at 08:00 UTC)
 **Data source:** Protocol-specific APIs via adapter registry (`worker/src/cron/reserve-adapters/`)
 
-**Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table. Uses a generic adapter pattern — each coin with a `liveReservesConfig` in metadata declares an adapter key + URL. The cron iterates configured coins sequentially, applies circuit breaker logic, and upserts results.
+**Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table and records per-coin operational state in `reserve_sync_state`. Each coin with `liveReservesConfig` declares an adapter, semantics, source inputs, and optional breaker scope. The cron iterates configured coins sequentially, applies per-source circuit breaker logic, and persists both successful snapshots and failed/degraded sync state.
 
 **D1 table: `reserve_composition`**
 
@@ -632,13 +632,37 @@ The three crons below were previously only listed by filename in `docs/architect
 
 Only coins with `liveReservesConfig` set in their metadata appear in this table. One row per coin (latest snapshot only).
 
+**D1 table: `reserve_sync_state`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `stablecoin_id` | TEXT PK | Pharos coin ID |
+| `adapter_key` | TEXT | Adapter key used for the last attempt |
+| `breaker_key` | TEXT | Per-source circuit-breaker key |
+| `last_attempted_at` | INTEGER | Unix seconds of the latest sync attempt |
+| `last_success_at` | INTEGER | Unix seconds of the latest successful live snapshot |
+| `last_status` | TEXT | `ok`, `degraded`, `error`, or `skipped` |
+| `warning_count` | INTEGER | Count of warnings returned by the adapter |
+| `warnings` | TEXT | JSON-serialized warning objects |
+| `last_error` | TEXT | Last failure message, if any |
+| `metadata` | TEXT | Adapter-specific operational metadata |
+
 **Registered adapters:**
 
 | Adapter | Coins | Source |
 |---------|-------|--------|
-| `infinifi` | `iusd-infinifi` | `https://eth-api.infinifi.xyz/api/protocol/data` |
+| `infinifi` | `iusd-infinifi` | `inputs.primary.kind = "http-json"` -> `https://eth-api.infinifi.xyz/api/protocol/data` |
 
-**Adding a new adapter:** Create `worker/src/cron/reserve-adapters/<protocol>.ts`, register in `index.ts`, and add `liveReservesConfig` to the coin metadata. The cron, API, circuit breaker, and frontend all pick it up automatically.
+**Operational behavior:**
+
+- Circuit breakers are now keyed per source/family (`live-reserves:<scope>`), not as one global `live-reserves` source.
+- The cron writes `reserve_sync_state` on every path, including degraded/error/skipped outcomes.
+- Cron result status is explicit:
+  - `ok` when all configured coins sync cleanly
+  - `degraded` when any sync fails, is skipped, or returns warnings
+  - `error` when no configured coin syncs successfully
+
+**Adding a new adapter:** Create `worker/src/cron/reserve-adapters/<protocol>.ts`, register it in `index.ts`, and add a structured `liveReservesConfig` to the coin metadata. The cron, reserve API, status surface, and detail-page fallback logic all consume that config.
 
 ### sync-bluechip
 

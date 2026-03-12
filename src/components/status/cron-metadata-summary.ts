@@ -207,6 +207,26 @@ function summarizeMintBurn(metadata: Record<string, unknown>): string[] {
   ].filter((line): line is string => line != null);
 }
 
+function summarizeLiveReserves(metadata: Record<string, unknown>): string[] {
+  const synced = readNumber(metadata.synced);
+  const failed = readNumber(metadata.failed);
+  const skipped = readNumber(metadata.skipped);
+  const total = readNumber(metadata.total);
+  const warningCount = readNumber(metadata.warningCount);
+  const coinsWithWarnings = readArray(metadata.coinsWithWarnings)?.length ?? 0;
+  const breakerKeys = formatStringList(metadata.breakerKeys);
+
+  return [
+    synced != null && total != null
+      ? `synced ${synced}/${total}${failed != null ? `, failed ${failed}` : ""}${skipped != null && skipped > 0 ? `, skipped ${skipped}` : ""}`
+      : null,
+    warningCount != null && warningCount > 0
+      ? `warnings ${warningCount}${coinsWithWarnings > 0 ? ` across ${coinsWithWarnings} coin(s)` : ""}`
+      : null,
+    breakerKeys ? `breaker keys ${breakerKeys}` : null,
+  ].filter((line): line is string => line != null);
+}
+
 const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => string[]> = {
   "status-self-check": summarizeStatusSelfCheck,
   "sync-dex-discovery": summarizeDexDiscovery,
@@ -214,6 +234,7 @@ const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => s
   "sync-blacklist": summarizeBlacklist,
   "sync-mint-burn": summarizeMintBurn,
   "sync-mint-burn-extended": summarizeMintBurn,
+  "sync-live-reserves": summarizeLiveReserves,
 };
 
 export function summarizeCronMetadata(job: string, metadata: Record<string, unknown> | undefined): string[] {

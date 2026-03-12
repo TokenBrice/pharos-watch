@@ -1,11 +1,14 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CronResult } from "../lib/db";
-import { batchExecute } from "../lib/db";
 import { getReserveAdapter, type AdapterContext } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { CIRCUIT_SOURCE } from "../lib/constants";
+import { getReserveSyncState, upsertReserveComposition, upsertReserveSyncState } from "../lib/live-reserves-store";
 
 const CONFIGURED_COINS = TRACKED_STABLECOINS.filter((c) => c.liveReservesConfig);
+
+function breakerKeyForConfig(config: NonNullable<(typeof CONFIGURED_COINS)[number]["liveReservesConfig"]>): string {
+  return `live-reserves:${config.breakerScope ?? config.adapter}`;
+}
 
 export async function syncLiveReserves(
   db: D1Database,
@@ -14,73 +17,149 @@ export async function syncLiveReserves(
 ): Promise<CronResult> {
   let synced = 0;
   let failed = 0;
+  let skipped = 0;
   const now = Math.floor(Date.now() / 1000);
-  const allUnknownFarms: string[] = [];
-
-  // Circuit breaker check — one breaker for all live-reserves sources
-  const canFetch = await shouldAttemptFetch(db, CIRCUIT_SOURCE.LIVE_RESERVES);
-  if (!canFetch) {
-    return {
-      itemCount: 0,
-      metadata: JSON.stringify({ synced: 0, failed: 0, total: CONFIGURED_COINS.length, circuitOpen: true }),
-    };
-  }
-
-  const upserts: D1PreparedStatement[] = [];
+  const warningMessages: string[] = [];
+  const coinsWithErrors: string[] = [];
+  const coinsWithWarnings: string[] = [];
+  const breakerKeys = new Set<string>();
 
   for (const coin of CONFIGURED_COINS) {
     const config = coin.liveReservesConfig!;
     const adapter = getReserveAdapter(config.adapter);
+    const breakerKey = breakerKeyForConfig(config);
+    const previousState = await getReserveSyncState(db, coin.id);
+    breakerKeys.add(breakerKey);
+
+    const canFetch = await shouldAttemptFetch(db, breakerKey);
+    if (!canFetch) {
+      skipped++;
+      await upsertReserveSyncState(db, {
+        stablecoinId: coin.id,
+        adapterKey: config.adapter,
+        breakerKey,
+        lastAttemptedAt: now,
+        lastSuccessAt: previousState?.lastSuccessAt ?? null,
+        lastStatus: "skipped",
+        warningCount: 0,
+        warnings: [],
+        lastError: null,
+        metadata: { reason: "circuit-open" },
+      });
+      continue;
+    }
+
     if (!adapter) {
       console.warn(`[sync-live-reserves] Unknown adapter "${config.adapter}" for ${coin.id}`);
       failed++;
+      coinsWithErrors.push(coin.id);
+      await upsertReserveSyncState(db, {
+        stablecoinId: coin.id,
+        adapterKey: config.adapter,
+        breakerKey,
+        lastAttemptedAt: now,
+        lastSuccessAt: previousState?.lastSuccessAt ?? null,
+        lastStatus: "error",
+        warningCount: 0,
+        warnings: [],
+        lastError: `Unknown adapter: ${config.adapter}`,
+        metadata: { reason: "unknown-adapter" },
+      });
+      await recordOutcomeSafe(db, breakerKey, false);
       continue;
     }
 
     try {
-      const result = await adapter(config.url, signal, adapterCtx);
+      const result = await adapter(coin, config, signal, adapterCtx);
       if (result.slices.length === 0) {
         console.warn(`[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
         failed++;
+        coinsWithErrors.push(coin.id);
+        await upsertReserveSyncState(db, {
+          stablecoinId: coin.id,
+          adapterKey: config.adapter,
+          breakerKey,
+          lastAttemptedAt: now,
+          lastSuccessAt: previousState?.lastSuccessAt ?? null,
+          lastStatus: "error",
+          warningCount: 0,
+          warnings: [],
+          lastError: "Adapter returned zero reserve slices",
+          metadata: { reason: "empty-slices" },
+        });
+        await recordOutcomeSafe(db, breakerKey, false);
         continue;
       }
-      if (result.unknownFarms && result.unknownFarms.length > 0) {
-        console.warn(`[sync-live-reserves] Unknown farms for ${coin.id}: ${result.unknownFarms.join(", ")}`);
-        allUnknownFarms.push(...result.unknownFarms);
+
+      const warnings = result.warnings ?? [];
+      if (warnings.length > 0) {
+        coinsWithWarnings.push(coin.id);
+        warningMessages.push(...warnings.map((warning) => `${coin.id}:${warning.code}`));
       }
-      upserts.push(
-        db
-          .prepare(
-            `INSERT INTO reserve_composition (stablecoin_id, slices, fetched_at, source)
-             VALUES (?, ?, ?, ?)
-             ON CONFLICT(stablecoin_id) DO UPDATE SET
-               slices = excluded.slices,
-               fetched_at = excluded.fetched_at,
-               source = excluded.source`,
-          )
-          .bind(coin.id, JSON.stringify(result.slices), now, config.adapter),
-      );
+
+      await upsertReserveComposition(db, {
+        stablecoinId: coin.id,
+        slices: result.slices,
+        fetchedAt: now,
+        source: config.adapter,
+      });
+      await upsertReserveSyncState(db, {
+        stablecoinId: coin.id,
+        adapterKey: config.adapter,
+        breakerKey,
+        lastAttemptedAt: now,
+        lastSuccessAt: now,
+        lastStatus: warnings.length > 0 ? "degraded" : "ok",
+        warningCount: warnings.length,
+        warnings,
+        lastError: null,
+        metadata: result.metadata ?? {},
+      });
+      await recordOutcomeSafe(db, breakerKey, true);
       synced++;
     } catch (e) {
       console.error(`[sync-live-reserves] Failed for ${coin.id}:`, e);
       failed++;
+      coinsWithErrors.push(coin.id);
+      await upsertReserveSyncState(db, {
+        stablecoinId: coin.id,
+        adapterKey: config.adapter,
+        breakerKey,
+        lastAttemptedAt: now,
+        lastSuccessAt: previousState?.lastSuccessAt ?? null,
+        lastStatus: "error",
+        warningCount: 0,
+        warnings: [],
+        lastError: e instanceof Error ? e.message : String(e),
+        metadata: { reason: "adapter-exception" },
+      });
+      await recordOutcomeSafe(db, breakerKey, false);
     }
   }
 
-  // Record circuit breaker outcome
-  await recordOutcomeSafe(db, CIRCUIT_SOURCE.LIVE_RESERVES, failed < CONFIGURED_COINS.length);
-
-  if (upserts.length > 0) {
-    await batchExecute(db, upserts);
-  }
+  const total = CONFIGURED_COINS.length;
+  const hasWarnings = warningMessages.length > 0;
+  const status: CronResult["status"] =
+    synced === 0 && (failed > 0 || skipped > 0)
+      ? "error"
+      : failed > 0 || skipped > 0 || hasWarnings
+        ? "degraded"
+        : "ok";
 
   return {
     itemCount: synced,
+    status,
     metadata: JSON.stringify({
+      structureVersion: 2,
       synced,
       failed,
-      total: CONFIGURED_COINS.length,
-      ...(allUnknownFarms.length > 0 ? { unknownFarms: allUnknownFarms } : {}),
+      skipped,
+      total,
+      warningCount: warningMessages.length,
+      ...(coinsWithWarnings.length > 0 ? { coinsWithWarnings } : {}),
+      ...(coinsWithErrors.length > 0 ? { coinsWithErrors } : {}),
+      ...(warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+      breakerKeys: Array.from(breakerKeys),
     }),
   };
 }

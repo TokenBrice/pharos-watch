@@ -20,6 +20,7 @@ import {
   STATUS_ONCHAIN_THRESHOLDS,
 } from "../lib/status-thresholds";
 import { queryBlacklistGapMetrics } from "../lib/blacklist-gaps";
+import { computeReserveCompositionOverview } from "../lib/live-reserves-store";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { sumPegBuckets } from "@shared/lib/supply";
@@ -59,6 +60,7 @@ interface RawStatusComputation {
   telegramBot: StatusResponse["telegramBot"];
   datasetFreshness: StatusResponse["datasetFreshness"];
   summary: StatusResponse["summary"];
+  reserveComposition: StatusResponse["reserveComposition"];
 }
 
 function formatRatio(value: number): string {
@@ -316,6 +318,12 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
   const dataQuality = dbHealthy ? await getDataQuality(db, now) : emptyDataQuality();
   const telegramBot = dbHealthy ? await getTelegramBotStats(db, now) : null;
   const datasetFreshness = dbHealthy ? await getDatasetFreshness(db) : emptyDatasetFreshness();
+  const reserveComposition = dbHealthy
+    ? await computeReserveCompositionOverview(db, now)
+    : emptyReserveComposition();
+  const reserveCompositionBootstrap =
+    reserveComposition.configuredCoins > 0
+    && reserveComposition.lastSuccessAt == null;
   const missingPriceRatio =
     dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
   const blacklistMissingRatio = dataQuality.blacklistMissingRatio;
@@ -326,6 +334,14 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
   const onchainSupplyDivergences = hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0;
   const staleOnchainRatio = trackedOnchainCoins > 0 ? staleOnchainSupply / trackedOnchainCoins : 0;
   const onchainDivergenceRatio = trackedOnchainCoins > 0 ? onchainSupplyDivergences / trackedOnchainCoins : 0;
+  const reserveCompositionCritical =
+    !reserveCompositionBootstrap
+    && reserveComposition.configuredCoins > 0
+    && reserveComposition.freshCoins === 0
+    && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0);
+  const reserveCompositionWarning =
+    !reserveCompositionBootstrap
+    && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0);
 
   // 5. Raw status synthesis
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
@@ -346,14 +362,16 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
     staleOnchainSupply >= STATUS_ONCHAIN_THRESHOLDS.staleAbsoluteStale ||
     onchainSupplyDivergences >= STATUS_ONCHAIN_THRESHOLDS.divergenceAbsoluteStale ||
     staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
-    onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
+    onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
+    reserveCompositionCritical
       ? "stale"
       : dataQuality.stablecoinsCacheStatus === "degraded" ||
           missingPriceRatio > 0.15 ||
           blacklistRecentMissing > 0 ||
           blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
           staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
-          onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
+          onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
+          reserveCompositionWarning
         ? "degraded"
         : "healthy";
 
@@ -530,6 +548,21 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       message: "On-chain supply monitor is unavailable; related checks are suppressed.",
     });
   }
+  if (reserveCompositionCritical) {
+    pushCause(dataQualityCauses, {
+      code: "reserve_sync_stale",
+      layer: "data-quality",
+      severity: "critical",
+      message: "All configured live reserve feeds are missing, stale, or degraded.",
+    });
+  } else if (reserveCompositionWarning) {
+    pushCause(dataQualityCauses, {
+      code: "reserve_sync_degraded",
+      layer: "data-quality",
+      severity: "warning",
+      message: `${reserveComposition.missingCoins} missing, ${reserveComposition.staleCoins} stale, ${reserveComposition.degradedCoins} degraded live reserve feed(s).`,
+    });
+  }
 
   const confidence = scoreConfidence({
     availabilityStatus,
@@ -556,6 +589,7 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
     dataQuality,
     telegramBot,
     datasetFreshness,
+    reserveComposition,
     summary: {
       unhealthyCrons,
       degradedCrons: degradedCronRuns,
@@ -700,6 +734,7 @@ export const handleStatus = withErrorHandler(
         telegramBot: raw.telegramBot,
         datasetFreshness: raw.datasetFreshness,
         summary: raw.summary,
+        reserveComposition: raw.reserveComposition,
         liquidityHealth,
         priceSourceHealth,
         discoveryCandidates,
@@ -747,6 +782,18 @@ function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
     dews: null,
     digest: null,
     discoveryCandidates: null,
+  };
+}
+
+function emptyReserveComposition(): StatusResponse["reserveComposition"] {
+  return {
+    configuredCoins: 0,
+    freshCoins: 0,
+    staleCoins: 0,
+    missingCoins: 0,
+    degradedCoins: 0,
+    lastSuccessAt: null,
+    oldestFreshAgeSec: null,
   };
 }
 

@@ -1,37 +1,71 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
-// Mock the adapter registry so tests don't make real HTTP calls
+const getReserveAdapterMock = vi.fn();
+const shouldAttemptFetchMock = vi.fn();
+const recordOutcomeSafeMock = vi.fn();
+
 vi.mock("../reserve-adapters/index", () => ({
-  getReserveAdapter: vi.fn().mockReturnValue(
-    async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }], unknownFarms: [] })
-  ),
+  getReserveAdapter: getReserveAdapterMock,
 }));
 
-// Mock circuit breaker — always allow fetch
 vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn().mockResolvedValue(true),
-  recordOutcomeSafe: vi.fn().mockResolvedValue(undefined),
+  shouldAttemptFetch: shouldAttemptFetchMock,
+  recordOutcomeSafe: recordOutcomeSafeMock,
 }));
 
 describe("syncLiveReserves", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    shouldAttemptFetchMock.mockResolvedValue(true);
+    recordOutcomeSafeMock.mockResolvedValue(undefined);
   });
 
-  it("upserts one row per configured coin and returns itemCount", async () => {
+  it("persists reserve snapshot + sync state and returns ok on a clean run", async () => {
+    getReserveAdapterMock.mockReturnValue(
+      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
+    );
+
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
     const result = await syncLiveReserves(db, new AbortController().signal, {});
-    // iusd-infinifi has liveReservesConfig — expect 1 coin processed
+
+    expect(result?.status).toBe("ok");
     expect(result?.itemCount).toBe(1);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
+    expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, "live-reserves:infinifi", true);
   });
 
-  it("skips coins without liveReservesConfig", async () => {
+  it("returns degraded when the adapter yields warning metadata", async () => {
+    getReserveAdapterMock.mockReturnValue(
+      async () => ({
+        slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+        warnings: [{ code: "unknown-position", message: "Unmapped reserve position: new-farm", severity: "warning" as const }],
+      }),
+    );
+
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
     const result = await syncLiveReserves(db, new AbortController().signal, {});
-    // Only iusd-infinifi is configured so far
-    expect(result?.itemCount).toBeGreaterThanOrEqual(1);
+
+    expect(result?.status).toBe("degraded");
+    expect(result?.metadata).toContain("\"warningCount\":1");
+  });
+
+  it("records a skipped sync state when the circuit is open", async () => {
+    shouldAttemptFetchMock.mockResolvedValue(false);
+    getReserveAdapterMock.mockReturnValue(async () => {
+      throw new Error("adapter should not run when circuit is open");
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+
+    expect(result?.status).toBe("error");
+    expect(result?.itemCount).toBe(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
+    expect(recordOutcomeSafeMock).not.toHaveBeenCalled();
   });
 });

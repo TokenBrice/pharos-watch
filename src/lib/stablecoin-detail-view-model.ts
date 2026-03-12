@@ -119,7 +119,7 @@ interface BuildStablecoinDetailViewModelParams {
   reportCardsError: unknown | null;
   flowsData?: MintBurnFlowsResponse;
   isFlowsLoading: boolean;
-  liveReserves: ReserveResult | null;
+  liveReserves?: ReserveResult | null;
   nowMs?: number;
 }
 
@@ -148,7 +148,7 @@ export function buildStablecoinDetailViewModel({
   reportCardsError,
   flowsData,
   isFlowsLoading,
-  liveReserves,
+  liveReserves = null,
   nowMs = Date.now(),
 }: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   if (supplyLoading || listLoading) {

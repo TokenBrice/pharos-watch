@@ -8,15 +8,12 @@ const STALE_TIME = 60 * 60 * 1000; // 1 hour — daily cron
 const REFETCH_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
 
 /**
- * Fetches live reserve composition for a stablecoin from the API.
- * Returns null when no live data is available (cron not yet run or not configured).
- * Only call this when `coin.liveReservesConfig` is defined.
- * `displayUrl` comes from the static coin metadata (not the API) since it never changes.
+ * Fetches resolved reserve presentation data for a stablecoin from the API.
+ * Returns null only when the coin is not live-enabled or unknown to the worker.
  */
 export function useStablecoinReserves(
   stablecoinId: string,
   enabled: boolean,
-  displayUrl?: string,
 ): ReserveResult | null {
   const { data } = useQuery({
     queryKey: ["stablecoin-reserves", stablecoinId],
@@ -29,10 +26,12 @@ export function useStablecoinReserves(
 
   if (!data) return null;
   return {
-    reserves: data.slices,
-    estimated: false,
-    liveAt: data.fetchedAt,
+    reserves: data.reserves,
+    estimated: data.estimated,
+    mode: data.mode,
+    liveAt: data.liveAt,
     source: data.source,
-    displayUrl,
+    displayUrl: data.displayUrl,
+    sync: data.sync,
   };
 }

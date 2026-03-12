@@ -6,14 +6,15 @@ Operational reference for `/status`: admin auth flow, backend status computation
 
 ## Scope
 
-The status dashboard combines six signals:
+The status dashboard combines seven signals:
 
 1. Cache freshness (`/api/status` -> `caches`)
 2. Cron health (`/api/status` -> `crons`)
 3. Data quality (`/api/status` -> `dataQuality`)
 4. Status state machine (`/api/status` -> `state`, `timeline`, `causes`, `summary`)
 5. Synthetic status probes (`/api/status` -> `probe`, `discrepancy`)
-6. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
+6. Live reserve sync health (`/api/status` -> `reserveComposition`)
+7. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
 
 This page is **auth-gated in practice** because `/api/status` plus the admin probe/action paths require `X-Admin-Key`.
 
@@ -61,7 +62,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Job-specific metadata summaries are resolved through `src/components/status/cron-metadata-summary.ts` instead of a long inline `if` chain inside `cron-card.tsx`
 - The client now groups widgets into six operational lanes instead of one flat vertical list:
   - `Overview`: state machine, divergence counters, summary facts, and remediation-linked causes
-  - `Pipeline`: data-quality threshold board, price-source health, liquidity health, dataset freshness, mint/burn reconciliation, and discovery backlog
+  - `Pipeline`: data-quality threshold board, price-source health, liquidity health, dataset freshness, live reserve sync health, mint/burn reconciliation, and discovery backlog
   - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, and cache freshness
   - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers
   - `Control Plane`: admin actions and Telegram delivery telemetry
@@ -107,6 +108,7 @@ For the split DEX pipeline:
 - `sync-dex-liquidity` `degraded` explicitly captures non-fatal upstream degradation (critical source-family failures or near-guard coverage drops), with machine-readable metadata (`failedSources`, `fallbackMode`, `sourceCoverage`, staged-pool merge counters, and staged skip-reason breakdowns for address vs fingerprint dedup).
 - `sync-mint-burn` is now the critical lane, while `sync-mint-burn-extended` drains long-tail backlog on its own offset schedule. The status surface tracks them independently so extended backlog pressure does not mask critical freshness.
 - `crons[*].inFlight` exposes live `cron_run_progress` state (`stage`, `itemsDone`, `itemsTotal`, `message`, `updatedAt`, `stale`) for long-running leased jobs such as blacklist, mint/burn, and DEX discovery.
+- `sync-live-reserves` now emits structured metadata (`synced`, `failed`, `skipped`, `warningCount`, `coinsWithWarnings`, `coinsWithErrors`, `breakerKeys`) summarized in the cron card.
 
 ### Availability status
 
@@ -176,6 +178,7 @@ Additional response fields:
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
 - `datasetFreshness`: last-write timestamps for key operational datasets (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
 - `summary`: compact availability rollup (`unhealthyCrons`, `degradedCrons`, `cronErrors`, `worstCacheRatio`)
+- `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `lastSuccessAt`, `oldestFreshAgeSec`)
 
 `dataQuality` now also exposes:
 
@@ -183,6 +186,20 @@ Additional response fields:
 - `stablecoinsCacheReason`: machine-readable reason when the stablecoins cache is unavailable or transitional
 
 This prevents `/status` from silently treating a broken stablecoins cache as `0 / 0` healthy price coverage.
+
+### Live reserve sync health
+
+`reserveComposition` is derived from:
+
+- coins with `liveReservesConfig`
+- `reserve_composition`
+- `reserve_sync_state`
+
+Behavior:
+
+- bootstrap is suppressed until the first successful live reserve sync exists
+- after bootstrap, stale/degraded/missing live reserve feeds can degrade `dataQualityStatus`
+- the page renders a dedicated `Live Reserve Sync` card in the pipeline lane
 
 ### Telegram bot metrics
 

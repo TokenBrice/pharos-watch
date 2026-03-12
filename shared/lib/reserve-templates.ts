@@ -1,14 +1,24 @@
-import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../types";
+import type {
+  DependencyType,
+  DependencyWeight,
+  ReservePresentationMode,
+  ReserveSlice,
+  ReserveSyncStateView,
+  StablecoinMeta,
+} from "../types";
 
 export interface ReserveResult {
   reserves: ReserveSlice[];
   estimated: boolean; // true if using template, false if manually curated
+  mode: ReservePresentationMode;
   /** Unix seconds. Present when reserves came from a live sync (not static). */
   liveAt?: number;
   /** Adapter key. Present when reserves came from a live sync. */
   source?: string;
   /** Human-readable URL to link to. Present when reserves came from a live sync. */
   displayUrl?: string;
+  /** Sync-state metadata for live-enabled reserve feeds. */
+  sync?: ReserveSyncStateView;
 }
 
 // ── Default reserve templates by classification ─────────────────────────
@@ -98,14 +108,14 @@ function templateKey(coin: StablecoinMeta): string | null {
 export function getReserves(coin: StablecoinMeta): ReserveResult | null {
   // Prefer manually curated data
   if (coin.reserves && coin.reserves.length > 0) {
-    return { reserves: coin.reserves, estimated: false };
+    return { reserves: coin.reserves, estimated: false, mode: "curated-fallback" };
   }
 
   // Fall back to template
   const key = templateKey(coin);
   if (!key) return null;
 
-  return { reserves: TEMPLATES[key], estimated: true };
+  return { reserves: TEMPLATES[key], estimated: true, mode: "template-fallback" };
 }
 
 // ── Dependency derivation from reserves ───────────────────────────────

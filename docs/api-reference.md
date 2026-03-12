@@ -248,19 +248,26 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
 
 ### `GET /api/stablecoin-reserves/:id`
 
-Returns live reserve composition for a stablecoin synced from its configured live data source. Only coins with a `liveReservesConfig` in their metadata have records. Returns `404` when no live data exists (cron not yet run).
+Returns the resolved reserve presentation for a stablecoin with `liveReservesConfig`.
+
+- Unknown IDs or coins without live reserve support return `404`.
+- Live-enabled coins return `200` even before the first successful sync; the payload includes fallback mode + sync state.
+- The endpoint currently powers the stablecoin detail-page reserve card only. Other analytics surfaces still use curated static reserve metadata.
 
 **Cache:** slow (`public, s-maxage=3600, max-age=300`)
 
 **Response (200):**
 
-| Field          | Type             | Description                              |
-|----------------|------------------|------------------------------------------|
-| `stablecoinId` | `string`         | Pharos coin ID                           |
-| `slices`       | `ReserveSlice[]` | Live reserve composition                 |
-| `fetchedAt`    | `number`         | Unix seconds of last sync                |
-| `source`       | `string`         | Adapter key (e.g., `"infinifi"`)         |
-| `estimated`    | `false`          | Always false — live data only            |
+| Field          | Type             | Description |
+|----------------|------------------|-------------|
+| `stablecoinId` | `string`         | Pharos coin ID |
+| `mode`         | `string`         | One of `live`, `live-stale`, `curated-fallback`, `template-fallback`, `unavailable` |
+| `reserves`     | `ReserveSlice[]` | Reserve slices currently being shown to the user |
+| `estimated`    | `boolean`        | `true` only when using the classification template fallback |
+| `liveAt`       | `number`         | Unix seconds of the last successful live snapshot, when present |
+| `source`       | `string`         | Adapter key (e.g. `"infinifi"`) when live data exists |
+| `displayUrl`   | `string`         | Human-readable source link shown in the UI |
+| `sync`         | `object`         | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`) |
 
 **Response (404):** `{ "error": "Not found" }`
 

@@ -19,6 +19,7 @@ import { formatAge } from "@/components/status/format";
 import { LiquidityHealthCard } from "@/components/status/liquidity-health";
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
+import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { StatusBanner } from "@/components/status/status-banner";
 import { StatusFacts } from "@/components/status/status-facts";
@@ -784,8 +785,9 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
           <LiquidityHealthCard health={data.liquidityHealth} />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-2">
+        <div className="grid gap-5 xl:grid-cols-3">
           <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
+          <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
           <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
         </div>
 

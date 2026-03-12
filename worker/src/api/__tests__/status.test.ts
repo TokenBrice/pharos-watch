@@ -182,6 +182,7 @@ describe("handleStatus", () => {
       liquidityHealth: Record<string, unknown> | null;
       discoveryCandidates: Array<Record<string, unknown>> | null;
       mintBurnReconciliation: Record<string, unknown> | null;
+      reserveComposition: Record<string, unknown>;
     };
 
     expect(body).toHaveProperty("timestamp");
@@ -196,6 +197,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("liquidityHealth");
     expect(body).toHaveProperty("discoveryCandidates");
     expect(body).toHaveProperty("mintBurnReconciliation");
+    expect(body).toHaveProperty("reserveComposition");
     expect(typeof body.dbHealthy).toBe("boolean");
     expect(body.datasetFreshness).toHaveProperty("stablecoins");
     expect(body.datasetFreshness).toHaveProperty("mintBurn");

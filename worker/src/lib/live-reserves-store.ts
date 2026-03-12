@@ -1,0 +1,378 @@
+import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import type { LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { buildInClause } from "./db";
+
+export const LIVE_RESERVE_FRESHNESS_SEC = 2 * 86400;
+
+export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
+
+interface ReserveCompositionRow {
+  stablecoin_id: string;
+  slices: string;
+  fetched_at: number;
+  source: string;
+}
+
+interface ReserveSyncStateRow {
+  stablecoin_id: string;
+  adapter_key: string;
+  breaker_key: string;
+  last_attempted_at: number | null;
+  last_success_at: number | null;
+  last_status: ReserveSyncStatus;
+  warning_count: number;
+  warnings: string | null;
+  last_error: string | null;
+  metadata: string;
+}
+
+export interface ReserveCompositionRecord {
+  stablecoinId: string;
+  slices: ReserveSlice[];
+  fetchedAt: number;
+  source: string;
+}
+
+export interface ReserveSyncStateRecord {
+  stablecoinId: string;
+  adapterKey: string;
+  breakerKey: string;
+  lastAttemptedAt: number | null;
+  lastSuccessAt: number | null;
+  lastStatus: ReserveSyncStatus;
+  warningCount: number;
+  warnings: LiveReserveWarning[];
+  lastError: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface ReserveCompositionOverview {
+  configuredCoins: number;
+  freshCoins: number;
+  staleCoins: number;
+  missingCoins: number;
+  degradedCoins: number;
+  lastSuccessAt: number | null;
+  oldestFreshAgeSec: number | null;
+}
+
+function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseWarnings(value: string | null): LiveReserveWarning[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is LiveReserveWarning =>
+        !!item
+        && typeof item === "object"
+        && typeof (item as LiveReserveWarning).code === "string"
+        && typeof (item as LiveReserveWarning).message === "string"
+        && ((item as LiveReserveWarning).severity === "info" || (item as LiveReserveWarning).severity === "warning"),
+      )
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseSlices(value: string): ReserveSlice[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed as ReserveSlice[] : [];
+  } catch {
+    return [];
+  }
+}
+
+export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {
+  return TRACKED_STABLECOINS.filter((coin) => !!coin.liveReservesConfig);
+}
+
+export async function upsertReserveComposition(
+  db: D1Database,
+  record: ReserveCompositionRecord,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO reserve_composition (stablecoin_id, slices, fetched_at, source)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(stablecoin_id) DO UPDATE SET
+         slices = excluded.slices,
+         fetched_at = excluded.fetched_at,
+         source = excluded.source`,
+    )
+    .bind(record.stablecoinId, JSON.stringify(record.slices), record.fetchedAt, record.source)
+    .run();
+}
+
+export async function upsertReserveSyncState(
+  db: D1Database,
+  record: ReserveSyncStateRecord,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO reserve_sync_state (
+         stablecoin_id,
+         adapter_key,
+         breaker_key,
+         last_attempted_at,
+         last_success_at,
+         last_status,
+         warning_count,
+         warnings,
+         last_error,
+         metadata
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(stablecoin_id) DO UPDATE SET
+         adapter_key = excluded.adapter_key,
+         breaker_key = excluded.breaker_key,
+         last_attempted_at = excluded.last_attempted_at,
+         last_success_at = excluded.last_success_at,
+         last_status = excluded.last_status,
+         warning_count = excluded.warning_count,
+         warnings = excluded.warnings,
+         last_error = excluded.last_error,
+         metadata = excluded.metadata`,
+    )
+    .bind(
+      record.stablecoinId,
+      record.adapterKey,
+      record.breakerKey,
+      record.lastAttemptedAt,
+      record.lastSuccessAt,
+      record.lastStatus,
+      record.warningCount,
+      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      record.lastError,
+      JSON.stringify(record.metadata),
+    )
+    .run();
+}
+
+export async function getReserveComposition(
+  db: D1Database,
+  stablecoinId: string,
+): Promise<ReserveCompositionRecord | null> {
+  const row = await db
+    .prepare("SELECT stablecoin_id, slices, fetched_at, source FROM reserve_composition WHERE stablecoin_id = ?")
+    .bind(stablecoinId)
+    .first<ReserveCompositionRow>();
+
+  if (!row) return null;
+
+  return {
+    stablecoinId: row.stablecoin_id,
+    slices: parseSlices(row.slices),
+    fetchedAt: row.fetched_at,
+    source: row.source,
+  };
+}
+
+export async function getReserveSyncState(
+  db: D1Database,
+  stablecoinId: string,
+): Promise<ReserveSyncStateRecord | null> {
+  const row = await db
+    .prepare(
+      `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
+              last_status, warning_count, warnings, last_error, metadata
+         FROM reserve_sync_state
+        WHERE stablecoin_id = ?`,
+    )
+    .bind(stablecoinId)
+    .first<ReserveSyncStateRow>();
+
+  if (!row) return null;
+
+  return {
+    stablecoinId: row.stablecoin_id,
+    adapterKey: row.adapter_key,
+    breakerKey: row.breaker_key,
+    lastAttemptedAt: row.last_attempted_at,
+    lastSuccessAt: row.last_success_at,
+    lastStatus: row.last_status,
+    warningCount: row.warning_count,
+    warnings: parseWarnings(row.warnings),
+    lastError: row.last_error,
+    metadata: parseJsonObject(row.metadata),
+  };
+}
+
+export async function computeReserveCompositionOverview(
+  db: D1Database,
+  now: number,
+  freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
+): Promise<ReserveCompositionOverview> {
+  const configuredCoins = getConfiguredLiveReserveCoins();
+  if (configuredCoins.length === 0) {
+    return {
+      configuredCoins: 0,
+      freshCoins: 0,
+      staleCoins: 0,
+      missingCoins: 0,
+      degradedCoins: 0,
+      lastSuccessAt: null,
+      oldestFreshAgeSec: null,
+    };
+  }
+
+  const idClause = buildInClause(configuredCoins.map((coin) => coin.id));
+  const [syncRowsResult, compositionRowsResult] = await Promise.all([
+    db
+      .prepare(
+        `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
+                last_status, warning_count, warnings, last_error, metadata
+           FROM reserve_sync_state
+          WHERE stablecoin_id IN (${idClause.sql})`,
+      )
+      .bind(...idClause.binds)
+      .all<ReserveSyncStateRow>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id, slices, fetched_at, source
+           FROM reserve_composition
+          WHERE stablecoin_id IN (${idClause.sql})`,
+      )
+      .bind(...idClause.binds)
+      .all<ReserveCompositionRow>(),
+  ]);
+
+  const syncById = new Map(
+    (syncRowsResult.results ?? []).map((row) => [row.stablecoin_id, row]),
+  );
+  const compositionById = new Map(
+    (compositionRowsResult.results ?? []).map((row) => [row.stablecoin_id, row]),
+  );
+
+  let freshCoins = 0;
+  let staleCoins = 0;
+  let missingCoins = 0;
+  let degradedCoins = 0;
+  let lastSuccessAt: number | null = null;
+  let oldestFreshAgeSec: number | null = null;
+
+  for (const coin of configuredCoins) {
+    const sync = syncById.get(coin.id);
+    const composition = compositionById.get(coin.id);
+    const successAt = sync?.last_success_at ?? null;
+
+    if (sync && sync.last_status !== "ok") {
+      degradedCoins++;
+    }
+
+    if (!successAt || !composition) {
+      missingCoins++;
+      continue;
+    }
+
+    const ageSec = Math.max(0, now - successAt);
+    lastSuccessAt = lastSuccessAt == null ? successAt : Math.max(lastSuccessAt, successAt);
+
+    if (ageSec > freshnessSec) {
+      staleCoins++;
+      continue;
+    }
+
+    freshCoins++;
+    oldestFreshAgeSec = oldestFreshAgeSec == null ? ageSec : Math.max(oldestFreshAgeSec, ageSec);
+  }
+
+  return {
+    configuredCoins: configuredCoins.length,
+    freshCoins,
+    staleCoins,
+    missingCoins,
+    degradedCoins,
+    lastSuccessAt,
+    oldestFreshAgeSec,
+  };
+}
+
+export async function resolveReserveResult(
+  db: D1Database,
+  stablecoinId: string,
+  now = Math.floor(Date.now() / 1000),
+  freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
+): Promise<ReserveResult | null> {
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  if (!meta) return null;
+
+  const [composition, syncState] = await Promise.all([
+    getReserveComposition(db, stablecoinId),
+    getReserveSyncState(db, stablecoinId),
+  ]);
+
+  const displayUrl = meta.liveReservesConfig?.display?.url;
+  const staticFallback = getReserves(meta);
+  const warningMessages = syncState?.warnings.map((warning) => warning.message);
+  const lastSuccessAt = syncState?.lastSuccessAt;
+  const stale = !!(lastSuccessAt && now - lastSuccessAt > freshnessSec);
+
+  if (composition && composition.slices.length > 0) {
+    return {
+      reserves: composition.slices,
+      estimated: false,
+      mode: stale ? "live-stale" : "live",
+      liveAt: composition.fetchedAt,
+      source: composition.source,
+      displayUrl,
+      sync: {
+        enabled: !!meta.liveReservesConfig,
+        status: syncState?.lastStatus ?? "ok",
+        stale,
+        bootstrap: false,
+        ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
+        ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
+        ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+      },
+    };
+  }
+
+  if (staticFallback) {
+    return {
+      ...staticFallback,
+      displayUrl,
+      sync: meta.liveReservesConfig
+        ? {
+            enabled: true,
+            status: syncState?.lastStatus ?? "skipped",
+            stale,
+            bootstrap: !syncState?.lastSuccessAt,
+            ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
+            ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
+            ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+          }
+        : undefined,
+    };
+  }
+
+  return meta.liveReservesConfig
+    ? {
+        reserves: [],
+        estimated: false,
+        mode: "unavailable",
+        displayUrl,
+        sync: {
+          enabled: true,
+          status: syncState?.lastStatus ?? "skipped",
+          stale,
+          bootstrap: !syncState?.lastSuccessAt,
+          ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
+          ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
+          ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+        },
+      }
+    : null;
+}

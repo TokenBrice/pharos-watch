@@ -51,3 +51,4 @@ The page is organized into these sections, in order:
 
 - The page is public-facing product copy, so internal workflow references should stay clear and non-novelty-first.
 - When adding a new major data source or externally visible feature surfaced on this page, update this document and the route copy together.
+- Reserve-transparency sources now include issuer/protocol reserve APIs and dashboards used for live reserve composition where available.

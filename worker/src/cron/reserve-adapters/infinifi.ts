@@ -1,4 +1,5 @@
-import type { ReserveSlice } from "@shared/types";
+import type { LiveReserveInput, LiveReservesConfig, LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { AdapterContext, AdapterResult } from "./index";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 
 interface InfiniFiFarm {
@@ -50,6 +51,10 @@ export interface AdaptInfiniFiResult {
   unknownFarms: string[];
 }
 
+function isHttpJsonInput(input: LiveReserveInput): input is Extract<LiveReserveInput, { kind: "http-json" }> {
+  return input.kind === "http-json";
+}
+
 /** Convert raw InfiniFi protocol data to ReserveSlice[]. Pure function — no I/O. */
 export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResult {
   const tvl = payload.data.stats.asset.totalTVLAssetNormalized;
@@ -93,13 +98,36 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
 
 /** Fetch + adapt infiniFi protocol data. Uses fetchWithRetry for resilience. */
 export async function fetchInfiniFiReserves(
-  url: string,
+  _coin: StablecoinMeta,
+  config: LiveReservesConfig,
   signal: AbortSignal,
-): Promise<AdaptInfiniFiResult> {
+  _ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const primaryInput = config.inputs.primary;
+  if (!isHttpJsonInput(primaryInput)) {
+    throw new Error("infiniFi adapter requires an http-json primary input");
+  }
+
+  const url = primaryInput.url;
   const res = await fetchWithRetry(url, { signal }, 2, { timeoutMs: 10_000 });
   if (!res) throw new Error("infiniFi API: fetchWithRetry returned null (all retries failed)");
   if (!res.ok) throw new Error(`infiniFi API ${res.status}`);
   const payload = await res.json() as InfiniFiProtocolData;
   if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
-  return adaptInfiniFi(payload);
+  const adapted = adaptInfiniFi(payload);
+  const warnings: LiveReserveWarning[] = adapted.unknownFarms.map((farmName) => ({
+    code: "unknown-position",
+    message: `Unmapped reserve position: ${farmName}`,
+    severity: "warning",
+  }));
+
+  return {
+    slices: adapted.slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
+    metadata: {
+      farmCount: payload.data.farms.length,
+      activeFarmCount: adapted.slices.length,
+      unknownFarmCount: adapted.unknownFarms.length,
+    },
+  };
 }

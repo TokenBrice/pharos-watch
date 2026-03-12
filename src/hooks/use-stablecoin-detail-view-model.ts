@@ -62,11 +62,7 @@ export function useStablecoinDetailViewModel({
     refetch: refetchReportCards,
   } = useReportCards();
   const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
-  const liveReserves = useStablecoinReserves(
-    id,
-    !!coin.liveReservesConfig,
-    coin.liveReservesConfig?.displayUrl,
-  );
+  const liveReserves = useStablecoinReserves(id, !!coin.liveReservesConfig);
 
   const handleRetryAll = useCallback(() => {
     void Promise.allSettled([

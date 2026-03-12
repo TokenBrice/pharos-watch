@@ -65,6 +65,8 @@ Cemetery coins get a permanent F.
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
+Current scope note: the live reserve sync pipeline used on certain detail pages does **not** feed report-card scoring yet. Report cards still use curated reserve metadata from `StablecoinMeta.reserves`.
+
 For coins with curated reserve compositions, collateral quality is computed as a weighted average of per-slice risk scores:
 
 | Reserve Risk Tier | Score | Description | Examples |
