@@ -13,12 +13,13 @@ interface AccountableDashboardResponse {
       verifiability?: string;
       total_reserves?: number;
       type?: Record<string, number>;
+      reserves_split?: Array<{ name: string; value: number }>;
     };
   };
 }
 
 interface AccountableParams {
-  bucket?: "type";
+  bucket?: "type" | "reserves_split";
   riskMap?: Record<string, ReserveSlice["risk"]>;
 }
 
@@ -26,7 +27,10 @@ function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
   const params = config.params;
   if (!params || typeof params !== "object" || Array.isArray(params)) return {};
 
-  const bucket = params.bucket === "type" ? "type" : undefined;
+  const bucket =
+    params.bucket === "type" || params.bucket === "reserves_split"
+      ? params.bucket
+      : undefined;
   const rawRiskMap = params.riskMap;
   const riskMap: Record<string, ReserveSlice["risk"]> = {};
 
@@ -59,14 +63,19 @@ function adaptAccountableDashboard(
   }
 
   const bucket = params.bucket ?? "type";
-  if (bucket !== "type") {
+  const breakdown =
+    bucket === "type"
+      ? Object.entries(payload.data.reserves.type ?? {}).map(([name, value]) => ({ name, value }))
+      : bucket === "reserves_split"
+        ? payload.data.reserves.reserves_split ?? []
+        : null;
+  if (!breakdown) {
     throw new Error(`Unsupported Accountable bucket: ${bucket}`);
   }
 
-  const breakdown = payload.data.reserves.type ?? {};
   const riskMap = params.riskMap ?? {};
   const slices = buildReserveSlicesFromValues(
-    Object.entries(breakdown).map(([name, value]) => ({
+    breakdown.map(({ name, value }) => ({
       name,
       value,
       risk: riskMap[name] ?? "medium",

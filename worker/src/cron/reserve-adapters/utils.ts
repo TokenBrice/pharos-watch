@@ -31,18 +31,21 @@ export function buildReserveSlicesFromValues(
     pct: Math.round(((value / total) * 100) * factor) / factor,
   }));
 
-  const roundedTotal = slices.reduce((sum, slice) => sum + slice.pct, 0);
+  const nonZeroSlices = slices.filter((slice) => slice.pct > 0);
+  if (nonZeroSlices.length === 0) return [];
+
+  const roundedTotal = nonZeroSlices.reduce((sum, slice) => sum + slice.pct, 0);
   const adjustment = Math.round((100 - roundedTotal) * factor) / factor;
-  if (adjustment !== 0 && slices.length > 0) {
-    const largestIndex = slices.reduce(
+  if (adjustment !== 0 && nonZeroSlices.length > 0) {
+    const largestIndex = nonZeroSlices.reduce(
       (maxIndex, slice, index, arr) => (slice.pct > arr[maxIndex].pct ? index : maxIndex),
       0,
     );
-    const nextPct = Math.round((slices[largestIndex].pct + adjustment) * factor) / factor;
+    const nextPct = Math.round((nonZeroSlices[largestIndex].pct + adjustment) * factor) / factor;
     if (nextPct > 0) {
-      slices[largestIndex].pct = nextPct;
+      nonZeroSlices[largestIndex].pct = nextPct;
     }
   }
 
-  return slices;
+  return nonZeroSlices;
 }

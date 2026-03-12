@@ -30,7 +30,7 @@ As of the current live-reserve remediation:
   - `iusd-infinifi` via the infiniFi protocol API
   - `m-m0`, `musd-metamask`, and `usdn-noble` via the M0 dashboard GraphQL collateral feed
   - `usdo-openeden` via OpenEden's reserve-composition API
-  - `aznd-mu-digital` via the Accountable dashboard JSON feed
+  - `aznd-mu-digital` and `yusd-aegis` via Accountable dashboard JSON feeds
 - The system now uses a structured `liveReservesConfig` contract (`adapter`, `version`, `semantics`, `display`, `inputs`, optional `params`) rather than the earlier minimal `adapter + url` model.
 - Operational state is tracked in both:
   - `reserve_composition` for the latest successful snapshot

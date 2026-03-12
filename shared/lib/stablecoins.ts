@@ -1978,6 +1978,36 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "Bitcoin held in institutional custody (Fireblocks, Copper, CEFFU); delta-neutral hedge via COIN-M perpetual futures; funded by user deposits of USDT, USDC, or DAI converted to BTC",
     pegMechanism: "Delta-neutral hedging: BTC spot long + COIN-M perpetual short; 1:1 redemption via Aegis Mint contract; funding rate yield distributed to registered YUSD holders; insurance fund backstop for extreme events",
     proofOfReserves: { type: "real-time", url: "https://aegis.accountable.capital/", provider: "Accountable" },
+    liveReservesConfig: {
+      adapter: "accountable",
+      version: 1,
+      semantics: "protocol-reserve",
+      breakerScope: "accountable",
+      display: {
+        url: "https://aegis.accountable.capital/",
+        label: "Accountable Dashboard",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://aegis.accountable.capital:10443/dashboard/YUSD",
+        },
+      },
+      params: {
+        bucket: "reserves_split",
+        riskMap: {
+          Copper: "medium",
+          Fireblocks: "medium",
+          "Insurance Fund": "low",
+          "Insurance Fund Usage": "very-high",
+          Binance: "high",
+          "Ethereum Chain": "low",
+          "BNB Smart Chain": "low",
+          Avalanche: "low",
+          Arbitrum: "low",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://aegis.im/" },
       { label: "Twitter", url: "https://x.com/aegis_im" },

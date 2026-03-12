@@ -658,7 +658,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 | Adapter | Coins | Source |
 |---------|-------|--------|
-| `accountable` | `aznd-mu-digital` | `inputs.primary.kind = "http-json"` -> `https://mu.accountable.capital:10443/dashboard` (`reserves.type`) |
+| `accountable` | `aznd-mu-digital`, `yusd-aegis` | `inputs.primary.kind = "http-json"` -> Accountable dashboard JSON feeds such as `https://mu.accountable.capital:10443/dashboard` (`reserves.type`) and `https://aegis.accountable.capital:10443/dashboard/YUSD` (`reserves.reserves_split`) |
 | `asymmetry` | `usdaf-asymmetry` | `inputs.primary.kind = "http-json"` -> `https://app.asymmetry.finance/api/stats` (`usdaf.branch`) |
 | `btcfi` | `btcusd-btcfi` | `inputs.primary.kind = "http-json"` -> `https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false` + handler metadata |
 | `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro` | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints |
