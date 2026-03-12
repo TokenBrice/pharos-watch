@@ -42,6 +42,12 @@ const STATUS_TONE = {
   },
 } as const;
 
+const STATUS_PRIORITY = {
+  healthy: 0,
+  degraded: 1,
+  stale: 2,
+} as const;
+
 const SEVERITY_RANK = {
   critical: 0,
   warning: 1,
@@ -231,7 +237,24 @@ export function buildStatusDashboardData({
     });
   }
 
-  const sections: DashboardSection[] = [
+  const reliabilityStatus = Math.max(
+    STATUS_PRIORITY[data.availabilityStatus],
+    healthData ? STATUS_PRIORITY[healthData.status] : 0,
+    browserProbeSummary && browserProbeSummary.failCount > 0 ? 1 : 0,
+    data.summary.worstCacheRatio > 2 ? 2 : data.summary.worstCacheRatio > 1.5 ? 1 : 0,
+  );
+  const cronStatus = data.summary.cronErrors > 0 ? 2 : data.summary.unhealthyCrons > 0 ? 1 : data.summary.degradedCrons > 0 ? 1 : 0;
+  const controlStatus = recommendedActions.length > 0 ? 2 : 0;
+  const sectionPriority: Record<DashboardSectionId, number> = {
+    overview: 999,
+    control: controlStatus * 100 + recommendedActions.length,
+    pipeline: STATUS_PRIORITY[data.dataQualityStatus] * 100 + data.causes.dataQuality.length,
+    crons: cronStatus * 100 + data.summary.unhealthyCrons * 10 + data.summary.cronErrors,
+    reliability: reliabilityStatus * 100 + (browserProbeSummary?.failCount ?? 0) + data.summary.cronErrors,
+    history: -1,
+  };
+  const sectionOrder: DashboardSectionId[] = ["overview", "control", "pipeline", "crons", "reliability", "history"];
+  const baseSections: DashboardSection[] = [
     {
       id: "overview",
       label: "Overview",
@@ -282,10 +305,10 @@ export function buildStatusDashboardData({
     },
     {
       id: "control",
-      label: "Control Plane",
+      label: "Actions",
       kicker: "Operations",
-      title: "Manual response and delivery systems",
-      description: "Recommended actions, manual triggers, and Telegram alert delivery telemetry.",
+      title: "Manual response",
+      description: "Recovery actions and operator controls for active incidents.",
       accentClassName: "border-l-emerald-500",
       value: recommendedActions.length > 0 ? `${recommendedActions.length} suggested` : "Clear",
       valueClassName:
@@ -303,6 +326,17 @@ export function buildStatusDashboardData({
       summary: `${allTransitions.length} transitions in view, latest ${latestTransition ? formatAge(Math.max(0, data.timestamp - latestTransition.at)) : "—"} ago`,
     },
   ];
+  const sections = [...baseSections].sort((a, b) => {
+    if (a.id === "overview") return -1;
+    if (b.id === "overview") return 1;
+    if (a.id === "history") return 1;
+    if (b.id === "history") return -1;
+
+    const priorityDelta = sectionPriority[b.id] - sectionPriority[a.id];
+    if (priorityDelta !== 0) return priorityDelta;
+
+    return sectionOrder.indexOf(a.id) - sectionOrder.indexOf(b.id);
+  });
 
   return {
     allTransitions,

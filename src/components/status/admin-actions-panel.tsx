@@ -15,6 +15,7 @@ interface AdminActionsPanelProps {
   status: Pick<StatusResponse, "causes" | "crons">;
   nowSeconds: number;
   onActionFinished?: () => void;
+  showRecommendations?: boolean;
 }
 
 export function AdminActionsPanel({
@@ -22,6 +23,7 @@ export function AdminActionsPanel({
   status,
   nowSeconds,
   onActionFinished,
+  showRecommendations = true,
 }: AdminActionsPanelProps) {
   const [executions, setExecutions] = useState<AdminActionExecution[]>([]);
 
@@ -41,7 +43,7 @@ export function AdminActionsPanel({
         <CardTitle className="text-base">Admin Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        {recommendations.length > 0 && (
+        {showRecommendations && recommendations.length > 0 && (
           <div className="space-y-3">
             <div>
               <h3 className="text-sm font-medium">Recommended now</h3>

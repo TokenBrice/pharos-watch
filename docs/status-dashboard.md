@@ -31,9 +31,10 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - Pure derived-data helpers: `src/lib/status-dashboard-model.ts`
 - Decomposed UI components: `src/components/status/*`
 - The page shell now adds a command-center top fold above the widget stack:
-  - consolidated overall-status hero (`StatusBanner`) + operator watchlist
-  - session controls (`RefreshCountdown`, sign-out, worker/client timestamp chips)
-  - a quick-jump card grid that mirrors the major operational lanes
+  - a compact triage utility bar for refresh/auth state (`RefreshCountdown`, sign-out, worker/client timestamp chips)
+  - consolidated overall-status hero (`StatusBanner`) + a short blocker watchlist
+  - a promoted `Recommended now` action strip derived from active causes / unhealthy cron lanes
+  - a `Follow this order` lane list that mirrors the priority-ranked section order
   - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
 - Metadata disables indexing (`robots: { index: false, follow: false }`)
 
@@ -53,7 +54,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
 - `src/hooks/use-status-dashboard-model.ts`
   - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
-  - Derives the operational lane summaries, quick-jump section cards, notice rail entries, and cross-surface status deltas used by the page shell
+  - Derives the operational lane summaries, severity-ranked section order, notice rail entries, and cross-surface status deltas used by the page shell
 - `src/components/status/telegram-bot-stats.tsx`
   - Renders Telegram subscriber adoption metrics, top subscribed coins, custom-preference / quiet-hour counts, and the latest `dispatch-telegram-alerts` delivery summary
 - Cron cards are grouped by trigger slot on the page:
@@ -68,13 +69,14 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Shared display metadata now comes from `shared/lib/cron-jobs.ts`, which also feeds worker interval expectations
   - Job-specific metadata summaries are resolved through `src/components/status/cron-metadata-summary.ts` instead of a long inline `if` chain inside `cron-card.tsx`
 - The client now groups widgets into six operational lanes instead of one flat vertical list:
-  - `Overview`: state machine, divergence counters, summary facts, and remediation-linked causes
+  - `Overview`: incident detail first, with the state-machine / probe diagnostics moved behind a secondary disclosure block
+  - `Actions`: manual response tools promoted upward when recommendations exist; Telegram delivery telemetry is now secondary and collapsible
   - `Pipeline`: data-quality threshold board, price-source health, liquidity health, dataset freshness, live reserve sync health, mint/burn reconciliation, and discovery backlog
   - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, and cache freshness
-  - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers
-  - `Control Plane`: admin actions and Telegram delivery telemetry
+  - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers; unhealthy/degraded groups sort first and fully healthy groups collapse by default
   - `History`: filtered incident timeline windows
-- Runtime warnings (`client stale`, `/api/health` divergence, hook fetch failures) are collapsed into a shared notice rail above the section map instead of rendering as separate free-floating banners.
+- Lane order below `Overview` is no longer fixed; `Actions`, `Pipeline`, `Cron Lanes`, and `Reliability` are ranked from current incident severity so the scroll order tapers from urgent action into broader telemetry.
+- Runtime warnings (`client stale`, `/api/health` divergence, hook fetch failures) are collapsed into a shared notice rail above the sticky lane nav instead of rendering as separate free-floating banners.
 
 ### Endpoint groups
 

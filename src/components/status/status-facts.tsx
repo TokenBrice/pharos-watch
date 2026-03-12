@@ -13,6 +13,12 @@ interface StatusFactsProps {
   onActionFinished?: () => void;
 }
 
+const SEVERITY_ORDER = {
+  critical: 0,
+  warning: 1,
+  info: 2,
+} as const;
+
 function formatCauseMetric(cause: StatusCause): string | null {
   if (cause.value == null && cause.threshold == null) return null;
   const value = cause.value != null ? String(cause.value) : "—";
@@ -20,29 +26,36 @@ function formatCauseMetric(cause: StatusCause): string | null {
   return cause.metric ? `${cause.metric}: ${value} (threshold ${threshold})` : `value ${value} / threshold ${threshold}`;
 }
 
-function CauseList({
-  title,
+function BlockerList({
   causes,
   adminKey,
   onActionFinished,
 }: {
-  title: string;
   causes: StatusCause[];
   adminKey: string;
   onActionFinished?: () => void;
 }) {
+  const orderedCauses = [...causes].sort((a, b) => {
+    const severityDelta = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
+    if (severityDelta !== 0) return severityDelta;
+    return a.message.localeCompare(b.message);
+  });
+
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-sm font-medium">{title}</h3>
+        <h3 className="text-sm font-medium">Current blockers</h3>
+        <p className="text-xs text-muted-foreground">
+          Severity wins over subsystem. Fix the top rows first.
+        </p>
       </div>
-      {causes.length === 0 ? (
+      {orderedCauses.length === 0 ? (
         <div className="rounded-md border border-border/60 px-3 py-2 text-sm text-muted-foreground">
-          No active causes in this layer.
+          No active blockers.
         </div>
       ) : (
         <div className="space-y-2">
-          {causes.map((cause) => {
+          {orderedCauses.map((cause) => {
             const actions = getRecommendedActionsForCause(cause);
             const detail = formatCauseMetric(cause);
             return (
@@ -56,10 +69,13 @@ function CauseList({
                             ? "bg-red-500/15 text-red-700 dark:text-red-400"
                             : cause.severity === "warning"
                               ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                              : "bg-muted text-muted-foreground"
+                          : "bg-muted text-muted-foreground"
                         }`}
                       >
                         {cause.severity}
+                      </span>
+                      <span className="rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-muted-foreground">
+                        {cause.layer}
                       </span>
                       <span className="font-mono text-[11px] text-muted-foreground">{cause.code}</span>
                     </div>
@@ -99,11 +115,6 @@ export function StatusFacts({
 }: StatusFactsProps) {
   const summaryCards = [
     {
-      label: "DB",
-      value: dbHealthy ? "healthy" : "degraded",
-      tone: dbHealthy ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400",
-    },
-    {
       label: "Worst Cache Ratio",
       value: `${summary.worstCacheRatio.toFixed(2)}x`,
       tone: summary.worstCacheRatio > 2
@@ -118,24 +129,25 @@ export function StatusFacts({
       tone: summary.unhealthyCrons > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400",
     },
     {
-      label: "Degraded Crons",
-      value: String(summary.degradedCrons),
-      tone: summary.degradedCrons > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground",
-    },
-    {
       label: "Cron Errors",
       value: String(summary.cronErrors),
       tone: summary.cronErrors > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400",
     },
+    {
+      label: "DB",
+      value: dbHealthy ? "healthy" : "degraded",
+      tone: dbHealthy ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400",
+    },
   ];
+  const activeCauses = [...causes.availability, ...causes.dataQuality];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Status Facts</CardTitle>
+        <CardTitle className="text-base">Incident Detail</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
             <div key={card.label} className="rounded-lg border border-border/60 p-3">
               <div className="text-xs text-muted-foreground">{card.label}</div>
@@ -143,20 +155,7 @@ export function StatusFacts({
             </div>
           ))}
         </div>
-        <div className="grid gap-5 xl:grid-cols-2">
-          <CauseList
-            title="Availability causes"
-            causes={causes.availability}
-            adminKey={adminKey}
-            onActionFinished={onActionFinished}
-          />
-          <CauseList
-            title="Data quality causes"
-            causes={causes.dataQuality}
-            adminKey={adminKey}
-            onActionFinished={onActionFinished}
-          />
-        </div>
+        <BlockerList causes={activeCauses} adminKey={adminKey} onActionFinished={onActionFinished} />
       </CardContent>
     </Card>
   );

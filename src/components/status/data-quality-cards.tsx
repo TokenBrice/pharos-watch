@@ -125,10 +125,17 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
     red: "text-red-600 dark:text-red-400",
     neutral: "text-muted-foreground",
   };
+  const severityRank = {
+    red: 0,
+    amber: 1,
+    green: 2,
+    neutral: 3,
+  } as const;
+  const orderedCards = [...cards].sort((a, b) => severityRank[a.severity] - severityRank[b.severity]);
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-      {cards.map((c) => (
+      {orderedCards.map((c) => (
         <Card key={c.label}>
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground">{c.label}</div>
