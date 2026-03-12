@@ -32,12 +32,12 @@ Do **not** multiply list endpoint values by price — that would double-convert 
 
 ## Price Enrichment Pipeline
 
-### Dual-Primary Price Validation
+### Primary Price Fetch
 
-Before the enrichment pipeline runs, `fetchDualPrimaryPrices()` fetches prices from both the DefiLlama coins API and CoinGecko `/simple/price` **in parallel** for all assets with a valid `geckoId`. It cross-validates within 50 basis points:
+Before the enrichment pipeline runs, `fetchPrimaryPrices()` fetches prices from CoinGecko `/simple/price` as the primary source for all assets with a valid `geckoId`, and cross-validates against the DefiLlama coins API within 50 basis points:
 
-- **Both agree (≤50 bps)** → `priceConfidence: "high"`, use DL price
-- **Disagree (>50 bps)** → `priceConfidence: "low"`, use the candidate closer to the asset's canonical peg reference for fixed pegs (USD, fiat FX, gold, silver). NAV tokens still default to DL because they are intentionally not anchored to a fixed `$1` face value
+- **Both agree (≤50 bps)** → `priceConfidence: "high"`, use CG price
+- **Disagree (>50 bps)** → `priceConfidence: "low"`, use the candidate closer to the asset's canonical peg reference for fixed pegs (USD, fiat FX, gold, silver). NAV tokens still default to CG because they are intentionally not anchored to a fixed `$1` face value
 - **One source down** → `priceConfidence: "single-source"`, use available
 - **Both down** → skip, falls through to enrichment pipeline
 
@@ -45,14 +45,12 @@ Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) 
 
 ### Enrichment Pipeline
 
-`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 6-pass system for assets still missing prices after dual-primary:
+`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 4-pass system for assets still missing prices after primary fetch:
 
 1. **Pass 1:** Contract address -> DefiLlama coins API
 2. **Pass 1b:** Multi-chain contract address fallback (tries alternate chain addresses via DefiLlama coins API)
-3. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
-4. **Pass 3:** CoinGecko ID -> CoinGecko direct API
-5. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt so a best-effort fallback cannot dominate cron runtime)
-6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-aware fallback validation. Primary sync paths now allow deep downside failures for fixed pegs when the move is being evaluated as an authoritative price, while fallback enrichment still rejects isolated bad prints below the lower bound. Commodity tokens still scale gold/silver references by `commodityOunces` for gram- and 1/1000-ounce assets; capped at 10 searches per run, no retries, 5s per-request timeout, 45s total pass budget)
+3. **Pass 2:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt so a best-effort fallback cannot dominate cron runtime)
+4. **Pass 3:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-aware fallback validation. Primary sync paths now allow deep downside failures for fixed pegs when the move is being evaluated as an authoritative price, while fallback enrichment still rejects isolated bad prints below the lower bound. Commodity tokens still scale gold/silver references by `commodityOunces` for gram- and 1/1000-ounce assets; capped at 10 searches per run, no retries, 5s per-request timeout, 45s total pass budget)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
 
@@ -88,7 +86,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 24. **Shared stablecoins cache loader**: Consumers that read `stablecoins` (`/api/status`, `/api/peg-summary`, `/api/mint-burn-flows`, `daily-digest`, `compute-dews`, `stability-index`, `backfill-depegs`) use `worker/src/lib/stablecoins-cache.ts` instead of ad-hoc `JSON.parse` logic. The loader supports strict mode (typed error reason) and lenient mode (safe empty defaults + warning reason), with optional legacy array-shape compatibility.
 25. **DEWS source-failure accounting**: `computeAndStoreDEWS()` records upstream read failures as structured `sourceFailures` metadata and emits `status: "degraded"` when non-bootstrap-critical inputs fail. Metadata now includes source coverage and validation-failure counts.
 26. **Stage-structured stablecoins sync**: `syncStablecoins()` keeps the same output contract but now delegates normalization/filtering/staleness/supply-history fill to `worker/src/cron/sync-stablecoins/stages.ts` and supplemental commodity/CG-only overlay fetching to `worker/src/cron/sync-stablecoins/supplemental-assets.ts`, reducing monolith complexity while preserving run metadata and fallback semantics.
-27. **DefiLlama ID remap before enrichment/cache writes**: in `syncStablecoins()`, assets are remapped via `REGISTRY_BY_LLAMA_ID` immediately after `normalizeChainCirculating()` and before supplemental merges/`applyTrackedAssetOverrides()`. This ensures downstream maps and keys (`dualPriceResults.get(asset.id)`, `savePriceCache`, cached-price fallback lookups, supply-history fill inputs, and final stablecoins cache payload) consistently use canonical IDs.
+27. **DefiLlama ID remap before enrichment/cache writes**: in `syncStablecoins()`, assets are remapped via `REGISTRY_BY_LLAMA_ID` immediately after `normalizeChainCirculating()` and before supplemental merges/`applyTrackedAssetOverrides()`. This ensures downstream maps and keys (`primaryPriceResults.get(asset.id)`, `savePriceCache`, cached-price fallback lookups, supply-history fill inputs, and final stablecoins cache payload) consistently use canonical IDs.
 
 ## Gold & Silver Spot Prices (gold-api.com)
 

@@ -129,8 +129,8 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `geckoId`              | `string \| null`                   | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)                                                                   |
 | `pegType`              | `string`                           | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`)                                                                                     |
 | `pegMechanism`         | `string`                           | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc.                                                                                       |
-| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"defillama+coingecko"`, `"dexscreener"`)                                       |
-| `priceConfidence`      | `string \| null`                   | Price confidence level: `"high"` (dual-source agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline) |
+| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"coingecko+defillama"`, `"dexscreener"`)                                       |
+| `priceConfidence`      | `string \| null`                   | Price confidence level: `"high"` (cross-validated agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline) |
 | `supplySource`         | `string \| undefined`              | Supply data source: `"defillama"` or `"coingecko-fallback"`                                                                                |
 | `price`                | `number \| null`                   | Current price in USD                                                                                                                       |
 | `circulating`          | `Record<string, number>`           | Current supply in USD, keyed by pegType (e.g. `{ "peggedUSD": 138000000 }`)                                                                |
@@ -210,7 +210,7 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
   "pegType": "peggedUSD",
   "pegMechanism": "fiat-backed",
   "priceUsd": 1.0001,
-  "priceSource": "defillama+coingecko",
+  "priceSource": "coingecko+defillama",
   "priceConfidence": "high",
   "supplySource": "defillama",
   "supplyByPegUsd": { "peggedUSD": 183883564940.52 },
