@@ -52,6 +52,7 @@ const SEND_BATCH_SIZE = 5; // Parallel sends per batch (stay under Workers 6-con
 
 const SNAPSHOT_KEYS = {
   dews: "alert:dews-snapshot",
+  dewsAlertable: "alert:dews-alertable-snapshot",
   depeg: "alert:depeg-snapshot",
   safety: "alert:safety-snapshot",
 } as const;
@@ -232,6 +233,28 @@ function buildDewsSnapshot(rows: DewsRow[]): DewsSnapshot {
   return snapshot;
 }
 
+function buildDewsAlertableSnapshot(
+  rows: DewsRow[],
+  previous: DewsSnapshot | null = null,
+): DewsSnapshot {
+  const snapshot: DewsSnapshot = previous ? { ...previous } : {};
+  for (const row of rows) {
+    if (!isDewsAlertable(row.band)) continue;
+    snapshot[row.stablecoin_id] = row.band;
+  }
+  return snapshot;
+}
+
+function filterAlertableBands(snapshot: DewsSnapshot | null): DewsSnapshot {
+  if (!snapshot) return {};
+  const filtered: DewsSnapshot = {};
+  for (const [stablecoinId, band] of Object.entries(snapshot)) {
+    if (!isDewsAlertable(band)) continue;
+    filtered[stablecoinId] = band;
+  }
+  return filtered;
+}
+
 function buildDepegSnapshot(rows: ActiveDepegRow[]): DepegSnapshot {
   const snapshot: DepegSnapshot = {};
   for (const row of rows) {
@@ -345,12 +368,14 @@ async function writeSnapshots(
   db: D1Database,
   snapshots: {
     dews: DewsSnapshot;
+    dewsAlertable: DewsSnapshot;
     depeg: DepegSnapshot;
     safety: SafetySnapshot;
   },
 ): Promise<void> {
   await Promise.all([
     setCache(db, SNAPSHOT_KEYS.dews, JSON.stringify(snapshots.dews)),
+    setCache(db, SNAPSHOT_KEYS.dewsAlertable, JSON.stringify(snapshots.dewsAlertable)),
     setCache(db, SNAPSHOT_KEYS.depeg, JSON.stringify(snapshots.depeg)),
     setCache(db, SNAPSHOT_KEYS.safety, JSON.stringify(snapshots.safety)),
   ]);
@@ -581,7 +606,7 @@ export async function dispatchTelegramAlerts(
   try {
     throwIfAborted(signal);
 
-    const [dewsRows, activeDepegRows, safetyRows, dewsCache, depegCache, safetyCache] = await Promise.all([
+    const [dewsRows, activeDepegRows, safetyRows, dewsCache, dewsAlertableCache, depegCache, safetyCache] = await Promise.all([
       db
         .prepare(
           `SELECT s.stablecoin_id, s.score, s.band, s.signals_json
@@ -620,6 +645,7 @@ export async function dispatchTelegramAlerts(
         .all<SafetyRow>()
         .then((result) => result.results ?? []),
       getCache(db, SNAPSHOT_KEYS.dews),
+      getCache(db, SNAPSHOT_KEYS.dewsAlertable),
       getCache(db, SNAPSHOT_KEYS.depeg),
       getCache(db, SNAPSHOT_KEYS.safety),
     ]);
@@ -627,18 +653,23 @@ export async function dispatchTelegramAlerts(
     throwIfAborted(signal);
 
     const nowSec = Math.floor(Date.now() / 1000);
+    const previousDewsSnapshot = parseSnapshotMap<DewsSnapshot>(dewsCache);
+    const previousDewsAlertableSnapshot =
+      parseSnapshotMap<DewsSnapshot>(dewsAlertableCache) ??
+      filterAlertableBands(previousDewsSnapshot);
     const currentSnapshots = {
       dews: buildDewsSnapshot(dewsRows),
+      dewsAlertable: buildDewsAlertableSnapshot(dewsRows, previousDewsAlertableSnapshot),
       depeg: buildDepegSnapshot(activeDepegRows),
       safety: buildSafetySnapshot(safetyRows),
     };
 
-    const previousDewsSnapshot = parseSnapshotMap<DewsSnapshot>(dewsCache);
     const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(depegCache);
     const previousSafetySnapshot = parseSnapshotMap<SafetySnapshot>(safetyCache);
 
     const mustSeedSnapshots =
       isSnapshotMissingOrStale(dewsCache, nowSec) ||
+      (dewsAlertableCache != null && isSnapshotMissingOrStale(dewsAlertableCache, nowSec)) ||
       isSnapshotMissingOrStale(depegCache, nowSec) ||
       isSnapshotMissingOrStale(safetyCache, nowSec) ||
       previousDewsSnapshot == null ||
@@ -659,12 +690,18 @@ export async function dispatchTelegramAlerts(
 
     const dewsChanges: DewsChange[] = [];
     for (const row of dewsRows) {
-      const oldBand = previousDewsSnapshot[row.stablecoin_id];
+      const oldBand = previousDewsAlertableSnapshot[row.stablecoin_id];
       if (oldBand === row.band || !isDewsAlertable(row.band)) continue;
+      const previousRawBand = previousDewsSnapshot[row.stablecoin_id];
       dewsChanges.push({
         stablecoinId: row.stablecoin_id,
         symbol: getSymbol(row.stablecoin_id),
-        oldBand: typeof oldBand === "string" ? oldBand : "UNKNOWN",
+        oldBand:
+          typeof oldBand === "string"
+            ? oldBand
+            : typeof previousRawBand === "string"
+              ? previousRawBand
+              : "UNKNOWN",
         newBand: row.band,
         score: row.score,
         topSignals: extractTopSignals(row.signals_json),

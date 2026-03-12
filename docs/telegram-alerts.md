@@ -132,16 +132,19 @@ Each dispatch run loads:
 - The latest `safety_grade_history` row for each stablecoin (not just the latest change day)
 - Prior dispatch snapshots from cache keys:
   - `alert:dews-snapshot`
+  - `alert:dews-alertable-snapshot`
   - `alert:depeg-snapshot`
   - `alert:safety-snapshot`
+
+When `alert:dews-alertable-snapshot` is absent (for example, immediately after deploy), the dispatcher rebuilds it from the raw DEWS snapshot so the rollout does not require a noisy cold start.
 
 Snapshots older than `24 hours` are treated as stale and are reseeded before any alerts are sent.
 
 ### First-Run / Stale-Snapshot Behavior
 
-If any snapshot is missing, unparsable, or older than 24 hours:
+If the raw DEWS/depeg/safety snapshots are missing, unparsable, or older than 24 hours, or if an existing `alert:dews-alertable-snapshot` is stale:
 
-1. Current DEWS/depeg/safety state is written back to the three snapshot cache keys.
+1. Current DEWS/depeg/safety state is written back to all four snapshot cache keys.
 2. No subscriber messages are sent for that run.
 3. The cron returns metadata with `snapshotSeeded: true`.
 
@@ -151,7 +154,7 @@ This prevents a cold start from blasting subscribers with every current conditio
 
 `worker/src/cron/dispatch-telegram-alerts.ts` detects:
 
-- DEWS band escalations and de-escalations by comparing current band to prior band
+- DEWS alert-band changes by comparing the current alertable band (`ALERT`/`WARNING`/`DANGER`) to the last alertable band snapshot, while still keeping the raw current-band snapshot for display context
 - New active depeg events by comparing current active-depeg snapshot to the prior snapshot
 - Depeg worsening milestones by comparing current active event severity to the prior snapshot
 - Depeg resolutions by checking which prior active depegs disappeared and then loading the corresponding closed event rows
@@ -159,6 +162,8 @@ This prevents a cold start from blasting subscribers with every current conditio
 - Methodology-version-only safety regrades are suppressed from user alerts
 
 If the cached safety snapshot is missing a coin, the dispatcher suppresses the alert unless that coin's latest grade-change row is newer than the cached snapshot timestamp. This avoids false `UNKNOWN → grade` alerts when repairing older partial snapshots or when a newly tracked coin gets its first seed row.
+
+The separate `alert:dews-alertable-snapshot` cache key prevents duplicate same-band DEWS alerts when a coin silently dips to `WATCH` or `CALM` and then returns to the same alert band. Example: `ALERT → WATCH` produces no message and does not reset the alert dedupe baseline, so a later `WATCH → ALERT` does not resend the same `ALERT` notification.
 
 The helper predicates `isDewsAlertable()` and `isDewsDeescalation()` live in `worker/src/lib/telegram-alerts.ts`.
 

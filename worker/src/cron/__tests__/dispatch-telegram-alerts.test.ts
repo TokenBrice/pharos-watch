@@ -100,7 +100,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(result.itemCount).toBe(0);
     expect(metadata.snapshotSeeded).toBe(true);
     expect(metadata.subscribersNotified).toBe(0);
-    expect(mockSetCache).toHaveBeenCalledTimes(3);
+    expect(mockSetCache).toHaveBeenCalledTimes(4);
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });
 
@@ -481,6 +481,52 @@ describe("dispatchTelegramAlerts", () => {
 
     expect(metadata.eventsDetected.dews).toBe(0);
     expect(mockSendToChat).not.toHaveBeenCalled();
+  });
+
+  it("does not resend the same DEWS alert band after a silent WATCH/CALM dip", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "uusd-youves": "WATCH" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:dews-alertable-snapshot") {
+        return { value: JSON.stringify({ "uusd-youves": "ALERT" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "uusd-youves", score: 39, band: "ALERT", signals_json: "{}" }],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { dews: number };
+      messagesSent: number;
+    };
+
+    expect(metadata.eventsDetected.dews).toBe(0);
+    expect(metadata.messagesSent).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+
+    const dewsAlertableSnapshotCall = mockSetCache.mock.calls.find(
+      (call) => call[1] === "alert:dews-alertable-snapshot",
+    );
+    expect(dewsAlertableSnapshotCall?.[2]).toContain("\"uusd-youves\":\"ALERT\"");
   });
 
   it("deactivates subscriber on blocked telegram response", async () => {
