@@ -3,6 +3,12 @@ import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } f
 export interface ReserveResult {
   reserves: ReserveSlice[];
   estimated: boolean; // true if using template, false if manually curated
+  /** Unix seconds. Present when reserves came from a live sync (not static). */
+  liveAt?: number;
+  /** Adapter key. Present when reserves came from a live sync. */
+  source?: string;
+  /** Human-readable URL to link to. Present when reserves came from a live sync. */
+  displayUrl?: string;
 }
 
 // ── Default reserve templates by classification ─────────────────────────

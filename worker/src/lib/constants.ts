@@ -136,4 +136,5 @@ export const CIRCUIT_SOURCE = {
   ALCHEMY: "alchemy",
   TWITTER_API: "twitter-api",
   TELEGRAM_API: "telegram-api",
+  LIVE_RESERVES: "live-reserves",
 } as const;

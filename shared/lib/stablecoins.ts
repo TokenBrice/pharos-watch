@@ -26,13 +26,14 @@ interface StablecoinOpts {
   custodyModel?: StablecoinMeta["custodyModel"];
   governanceQuality?: StablecoinMeta["governanceQuality"];
   reserves?: StablecoinMeta["reserves"];
+  liveReservesConfig?: StablecoinMeta["liveReservesConfig"];
   notices?: StablecoinMeta["notices"];
   tags?: string[];
   yieldConfig?: StablecoinMeta["yieldConfig"];
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, llamaId: opts?.llamaId, detailProvider: opts?.detailProvider ?? "defillama", geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, tradedContracts: opts?.tradedContracts, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, llamaId: opts?.llamaId, detailProvider: opts?.detailProvider ?? "defillama", geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, tradedContracts: opts?.tradedContracts, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, liveReservesConfig: opts?.liveReservesConfig, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -1117,6 +1118,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     yieldConfig: { yieldSource: "infiniFi savings (siUSD)", yieldType: "lending-vault" },
     geckoId: "infinifi-usd",
     proofOfReserves: { type: "real-time", url: "https://eth-api.infinifi.xyz/api/protocol/data", provider: "infiniFi" },
+    liveReservesConfig: {
+      adapter: "infinifi",
+      url: "https://eth-api.infinifi.xyz/api/protocol/data",
+      displayUrl: "https://stats.infinifi.xyz/",
+    },
     collateralQuality: "exotic",
     collateral: "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
     pegMechanism: "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve — liquid portion available for instant withdrawals, illiquid portion deployed to time-locked institutional lending strategies; redemptions queue when liquid reserves are insufficient",

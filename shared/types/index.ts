@@ -138,6 +138,16 @@ export interface CoinNotice {
   message: string;
 }
 
+/** Configuration for live reserve composition sync. */
+export interface LiveReservesConfig {
+  /** Registered adapter key (e.g., "infinifi", "circle", "bold-onchain"). */
+  adapter: string;
+  /** Machine-readable URL the cron adapter fetches. Empty string for on-chain adapters. */
+  url: string;
+  /** Human-readable URL for the "source" link shown in the UI (e.g. stats page). */
+  displayUrl?: string;
+}
+
 export interface StablecoinMeta {
   id: string; // Stablecoin ID (canonical ticker-issuer format in future; currently legacy)
   /** DefiLlama numeric stablecoin ID (for API calls to stablecoins.llama.fi) */
@@ -166,6 +176,7 @@ export interface StablecoinMeta {
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;
   reserves?: ReserveSlice[]; // Structured reserve composition (manually curated)
+  liveReservesConfig?: LiveReservesConfig; // Live reserve sync config (adapter + URL)
   notices?: CoinNotice[]; // Important alerts (winding down, depegged, etc.)
   tags?: string[]; // Protocol lineage / fork tags (e.g. "Liquity v1 fork")
   yieldConfig?: YieldConfig; // Yield intelligence config (only for yieldBearing coins)
