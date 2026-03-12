@@ -287,6 +287,7 @@ export async function fetchPrimaryPrices(
     fetches.push(
       (async () => {
         try {
+          let hadBatchFailure = false;
           // CG /simple/price supports up to 250 IDs per call
           for (let i = 0; i < geckoIds.length; i += BATCH_SIZE) {
             throwIfAborted(signal);
@@ -307,10 +308,11 @@ export async function fetchPrimaryPrices(
                 }
               }
             } else {
+              hadBatchFailure = true;
               console.warn(`[primary-prices] CG price API returned ${res?.status ?? "no response"}`);
             }
           }
-          await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, true);
+          await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, !hadBatchFailure);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[primary-prices] CG price API failed:", err);

@@ -10,6 +10,7 @@ vi.mock("@shared/lib/stablecoins", () => ({
 import {
   applyTrackedAssetOverrides,
   computePriceStalenessSummary,
+  dedupeCanonicalAssets,
   filterStructurallyValidAssets,
   normalizeChainCirculating,
 } from "../sync-stablecoins/stages";
@@ -76,6 +77,50 @@ describe("sync-stablecoins stage helpers", () => {
     expect(usdt.cmcSlug).toBe("tether");
     expect(nav.navToken).toBe(true);
     expect(patchedAddress.address).toBe("0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b");
+  });
+
+  it("dedupes canonical ID collisions by keeping the richer asset row", () => {
+    const assets = [
+      {
+        id: "usdt-tether",
+        symbol: "USDT",
+        circulating: { peggedUSD: 100 },
+        chainCirculating: { Ethereum: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 } },
+        chains: ["Ethereum"],
+        price: 1,
+      },
+      {
+        id: "usdt-tether",
+        symbol: "USDT",
+        circulating: { peggedUSD: 125 },
+        chainCirculating: {
+          Ethereum: { current: 80, circulatingPrevDay: 80, circulatingPrevWeek: 80, circulatingPrevMonth: 80 },
+          Tron: { current: 45, circulatingPrevDay: 45, circulatingPrevWeek: 45, circulatingPrevMonth: 45 },
+        },
+        chains: ["Ethereum", "Tron"],
+        price: 1.0002,
+        priceUpdatedAt: 2_000,
+      },
+      {
+        id: "usdc-circle",
+        symbol: "USDC",
+        circulating: { peggedUSD: 90 },
+        chainCirculating: {},
+        chains: ["Ethereum"],
+        price: 1,
+      },
+    ] as unknown as never[];
+
+    const result = dedupeCanonicalAssets(assets);
+
+    expect(result.duplicateRows).toBe(1);
+    expect(result.affectedIds).toEqual(["usdt-tether"]);
+    expect(result.dedupedAssets).toHaveLength(2);
+    expect(result.dedupedAssets.find((asset) => asset.id === "usdt-tether")).toMatchObject({
+      circulating: { peggedUSD: 125 },
+      chains: ["Ethereum", "Tron"],
+      price: 1.0002,
+    });
   });
 
   it("flags stale price snapshots when >95% of compared rows are identical", () => {

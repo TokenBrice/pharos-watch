@@ -180,9 +180,9 @@ All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on u
 | `totalCirculatingUSD` | `Record<string, number>` | Supply in USD per pegType key          |
 | `totalCirculating`    | `Record<string, number>` | Supply in native units per pegType key |
 
-For regular stablecoins the response is the raw DefiLlama stablecoin detail shape (it includes additional fields). For commodity and CG-only tokens the response is normalized to the shape above.
+For regular stablecoins the response still includes the raw DefiLlama detail fields, but the worker now also materializes `totalCirculatingUSD` and `totalCirculating` on each token row for contract consistency. Commodity and CG-only tokens are returned directly in the normalized shape above.
 
-Non-USD pegs have their `totalCirculatingUSD` values converted to USD using the current token price before caching, so the `totalCirculatingUSD` field always reflects the USD market cap regardless of peg type.
+For non-USD pegs, `totalCirculating` remains in native units while `totalCirculatingUSD` is converted to USD using the current token price before caching, so the USD field always reflects market cap regardless of peg type.
 
 **Error responses:** `502` when DefiLlama/CoinGecko is unavailable and neither cached detail nor `supply_history` fallback data exists; stale cache is returned in preference to an error.
 
@@ -305,7 +305,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 ### `GET /api/blacklist`
 
-Freeze, blacklist, and token-destruction events for USDC, USDT, EURC, PAXG, and XAUT. Sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
+Freeze, blacklist, and token-destruction events currently ingested for USDC, USDT, PAXG, and XAUT. The shared filter enum still includes `EURC`, but the live sync contract registry does not yet define an EURC ingestion path. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
 **Cache:** realtime
 
@@ -318,6 +318,8 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, EURC, PAXG, and 
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
 | `limit`      | `integer` | `1000`  | Max results (1–1000; `0` maps to default `1000`)               |
 | `offset`     | `integer` | `0`     | Pagination offset                                              |
+
+`stablecoin=EURC` remains a valid query value because the shared blacklist enum still includes it, but the current sync contract registry (`worker/src/lib/blacklist-contracts.ts`) only ingests USDC, USDT, PAXG, and XAUT rows.
 
 **Response**
 
@@ -1561,7 +1563,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 ---
 
-### POST /api/telegram-webhook
+### `POST /api/telegram-webhook`
 
 Telegram Bot API webhook endpoint. Receives user messages, processes bot commands, and manages subscriptions.
 

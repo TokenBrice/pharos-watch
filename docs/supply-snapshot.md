@@ -180,7 +180,7 @@ Other CoinGecko-only non-commodity tokens are skipped because the current backfi
 **File:** `src/hooks/use-stablecoins.ts`
 
 - Fetches `/api/stablecoin/{id}` (detail API, not `/api/supply-history`)
-- Transforms via `detailToSupplyHistory()`: tries `totalCirculatingUSD` first, falls back to `circulating`, filters zero values
+- Transforms via `detailToSupplyHistory()`: tries normalized `totalCirculatingUSD` first, falls back to legacy `circulating`, filters zero values
 - TanStack Query: `staleTime = 1 hour`, `refetchInterval = 2 hours`
 
 ### McapChart

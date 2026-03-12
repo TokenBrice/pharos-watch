@@ -166,12 +166,13 @@ Age checks:
 
 ### Secondary Source Checks
 
-**CoinGecko check:**
+**Off-chain check:**
 
-- Fetch `/simple/price` for the coin's `geckoId`
+- Default path: fetch CoinGecko `/simple/price` for the coin's `geckoId`
+- If the current primary price already comes from CoinGecko (`priceSource = "coingecko"` or `"coingecko+defillama"`), switch the confirmer to DefiLlama `coins.llama.fi/prices/current/coingecko:{geckoId}` instead of querying CoinGecko again
 - Calculate deviation against `peg_reference`
 - Agrees if deviation >= `secondaryBar` (50% of primary threshold)
-- Non-fatal: if fetch fails, `cgAgrees = null`
+- Non-fatal: if fetch fails, the off-chain agreement remains `null`
 
 **DEX check:**
 
@@ -181,12 +182,12 @@ Age checks:
 
 ### Decision Matrix
 
-| CG agrees | DEX agrees | Action |
-|-----------|-----------|--------|
+| Off-chain agrees | DEX agrees | Action |
+|------------------|-----------|--------|
 | true | any | PROMOTE to `depeg_events` |
 | any | true | PROMOTE to `depeg_events` |
 | false | false | REJECT (both disagree) |
-| false | null | REJECT (CG disagrees, no DEX) |
+| false | null | REJECT (off-chain check disagrees, no DEX) |
 | null | false | Keep pending (retry next cycle) |
 | null | null | Keep pending (retry next cycle) |
 

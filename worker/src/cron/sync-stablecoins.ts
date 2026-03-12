@@ -13,6 +13,7 @@ import { detectDepegEvents } from "./detect-depegs";
 import { confirmPendingDepegs } from "./confirm-pending-depegs";
 import {
   applyTrackedAssetOverrides,
+  dedupeCanonicalAssets,
   detectPriceStaleness,
   fillMissingSupplyHistory,
   filterStructurallyValidAssets,
@@ -751,6 +752,27 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     }
   }
 
+  const canonicalDeduplication = dedupeCanonicalAssets(llamaData.peggedAssets);
+  if (canonicalDeduplication.duplicateRows > 0) {
+    console.warn(
+      `[sync-stablecoins] Deduped ${canonicalDeduplication.duplicateRows} canonical duplicate row(s): ` +
+      canonicalDeduplication.affectedIds.join(", "),
+    );
+    llamaData.peggedAssets = canonicalDeduplication.dedupedAssets;
+  }
+  if (llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
+    console.error(
+      `[sync-stablecoins] Canonical dedupe reduced asset count to ${llamaData.peggedAssets.length} ` +
+      `(need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
+    );
+    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
+    const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec, signal);
+    if (fallback.itemCount && fallback.itemCount > 0) return fallback;
+    throw new Error(
+      `DefiLlama payload collapsed to ${llamaData.peggedAssets.length} unique canonical IDs and fallback failed`,
+    );
+  }
+
   const supplementalResolution = mergeSupplementalLastKnownGood(
     [...goldTokens, ...silverTokens, ...fiatCgTokens],
     previousAssetsById,
@@ -1116,6 +1138,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     sourceCoverage: { defillama: true },
     fallbackMode: null,
     validationFailures: 0,
+    canonicalDeduplication,
     assetCount: llamaData.peggedAssets.length,
     enrichment: enrichStats,
     priceValidation: priceValidationStats,

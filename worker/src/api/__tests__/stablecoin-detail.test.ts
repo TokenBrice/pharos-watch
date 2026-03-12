@@ -185,6 +185,39 @@ describe("handleStablecoinDetail", () => {
     expect(ctx.waitUntil).toHaveBeenCalled();
   });
 
+  it("normalizes non-USD DefiLlama detail responses into explicit native and USD token fields", async () => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+    const dlBody = JSON.stringify({
+      price: 1.25,
+      tokens: [
+        {
+          date: 1700000000,
+          circulating: { peggedEUR: 80 },
+        },
+      ],
+    });
+
+    fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "eurc-circle", ctx);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      tokens: Array<{
+        circulating?: Record<string, number>;
+        totalCirculating?: Record<string, number>;
+        totalCirculatingUSD?: Record<string, number>;
+      }>;
+    };
+    expect(body.tokens[0]).toEqual({
+      date: 1700000000,
+      circulating: { peggedEUR: 80 },
+      totalCirculating: { peggedEUR: 80 },
+      totalCirculatingUSD: { peggedEUR: 100 },
+    });
+  });
+
   it("returns 502 for commodity branch upstream parse failure without stale cache", async () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
     fetchSpy

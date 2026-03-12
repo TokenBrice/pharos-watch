@@ -3,6 +3,7 @@ import {
   DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_SECONDARY_THRESHOLD_RATIO,
+  DEFILLAMA_COINS,
   USER_AGENT,
 } from "../lib/constants";
 import { batchExecute } from "../lib/db";
@@ -132,33 +133,51 @@ export async function confirmPendingDepegs(
     }
 
     // 3. Fetch CoinGecko spot price
-    let cgAgrees: boolean | null = null; // null = no data
+    let offchainAgrees: boolean | null = null; // null = no data
     const geckoId = meta?.geckoId;
     if (geckoId) {
+      const primarySource = asset?.priceSource ?? null;
+      const useDefiLlamaSecondary =
+        primarySource === "coingecko" ||
+        primarySource === "coingecko+defillama";
+      const offchainLabel = useDefiLlamaSecondary ? "DefiLlama" : "CoinGecko";
       try {
-        const cgRes = await fetchWithRetry(
-          cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`),
-          {
-            headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
-            signal,
-          },
+        const offchainRes = await fetchWithRetry(
+          useDefiLlamaSecondary
+            ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
+            : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`),
+          useDefiLlamaSecondary
+            ? { headers: { "User-Agent": USER_AGENT }, signal }
+            : {
+                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+                signal,
+              },
           1, // single retry
         );
-        if (cgRes?.ok) {
-          const cgData = (await cgRes.json()) as Record<string, { usd?: number }>;
-          const cgPrice = cgData[geckoId]?.usd;
-          if (cgPrice && cgPrice > 0) {
-            const cgBps = Math.abs(Math.round(((cgPrice / row.peg_reference) - 1) * 10000));
-            cgAgrees = cgBps >= secondaryBar;
+        if (offchainRes?.ok) {
+          let offchainPrice: number | undefined;
+          if (useDefiLlamaSecondary) {
+            const dlData = (await offchainRes.json()) as {
+              coins?: Record<string, { price?: number }>;
+            };
+            offchainPrice = dlData.coins?.[`coingecko:${geckoId}`]?.price;
+          } else {
+            const cgData = (await offchainRes.json()) as Record<string, { usd?: number }>;
+            offchainPrice = cgData[geckoId]?.usd;
+          }
+
+          if (offchainPrice && offchainPrice > 0) {
+            const offchainBps = Math.abs(Math.round(((offchainPrice / row.peg_reference) - 1) * 10000));
+            offchainAgrees = offchainBps >= secondaryBar;
             console.log(
-              `[depeg-confirm] ${row.symbol} CG check: price=$${cgPrice}, deviation=${cgBps}bps, ` +
-              `bar=${secondaryBar}bps, agrees=${cgAgrees}`
+              `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainBps}bps, ` +
+              `bar=${secondaryBar}bps, agrees=${offchainAgrees}`
             );
           }
         }
       } catch (err) {
         if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-        console.warn(`[depeg-confirm] CG fetch failed for ${row.symbol}:`, err);
+        console.warn(`[depeg-confirm] ${offchainLabel} fetch failed for ${row.symbol}:`, err);
       }
     }
 
@@ -177,7 +196,7 @@ export async function confirmPendingDepegs(
     }
 
     // 5. Decision
-    if (cgAgrees === true || dexAgrees === true) {
+    if (offchainAgrees === true || dexAgrees === true) {
       // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
       const authoritativePrice =
         asset != null &&
@@ -214,26 +233,26 @@ export async function confirmPendingDepegs(
       );
 
       const confirmedBy = [
-        cgAgrees ? "CoinGecko" : null,
+        offchainAgrees ? (asset?.priceSource === "coingecko" || asset?.priceSource === "coingecko+defillama" ? "DefiLlama" : "CoinGecko") : null,
         dexAgrees ? "DEX" : null,
       ].filter(Boolean).join("+");
       console.log(
         `[depeg-confirm] PROMOTED ${row.symbol}: ${row.first_seen_bps}bps confirmed by ${confirmedBy}${row.reason ? ` (${row.reason})` : ""}`
       );
-    } else if (cgAgrees === false && dexAgrees === false) {
+    } else if (offchainAgrees === false && dexAgrees === false) {
       // Both secondary sources disagree -- confirmed false positive
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
-        `[depeg-confirm] Rejected false positive for ${row.symbol}: both CG and DEX disagree`
+        `[depeg-confirm] Rejected false positive for ${row.symbol}: both off-chain and DEX checks disagree`
       );
-    } else if (cgAgrees === false && dexAgrees === null) {
-      // CG disagrees, no DEX data -- lean toward false positive
+    } else if (offchainAgrees === false && dexAgrees === null) {
+      // Off-chain check disagrees, no DEX data -- lean toward false positive
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
-        `[depeg-confirm] Rejected ${row.symbol}: CG disagrees, no DEX data`
+        `[depeg-confirm] Rejected ${row.symbol}: off-chain check disagrees, no DEX data`
       );
     }
-    // else: cgAgrees === null and dexAgrees === null (or null+false) -- keep pending, retry next cycle
+    // else: offchainAgrees === null and dexAgrees === null (or null+false) -- keep pending, retry next cycle
   }
 
   // Execute all collected mutations atomically

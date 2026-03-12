@@ -1032,7 +1032,7 @@ describe("syncStablecoins", () => {
     expect(dgld?.circulating).toEqual({ peggedGOLD: 16_985_391.664749127 });
   });
 
-  it("handles duplicate DefiLlama coin IDs without crashing", async () => {
+  it("dedupes duplicate canonical IDs after DefiLlama remap", async () => {
     const db = makeDb();
     const dlData = makeDlResponse(60);
     dlData.peggedAssets[1].id = "1"; // duplicate DefiLlama ID, maps to usdt-tether
@@ -1047,14 +1047,14 @@ describe("syncStablecoins", () => {
 
     const result = await syncStablecoins(db);
 
-    expect(result.itemCount).toBe(60);
+    expect(result.itemCount).toBe(59);
     const finalValidationCall = validateSpy.mock.calls.find(
       (call) => call[2] === "sync-stablecoins:stablecoins"
     );
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<{ id: string }> } | undefined;
     expect(payload).toBeDefined();
     const usdtCopies = payload?.peggedAssets.filter((asset) => asset.id === "usdt-tether").length ?? 0;
-    expect(usdtCopies).toBeGreaterThanOrEqual(2);
+    expect(usdtCopies).toBe(1);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
   });
 });

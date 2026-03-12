@@ -11,6 +11,8 @@ No on-chain overrides, no CMC supply patches, no manual supply corrections.
 
 For tracked supplemental assets that are not in DefiLlama's stablecoin list, the worker still prefers DefiLlama's `coins.llama.fi` price proxy when it exists, but it now falls back to CoinGecko `simple/price` for the current token price when DefiLlama omits that `geckoId`. Gold tokens also fall back to CoinGecko market cap when a configured DefiLlama `protocolSlug` returns TVL history but no usable `mcap`, preventing zero-supply rows for otherwise healthy commodity assets. A positive CoinGecko market cap is still required before CoinGecko-only fiat assets are admitted into the cached `/api/stablecoins` payload.
 
+If the supplemental CoinGecko market-cap fetch is temporarily unavailable, `syncStablecoins()` now reuses the last known good cached supply snapshot for those supplemental assets instead of emitting zero-supply rows or dropping them from the payload. When a fresh DefiLlama `coins.llama.fi` price is still available, that fresher price is merged onto the restored supply snapshot.
+
 ### Circuit Breakers
 
 All external data sources are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`.
@@ -68,7 +70,7 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
 
-**Price validation ordering:** sync-time price validation runs **before** `savePriceCache()` so that unreasonable enriched prices never enter the 24-hour cache. This prevents a single bad API response from poisoning the cache across multiple sync cycles. The worker now distinguishes between authoritative primary validation, fallback enrichment validation, DEX observation validation, and historical-backfill validation instead of using one identical rule for every context.
+**Price validation ordering:** sync-time price validation runs **before** `savePriceCache()` so that unreasonable enriched prices never enter the 24-hour cache. This prevents a single bad API response from poisoning the cache across multiple sync cycles. The worker now distinguishes between authoritative primary validation, fallback enrichment validation, DEX observation validation, and historical-backfill validation instead of using one identical rule for every context. The DefiLlama-down CoinGecko full-supply fallback path now follows the same price guardrails: authoritative live overrides run before enrichment, invalid CoinGecko spot prices are pre-rejected, valid fallback-run prices refresh `price_cache`, cached-price fallback can heal newly missing prices, and pending-depeg confirmation still runs after fallback detection.
 
 ## Data Integrity Guardrails
 
@@ -102,6 +104,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 26. **DEWS source-failure accounting**: `computeAndStoreDEWS()` records upstream read failures as structured `sourceFailures` metadata and emits `status: "degraded"` when non-bootstrap-critical inputs fail. Metadata now includes source coverage and validation-failure counts.
 27. **Stage-structured stablecoins sync**: `syncStablecoins()` keeps the same output contract but now delegates normalization/filtering/staleness/supply-history fill to `worker/src/cron/sync-stablecoins/stages.ts` and supplemental commodity/CG-only overlay fetching to `worker/src/cron/sync-stablecoins/supplemental-assets.ts`, reducing monolith complexity while preserving run metadata and fallback semantics.
 28. **DefiLlama ID remap before enrichment/cache writes**: in `syncStablecoins()`, assets are remapped via `REGISTRY_BY_LLAMA_ID` immediately after `normalizeChainCirculating()` and before supplemental merges/`applyTrackedAssetOverrides()`. This ensures downstream maps and keys (`primaryPriceResults.get(asset.id)`, `savePriceCache`, cached-price fallback lookups, supply-history fill inputs, and final stablecoins cache payload) consistently use canonical IDs.
+29. **Post-remap canonical dedupe**: if DefiLlama emits duplicate rows that collapse onto the same canonical Pharos ID, `syncStablecoins()` now keeps a single preferred row before caching or enrichment. This prevents duplicate canonical assets from double-counting supply in the final `stablecoins` payload.
 
 ## Gold & Silver Spot Prices (gold-api.com)
 

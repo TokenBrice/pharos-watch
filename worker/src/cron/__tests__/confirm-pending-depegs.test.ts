@@ -294,6 +294,81 @@ describe("confirmPendingDepegs", () => {
     expect(deletes).toEqual([10, 11, 12, 13]);
   });
 
+  it("uses DefiLlama as the off-chain confirmer when the primary price already comes from CoinGecko", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
+      if (url.includes("coins.llama.fi/prices/current/coingecko:tether")) {
+        return new Response(JSON.stringify({
+          coins: {
+            "coingecko:tether": { price: 0.95 },
+          },
+        }), { status: 200 });
+      }
+      if (url.includes("api.coingecko.com")) {
+        throw new Error("should not query CoinGecko for CoinGecko-primary confirmation");
+      }
+      return null;
+    });
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 31,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_bps: -240,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.976,
+          }),
+        ],
+      }),
+      [
+        makeAsset({
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.95,
+          priceSource: "coingecko",
+          priceConfidence: "single-source",
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      expect.stringContaining("coins.llama.fi/prices/current/coingecko:tether"),
+      expect.objectContaining({ headers: { "User-Agent": "Pharos/1.0 (stablecoin analytics)" } }),
+      1,
+    );
+
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const prepared = statements as PreparedStatementWithMeta[];
+    const inserts = prepared.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    const deletes = prepared
+      .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
+      .map((stmt) => stmt.boundValues[0]);
+
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]?.boundValues).toEqual([
+      "usdt-tether",
+      "USDT",
+      "peggedUSD",
+      "below",
+      -500,
+      nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+      0.976,
+      0.95,
+      1,
+    ]);
+    expect(deletes).toEqual([31]);
+  });
+
   it("does not let a thin DEX row promote a pending event without CoinGecko support", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);

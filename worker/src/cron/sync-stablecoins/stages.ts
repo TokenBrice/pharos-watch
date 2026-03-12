@@ -14,6 +14,24 @@ export interface StructuralValidationResult {
   droppedMalformedAssets: number;
 }
 
+function sumPegBuckets(buckets: Record<string, number> | undefined): number {
+  if (!buckets) return 0;
+  return Object.values(buckets).reduce(
+    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
+    0,
+  );
+}
+
+function countFiniteBuckets(buckets: Record<string, number> | undefined): number {
+  if (!buckets) return 0;
+  return Object.values(buckets).filter((value) => typeof value === "number" && Number.isFinite(value)).length;
+}
+
+function countChainEntries(chainCirculating: unknown): number {
+  if (!chainCirculating || typeof chainCirculating !== "object") return 0;
+  return Object.keys(chainCirculating as Record<string, unknown>).length;
+}
+
 /** Keep only assets with required structural fields before deeper enrichment/validation stages. */
 export function filterStructurallyValidAssets(assets: PeggedAsset[]): StructuralValidationResult {
   const validAssets = assets.filter(
@@ -66,6 +84,75 @@ export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
       asset.address = ADDRESS_OVERRIDES[asset.id];
     }
   }
+}
+
+function compareCanonicalAssetQuality(left: PeggedAsset, right: PeggedAsset): number {
+  const leftVector = [
+    sumPegBuckets(left.circulating as Record<string, number> | undefined),
+    countChainEntries(left.chainCirculating),
+    Array.isArray(left.chains) ? left.chains.length : 0,
+    countFiniteBuckets(left.circulatingPrevDay as Record<string, number> | undefined) +
+      countFiniteBuckets(left.circulatingPrevWeek as Record<string, number> | undefined) +
+      countFiniteBuckets(left.circulatingPrevMonth as Record<string, number> | undefined),
+    left.price != null && typeof left.price === "number" && left.price > 0 ? 1 : 0,
+    typeof left.priceUpdatedAt === "number" && Number.isFinite(left.priceUpdatedAt) ? left.priceUpdatedAt : 0,
+    left.geckoId ? 1 : 0,
+    left.cmcSlug ? 1 : 0,
+    left.address ? 1 : 0,
+  ];
+  const rightVector = [
+    sumPegBuckets(right.circulating as Record<string, number> | undefined),
+    countChainEntries(right.chainCirculating),
+    Array.isArray(right.chains) ? right.chains.length : 0,
+    countFiniteBuckets(right.circulatingPrevDay as Record<string, number> | undefined) +
+      countFiniteBuckets(right.circulatingPrevWeek as Record<string, number> | undefined) +
+      countFiniteBuckets(right.circulatingPrevMonth as Record<string, number> | undefined),
+    right.price != null && typeof right.price === "number" && right.price > 0 ? 1 : 0,
+    typeof right.priceUpdatedAt === "number" && Number.isFinite(right.priceUpdatedAt) ? right.priceUpdatedAt : 0,
+    right.geckoId ? 1 : 0,
+    right.cmcSlug ? 1 : 0,
+    right.address ? 1 : 0,
+  ];
+
+  for (let i = 0; i < leftVector.length; i++) {
+    if (leftVector[i] === rightVector[i]) continue;
+    return leftVector[i] - rightVector[i];
+  }
+  return 0;
+}
+
+export interface CanonicalDeduplicationResult {
+  dedupedAssets: PeggedAsset[];
+  duplicateRows: number;
+  affectedIds: string[];
+}
+
+/** Collapse post-remap canonical ID collisions to a single preferred asset row. */
+export function dedupeCanonicalAssets(assets: PeggedAsset[]): CanonicalDeduplicationResult {
+  const deduped = new Map<string, PeggedAsset>();
+  const affectedIds = new Set<string>();
+  let duplicateRows = 0;
+
+  for (const asset of assets) {
+    const id = String(asset.id);
+    const existing = deduped.get(id);
+    if (!existing) {
+      deduped.set(id, asset);
+      continue;
+    }
+
+    duplicateRows++;
+    affectedIds.add(id);
+    if (compareCanonicalAssetQuality(asset, existing) > 0) {
+      deduped.set(id, asset);
+    }
+  }
+
+  return {
+    dedupedAssets: [...deduped.values()],
+    duplicateRows,
+    affectedIds: [...affectedIds],
+  };
 }
 
 interface SupplyHistoryRow {
