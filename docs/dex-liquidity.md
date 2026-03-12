@@ -233,7 +233,6 @@ DEX observation validation now loads the current FX / gold / silver references *
 
 - fiat pegs validate against live FX references, not only hardcoded fallback ranges
 - gold/silver pegs validate against live spot references, scaled by `commodityOunces` for fractional tokens
-- the cron still records shadow counters (`priceValidationShadow`) comparing the old DEX gate vs the new shared validator
 5. Store in `dex_prices` with top 5 source pools as JSON (shows mixed protocols)
 
 Every source family now uses the same minimum liquidity rule for DEX prices: a pool must contribute at least `$50K` of liquidity at observation time. For staged discovery rows, the floor is applied after freshness confidence decay.

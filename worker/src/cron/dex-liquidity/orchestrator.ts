@@ -15,7 +15,6 @@ import { mergeGtPools } from "./fetch-crawlers";
 import { fetchDsFallbackPools, fetchCgTickersFallback } from "./fetch-fallbacks";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
-import { getDexPriceValidationShadowStats, resetDexPriceValidationShadowStats } from "./price-sanity";
 
 function rethrowIfAborted(err: unknown, signal?: AbortSignal): void {
   if (signal?.aborted) {
@@ -38,7 +37,6 @@ export async function syncDexLiquidity(
   const fallbackSignals: string[] = [];
   console.log(`[dex-liquidity] Starting sync`);
   throwIfAborted(signal);
-  resetDexPriceValidationShadowStats();
   const validationReferences = await loadPriceValidationReferences(db);
 
   // 1. Fetch all external data sources
@@ -290,8 +288,6 @@ export async function syncDexLiquidity(
     nearValueGuard ||
     nearMajorCoverageGuard;
 
-  const priceValidationShadow = getDexPriceValidationShadowStats();
-
   return {
     status: degraded ? "degraded" : "ok",
     itemCount: scoreResults.size,
@@ -326,7 +322,6 @@ export async function syncDexLiquidity(
       failedSources,
       fallbackMode: fallbackSignals,
       validationFailures: 0,
-      priceValidationShadow,
     }),
   };
 }

@@ -27,11 +27,7 @@ vi.mock("@shared/lib/stablecoins", () => ({
   ]),
 }));
 
-import {
-  getDexPriceValidationShadowStats,
-  isPlausibleDexObservationPrice,
-  resetDexPriceValidationShadowStats,
-} from "../dex-liquidity/price-sanity";
+import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 
 describe("isPlausibleDexObservationPrice", () => {
   const liveRefs = {
@@ -46,16 +42,8 @@ describe("isPlausibleDexObservationPrice", () => {
     updatedAt: Math.floor(Date.now() / 1000),
   };
 
-  it("tracks legacy-vs-new shadow counters without changing the return value", () => {
-    resetDexPriceValidationShadowStats();
-
+  it("rejects implausible low-nominal fiat noise", () => {
     expect(isPlausibleDexObservationPrice("jpyc-jpyc", 1.0)).toBe(false);
-
-    const stats = getDexPriceValidationShadowStats();
-    expect(stats.comparedObs).toBe(1);
-    expect(stats.acceptedOld).toBe(0);
-    expect(stats.acceptedNew).toBe(0);
-    expect(stats.deltaAccepted).toBe(0);
   });
 
   it("accepts realistic EUR prices and rejects implausible ones", () => {
