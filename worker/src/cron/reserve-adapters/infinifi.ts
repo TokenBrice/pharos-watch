@@ -9,7 +9,7 @@ interface InfiniFiFarm {
   underlyingAssetSymbol: string;
 }
 
-interface InfiniFiProtocolData {
+export interface InfiniFiProtocolData {
   code: string;
   data: {
     stats: { asset: { totalTVLAssetNormalized: number } };

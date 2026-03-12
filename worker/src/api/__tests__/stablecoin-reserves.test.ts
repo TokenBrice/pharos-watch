@@ -25,7 +25,7 @@ describe("handleStablecoinReserves", () => {
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.status).toBe(200);
-    const body = await res.json() as any;
+    const body = await res.json() as { slices: unknown[]; estimated: boolean; source: string };
     expect(body.slices).toEqual(slices);
     expect(body.estimated).toBe(false);
     expect(body.source).toBe("infinifi");

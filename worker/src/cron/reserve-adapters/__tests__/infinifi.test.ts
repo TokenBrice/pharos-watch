@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { adaptInfiniFi } from "../infinifi";
+import { adaptInfiniFi, type InfiniFiProtocolData } from "../infinifi";
 
-const SAMPLE_RESPONSE = {
+const SAMPLE_RESPONSE: InfiniFiProtocolData = {
   code: "OK",
   data: {
     stats: {
@@ -42,7 +42,7 @@ const SAMPLE_RESPONSE = {
 
 describe("adaptInfiniFi", () => {
   it("converts farm data to ReserveSlice[], skips PROTOCOL and zero-asset farms", () => {
-    const { slices } = adaptInfiniFi(SAMPLE_RESPONSE as any);
+    const { slices } = adaptInfiniFi(SAMPLE_RESPONSE);
     expect(slices).toHaveLength(3);
     expect(slices.find((s) => s.name.includes("Fasanara"))).toMatchObject({
       pct: 40,
@@ -57,17 +57,17 @@ describe("adaptInfiniFi", () => {
   });
 
   it("sums to 100 after rounding", () => {
-    const total = adaptInfiniFi(SAMPLE_RESPONSE as any).slices.reduce((acc, s) => acc + s.pct, 0);
+    const total = adaptInfiniFi(SAMPLE_RESPONSE).slices.reduce((acc, s) => acc + s.pct, 0);
     expect(total).toBe(100);
   });
 
   it("drops farms where assetsNormalized is 0", () => {
-    const { slices } = adaptInfiniFi(SAMPLE_RESPONSE as any);
+    const { slices } = adaptInfiniFi(SAMPLE_RESPONSE);
     expect(slices.every((s) => s.pct > 0)).toBe(true);
   });
 
   it("returns unknown farm names in a separate list", () => {
-    const response = {
+    const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,
       data: {
         ...SAMPLE_RESPONSE.data,
@@ -78,7 +78,7 @@ describe("adaptInfiniFi", () => {
         stats: { asset: { totalTVLAssetNormalized: 110 } },
       },
     };
-    const result = adaptInfiniFi(response as any);
+    const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toContain("brand-new-farm");
   });
 });
