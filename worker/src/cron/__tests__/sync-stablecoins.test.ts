@@ -1,6 +1,30 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+
+const fetchWithRetryMock = vi.fn();
+
+interface MockRoute {
+  match: string;
+  body: unknown;
+  status?: number;
+  headers?: Record<string, string>;
+}
+
+function mockFetch(routes: MockRoute[] = []): ReturnType<typeof vi.fn> {
+  const spy = vi.fn(async (url: string) => {
+    const route = routes.find((candidate) => url.includes(candidate.match));
+    if (!route) {
+      return new Response(JSON.stringify({ error: "Not found" }), { status: 404 });
+    }
+    const body = typeof route.body === "string" ? route.body : JSON.stringify(route.body);
+    return new Response(body, {
+      status: route.status ?? 200,
+      headers: { "Content-Type": "application/json", ...route.headers },
+    });
+  });
+  fetchWithRetryMock.mockImplementation((url: string) => spy(url));
+  return spy;
+}
 
 // --- Module-level mocks ---
 
@@ -114,7 +138,7 @@ vi.mock("../../lib/resolve-market-cap", () => ({
 
 // Stub fetch-retry to delegate to global fetch
 vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
+  fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
 }));
 
 // Stub circuit-breaker
@@ -205,6 +229,7 @@ describe("syncStablecoins", () => {
     // does NOT restore vi.fn() factories, only vi.spyOn() spies.
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
+    fetchWithRetryMock.mockReset();
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
       totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, pass4: 0, finalMissing: 0,
     });
@@ -883,7 +908,7 @@ describe("syncStablecoins", () => {
     const cgBody = Object.fromEntries(
       Array.from({ length: 60 }, (_, i) => [
         `fallback-coin-${i}`,
-        { usd: i === 0 ? 1.25 : 1, usd_market_cap: 1_000_000 + i },
+        { usd: i === 0 ? 2.5 : 1, usd_market_cap: 1_000_000 + i },
       ]),
     );
 
