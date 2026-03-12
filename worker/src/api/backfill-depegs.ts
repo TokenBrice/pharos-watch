@@ -18,6 +18,7 @@ import type { StablecoinMeta } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { fetchAuthoritativeHistoricalPriceSeries } from "../lib/authoritative-price-sources";
 const BATCH_SIZE = 3;
 const BATCH_CHUNK_SIZE = 100;
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
@@ -642,15 +643,21 @@ const CG_ABOVE_PEG_EXCLUSIONS: { coinId: string; from: number; to: number; maxPr
   { coinId: "usdt-tether", from: 1531000000, to: 1534000000, maxPrice: 1.02 },
 ];
 
-/** Returns null when neither CG nor DL has price data (caller should preserve existing events). */
-async function backfillCoin(
+function collapsePricesToDailyTimestamps(prices: PricePoint[]): number[] {
+  const byDay = new Map<string, number>();
+  for (const point of prices) {
+    const day = new Date(point.timestamp * 1000).toISOString().slice(0, 10);
+    if (!byDay.has(day)) {
+      byDay.set(day, point.timestamp);
+    }
+  }
+  return Array.from(byDay.values()).sort((a, b) => a - b);
+}
+
+async function fetchMarketBackfillPrices(
   meta: StablecoinMeta,
   geckoId: string,
-  getPegRef: (timestamp: number) => number,
-  supplyByDate: SupplySnapshot[],
-  fxRates?: Record<string, number>,
-): Promise<BackfillEvent[] | null> {
-  const pegType = `pegged${meta.flags.pegCurrency}`;
+): Promise<PricePoint[] | null> {
   let prices = await fetchCgPriceHistoryHourly(geckoId);
   // Fall back to DefiLlama if CG has no data (~4 year coverage)
   if (prices.length === 0) {
@@ -680,6 +687,50 @@ async function backfillCoin(
       }
       return true;
     });
+  }
+
+  return prices;
+}
+
+/** Returns null when no trusted historical source is available (caller should preserve existing events). */
+async function backfillCoin(
+  meta: StablecoinMeta,
+  geckoId: string,
+  getPegRef: (timestamp: number) => number,
+  supplyByDate: SupplySnapshot[],
+  fxRates?: Record<string, number>,
+): Promise<BackfillEvent[] | null> {
+  const pegType = `pegged${meta.flags.pegCurrency}`;
+
+  let marketPrices: PricePoint[] | null = null;
+  const loadMarketPrices = async (): Promise<PricePoint[] | null> => {
+    if (marketPrices != null) return marketPrices;
+    marketPrices = await fetchMarketBackfillPrices(meta, geckoId);
+    return marketPrices;
+  };
+
+  const candidateTimestamps = supplyByDate.length > 0
+    ? supplyByDate.map((snapshot) => snapshot.ts)
+    : collapsePricesToDailyTimestamps((await loadMarketPrices()) ?? []);
+
+  const authoritativeHistory = await fetchAuthoritativeHistoricalPriceSeries(meta, {
+    candidateTimestamps,
+    supplySnapshots: supplyByDate,
+  });
+
+  let prices: PricePoint[] | null;
+  if (authoritativeHistory.matched) {
+    prices = authoritativeHistory.prices;
+    if (!prices || prices.length === 0) {
+      console.warn(
+        `[backfill-depegs] authoritative historical price source unavailable for ${meta.symbol}` +
+        `${authoritativeHistory.source ? ` (${authoritativeHistory.source})` : ""}; preserving existing backfill rows`,
+      );
+      return null;
+    }
+  } else {
+    prices = await loadMarketPrices();
+    if (!prices || prices.length === 0) return null;
   }
 
   return extractDepegEvents(

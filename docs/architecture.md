@@ -371,7 +371,6 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   ├── stages.ts         # Extracted sync-stablecoins stage helpers (normalize/filter/staleness/supply-history fill)
     │   │   └── supplemental-assets.ts # Extracted supplemental token fetch helpers (gold/silver/CG-only fiat overlays)
     │   ├── enrich-prices.ts      # Dual-primary price validation + 6-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
-    │   ├── protocol-price-overrides.ts # Protocol-backed authoritative price quotes for selected redeemable assets
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)
@@ -472,6 +471,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
         ├── depeg-helpers.ts      # Shared depeg helpers: row mapper, DEX price loader, and event insert statement builder
         ├── dews.ts               # DEWS computation: 8 sub-signals, weighted average, threat bands
+        ├── authoritative-price-sources.ts # Shared authoritative live/historical price provider registry for protocol-backed assets
+        ├── evm-rpc.ts            # Generic EVM JSON-RPC helpers (eth_call, block headers, timestamp→block search)
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
         ├── coingecko.ts          # CoinGecko API key initialization (shared across crons)
         ├── coingecko-onchain.ts  # CoinGecko Onchain API client (registry-backed network mapping, pool discovery, locked liquidity)

@@ -103,8 +103,8 @@ vi.mock("../confirm-pending-depegs", () => ({
   confirmPendingDepegs: vi.fn(async () => {}),
 }));
 
-vi.mock("../protocol-price-overrides", () => ({
-  fetchProtocolPriceOverrides: vi.fn(async () => new Map()),
+vi.mock("../../lib/authoritative-price-sources", () => ({
+  fetchAuthoritativeLivePriceOverrides: vi.fn(async () => new Map()),
 }));
 
 // Stub resolve-market-cap
@@ -121,6 +121,7 @@ vi.mock("../../lib/fetch-retry", () => ({
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => {}),
+  recordOutcomeSafe: vi.fn(async () => {}),
 }));
 
 // Stub coingecko helpers
@@ -139,7 +140,7 @@ import { enrichMissingPrices, fetchPrimaryPrices } from "../enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
-import { fetchProtocolPriceOverrides } from "../protocol-price-overrides";
+import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { sendAlert } from "../../lib/alerts";
 import * as apiUtils from "../../lib/api-utils";
 
@@ -212,7 +213,7 @@ describe("syncStablecoins", () => {
       stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
       cgPrices: new Map(),
     });
-    vi.mocked(fetchProtocolPriceOverrides).mockReset().mockResolvedValue(new Map());
+    vi.mocked(fetchAuthoritativeLivePriceOverrides).mockReset().mockResolvedValue(new Map());
     vi.mocked(detectDepegEvents).mockReset().mockResolvedValue(undefined);
     vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue(undefined);
   });
@@ -279,7 +280,7 @@ describe("syncStablecoins", () => {
       circulating: { peggedUSD: 114_000_000 },
     };
 
-    vi.mocked(fetchProtocolPriceOverrides).mockResolvedValue(new Map([
+    vi.mocked(fetchAuthoritativeLivePriceOverrides).mockResolvedValue(new Map([
       [
         "cusd-cap",
         { price: 0.99999266, source: "protocol-redeem", confidence: "high" },
@@ -851,6 +852,159 @@ describe("syncStablecoins", () => {
     expect(pgold?.price).toBe(5_119.117514760049);
     expect(pgold?.priceSource).toBe("defillama");
     expect(pgold?.circulating).toEqual({ peggedGOLD: 99_913_387.23420689 });
+  });
+
+  it("reuses fresh cached prices during CG supply fallback when CoinGecko spot values fail validation", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: { value: JSON.stringify({ peggedUSD: 1 }), updated_at: nowSec - 60 },
+      },
+      {
+        match: "SELECT asset_id, price, updated_at FROM price_cache",
+        rows: [{ asset_id: "fb-0", price: 1.01, updated_at: nowSec - 120 }],
+      },
+      { match: "INSERT OR REPLACE INTO price_cache", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+    ]);
+    const writes = trackCacheWrites(db);
+
+    const cgBody = Object.fromEntries(
+      Array.from({ length: 60 }, (_, i) => [
+        `fallback-coin-${i}`,
+        { usd: i === 0 ? 1.25 : 1, usd_market_cap: 1_000_000 + i },
+      ]),
+    );
+
+    mockFetch([
+      { match: "api.coingecko.com/simple/price", body: cgBody },
+      { match: "stablecoins.llama.fi", body: { error: "upstream" }, status: 500 },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+      { match: "api.llama.fi/protocol/pleasing-gold", body: { mcap: null, tvl: [] } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(60);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), { peggedUSD: 1 }, undefined);
+
+    const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
+    expect(stablecoinsWrite).toBeDefined();
+
+    const cached = JSON.parse(stablecoinsWrite!.value) as {
+      peggedAssets: Array<{
+        id: string;
+        price: number | null;
+        priceSource: string;
+        priceConfidence: string | null;
+      }>;
+    };
+    const fb0 = cached.peggedAssets.find((asset) => asset.id === "fb-0");
+    expect(fb0).toMatchObject({
+      id: "fb-0",
+      price: 1.01,
+      priceSource: "cached",
+      priceConfidence: "fallback",
+    });
+
+    const savePriceCacheWrites = (db as ReturnType<typeof mockD1>).getHistory().filter(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache"),
+    );
+    expect(savePriceCacheWrites.length).toBeGreaterThan(0);
+  });
+
+  it("restores last-known-good supplemental supply when CoinGecko market-cap fetch is unavailable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const previousStablecoinsPayload = {
+      peggedAssets: [
+        {
+          id: "dgld-gold-token-sa",
+          name: "DGLD Tokenized Gold",
+          symbol: "DGLD",
+          geckoId: "gold-token-sa-dgld-tokenized-gold",
+          pegType: "peggedGOLD",
+          pegMechanism: "rwa-backed",
+          price: 10_500,
+          priceSource: "coingecko",
+          priceConfidence: "single-source",
+          priceUpdatedAt: nowSec - 900,
+          supplySource: "coingecko-fallback",
+          circulating: { peggedGOLD: 16_985_391.664749127 },
+          circulatingPrevDay: {},
+          circulatingPrevWeek: {},
+          circulatingPrevMonth: {},
+          chainCirculating: {},
+          chains: ["Ethereum"],
+        },
+      ],
+    };
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { value: JSON.stringify(previousStablecoinsPayload), updated_at: nowSec - 300 },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
+      { match: "price_cache", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    const dlData = makeDlResponse(60);
+    mockFetch([
+      { match: "api.coingecko.com/simple/price", body: { error: "cg down" }, status: 500 },
+      { match: "stablecoins.llama.fi", body: dlData },
+      {
+        match: "coins.llama.fi/prices",
+        body: {
+          coins: {
+            "coingecko:gold-token-sa-dgld-tokenized-gold": {
+              price: 10_700,
+              symbol: "DGLD",
+              timestamp: 1_773_122_336,
+              confidence: 0.99,
+            },
+          },
+        },
+      },
+      { match: "api.llama.fi/protocol/pleasing-gold", body: { mcap: null, tvl: [] } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(61);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const dgld = payload?.peggedAssets.find((asset) => asset.id === "dgld-gold-token-sa");
+
+    expect(dgld).toBeDefined();
+    expect(dgld?.price).toBe(10_700);
+    expect(dgld?.priceSource).toBe("defillama");
+    expect(dgld?.supplySource).toBe("coingecko-fallback");
+    expect(dgld?.circulating).toEqual({ peggedGOLD: 16_985_391.664749127 });
   });
 
   it("handles duplicate DefiLlama coin IDs without crashing", async () => {

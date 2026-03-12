@@ -129,7 +129,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `geckoId`              | `string \| null`                   | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)                                                                   |
 | `pegType`              | `string`                           | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`)                                                                                     |
 | `pegMechanism`         | `string`                           | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc.                                                                                       |
-| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"coingecko+defillama"`, `"dexscreener"`)                                       |
+| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"coingecko+defillama"`, `"protocol-redeem"`, `"dexscreener"`)                  |
 | `priceConfidence`      | `string \| null`                   | Price confidence level: `"high"` (cross-validated agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline) |
 | `supplySource`         | `string \| undefined`              | Supply data source: `"defillama"` or `"coingecko-fallback"`                                                                                |
 | `price`                | `number \| null`                   | Current price in USD                                                                                                                       |
@@ -1844,6 +1844,8 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 ### `POST /api/backfill-depegs`
 
 Backfills historical depeg events from stored price data.
+
+For coins with a registered authoritative historical price provider, the backfill uses that same provider family first (for example, replayed protocol redemption quotes) before falling back to CoinGecko/DefiLlama market history. If the authoritative provider is configured but unavailable, existing `source='backfill'` rows for that coin are preserved instead of being rebuilt from a weaker source.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 

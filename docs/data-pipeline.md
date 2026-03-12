@@ -43,9 +43,14 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` fetches prices from 
 
 Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (defillama/coingecko-fallback).
 
-### Protocol-backed Price Overrides
+### Authoritative Price Source Registry
 
-After the CG/DL primary pass is applied, `syncStablecoins()` can still replace market-derived prices for specific redeemable assets when the protocol itself exposes a more authoritative exit quote.
+After the CG/DL primary pass is applied, `syncStablecoins()` can still replace market-derived prices for specific redeemable assets when a shared authoritative-price provider exposes a better executable mark than secondary-market liquidity.
+
+The registry lives in `worker/src/lib/authoritative-price-sources.ts` and supports two capabilities:
+
+- **Live override** — used by `syncStablecoins()` to replace the current cached price
+- **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
 
 - **Current scope:** `cusd-cap`
 - **Source:** direct Ethereum `eth_call` against Cap's `getBurnAmount(address,uint256)` redemption path for `cUSD -> USDC`
@@ -115,6 +120,7 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 
 ### Backfill (backfill-depegs.ts)
 
+- `backfill-depegs.ts` now asks the same authoritative-price registry used by live sync for historical series first. If a coin has an authoritative historical provider and that provider cannot return enough coverage, the backfill preserves existing `source='backfill'` rows instead of rebuilding from a known-weaker fallback source.
 - Commodity backfill does **not** call a gold-api.com timeseries endpoint.
 - Instead, it builds daily GOLD/SILVER peg references from CoinGecko historical prices across tracked commodity tokens (`buildCommodityMedianSeriesFromCg()`), normalized to per-troy-ounce and median-aggregated per day.
 - The resulting `{ GOLD: FxTimeSeries[], SILVER: FxTimeSeries[] }` series feeds `buildFxLookup()` for time-varying commodity peg references.

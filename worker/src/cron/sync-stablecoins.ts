@@ -7,7 +7,6 @@ import {
   hasMissingPrice,
   fetchPrimaryPrices,
 } from "./enrich-prices";
-import { fetchProtocolPriceOverrides } from "./protocol-price-overrides";
 import type { PeggedAsset } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
@@ -32,6 +31,7 @@ import { StablecoinListResponseSchema } from "@shared/types";
 import type { PriceSourceHealth } from "@shared/types";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { sendAlert } from "../lib/alerts";
+import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
 import {
   buildPriceValidationContext,
   validatePriceCandidate,
@@ -41,6 +41,17 @@ import {
 
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
+const FX_REFERENCE_MAX_AGE_SEC = 6 * 3600;
+const PRICE_CACHE_TTL = 24 * 60 * 60;
+const SUPPLEMENTAL_TRACKED_IDS = new Set(
+  TRACKED_STABLECOINS
+    .filter(
+      (meta) =>
+        !!meta.geckoId &&
+        (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER" || meta.detailProvider === "coingecko"),
+    )
+    .map((meta) => meta.id),
+);
 
 type StablecoinsPayload = {
   peggedAssets: PeggedAsset[];
@@ -225,6 +236,122 @@ function stampPriceMetadata(
   asset.priceUpdatedAt = updatedAt;
 }
 
+function sumPegBuckets(buckets: Record<string, number> | undefined | null): number {
+  if (!buckets) return 0;
+  return Object.values(buckets).reduce(
+    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
+    0,
+  );
+}
+
+function cloneCachedAsset(asset: PeggedAsset): PeggedAsset {
+  return {
+    ...asset,
+    chains: Array.isArray(asset.chains) ? [...asset.chains] : asset.chains,
+  };
+}
+
+async function loadPreviousStablecoinsById(db: D1Database): Promise<Map<string, PeggedAsset>> {
+  try {
+    const prevCache = await getCache(db, "stablecoins");
+    if (!prevCache) return new Map();
+    const prevData = JSON.parse(prevCache.value) as { peggedAssets?: PeggedAsset[] };
+    if (!Array.isArray(prevData.peggedAssets)) return new Map();
+    return new Map(prevData.peggedAssets.map((asset) => [String(asset.id), asset]));
+  } catch (err) {
+    console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache:", err);
+    return new Map();
+  }
+}
+
+function mergeSupplementalLastKnownGood(
+  supplementalAssets: PeggedAsset[],
+  previousAssetsById: Map<string, PeggedAsset>,
+  primaryAssetIds: Set<string>,
+): { assets: PeggedAsset[]; restoredCount: number; skippedDuplicates: number } {
+  const resolved = new Map<string, PeggedAsset>();
+  let restoredCount = 0;
+  let skippedDuplicates = 0;
+
+  for (const asset of supplementalAssets) {
+    const id = String(asset.id);
+    if (primaryAssetIds.has(id)) {
+      skippedDuplicates++;
+      continue;
+    }
+
+    if (sumPegBuckets(asset.circulating) > 0) {
+      resolved.set(id, asset);
+      continue;
+    }
+
+    const previous = previousAssetsById.get(id);
+    if (previous && sumPegBuckets(previous.circulating) > 0) {
+      const merged = cloneCachedAsset(previous);
+      if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
+        merged.price = asset.price;
+        merged.priceSource = asset.priceSource;
+        merged.priceConfidence = asset.priceConfidence ?? null;
+        merged.priceUpdatedAt = asset.priceUpdatedAt ?? null;
+      }
+      resolved.set(id, merged);
+      restoredCount++;
+      continue;
+    }
+
+    resolved.set(id, asset);
+  }
+
+  for (const id of SUPPLEMENTAL_TRACKED_IDS) {
+    if (primaryAssetIds.has(id) || resolved.has(id)) continue;
+    const previous = previousAssetsById.get(id);
+    if (!previous || sumPegBuckets(previous.circulating) <= 0) continue;
+    resolved.set(id, cloneCachedAsset(previous));
+    restoredCount++;
+  }
+
+  return {
+    assets: [...resolved.values()],
+    restoredCount,
+    skippedDuplicates,
+  };
+}
+
+async function loadFreshFxRates(
+  db: D1Database,
+  syncStartSec: number,
+  logPrefix = "[sync-stablecoins]",
+): Promise<{
+  fxFallbackRates?: Record<string, number>;
+  validationReferences?: PriceValidationReferences;
+}> {
+  const fxCache = await getCache(db, "fx-rates");
+  if (!fxCache) {
+    return {};
+  }
+
+  const fxAgeSec = Math.floor(Date.now() / 1000) - fxCache.updatedAt;
+  if (fxAgeSec > FX_REFERENCE_MAX_AGE_SEC) {
+    console.warn(`${logPrefix} Ignoring stale FX cache (${fxAgeSec}s old)`);
+    return {};
+  }
+
+  try {
+    const fxFallbackRates = JSON.parse(fxCache.value) as Record<string, number>;
+    return {
+      fxFallbackRates,
+      validationReferences: {
+        rates: fxFallbackRates,
+        type: "fresh",
+        updatedAt: fxCache.updatedAt ?? syncStartSec,
+      },
+    };
+  } catch (err) {
+    console.warn(`${logPrefix} Failed to parse FX cache:`, err);
+    return {};
+  }
+}
+
 /**
  * CoinGecko supply fallback: when DefiLlama stablecoins API is down,
  * use CG market cap as a proxy for circulating supply.
@@ -291,41 +418,130 @@ async function fallbackToCgSupply(
   }
 
   // Try to restore stale chainCirculating from previous DL cache
+  const previousAssetsById = await loadPreviousStablecoinsById(db);
   try {
-    const prevCache = await getCache(db, "stablecoins");
-    if (prevCache) {
-      const prevData = JSON.parse(prevCache.value) as { peggedAssets?: PeggedAsset[] };
-      if (prevData.peggedAssets) {
-        const prevMap = new Map(prevData.peggedAssets.map((a) => [String(a.id), a]));
-        for (const asset of assets) {
-          const prev = prevMap.get(String(asset.id));
-          if (prev?.chainCirculating) {
-            asset.chainCirculating = prev.chainCirculating;
-            asset.chains = prev.chains ?? [];
-          }
-          // Restore historical supply if available
-          if (prev?.circulatingPrevDay) asset.circulatingPrevDay = prev.circulatingPrevDay;
-          if (prev?.circulatingPrevWeek) asset.circulatingPrevWeek = prev.circulatingPrevWeek;
-          if (prev?.circulatingPrevMonth) asset.circulatingPrevMonth = prev.circulatingPrevMonth;
-        }
+    for (const asset of assets) {
+      const prev = previousAssetsById.get(String(asset.id));
+      if (prev?.chainCirculating) {
+        asset.chainCirculating = prev.chainCirculating;
+        asset.chains = prev.chains ?? [];
       }
+      // Restore historical supply if available
+      if (prev?.circulatingPrevDay) asset.circulatingPrevDay = prev.circulatingPrevDay;
+      if (prev?.circulatingPrevWeek) asset.circulatingPrevWeek = prev.circulatingPrevWeek;
+      if (prev?.circulatingPrevMonth) asset.circulatingPrevMonth = prev.circulatingPrevMonth;
     }
   } catch (e) {
     console.warn("[sync-stablecoins] Failed to restore stale cache data:", e);
   }
+
+  applyTrackedAssetOverrides(assets);
+
+  const { fxFallbackRates, validationReferences } = await loadFreshFxRates(db, syncStartSec, "[sync-stablecoins:fallback]");
+  const validationContexts = createValidationContextResolver();
+  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
+  let authoritativeOverrideCount = 0;
+  for (const asset of assets) {
+    const override = authoritativeOverrides.get(asset.id);
+    if (!override) continue;
+
+    const decision = validatePriceCandidate(
+      override.price,
+      validationContexts.get(asset),
+      "primary_authoritative",
+      validationReferences,
+    );
+    if (!decision.accepted) continue;
+
+    asset.price = override.price;
+    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec);
+    authoritativeOverrideCount++;
+  }
+
+  for (const asset of assets) {
+    if (!asset.supplySource) {
+      asset.supplySource = "coingecko-fallback";
+    }
+  }
+
+  for (const asset of assets) {
+    if (asset.price == null || typeof asset.price !== "number" || asset.price === 0) continue;
+    const decision = validatePriceCandidate(
+      asset.price,
+      validationContexts.get(asset),
+      "primary_authoritative",
+      validationReferences,
+    );
+    if (!decision.accepted) {
+      console.warn(`[sync-stablecoins] Pre-rejected fallback price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
+      asset.price = 0;
+      stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
+    }
+  }
+
+  const missingBefore = new Set(assets.filter(hasMissingPrice).map((asset) => asset.id));
 
   // Enrich missing prices
   const enrichAbort = returnIfAborted(signal, "fallback-enrich-prices");
   if (enrichAbort) return enrichAbort;
   const enrichStats = await enrichMissingPrices(assets, cmcApiKey, db, signal);
 
-  // Embed FX rates
-  const fxCache = await getCache(db, "fx-rates");
-  let fxFallbackRates: Record<string, number> | undefined;
-  if (fxCache) {
-    try {
-      fxFallbackRates = JSON.parse(fxCache.value);
-    } catch { /* ignore */ }
+  for (const asset of assets) {
+    if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
+      stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", syncStartSec);
+    }
+  }
+
+  let rejectedCount = 0;
+  for (const asset of assets) {
+    if (asset.price == null || typeof asset.price !== "number") continue;
+    const decision = validatePriceCandidate(
+      asset.price,
+      validationContexts.get(asset),
+      priceValidationModeForAsset(asset),
+      validationReferences,
+    );
+    if (!decision.accepted) {
+      console.warn(`[sync-stablecoins] Rejected unreasonable fallback price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
+      asset.price = null;
+      asset.priceUpdatedAt = null;
+      rejectedCount++;
+    }
+  }
+
+  const withValidPrices = assets.filter(
+    (asset) => asset.price != null && typeof asset.price === "number" && asset.price > 0,
+  );
+  if (withValidPrices.length > 0) {
+    const priceCacheWriteAbort = returnIfAborted(signal, "fallback-save-price-cache");
+    if (priceCacheWriteAbort) return priceCacheWriteAbort;
+    await savePriceCache(db, withValidPrices.map((asset) => ({ id: asset.id, price: asset.price! as number })));
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const stillMissing = assets.filter(
+    (asset) => missingBefore.has(asset.id) && hasMissingPrice(asset),
+  );
+  let cachedFallbackCount = 0;
+  if (stillMissing.length > 0) {
+    const priceCacheReadAbort = returnIfAborted(signal, "fallback-read-price-cache");
+    if (priceCacheReadAbort) return priceCacheReadAbort;
+    const priceCache = await getPriceCache(db);
+    for (const asset of stillMissing) {
+      const cached = priceCache.get(asset.id);
+      if (!cached || (now - cached.updatedAt) >= PRICE_CACHE_TTL) continue;
+      const decision = validatePriceCandidate(
+        cached.price,
+        validationContexts.get(asset),
+        "fallback_enrichment",
+        validationReferences,
+      );
+      if (!decision.accepted) continue;
+
+      asset.price = cached.price;
+      stampPriceMetadata(asset, "cached", "fallback", cached.updatedAt);
+      cachedFallbackCount++;
+    }
   }
 
   const llamaData: StablecoinsPayload = { peggedAssets: assets, fxFallbackRates };
@@ -378,7 +594,7 @@ async function fallbackToCgSupply(
   await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
   console.log(`[sync-stablecoins] CG fallback: cached ${assets.length} assets`);
 
-  // Still run depeg detection
+  let depegErrorCount = 0;
   try {
     const depegAbort = returnIfAborted(signal, "fallback-depeg-detection");
     if (depegAbort) return depegAbort;
@@ -386,34 +602,50 @@ async function fallbackToCgSupply(
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, "fallback-depeg-detection");
     console.error("[sync-stablecoins] Depeg detection failed (CG fallback):", err);
+    depegErrorCount++;
+  }
+
+  try {
+    const confirmAbort = returnIfAborted(signal, "fallback-depeg-confirmation");
+    if (confirmAbort) return confirmAbort;
+    await confirmPendingDepegs(db, assets, fxFallbackRates, signal);
+  } catch (err) {
+    if (signal?.aborted) return abortResult(signal, "fallback-depeg-confirmation");
+    console.error("[sync-stablecoins] Pending depeg confirmation failed (CG fallback):", err);
+    depegErrorCount++;
   }
 
   return {
+    status: depegErrorCount > 0 ? "degraded" : "ok",
     itemCount: assets.length,
-      metadata: buildSyncMetadata({
-        rowsRead: assets.length,
-        rowsWritten: assets.length,
+    metadata: buildSyncMetadata({
+      rowsRead: assets.length,
+      rowsWritten: assets.length,
       rowsDropped: 0,
       sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: enrichStats,
-      }, {
-        cacheWriteMode: "fallback-write",
-        capabilities: {
-          stablecoinsCache: false,
-          depegPipeline: false,
-        },
-      }),
-    };
-  }
+      rejectedPrices: rejectedCount,
+      cachedFallbackPrices: cachedFallbackCount,
+      authoritativeOverrides: authoritativeOverrideCount,
+    }, {
+      cacheWriteMode: "fallback-write",
+      capabilities: {
+        stablecoinsCache: true,
+        depegPipeline: depegErrorCount === 0,
+      },
+    }),
+  };
+}
 
 export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal?: AbortSignal): Promise<CronResult> {
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);
 
-  const cgData = await fetchCoinGeckoMarketData(signal);
+  const previousAssetsById = await loadPreviousStablecoinsById(db);
+  const cgData = await fetchCoinGeckoMarketData(db, signal);
 
   // Check circuit breaker before DL fetch
   const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_STABLECOINS);
@@ -519,28 +751,26 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     }
   }
 
-  if (goldTokens.length || silverTokens.length || fiatCgTokens.length) {
-    llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens, ...silverTokens, ...fiatCgTokens];
+  const supplementalResolution = mergeSupplementalLastKnownGood(
+    [...goldTokens, ...silverTokens, ...fiatCgTokens],
+    previousAssetsById,
+    new Set(llamaData.peggedAssets.map((asset) => String(asset.id))),
+  );
+  if (supplementalResolution.assets.length > 0) {
+    llamaData.peggedAssets = [...llamaData.peggedAssets, ...supplementalResolution.assets];
+  }
+  if (supplementalResolution.restoredCount > 0 || supplementalResolution.skippedDuplicates > 0) {
+    console.log(
+      `[sync-stablecoins] Supplemental resolution: restored=${supplementalResolution.restoredCount}, ` +
+      `skippedDuplicates=${supplementalResolution.skippedDuplicates}`,
+    );
   }
 
   // Always prefer curated metadata over DefiLlama fields; includes known address patches.
   applyTrackedAssetOverrides(llamaData.peggedAssets);
 
   // Load FX rates early for dynamic price bounds in validatePriceCandidate
-  let fxRates: Record<string, number> | undefined;
-  const fxCacheEarly = await getCache(db, "fx-rates");
-  const maxFxAgeSec = 6 * 3600;
-  if (fxCacheEarly) {
-    const fxAgeSec = Math.floor(Date.now() / 1000) - fxCacheEarly.updatedAt;
-    if (fxAgeSec <= maxFxAgeSec) {
-      try { fxRates = JSON.parse(fxCacheEarly.value); } catch { /* ignore */ }
-    } else {
-      console.warn(`[sync-stablecoins] Ignoring stale FX cache (${fxAgeSec}s old)`);
-    }
-  }
-  const validationReferences: PriceValidationReferences | undefined = fxRates
-    ? { rates: fxRates, type: "fresh", updatedAt: fxCacheEarly?.updatedAt ?? syncStartSec }
-    : undefined;
+  const { fxFallbackRates: fxRates, validationReferences } = await loadFreshFxRates(db, syncStartSec);
   const validationContexts = createValidationContextResolver();
 
   // --- Primary price validation ---
@@ -550,7 +780,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const { results: primaryPriceResults, stats: priceValidationStats } = await fetchPrimaryPrices(
     llamaData.peggedAssets, db, signal, validationReferences,
   );
-  const protocolPriceOverrides = await fetchProtocolPriceOverrides(llamaData.peggedAssets, signal);
+  const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(llamaData.peggedAssets, signal);
   const protocolOverrideCount = protocolPriceOverrides.size;
 
   // Apply primary price results — these override the DL list endpoint prices
@@ -663,7 +893,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
 
   // --- Price cache: save successes, apply fallbacks ---
-  const PRICE_CACHE_TTL = 24 * 60 * 60; // 24 hours
   const now = Math.floor(Date.now() / 1000);
 
   // Save ALL assets with valid prices so other crons (mint-burn sync) can look them up.
