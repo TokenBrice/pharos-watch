@@ -2,8 +2,7 @@
 
 import { useMemo } from "react";
 import Image from "next/image";
-import { useHealth } from "@/hooks/use-health";
-import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useDexLiquidity, useHealth } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
 

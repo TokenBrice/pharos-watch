@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { apiFetch, apiFetchWithMeta, type ApiMeta } from "@/lib/api";
+import { ApiFetchError, apiFetch, apiFetchWithMeta, type ApiMeta } from "@/lib/api";
 export {
   CRON_1MIN,
   CRON_15MIN,
@@ -36,6 +36,40 @@ export function createApiQueryFn<T>(
       return apiFetch<T>(path, schema, fetchInit);
     }
     return apiFetch<T>(path, schema);
+  };
+}
+
+export interface AdminApiQueryOptions<T> extends ApiQueryOptions<T> {
+  adminKey: string;
+  unauthorizedMessage?: string;
+}
+
+export function createAdminApiQueryFn<T>(
+  path: string,
+  adminKey: string,
+  schema?: ZodType<T>,
+  fetchInit?: RequestInit,
+  unauthorizedMessage = "Invalid admin key",
+): () => Promise<T> {
+  return async () => {
+    try {
+      const headers = new Headers(fetchInit?.headers);
+      headers.set("X-Admin-Key", adminKey);
+
+      return await apiFetch<T>(
+        path,
+        schema,
+        {
+          ...fetchInit,
+          headers,
+        },
+      );
+    } catch (err) {
+      if (err instanceof ApiFetchError && err.status === 401) {
+        throw new Error(unauthorizedMessage);
+      }
+      throw err;
+    }
   };
 }
 
@@ -123,6 +157,30 @@ export function useApiQuery<T>(
       enabled: opts?.enabled,
       retry: opts?.retry,
       retryDelay: opts?.retryDelay,
+    },
+  );
+}
+
+export function useAdminApiQuery<T>(
+  key: readonly unknown[],
+  path: string,
+  cronInterval: number,
+  opts: AdminApiQueryOptions<T>,
+): UseQueryResult<T, Error> {
+  return usePollingQuery(
+    key,
+    createAdminApiQueryFn(
+      path,
+      opts.adminKey,
+      opts.schema,
+      opts.fetchInit,
+      opts.unauthorizedMessage,
+    ),
+    cronInterval,
+    {
+      enabled: opts.enabled ?? !!opts.adminKey,
+      retry: opts.retry,
+      retryDelay: opts.retryDelay,
     },
   );
 }

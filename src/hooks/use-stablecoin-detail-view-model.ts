@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
+import { useDexLiquidity, usePegSummary, useReportCards } from "@/hooks/api-hooks";
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
-import { usePegSummary } from "@/hooks/use-peg-summary";
-import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
-import { useReportCards } from "@/hooks/use-report-cards";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import {

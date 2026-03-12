@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDigestArchive } from "@/hooks/use-digest-archive";
+import { useDigestArchive } from "@/hooks/api-hooks";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";

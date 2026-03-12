@@ -15,7 +15,7 @@ vi.mock("@/lib/api", () => ({
 }));
 
 import { CRON_24H } from "../use-api-query";
-import { useSafetyScoreHistory } from "../use-safety-score-history";
+import { useSafetyScoreHistory } from "../api-hooks";
 
 describe("useSafetyScoreHistory", () => {
   beforeEach(() => {

@@ -9,7 +9,7 @@ import { ReportCardRadar } from "@/components/radar-chart";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { GradeBadge } from "@/components/grade-badge";
 import { ReportCardMini } from "@/components/report-card-mini";
-import { useReportCards } from "@/hooks/use-report-cards";
+import { useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";

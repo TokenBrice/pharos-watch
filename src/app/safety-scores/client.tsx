@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useReportCards } from "@/hooks/use-report-cards";
+import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { useStressTest } from "@/hooks/use-stress-test";

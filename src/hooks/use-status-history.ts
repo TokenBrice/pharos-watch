@@ -1,9 +1,8 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { ApiFetchError, apiFetch } from "@/lib/api";
 import type { StatusHistoryResponse } from "@shared/types";
-import { CRON_1MIN, usePollingQuery } from "./use-api-query";
+import { CRON_1MIN, useAdminApiQuery } from "./use-api-query";
 
 export type StatusHistoryWindow = "6h" | "24h" | "7d" | "30d";
 
@@ -28,23 +27,10 @@ export function useStatusHistory(
   adminKey: string,
   window: StatusHistoryWindow,
 ): UseQueryResult<StatusHistoryResponse, Error> {
-  return usePollingQuery<StatusHistoryResponse>(
+  return useAdminApiQuery<StatusHistoryResponse>(
     ["status-history", adminKey, window],
-    async () => {
-      try {
-        return await apiFetch<StatusHistoryResponse>(
-          buildStatusHistoryPath(window),
-          undefined,
-          { headers: { "X-Admin-Key": adminKey } },
-        );
-      } catch (err) {
-        if (err instanceof ApiFetchError && err.status === 401) {
-          throw new Error("Invalid admin key");
-        }
-        throw err;
-      }
-    },
+    buildStatusHistoryPath(window),
     CRON_1MIN,
-    { enabled: !!adminKey, retry: 0 },
+    { adminKey, retry: 0 },
   );
 }

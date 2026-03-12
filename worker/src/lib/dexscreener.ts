@@ -5,12 +5,11 @@
  */
 import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
-import { DS_CHAIN_MAP } from "./chain-registry";
+import { DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 
-// Re-export for downstream consumers
-export { DS_CHAIN_MAP };
+export { DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
 
 const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
 

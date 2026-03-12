@@ -1,10 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useDexLiquidity, usePegSummary, useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
-import { usePegSummary } from "@/hooks/use-peg-summary";
-import { useReportCards } from "@/hooks/use-report-cards";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinTable } from "@/components/stablecoin-table";

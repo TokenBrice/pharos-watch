@@ -14,7 +14,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useYieldHistory } from "@/hooks/use-yield-history";
+import { useYieldHistory } from "@/hooks/api-hooks";
 import { CHART_AMBER, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { DAY_MS } from "@/lib/constants";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";

@@ -13,7 +13,7 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
-import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
+import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 
 /* Brand colors */

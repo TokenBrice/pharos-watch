@@ -1,9 +1,9 @@
-import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import {
+  SAFETY_SCORE_CHANGELOG_NAV_VERSIONS,
   SAFETY_SCORE_VERSION_LABEL,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/safety-score-version";
-import { buildMethodologyChangelogMetadata } from "../changelog-page-utils";
+import { createMethodologyChangelogRoute } from "../changelog-route-factory";
 import {
   Card,
   CardContent,
@@ -12,13 +12,6 @@ import {
 } from "@/components/ui/card";
 
 const PAGE_PATH = SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH;
-
-export const metadata = buildMethodologyChangelogMetadata({
-  title: "Safety Scores Changelog — Version History",
-  description:
-    `Full version history of the Pharos safety scoring methodology, from v1.0 through ${SAFETY_SCORE_VERSION_LABEL}. Every weight change, new dimension, and structural decision documented.`,
-  path: PAGE_PATH,
-});
 
 /* ── tiny helpers ────────────────────────────────────────────────── */
 
@@ -111,43 +104,26 @@ function WeightRow({
   );
 }
 
-/* ── page ────────────────────────────────────────────────────────── */
-
-export default function ScoringChangelogPage() {
-  const sections = [
-    SAFETY_SCORE_VERSION_LABEL,
-    "v5.4",
-    "v5.3",
-    "v5.2",
-    "v5.1",
-    "v5.0",
-    "v4.1",
-    "v4.0",
-    "v3.3",
-    "v3.2",
-    "v3.0",
-    "v2.0",
-    "v1.0",
-  ].map((version) => ({
+const route = createMethodologyChangelogRoute({
+  path: PAGE_PATH,
+  metadataTitle: "Safety Scores Changelog — Version History",
+  metadataDescription:
+    `Full version history of the Pharos safety scoring methodology, from v1.0 through ${SAFETY_SCORE_VERSION_LABEL}. Every weight change, new dimension, and structural decision documented.`,
+  breadcrumbName: "Scoring Changelog",
+  title: "Safety Scores Changelog",
+  lead: (
+    <>
+      Full version history of the grading methodology &mdash; every weight
+      change, new dimension, and structural decision from v1.0 to {SAFETY_SCORE_VERSION_LABEL}.
+    </>
+  ),
+  accentClass: "border-l-amber-500",
+  sections: SAFETY_SCORE_CHANGELOG_NAV_VERSIONS.map((version) => ({
     id: scoringAnchorId(version),
     label: version,
-  }));
-
-  return (
-    <MethodologyChangelogPage
-      breadcrumbName="Scoring Changelog"
-      path={PAGE_PATH}
-      title="Safety Scores Changelog"
-      lead={
-        <>
-          Full version history of the grading methodology &mdash; every weight
-          change, new dimension, and structural decision from v1.0 to {SAFETY_SCORE_VERSION_LABEL}.
-        </>
-      }
-      sections={sections}
-      railLabel="Jump to Version"
-      navAriaLabel="Safety score changelog version navigation"
-    >
+  })),
+  renderContent: () => (
+    <>
       {/* ──────────── v5.5 ──────────── */}
       <VersionCard
         version={SAFETY_SCORE_VERSION_LABEL}
@@ -851,6 +827,9 @@ export default function ScoringChangelogPage() {
           </div>
         </CardContent>
       </Card>
-    </MethodologyChangelogPage>
-  );
-}
+    </>
+  ),
+});
+
+export const metadata = route.metadata;
+export default route.Page;

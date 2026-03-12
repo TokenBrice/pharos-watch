@@ -276,20 +276,15 @@ src/                              # Next.js frontend (static export)
 │   ├── api-hooks.ts              # Consolidated low-friction GET hooks wired to shared API path builders
 │   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
 │   ├── use-logos.ts              # Static logos from data/logos.json
-│   ├── use-stablecoin-charts.ts  # Compatibility re-export for api-hooks.ts
 │   ├── use-blacklist-events.ts   # GET /api/blacklist
 │   ├── use-depeg-events.ts       # GET /api/depeg-events
-│   ├── use-peg-summary.ts        # Compatibility re-export for api-hooks.ts
-│   ├── use-bluechip-ratings.ts   # Compatibility re-export for api-hooks.ts
-│   ├── use-dex-liquidity.ts      # Compatibility re-export for api-hooks.ts
-│   ├── use-dex-liquidity-history.ts # Compatibility re-export for api-hooks.ts
-│   ├── use-usds-status.ts        # Compatibility re-export for api-hooks.ts
-│   ├── use-daily-digest.ts       # Compatibility re-export for api-hooks.ts
-│   ├── use-digest-archive.ts    # Compatibility re-export for api-hooks.ts
-│   ├── use-digest-snapshot.ts    # Compatibility re-export for api-hooks.ts
 │   ├── use-endpoint-probes.ts    # Parallel endpoint probes (status page), shared polling helper + admin-header handling
-│   ├── use-health.ts             # Compatibility re-export for api-hooks.ts
 │   ├── use-status.ts             # GET /api/status (admin key auth) using shared polling policy helper
+│   ├── use-admin-session-key.ts  # Session-storage-backed admin key hook for auth-gated operator views
+│   ├── use-status-dashboard-model.ts # Status dashboard polling orchestration + derived operator model
+│   ├── use-compare-selection.ts  # Compare page URL state, slot selection, and preset application
+│   ├── use-compare-data-model.ts # Compare page query wiring + derived chart/card/table models
+│   ├── use-compare-share-actions.ts # Compare page share/download image actions + clipboard fallbacks
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-sorted-table-rows.ts  # Shared table sorting scaffold (useSort wiring + sorted row memo)
 │   ├── use-table-pagination.ts   # Shared table pagination scaffold (effective page, ranges, prev/next handlers)
@@ -299,24 +294,24 @@ src/                              # Next.js frontend (static export)
 │   ├── use-start-here-callout.ts # Homepage-only first-session onboarding callout visibility + retirement
 │   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover
 │   ├── use-stablecoin-detail-view-model.ts # Stablecoin detail query wiring; delegates pure derivation to src/lib/stablecoin-detail-view-model.ts
-│   ├── use-api-query.ts          # Generic typed fetch + polling helper wrapping TanStack Query
+│   ├── use-api-query.ts          # Generic typed fetch + polling helper wrapping TanStack Query, including shared admin-auth query helpers
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
-│   ├── use-stability-index.ts    # Compatibility re-export for api-hooks.ts
-│   ├── use-report-cards.ts       # Compatibility re-export for api-hooks.ts
-│   ├── use-safety-score-history.ts # Compatibility re-export for api-hooks.ts
 │   ├── use-portfolio.ts          # Portfolio holdings state + browser persistence; delegates codec/analysis to src/lib/portfolio-*.ts
 │   ├── use-preferences.ts        # User preference state (persistent settings)
 │   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
-│   └── use-yield-rankings.ts     # Compatibility re-export for api-hooks.ts
+│   └── use-status-history.ts     # GET /api/status-history (admin key auth) using shared polling policy helper
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
     ├── analytics.ts              # Analytics tracking (page views, events)
+    ├── client-feature-page.tsx   # Narrow helper for repeated dynamic-client feature routes wrapped by FeaturePageShell
     ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin() type guard, extractGoldPrices(), computeBlacklistStats()
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
     ├── chart-export.ts           # Chart export utilities (PNG download)
+    ├── compare-config.ts         # Compare presets, color palette, and ID/symbol selection registry
     ├── compare-pages.ts          # Finite static comparison landing page registry + helpers
+    ├── status-dashboard-model.ts # Status dashboard pure formatting and derived-data helpers
     ├── start-here-callout.ts     # Browser-persisted Start Here callout state helpers (first-session exposure + /start/ retirement)
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
@@ -343,9 +338,18 @@ src/                              # Next.js frontend (static export)
 
 shared/                           # Runtime-neutral boundary (import via `@shared/*`)
 ├── types/
-│   └── index.ts                  # Shared TypeScript types + Zod schemas
+│   ├── index.ts                  # Stable barrel export for shared contracts
+│   ├── core.ts                   # Shared enums, metadata shapes, and common Zod schemas
+│   ├── digest.ts                 # Daily digest / archive / snapshot contracts
+│   ├── market.ts                 # Stablecoin list, liquidity, depeg, blacklist, and stress-signal contracts
+│   ├── report-cards.ts           # Safety-score history + report-card response contracts
+│   ├── stability.ts              # Stability Index response contracts
+│   ├── status.ts                 # Status / health / discovery / reconciliation contracts
+│   ├── yield.ts                  # Yield rankings/history contracts
+│   └── mint-burn.ts              # Mint/burn flow, event, and sync contracts
 └── lib/
     ├── api-endpoints.ts          # Authoritative endpoint metadata + router/status/smoke/strict-contract helpers
+    ├── chain-provider-registry.ts # Runtime-neutral CoinGecko/DexScreener/GeckoTerminal chain slug registry
     ├── strict-contract-paths.ts  # Strict API contract path exports derived from api-endpoints.ts
     ├── stablecoins.ts            # Tracked stablecoin metadata list
     ├── stablecoin-id-registry.ts # Canonical/external ID lookup maps + resolution helpers
@@ -365,7 +369,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── http.ts               # HTTP flow: CORS, edge cache, method/auth gating, router dispatch
     │   ├── scheduled.ts          # Thin cron entrypoint: init env-aware clients + dispatch to slot runner registry
     │   └── scheduled/            # Slot runners + shared lease/runtime context for scheduled execution
-    ├── router.ts                 # Router-dispatched API handlers (method gating + path dispatch from endpoint contract)
+    ├── router.ts                 # Worker-owned static route dispatch table + dynamic route matching
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/
@@ -456,7 +460,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   └── telegram-webhook.ts  # POST /api/telegram-webhook (Telegram bot command ingress)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, buildInClause, logCronRun with protected catch)
-        ├── chain-registry.ts     # Canonical chain ids + provider-specific network slugs + chain RPC endpoint config
+        ├── chain-registry.ts     # Worker RPC registry and provider-map re-exports; runtime-neutral provider slugs now live in shared/lib/chain-provider-registry.ts
+        ├── status-derived-data.ts # Extracted status endpoint data loaders (dataset freshness, Telegram stats, mint/burn reconciliation)
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)

@@ -1,18 +1,12 @@
-import dynamic from "next/dynamic";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FeaturePageShell } from "@/components/feature-page-shell";
+import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
 import { safeJsonLd } from "@/lib/json-ld";
-
-const YieldClient = dynamic(
-  () => import("./client").then((m) => ({ default: m.YieldClient })),
-  { loading: () => <Skeleton className="h-[600px] w-full rounded-xl" /> },
-);
 
 const yieldBearingCount = YIELD_BEARING_STABLECOINS.length;
 const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, and the Pharos Yield Score.`;
@@ -55,28 +49,26 @@ const faqJsonLd = {
   ],
 };
 
-export default function YieldPage() {
-  return (
-    <FeaturePageShell
-      breadcrumbName="Yield Intelligence"
-      path="/yield/"
-      title="Yield Intelligence"
-      statusBadge={{ status: "mature", version: YIELD_METHODOLOGY_VERSION_LABEL }}
-      methodology={{
-        version: YIELD_METHODOLOGY_VERSION_LABEL,
-        changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
-      }}
-      preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
-        />
-      }
-      leadParagraphs={[
-        `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, and the Pharos Yield Score (PYS).`,
-      ]}
-    >
-      <YieldClient />
-    </FeaturePageShell>
-  );
-}
+export default createClientFeaturePage({
+  loadClient: () => import("./client").then((m) => ({ default: m.YieldClient })),
+  loading: <Skeleton className="h-[600px] w-full rounded-xl" />,
+  shell: {
+    breadcrumbName: "Yield Intelligence",
+    path: "/yield/",
+    title: "Yield Intelligence",
+    statusBadge: { status: "mature", version: YIELD_METHODOLOGY_VERSION_LABEL },
+    methodology: {
+      version: YIELD_METHODOLOGY_VERSION_LABEL,
+      changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
+    },
+    preface: (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
+      />
+    ),
+    leadParagraphs: [
+      `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, and the Pharos Yield Score (PYS).`,
+    ],
+  },
+});

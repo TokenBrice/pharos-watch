@@ -22,7 +22,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 });
 
 import { CRON_1MIN, createPollingQueryOptions } from "../use-api-query";
-import { useHealth } from "../use-health";
+import { useHealth } from "../api-hooks";
 import { useStatus } from "../use-status";
 import { useEndpointProbes } from "../use-endpoint-probes";
 
@@ -85,10 +85,10 @@ describe("query polling policy", () => {
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
 
     await options.queryFn();
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/status"),
-      expect.objectContaining({ headers: { "X-Admin-Key": "admin-secret" } }),
-    );
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toContain("/api/status");
+    expect(init.headers).toBeInstanceOf(Headers);
+    expect((init.headers as Headers).get("X-Admin-Key")).toBe("admin-secret");
   });
 
   it("useEndpointProbes uses shared polling and passes admin key only to admin paths", async () => {

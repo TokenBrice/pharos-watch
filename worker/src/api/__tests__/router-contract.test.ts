@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
 import { route, ROUTER_STATIC_PATHS } from "../../router";
-import worker from "../../index";
 import { mockD1 } from "./helpers/mock-d1";
 
 vi.stubGlobal("fetch", vi.fn(async () => (
@@ -68,41 +67,26 @@ describe("router contract: strict frontend paths are routable", () => {
         const expectedPublicStatuses =
           endpoint.path === "/api/telegram-webhook"
             ? [200, 400, 501, 502, 503]
-            : endpoint.handlerKey === "stablecoin-reserves-probe"
+            : endpoint.path === "/api/stablecoin-reserves/iusd-infinifi"
               ? [200, 400, 502, 503]
               : [200, 400, 502, 503];
 
-        if (endpoint.routerHandled === false) {
-          const response = await worker.fetch(
-            request,
-            env as never,
-            ctx,
-          );
-          if (method === "GET" && endpoint.mutatingAdmin && !allowAuditDryRunGet) {
-            expect(response.status).toBe(405);
-          } else if (endpoint.adminRequired) {
-            expect(response.status).toBe(401);
-          } else {
-            expect(expectedPublicStatuses).toContain(response.status);
-          }
-        } else {
-          const response = await route(
-            new URL(`https://api.pharos.watch${path}`),
-            db,
-            ctx,
-            request,
-            env.ADMIN_KEY,
-            null,
-          );
-          expect(response, `expected route for ${method} ${path}`).not.toBeNull();
+        const response = await route(
+          new URL(`https://api.pharos.watch${path}`),
+          db,
+          ctx,
+          request,
+          env.ADMIN_KEY,
+          null,
+        );
+        expect(response, `expected route for ${method} ${path}`).not.toBeNull();
 
-          if (method === "GET" && endpoint.mutatingAdmin && !allowAuditDryRunGet) {
-            expect(response!.status).toBe(405);
-          } else if (endpoint.adminRequired) {
-            expect(response!.status).toBe(401);
-          } else {
-            expect(expectedPublicStatuses).toContain(response!.status);
-          }
+        if (method === "GET" && endpoint.mutatingAdmin && !allowAuditDryRunGet) {
+          expect(response!.status).toBe(405);
+        } else if (endpoint.adminRequired) {
+          expect(response!.status).toBe(401);
+        } else {
+          expect(expectedPublicStatuses).toContain(response!.status);
         }
       }
     }
@@ -134,24 +118,14 @@ describe("router contract: strict frontend paths are routable", () => {
       }
 
       if (endpoint.methods.includes("POST")) {
-        if (endpoint.routerHandled === false) {
-          const postResponse = await worker.fetch(
-            new Request(`https://api.pharos.watch${path}`, { method: "POST" }),
-            env as never,
-            ctx,
-          );
-          expect(postResponse.status).not.toBe(404);
-          expect(postResponse.status).not.toBe(405);
-        } else {
-          const postResult = await route(
-            new URL(`https://api.pharos.watch${path}`),
-            db,
-            ctx,
-            new Request(`https://api.pharos.watch${path}`, { method: "POST" }),
-          );
-          expect(postResult).not.toBeNull();
-          expect(postResult!.status).not.toBe(405);
-        }
+        const postResult = await route(
+          new URL(`https://api.pharos.watch${path}`),
+          db,
+          ctx,
+          new Request(`https://api.pharos.watch${path}`, { method: "POST" }),
+        );
+        expect(postResult).not.toBeNull();
+        expect(postResult!.status).not.toBe(405);
       }
     }
   });

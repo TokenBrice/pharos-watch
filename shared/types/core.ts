@@ -1,0 +1,427 @@
+import { z } from "zod";
+
+// --- Flag-based classification ---
+
+/** Backing mechanism */
+export type BackingType = "rwa-backed" | "crypto-backed" | "algorithmic";
+
+/** Peg currency */
+export type PegCurrency =
+  | "USD"
+  | "EUR"
+  | "GBP"
+  | "CHF"
+  | "BRL"
+  | "RUB"
+  | "JPY"
+  | "IDR"
+  | "SGD"
+  | "TRY"
+  | "AUD"
+  | "ZAR"
+  | "CAD"
+  | "CNY"
+  | "CNH"
+  | "PHP"
+  | "MXN"
+  | "UAH"
+  | "ARS"
+  | "GOLD"
+  | "SILVER"
+  | "VAR"
+  | "OTHER";
+
+/** Governance model */
+export type GovernanceType = "centralized" | "centralized-dependent" | "decentralized";
+
+interface StablecoinFlags {
+  backing: BackingType;
+  pegCurrency: PegCurrency;
+  governance: GovernanceType;
+  yieldBearing: boolean;
+  rwa: boolean;
+  navToken: boolean;
+}
+
+type ProofOfReservesType = "independent-audit" | "real-time" | "self-reported";
+
+interface ProofOfReserves {
+  type: ProofOfReservesType;
+  url: string;
+  provider?: string;
+}
+
+interface StablecoinLink {
+  label: string;
+  url: string;
+}
+
+interface Jurisdiction {
+  country: string;
+  regulator?: string;
+  license?: string;
+}
+
+export interface ContractDeployment {
+  chain: string;
+  address: string;
+  decimals: number;
+}
+
+export type DependencyType = "wrapper" | "mechanism" | "collateral";
+
+export interface DependencyWeight {
+  id: string;
+  weight: number;
+  type?: DependencyType;
+}
+
+export type ReserveRisk = "very-low" | "low" | "medium" | "high" | "very-high";
+
+export interface ReserveSlice {
+  name: string;
+  pct: number;
+  risk: ReserveRisk;
+  coinId?: string;
+  depType?: DependencyType;
+}
+
+export type ChainTier = "ethereum" | "stage1-l2" | "established-alt-l1" | "unproven";
+export type DeploymentModel = "single-chain" | "canonical-bridge" | "third-party-bridge" | "native-multichain";
+export type CollateralQuality = "native" | "rwa" | "eth-lst" | "alt-lst-bridged-or-mixed" | "exotic";
+export type CustodyModel = "onchain" | "institutional" | "cex";
+
+export type GovernanceQuality =
+  | "immutable-code"
+  | "dao-governance"
+  | "multisig"
+  | "regulated-entity"
+  | "single-entity"
+  | "wrapper";
+
+const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
+const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
+const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "established-alt-l1", "unproven"] as const;
+const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
+const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
+const CUSTODY_MODEL_VALUES = ["onchain", "institutional", "cex"] as const;
+const GOVERNANCE_QUALITY_VALUES = [
+  "immutable-code",
+  "dao-governance",
+  "multisig",
+  "regulated-entity",
+  "single-entity",
+  "wrapper",
+] as const;
+
+export const GovernanceTypeSchema = z.enum(GOVERNANCE_TYPE_VALUES);
+export const DependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
+export const ChainTierSchema = z.enum(CHAIN_TIER_VALUES);
+export const DeploymentModelSchema = z.enum(DEPLOYMENT_MODEL_VALUES);
+export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
+export const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
+export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);
+
+export interface CoinNotice {
+  type: "danger" | "warning" | "info";
+  title: string;
+  message: string;
+}
+
+export type LiveReserveSemantics =
+  | "collateral-mix"
+  | "protocol-reserve"
+  | "attestation-mix"
+  | "single-asset";
+
+export type LiveReserveInput =
+  | { kind: "http-json"; url: string }
+  | { kind: "http-html"; url: string }
+  | { kind: "indexer"; url: string }
+  | { kind: "onchain-evm"; chain: string; rpcMode: "etherscan-proxy" | "alchemy" | "public-rpc" };
+
+export interface LiveReserveWarning {
+  code: string;
+  message: string;
+  severity: "info" | "warning";
+}
+
+export interface LiveReservesConfig {
+  adapter: string;
+  version: number;
+  semantics: LiveReserveSemantics;
+  breakerScope?: string;
+  display?: {
+    url?: string;
+    label?: string;
+  };
+  inputs: {
+    primary: LiveReserveInput;
+    fallbacks?: LiveReserveInput[];
+  };
+  params?: Record<string, unknown>;
+}
+
+export type ReservePresentationMode =
+  | "live"
+  | "live-stale"
+  | "curated-fallback"
+  | "template-fallback"
+  | "unavailable";
+
+export interface ReserveSyncStateView {
+  enabled: boolean;
+  status: "ok" | "degraded" | "error" | "skipped";
+  stale: boolean;
+  bootstrap: boolean;
+  lastAttemptedAt?: number;
+  lastSuccessAt?: number;
+  warnings?: string[];
+}
+
+export interface StablecoinReservesResponse {
+  stablecoinId: string;
+  mode: ReservePresentationMode;
+  reserves: ReserveSlice[];
+  estimated: boolean;
+  liveAt?: number;
+  source?: string;
+  displayUrl?: string;
+  sync?: ReserveSyncStateView;
+}
+
+export type YieldType =
+  | "lending-vault"
+  | "rebase"
+  | "fee-sharing"
+  | "lp-receipt"
+  | "nav-appreciation"
+  | "governance-set"
+  | "lending-opportunity";
+
+const YIELD_TYPE_VALUES = [
+  "lending-vault",
+  "rebase",
+  "fee-sharing",
+  "lp-receipt",
+  "nav-appreciation",
+  "governance-set",
+  "lending-opportunity",
+] as const;
+
+export const YieldTypeSchema = z.enum(YIELD_TYPE_VALUES);
+
+interface YieldConfig {
+  defiLlamaPoolId?: string;
+  yieldSource: string;
+  yieldType: YieldType;
+}
+
+export interface StablecoinMeta {
+  id: string;
+  llamaId?: string;
+  detailProvider?: "defillama" | "coingecko" | "commodity";
+  name: string;
+  symbol: string;
+  flags: StablecoinFlags;
+  collateral?: string;
+  pegMechanism?: string;
+  commodityOunces?: number;
+  geckoId?: string;
+  cmcSlug?: string;
+  protocolSlug?: string;
+  proofOfReserves?: ProofOfReserves;
+  links?: StablecoinLink[];
+  jurisdiction?: Jurisdiction;
+  contracts?: ContractDeployment[];
+  tradedContracts?: ContractDeployment[];
+  dependencies?: DependencyWeight[];
+  canBeBlacklisted?: boolean | "possible";
+  chainTier?: ChainTier;
+  deploymentModel?: DeploymentModel;
+  collateralQuality?: CollateralQuality;
+  custodyModel?: CustodyModel;
+  governanceQuality?: GovernanceQuality;
+  reserves?: ReserveSlice[];
+  liveReservesConfig?: LiveReservesConfig;
+  notices?: CoinNotice[];
+  tags?: string[];
+  yieldConfig?: YieldConfig;
+}
+
+export type FilterTag =
+  | "usd-peg"
+  | "eur-peg"
+  | "gold-peg"
+  | "chf-peg"
+  | "gbp-peg"
+  | "brl-peg"
+  | "rub-peg"
+  | "jpy-peg"
+  | "idr-peg"
+  | "sgd-peg"
+  | "try-peg"
+  | "aud-peg"
+  | "zar-peg"
+  | "cad-peg"
+  | "cny-peg"
+  | "cnh-peg"
+  | "php-peg"
+  | "mxn-peg"
+  | "uah-peg"
+  | "ars-peg"
+  | "silver-peg"
+  | "var-peg"
+  | "other-peg"
+  | "centralized"
+  | "centralized-dependent"
+  | "decentralized"
+  | "rwa-backed"
+  | "crypto-backed"
+  | "algorithmic";
+
+export const OTHER_PEG_TAGS: FilterTag[] = [
+  "brl-peg",
+  "rub-peg",
+  "jpy-peg",
+  "idr-peg",
+  "sgd-peg",
+  "try-peg",
+  "aud-peg",
+  "zar-peg",
+  "cad-peg",
+  "cny-peg",
+  "cnh-peg",
+  "php-peg",
+  "mxn-peg",
+  "uah-peg",
+  "ars-peg",
+  "silver-peg",
+  "var-peg",
+  "other-peg",
+];
+
+export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
+  "usd-peg": "USD",
+  "eur-peg": "EUR",
+  "gold-peg": "Gold",
+  "chf-peg": "CHF",
+  "gbp-peg": "GBP",
+  "brl-peg": "BRL",
+  "rub-peg": "RUB",
+  "jpy-peg": "JPY",
+  "idr-peg": "IDR",
+  "sgd-peg": "SGD",
+  "try-peg": "TRY",
+  "aud-peg": "AUD",
+  "zar-peg": "ZAR",
+  "cad-peg": "CAD",
+  "cny-peg": "CNY",
+  "cnh-peg": "CNH",
+  "php-peg": "PHP",
+  "mxn-peg": "MXN",
+  "uah-peg": "UAH",
+  "ars-peg": "ARS",
+  "silver-peg": "Silver",
+  "var-peg": "CPI",
+  "other-peg": "Other",
+  centralized: "Centralized",
+  "centralized-dependent": "CeFi-Dependent",
+  decentralized: "Decentralized",
+  "rwa-backed": "RWA-Backed",
+  "crypto-backed": "Crypto-Backed",
+  algorithmic: "Algorithmic",
+};
+
+export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
+  switch (peg) {
+    case "USD":
+      return "usd-peg";
+    case "EUR":
+      return "eur-peg";
+    case "GOLD":
+      return "gold-peg";
+    case "CHF":
+      return "chf-peg";
+    case "GBP":
+      return "gbp-peg";
+    case "BRL":
+      return "brl-peg";
+    case "RUB":
+      return "rub-peg";
+    case "JPY":
+      return "jpy-peg";
+    case "IDR":
+      return "idr-peg";
+    case "SGD":
+      return "sgd-peg";
+    case "TRY":
+      return "try-peg";
+    case "AUD":
+      return "aud-peg";
+    case "ZAR":
+      return "zar-peg";
+    case "CAD":
+      return "cad-peg";
+    case "CNY":
+      return "cny-peg";
+    case "CNH":
+      return "cnh-peg";
+    case "PHP":
+      return "php-peg";
+    case "MXN":
+      return "mxn-peg";
+    case "UAH":
+      return "uah-peg";
+    case "ARS":
+      return "ars-peg";
+    case "SILVER":
+      return "silver-peg";
+    case "VAR":
+      return "var-peg";
+    default:
+      return "other-peg";
+  }
+}
+
+export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
+  const tags: FilterTag[] = [];
+  tags.push(pegCurrencyToFilterTag(meta.flags.pegCurrency));
+  tags.push(meta.flags.governance);
+  tags.push(meta.flags.backing);
+  return tags;
+}
+
+export type PriceConfidence = "high" | "single-source" | "low" | "fallback";
+export type DepegPrimaryTrust = "authoritative" | "confirm_required" | "unusable";
+
+export const PriceConfidenceSchema = z.enum(["high", "single-source", "low", "fallback"]);
+export const DepegPrimaryTrustSchema = z.enum(["authoritative", "confirm_required", "unusable"]);
+
+export interface PegAssetBase {
+  id: string;
+  symbol: string;
+  price?: number | null;
+  priceSource?: string | null;
+  priceConfidence?: PriceConfidence | null;
+  priceUpdatedAt?: number | null;
+  pegType?: string;
+  circulating?: Record<string, number>;
+}
+
+export type BluechipGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F";
+
+const BLUECHIP_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"] as const;
+export const BluechipGradeSchema = z.enum(BLUECHIP_GRADE_VALUES);
+
+export const MethodologyEnvelopeSchema = z.object({
+  version: z.string(),
+  versionLabel: z.string(),
+  currentVersion: z.string(),
+  currentVersionLabel: z.string(),
+  changelogPath: z.string(),
+  asOf: z.number(),
+  isCurrent: z.boolean(),
+});
+
+export type MethodologyEnvelope = z.infer<typeof MethodologyEnvelopeSchema>;

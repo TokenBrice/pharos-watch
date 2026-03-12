@@ -1,22 +1,16 @@
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
-import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_VERSION_LABEL,
 } from "@shared/lib/safety-score-version";
-
-const ReportCardsClient = dynamic(
-  () => import("./client").then((m) => ({ default: m.ReportCardsClient })),
-  { loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> },
-);
 
 const reportCardsDescription =
   "Transparent stablecoin safety grades and contagion simulation. Five dimensions combined into a single letter grade, plus simulate what happens when a major stablecoin fails.";
@@ -40,35 +34,35 @@ const FAQ_ITEMS = [
       "The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to \"fail\" and the simulation traces dependency chains: if stablecoin A uses stablecoin B as collateral, and B fails, A's grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.",
   },
 ] as const satisfies readonly FaqItem[];
-export default function ReportCardsPage() {
-  return (
-    <FeaturePageShell
-      breadcrumbName="Safety Scores"
-      path="/safety-scores/"
-      title="Safety Scores"
-      statusBadge={{ status: "mature", version: SAFETY_SCORE_VERSION_LABEL }}
-      methodology={{
-        version: SAFETY_SCORE_VERSION_LABEL,
-        changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-      }}
-      headerActions={<ShareButton ogPath="/api/og/safety-scores" />}
-      leadParagraphs={[
-        "Safety grades and contagion simulation for every tracked stablecoin.",
-        "Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability, liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator lets you model what happens to the broader market when a major stablecoin fails, revealing hidden dependency chains and systemic risk.",
-      ]}
-    >
-      <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
-        Get notified when a safety grade changes.{" "}
-        <Link
-          href="/telegram#bot"
-          className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-        >
-          Set up alerts&nbsp;&rarr;
-        </Link>
-      </CalloutBanner>
 
-      <ReportCardsClient />
-      <FaqSection items={FAQ_ITEMS} includeJsonLd />
-    </FeaturePageShell>
-  );
-}
+export default createClientFeaturePage({
+  loadClient: () => import("./client").then((m) => ({ default: m.ReportCardsClient })),
+  loading: <Skeleton className="h-[400px] w-full rounded-xl" />,
+  shell: {
+    breadcrumbName: "Safety Scores",
+    path: "/safety-scores/",
+    title: "Safety Scores",
+    statusBadge: { status: "mature", version: SAFETY_SCORE_VERSION_LABEL },
+    methodology: {
+      version: SAFETY_SCORE_VERSION_LABEL,
+      changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+    },
+    headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
+    leadParagraphs: [
+      "Safety grades and contagion simulation for every tracked stablecoin.",
+      "Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability, liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator lets you model what happens to the broader market when a major stablecoin fails, revealing hidden dependency chains and systemic risk.",
+    ],
+  },
+  beforeClient: (
+    <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+      Get notified when a safety grade changes.{" "}
+      <Link
+        href="/telegram#bot"
+        className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+      >
+        Set up alerts&nbsp;&rarr;
+      </Link>
+    </CalloutBanner>
+  ),
+  afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
+});

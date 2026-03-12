@@ -1,7 +1,7 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
-import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
+import { useBluechipRatings } from "@/hooks/api-hooks";
 import { BLUECHIP_REPORT_BASE, GRADE_ORDER } from "@/lib/bluechip";
 
 export function BluechipHeaderBadge({ stablecoinId }: { stablecoinId: string }) {

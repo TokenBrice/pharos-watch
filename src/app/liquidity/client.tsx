@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useDexLiquidity } from "@/hooks/api-hooks";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useLogos } from "@/hooks/use-logos";

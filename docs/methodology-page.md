@@ -15,6 +15,7 @@
 - **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`
 - **Version badges:** imported from per-system version modules in `shared/lib/*-version.ts`
 - **Changelog wrappers:** config-driven route wrappers via `src/app/methodology/changelog-route-factory.tsx`
+- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` now uses the shared route factory for metadata + shell wiring while still rendering its richer custom body content locally
 
 ---
 
@@ -42,6 +43,11 @@ When changing any scoring methodology, update all three surfaces in the same cha
 3. `/methodology` page copy and worked examples (`src/app/methodology/methodology-sections.tsx`; update `page.tsx` only when shell/layout wiring changes).
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
+
+For the safety-score changelog specifically, update both:
+
+1. `shared/lib/safety-score-version.ts` for shared route metadata / navigation versions.
+2. `src/app/methodology/scoring-changelog/page.tsx` for the authored long-form version cards and reference tables.
 
 ---
 

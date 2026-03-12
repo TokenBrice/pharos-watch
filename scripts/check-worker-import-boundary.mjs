@@ -1,10 +1,12 @@
-import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const WORKER_SRC_DIR = "worker/src";
-const FORBIDDEN_IMPORT_FRAGMENT = "src/lib/";
 const SOURCE_FILE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs", ".cts"]);
+const WORKER_TO_FRONTEND_IMPORT_PATTERN =
+  /(?:from\s+["'][^"']*(?:@\/|src\/)|import\s*\(\s*["'][^"']*(?:@\/|src\/))/;
+const FRONTEND_TO_WORKER_IMPORT_PATTERN =
+  /(?:from\s+["'][^"']*worker\/src\/|import\s*\(\s*["'][^"']*worker\/src\/)/;
 
 function isSourceFile(path) {
   const dot = path.lastIndexOf(".");
@@ -33,15 +35,15 @@ function formatMatches(matches) {
   }
 }
 
-function runFallbackCheck(label, { excludeTests }) {
+function runBoundaryCheck(label, { excludeTests, rootDir, forbiddenPattern }) {
   try {
-    const files = collectFiles(WORKER_SRC_DIR);
+    const files = collectFiles(rootDir);
     const matches = [];
     for (const file of files) {
       if (excludeTests && file.includes("/__tests__/")) continue;
       const lines = readFileSync(file, "utf8").split("\n");
       for (let i = 0; i < lines.length; i += 1) {
-        if (lines[i].includes(FORBIDDEN_IMPORT_FRAGMENT)) {
+        if (forbiddenPattern.test(lines[i])) {
           matches.push({
             file,
             line: i + 1,
@@ -52,7 +54,7 @@ function runFallbackCheck(label, { excludeTests }) {
     }
 
     if (matches.length > 0) {
-      console.error(`[boundary] ${label} failed: found forbidden worker -> src/lib imports`);
+      console.error(`[boundary] ${label} failed: found forbidden imports`);
       formatMatches(matches);
       return false;
     }
@@ -65,47 +67,27 @@ function runFallbackCheck(label, { excludeTests }) {
   }
 }
 
-function runCheck(label, args) {
-  const result = spawnSync("rg", args, {
-    encoding: "utf8",
-  });
+const allWorkerOk = runBoundaryCheck("all worker sources", {
+  rootDir: WORKER_SRC_DIR,
+  excludeTests: false,
+  forbiddenPattern: WORKER_TO_FRONTEND_IMPORT_PATTERN,
+});
 
-  if (result.error && result.error.code === "ENOENT") {
-    // CI environments may not have ripgrep preinstalled. Fall back to a Node scan.
-    const excludeTests = args.includes("--glob");
-    return runFallbackCheck(label, { excludeTests });
-  }
+const nonTestWorkerOk = runBoundaryCheck("non-test worker sources", {
+  rootDir: WORKER_SRC_DIR,
+  excludeTests: true,
+  forbiddenPattern: WORKER_TO_FRONTEND_IMPORT_PATTERN,
+});
 
-  if (result.status === 1) {
-    return true;
-  }
+const appDirs = ["src", "shared", "scripts"];
+const allFrontendBoundaryOk = appDirs.every((dir) =>
+  runBoundaryCheck(`${dir} sources`, {
+    rootDir: dir,
+    excludeTests: false,
+    forbiddenPattern: FRONTEND_TO_WORKER_IMPORT_PATTERN,
+  }));
 
-  if (result.status === 0) {
-    console.error(`[boundary] ${label} failed: found forbidden worker -> src/lib imports`);
-    if (result.stdout) process.stderr.write(result.stdout);
-    return false;
-  }
-
-  console.error(`[boundary] ${label} check failed to execute rg`);
-  if (result.stderr) process.stderr.write(result.stderr);
-  return false;
-}
-
-const allWorkerOk = runCheck("all worker sources", [
-  "-n",
-  FORBIDDEN_IMPORT_FRAGMENT,
-  WORKER_SRC_DIR,
-]);
-
-const nonTestWorkerOk = runCheck("non-test worker sources", [
-  "-n",
-  FORBIDDEN_IMPORT_FRAGMENT,
-  WORKER_SRC_DIR,
-  "--glob",
-  "!**/__tests__/**",
-]);
-
-if (!allWorkerOk || !nonTestWorkerOk) {
+if (!allWorkerOk || !nonTestWorkerOk || !allFrontendBoundaryOk) {
   process.exit(1);
 }
 

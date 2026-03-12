@@ -16,8 +16,6 @@ interface EndpointDefinition {
   mutatingAdmin: boolean;
   cacheBypass: boolean;
   strictContract?: boolean;
-  handlerKey?: string;
-  routerHandled?: boolean;
   probeGroup?: EndpointProbeGroup;
   probePath?: string;
   statusPageAction?: EndpointStatusPageActionConfig;
@@ -101,7 +99,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     strictContract: true,
-    handlerKey: "stablecoins",
     probeGroup: "public",
   },
   {
@@ -110,7 +107,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "stablecoin-probe-detail",
     probeGroup: "public",
     // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
     probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
@@ -121,7 +117,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "stablecoin-probe-summary",
     probeGroup: "public",
   },
   {
@@ -130,7 +125,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "stablecoin-reserves-probe",
     probeGroup: "public",
   },
   {
@@ -139,7 +133,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "stablecoin-charts",
     probeGroup: "public",
   },
   {
@@ -149,7 +142,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     strictContract: true,
-    handlerKey: "peg-summary",
     probeGroup: "public",
   },
   {
@@ -158,7 +150,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
-    handlerKey: "health",
     probeGroup: "public",
   },
   {
@@ -167,7 +158,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "blacklist",
     probeGroup: "public",
   },
   {
@@ -176,7 +166,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "depeg-events",
     probeGroup: "public",
   },
   {
@@ -185,7 +174,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "usds-status",
     probeGroup: "public",
   },
   {
@@ -194,7 +182,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "bluechip-ratings",
     probeGroup: "public",
   },
   {
@@ -204,7 +191,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     strictContract: true,
-    handlerKey: "dex-liquidity",
     probeGroup: "public",
   },
   {
@@ -213,7 +199,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "dex-liquidity-history",
     probeGroup: "public",
     probePath: buildQueryPath("/api/dex-liquidity-history", { stablecoin: "usdt-tether" }),
   },
@@ -223,7 +208,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "supply-history",
     probeGroup: "public",
     probePath: API_PATHS.supplyHistory("usdt-tether"),
   },
@@ -233,7 +217,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "daily-digest",
     probeGroup: "public",
   },
   {
@@ -242,7 +225,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "digest-archive",
     probeGroup: "public",
   },
   {
@@ -251,7 +233,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "digest-snapshot",
     // Requires a date-specific snapshot that is not stable enough for a generic canary probe.
   },
   {
@@ -260,7 +241,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "yield-rankings",
     probeGroup: "public",
   },
   {
@@ -269,7 +249,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "yield-history",
     probeGroup: "public",
     probePath: buildQueryPath("/api/yield-history", { stablecoin: "usdt-tether" }),
   },
@@ -279,7 +258,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "safety-score-history",
     probeGroup: "public",
     probePath: buildQueryPath("/api/safety-score-history", { stablecoin: "usdt-tether" }),
   },
@@ -290,7 +268,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     strictContract: true,
-    handlerKey: "stability-index",
     probeGroup: "public",
   },
   {
@@ -300,7 +277,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     strictContract: true,
-    handlerKey: "report-cards",
     probeGroup: "public",
   },
   {
@@ -310,7 +286,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     strictContract: true,
-    handlerKey: "mint-burn-flows",
     probeGroup: "public",
   },
   {
@@ -319,7 +294,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    handlerKey: "mint-burn-events",
     probeGroup: "public",
     probePath: "/api/mint-burn-events?stablecoin=usdt-tether",
   },
@@ -330,7 +304,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     strictContract: true,
-    handlerKey: "stress-signals",
     probeGroup: "public",
   },
   {
@@ -339,7 +312,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
-    handlerKey: "feedback",
   },
   {
     path: "/api/telegram-webhook",
@@ -347,7 +319,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
-    handlerKey: "telegram-webhook",
   },
 
   // Admin status/probe endpoints.
@@ -357,7 +328,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: true,
-    handlerKey: "status",
     probeGroup: "admin",
   },
   {
@@ -366,7 +336,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: true,
-    handlerKey: "status-history",
     probeGroup: "admin",
     probePath: "/api/status-history?limit=10",
   },
@@ -376,7 +345,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: false,
-    handlerKey: "trigger-digest",
     probeGroup: "manual",
     statusPageAction: {
       label: "Trigger Digest",
@@ -390,7 +358,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: false,
-    handlerKey: "reset-blacklist-sync",
     probeGroup: "manual",
     statusPageAction: {
       label: "Reset Blacklist Sync",
@@ -405,7 +372,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: true,
-    handlerKey: "debug-sync-state",
     probeGroup: "admin",
     statusPageAction: {
       label: "Debug Sync State",
@@ -419,7 +385,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    handlerKey: "backfill-depegs",
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Depegs",
@@ -433,7 +398,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    handlerKey: "backfill-supply-history",
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Supply",
@@ -447,7 +411,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    handlerKey: "backfill-cg-prices",
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill CG Prices",
@@ -461,7 +424,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    handlerKey: "backfill-stability-index",
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill PSI",
@@ -475,7 +437,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    handlerKey: "backfill-mint-burn-prices",
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Mint/Burn Prices",
@@ -489,7 +450,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    handlerKey: "backfill-mint-burn",
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Mint/Burn",
@@ -503,7 +463,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    handlerKey: "reclassify-atomic-roundtrips",
     probeGroup: "manual",
   },
   {
@@ -512,7 +471,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    handlerKey: "audit-depeg-history",
     probeGroup: "manual",
     probePath: "/api/audit-depeg-history?dry-run=true",
     statusPageAction: {
@@ -528,7 +486,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: true,
-    handlerKey: "backfill-dews",
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill DEWS",
@@ -542,7 +499,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: true,
-    handlerKey: "discovery-candidates",
     probeGroup: "admin",
   },
 ] as const;
@@ -572,25 +528,12 @@ const STRICT_CONTRACT_PATHS = ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint
   (endpoint) => endpoint.path,
 );
 
-const ROUTER_HANDLED_ENDPOINTS = ENDPOINT_DEFINITIONS.filter(
-  (endpoint) => endpoint.routerHandled !== false && endpoint.handlerKey,
-);
-const ROUTER_HANDLED_PATHS = ROUTER_HANDLED_ENDPOINTS.map((endpoint) => endpoint.path);
-
 export function isMutatingAdminPath(path: string): boolean {
   return MUTATING_ADMIN_PATHS.has(path);
 }
 
 export function isCacheBypassPath(path: string): boolean {
   return CACHE_BYPASS_PATHS.has(path);
-}
-
-export function getRouterHandledPaths(): readonly string[] {
-  return ROUTER_HANDLED_PATHS;
-}
-
-export function getRouterHandledEndpoints(): readonly EndpointDefinition[] {
-  return ROUTER_HANDLED_ENDPOINTS;
 }
 
 export function getEndpointDefinition(path: string): EndpointDefinition | undefined {

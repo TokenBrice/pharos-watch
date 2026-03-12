@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDailyDigest } from "@/hooks/use-daily-digest";
+import { useDailyDigest } from "@/hooks/api-hooks";
 import { getDigestBodyParagraphs } from "@/lib/digest";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { cn } from "@/lib/utils";

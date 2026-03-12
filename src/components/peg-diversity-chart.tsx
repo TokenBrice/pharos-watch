@@ -9,7 +9,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
-import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
+import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { CHART_HEIGHT, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";

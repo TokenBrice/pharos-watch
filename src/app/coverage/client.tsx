@@ -31,14 +31,16 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
-import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import {
+  useBluechipRatings,
+  useDexLiquidity,
+  usePegSummary,
+  useReportCards,
+  useYieldRankings,
+} from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { usePegSummary } from "@/hooks/use-peg-summary";
-import { useReportCards } from "@/hooks/use-report-cards";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useYieldRankings } from "@/hooks/use-yield-rankings";
 import {
   buildCoverageFeatureSummary,
   buildCoverageRow,

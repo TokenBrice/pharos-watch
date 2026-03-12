@@ -4,7 +4,7 @@ import { useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useYieldRankings } from "@/hooks/use-yield-rankings";
+import { useYieldRankings } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";

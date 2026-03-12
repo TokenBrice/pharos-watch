@@ -11,7 +11,7 @@ npm test              # Run all tests once (CI mode)
 npm run test:watch    # Watch mode — re-runs on file changes
 npm run lint          # ESLint across frontend + worker code
 npm run seo:check     # Static SEO audit against built `out/` HTML
-npm run check:worker-boundary # Enforce worker/src import boundary (no src/lib/* imports)
+npm run check:worker-boundary # Enforce the worker/frontend boundary in both directions (no worker -> src imports, no src/shared/scripts -> worker runtime imports)
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report

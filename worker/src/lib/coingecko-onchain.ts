@@ -7,12 +7,10 @@
 import { cgUrl, cgHeaders } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
-import { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "./chain-registry";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 
-// Re-export for downstream consumers
-export { CG_CHAIN_MAP, CG_CHAIN_REVERSE };
+export { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "@shared/lib/chain-provider-registry";
 
 /** Check if CoinGecko onchain API is available (API key configured) */
 let onchainAvailable = false;

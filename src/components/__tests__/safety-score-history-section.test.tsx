@@ -5,7 +5,7 @@ const { useSafetyScoreHistoryMock } = vi.hoisted(() => ({
   useSafetyScoreHistoryMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-safety-score-history", () => ({
+vi.mock("@/hooks/api-hooks", () => ({
   useSafetyScoreHistory: useSafetyScoreHistoryMock,
 }));
 

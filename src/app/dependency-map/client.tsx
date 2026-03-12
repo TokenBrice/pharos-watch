@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useReportCards } from "@/hooks/use-report-cards";
+import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { ContagionGraph } from "@/components/contagion-graph";

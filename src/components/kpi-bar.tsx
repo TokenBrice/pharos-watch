@@ -2,12 +2,14 @@
 
 import { useMemo } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import {
+  useDexLiquidity,
+  usePegSummary,
+  useStabilityIndex,
+} from "@/hooks/api-hooks";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useStabilityIndex } from "@/hooks/use-stability-index";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { usePegSummary } from "@/hooks/use-peg-summary";
-import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStressSignals } from "@/hooks/use-stress-signals";
 import { useCountUp } from "@/hooks/use-count-up";

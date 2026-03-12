@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStatCard } from "@/components/metric-stat-card";
-import { useUsdsStatus } from "@/hooks/use-usds-status";
+import { useUsdsStatus } from "@/hooks/api-hooks";
 
 function formatLastChecked(timestamp: number): string {
   const date = new Date(timestamp * 1000);

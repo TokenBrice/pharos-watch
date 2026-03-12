@@ -1,0 +1,448 @@
+import { z } from "zod";
+import type { MethodologyEnvelope, PegCurrency } from "./core";
+import {
+  BluechipGrade,
+  DepegPrimaryTrustSchema,
+  MethodologyEnvelopeSchema,
+  PriceConfidenceSchema,
+} from "./core";
+
+const PegBucketsSchema = z.record(z.string(), z.number());
+const ChainCirculatingSchema = z.record(
+  z.string(),
+  z.object({
+    current: z.number(),
+    circulatingPrevDay: z.number(),
+    circulatingPrevWeek: z.number(),
+    circulatingPrevMonth: z.number(),
+  }),
+);
+
+const StablecoinDataRawSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  symbol: z.string(),
+  geckoId: z.string().nullable().optional(),
+  gecko_id: z.string().nullable().optional(),
+  pegType: z.string(),
+  pegMechanism: z.string(),
+  price: z.number().nullable(),
+  priceSource: z.string(),
+  priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  priceUpdatedAt: z.number().nullable().optional(),
+  supplySource: z.string().optional(),
+  circulating: PegBucketsSchema,
+  circulatingPrevDay: PegBucketsSchema.nullish(),
+  circulatingPrevWeek: PegBucketsSchema.nullish(),
+  circulatingPrevMonth: PegBucketsSchema.nullish(),
+  chainCirculating: ChainCirculatingSchema,
+  chains: z.array(z.string()),
+});
+
+const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
+  id: asset.id,
+  name: asset.name,
+  symbol: asset.symbol,
+  geckoId: asset.geckoId ?? asset.gecko_id ?? null,
+  pegType: asset.pegType,
+  pegMechanism: asset.pegMechanism,
+  price: asset.price,
+  priceSource: asset.priceSource,
+  priceConfidence: asset.priceConfidence ?? null,
+  priceUpdatedAt: asset.priceUpdatedAt ?? null,
+  supplySource: asset.supplySource,
+  circulating: asset.circulating,
+  circulatingPrevDay: asset.circulatingPrevDay ?? {},
+  circulatingPrevWeek: asset.circulatingPrevWeek ?? {},
+  circulatingPrevMonth: asset.circulatingPrevMonth ?? {},
+  chainCirculating: asset.chainCirculating,
+  chains: asset.chains,
+}));
+export type StablecoinData = z.infer<typeof StablecoinDataSchema>;
+
+export const StablecoinListResponseSchema = z.object({
+  peggedAssets: z.array(StablecoinDataSchema),
+  fxFallbackRates: z.record(z.string(), z.number()).optional(),
+});
+export type StablecoinListResponse = z.infer<typeof StablecoinListResponseSchema>;
+
+export type CauseOfDeath =
+  | "algorithmic-failure"
+  | "counterparty-failure"
+  | "liquidity-drain"
+  | "regulatory"
+  | "abandoned";
+
+export interface DeadStablecoin {
+  name: string;
+  symbol: string;
+  llamaId?: string;
+  logo?: string;
+  pegCurrency: PegCurrency;
+  causeOfDeath: CauseOfDeath;
+  deathDate: string;
+  peakMcap?: number;
+  epitaph?: string;
+  obituary: string;
+  sourceUrl: string;
+  sourceLabel: string;
+}
+
+export interface BluechipSmidge {
+  stability: string | null;
+  management: string | null;
+  implementation: string | null;
+  decentralization: string | null;
+  governance: string | null;
+  externals: string | null;
+}
+
+export interface BluechipRating {
+  grade: BluechipGrade;
+  slug: string;
+  collateralization: number;
+  smartContractAudit: boolean;
+  dateOfRating: string;
+  dateLastChange: string | null;
+  smidge: BluechipSmidge;
+}
+
+export type BluechipRatingsMap = Record<string, BluechipRating>;
+
+export const LiquidityPoolSourceFamilySchema = z.enum([
+  "dl",
+  "cg_onchain",
+  "gecko_terminal",
+  "dexscreener",
+  "cg_tickers",
+]);
+export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamilySchema>;
+
+const LegacyLiquidityPoolSourceSchema = z.enum([
+  "cg",
+  "gt",
+  "ds",
+]);
+
+export const LiquidityCoverageClassSchema = z.enum([
+  "primary",
+  "mixed",
+  "fallback",
+  "legacy",
+  "unobserved",
+]);
+export type LiquidityCoverageClass = z.infer<typeof LiquidityCoverageClassSchema>;
+
+const LiquiditySourceMixEntrySchema = z.object({
+  poolCount: z.number(),
+  tvlUsd: z.number(),
+});
+export type LiquiditySourceMixEntry = z.infer<typeof LiquiditySourceMixEntrySchema>;
+
+export const LiquiditySourceMixSchema = z.record(z.string(), LiquiditySourceMixEntrySchema);
+export type LiquiditySourceMix = Record<string, LiquiditySourceMixEntry>;
+
+const DexLiquidityPoolSchema = z.object({
+  project: z.string(),
+  chain: z.string(),
+  tvlUsd: z.number(),
+  symbol: z.string(),
+  volumeUsd1d: z.number(),
+  poolType: z.string(),
+  source: z.union([LiquidityPoolSourceFamilySchema, LegacyLiquidityPoolSourceSchema]).optional(),
+  extra: z
+    .object({
+      amplificationCoefficient: z.number().optional(),
+      balanceRatio: z.number().optional(),
+      feeTier: z.number().optional(),
+      effectiveTvl: z.number().optional(),
+      organicFraction: z.number().optional(),
+      pairQuality: z.number().optional(),
+      stressIndex: z.number().optional(),
+      isMetaPool: z.boolean().optional(),
+      maturityDays: z.number().optional(),
+      registryId: z.string().optional(),
+      balanceDetails: z
+        .array(
+          z.object({
+            symbol: z.string(),
+            balancePct: z.number(),
+            isTracked: z.boolean(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+});
+export type DexLiquidityPool = z.infer<typeof DexLiquidityPoolSchema>;
+
+const DexPriceSourceSchema = z.object({
+  protocol: z.string(),
+  chain: z.string(),
+  price: z.number(),
+  tvl: z.number(),
+});
+
+const DexLiquidityDataSchema = z.object({
+  totalTvlUsd: z.number(),
+  totalVolume24hUsd: z.number(),
+  totalVolume7dUsd: z.number(),
+  poolCount: z.number(),
+  pairCount: z.number(),
+  chainCount: z.number(),
+  protocolTvl: z.record(z.string(), z.number()),
+  chainTvl: z.record(z.string(), z.number()),
+  topPools: z.array(DexLiquidityPoolSchema),
+  liquidityScore: z.number().nullable(),
+  concentrationHhi: z.number().nullable(),
+  depthStability: z.number().nullable(),
+  tvlChange24h: z.number().nullable(),
+  tvlChange7d: z.number().nullable(),
+  updatedAt: z.number(),
+  dexPriceUsd: z.number().nullable(),
+  dexDeviationBps: z.number().nullable(),
+  priceSourceCount: z.number().nullable(),
+  priceSourceTvl: z.number().nullable(),
+  priceSources: z.array(DexPriceSourceSchema).nullable(),
+  effectiveTvlUsd: z.number(),
+  avgPoolStress: z.number().nullable(),
+  weightedBalanceRatio: z.number().nullable(),
+  organicFraction: z.number().nullable(),
+  durabilityScore: z.number().nullable(),
+  coverageClass: LiquidityCoverageClassSchema,
+  coverageConfidence: z.number(),
+  sourceMix: LiquiditySourceMixSchema,
+  balanceMeasuredTvlUsd: z.number(),
+  organicMeasuredTvlUsd: z.number(),
+  scoreComponents: z
+    .object({
+      tvlDepth: z.number(),
+      volumeActivity: z.number(),
+      poolQuality: z.number(),
+      durability: z.number(),
+      pairDiversity: z.number(),
+      crossChain: z.number().optional(),
+    })
+    .nullable(),
+  lockedLiquidityPct: z.number().nullable().optional(),
+  methodologyVersion: z.string(),
+});
+export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
+
+export interface DexLiquidityHistoryPoint {
+  tvl: number;
+  volume24h: number;
+  score: number | null;
+  date: number;
+  coverageClass: LiquidityCoverageClass;
+  coverageConfidence: number;
+  methodologyVersion: string;
+}
+
+export type DexLiquidityMap = Record<string, DexLiquidityData>;
+export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema);
+
+export const DEX_GLOBAL_KEY = "__global__";
+
+export interface DepegEvent {
+  id: number;
+  stablecoinId: string;
+  symbol: string;
+  pegType: string;
+  direction: "above" | "below";
+  peakDeviationBps: number;
+  startedAt: number;
+  endedAt: number | null;
+  startPrice: number;
+  peakPrice: number | null;
+  recoveryPrice: number | null;
+  pegReference: number;
+  source: "live" | "backfill";
+}
+
+const DepegEventSchema = z.object({
+  id: z.number(),
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  pegType: z.string(),
+  direction: z.enum(["above", "below"]),
+  peakDeviationBps: z.number(),
+  startedAt: z.number(),
+  endedAt: z.number().nullable(),
+  startPrice: z.number(),
+  peakPrice: z.number().nullable(),
+  recoveryPrice: z.number().nullable(),
+  pegReference: z.number(),
+  source: z.enum(["live", "backfill"]),
+});
+
+export const DepegEventsResponseSchema = z.object({
+  events: z.array(DepegEventSchema),
+  total: z.number(),
+  methodology: MethodologyEnvelopeSchema.optional(),
+});
+export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
+
+export type DepegDewsMethodology = MethodologyEnvelope;
+
+const PegSummaryCoinSchema = z.object({
+  id: z.string(),
+  symbol: z.string(),
+  name: z.string(),
+  pegType: z.string(),
+  pegCurrency: z.string(),
+  governance: z.string(),
+  currentDeviationBps: z.number().nullable(),
+  pegScore: z.number().nullable(),
+  priceSource: z.string().optional(),
+  priceConfidence: PriceConfidenceSchema.nullable().optional(),
+  priceUpdatedAt: z.number().nullable().optional(),
+  primaryTrust: DepegPrimaryTrustSchema.optional(),
+  pegPct: z.number(),
+  severityScore: z.number(),
+  spreadPenalty: z.number(),
+  eventCount: z.number(),
+  worstDeviationBps: z.number().nullable(),
+  activeDepeg: z.boolean(),
+  lastEventAt: z.number().nullable(),
+  trackingSpanDays: z.number(),
+  methodologyVersion: z.string(),
+  dexPriceCheck: z
+    .object({
+      dexPrice: z.number(),
+      dexDeviationBps: z.number(),
+      agrees: z.boolean(),
+      sourcePools: z.number(),
+      sourceTvl: z.number(),
+    })
+    .nullable()
+    .optional(),
+});
+export type PegSummaryCoin = z.infer<typeof PegSummaryCoinSchema>;
+
+const PegSummaryStatsSchema = z.object({
+  activeDepegCount: z.number(),
+  medianDeviationBps: z.number(),
+  worstCurrent: z.object({ id: z.string(), symbol: z.string(), bps: z.number() }).nullable(),
+  coinsAtPeg: z.number(),
+  totalTracked: z.number(),
+  depegEventsToday: z.number(),
+  depegEventsYesterday: z.number(),
+  fallbackPegRates: z.array(z.string()).optional(),
+});
+export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
+
+export const PegSummaryResponseSchema = z.object({
+  coins: z.array(PegSummaryCoinSchema),
+  summary: PegSummaryStatsSchema.nullable(),
+  methodology: MethodologyEnvelopeSchema,
+});
+export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
+
+export const BLACKLIST_STABLECOINS = ["USDC", "USDT", "EURC", "PAXG", "XAUT"] as const;
+
+export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
+export type BlacklistEventType = "blacklist" | "unblacklist" | "destroy";
+
+export interface BlacklistEvent {
+  id: string;
+  stablecoin: BlacklistStablecoin;
+  chainId: string;
+  chainName: string;
+  eventType: BlacklistEventType;
+  address: string;
+  amount: number | null;
+  txHash: string;
+  blockNumber: number;
+  timestamp: number;
+  methodologyVersion: string;
+  explorerTxUrl: string;
+  explorerAddressUrl: string;
+}
+
+const BlacklistEventSchema = z.object({
+  id: z.string(),
+  stablecoin: z.enum(BLACKLIST_STABLECOINS),
+  chainId: z.string(),
+  chainName: z.string(),
+  eventType: z.enum(["blacklist", "unblacklist", "destroy"]),
+  address: z.string(),
+  amount: z.number().nullable(),
+  txHash: z.string(),
+  blockNumber: z.number(),
+  timestamp: z.number(),
+  methodologyVersion: z.string(),
+  explorerTxUrl: z.string(),
+  explorerAddressUrl: z.string(),
+});
+
+export const BlacklistResponseSchema = z.object({
+  events: z.array(BlacklistEventSchema),
+  total: z.number(),
+  methodology: MethodologyEnvelopeSchema.optional(),
+});
+export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;
+
+const SignalDetailSchema = z
+  .object({
+    value: z.number(),
+    available: z.boolean(),
+  })
+  .passthrough();
+
+const StressSignalEntrySchema = z.object({
+  score: z.number(),
+  band: z.string(),
+  signals: z.record(z.string(), SignalDetailSchema),
+  computedAt: z.number(),
+  methodologyVersion: z.string(),
+});
+
+export interface StressSignalEntry {
+  score: number;
+  band: string;
+  signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
+  computedAt: number;
+  methodologyVersion: string;
+}
+
+export const StressSignalsAllResponseSchema = z.object({
+  signals: z.record(z.string(), StressSignalEntrySchema),
+  updatedAt: z.number(),
+  malformedRows: z.number().optional(),
+  methodology: MethodologyEnvelopeSchema,
+});
+
+export interface StressSignalsAllResponse {
+  signals: Record<string, StressSignalEntry>;
+  updatedAt: number;
+  malformedRows?: number;
+  methodology: DepegDewsMethodology;
+}
+
+const StressSignalHistoryEntrySchema = z.object({
+  date: z.number(),
+  score: z.number(),
+  band: z.string(),
+  signals: z.record(z.string(), SignalDetailSchema),
+  methodologyVersion: z.string(),
+});
+
+export const StressSignalDetailResponseSchema = z.object({
+  current: StressSignalEntrySchema.nullable(),
+  history: z.array(StressSignalHistoryEntrySchema),
+  malformedRows: z.number().optional(),
+  methodology: MethodologyEnvelopeSchema,
+});
+
+export interface StressSignalDetailResponse {
+  current: StressSignalEntry | null;
+  history: {
+    date: number;
+    score: number;
+    band: string;
+    signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
+    methodologyVersion: string;
+  }[];
+  methodology: DepegDewsMethodology;
+}

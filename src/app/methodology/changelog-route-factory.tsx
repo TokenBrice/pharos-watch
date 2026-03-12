@@ -25,8 +25,10 @@ interface MethodologyChangelogRouteConfig<T extends MethodologyChangelogSourceEn
   title: string;
   lead: ReactNode;
   accentClass: string;
-  entries: readonly T[];
-  selectImpact: (entry: T) => readonly string[];
+  entries?: readonly T[];
+  selectImpact?: (entry: T) => readonly string[];
+  sections?: readonly { id: string; label: string }[];
+  renderContent?: () => ReactNode;
 }
 
 interface MethodologyChangelogRouteDefinition {
@@ -43,7 +45,9 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
     description: config.metadataDescription,
     path: config.path,
   });
-  const entries = mapMethodologyChangelogEntries(config.entries, config.selectImpact);
+  const entries = config.entries && config.selectImpact
+    ? mapMethodologyChangelogEntries(config.entries, config.selectImpact)
+    : [];
 
   const Page = () => (
     <MethodologyChangelogPage
@@ -53,7 +57,10 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
       lead={config.lead}
       accentClass={config.accentClass}
       entries={entries}
-    />
+      sections={config.sections}
+    >
+      {config.renderContent?.()}
+    </MethodologyChangelogPage>
   );
 
   return { metadata, entries, Page };

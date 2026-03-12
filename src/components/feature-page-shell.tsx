@@ -3,7 +3,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { FeatureStatusBadge, type FeatureStatus } from "@/components/feature-status-badge";
 import { cn } from "@/lib/utils";
 
-interface FeaturePageShellProps {
+export interface FeaturePageShellProps {
   breadcrumbName: string;
   path: string;
   title: string;

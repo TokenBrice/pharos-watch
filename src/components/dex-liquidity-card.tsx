@@ -9,9 +9,8 @@ import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/secti
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { useDexLiquidity, useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
-import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";

@@ -26,6 +26,9 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 
 - Page: `src/app/status/page.tsx`
 - Client implementation: `src/app/status/client.tsx`
+- Session/auth hook: `src/hooks/use-admin-session-key.ts`
+- Dashboard model hook: `src/hooks/use-status-dashboard-model.ts`
+- Pure derived-data helpers: `src/lib/status-dashboard-model.ts`
 - Decomposed UI components: `src/components/status/*`
 - The page shell now adds a command-center top fold above the widget stack:
   - consolidated overall-status hero (`StatusBanner`) + operator watchlist
@@ -48,6 +51,9 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - `src/hooks/use-status-history.ts`
   - Calls `GET /api/status-history` with `X-Admin-Key`
   - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
+- `src/hooks/use-status-dashboard-model.ts`
+  - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
+  - Derives the operational lane summaries, quick-jump section cards, notice rail entries, and cross-surface status deltas used by the page shell
 - `src/components/status/telegram-bot-stats.tsx`
   - Renders Telegram subscriber adoption metrics, top subscribed coins, custom-preference / quiet-hour counts, and the latest `dispatch-telegram-alerts` delivery summary
 - Cron cards are grouped by trigger slot on the page:
@@ -83,6 +89,14 @@ Probe groups are sourced from `shared/lib/api-endpoints.ts`:
 ## Backend Contract (`GET /api/status`)
 
 Source: `worker/src/api/status.ts`
+
+Related extracted loaders:
+
+- `worker/src/api/status-derived-data.ts`
+  - `getDatasetFreshness()`
+  - `getTelegramBotStats()`
+  - `getMintBurnReconciliation()`
+  - empty fallback builders for dataset freshness / reserve composition
 
 ### Auth and caching
 

@@ -1,18 +1,12 @@
-import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/stability-index-version";
-
-const StabilityIndexClient = dynamic(
-  () => import("./client").then((m) => ({ default: m.StabilityIndexClient })),
-  { loading: () => <div className="space-y-6"><Skeleton className="h-48 w-full rounded-xl" /><Skeleton className="h-[350px] w-full rounded-xl" /><Skeleton className="h-[350px] w-full rounded-xl" /></div> },
-);
 
 const description = "Historical Pharos Stability Index scores, component breakdowns, and condition band analysis for the stablecoin market.";
 
@@ -36,24 +30,28 @@ const FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
-export default function StabilityIndexPage() {
-  return (
-    <FeaturePageShell
-      breadcrumbName="Stability Index"
-      path="/stability-index/"
-      title="Pharos Stability Index"
-      statusBadge={{ status: "mature", version: PSI_METHODOLOGY_VERSION_LABEL }}
-      methodology={{
-        version: PSI_METHODOLOGY_VERSION_LABEL,
-        changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
-      }}
-      leadParagraphs={[
-        "Historical stablecoin market health scores, component breakdowns, and condition band analysis.",
-        "The Pharos Stability Index (PSI) is a composite 0–100 score that combines peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend into a single market health reading. Scores fall into six condition bands, from BEDROCK (90+) to MELTDOWN (below 20), so you can gauge market stress at a glance.",
-      ]}
-    >
-      <StabilityIndexClient />
-      <FaqSection items={FAQ_ITEMS} includeJsonLd />
-    </FeaturePageShell>
-  );
-}
+export default createClientFeaturePage({
+  loadClient: () => import("./client").then((m) => ({ default: m.StabilityIndexClient })),
+  loading: (
+    <div className="space-y-6">
+      <Skeleton className="h-48 w-full rounded-xl" />
+      <Skeleton className="h-[350px] w-full rounded-xl" />
+      <Skeleton className="h-[350px] w-full rounded-xl" />
+    </div>
+  ),
+  shell: {
+    breadcrumbName: "Stability Index",
+    path: "/stability-index/",
+    title: "Pharos Stability Index",
+    statusBadge: { status: "mature", version: PSI_METHODOLOGY_VERSION_LABEL },
+    methodology: {
+      version: PSI_METHODOLOGY_VERSION_LABEL,
+      changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
+    },
+    leadParagraphs: [
+      "Historical stablecoin market health scores, component breakdowns, and condition band analysis.",
+      "The Pharos Stability Index (PSI) is a composite 0–100 score that combines peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend into a single market health reading. Scores fall into six condition bands, from BEDROCK (90+) to MELTDOWN (below 20), so you can gauge market stress at a glance.",
+    ],
+  },
+  afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
+});

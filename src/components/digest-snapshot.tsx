@@ -1,7 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDigestSnapshot } from "@/hooks/use-digest-snapshot";
+import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";

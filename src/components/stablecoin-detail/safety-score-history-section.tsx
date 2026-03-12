@@ -4,7 +4,7 @@ import { GradeBadge } from "@/components/grade-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
-import { useSafetyScoreHistory } from "@/hooks/use-safety-score-history";
+import { useSafetyScoreHistory } from "@/hooks/api-hooks";
 import type { SafetyScoreHistoryPoint } from "@shared/types";
 
 function formatSafetyScoreHistoryDate(date: number): string {

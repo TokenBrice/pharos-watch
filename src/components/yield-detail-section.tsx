@@ -7,7 +7,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useYieldRankings } from "@/hooks/use-yield-rankings";
+import { useYieldRankings } from "@/hooks/api-hooks";
 import { WARNING_SIGNAL_LABELS, formatYieldWarningSignal } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";

@@ -12,7 +12,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
-import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
+import { useStabilityIndexDetail } from "@/hooks/api-hooks";
 import { trackEvent } from "@/lib/analytics";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
