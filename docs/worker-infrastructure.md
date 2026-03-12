@@ -665,6 +665,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 | `crvusd` | `crvusd-curve` | `inputs.primary.kind = "http-json"` -> `https://prices.curve.finance/v1/crvusd/markets` |
 | `infinifi` | `iusd-infinifi` | `inputs.primary.kind = "http-json"` -> `https://eth-api.infinifi.xyz/api/protocol/data` |
 | `m0` | `m-m0`, `musd-metamask`, `usdn-noble` | `inputs.primary.kind = "http-json"` -> `https://protocol-api.m0.org/graphql` (`CollateralCurrent`) |
+| `mento` | `cusd-celo`, `ceur-celo` | `inputs.primary.kind = "http-html"` -> `https://reserve.mento.org/` (server-rendered `reserveComposition`) |
 | `evm-branch-balances` | `bold-liquity`, `usnd-nerite` | `inputs.primary.kind = "onchain-evm"` -> branch `ActivePool` ERC-20 balances + DefiLlama prices |
 | `openeden-usdo` | `usdo-openeden` | `inputs.primary.kind = "http-json"` -> `https://prod-gw.openeden.com/usdo/sys/reserve-composition-last` |
 | `reservoir` | `wsrusd-reservoir` | `inputs.primary.kind = "http-json"` -> `https://app.reservoir.xyz/api/reserves/raw` |

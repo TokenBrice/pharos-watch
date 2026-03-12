@@ -10,6 +10,7 @@ const BALANCE_OF_SELECTOR = "0x70a08231";
 type JsonObject = Record<string, unknown>;
 
 type JsonInput = Extract<LiveReserveInput, { kind: "http-json" }>;
+type HtmlInput = Extract<LiveReserveInput, { kind: "http-html" }>;
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 
 interface EvmCallOptions {
@@ -31,9 +32,20 @@ export function isOnchainEvmInput(input: LiveReserveInput): input is EvmInput {
   return input.kind === "onchain-evm";
 }
 
+export function isHttpHtmlInput(input: LiveReserveInput): input is HtmlInput {
+  return input.kind === "http-html";
+}
+
 export function requireJsonInput(input: LiveReserveInput, adapterName: string): JsonInput {
   if (!isHttpJsonInput(input)) {
     throw new Error(`${adapterName} adapter requires an http-json primary input`);
+  }
+  return input;
+}
+
+export function requireHtmlInput(input: LiveReserveInput, adapterName: string): HtmlInput {
+  if (!isHttpHtmlInput(input)) {
+    throw new Error(`${adapterName} adapter requires an http-html primary input`);
   }
   return input;
 }
@@ -58,6 +70,29 @@ export async function fetchJsonWithRetry<T>(
     throw new Error(`HTTP ${res.status} for ${url}`);
   }
   return res.json() as Promise<T>;
+}
+
+export async function fetchTextWithRetry(
+  url: string,
+  signal: AbortSignal,
+  timeoutMs = 10_000,
+): Promise<string> {
+  const res = await fetchWithRetry(
+    url,
+    {
+      signal,
+      headers: { "User-Agent": "Mozilla/5.0" },
+    },
+    2,
+    { timeoutMs },
+  );
+  if (!res) {
+    throw new Error(`Fetch failed for ${url}`);
+  }
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} for ${url}`);
+  }
+  return res.text();
 }
 
 export async function fetchDefiLlamaPrices(

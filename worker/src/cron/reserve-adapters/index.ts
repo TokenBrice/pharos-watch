@@ -7,6 +7,7 @@ import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchFxReserves } from "./fx";
 import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchM0Reserves } from "./m0";
+import { fetchMentoReserves } from "./mento";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
@@ -43,6 +44,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   fx: fetchFxReserves,
   infinifi: fetchInfiniFiReserves,
   m0: fetchM0Reserves,
+  mento: fetchMentoReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   reservoir: fetchReservoirReserves,
   "single-asset": fetchSingleAssetReserves,

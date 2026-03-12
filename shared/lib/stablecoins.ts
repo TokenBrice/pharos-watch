@@ -2958,6 +2958,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     llamaId: "24",
     geckoId: "celo-dollar",
     deploymentModel: "third-party-bridge",
+    liveReservesConfig: {
+      adapter: "mento",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "mento-reserve",
+      display: {
+        url: "https://reserve.mento.org/",
+        label: "Reserve",
+      },
+      inputs: {
+        primary: {
+          kind: "http-html",
+          url: "https://reserve.mento.org/",
+        },
+      },
+    },
     collateral: "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
     pegMechanism: "Mento AMM: users mint cUSD by sending $1 of reserve collateral, burn to receive equivalent value; oracle-driven arbitrage restores peg; circuit breakers enforce safety bounds",
     links: [
@@ -3927,6 +3943,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   eur("ceur-celo", "Celo Euro", "CEUR", "algorithmic", "centralized-dependent", {
     llamaId: "52",
     geckoId: "celo-euro",
+    liveReservesConfig: {
+      adapter: "mento",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "mento-reserve",
+      display: {
+        url: "https://reserve.mento.org/",
+        label: "Reserve",
+      },
+      inputs: {
+        primary: {
+          kind: "http-html",
+          url: "https://reserve.mento.org/",
+        },
+      },
+    },
     collateral: "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
     pegMechanism: "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
     proofOfReserves: { type: "real-time", url: "https://reserve.mento.org/", provider: "Mento Reserve (on-chain, publicly verifiable)" },
