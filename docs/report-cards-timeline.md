@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history. Covers v1.0 through v5.5 (2026-02-25 → 2026-03-01).
+Internal changelog reconstructed from git history. Covers v1.0 through v5.6 (2026-02-25 → 2026-03-12).
 
 ---
 
@@ -251,6 +251,16 @@ Three fixes landed in peg scoring to prevent young coins with repeated brief dep
 
 Weights and grade thresholds are unchanged from v5.4.
 
+### v5.6 — Exit-liquidity integration (Mar 12)
+
+Safety Score liquidity now evaluates modeled exit quality, not just raw DEX depth:
+
+- Added a redemption-backstop dataset for redeemable assets, covering onchain collateral redemptions, stable-basket redemptions, queue-based buffer systems, and issuer redemption rails.
+- The Liquidity dimension now uses `effectiveExitScore`, which preserves DEX liquidity as the floor while allowing redemption quality to improve the dimension when a credible direct route exists.
+- Added route-family caps so queue-based and offchain issuer systems cannot look unrealistically liquid even when redemption exists.
+
+Weights and grade thresholds are unchanged from v5.5.
+
 ---
 
 ## Quick Reference: Weight Evolution
@@ -264,7 +274,7 @@ Weights and grade thresholds are unchanged from v5.4.
 | v3.3       | 25%        | 20%       | —       | 20%        | 15%              | 25%      |
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
-| **v5.0–5.5** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v5.0–5.6** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

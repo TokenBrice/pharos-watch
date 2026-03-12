@@ -42,6 +42,7 @@ Verified entry point for the `/docs` corpus. Use this file to find the authorita
 - [dex-liquidity.md](./dex-liquidity.md) - liquidity score algorithm, discovery pipeline, and DEX price cross-validation
 - [stability-index.md](./stability-index.md) - PSI formula, bands, storage, and API surface
 - [report-cards.md](./report-cards.md) - report-card scoring, portfolio analyzer, and stress test
+- [redemption-backstops.md](./redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers
 - [supply-snapshot.md](./supply-snapshot.md) - supply snapshot cron, schema, helpers, and API consumers
 - [blacklist-tracker.md](./blacklist-tracker.md) - freeze/blacklist coverage, contracts, sync flow, and API/frontend behavior
 - [mint-burn-flows.md](./mint-burn-flows.md) - mint/burn ingestion, scoring, schema, and admin backfills

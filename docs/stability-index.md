@@ -130,7 +130,7 @@ See `docs/api-reference.md` for full response shape.
 
 - **Homepage widget**: `src/components/stability-index.tsx` — score, band, delta from yesterday, 30-day sparkline, animated lighthouse icon
 - **Dedicated page**: `src/app/stability-index/client.tsx` — score history chart with band-colored zones, component breakdown stacked area chart, time range filter, methodology section
-- **Hook**: `src/hooks/use-stability-index.ts` — `useStabilityIndex()` (homepage), `useStabilityIndexDetail()` (page)
+- **Hook**: `src/hooks/api-hooks.ts` — `useStabilityIndex()` (homepage), `useStabilityIndexDetail()` (page)
 - **Route strategy (2026-03-05):** legacy `/stability-index-alt` was retired after Tier 3A review (no nav/sitemap/internal product usage) and now redirects to `/stability-index` via `public/_redirects`
 
 ## Digest Integration
@@ -147,4 +147,4 @@ The daily digest cron (08:05 UTC) queries the latest two stability index rows an
 | `worker/src/api/backfill-stability-index.ts` | Admin backfill (replays formula over historical data) |
 | `src/components/stability-index.tsx` | Homepage widget + lighthouse SVG |
 | `src/app/stability-index/client.tsx` | Full page with charts and methodology |
-| `src/hooks/use-stability-index.ts` | TanStack Query hooks |
+| `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useStabilityIndex()` and `useStabilityIndexDetail()` |

@@ -33,6 +33,7 @@ describe("api endpoint registry", () => {
       "/api/safety-score-history?stablecoin=usdt-tether",
       "/api/stability-index",
       "/api/report-cards",
+      "/api/redemption-backstops",
       "/api/mint-burn-flows",
       "/api/mint-burn-events?stablecoin=usdt-tether",
       "/api/stress-signals",

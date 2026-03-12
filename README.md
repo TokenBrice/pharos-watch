@@ -18,7 +18,8 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 81 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Detail pages** — price chart, supply history, chain distribution, reserve card, liquidity card, and safety ratings for each stablecoin
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 47 configured assets
+- **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
 - **Status dashboard** — cron health, cache freshness, and system monitoring
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
@@ -140,7 +141,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migration files (71 total)
+└── migrations/                   D1 SQL migration files (72 total)
 ```
 
 ## Documentation
@@ -150,6 +151,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
 - [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior
 - [docs/live-reserves.md](./docs/live-reserves.md) - live reserve-sync config, adapter registry, API modes, and status/detail consumers
+- [docs/redemption-backstops.md](./docs/redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers
 - [docs/deployment-process.md](./docs/deployment-process.md) - local merge gate and CI deploy sequence
 - [docs/methodology-page.md](./docs/methodology-page.md) - `/methodology` section-to-source mapping and update contract
 
@@ -163,7 +165,7 @@ Cloudflare Worker (API layer)
   ├── Cron: 6,26,46 * * * *                     → DEX discovery staging
   ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
   ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + yield sync
-  ├── Cron: 11 * * * *                          → live reserve sync
+  ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
   └── Cron: 5 8 * * *                           → Bluechip sync + daily digest + discovery scan
@@ -181,6 +183,8 @@ Cloudflare D1 (SQLite database)
   ├── supply_history       → daily per-coin supply snapshots from cached stablecoins data (08:00 UTC + retry upserts)
   ├── reserve_composition  → live reserve slices per coin for live-enabled assets
   ├── reserve_sync_state   → per-coin reserve-sync freshness, status, and warnings
+  ├── redemption_backstop  → current modeled redemption-route / effective-exit snapshot per configured coin
+  ├── redemption_backstop_history → daily redemption-route history snapshot per configured coin
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
   ├── stability_index_samples → high-frequency PSI samples (sub-daily granularity)
   ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs

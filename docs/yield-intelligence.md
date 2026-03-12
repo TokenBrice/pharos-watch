@@ -565,10 +565,10 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 ### Hooks
 
-| Hook               | File                              | Endpoint              | Stale Time            |
-| ------------------ | --------------------------------- | --------------------- | --------------------- |
-| `useYieldRankings` | `src/hooks/use-yield-rankings.ts` | `/api/yield-rankings` | `CRON_30MIN` (30 min) |
-| `useYieldHistory`  | `src/hooks/use-yield-history.ts`  | `/api/yield-history`  | `CRON_30MIN` (30 min) |
+| Hook               | File                     | Endpoint              | Stale Time            |
+| ------------------ | ------------------------ | --------------------- | --------------------- |
+| `useYieldRankings` | `src/hooks/api-hooks.ts` | `/api/yield-rankings` | `CRON_30MIN` (30 min) |
+| `useYieldHistory`  | `src/hooks/api-hooks.ts` | `/api/yield-history`  | `CRON_30MIN` (30 min) |
 
 ---
 
@@ -631,8 +631,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `shared/lib/classification.ts`                       | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`                                                                                                     |
-| `src/hooks/use-yield-rankings.ts`                    | TanStack Query hook for rankings                                                                                                             |
-| `src/hooks/use-yield-history.ts`                     | TanStack Query hook for per-coin APY history                                                                                                 |
+| `src/hooks/api-hooks.ts`                             | TanStack Query hook exports for `useYieldRankings()` and `useYieldHistory()`                                                                |
 | `src/lib/yield-constants.ts`                         | Shared warning-signal labels and formatter used by yield detail/history surfaces                                                             |
 | `src/app/yield/page.tsx`                             | SSG page wrapper with metadata                                                                                                               |
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |

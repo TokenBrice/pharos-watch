@@ -78,7 +78,7 @@ See `docs/api-reference.md` for the exact response shape.
 
 ## Frontend Usage
 
-- `src/hooks/use-bluechip-ratings.ts` exposes the cached map with `CRON_24H`.
+- `src/hooks/api-hooks.ts` exposes `useBluechipRatings()` with `CRON_24H`.
 - `src/components/bluechip-header-badge.tsx` renders the external Bluechip badge/link on stablecoin detail pages.
 - `src/app/compare/client.tsx` includes Bluechip data in compare-page fetch orchestration and freshness tracking.
 - `worker/src/lib/report-cards-snapshot.ts` copies the fetched grade into report-card `rawInputs.bluechipGrade` for client-side analysis surfaces.
@@ -96,6 +96,6 @@ See `docs/api-reference.md` for the exact response shape.
 | `worker/src/lib/bluechip-slugs.ts` | Explicit Bluechip slug → Pharos ID coverage map |
 | `worker/src/cron/sync-bluechip.ts` | Daily fetch + normalization + cache write |
 | `worker/src/api/cache-handlers.ts` | Public cache-passthrough handler for `/api/bluechip-ratings` |
-| `src/hooks/use-bluechip-ratings.ts` | TanStack Query hook |
+| `src/hooks/api-hooks.ts` | TanStack Query hook export for `useBluechipRatings()` |
 | `src/components/bluechip-header-badge.tsx` | Detail-page badge and outbound Bluechip link |
 | `src/lib/bluechip.ts` | Frontend sort/base URL helpers |

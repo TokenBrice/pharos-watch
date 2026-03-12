@@ -1155,6 +1155,26 @@ Top-level fields:
 | `methodology` | `object` | Version metadata plus component weights, effective-exit blend weights, and route-family caps |
 | `updatedAt` | `number` | Freshest `updated_at` timestamp across all current rows |
 
+`RedemptionBackstopEntry` highlights:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `score` | `number \| null` | Direct redemption-quality score after route-family/config caps |
+| `effectiveExitScore` | `number \| null` | Blended exit score used by report cards |
+| `dexLiquidityScore` | `number \| null` | DEX liquidity input used in the blend |
+| `routeFamily` | `string` | `stablecoin-redeem`, `basket-redeem`, `collateral-redeem`, `psm-swap`, `queue-redeem`, or `offchain-issuer` |
+| `accessModel` | `string` | `permissionless-onchain`, `whitelisted-onchain`, `issuer-api`, or `manual` |
+| `settlementModel` | `string` | `atomic`, `immediate`, `same-day`, `days`, or `queued` |
+| `outputAssetType` | `string` | `stable-single`, `stable-basket`, `bluechip-collateral`, `mixed-collateral`, or `nav` |
+| `sourceMode` | `string` | `dynamic`, `estimated`, or `static` capacity provenance |
+| `immediateCapacityUsd` | `number \| null` | Immediate redeemable capacity in USD |
+| `immediateCapacityRatio` | `number \| null` | Immediate redeemable capacity as a share of supply |
+| `feeBps` | `number \| null` | Explicit bounded fee when configured |
+| `queueEnabled` | `boolean` | Whether the modeled route is explicitly queued/serial |
+| `docs` | `{ label?: string, url?: string } \| undefined` | Optional external documentation / transparency link |
+| `notes` | `string[] \| undefined` | Runtime notes such as stale reserve metadata fallback |
+| `capsApplied` | `string[] \| undefined` | Applied score caps (`queue-route-cap`, `offchain-route-cap`, `config-cap`) |
+
 **Response (503):** `{ "error": "Data not yet available" }`
 
 ---

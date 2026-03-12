@@ -48,6 +48,8 @@ describe("useSafetyScoreHistory", () => {
     expect(apiFetchMock).toHaveBeenCalledWith(
       "/api/safety-score-history?stablecoin=usdt-tether&days=3650",
       expect.any(Object),
+      undefined,
+      undefined,
     );
   });
 

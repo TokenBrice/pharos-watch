@@ -206,6 +206,31 @@ export const ENDPOINT_ASSERTIONS = {
     assert(sample.totalTvlUsd >= 0, "/api/dex-liquidity sample totalTvlUsd is negative");
     return `${entries.length} coins with liquidity`;
   },
+  "/api/redemption-backstops": (result) => {
+    assert(result.status === 200, `/api/redemption-backstops returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && body.coins && typeof body.coins === "object", "/api/redemption-backstops missing coins map");
+    const entries = Object.entries(body.coins);
+    assert(entries.length > 0, "/api/redemption-backstops returned empty coins map");
+    const [, sample] = entries[0];
+    assert(sample && typeof sample === "object", "/api/redemption-backstops sample item is invalid");
+    if (sample.score !== null) {
+      assert(isFiniteNumber(sample.score), "/api/redemption-backstops sample score is not finite");
+      assert(sample.score >= 0 && sample.score <= 100, "/api/redemption-backstops sample score out of range");
+    }
+    if (sample.effectiveExitScore !== null) {
+      assert(isFiniteNumber(sample.effectiveExitScore), "/api/redemption-backstops sample effectiveExitScore is not finite");
+      assert(
+        sample.effectiveExitScore >= 0 && sample.effectiveExitScore <= 100,
+        "/api/redemption-backstops sample effectiveExitScore out of range",
+      );
+    }
+    assert(
+      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
+      "/api/redemption-backstops missing methodology.version",
+    );
+    return `${entries.length} redemption entries`;
+  },
   "/api/stress-signals": (result) => {
     assert(result.status === 200, `/api/stress-signals returned ${result.status}`);
     const body = stripMeta(result.body);

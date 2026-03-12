@@ -191,7 +191,7 @@ Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`
 ### Broadsheet (shared component)
 
 **Component:** `src/components/daily-digest.tsx`
-**Hook:** `src/hooks/use-daily-digest.ts` → `GET /api/daily-digest`
+**Hook:** `src/hooks/api-hooks.ts` (`useDailyDigest`) → `GET /api/daily-digest`
 **Cache:** `staleTime: 86400s`, `refetchInterval: 172800s`
 
 The latest digest is presented in a broadsheet newspaper style:
@@ -208,7 +208,7 @@ Used in two places: the homepage (title + first editorial paragraph + "Read toda
 **Route:** `/digest/`
 **Page:** `src/app/digest/page.tsx` (static route in the Next.js export)
 **Component:** `src/components/digest-archive-client.tsx`
-**Hook:** `src/hooks/use-digest-archive.ts` → `GET /api/digest-archive`
+**Hook:** `src/hooks/api-hooks.ts` (`useDigestArchive`) → `GET /api/digest-archive`
 
 The archive page has two zones:
 1. **Broadsheet** — today's digest in full broadsheet layout (via `DailyDigest`)
@@ -222,7 +222,7 @@ The wire table shows each digest as a compact row: **date** (monospace, e.g. "27
 **Page:** `src/app/digest/[date]/page.tsx` (SSG)
 **Static params:** generated from `data/digests.json` at build time
 **Component:** `src/components/digest-snapshot.tsx`
-**Hook:** `src/hooks/use-digest-snapshot.ts` → `GET /api/digest-snapshot?date={date}`
+**Hook:** `src/hooks/api-hooks.ts` (`useDigestSnapshot`) → `GET /api/digest-snapshot?date={date}`
 
 Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus 8 contextual data cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Supply Velocity, Resolved Depegs). Includes JSON-LD Article structured data and prev/next navigation.
 
@@ -275,8 +275,6 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `src/components/digest-snapshot.tsx` | Date-specific data cards (8 categories) |
 | `src/app/digest/page.tsx` | Archive page route shell (static export) |
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
-| `src/hooks/use-daily-digest.ts` | TanStack Query hook for latest digest |
-| `src/hooks/use-digest-archive.ts` | TanStack Query hook for full archive |
-| `src/hooks/use-digest-snapshot.ts` | TanStack Query hook for date snapshot |
+| `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useDailyDigest()`, `useDigestArchive()`, and `useDigestSnapshot()` |
 | `scripts/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
 | `data/digests.json` | Static digest list for SSG (generated, not hand-edited) |

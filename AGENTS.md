@@ -86,6 +86,7 @@ Read these when working on related code:
 - **`docs/shadow-stablecoins.md`** — Shadow stablecoin metadata, PSI eligibility boundary, and UI exclusion rules
 - **`docs/supply-snapshot.md`** — Daily supply snapshot cron, supply_history schema, supply helpers, backfill endpoint
 - **`docs/live-reserves.md`** — Live reserve sync config, adapter registry, storage, API modes, and detail/status consumers
+- **`docs/redemption-backstops.md`** — Redemption-route configs, effective-exit scoring, storage, API endpoint, and detail/report-card consumers
 - **`docs/blacklist-tracker.md`** — Multi-chain blacklist/freeze tracking, contract configs, balance enrichment, sync flow
 - **`docs/mint-burn-flows.md`** — Mint/burn flow tracker: on-chain event sync, Flow Intensity Score, Bank Run Gauge, flight-to-quality detection, contract configs, scoring, API endpoints, frontend
 - **`docs/yield-intelligence.md`** — Yield pipeline: three-tier APY resolution, PYS formula, T-bill rate, warning signals, DB schema, API endpoints, frontend
