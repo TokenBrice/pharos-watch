@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
+import { CRON_INTERVALS } from "../../lib/cron-schedule";
 
 stubCryptoForAuth();
 
@@ -246,6 +247,48 @@ describe("handleStatus", () => {
     expect(body.causes.dataQuality.some((cause) => cause.code === "stablecoins_cache_unavailable")).toBe(true);
   });
 
+  it("marks data quality degraded when the blacklist-gap query fails", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], throwError: "blacklist query failed" },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      dataQualityStatus: string;
+      dataQuality: {
+        blacklistGapStatus: string;
+        sourceFailures: Array<{ source: string; message: string }>;
+      };
+      causes: { dataQuality: Array<{ code: string }> };
+    };
+
+    expect(body.dataQualityStatus).toBe("degraded");
+    expect(body.dataQuality.blacklistGapStatus).toBe("failed");
+    expect(body.dataQuality.sourceFailures).toContainEqual({
+      source: "blacklist-gaps",
+      message: "blacklist query failed",
+    });
+    expect(body.causes.dataQuality.some((cause) => cause.code === "blacklist_gap_query_failed")).toBe(true);
+  });
+
   it("returns Cache-Control: no-store", async () => {
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [] },
@@ -344,31 +387,11 @@ describe("handleStatus", () => {
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
-    const jobs = [
-      "sync-stablecoins",
-      "sync-stablecoin-charts",
-      "sync-blacklist",
-      "sync-mint-burn",
-      "sync-mint-burn-extended",
-      "sync-dex-discovery",
-      "sync-dex-liquidity",
-      "sync-usds-status",
-      "sync-live-reserves",
-      "sync-bluechip",
-      "sync-fx-rates",
-      "daily-digest",
-      "snapshot-supply",
-      "snapshot-safety-grade-history",
-      "stability-index",
-      "snapshot-psi",
-      "sync-yield-data",
-      "fetch-tbill-rate",
-      "compute-dews",
-      "status-self-check",
-      "dispatch-telegram-alerts",
-      "discovery-scan",
+    const jobs = Object.keys(CRON_INTERVALS);
+    const cronRows = [
+      ...jobs.map((job) => makeCronRow(job, job === "sync-blacklist" ? "error" : "ok", 30)),
+      makeCronRow("sync-redemption-backstops", "ok", 30),
     ];
-    const cronRows = jobs.map((job) => makeCronRow(job, job === "sync-blacklist" ? "error" : "ok", 30));
     const db = mockD1([
       {
         match: "cache WHERE key IN",
@@ -611,32 +634,11 @@ describe("handleStatus", () => {
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
-    const jobs = [
-      "sync-stablecoins",
-      "sync-stablecoin-charts",
-      "sync-blacklist",
-      "sync-mint-burn",
-      "sync-mint-burn-extended",
-      "sync-dex-discovery",
-      "sync-dex-liquidity",
-      "sync-usds-status",
-      "sync-live-reserves",
-      "sync-bluechip",
-      "sync-fx-rates",
-      "daily-digest",
-      "dispatch-telegram-alerts-daily",
-      "snapshot-supply",
-      "snapshot-safety-grade-history",
-      "stability-index",
-      "snapshot-psi",
-      "sync-yield-data",
-      "fetch-tbill-rate",
-      "compute-dews",
-      "status-self-check",
-      "dispatch-telegram-alerts",
-      "discovery-scan",
+    const jobs = Object.keys(CRON_INTERVALS);
+    const cronRows = [
+      ...jobs.map((job) => makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30)),
+      makeCronRow("sync-redemption-backstops", "ok", 30),
     ];
-    const cronRows = jobs.map((job) => makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30));
     const db = mockD1([
       {
         match: "cache WHERE key IN",
