@@ -29,6 +29,7 @@ Verified entry point for the `/docs` corpus. Use this file to find the authorita
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
 - [dependency-map.md](./dependency-map.md) - dependency-graph construction, rendering, and interaction model
+- [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules
 - [status-dashboard.md](./status-dashboard.md) - `/status/` frontend/backend contract and admin actions
 
 ## Feature And Methodology Docs

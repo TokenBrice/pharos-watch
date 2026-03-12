@@ -9,6 +9,7 @@ const FOOTER_PRIMARY_LINKS = [
   { href: "/portfolio/", label: "Portfolio" },
   { href: "/safety-scores/", label: "Safety Scores" },
   { href: "/yield/", label: "Yield" },
+  { href: "/coverage/", label: "Coverage" },
   { href: "/methodology/", label: "Methodology" },
   { href: "/about/", label: "About" },
 ] as const;

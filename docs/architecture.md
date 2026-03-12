@@ -87,6 +87,10 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
+│   ├── coverage/                 # Per-coin feature coverage matrix
+│   │   ├── page.tsx
+│   │   ├── client.tsx
+│   │   └── error.tsx
 │   ├── dependency-map/           # Collateral dependency graph visualization
 │   │   ├── page.tsx
 │   │   └── client.tsx
