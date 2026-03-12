@@ -20,12 +20,25 @@ type EthenaBucket = "stable" | "btc" | "eth" | "other";
 const ETHENA_ETH_ASSETS = new Set(["ETH", "stETH", "WBETH", "mETH", "LsETH"]);
 const ETHENA_BTC_ASSETS = new Set(["BTC"]);
 const ETHENA_STABLE_ASSETS = new Set(["Liquid Cash"]);
+const ETHENA_OTHER_ASSETS = new Set(["SOL", "XRP", "BNB", "HYPE"]);
 
 function bucketForEthenaAsset(asset: string): EthenaBucket {
   if (ETHENA_STABLE_ASSETS.has(asset)) return "stable";
   if (ETHENA_BTC_ASSETS.has(asset)) return "btc";
   if (ETHENA_ETH_ASSETS.has(asset)) return "eth";
   return "other";
+}
+
+export function listUnexpectedEthenaAssets(payload: EthenaCollateralResponse): string[] {
+  const knownAssets = new Set([
+    ...ETHENA_STABLE_ASSETS,
+    ...ETHENA_BTC_ASSETS,
+    ...ETHENA_ETH_ASSETS,
+    ...ETHENA_OTHER_ASSETS,
+  ]);
+
+  return Array.from(new Set(payload.collateral.map((row) => row.asset)))
+    .filter((asset) => !knownAssets.has(asset));
 }
 
 export function adaptEthenaCollateral(payload: EthenaCollateralResponse): AdapterResult {
@@ -89,10 +102,7 @@ export async function fetchEthenaReserves(
 
   const payload = await res.json() as EthenaCollateralResponse;
   const adapted = adaptEthenaCollateral(payload);
-
-  const knownAssets = new Set([...ETHENA_STABLE_ASSETS, ...ETHENA_BTC_ASSETS, ...ETHENA_ETH_ASSETS]);
-  const unknownAssets = Array.from(new Set(payload.collateral.map((row) => row.asset)))
-    .filter((asset) => !knownAssets.has(asset));
+  const unknownAssets = listUnexpectedEthenaAssets(payload);
   const warnings: LiveReserveWarning[] = unknownAssets.map((asset) => ({
     code: "unknown-asset",
     message: `Ethena asset bucketed into other-crypto: ${asset}`,

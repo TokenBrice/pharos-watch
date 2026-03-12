@@ -3,6 +3,9 @@ import { TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinReservesResponse } from "@shared/types";
 import { resolveReserveResult } from "../lib/live-reserves-store";
 
+const LIVE_CACHE_CONTROL = "public, s-maxage=3600, max-age=300";
+const FALLBACK_CACHE_CONTROL = "public, s-maxage=300, max-age=60";
+
 export async function handleStablecoinReserves(
   db: D1Database,
   stablecoinId: string,
@@ -32,5 +35,7 @@ export async function handleStablecoinReserves(
     ...(resolved.sync ? { sync: resolved.sync } : {}),
   };
 
-  return jsonFreshResponse(body, { cacheControl: "public, s-maxage=3600, max-age=300" });
+  return jsonFreshResponse(body, {
+    cacheControl: resolved.mode === "live" ? LIVE_CACHE_CONTROL : FALLBACK_CACHE_CONTROL,
+  });
 }

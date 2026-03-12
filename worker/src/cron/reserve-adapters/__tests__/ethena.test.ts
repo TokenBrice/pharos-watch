@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adaptEthenaCollateral, type EthenaCollateralResponse } from "../ethena";
+import { adaptEthenaCollateral, listUnexpectedEthenaAssets, type EthenaCollateralResponse } from "../ethena";
 
 describe("adaptEthenaCollateral", () => {
   it("groups Ethena collateral into reserve buckets", () => {
@@ -27,5 +27,32 @@ describe("adaptEthenaCollateral", () => {
       totalBackingAssetsInUsd: 100,
       lastUpdatedAt: 1,
     });
+  });
+
+  it("does not warn for known alt-collateral already bucketed into other", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 80 },
+        { asset: "SOL", exchange: "Binance", timestamp: 1, usdAmount: 5 },
+        { asset: "XRP", exchange: "Binance", timestamp: 1, usdAmount: 5 },
+        { asset: "BNB", exchange: "Binance", timestamp: 1, usdAmount: 5 },
+        { asset: "HYPE", exchange: "Binance", timestamp: 1, usdAmount: 5 },
+      ],
+    };
+
+    expect(listUnexpectedEthenaAssets(payload)).toEqual([]);
+  });
+
+  it("still surfaces genuinely new Ethena assets", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 95 },
+        { asset: "DOGE", exchange: "Binance", timestamp: 1, usdAmount: 5 },
+      ],
+    };
+
+    expect(listUnexpectedEthenaAssets(payload)).toEqual(["DOGE"]);
   });
 });

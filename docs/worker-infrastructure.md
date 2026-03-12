@@ -680,6 +680,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 - Circuit breakers are now keyed per source/family (`live-reserves:<scope>`), not as one global `live-reserves` source.
 - The cron writes `reserve_sync_state` on every path, including degraded/error/skipped outcomes.
+- Adapter warnings are reserved for unresolved material mapping drift. Known Ethena alt-collateral that is intentionally bucketed into `Other crypto collateral` does not emit warnings, and infiniFi dust farms that round to `0%` in the displayed mix do not keep the cron degraded.
 - Cron result status is explicit:
   - `ok` when all configured coins sync cleanly
   - `degraded` when any sync fails, is skipped, or returns warnings

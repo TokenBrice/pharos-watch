@@ -81,4 +81,22 @@ describe("adaptInfiniFi", () => {
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toContain("brand-new-farm");
   });
+
+  it("ignores dust unknown farms that round out of the displayed mix", () => {
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        farms: [
+          ...SAMPLE_RESPONSE.data.farms,
+          { name: "dust-farm", label: "Dust Farm", assetsNormalized: 0.4, type: "LIQUID", underlyingAssetSymbol: "USDC" },
+        ],
+        stats: { asset: { totalTVLAssetNormalized: 100.4 } },
+      },
+    };
+
+    const result = adaptInfiniFi(response);
+    expect(result.unknownFarms).not.toContain("dust-farm");
+    expect(result.slices.some((slice) => slice.name === "Dust Farm")).toBe(false);
+  });
 });

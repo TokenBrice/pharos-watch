@@ -66,19 +66,23 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
 
   const unknownFarms: string[] = [];
 
-  const rawSlices = activeFarms.map((f) => {
+  const rawSlices: ReserveSlice[] = [];
+
+  for (const f of activeFarms) {
+    const pct = Math.round((f.assetsNormalized / tvl) * 100);
+    if (pct <= 0) continue;
     const config = FARM_RISK_MAP[f.name];
     if (!config) unknownFarms.push(f.name);
     const risk: ReserveSlice["risk"] = config?.risk
       ?? (f.type === "LIQUID" ? "low" : "medium");
-    return {
+    rawSlices.push({
       name: f.label,
-      pct: Math.round((f.assetsNormalized / tvl) * 100),
+      pct,
       risk,
       ...(config?.coinId ? { coinId: config.coinId } : {}),
       ...(config?.depType ? { depType: config.depType } : {}),
-    } satisfies ReserveSlice;
-  }).filter((s) => s.pct > 0);
+    } satisfies ReserveSlice);
+  }
 
   // Adjust largest slice so total sums to exactly 100
   const sum = rawSlices.reduce((acc, s) => acc + s.pct, 0);

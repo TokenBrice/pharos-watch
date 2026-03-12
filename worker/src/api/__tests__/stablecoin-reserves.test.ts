@@ -7,6 +7,7 @@ describe("handleStablecoinReserves", () => {
     const db = mockD1();
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
     const body = await res.json() as { mode: string; estimated: boolean; sync?: { bootstrap?: boolean } };
     expect(body.mode).toBe("curated-fallback");
     expect(body.estimated).toBe(false);
@@ -29,6 +30,7 @@ describe("handleStablecoinReserves", () => {
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=3600, max-age=300");
     const body = await res.json() as { reserves: unknown[]; estimated: boolean; source: string; mode: string };
     expect(body.reserves).toEqual(slices);
     expect(body.estimated).toBe(false);
