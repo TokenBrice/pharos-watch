@@ -88,7 +88,7 @@ function parseHexInteger(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function isHexResult(value: string | undefined): value is `0x${string}` {
+function isHexResult(value: string | null | undefined): value is `0x${string}` {
   return typeof value === "string" && value.startsWith("0x") && value.length > 2;
 }
 
@@ -109,7 +109,7 @@ export async function fetchEvmCallHexAtBlock(
     options,
   );
 
-  if (!isHexResult(result) || result === "0x") return null;
+  if (!isHexResult(result ?? undefined) || result === "0x") return null;
   return result;
 }
 
@@ -150,7 +150,7 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
 ): Promise<number | null> {
   if (!Number.isFinite(targetTimestamp) || targetTimestamp <= 0) return null;
 
-  let latestBlock = cache.latestBlockNumber;
+  let latestBlock: number | null | undefined = cache.latestBlockNumber;
   if (latestBlock == null) {
     latestBlock = await fetchEvmBlockNumber(chainId, options);
     if (latestBlock == null) return null;
