@@ -23,9 +23,14 @@ import type {
   DependencyType,
   ReserveRisk,
   ReserveSlice,
+  RedemptionBackstopEntry,
 } from "../types";
 import { deriveDependencies } from "./reserve-templates";
 import { SAFETY_SCORE_VERSION } from "./safety-score-version";
+import {
+  computeEffectiveExitScore,
+  REDEMPTION_ROUTE_FAMILY_LABELS,
+} from "./redemption-backstop-scoring";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -55,14 +60,13 @@ export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
 // so the multiplier only bites for genuinely impaired pegs.
 export const PEG_MULTIPLIER_EXPONENT = 0.20;
 
-// No-liquidity penalty: 10% score reduction for coins with no DEX liquidity data.
-// Rationale: absence of DEX presence is increasingly suspicious as DEX coverage
-// matures. 10% is large enough to matter but doesn't dominate the grade.
+// No-liquidity penalty: 10% score reduction when the exit-liquidity dimension is
+// NR (no DEX or redemption backstop signal at all).
 export const NO_LIQUIDITY_PENALTY = 0.9;
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg Stability",
-  liquidity: "Liquidity",
+  liquidity: "Exit Liquidity",
   resilience: "Resilience",
   decentralization: "Decentralization",
   dependencyRisk: "Dependency Risk",
@@ -70,7 +74,7 @@ export const DIMENSION_LABELS: Record<DimensionKey, string> = {
 
 export const DIMENSION_SHORT_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg",
-  liquidity: "Liq.",
+  liquidity: "Exit",
   resilience: "Resil.",
   decentralization: "Decen.",
   dependencyRisk: "Dep.",
@@ -207,24 +211,66 @@ export function scorePegStability(
 }
 
 /**
- * Liquidity: uses liquidityScore from DEX liquidity data as-is.
- * The composite score already factors in pool quality, diversity, and durability.
- * NR if no data.
+ * Exit Liquidity: blends DEX liquidity with direct redemption quality where available.
+ * The public DEX liquidity dataset remains pure; report cards use effective exit.
  */
 export function scoreLiquidity(
   liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
+  redemption?: Pick<
+    RedemptionBackstopEntry,
+    | "score"
+    | "routeFamily"
+    | "immediateCapacityUsd"
+    | "immediateCapacityRatio"
+  >,
 ): ReportCardDimension {
-  if (!liq || liq.liquidityScore === null) {
-    return { grade: "NR", score: null, detail: "No DEX liquidity data" };
+  const dexScore = liq?.liquidityScore ?? null;
+  const redemptionScore = redemption?.score ?? null;
+  const effectiveScore = computeEffectiveExitScore(dexScore, redemptionScore);
+
+  if (effectiveScore === null) {
+    return {
+      grade: "NR",
+      score: null,
+      detail: redemption ? "No DEX or redemption backstop data" : "No DEX liquidity data",
+    };
   }
 
-  const score = Math.round(Math.max(0, Math.min(100, liq.liquidityScore)));
+  const score = Math.round(Math.max(0, Math.min(100, effectiveScore)));
+
+  function formatCapacityUsd(value: number): string {
+    if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+    return `$${Math.round(value)}`;
+  }
 
   const parts: string[] = [];
-  parts.push(`Liquidity score: ${score}/100`);
-  parts.push(`${liq.poolCount} pool${liq.poolCount === 1 ? "" : "s"} across ${liq.chainCount} chain${liq.chainCount === 1 ? "" : "s"}`);
-  if (liq.concentrationHhi !== null && liq.concentrationHhi > 0.5) {
+  parts.push(`Effective exit score: ${score}/100`);
+  if (dexScore !== null) {
+    parts.push(`DEX liquidity ${Math.round(Math.max(0, Math.min(100, dexScore)))}/100`);
+  } else {
+    parts.push("DEX liquidity unavailable");
+  }
+  if (liq) {
+    parts.push(`${liq.poolCount} pool${liq.poolCount === 1 ? "" : "s"} across ${liq.chainCount} chain${liq.chainCount === 1 ? "" : "s"}`);
+  }
+  if (
+    liq?.concentrationHhi != null &&
+    liq.concentrationHhi > 0.5
+  ) {
     parts.push(`high concentration (HHI: ${liq.concentrationHhi.toFixed(2)})`);
+  }
+  if (redemptionScore !== null) {
+    parts.push(`Redemption backstop ${Math.round(redemptionScore)}/100`);
+    if (redemption?.routeFamily) {
+      parts.push(REDEMPTION_ROUTE_FAMILY_LABELS[redemption.routeFamily]);
+    }
+    if (redemption?.immediateCapacityRatio != null) {
+      parts.push(`immediate capacity ${(redemption.immediateCapacityRatio * 100).toFixed(1)}% of supply`);
+    } else if (redemption?.immediateCapacityUsd != null) {
+      parts.push(`immediate capacity ${formatCapacityUsd(redemption.immediateCapacityUsd)}`);
+    }
   }
 
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
@@ -690,7 +736,7 @@ export function computeOverallGrade(
   }
   // NAV token with null peg → multiplier 1.0, no change
 
-  // No liquidity data → 10% penalty (no free pass)
+  // No exit-liquidity data at all → 10% penalty (no free pass)
   if (dimensions.liquidity.score === null) {
     score *= NO_LIQUIDITY_PENALTY;
   }

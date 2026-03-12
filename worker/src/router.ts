@@ -27,6 +27,7 @@ import { handleBackfillStabilityIndex } from "./api/backfill-stability-index";
 import { handleAuditDepegHistory } from "./api/audit-depeg-history";
 import { handleBackfillCgPrices } from "./api/backfill-cg-prices";
 import { handleReportCards } from "./api/report-cards";
+import { handleRedemptionBackstops } from "./api/redemption-backstops";
 import { handleYieldHistory } from "./api/yield-history";
 import { handleSafetyScoreHistory } from "./api/safety-score-history";
 import { handleMintBurnFlows } from "./api/mint-burn-flows";
@@ -123,6 +124,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     return handleAuditDepegHistory(db, url, adminKey, request);
   }],
   [API_PATHS.reportCards(), ({ db }) => handleReportCards(db)],
+  [API_PATHS.redemptionBackstops(), ({ db }) => handleRedemptionBackstops(db)],
   [API_PATHS.yieldRankings(), ({ db }) => handleYieldRankings(db)],
   ["/api/yield-history", ({ db, url }) => handleYieldHistory(db, url)],
   ["/api/safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)],

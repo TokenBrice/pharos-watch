@@ -227,6 +227,26 @@ function summarizeLiveReserves(metadata: Record<string, unknown>): string[] {
   ].filter((line): line is string => line != null);
 }
 
+function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string[] {
+  const synced = readNumber(metadata.synced);
+  const configured = readNumber(metadata.configured);
+  const failed = readNumber(metadata.failed);
+  const dynamic = readNumber(metadata.dynamic);
+  const estimated = readNumber(metadata.estimated);
+  const staticCount = readNumber(metadata.static);
+  const missingFromCache = readArray(metadata.missingFromCache)?.length ?? 0;
+
+  return [
+    synced != null && configured != null
+      ? `synced ${synced}/${configured}${failed != null && failed > 0 ? `, failed ${failed}` : ""}`
+      : null,
+    dynamic != null || estimated != null || staticCount != null
+      ? `source mix${dynamic != null ? ` dynamic ${dynamic}` : ""}${estimated != null ? `, estimated ${estimated}` : ""}${staticCount != null ? `, static ${staticCount}` : ""}`
+      : null,
+    missingFromCache > 0 ? `missing from cache ${missingFromCache}` : null,
+  ].filter((line): line is string => line != null);
+}
+
 const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => string[]> = {
   "status-self-check": summarizeStatusSelfCheck,
   "sync-dex-discovery": summarizeDexDiscovery,
@@ -235,6 +255,7 @@ const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => s
   "sync-mint-burn": summarizeMintBurn,
   "sync-mint-burn-extended": summarizeMintBurn,
   "sync-live-reserves": summarizeLiveReserves,
+  "sync-redemption-backstops": summarizeRedemptionBackstops,
 };
 
 export function summarizeCronMetadata(job: string, metadata: Record<string, unknown> | undefined): string[] {

@@ -184,6 +184,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         summary={viewModel.summary}
         reserves={viewModel.reserves}
         reserveFetchError={viewModel.reserveFetchError}
+        redemptionBackstop={viewModel.redemptionBackstop}
         isNavToken={viewModel.isNavToken}
       />
 

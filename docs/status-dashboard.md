@@ -44,7 +44,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards`, `GET /api/yield-rankings`, and related read endpoints
-  - Legacy per-hook files (`src/hooks/use-health.ts`, `src/hooks/use-peg-summary.ts`, etc.) now re-export from this module so existing imports and tests stay stable
+  - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
   - Manual/admin mutation actions are listed but intentionally not auto-probed
@@ -61,7 +61,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - 5-minute Telegram dispatch lane, with cemetery-announcement sidecar work on the same trigger
   - 20-minute on-chain intake jobs shown together, but labeled as isolated triggers (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`, `sync-dex-discovery`)
   - 30-minute charts / liquidity / yield jobs
-  - hourly reserve-sync tuning lane (`sync-live-reserves`)
+  - hourly reserve / redemption lane (`sync-live-reserves`, `sync-redemption-backstops`)
   - daily snapshot / digest / coverage-discovery jobs
   - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup, plus the exact cron expression and whether the trigger is shared vs isolated
   - When a leased job is still running, cards surface `running` / `running-stale` state from `crons[*].inFlight`
@@ -386,6 +386,7 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `src/components/status/price-source-health.tsx`  | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                      |
 | `src/components/status/mint-burn-reconciliation.tsx` | Mint/burn reconciliation card — 24h Ethereum flow vs chain-supply delta diagnostics                                                                                                                                                                                               |
 | `src/hooks/use-status.ts`                        | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                                                                                  |
+| `src/hooks/api-hooks.ts`                        | Shared read hooks consumed by the dashboard model (`useHealth`, `usePegSummary`, `useDexLiquidity`, `useReportCards`, `useYieldRankings`)                                                                                                                                             |
 | `src/hooks/use-endpoint-probes.ts`               | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                                                                                                |
 | `src/hooks/use-status-history.ts`                | Shared polling policy for `/api/status-history` + dashboard time-window filters                                                                                                                                                                                                        |
 | `shared/lib/cron-jobs.ts`                        | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |

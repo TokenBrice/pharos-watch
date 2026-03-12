@@ -185,6 +185,39 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                       })}
                     </div>
                   )}
+                  {key === "liquidity" && dim.score !== null && (
+                    <div className="ml-4 mt-1 space-y-0.5 text-xs text-muted-foreground">
+                      {card.rawInputs.liquidityScore != null ? (
+                        <div className="flex items-center justify-between">
+                          <span>DEX liquidity</span>
+                          <span className="tabular-nums text-foreground/80">
+                            {card.rawInputs.liquidityScore}/100
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <span>DEX liquidity</span>
+                          <span className="text-foreground/60">Unavailable</span>
+                        </div>
+                      )}
+                      {card.rawInputs.redemptionBackstopScore != null ? (
+                        <div className="flex items-center justify-between">
+                          <span>Redemption backstop</span>
+                          <span className="tabular-nums text-foreground/80">
+                            {card.rawInputs.redemptionBackstopScore}/100
+                          </span>
+                        </div>
+                      ) : null}
+                      {card.rawInputs.effectiveExitScore != null ? (
+                        <div className="flex items-center justify-between">
+                          <span>Effective exit</span>
+                          <span className="tabular-nums text-foreground/80">
+                            {card.rawInputs.effectiveExitScore}/100
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                   {key === "liquidity" && liquidityComponents && dim.score !== null && (
                     <details className="mt-1.5 text-xs text-muted-foreground">
                       <summary className="pharos-focus-ring ml-3 cursor-pointer rounded-md transition-colors hover:text-foreground">

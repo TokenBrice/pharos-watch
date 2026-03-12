@@ -9,6 +9,8 @@ import type {
   PegSummaryResponse,
   ReportCardsResponse,
   DexLiquidityMap,
+  RedemptionBackstopsResponse,
+  RedemptionBackstopEntry,
 } from "@shared/types";
 import {
   getCirculatingRaw,
@@ -73,6 +75,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   pegScoreResult: PegSummaryCoin | null;
   pegScoreBorderClass: string;
   liquidityData: DexLiquidityData | undefined;
+  redemptionBackstop: RedemptionBackstopEntry | undefined;
   liqBorderClass: string;
   hasFlows: boolean;
   supplyHistory: SupplyHistoryPoint[];
@@ -81,7 +84,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   reserveFetchError: unknown | null;
   supplyError: unknown | null;
   staleQueries: {
-    preset: "stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards";
+    preset: "stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards" | "redemptionBackstops";
     dataUpdatedAt: number;
     error: unknown | null;
     hasData: boolean;
@@ -118,6 +121,9 @@ interface BuildStablecoinDetailViewModelParams {
   reportCardsData?: ReportCardsResponse;
   rcUpdatedAt: number;
   reportCardsError: unknown | null;
+  redemptionBackstopsData?: RedemptionBackstopsResponse;
+  rbUpdatedAt?: number;
+  redemptionBackstopsError?: unknown | null;
   flowsData?: MintBurnFlowsResponse;
   isFlowsLoading: boolean;
   liveReserves?: ReserveResult | null;
@@ -148,6 +154,9 @@ export function buildStablecoinDetailViewModel({
   reportCardsData,
   rcUpdatedAt,
   reportCardsError,
+  redemptionBackstopsData,
+  rbUpdatedAt = 0,
+  redemptionBackstopsError = null,
   flowsData,
   isFlowsLoading,
   liveReserves = null,
@@ -193,6 +202,7 @@ export function buildStablecoinDetailViewModel({
     ?? null;
   const pegScoreBorderClass = derivePegScoreBorderClass(pegScoreResult?.pegScore);
   const liquidityData = liquidityMap?.[id];
+  const redemptionBackstop = redemptionBackstopsData?.coins?.[id];
   const liqBorderClass = deriveLiquidityBorderClass(liquidityData);
   const reportCard = reportCardsData?.cards.find((candidate) => candidate.id === id);
   const reserves = liveReserves ?? getReserves(coin);
@@ -222,6 +232,7 @@ export function buildStablecoinDetailViewModel({
     pegScoreResult,
     pegScoreBorderClass,
     liquidityData,
+    redemptionBackstop,
     liqBorderClass,
     hasFlows,
     supplyHistory: resolvedSupplyHistory,
@@ -253,6 +264,12 @@ export function buildStablecoinDetailViewModel({
         dataUpdatedAt: rcUpdatedAt,
         error: reportCardsError,
         hasData: !!reportCardsData?.cards?.length,
+      },
+      {
+        preset: "redemptionBackstops",
+        dataUpdatedAt: rbUpdatedAt,
+        error: redemptionBackstopsError,
+        hasData: !!redemptionBackstopsData?.coins,
       },
     ],
     usesFallbackPegRate: pegContext.pegRateSources[coinData.pegType ?? ""] === "fallback",

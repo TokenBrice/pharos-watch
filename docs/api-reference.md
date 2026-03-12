@@ -42,7 +42,7 @@ Endpoints backed by the cron cache include these additional headers:
 | Profile  | `Cache-Control`                      | Used by                                                                                                                                                                                                 |
 | -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                                                               |
-| standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                         |
+| standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, dex-liquidity, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                    |
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                              |
 | slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot                                                                                           |
 | no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`)                     |
@@ -1016,7 +1016,7 @@ Dynamic Open Graph PNG images used by share buttons and page metadata.
 
 ### `GET /api/report-cards`
 
-Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimensions; overall score is the weighted base (liquidity/resilience/decentralization/dependency) plus peg-multiplier adjustment.
+Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimensions; overall score is the weighted base (exit-liquidity/resilience/decentralization/dependency) plus peg-multiplier adjustment.
 
 **Cache:** standard
 
@@ -1029,7 +1029,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle" }, ...]
   },
   "methodology": {
-    "version": "5.5",
+    "version": "5.6",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.2,
     "thresholds": [{ "grade": "A+", "min": 87 }, { "grade": "A", "min": 83 }, ...]
@@ -1037,6 +1037,8 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
   "updatedAt": 1771977600
 }
 ```
+
+The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists.
 
 **`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. Used by the frontend to identify targetable coins for stress testing and walk the dependency tree.
 
@@ -1066,6 +1068,11 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 | `depegEventCount`   | `number`                                        |
 | `lastEventAt`       | `number \| null`                                |
 | `liquidityScore`    | `number \| null`                                |
+| `effectiveExitScore` | `number \| null`                               |
+| `redemptionBackstopScore` | `number \| null`                          |
+| `redemptionRouteFamily` | `RedemptionRouteFamily \| null`             |
+| `redemptionImmediateCapacityUsd` | `number \| null`                   |
+| `redemptionImmediateCapacityRatio` | `number \| null`                 |
 | `concentrationHhi`  | `number \| null`                                |
 | `bluechipGrade`     | `BluechipGrade \| null`                         |
 | `canBeBlacklisted`  | `boolean \| "possible" \| "possible-inherited"` |
@@ -1079,6 +1086,76 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 | `navToken`          | `boolean`                                       |
 
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
+
+---
+
+### `GET /api/redemption-backstops`
+
+Current redemption-backstop dataset for redeemable assets.
+
+**Cache:** standard
+
+**Error responses:** `503` when `redemption_backstop` has no rows yet.
+
+**Response**
+
+```json
+{
+  "coins": {
+    "cusd-cap": {
+      "stablecoinId": "cusd-cap",
+      "score": 88,
+      "effectiveExitScore": 56,
+      "dexLiquidityScore": 29,
+      "routeFamily": "basket-redeem",
+      "accessModel": "permissionless-onchain",
+      "settlementModel": "atomic",
+      "outputAssetType": "stable-basket",
+      "immediateCapacityUsd": 10000000,
+      "immediateCapacityRatio": 1,
+      "sourceMode": "estimated",
+      "updatedAt": 1773350400,
+      "methodologyVersion": "1.0"
+    }
+  },
+  "methodology": {
+    "version": "1.0",
+    "componentWeights": {
+      "access": 0.2,
+      "settlement": 0.15,
+      "executionCertainty": 0.15,
+      "capacity": 0.25,
+      "outputAssetQuality": 0.15,
+      "cost": 0.1
+    },
+    "effectiveExitWeights": {
+      "liquidity": 0.55,
+      "redemption": 0.45
+    }
+  },
+  "updatedAt": 1773350400
+}
+```
+
+`score` is the direct redemption-quality score.
+
+`effectiveExitScore` is the blended exit score used by report cards when available.
+
+`sourceMode`:
+
+- `dynamic` = live reserve/protocol telemetry
+- `estimated` = modelled from current supply and conservative route assumptions
+- `static` = policy-only fallback
+
+Top-level fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `coins` | `Record<string, RedemptionBackstopEntry>` | Current snapshot keyed by Pharos stablecoin ID |
+| `methodology` | `object` | Version metadata plus component weights, effective-exit blend weights, and route-family caps |
+| `updatedAt` | `number` | Freshest `updated_at` timestamp across all current rows |
+
+**Response (503):** `{ "error": "Data not yet available" }`
 
 ---
 

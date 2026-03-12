@@ -15,6 +15,7 @@ import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { getFirstSeenDates } from "./db";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 import { loadDexLiquidityMap } from "./dex-liquidity";
+import { loadRedemptionBackstopMap } from "./redemption-backstops-store";
 
 interface SafetyResult {
   score: number;
@@ -130,12 +131,13 @@ export async function computeSafetyScoresSnapshot(
 
     const nowSec = Math.floor(Date.now() / 1000);
     const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
-    const [eventsResult, dexLiqMap, firstSeenMap] = await Promise.all([
+    const [eventsResult, dexLiqMap, firstSeenMap, redemptionBackstopMap] = await Promise.all([
       db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
         .bind(fourYearsAgoSec)
         .all<DepegRow>(),
       loadDexLiquidityMap(db),
       getFirstSeenDates(db),
+      loadRedemptionBackstopMap(db),
     ]);
 
     const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
@@ -183,9 +185,10 @@ export async function computeSafetyScoresSnapshot(
       };
 
       const canBlacklist = isBlacklistable(meta, blacklistableIds);
+      const redemption = redemptionBackstopMap[meta.id];
       const dimensions = {
         pegStability: scorePegStability(pegData, meta),
-        liquidity: scoreLiquidity(dexLiqMap[meta.id]),
+        liquidity: scoreLiquidity(dexLiqMap[meta.id], redemption),
         resilience: scoreResilience(meta, canBlacklist),
         decentralization: scoreDecentralization(meta.flags.governance, meta),
         dependencyRisk: scoreDependencyRisk(meta, overallScores),
@@ -203,7 +206,7 @@ export async function computeSafetyScoresSnapshot(
           grade: overall.grade,
           score: overall.score ?? 0,
           pegScore: scoreResult.pegScore,
-          liqScore: dexLiqMap[meta.id]?.liquidityScore ?? null,
+          liqScore: dimensions.liquidity.score,
         });
       }
     };

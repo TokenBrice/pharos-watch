@@ -59,6 +59,10 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
       reserveAssetsInUsd: payload.reserveAssetsInUsd,
       reserveRatio: payload.ratio,
       supplyUsd: payload.usdoAmount,
+      totalReserveUsd: payload.reserveAssetsInUsd,
+      immediateRedeemableUsd: payload.usdcAmount,
+      immediateRedeemableRatio:
+        payload.usdoAmount > 0 ? payload.usdcAmount / payload.usdoAmount : null,
     },
   };
 }

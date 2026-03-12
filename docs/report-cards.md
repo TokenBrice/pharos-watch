@@ -2,13 +2,13 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.5)
+## Overall Grade (v5.6)
 
 Three-step computation:
 
 1. **Base score**: weighted average of 4 base dimensions (each 0–100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
 2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.20`. Coins with good pegs (90+) barely affected (~2% penalty). Coins with broken pegs get properly penalized (pegScore 10 → 37% penalty). pegScore = NR (NAV tokens) → multiplier 1.0 (no penalty). pegScore = 0 → multiplier 0.
-3. **No-liquidity penalty**: `final × 0.9` when the Liquidity dimension is NR (no DEX data). No free pass — as DEX coverage matures, absence of liquidity data is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` constant in `report-cards.ts`.
+3. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `report-cards.ts`.
 
 Cemetery coins get a permanent F.
 
@@ -18,7 +18,7 @@ Cemetery coins get a permanent F.
 
 | Dimension | Weight | Source | Scoring |
 |-----------|--------|--------|---------|
-| **Liquidity** | 30% | `liquidityScore` from DEX liquidity | Passthrough (composite score already factors pool quality, diversity, durability) |
+| **Liquidity / Exit** | 30% | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present |
 | **Resilience** | 20% | Token metadata (3 sub-factors) | Weighted avg of collateral quality, custody model, and blacklist capability |
 | **Decentralization** | 15% | Governance quality + chain infrastructure | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → 95. With deps → blended score (upstream × weight + self-backed), −10 if any < 75. Self-backed varies by governance (90/75/95) |
@@ -36,11 +36,19 @@ Cemetery coins get a permanent F.
 - NAV tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
 - Yield-bearing annotation added to detail text
 
-### Liquidity Details
+### Liquidity / Exit Details
 
-- Direct passthrough of DEX liquidity composite score (see `docs/dex-liquidity.md`)
-- The composite already weighs TVL depth, volume, pool quality, durability, and pair diversity; chain coverage remains descriptive liquidity context, not a scored component
-- High concentration (HHI > 0.5) noted in detail text but no additional penalty applied
+- The public DEX liquidity dataset stays unchanged and fully market-based (see `docs/dex-liquidity.md`)
+- Report cards now use `effectiveExitScore`, not raw `liquidityScore`
+- `effectiveExitScore` blends:
+  - `liquidityScore` from DEX liquidity
+  - `redemptionBackstopScore` from protocol / issuer redemption quality
+- Formula when both exist:
+  - `effectiveExitScore = round(max(liquidityScore, liquidityScore * 0.55 + redemptionBackstopScore * 0.45))`
+- If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
+- If only redemption exists, `effectiveExitScore = round(min(70, redemptionBackstopScore * 0.75))`
+- High concentration (HHI > 0.5) remains descriptive context, not an extra penalty
+- See `docs/redemption-backstops.md` for redemption component scoring and route-family caps
 
 ### Resilience Details
 
@@ -250,6 +258,8 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 `GET /api/report-cards` — all coins graded with per-dimension breakdown and methodology metadata. Cache: standard (5-min edge).
 
+`GET /api/redemption-backstops` — current redemption backstop and effective-exit dataset used by redeemable-asset detail views and report-card liquidity inputs. Cache: standard (1-hour max-age).
+
 Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
 
 `GET /api/safety-score-history` — per-coin Safety Score grade history timeline (`stablecoin` required, `days` optional). Backed by `safety_grade_history` event rows written daily by `snapshot-safety-grade-history`. Cache: slow (1-hour edge).
@@ -260,7 +270,7 @@ Implementation notes:
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, etc.) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 
@@ -298,7 +308,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 - **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
 - **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge); the radar stage now uses a width-driven aspect ratio so the grid cards do not carry excess vertical dead space
 - **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay); `ReportCardRadar` automatically switches to short axis labels on very narrow containers
-- **Hooks**: `src/hooks/use-report-cards.ts` (grade cards + methodology), `src/hooks/use-safety-score-history.ts` (per-coin grade history), `src/hooks/use-portfolio.ts` (portfolio state + browser persistence), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
+- **Hooks**: `src/hooks/api-hooks.ts` (`useReportCards`, `useSafetyScoreHistory`), `src/hooks/use-portfolio.ts` (portfolio state + browser persistence), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
 
 ## Key Files
 
@@ -315,7 +325,6 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 | `src/components/report-card-mini.tsx` | Compact grid tile with simulation mode support |
 | `src/components/radar-chart.tsx` | Recharts radar visualization |
 | `src/app/safety-scores/client.tsx` | Full page with filtering, sorting, grade distribution, simulation mode |
-| `src/hooks/use-report-cards.ts` | TanStack Query hook |
-| `src/hooks/use-safety-score-history.ts` | TanStack Query hook for `/api/safety-score-history` |
+| `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useReportCards()` and `useSafetyScoreHistory()` |
 | `src/hooks/use-portfolio.ts` | Portfolio holdings state + browser persistence; delegates codec and exposure math to `src/lib/portfolio-codec.ts` and `src/lib/portfolio-analysis.ts` |
 | `src/hooks/use-stress-test.ts` | Stress test state, `computeStressedGrades` invocation, impact calculation |

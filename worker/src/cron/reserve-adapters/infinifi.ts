@@ -13,7 +13,17 @@ interface InfiniFiFarm {
 export interface InfiniFiProtocolData {
   code: string;
   data: {
-    stats: { asset: { totalTVLAssetNormalized: number } };
+    stats: {
+      asset: {
+        totalTVLAssetNormalized: number;
+        totalLiquidAssetNormalized?: number;
+        totalIlliquidAssetNormalized?: number;
+        pendingRedemptionsAssetNormalized?: number;
+      };
+    };
+    receipt?: {
+      totalSupplyNormalized?: number;
+    };
     farms: InfiniFiFarm[];
   };
 }
@@ -125,6 +135,12 @@ export async function fetchInfiniFiReserves(
     severity: "warning",
   }));
 
+  const totalReserveUsd = payload.data.stats.asset.totalTVLAssetNormalized;
+  const immediateRedeemableUsd =
+    payload.data.stats.asset.totalLiquidAssetNormalized ?? 0;
+  const illiquidReserveUsd =
+    payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
+
   return {
     slices: adapted.slices,
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -132,6 +148,16 @@ export async function fetchInfiniFiReserves(
       farmCount: payload.data.farms.length,
       activeFarmCount: adapted.slices.length,
       unknownFarmCount: adapted.unknownFarms.length,
+      totalReserveUsd,
+      immediateRedeemableUsd,
+      illiquidReserveUsd,
+      immediateRedeemableRatio:
+        totalReserveUsd > 0
+          ? immediateRedeemableUsd / totalReserveUsd
+          : null,
+      pendingRedemptionsUsd:
+        payload.data.stats.asset.pendingRedemptionsAssetNormalized,
+      supplyUsd: payload.data.receipt?.totalSupplyNormalized,
     },
   };
 }

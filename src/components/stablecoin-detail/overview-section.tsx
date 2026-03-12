@@ -2,10 +2,11 @@
 
 import { AiSummary } from "@/components/ai-summary";
 import { DEWSDetail } from "@/components/dews-detail";
+import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { ReserveTreemap } from "@/components/reserve-treemap";
 import { ApiFetchError } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import type { StablecoinMeta } from "@shared/types";
+import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 
 interface SummaryData {
   title: string;
@@ -19,6 +20,7 @@ interface OverviewSectionProps {
   summary: SummaryData | null;
   reserves: ReserveResult | null;
   reserveFetchError: unknown | null;
+  redemptionBackstop?: RedemptionBackstopEntry;
   isNavToken: boolean;
 }
 
@@ -101,9 +103,10 @@ export function OverviewSection({
   summary,
   reserves,
   reserveFetchError,
+  redemptionBackstop,
   isNavToken,
 }: OverviewSectionProps) {
-  const hasLeft = !!(summary || reserves || reserveFetchError);
+  const hasLeft = !!(summary || reserves || reserveFetchError || redemptionBackstop);
   const hasDews = !isNavToken;
   const isLiveEnabled = !!coin.liveReservesConfig;
   const reserveFetchNotice = reserveFetchError
@@ -210,6 +213,9 @@ export function OverviewSection({
                 )}
               </div>
             )}
+            {redemptionBackstop ? (
+              <RedemptionBackstopCard entry={redemptionBackstop} />
+            ) : null}
           </div>
           {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
         </div>

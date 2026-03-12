@@ -243,6 +243,14 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     triggerMode: "shared",
   },
   {
+    job: "sync-redemption-backstops",
+    label: "Redemption backstops",
+    group: "hourly",
+    intervalSec: 3600,
+    scheduleKey: "hourlyReserveSync",
+    triggerMode: "shared",
+  },
+  {
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",

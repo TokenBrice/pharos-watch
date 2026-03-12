@@ -90,8 +90,7 @@ export default defineConfig({
 - `worker/src/lib/__tests__/` — worker library tests (scoring, parsing)
 - `worker/src/api/__tests__/` — API handler contract tests
 - `worker/src/cron/__tests__/` — cron job tests (with degraded-mode scenarios)
-- `worker/src/cron/dex-discovery/__tests__/` — extracted DEX discovery cron tests
-- `worker/src/cron/dex-liquidity/__tests__/` — extracted DEX liquidity merge/staging tests
+- Extracted DEX discovery/liquidity modules are still tested from `worker/src/cron/__tests__/` via module-prefixed files such as `discovery-scan.test.ts`, `dex-liquidity-scoring.test.ts`, and `dex-liquidity-persistence.test.ts`
 
 **Pattern:** `*.test.ts` / `*.test.tsx` — Vitest discovers files matching `**/*.{test,spec}.?(c|m)[jt]s?(x)`.
 
@@ -310,6 +309,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `cache-passthrough.test.ts`           | stablecoins, charts, usds, bluechip, yield-rankings | 503 cache miss, 200 with \_meta, X-Data-Age                                                                                                          |
 | `dex-liquidity.test.ts`               | `handleDexLiquidity`                                | 200 with liquidity map, empty map, coverage-confidence fields, degraded Warning header, X-Data-Age                                                   |
 | `peg-summary.test.ts`                 | `handlePegSummary`                                  | 503 cache miss, 200 with coins + summary, X-Data-Age                                                                                                 |
+| `redemption-backstops.test.ts`        | `handleRedemptionBackstops`                         | 503 bootstrap miss, 200 with modeled route map + methodology metadata                                                                                |
 | `report-cards.test.ts`                | `handleReportCards`                                 | 503 cache miss, 200 with cards/methodology/dependencyGraph                                                                                           |
 | `stablecoin-detail.test.ts`           | `handleStablecoinDetail`                            | Upstream retry/timeout fallback behavior, stale-cache fallback, parse-failure diagnostics                                                            |
 | `stablecoin-summary.test.ts`          | `handleStablecoinSummary`                           | 503 cache-miss/corrupt-cache handling, 404 unknown coin, 200 compact supply/price summary + freshness headers                                        |
@@ -361,6 +361,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `sync-blacklist.test.ts`                                        | `sync-blacklist.ts`                | Incremental multi-chain sync, enrichment, and state advancement                                                                                                 |
 | `sync-bluechip.test.ts`                                         | `sync-bluechip.ts`                 | Bluechip scrape normalization and cache writes                                                                                                                  |
 | `sync-live-reserves.test.ts`                                    | `sync-live-reserves.ts`            | Adapter orchestration, circuit-open skips, degraded warning handling, and shared-source dedupe                                                               |
+| `sync-redemption-backstops.test.ts`                             | `sync-redemption-backstops.ts`     | Stablecoins-cache gating, snapshot writes, source-mode metadata, and current-row pruning                                                                    |
 | `sync-usds-status.test.ts`                                      | `sync-usds-status.ts`              | USDS implementation/freeze-module on-chain checks                                                                                                               |
 | `yield-helpers.test.ts`                                         | `yield-helpers.ts`                 | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool`                           |
 | `sync-fx-rates.test.ts`                                         | `sync-fx-rates.ts`                 | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for CNH/RUB/UAH/ARS                                                   |
@@ -373,10 +374,10 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `dex-liquidity-persistence.test.ts`                             | `dex-liquidity/persistence.ts`     | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior              |
 | `sync-mint-burn.test.ts`                                        | `sync-mint-burn.ts`                | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior                                                             |
 | `announce-cemetery-additions.test.ts`                           | `announce-cemetery-additions.ts`   | Cemetery dataset diffing, first-run seeding, and Telegram announcement behavior                                                                                |
-| `worker/src/cron/dex-discovery/__tests__/crawl-sources.test.ts` | `dex-discovery/crawl-sources.ts`   | Chain-aware source crawling, source demotion, and staged-pool harvest behavior                                                                                 |
-| `worker/src/cron/dex-discovery/__tests__/orchestrator.test.ts`  | `dex-discovery/orchestrator.ts`    | Discovery tiering, backoff cadence, staged-pool writes, and budget exhaustion behavior                                                                          |
-| `worker/src/cron/dex-discovery/__tests__/sync-dex-discovery.test.ts` | `dex-discovery/index.ts`      | Top-level discovery cron orchestration and persistence handoff                                                                                                  |
-| `worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts` | `dex-liquidity/staging-merge.ts`   | Staged-pool confidence decay, default filling, and merge-selection semantics                                                                                    |
+| `discovery-scan.test.ts`                                         | `discovery-scan.ts`                | Daily CoinGecko residual scan, candidate upserts, and dismiss-state preservation                                                                                |
+| `dex-liquidity-fallbacks.test.ts`                                | `dex-liquidity/fetch-fallbacks.ts` | DexScreener and CoinGecko ticker fallback ingestion behavior                                                                                                    |
+| `dex-liquidity-persistence.test.ts`                              | `dex-liquidity/persistence.ts`     | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior           |
+| `dex-liquidity-scoring.test.ts`                                  | `dex-liquidity/scoring.ts`         | Pool filtering/scaling, per-coin/global aggregate recomputation, confidence-gated depth stability, and DEX price median persistence                          |
 
 ## Conventions
 
@@ -448,10 +449,10 @@ Current critical file set:
 
 ### Critical Test Suites
 
-- `npm run test:critical-contracts` covers strict contract paths (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus router mapping tests to guarantee these paths are wired in `worker/src/router.ts`.
+- `npm run test:critical-contracts` covers the explicitly enumerated critical handler suites (`peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus shared strict-path registry tests and router mapping tests.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes).
-- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
+- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path derived from `shared/lib/api-endpoints.ts` / `shared/lib/strict-contract-paths.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage/empty states (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`) and on sustained horizontal overflow across tracked mobile routes.
 
 ### Tier-3 Structural Refactor Targeted Suites
@@ -556,9 +557,10 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current s
 - `DepegEventsResponseSchema`
 - `PegSummaryResponseSchema`
 - `DexLiquidityMapSchema`
+- `RedemptionBackstopsResponseSchema`
 - `StabilityIndexResponseSchema`
-- `ReportCardsResponseSchema` (wired with a typed cast in `use-report-cards.ts`)
-- `SafetyScoreHistoryResponseSchema` (wired with a typed cast in `use-safety-score-history.ts`)
+- `ReportCardsResponseSchema`
+- `SafetyScoreHistoryResponseSchema`
 - `MintBurnFlowsResponseSchema`
 - `MintBurnPerCoinResponseSchema`
 - `MintBurnEventsResponseSchema`
@@ -573,6 +575,6 @@ When adding a new API endpoint:
 2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
 
-**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), Zod schemas infer `string`. In those cases, keep hand-written interfaces and cast schema wiring intentionally where needed (see `use-report-cards.ts`).
+**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), prefer the shared hand-written interfaces and keep any unavoidable schema wiring/casts localized in the consolidated hook module (`src/hooks/api-hooks.ts`).
 
 **Worker CI note:** `shared/types/index.ts` imports `zod`, and the worker type-checks shared modules via the `@shared/*` path alias in the `validate` job (`cd worker && npx tsc --noEmit`) before any deploy step runs. Root deps are installed first (`npm ci`) so shared imports resolve from root `node_modules/`. If you add new npm packages imported at the top level of shared files, they do not need duplication in `worker/package.json` unless the worker uses a worker-local build/runtime path that requires it.

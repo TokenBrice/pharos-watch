@@ -292,13 +292,14 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out and channel posting get their own 6-connection pool and CPU budget. The scheduled handler runs the two jobs sequentially: subscriber alerts first, cemetery channel diff second. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
-### Trigger 8: `11 * * * *` (hourly at :11 — live reserve sync tuning lane)
+### Trigger 8: `11 * * * *` (hourly at :11 — reserve + redemption lane)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-live-reserves` | `syncLiveReserves()` | `worker/src/cron/sync-live-reserves.ts` | This doc (below) |
+| `sync-redemption-backstops` | `syncRedemptionBackstops()` | `worker/src/cron/sync-redemption-backstops.ts` | `docs/redemption-backstops.md` |
 
-**Connection budget:** dedicated hourly trigger for reserve-sync tuning. Current implementation is sequential and uses at most one external protocol request at a time.
+**Connection budget:** dedicated hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata.
 
 ### Trigger 9: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
@@ -665,6 +666,16 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 | `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro` | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints |
 | `crvusd` | `crvusd-curve` | `inputs.primary.kind = "http-json"` -> `https://prices.curve.finance/v1/crvusd/markets` |
 | `ethena` | `usde-ethena` | `inputs.primary.kind = "http-json"` -> `https://app.ethena.fi/api/positions/current/collateral` |
+
+### sync-redemption-backstops
+
+**File:** `worker/src/cron/sync-redemption-backstops.ts`  
+**Schedule:** `11 * * * *` (hourly at :11 UTC, immediately after `sync-live-reserves`)  
+**Data source:** Stablecoins cache, DEX liquidity snapshot, redemption-backstop config registry, and live reserve-sync metadata where available
+
+**Purpose:** Builds the current `redemption_backstop` dataset for redeemable assets and writes daily rows to `redemption_backstop_history`. This sync is deliberately separate from report-card generation so redeemability remains a first-class worker dataset with its own cron visibility, API surface, and methodology versioning.
+
+Current dynamic reserve-metadata support is used for `iusd-infinifi`, whose immediate redeemable capacity is derived from the live reserve lane’s standardized metadata (`immediateRedeemableUsd`, `immediateRedeemableRatio`). Other covered assets currently use conservative modelled capacity rules such as full-supply redeemability or configured liquid-buffer ratios, depending on route family.
 | `falcon` | `usdf-falcon` | `inputs.primary.kind = "http-json"` -> `https://api.falcon.finance/api/v1/transparency` |
 | `infinifi` | `iusd-infinifi` | `inputs.primary.kind = "http-json"` -> `https://eth-api.infinifi.xyz/api/protocol/data` |
 | `m0` | `m-m0`, `musd-metamask`, `usdn-noble` | `inputs.primary.kind = "http-json"` -> `https://protocol-api.m0.org/graphql` (`CollateralCurrent`) |
@@ -747,7 +758,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 22 cron jobs across 10 triggers via `CRON_INTERVALS` in `worker/src/lib/cron-schedule.ts`, which is derived from the shared `shared/lib/cron-jobs.ts` source of truth:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 23 cron jobs across 10 triggers via `CRON_INTERVALS` in `worker/src/lib/cron-schedule.ts`, which is derived from the shared `shared/lib/cron-jobs.ts` source of truth:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -770,6 +781,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
 | `sync-live-reserves` | 3,600s (1h) | `11 * * * *` |
+| `sync-redemption-backstops` | 3,600s (1h) | `11 * * * *` |
 | `sync-bluechip` | 86,400s (24h) | `5 8 * * *` |
 | `daily-digest` | 86,400s (24h) | `5 8 * * *` |
 | `discovery-scan` | 86,400s (24h) | `5 8 * * *` |
@@ -823,11 +835,14 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/bluechip-slugs.ts` | Bluechip slug → canonical Pharos ID mapping (17 coins) |
 | `worker/src/lib/mint-burn-health-config.ts` | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator |
 | `worker/src/lib/dex-liquidity.ts` | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`) |
+| `worker/src/lib/redemption-backstop-sources.ts` | Redemption-route resolver: capacity models, docs, costs, and effective-exit scoring inputs |
+| `worker/src/lib/redemption-backstops-store.ts` | D1 snapshot storage + `GET /api/redemption-backstops` response builder |
 | `worker/src/lib/psi-recompute.ts` | Shared historical PSI day-input builder used by audit/backfill admin APIs |
 | `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit vault overrides, `startBlock`, and `SAFE_HAVEN_IDS` |
 | `worker/src/lib/mint-burn-scoring.ts` | FIS computation, gauge bands, flight-to-quality detection (pure functions) |
 | `worker/src/cron/sync-stablecoin-charts.ts` | Chart sync: DefiLlama charts, FX fix, downsampling |
 | `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation |
+| `worker/src/cron/sync-redemption-backstops.ts` | Hourly redemption-route snapshot sync used by detail pages and report cards |
 | `worker/src/cron/sync-usds-status.ts` | USDS freeze monitor: ERC-1967 proxy inspection |
 | `worker/src/cron/sync-bluechip.ts` | Bluechip ratings: batch fetch from bluechip.org |
 | `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events) |

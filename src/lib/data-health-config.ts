@@ -1,4 +1,4 @@
-import { CRON_15MIN, CRON_20MIN, CRON_30MIN, CRON_24H } from "@/lib/cron-intervals";
+import { CRON_15MIN, CRON_20MIN, CRON_30MIN, CRON_1H, CRON_24H } from "@/lib/cron-intervals";
 
 interface DataHealthPreset {
   label: string;
@@ -11,6 +11,7 @@ export const DATA_HEALTH_PRESETS = {
   stressSignals: { label: "DEWS", staleTime: CRON_15MIN },
   depegEvents: { label: "Depeg Events", staleTime: CRON_15MIN },
   reportCards: { label: "Report Cards", staleTime: CRON_15MIN },
+  redemptionBackstops: { label: "Redemption Backstops", staleTime: CRON_1H },
   stabilityIndex: { label: "Stability Index", staleTime: CRON_15MIN },
   mintBurnFlows: { label: "Mint/Burn Flows", staleTime: CRON_20MIN },
   blacklist: { label: "Blacklist", staleTime: CRON_20MIN },

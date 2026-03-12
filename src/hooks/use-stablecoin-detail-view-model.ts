@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback } from "react";
-import { useDexLiquidity, usePegSummary, useReportCards } from "@/hooks/api-hooks";
+import {
+  useDexLiquidity,
+  usePegSummary,
+  useRedemptionBackstops,
+  useReportCards,
+} from "@/hooks/api-hooks";
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
@@ -59,6 +64,12 @@ export function useStablecoinDetailViewModel({
     error: reportCardsError,
     refetch: refetchReportCards,
   } = useReportCards();
+  const {
+    data: redemptionBackstopsData,
+    dataUpdatedAt: rbUpdatedAt,
+    error: redemptionBackstopsError,
+    refetch: refetchRedemptionBackstops,
+  } = useRedemptionBackstops();
   const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
   const liveReserves = useStablecoinReserves(id, !!coin.liveReservesConfig);
 
@@ -69,8 +80,16 @@ export function useStablecoinDetailViewModel({
       refetchPeg(),
       refetchLiquidity(),
       refetchReportCards(),
+      refetchRedemptionBackstops(),
     ]);
-  }, [refetchLiquidity, refetchList, refetchPeg, refetchReportCards, refetchSupply]);
+  }, [
+    refetchLiquidity,
+    refetchList,
+    refetchPeg,
+    refetchRedemptionBackstops,
+    refetchReportCards,
+    refetchSupply,
+  ]);
 
   return buildStablecoinDetailViewModel({
     id,
@@ -95,6 +114,9 @@ export function useStablecoinDetailViewModel({
     reportCardsData,
     rcUpdatedAt,
     reportCardsError,
+    redemptionBackstopsData,
+    rbUpdatedAt,
+    redemptionBackstopsError,
     flowsData,
     isFlowsLoading,
     liveReserves: liveReserves.reserveResult,

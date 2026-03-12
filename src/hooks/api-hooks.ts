@@ -7,6 +7,7 @@ import {
   HealthResponseSchema,
   PegSummaryResponseSchema,
   ReportCardsResponseSchema,
+  RedemptionBackstopsResponseSchema,
   SafetyScoreHistoryResponseSchema,
   StabilityIndexResponseSchema,
   YieldRankingsResponseSchema,
@@ -19,6 +20,7 @@ import {
   type HealthResponse,
   type PegSummaryResponse,
   type ReportCardsResponse,
+  type RedemptionBackstopsResponse,
   type SafetyScoreHistoryResponse,
   type StabilityContributor,
   type StabilityIndexResponse,
@@ -104,6 +106,15 @@ export function useReportCards() {
     API_PATHS.reportCards(),
     CRON_15MIN,
     { schema: ReportCardsResponseSchema },
+  );
+}
+
+export function useRedemptionBackstops() {
+  return useApiQuery<RedemptionBackstopsResponse>(
+    ["redemption-backstops"],
+    API_PATHS.redemptionBackstops(),
+    CRON_1H,
+    { schema: RedemptionBackstopsResponseSchema },
   );
 }
 

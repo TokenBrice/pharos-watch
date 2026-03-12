@@ -306,10 +306,11 @@ export function MethodologySections() {
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Pharos synthesizes multiple data signals into a single transparent grade per stablecoin. The overall score
-            is computed in two steps: first, a weighted average of four base dimensions (liquidity, resilience,
+            is computed in two steps: first, a weighted average of four base dimensions (exit liquidity, resilience,
             decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs
-            while barely affecting well-pegged ones. When some base dimensions lack data (NR), their weight is
-            redistributed proportionally among rated ones.
+            while barely affecting well-pegged ones. The exit-liquidity dimension blends raw DEX liquidity with
+            redemption-backstop quality when a direct exit path exists. When some base dimensions lack data (NR), their
+            weight is redistributed proportionally among rated ones.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
@@ -322,7 +323,7 @@ export function MethodologySections() {
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Key caveat</p>
-              <p className="text-foreground">No DEX data = 10% penalty</p>
+              <p className="text-foreground">No exit signal = 10% penalty</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -330,20 +331,20 @@ export function MethodologySections() {
             <MethodologyFacts
               facts={[
                 { label: "Minimum data", value: "At least 2 rated non-peg dimensions" },
-                { label: "Required sources", value: "Peg summary, DEX liquidity, and dependency/metadata inputs" },
+                { label: "Required sources", value: "Peg summary, DEX liquidity/redemption data, and dependency/metadata inputs" },
                 {
                   label: "Failure behavior",
-                  value: "NR if peg is missing on non-NAV coins; no-liquidity applies 0.9 multiplier",
+                  value: "NR if peg is missing on non-NAV coins; 0.9 penalty applies only when both DEX and redemption signals are absent",
                 },
               ]}
             />
           </div>
           <WorkedExample summary="Worked example (verified against computeOverallGrade)">
-            <p className="font-mono">Inputs: Liq 80, Res 70, Decen 60, Dep 75, Peg 92</p>
-            <p className="font-mono">base=(80*0.30+70*0.20+60*0.15+75*0.25)/0.90=73.06</p>
-            <p className="font-mono">final=round(base*(92/100)^0.20)=round(73.06*0.9835)=72</p>
+            <p className="font-mono">Inputs: DEX 30, Redemption 88, Exit 56, Res 70, Decen 60, Dep 75, Peg 92</p>
+            <p className="font-mono">base=(56*0.30+70*0.20+60*0.15+75*0.25)/0.90=65.06</p>
+            <p className="font-mono">final=round(base*(92/100)^0.20)=round(65.06*0.9835)=64</p>
             <p>
-              Result: <span className="text-foreground">Score 72 (grade B)</span>.
+              Result: <span className="text-foreground">Score 64 (grade C+)</span>.
             </p>
           </WorkedExample>
 
@@ -352,7 +353,7 @@ export function MethodologySections() {
             <div className="hidden md:flex flex-col items-center gap-3">
               <div className="grid grid-cols-4 gap-3 w-full">
                 <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium">Liquidity</p>
+                  <p className="text-foreground font-medium">Exit Liquidity</p>
                   <p className="text-xs text-muted-foreground mt-0.5">30%</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
@@ -383,7 +384,7 @@ export function MethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border border-amber-500/40 p-3 text-center w-64">
                 <p className="text-foreground font-medium">&times; No-Liquidity Penalty</p>
-                <p className="text-xs text-muted-foreground mt-0.5">0.9&times; if no DEX data</p>
+                <p className="text-xs text-muted-foreground mt-0.5">0.9&times; if no DEX or redemption signal</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border p-3 text-center w-64">
@@ -396,7 +397,7 @@ export function MethodologySections() {
             <div className="flex flex-col items-center gap-3 md:hidden">
               <div className="grid grid-cols-2 gap-2 w-full">
                 <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Liquidity</p>
+                  <p className="text-foreground font-medium text-xs">Exit Liquidity</p>
                   <p className="text-xs text-muted-foreground">30%</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
@@ -427,7 +428,7 @@ export function MethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border border-amber-500/40 p-3 text-center">
                 <p className="text-foreground font-medium">&times; No-Liquidity Penalty</p>
-                <p className="text-xs text-muted-foreground mt-0.5">0.9&times; if no DEX data</p>
+                <p className="text-xs text-muted-foreground mt-0.5">0.9&times; if no DEX or redemption signal</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border p-3 text-center">
@@ -451,10 +452,10 @@ export function MethodologySections() {
                   </thead>
                   <tbody className="divide-y">
                     <tr>
-                      <td className="py-2 pr-4 text-foreground">Liquidity</td>
+                      <td className="py-2 pr-4 text-foreground">Exit Liquidity</td>
                       <td className="py-2 pr-4">30%</td>
-                      <td className="py-2 pr-4">DEX liquidity score</td>
-                      <td className="py-2">Direct passthrough of the liquidity score (see below)</td>
+                      <td className="py-2 pr-4">DEX liquidity + redemption backstop</td>
+                      <td className="py-2">Uses effective exit: DEX liquidity stays the floor, redemption can improve the dimension when a direct exit path exists</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 text-foreground">Resilience</td>
@@ -479,6 +480,24 @@ export function MethodologySections() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <h3 className="text-foreground font-medium">Redemption Backstop and Effective Exit</h3>
+              <p>
+                The standalone Liquidity Score remains a pure DEX market-depth metric. Safety Scores now use an
+                <span className="text-foreground font-medium"> effective exit score</span> for the Liquidity dimension:
+                DEX liquidity is preserved as the floor, while redeemable assets can gain uplift from protocol or
+                issuer redemption quality.
+              </p>
+              <p className="font-mono">
+                effectiveExit = max(liquidity, liquidity * 0.55 + redemption * 0.45)
+              </p>
+              <p>
+                Redemption backstops are scored across access, settlement, execution certainty, immediate capacity,
+                output-asset quality, and cost. Queue-based and offchain issuer routes are capped so they do not look
+                unrealistically liquid.
+              </p>
+            </div>
+
             {/* Peg multiplier */}
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Peg Stability Multiplier</h3>
@@ -495,10 +514,10 @@ export function MethodologySections() {
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">No-Liquidity-Data Penalty</h3>
               <p>
-                A further 0.9&times; multiplier is applied when a coin has no DEX liquidity score (NR). No free pass —
-                as DEX liquidity coverage matures, the absence of liquidity data is increasingly suspicious. The 30%
-                weight would normally be redistributed to other dimensions, effectively inflating the overall score;
-                this multiplier corrects for that by applying a flat 10% penalty instead.
+                A further 0.9&times; multiplier is applied only when a coin has no exit-liquidity signal at all —
+                neither DEX liquidity nor redemption-backstop coverage. The 30% weight would otherwise be redistributed
+                to other dimensions, effectively inflating the overall score; this multiplier corrects for that by
+                applying a flat 10% penalty instead.
               </p>
             </div>
 

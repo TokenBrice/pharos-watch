@@ -52,4 +52,50 @@ describe("OverviewSection", () => {
     expect(html).toContain("Live reserve refresh delayed");
     expect(html).toContain("last worker-resolved reserve snapshot");
   });
+
+  it("renders the redemption backstop card when a score is available", () => {
+    const coin = TRACKED_META_BY_ID.get("cusd-cap");
+    expect(coin).toBeDefined();
+
+    const html = renderToStaticMarkup(
+      <OverviewSection
+        stablecoinId="cusd-cap"
+        coin={coin!}
+        summary={null}
+        reserves={null}
+        reserveFetchError={null}
+        redemptionBackstop={{
+          stablecoinId: "cusd-cap",
+          score: 88,
+          effectiveExitScore: 56,
+          dexLiquidityScore: 29,
+          accessScore: 100,
+          settlementScore: 100,
+          executionCertaintyScore: 80,
+          capacityScore: 100,
+          outputAssetQualityScore: 80,
+          costScore: 40,
+          routeFamily: "basket-redeem",
+          accessModel: "permissionless-onchain",
+          settlementModel: "atomic",
+          executionModel: "deterministic-basket",
+          outputAssetType: "stable-basket",
+          provider: "supply-full-model",
+          sourceMode: "estimated",
+          immediateCapacityUsd: 10_000_000,
+          immediateCapacityRatio: 1,
+          feeBps: null,
+          queueEnabled: false,
+          methodologyVersion: "1.0",
+          updatedAt: 1_700_000_000,
+          capsApplied: [],
+        }}
+        isNavToken
+      />,
+    );
+
+    expect(html).toContain("Redemption Backstop");
+    expect(html).toContain("Immediate Capacity");
+    expect(html).toContain("10.0M");
+  });
 });

@@ -10,6 +10,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/stablecoin/:id` | Per-coin detail (cache-aside, 5min TTL) |
 | `GET /api/stablecoin-summary/:id` | Lightweight per-coin snapshot (price + aggregate supply/deltas) |
 | `GET /api/stablecoin-reserves/:id` | Live or fallback reserve composition for live-enabled assets |
+| `GET /api/redemption-backstops` | Modeled redemption-route and effective-exit snapshot for configured assets |
 | `GET /api/stablecoin-charts` | Historical total supply chart data |
 | `GET /api/blacklist` | Freeze/blacklist events (filterable by token, chain) |
 | `GET /api/depeg-events` | Depeg events (`?stablecoin=ID`, `?active=true`, `?limit=N&offset=M`) |
@@ -170,6 +171,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── overview-section.tsx
 │   │   ├── flows-section.tsx
 │   │   ├── explore-next-section.tsx # Consolidated crawlable link hub for taxonomy, compare, and related-coin routes
+│   │   ├── redemption-backstop-card.tsx
 │   │   ├── safety-score-history-section.tsx
 │   │   └── notices-and-summary-section.tsx
 │   ├── header.tsx                # Top nav bar
@@ -343,6 +345,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 │   ├── digest.ts                 # Daily digest / archive / snapshot contracts
 │   ├── market.ts                 # Stablecoin list, liquidity, depeg, blacklist, and stress-signal contracts
 │   ├── report-cards.ts           # Safety-score history + report-card response contracts
+│   ├── redemption.ts             # Redemption backstop response contracts
 │   ├── stability.ts              # Stability Index response contracts
 │   ├── status.ts                 # Status / health / discovery / reconciliation contracts
 │   ├── yield.ts                  # Yield rankings/history contracts
@@ -362,7 +365,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (71 total)
+├── migrations/                   # D1 SQL migration files (72 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
@@ -380,6 +383,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)
     │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
+    │   ├── sync-redemption-backstops.ts # Redemption backstop + effective-exit snapshot sync → D1 (hourly, reserve lane)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
@@ -421,6 +425,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id (orchestrator + branch routing)
     │   ├── stablecoin-summary.ts # GET /api/stablecoin-summary/:id (lightweight per-coin snapshot)
     │   ├── stablecoin-reserves.ts # GET /api/stablecoin-reserves/:id (live reserve composition + fallback modes)
+    │   ├── redemption-backstops.ts # GET /api/redemption-backstops (current redemption / effective-exit dataset)
     │   ├── stablecoin-detail/    # Stablecoin detail handler internals (focused modules)
     │   │   ├── shared.ts         # Shared cache/logging/response helpers + supply_history fallback
     │   │   ├── commodity.ts      # Commodity token upstream assembly (DL + CG fallback)
@@ -470,6 +475,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── stablecoins-cache.ts  # Shared strict/lenient loader for canonical stablecoins cache payload
         ├── safety-scores.ts      # Shared safety score snapshot helper (yield + digest consumers)
         ├── report-cards-snapshot.ts # Shared report-card snapshot builder (API + safety-grade-history cron)
+        ├── redemption-backstops-store.ts # D1 helpers for current + daily redemption-backstop snapshots
+        ├── redemption-backstop-sources.ts # Redeemability capacity-source resolution + scoring inputs
         ├── peg-analytics.ts      # Shared peg analytics snapshot helper (peg-summary + report-cards consumers)
         ├── mint-burn-health-config.ts # Shared mint/burn stale thresholds + major symbol defaults
         ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion (used by blacklist sync)

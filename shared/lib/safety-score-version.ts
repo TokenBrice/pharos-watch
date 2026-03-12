@@ -1,5 +1,5 @@
 /** Canonical safety scoring methodology version (no "v" prefix). */
-export const SAFETY_SCORE_VERSION = "5.5";
+export const SAFETY_SCORE_VERSION = "5.6";
 
 /** Display-ready safety scoring methodology version (with "v" prefix). */
 export const SAFETY_SCORE_VERSION_LABEL = `v${SAFETY_SCORE_VERSION}`;
@@ -10,6 +10,7 @@ export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH = "/methodology/scoring-cha
 /** Ordered scoring changelog versions used for the longform navigation rail. */
 export const SAFETY_SCORE_CHANGELOG_NAV_VERSIONS = [
   SAFETY_SCORE_VERSION_LABEL,
+  "v5.5",
   "v5.4",
   "v5.3",
   "v5.2",

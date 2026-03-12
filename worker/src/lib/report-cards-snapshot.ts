@@ -4,6 +4,7 @@ import { deriveDependencies } from "@shared/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
 import { loadDexLiquidityMap } from "./dex-liquidity";
+import { loadRedemptionBackstopMap } from "./redemption-backstops-store";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -19,6 +20,7 @@ import {
   resolveGovernanceQuality,
   isBlacklistable,
 } from "@shared/lib/report-cards";
+import { loadStablecoinsCache } from "./stablecoins-cache";
 import type {
   StablecoinData,
   StablecoinMeta,
@@ -35,6 +37,7 @@ import type {
   CollateralQuality,
   CustodyModel,
   ReportCardGrade,
+  RedemptionBackstopEntry,
 } from "@shared/types";
 
 export interface ReportCardsSnapshot {
@@ -59,28 +62,18 @@ export class ReportCardsSnapshotUnavailableError extends Error {
 }
 
 export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCardsSnapshot> {
-  const [stablecoinsCached, bluechipCached, dexLiqMap] = await Promise.all([
-    getCache(db, "stablecoins"),
+  const [stablecoinsCached, bluechipCached, dexLiqMap, redemptionBackstopMap] = await Promise.all([
+    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
     getCache(db, "bluechip-ratings"),
     loadDexLiquidityMap(db),
+    loadRedemptionBackstopMap(db),
   ]);
 
-  if (!stablecoinsCached) {
-    throw new ReportCardsSnapshotUnavailableError("Data not yet available");
-  }
-
-  let peggedAssets: StablecoinData[];
-  let fxFallbackRates: Record<string, number> | undefined;
-  try {
-    const parsed = JSON.parse(stablecoinsCached.value) as {
-      peggedAssets: StablecoinData[];
-      fxFallbackRates?: Record<string, number>;
-    };
-    peggedAssets = parsed.peggedAssets;
-    fxFallbackRates = parsed.fxFallbackRates;
-  } catch {
+  if (stablecoinsCached.kind !== "ok") {
     throw new ReportCardsSnapshotUnavailableError("Cached stablecoins data is corrupt");
   }
+  const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
+  const fxFallbackRates = stablecoinsCached.payload.fxFallbackRates;
 
   let bluechipMap: Record<string, BluechipRating> = {};
   if (bluechipCached) {
@@ -110,7 +103,15 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   const liveCards: ReportCard[] = [];
 
   for (const meta of sortedMetas) {
-    const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, overallScores, blacklistableIds);
+    const card = computeCard(
+      meta,
+      pegDataById,
+      dexLiqMap,
+      redemptionBackstopMap,
+      bluechipMap,
+      overallScores,
+      blacklistableIds,
+    );
     liveCards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
@@ -141,6 +142,11 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
         depegEventCount: 0,
         lastEventAt: null,
         liquidityScore: null,
+        effectiveExitScore: null,
+        redemptionBackstopScore: null,
+        redemptionRouteFamily: null,
+        redemptionImmediateCapacityUsd: null,
+        redemptionImmediateCapacityRatio: null,
         concentrationHhi: null,
         bluechipGrade: null,
         canBeBlacklisted: false,
@@ -189,12 +195,14 @@ function computeCard(
   meta: (typeof TRACKED_STABLECOINS)[number],
   pegDataById: Map<string, PegSummaryCoin>,
   dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>,
+  redemptionBackstopMap: Record<string, RedemptionBackstopEntry>,
   bluechipMap: Record<string, BluechipRating>,
   overallScores: Map<string, number>,
   blacklistableIds: ReadonlySet<string>,
 ): ReportCard {
   const peg = pegDataById.get(meta.id);
   const liq = dexLiqMap[meta.id];
+  const redemption = redemptionBackstopMap[meta.id];
   const rating = bluechipMap[meta.id];
 
   const canBeBlacklisted = isBlacklistable(meta, blacklistableIds);
@@ -202,7 +210,7 @@ function computeCard(
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta),
-    liquidity: scoreLiquidity(liq),
+    liquidity: scoreLiquidity(liq, redemption),
     resilience: scoreResilience(meta, canBeBlacklisted),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
@@ -217,6 +225,11 @@ function computeCard(
     depegEventCount: peg?.eventCount ?? 0,
     lastEventAt: peg?.lastEventAt ?? null,
     liquidityScore: liq?.liquidityScore ?? null,
+    effectiveExitScore: dimensions.liquidity.score,
+    redemptionBackstopScore: redemption?.score ?? null,
+    redemptionRouteFamily: redemption?.routeFamily ?? null,
+    redemptionImmediateCapacityUsd: redemption?.immediateCapacityUsd ?? null,
+    redemptionImmediateCapacityRatio: redemption?.immediateCapacityRatio ?? null,
     concentrationHhi: liq?.concentrationHhi ?? null,
     bluechipGrade: rating?.grade ?? null,
     canBeBlacklisted,

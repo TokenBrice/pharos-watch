@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { makeAsset } from "../../api/__tests__/helpers/fixtures";
 import { handleReportCards } from "../../api/report-cards";
@@ -6,6 +6,20 @@ import {
   buildReportCardsSnapshot,
   ReportCardsSnapshotUnavailableError,
 } from "../report-cards-snapshot";
+
+const loadRedemptionBackstopMapMock = vi.hoisted(() =>
+  vi.fn(async () => ({})),
+);
+
+vi.mock("../redemption-backstops-store", async (importOriginal) => {
+  const original = await importOriginal<
+    typeof import("../redemption-backstops-store")
+  >();
+  return {
+    ...original,
+    loadRedemptionBackstopMap: loadRedemptionBackstopMapMock,
+  };
+});
 
 const nowSec = Math.floor(Date.now() / 1000);
 
@@ -55,5 +69,70 @@ describe("buildReportCardsSnapshot", () => {
 
     const body = await response.json();
     expect(body).toEqual(snapshot);
+  });
+
+  it("uses effective exit scoring when a redemption backstop row exists", async () => {
+    const cacheValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+          { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
+        ],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      {
+        match: "dex_liquidity",
+        rows: [
+          {
+            stablecoin_id: "cusd-cap",
+            liquidity_score: 29,
+            concentration_hhi: 1,
+            pool_count: 1,
+            chain_count: 1,
+          },
+        ],
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+    loadRedemptionBackstopMapMock.mockResolvedValueOnce({
+      "cusd-cap": {
+        stablecoinId: "cusd-cap",
+        score: 88,
+        effectiveExitScore: 56,
+        dexLiquidityScore: 29,
+        accessScore: 100,
+        settlementScore: 100,
+        executionCertaintyScore: 80,
+        capacityScore: 100,
+        outputAssetQualityScore: 80,
+        costScore: 40,
+        routeFamily: "basket-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-basket",
+        outputAssetType: "stable-basket",
+        provider: "supply-full-model",
+        sourceMode: "estimated",
+        immediateCapacityUsd: 10_000_000,
+        immediateCapacityRatio: 1,
+        feeBps: null,
+        queueEnabled: false,
+        methodologyVersion: "1.0",
+        updatedAt: nowSec,
+        capsApplied: [],
+      },
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+    expect(card?.rawInputs.liquidityScore).toBe(29);
+    expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
+    expect(card?.rawInputs.effectiveExitScore).toBe(56);
+    expect(card?.dimensions.liquidity.score).toBe(56);
   });
 });

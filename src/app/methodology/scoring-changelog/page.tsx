@@ -124,9 +124,40 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
-      {/* ──────────── v5.5 ──────────── */}
+      {/* ──────────── v5.6 ──────────── */}
       <VersionCard
         version={SAFETY_SCORE_VERSION_LABEL}
+        title="Exit-liquidity integration"
+        date="Mar 12, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          The Safety Score liquidity dimension now evaluates
+          <span className="text-foreground font-medium"> exit liquidity</span>,
+          not just raw DEX depth.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Added a new <span className="text-foreground font-medium">redemption backstop dataset</span>
+            for redeemable assets, covering onchain collateral redemptions, stable basket redemptions,
+            queue-based liquid-buffer systems, and issuer redemption rails.
+          </li>
+          <li>
+            The report-card Liquidity dimension now uses an
+            <span className="text-foreground font-medium"> effective exit score</span>:
+            DEX liquidity remains the floor, while redemption quality can improve the dimension
+            without redefining the standalone DEX liquidity score.
+          </li>
+          <li>
+            Added route-family caps so queue-based and offchain issuer systems cannot look
+            unrealistically liquid even when redemption exists.
+          </li>
+        </ul>
+      </VersionCard>
+
+      {/* ──────────── v5.5 ──────────── */}
+      <VersionCard
+        version="v5.5"
         title="Peg score fairness for young coins"
         date="Mar 1, 2026"
         accent="border-l-amber-500"

@@ -3,7 +3,7 @@
 import { CoinNotices } from "@/components/coin-notice";
 import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import type { StablecoinMeta } from "@shared/types";
+import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 
 interface SummaryData {
   title: string;
@@ -17,6 +17,7 @@ interface NoticesAndSummarySectionProps {
   summary: SummaryData | null;
   reserves: ReserveResult | null;
   reserveFetchError: unknown | null;
+  redemptionBackstop?: RedemptionBackstopEntry;
   isNavToken: boolean;
 }
 
@@ -26,6 +27,7 @@ export function NoticesAndSummarySection({
   summary,
   reserves,
   reserveFetchError,
+  redemptionBackstop,
   isNavToken,
 }: NoticesAndSummarySectionProps) {
   return (
@@ -36,6 +38,7 @@ export function NoticesAndSummarySection({
         summary={summary}
         reserves={reserves}
         reserveFetchError={reserveFetchError}
+        redemptionBackstop={redemptionBackstop}
         isNavToken={isNavToken}
       />
 
