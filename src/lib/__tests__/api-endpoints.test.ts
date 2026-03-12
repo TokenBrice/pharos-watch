@@ -15,6 +15,7 @@ describe("api endpoint registry", () => {
       "/api/stablecoins",
       "/api/stablecoin/pyusd-paypal",
       "/api/stablecoin-summary/usdt-tether",
+      "/api/stablecoin-reserves/iusd-infinifi",
       "/api/stablecoin-charts",
       "/api/peg-summary",
       "/api/health",

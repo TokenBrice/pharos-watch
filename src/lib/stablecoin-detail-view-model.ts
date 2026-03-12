@@ -119,6 +119,7 @@ interface BuildStablecoinDetailViewModelParams {
   reportCardsError: unknown | null;
   flowsData?: MintBurnFlowsResponse;
   isFlowsLoading: boolean;
+  liveReserves: ReserveResult | null;
   nowMs?: number;
 }
 
@@ -147,6 +148,7 @@ export function buildStablecoinDetailViewModel({
   reportCardsError,
   flowsData,
   isFlowsLoading,
+  liveReserves,
   nowMs = Date.now(),
 }: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   if (supplyLoading || listLoading) {
@@ -190,7 +192,7 @@ export function buildStablecoinDetailViewModel({
   const liquidityData = liquidityMap?.[id];
   const liqBorderClass = deriveLiquidityBorderClass(liquidityData);
   const reportCard = reportCardsData?.cards.find((candidate) => candidate.id === id);
-  const reserves = getReserves(coin);
+  const reserves = liveReserves ?? getReserves(coin);
   const hasFlows =
     isFlowsLoading
     || !!flowsData?.coins.find((entry) => entry.stablecoinId === id);

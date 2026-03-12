@@ -6,6 +6,7 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailSummary,
@@ -61,6 +62,11 @@ export function useStablecoinDetailViewModel({
     refetch: refetchReportCards,
   } = useReportCards();
   const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
+  const liveReserves = useStablecoinReserves(
+    id,
+    !!coin.liveReservesConfig,
+    coin.liveReservesConfig?.displayUrl,
+  );
 
   const handleRetryAll = useCallback(() => {
     void Promise.allSettled([
@@ -97,5 +103,6 @@ export function useStablecoinDetailViewModel({
     reportCardsError,
     flowsData,
     isFlowsLoading,
+    liveReserves,
   });
 }

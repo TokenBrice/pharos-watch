@@ -40,12 +40,43 @@ export function OverviewSection({
             {summary && <AiSummary {...summary} />}
             {reserves && (
               <div>
-                <ReserveTreemap reserves={reserves.reserves} />
-                {reserves.estimated && (
-                  <p className="mt-1 text-center text-xs text-muted-foreground">
-                    Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
-                  </p>
-                )}
+                <ReserveTreemap
+                  reserves={reserves.reserves}
+                  isLive={!!reserves.liveAt}
+                />
+                <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                  {reserves.liveAt ? (
+                    <>
+                      <span>
+                        Updated{" "}
+                        {new Date(reserves.liveAt * 1000).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          timeZoneName: "short",
+                        })}
+                      </span>
+                      {reserves.displayUrl && (
+                        <>
+                          <span aria-hidden>·</span>
+                          <a
+                            href={reserves.displayUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2 hover:text-foreground transition-colors"
+                          >
+                            Source
+                          </a>
+                        </>
+                      )}
+                    </>
+                  ) : reserves.estimated ? (
+                    <span>
+                      Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
+                    </span>
+                  ) : null}
+                </div>
               </div>
             )}
           </div>

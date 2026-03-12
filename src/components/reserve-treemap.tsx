@@ -10,6 +10,7 @@ import type { ReserveSlice, ReserveRisk } from "@shared/types";
 
 interface ReserveTreemapProps {
   reserves: ReserveSlice[];
+  isLive?: boolean;
 }
 
 const RISK_COLORS: Record<ReserveRisk, string> = {
@@ -119,15 +120,20 @@ function ReserveTooltip({
   );
 }
 
-export function ReserveTreemap({ reserves }: ReserveTreemapProps) {
+export function ReserveTreemap({ reserves, isLive }: ReserveTreemapProps) {
   const data = useMemo(() => reserves.map((r) => ({ ...r, size: r.pct })), [reserves]);
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+        <CardTitle as="h2" className={`${DETAIL_SECTION_TITLE_CLASS} flex items-center gap-2`}>
           Reserve Composition
+          {isLive && (
+            <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+              Live
+            </span>
+          )}
         </CardTitle>
         <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
           {(Object.entries(RISK_LABELS) as [ReserveRisk, string][]).map(([risk, label]) => (

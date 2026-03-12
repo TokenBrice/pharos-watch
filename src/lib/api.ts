@@ -1,4 +1,6 @@
 import type { ZodType } from "zod";
+import type { ReserveSlice } from "@shared/types";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
 
 export function resolveApiBase(
@@ -197,4 +199,16 @@ export async function apiFetchWithMeta<T>(
   }
 
   return { data: data as T, meta };
+}
+
+export async function fetchStablecoinReserves(stablecoinId: string): Promise<{
+  slices: ReserveSlice[];
+  fetchedAt: number;
+  source: string;
+} | null> {
+  const res = await fetch(buildApiUrl(API_PATHS.stablecoinReserves(stablecoinId)));
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`stablecoin-reserves fetch failed: ${res.status}`);
+  const data = await res.json() as { slices: ReserveSlice[]; fetchedAt: number; source: string };
+  return data;
 }

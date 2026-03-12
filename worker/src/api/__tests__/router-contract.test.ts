@@ -68,7 +68,9 @@ describe("router contract: strict frontend paths are routable", () => {
         const expectedPublicStatuses =
           endpoint.path === "/api/telegram-webhook"
             ? [200, 400, 501, 502, 503]
-            : [200, 400, 502, 503];
+            : endpoint.handlerKey === "stablecoin-reserves-probe"
+              ? [200, 404, 400, 502, 503]
+              : [200, 400, 502, 503];
 
         if (endpoint.routerHandled === false) {
           const response = await worker.fetch(
