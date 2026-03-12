@@ -307,7 +307,6 @@ Renders after the Circuit Breakers section. Shows the current price confidence d
 - **Source breakdown line** — which price sources contributed to the current sync
 - **Divergences list** — collapsible list of assets where dual-primary sources disagreed by more than 50 bps
 - **Last sync age** — how old the price-health snapshot is
-- **Shadow pipeline stats** — divergence summary, coverage deltas, and compared-asset count
 
 Data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row — no extra DB query required.
 

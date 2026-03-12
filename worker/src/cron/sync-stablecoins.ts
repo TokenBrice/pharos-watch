@@ -3,12 +3,11 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import {
-  computeShadowComparison,
   enrichMissingPrices,
   hasMissingPrice,
   fetchPrimaryPrices,
 } from "./enrich-prices";
-import type { PeggedAsset, ShadowComparisonResult } from "./enrich-prices";
+import type { PeggedAsset } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
 import { confirmPendingDepegs } from "./confirm-pending-depegs";
@@ -108,7 +107,7 @@ function summarizeValidationIssues(issues: string): string {
   return `${issues.slice(0, VALIDATION_ISSUES_MAX_CHARS)}...`;
 }
 
-function shadowDecisionModeForAsset(asset: PeggedAsset): "primary_authoritative" | "fallback_enrichment" {
+function priceValidationModeForAsset(asset: PeggedAsset): "primary_authoritative" | "fallback_enrichment" {
   return asset.priceConfidence === "fallback" ||
     asset.priceSource === "coinmarketcap" ||
     asset.priceSource === "dexscreener" ||
@@ -551,40 +550,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     llamaData.peggedAssets, db, signal, validationReferences,
   );
 
-  // Regression monitor: compare CG primary prices against DL list endpoint prices.
-  // This tracks divergence between our primary source and the DL ecosystem baseline.
-  let shadowComparison: ShadowComparisonResult | null = null;
-  try {
-    // Extract CG prices from primary results (already fetched — no extra API call)
-    const shadowCgPrices = new Map<string, number>();
-    const oldPrices = new Map<string, number>();
-    for (const asset of llamaData.peggedAssets) {
-      if (!asset.geckoId) continue;
-      const primary = primaryPriceResults.get(asset.id);
-      if (primary?.cgPrice != null && primary.cgPrice > 0) {
-        shadowCgPrices.set(asset.geckoId, primary.cgPrice);
-      }
-      // Old pipeline price = DL list endpoint price (what we'd lose if CG becomes primary)
-      if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
-        oldPrices.set(asset.geckoId, asset.price);
-      }
-    }
-
-    if (shadowCgPrices.size > 0) {
-      shadowComparison = computeShadowComparison(oldPrices, shadowCgPrices);
-      console.log(
-        `[shadow] Compared ${shadowComparison.totalCompared} prices: ` +
-        `mean=${shadowComparison.meanDivergenceBps}bps, p95=${shadowComparison.p95DivergenceBps}bps, ` +
-        `max=${shadowComparison.maxDivergenceBps}bps, lost=${shadowComparison.coverageLost}, gained=${shadowComparison.coverageGained}`,
-      );
-    } else {
-      // CG was unavailable (circuit breaker open or fetch failed) — record explicitly
-      shadowComparison = computeShadowComparison(oldPrices, new Map());
-    }
-  } catch (err) {
-    console.warn("[shadow] Shadow comparison failed:", err);
-  }
-
   // Apply primary price results — these override the DL list endpoint prices
   for (const asset of llamaData.peggedAssets) {
     const primary = primaryPriceResults.get(asset.id);
@@ -658,7 +623,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       const decision = validatePriceCandidate(
         asset.price,
         validationContexts.get(asset),
-        shadowDecisionModeForAsset(asset),
+        priceValidationModeForAsset(asset),
         validationReferences,
       );
       if (!decision.accepted) {
@@ -884,7 +849,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     rejectedPrices: rejectedCount,
     missingPrices: finalMissing,
     priceSourceHealth,
-    shadowComparison,
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
   if (depegErrorCount > 0) {

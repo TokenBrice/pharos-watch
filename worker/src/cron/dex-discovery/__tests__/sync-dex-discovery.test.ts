@@ -111,7 +111,7 @@ describe("syncDexDiscovery", () => {
     });
   });
 
-  it("returns the discovery contract metadata without shadow telemetry", async () => {
+  it("returns the discovery contract metadata without legacy telemetry fields", async () => {
     const result = await syncDexDiscovery(db, null);
 
     expect(result.status).toBe("ok");
@@ -136,6 +136,5 @@ describe("syncDexDiscovery", () => {
         skipped: 1,
       },
     });
-    expect(metadata).not.toHaveProperty("priceValidationShadow");
   });
 });

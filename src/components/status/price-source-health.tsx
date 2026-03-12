@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { PriceSourceHealth, ShadowComparisonResult } from "@shared/types";
+import type { PriceSourceHealth } from "@shared/types";
 import { useState } from "react";
 import { formatAge } from "./format";
 
@@ -33,15 +33,12 @@ function confidenceSeverity(label: string, value: number, total: number): string
 
 export function PriceSourceHealthCard({
   health,
-  shadowComparison,
   nowSeconds,
 }: {
   health: PriceSourceHealth | null;
-  shadowComparison?: ShadowComparisonResult | null;
   nowSeconds: number;
 }) {
   const [showDivergences, setShowDivergences] = useState(false);
-  const [showShadow, setShowShadow] = useState(false);
 
   if (!health) {
     return (
@@ -116,41 +113,6 @@ export function PriceSourceHealthCard({
                     {d.symbol}: CG ${d.cgPrice.toFixed(4)} vs DL ${d.dlPrice.toFixed(4)} ({d.bps} bps)
                   </div>
                 ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {shadowComparison && (
-          <div>
-            <button
-              onClick={() => setShowShadow(!showShadow)}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              {showShadow ? "▾" : "▸"} Shadow Pipeline {shadowComparison.cgAvailable ? "" : "(CG unavailable)"}
-            </button>
-            {showShadow && (
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                <div className="rounded-md border border-border/50 p-2">
-                  <div className="text-[10px] text-muted-foreground">Mean</div>
-                  <div className="font-mono text-sm">{shadowComparison.meanDivergenceBps} bps</div>
-                </div>
-                <div className="rounded-md border border-border/50 p-2">
-                  <div className="text-[10px] text-muted-foreground">P95</div>
-                  <div className="font-mono text-sm">{shadowComparison.p95DivergenceBps} bps</div>
-                </div>
-                <div className="rounded-md border border-border/50 p-2">
-                  <div className="text-[10px] text-muted-foreground">Max</div>
-                  <div className="font-mono text-sm">{shadowComparison.maxDivergenceBps} bps</div>
-                </div>
-                <div className="rounded-md border border-border/50 p-2">
-                  <div className="text-[10px] text-muted-foreground">Coverage</div>
-                  <div className="font-mono text-sm">+{shadowComparison.coverageGained} / -{shadowComparison.coverageLost}</div>
-                </div>
-                <div className="rounded-md border border-border/50 p-2">
-                  <div className="text-[10px] text-muted-foreground">Compared</div>
-                  <div className="font-mono text-sm">{shadowComparison.totalCompared}</div>
-                </div>
               </div>
             )}
           </div>

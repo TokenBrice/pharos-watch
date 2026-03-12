@@ -92,15 +92,6 @@ vi.mock("../enrich-prices", () => ({
     stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
     cgPrices: new Map(),
   })),
-  computeShadowComparison: vi.fn(() => ({
-    totalCompared: 0,
-    meanDivergenceBps: 0,
-    p95DivergenceBps: 0,
-    maxDivergenceBps: 0,
-    coverageLost: 0,
-    coverageGained: 0,
-    cgAvailable: false,
-  })),
 }));
 
 // Stub detect-depegs and confirm-pending-depegs

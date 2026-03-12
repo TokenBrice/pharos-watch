@@ -779,7 +779,6 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
         <div className="grid gap-5 xl:grid-cols-2">
           <PriceSourceHealthCard
             health={data.priceSourceHealth}
-            shadowComparison={data.shadowComparison}
             nowSeconds={data.timestamp}
           />
           <LiquidityHealthCard health={data.liquidityHealth} />
