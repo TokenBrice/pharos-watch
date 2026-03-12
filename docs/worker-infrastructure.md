@@ -446,7 +446,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `ALCHEMY` | `alchemy` | `sync-mint-burn` |
 | `TWITTER_API` | `twitter-api` | `daily-digest` social posting |
 | `TELEGRAM_API` | `telegram-api` | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
-| Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured source/family |
+| Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured source or exact shared-source cluster |
 
 ---
 
@@ -595,7 +595,7 @@ The three crons below were previously only listed by filename in `docs/architect
 ### sync-usds-status
 
 **File:** `worker/src/cron/sync-usds-status.ts`
-**Schedule:** `11 * * * *` (hourly at :11 UTC)
+**Schedule:** `0 8 * * *` (daily at 08:00 UTC)
 **Data source:** Etherscan V2 API (on-chain reads)
 
 **Purpose:** Monitors whether the USDS token contract has been upgraded to include freeze/blacklist capability (which it currently does not have).
@@ -624,10 +624,10 @@ The three crons below were previously only listed by filename in `docs/architect
 ### sync-live-reserves
 
 **File:** `worker/src/cron/sync-live-reserves.ts`
-**Schedule:** `0 8 * * *` (daily at 08:00 UTC)
+**Schedule:** `11 * * * *` (hourly at :11 UTC)
 **Data source:** Protocol-specific reserve APIs and on-chain vault/accounting reads via adapter registry (`worker/src/cron/reserve-adapters/`)
 
-**Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table and records per-coin operational state in `reserve_sync_state`. Each coin with `liveReservesConfig` declares an adapter, semantics, source inputs, and optional breaker scope. The cron iterates configured coins sequentially, applies per-source circuit breaker logic, and persists both successful snapshots and failed/degraded sync state.
+**Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table and records per-coin operational state in `reserve_sync_state`. Each coin with `liveReservesConfig` declares an adapter, semantics, source inputs, and optional breaker scope. The cron iterates configured coins sequentially, applies per-source circuit breaker logic, reuses exact duplicate HTTP source configs within a run, and persists both successful snapshots and failed/degraded sync state. For the full adapter/config/API contract, see [live-reserves.md](./live-reserves.md).
 
 **D1 table: `reserve_composition`**
 
@@ -638,7 +638,7 @@ The three crons below were previously only listed by filename in `docs/architect
 | `fetched_at` | INTEGER | Unix seconds of last successful sync |
 | `source` | TEXT | Adapter key used (e.g., `"infinifi"`) |
 
-Only coins with `liveReservesConfig` set in their metadata appear in this table. One row per coin (latest snapshot only).
+Only coins with `liveReservesConfig` set in their metadata appear in this table. One row per coin (latest snapshot only). A row is only considered an authoritative live snapshot when it matches the coin’s `reserve_sync_state.last_success_at`.
 
 **D1 table: `reserve_sync_state`**
 
@@ -659,7 +659,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 | Adapter | Coins | Source |
 |---------|-------|--------|
-| `accountable` | `aznd-mu-digital`, `yusd-aegis`, `usn-noon`, `nusd-neutrl`, `yzusd-yuzu` | `inputs.primary.kind = "http-json"` -> Accountable dashboard JSON feeds such as `https://mu.accountable.capital:10443/dashboard`, `https://aegis.accountable.capital:10443/dashboard/YUSD`, and `https://cache.accountable.capital/dashboard/<slug>` using bucket families like `type`, `reserves_split`, `deployment`, `type_split`, and `exposure_split` |
+| `accountable` | `aznd-mu-digital`, `yusd-aegis`, `usn-noon`, `nusd-neutrl`, `yzusd-yuzu` | `inputs.primary.kind = "http-json"` -> Accountable dashboard JSON feeds such as `https://mu.accountable.capital:10443/dashboard`, `https://aegis.accountable.capital:10443/dashboard/YUSD`, and `https://cache.accountable.capital/dashboard/<slug>` using bucket families like `type`, `reserves_split`, `deployment`, `type_split`, and `exposure_split`; each distinct dashboard URL has its own breaker scope |
 | `asymmetry` | `usdaf-asymmetry` | `inputs.primary.kind = "http-json"` -> `https://app.asymmetry.finance/api/stats` (`usdaf.branch`) |
 | `btcfi` | `btcusd-btcfi` | `inputs.primary.kind = "http-json"` -> `https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false` + handler metadata |
 | `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro` | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints |
@@ -678,8 +678,9 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 **Operational behavior:**
 
-- Circuit breakers are now keyed per source/family (`live-reserves:<scope>`), not as one global `live-reserves` source.
+- Circuit breakers are keyed per source identity (`live-reserves:<scope>`), not as one global `live-reserves` source. Exact duplicates that intentionally share one upstream payload, such as the M0 GraphQL feed or the Mento reserve page, can share a breaker scope and one fetched result inside a run. Distinct URLs should not share a breaker scope.
 - The cron writes `reserve_sync_state` on every path, including degraded/error/skipped outcomes.
+- Successful snapshots write `reserve_composition` and `reserve_sync_state` together in one D1 batch, and downstream readers ignore orphaned composition rows that do not have a matching successful sync state.
 - Adapter warnings are reserved for unresolved material mapping drift. Known Ethena alt-collateral that is intentionally bucketed into `Other crypto collateral` does not emit warnings, and infiniFi dust farms that round to `0%` in the displayed mix do not keep the cron degraded.
 - Cron result status is explicit:
   - `ok` when all configured coins sync cleanly
@@ -746,7 +747,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 21 cron jobs across 9 triggers via `CRON_INTERVALS` in `worker/src/lib/cron-schedule.ts`, which is derived from the shared `shared/lib/cron-jobs.ts` source of truth:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 22 cron jobs across 10 triggers via `CRON_INTERVALS` in `worker/src/lib/cron-schedule.ts`, which is derived from the shared `shared/lib/cron-jobs.ts` source of truth:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|

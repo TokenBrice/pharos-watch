@@ -1,13 +1,65 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CronResult } from "../lib/db";
-import { getReserveAdapter, type AdapterContext } from "./reserve-adapters/index";
+import { getReserveAdapter, type AdapterContext, type AdapterResult } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { getReserveSyncState, upsertReserveComposition, upsertReserveSyncState } from "../lib/live-reserves-store";
+import {
+  getReserveSyncState,
+  upsertReserveSnapshot,
+  upsertReserveSyncState,
+  type ReserveSyncStateRecord,
+} from "../lib/live-reserves-store";
 
 const CONFIGURED_COINS = TRACKED_STABLECOINS.filter((c) => c.liveReservesConfig);
+type ConfiguredCoin = (typeof CONFIGURED_COINS)[number];
+type LiveReserveConfig = NonNullable<ConfiguredCoin["liveReservesConfig"]>;
 
-function breakerKeyForConfig(config: NonNullable<(typeof CONFIGURED_COINS)[number]["liveReservesConfig"]>): string {
+function breakerKeyForConfig(config: LiveReserveConfig): string {
   return `live-reserves:${config.breakerScope ?? config.adapter}`;
+}
+
+function buildSharedSourceCacheKey(config: LiveReserveConfig): string | null {
+  const primary = config.inputs.primary;
+  if (primary.kind !== "http-json" && primary.kind !== "http-html") {
+    return null;
+  }
+
+  return JSON.stringify({
+    adapter: config.adapter,
+    version: config.version,
+    semantics: config.semantics,
+    inputs: {
+      primary,
+      fallbacks: config.inputs.fallbacks ?? null,
+    },
+    params: config.params ?? null,
+  });
+}
+
+function buildReserveSyncStateRecord(args: {
+  stablecoinId: string;
+  config: LiveReserveConfig;
+  breakerKey: string;
+  previousLastSuccessAt: number | null;
+  now: number;
+  status: ReserveSyncStateRecord["lastStatus"];
+  warnings?: ReserveSyncStateRecord["warnings"];
+  lastError?: string | null;
+  metadata?: Record<string, unknown>;
+  lastSuccessAt?: number | null;
+}): ReserveSyncStateRecord {
+  const warnings = args.warnings ?? [];
+  return {
+    stablecoinId: args.stablecoinId,
+    adapterKey: args.config.adapter,
+    breakerKey: args.breakerKey,
+    lastAttemptedAt: args.now,
+    lastSuccessAt: args.lastSuccessAt ?? args.previousLastSuccessAt,
+    lastStatus: args.status,
+    warningCount: warnings.length,
+    warnings,
+    lastError: args.lastError ?? null,
+    metadata: args.metadata ?? {},
+  };
 }
 
 export async function syncLiveReserves(
@@ -23,6 +75,27 @@ export async function syncLiveReserves(
   const coinsWithErrors: string[] = [];
   const coinsWithWarnings: string[] = [];
   const breakerKeys = new Set<string>();
+  const sharedSourceResults = new Map<string, Promise<AdapterResult>>();
+
+  const runAdapter = (
+    coin: ConfiguredCoin,
+    config: LiveReserveConfig,
+    adapter: NonNullable<ReturnType<typeof getReserveAdapter>>,
+  ): Promise<AdapterResult> => {
+    const cacheKey = buildSharedSourceCacheKey(config);
+    if (!cacheKey) {
+      return adapter(coin, config, signal, adapterCtx);
+    }
+
+    const cached = sharedSourceResults.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const resultPromise = adapter(coin, config, signal, adapterCtx);
+    sharedSourceResults.set(cacheKey, resultPromise);
+    return resultPromise;
+  };
 
   for (const coin of CONFIGURED_COINS) {
     const config = coin.liveReservesConfig!;
@@ -34,18 +107,15 @@ export async function syncLiveReserves(
     const canFetch = await shouldAttemptFetch(db, breakerKey);
     if (!canFetch) {
       skipped++;
-      await upsertReserveSyncState(db, {
+      await upsertReserveSyncState(db, buildReserveSyncStateRecord({
         stablecoinId: coin.id,
-        adapterKey: config.adapter,
+        config,
         breakerKey,
-        lastAttemptedAt: now,
-        lastSuccessAt: previousState?.lastSuccessAt ?? null,
-        lastStatus: "skipped",
-        warningCount: 0,
-        warnings: [],
-        lastError: null,
+        previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
+        now,
+        status: "skipped",
         metadata: { reason: "circuit-open" },
-      });
+      }));
       continue;
     }
 
@@ -53,40 +123,36 @@ export async function syncLiveReserves(
       console.warn(`[sync-live-reserves] Unknown adapter "${config.adapter}" for ${coin.id}`);
       failed++;
       coinsWithErrors.push(coin.id);
-      await upsertReserveSyncState(db, {
+      await upsertReserveSyncState(db, buildReserveSyncStateRecord({
         stablecoinId: coin.id,
-        adapterKey: config.adapter,
+        config,
         breakerKey,
-        lastAttemptedAt: now,
-        lastSuccessAt: previousState?.lastSuccessAt ?? null,
-        lastStatus: "error",
-        warningCount: 0,
-        warnings: [],
+        previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
+        now,
+        status: "error",
         lastError: `Unknown adapter: ${config.adapter}`,
         metadata: { reason: "unknown-adapter" },
-      });
+      }));
       await recordOutcomeSafe(db, breakerKey, false);
       continue;
     }
 
     try {
-      const result = await adapter(coin, config, signal, adapterCtx);
+      const result = await runAdapter(coin, config, adapter);
       if (result.slices.length === 0) {
         console.warn(`[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
         failed++;
         coinsWithErrors.push(coin.id);
-        await upsertReserveSyncState(db, {
+        await upsertReserveSyncState(db, buildReserveSyncStateRecord({
           stablecoinId: coin.id,
-          adapterKey: config.adapter,
+          config,
           breakerKey,
-          lastAttemptedAt: now,
-          lastSuccessAt: previousState?.lastSuccessAt ?? null,
-          lastStatus: "error",
-          warningCount: 0,
-          warnings: [],
+          previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
+          now,
+          status: "error",
           lastError: "Adapter returned zero reserve slices",
           metadata: { reason: "empty-slices" },
-        });
+        }));
         await recordOutcomeSafe(db, breakerKey, false);
         continue;
       }
@@ -97,42 +163,42 @@ export async function syncLiveReserves(
         warningMessages.push(...warnings.map((warning) => `${coin.id}:${warning.code}`));
       }
 
-      await upsertReserveComposition(db, {
-        stablecoinId: coin.id,
-        slices: result.slices,
-        fetchedAt: now,
-        source: config.adapter,
-      });
-      await upsertReserveSyncState(db, {
-        stablecoinId: coin.id,
-        adapterKey: config.adapter,
-        breakerKey,
-        lastAttemptedAt: now,
-        lastSuccessAt: now,
-        lastStatus: warnings.length > 0 ? "degraded" : "ok",
-        warningCount: warnings.length,
-        warnings,
-        lastError: null,
-        metadata: result.metadata ?? {},
-      });
+      await upsertReserveSnapshot(
+        db,
+        {
+          stablecoinId: coin.id,
+          slices: result.slices,
+          fetchedAt: now,
+          source: config.adapter,
+        },
+        buildReserveSyncStateRecord({
+          stablecoinId: coin.id,
+          config,
+          breakerKey,
+          previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
+          now,
+          status: warnings.length > 0 ? "degraded" : "ok",
+          warnings,
+          metadata: result.metadata ?? {},
+          lastSuccessAt: now,
+        }),
+      );
       await recordOutcomeSafe(db, breakerKey, true);
       synced++;
     } catch (e) {
       console.error(`[sync-live-reserves] Failed for ${coin.id}:`, e);
       failed++;
       coinsWithErrors.push(coin.id);
-      await upsertReserveSyncState(db, {
+      await upsertReserveSyncState(db, buildReserveSyncStateRecord({
         stablecoinId: coin.id,
-        adapterKey: config.adapter,
+        config,
         breakerKey,
-        lastAttemptedAt: now,
-        lastSuccessAt: previousState?.lastSuccessAt ?? null,
-        lastStatus: "error",
-        warningCount: 0,
-        warnings: [],
+        previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
+        now,
+        status: "error",
         lastError: e instanceof Error ? e.message : String(e),
         metadata: { reason: "adapter-exception" },
-      });
+      }));
       await recordOutcomeSafe(db, breakerKey, false);
     }
   }

@@ -2014,7 +2014,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       adapter: "accountable",
       version: 1,
       semantics: "protocol-reserve",
-      breakerScope: "accountable",
+      breakerScope: "yusd-aegis",
       display: {
         url: "https://aegis.accountable.capital/",
         label: "Accountable Dashboard",
@@ -2486,7 +2486,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       adapter: "accountable",
       version: 1,
       semantics: "protocol-reserve",
-      breakerScope: "accountable",
+      breakerScope: "usn-noon",
       display: {
         url: "https://noon.accountable.capital/",
         label: "Accountable Dashboard",
@@ -2917,7 +2917,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       adapter: "accountable",
       version: 1,
       semantics: "protocol-reserve",
-      breakerScope: "accountable",
+      breakerScope: "nusd-neutrl",
       display: {
         url: "https://accountable.neutrl.fi/",
         label: "Accountable Dashboard",
@@ -2977,7 +2977,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       adapter: "accountable",
       version: 1,
       semantics: "protocol-reserve",
-      breakerScope: "accountable",
+      breakerScope: "yzusd-yuzu",
       display: {
         url: "https://yuzu.accountable.capital/",
         label: "Accountable Dashboard",
@@ -3361,7 +3361,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       adapter: "accountable",
       version: 1,
       semantics: "protocol-reserve",
-      breakerScope: "accountable",
+      breakerScope: "aznd-mu-digital",
       display: {
         url: "https://mu.accountable.capital/",
         label: "Accountable Dashboard",
@@ -4432,6 +4432,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       adapter: "erc4626-single-asset",
       version: 1,
       semantics: "single-asset",
+      breakerScope: "syrupusdc-maple",
       display: {
         url: "https://app.maple.finance/earn",
         label: "Maple App",
@@ -4481,6 +4482,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       adapter: "erc4626-single-asset",
       version: 1,
       semantics: "single-asset",
+      breakerScope: "syrupusdt-maple",
       display: {
         url: "https://app.maple.finance/earn",
         label: "Maple App",

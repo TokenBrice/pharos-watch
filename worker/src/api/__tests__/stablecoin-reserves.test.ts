@@ -15,6 +15,7 @@ describe("handleStablecoinReserves", () => {
   });
 
   it("returns live slices when D1 has data", async () => {
+    const now = Math.floor(Date.now() / 1000);
     const slices = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
     const db = mockD1([
       {
@@ -23,8 +24,24 @@ describe("handleStablecoinReserves", () => {
         first: {
           stablecoin_id: "iusd-infinifi",
           slices: JSON.stringify(slices),
-          fetched_at: 1000,
+          fetched_at: now,
           source: "infinifi",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
         },
       },
     ]);

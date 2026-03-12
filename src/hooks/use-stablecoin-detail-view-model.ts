@@ -99,6 +99,7 @@ export function useStablecoinDetailViewModel({
     reportCardsError,
     flowsData,
     isFlowsLoading,
-    liveReserves,
+    liveReserves: liveReserves.reserveResult,
+    liveReserveError: liveReserves.error,
   });
 }

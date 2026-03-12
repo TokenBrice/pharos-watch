@@ -183,6 +183,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         coin={viewModel.coin}
         summary={viewModel.summary}
         reserves={viewModel.reserves}
+        reserveFetchError={viewModel.reserveFetchError}
         isNavToken={viewModel.isNavToken}
       />
 

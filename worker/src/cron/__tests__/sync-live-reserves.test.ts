@@ -17,6 +17,29 @@ vi.mock("../../lib/circuit-breaker", () => ({
 
 describe("syncLiveReserves", () => {
   const configuredCoinCount = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
+  const sharedSourceInvocationCount = TRACKED_STABLECOINS
+    .filter((coin) => coin.liveReservesConfig)
+    .reduce((keys, coin) => {
+      const config = coin.liveReservesConfig!;
+      const primary = config.inputs.primary;
+      if (primary.kind !== "http-json" && primary.kind !== "http-html") {
+        keys.add(`coin:${coin.id}`);
+        return keys;
+      }
+
+      keys.add(JSON.stringify({
+        adapter: config.adapter,
+        version: config.version,
+        semantics: config.semantics,
+        inputs: {
+          primary,
+          fallbacks: config.inputs.fallbacks ?? null,
+        },
+        params: config.params ?? null,
+      }));
+      return keys;
+    }, new Set<string>())
+    .size;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,6 +62,20 @@ describe("syncLiveReserves", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
     expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, "live-reserves:infinifi", true);
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(configuredCoinCount);
+  });
+
+  it("reuses identical shared HTTP reserve sources within a run", async () => {
+    const adapterFn = vi.fn(async () => ({
+      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+    }));
+    getReserveAdapterMock.mockReturnValue(adapterFn);
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    expect(adapterFn).toHaveBeenCalledTimes(sharedSourceInvocationCount);
+    expect(sharedSourceInvocationCount).toBeLessThan(configuredCoinCount);
   });
 
   it("returns degraded when the adapter yields warning metadata", async () => {

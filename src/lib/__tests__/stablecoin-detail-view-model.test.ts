@@ -103,4 +103,59 @@ describe("stablecoin detail view-model builder", () => {
 
     expect(viewModel.status).toBe("not-found");
   });
+
+  it("preserves reserve fetch errors while still falling back to static reserve metadata", () => {
+    const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
+    expect(coin).toBeDefined();
+
+    const viewModel = buildStablecoinDetailViewModel({
+      id: "iusd-infinifi",
+      coin: coin!,
+      summary: null,
+      handleRetryAll: () => {},
+      supplyData: [{ date: 1_700_000_000, circulatingUsd: 100, price: null }],
+      supplyLoading: false,
+      supplyError: null,
+      listData: {
+        peggedAssets: [
+          {
+            id: "iusd-infinifi",
+            name: "iUSD",
+            symbol: "iUSD",
+            pegType: "peggedUSD",
+            price: 1,
+            circulating: { peggedUSD: 100 },
+            circulatingPrevDay: { peggedUSD: 90 },
+            circulatingPrevWeek: { peggedUSD: 80 },
+            circulatingPrevMonth: { peggedUSD: 70 },
+          },
+        ],
+        fxFallbackRates: {},
+      } as never,
+      listLoading: false,
+      listError: null,
+      isListError: false,
+      listUpdatedAt: 1,
+      pegSummaryData: undefined,
+      pegUpdatedAt: 0,
+      pegError: null,
+      liquidityMap: undefined,
+      liqUpdatedAt: 0,
+      liquidityError: null,
+      reportCardsData: undefined,
+      rcUpdatedAt: 0,
+      reportCardsError: null,
+      flowsData: undefined,
+      isFlowsLoading: false,
+      liveReserves: null,
+      liveReserveError: new Error("reserve api failed"),
+      nowMs: 1_700_000_000_000,
+    });
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+
+    expect(viewModel.reserves?.mode).toBe("curated-fallback");
+    expect(viewModel.reserveFetchError).toBeInstanceOf(Error);
+  });
 });

@@ -201,9 +201,18 @@ export async function apiFetchWithMeta<T>(
 }
 
 export async function fetchStablecoinReserves(stablecoinId: string): Promise<import("@shared/types").StablecoinReservesResponse | null> {
-  const res = await fetch(buildApiUrl(API_PATHS.stablecoinReserves(stablecoinId)));
+  const path = API_PATHS.stablecoinReserves(stablecoinId);
+  const res = await fetch(buildApiUrl(path));
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`stablecoin-reserves fetch failed: ${res.status}`);
+  if (!res.ok) {
+    let bodyText: string | null = null;
+    try {
+      bodyText = await res.text();
+    } catch {
+      bodyText = null;
+    }
+    throw new ApiFetchError(path, res.status, bodyText);
+  }
   const data = await res.json() as import("@shared/types").StablecoinReservesResponse;
   return data;
 }

@@ -4,18 +4,23 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchStablecoinReserves } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 
-const STALE_TIME = 60 * 60 * 1000; // 1 hour — daily cron
+const STALE_TIME = 60 * 60 * 1000; // 1 hour — hourly cron
 const REFETCH_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
+
+export interface StablecoinReservesQueryState {
+  reserveResult: ReserveResult | null;
+  error: unknown | null;
+}
 
 /**
  * Fetches resolved reserve presentation data for a stablecoin from the API.
- * Returns null only when the coin is not live-enabled or unknown to the worker.
+ * Returns `reserveResult = null` only when the coin is not live-enabled or unknown to the worker.
  */
 export function useStablecoinReserves(
   stablecoinId: string,
   enabled: boolean,
-): ReserveResult | null {
-  const { data } = useQuery({
+): StablecoinReservesQueryState {
+  const { data, error } = useQuery({
     queryKey: ["stablecoin-reserves", stablecoinId],
     queryFn: () => fetchStablecoinReserves(stablecoinId),
     enabled,
@@ -24,14 +29,18 @@ export function useStablecoinReserves(
     retry: 1,
   });
 
-  if (!data) return null;
   return {
-    reserves: data.reserves,
-    estimated: data.estimated,
-    mode: data.mode,
-    liveAt: data.liveAt,
-    source: data.source,
-    displayUrl: data.displayUrl,
-    sync: data.sync,
+    reserveResult: data
+      ? {
+          reserves: data.reserves,
+          estimated: data.estimated,
+          mode: data.mode,
+          liveAt: data.liveAt,
+          source: data.source,
+          displayUrl: data.displayUrl,
+          sync: data.sync,
+        }
+      : null,
+    error: error ?? null,
   };
 }

@@ -253,6 +253,7 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 - Unknown IDs or coins without live reserve support return `404`.
 - Live-enabled coins return `200` even before the first successful sync; the payload includes fallback mode + sync state.
 - The endpoint currently powers the stablecoin detail-page reserve card only. Other analytics surfaces still use curated static reserve metadata.
+- A response is treated as `live` only when the stored reserve snapshot matches the latest successful sync state; orphaned partial writes fall back to the curated/template presentation instead of presenting stale live data as authoritative.
 
 **Cache:** dynamic
 

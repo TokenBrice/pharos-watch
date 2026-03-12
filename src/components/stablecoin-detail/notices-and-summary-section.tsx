@@ -16,6 +16,7 @@ interface NoticesAndSummarySectionProps {
   coin: StablecoinMeta;
   summary: SummaryData | null;
   reserves: ReserveResult | null;
+  reserveFetchError: unknown | null;
   isNavToken: boolean;
 }
 
@@ -24,6 +25,7 @@ export function NoticesAndSummarySection({
   coin,
   summary,
   reserves,
+  reserveFetchError,
   isNavToken,
 }: NoticesAndSummarySectionProps) {
   return (
@@ -33,6 +35,7 @@ export function NoticesAndSummarySection({
         coin={coin}
         summary={summary}
         reserves={reserves}
+        reserveFetchError={reserveFetchError}
         isNavToken={isNavToken}
       />
 

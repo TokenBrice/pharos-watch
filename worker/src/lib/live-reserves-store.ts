@@ -100,11 +100,11 @@ export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {
   return TRACKED_STABLECOINS.filter((coin) => !!coin.liveReservesConfig);
 }
 
-export async function upsertReserveComposition(
+function buildReserveCompositionUpsertStatement(
   db: D1Database,
   record: ReserveCompositionRecord,
-): Promise<void> {
-  await db
+): D1PreparedStatement {
+  return db
     .prepare(
       `INSERT INTO reserve_composition (stablecoin_id, slices, fetched_at, source)
        VALUES (?, ?, ?, ?)
@@ -113,15 +113,14 @@ export async function upsertReserveComposition(
          fetched_at = excluded.fetched_at,
          source = excluded.source`,
     )
-    .bind(record.stablecoinId, JSON.stringify(record.slices), record.fetchedAt, record.source)
-    .run();
+    .bind(record.stablecoinId, JSON.stringify(record.slices), record.fetchedAt, record.source);
 }
 
-export async function upsertReserveSyncState(
+function buildReserveSyncStateUpsertStatement(
   db: D1Database,
   record: ReserveSyncStateRecord,
-): Promise<void> {
-  await db
+): D1PreparedStatement {
+  return db
     .prepare(
       `INSERT INTO reserve_sync_state (
          stablecoin_id,
@@ -157,8 +156,32 @@ export async function upsertReserveSyncState(
       record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
       record.lastError,
       JSON.stringify(record.metadata),
-    )
-    .run();
+    );
+}
+
+export async function upsertReserveComposition(
+  db: D1Database,
+  record: ReserveCompositionRecord,
+): Promise<void> {
+  await buildReserveCompositionUpsertStatement(db, record).run();
+}
+
+export async function upsertReserveSyncState(
+  db: D1Database,
+  record: ReserveSyncStateRecord,
+): Promise<void> {
+  await buildReserveSyncStateUpsertStatement(db, record).run();
+}
+
+export async function upsertReserveSnapshot(
+  db: D1Database,
+  composition: ReserveCompositionRecord,
+  syncState: ReserveSyncStateRecord,
+): Promise<void> {
+  await db.batch([
+    buildReserveCompositionUpsertStatement(db, composition),
+    buildReserveSyncStateUpsertStatement(db, syncState),
+  ]);
 }
 
 export async function getReserveComposition(
@@ -208,6 +231,28 @@ export async function getReserveSyncState(
     lastError: row.last_error,
     metadata: parseJsonObject(row.metadata),
   };
+}
+
+function hasConsistentSnapshotRow(
+  sync: ReserveSyncStateRow | undefined,
+  composition: ReserveCompositionRow | undefined,
+): boolean {
+  return !!sync
+    && !!composition
+    && typeof sync.last_success_at === "number"
+    && sync.last_success_at > 0
+    && sync.last_success_at === composition.fetched_at;
+}
+
+function hasConsistentSnapshotRecord(
+  sync: ReserveSyncStateRecord | null,
+  composition: ReserveCompositionRecord | null,
+): composition is ReserveCompositionRecord {
+  return !!composition
+    && composition.slices.length > 0
+    && typeof sync?.lastSuccessAt === "number"
+    && sync.lastSuccessAt > 0
+    && sync.lastSuccessAt === composition.fetchedAt;
 }
 
 export async function computeReserveCompositionOverview(
@@ -266,9 +311,10 @@ export async function computeReserveCompositionOverview(
   for (const coin of configuredCoins) {
     const sync = syncById.get(coin.id);
     const composition = compositionById.get(coin.id);
-    const successAt = sync?.last_success_at ?? null;
+    const hasSnapshot = hasConsistentSnapshotRow(sync, composition);
+    const successAt = hasSnapshot ? sync!.last_success_at : null;
 
-    if (sync && sync.last_status !== "ok") {
+    if (sync && (sync.last_status !== "ok" || (sync.last_success_at != null && !hasSnapshot))) {
       degradedCoins++;
     }
 
@@ -317,16 +363,17 @@ export async function resolveReserveResult(
   const displayUrl = meta.liveReservesConfig?.display?.url;
   const staticFallback = getReserves(meta);
   const warningMessages = syncState?.warnings.map((warning) => warning.message);
-  const lastSuccessAt = syncState?.lastSuccessAt;
-  const stale = !!(lastSuccessAt && now - lastSuccessAt > freshnessSec);
+  const liveSnapshot = hasConsistentSnapshotRecord(syncState, composition) ? composition : null;
+  const liveAt = liveSnapshot?.fetchedAt ?? null;
+  const stale = !!(liveAt && now - liveAt > freshnessSec);
 
-  if (composition && composition.slices.length > 0) {
+  if (liveSnapshot) {
     return {
-      reserves: composition.slices,
+      reserves: liveSnapshot.slices,
       estimated: false,
       mode: stale ? "live-stale" : "live",
-      liveAt: composition.fetchedAt,
-      source: composition.source,
+      liveAt: liveSnapshot.fetchedAt,
+      source: liveSnapshot.source,
       displayUrl,
       sync: {
         enabled: !!meta.liveReservesConfig,

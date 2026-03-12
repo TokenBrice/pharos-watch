@@ -78,6 +78,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   supplyHistory: SupplyHistoryPoint[];
   earliestTrackingDate: string | null;
   reserves: ReserveResult | null;
+  reserveFetchError: unknown | null;
   supplyError: unknown | null;
   staleQueries: {
     preset: "stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards";
@@ -120,6 +121,7 @@ interface BuildStablecoinDetailViewModelParams {
   flowsData?: MintBurnFlowsResponse;
   isFlowsLoading: boolean;
   liveReserves?: ReserveResult | null;
+  liveReserveError?: unknown | null;
   nowMs?: number;
 }
 
@@ -149,6 +151,7 @@ export function buildStablecoinDetailViewModel({
   flowsData,
   isFlowsLoading,
   liveReserves = null,
+  liveReserveError = null,
   nowMs = Date.now(),
 }: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   if (supplyLoading || listLoading) {
@@ -224,6 +227,7 @@ export function buildStablecoinDetailViewModel({
     supplyHistory: resolvedSupplyHistory,
     earliestTrackingDate,
     reserves,
+    reserveFetchError: liveReserveError,
     supplyError,
     staleQueries: [
       {

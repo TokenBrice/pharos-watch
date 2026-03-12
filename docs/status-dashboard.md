@@ -203,6 +203,7 @@ This prevents `/status` from silently treating a broken stablecoins cache as `0 
 Behavior:
 
 - bootstrap is suppressed until the first successful live reserve sync exists
+- only matched `reserve_composition` + `reserve_sync_state.last_success_at` pairs count as live snapshots; orphaned or split-write rows are treated as missing
 - after bootstrap, stale/degraded/missing live reserve feeds can degrade `dataQualityStatus`
 - the page renders a dedicated `Live Reserve Sync` card in the pipeline lane
 
