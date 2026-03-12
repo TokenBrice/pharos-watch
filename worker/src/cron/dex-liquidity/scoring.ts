@@ -450,7 +450,21 @@ export async function computeDexPrices(
   priceObservations: Map<string, DexPriceObs[]>,
   nowSec: number,
 ): Promise<void> {
-  if (priceObservations.size === 0) return;
+  const existingRows = await db
+    .prepare("SELECT stablecoin_id FROM dex_prices")
+    .all<{ stablecoin_id: string }>();
+  const existingIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
+
+  if (priceObservations.size === 0) {
+    if (existingIds.size === 0) return;
+
+    const retireStmts = Array.from(existingIds, (stablecoinId) =>
+      db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(stablecoinId)
+    );
+    await batchExecute(db, retireStmts);
+    console.log(`[dex-liquidity] Retired ${retireStmts.length} DEX price rows with no current observations`);
+    return;
+  }
 
   // Load primary prices from stablecoins cache for comparison
   const primaryPrices = new Map<string, number>();
@@ -467,8 +481,10 @@ export async function computeDexPrices(
   }
 
   const priceStmts: D1PreparedStatement[] = [];
+  const observedIds = new Set<string>();
   for (const [id, observations] of priceObservations) {
     if (observations.length === 0) continue;
+    observedIds.add(id);
 
     // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
     observations.sort((a, b) => a.price - b.price);
@@ -532,8 +548,20 @@ export async function computeDexPrices(
     );
   }
 
+  let retiredCount = 0;
+  for (const existingId of existingIds) {
+    if (observedIds.has(existingId)) continue;
+    priceStmts.push(
+      db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(existingId)
+    );
+    retiredCount++;
+  }
+
   if (priceStmts.length > 0) {
     await batchExecute(db, priceStmts);
-    console.log(`[dex-liquidity] Wrote ${priceStmts.length} DEX price observations to dex_prices`);
+    console.log(
+      `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
+      (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : ""),
+    );
   }
 }

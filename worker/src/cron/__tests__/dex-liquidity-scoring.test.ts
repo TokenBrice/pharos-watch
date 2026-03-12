@@ -489,4 +489,63 @@ describe("dex-liquidity scoring", () => {
     expect(upserts[0]?.boundValues?.[5]).toBe(null);
     expect(upserts[0]?.boundValues?.[6]).toBe(null);
   });
+
+  it("retires dex price rows that are missing from the latest observation set", async () => {
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", price: 1 },
+        ],
+      }),
+      updatedAt: 1_700_000_000,
+    });
+
+    await computeDexPrices(
+      makeQueryDb([
+        {
+          match: "SELECT stablecoin_id FROM dex_prices",
+          all: [
+            { stablecoin_id: "usdt-tether" },
+            { stablecoin_id: "usdc-circle" },
+          ],
+        },
+      ]),
+      new Map([
+        ["usdt-tether", [{ price: 0.9999, tvl: 100_000, chain: "Ethereum", protocol: "curve" }]],
+      ]),
+      1_700_000_003,
+    );
+
+    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
+    const [, statements] = latestBatchCall;
+    const prepared = statements as PreparedStatementWithMeta[];
+    const deleteStmt = prepared.find((stmt) => stmt.sql.includes("DELETE FROM dex_prices"));
+
+    expect(prepared).toHaveLength(2);
+    expect(deleteStmt?.boundValues).toEqual(["usdc-circle"]);
+  });
+
+  it("clears stale dex price rows when the latest sync has no observations", async () => {
+    await computeDexPrices(
+      makeQueryDb([
+        {
+          match: "SELECT stablecoin_id FROM dex_prices",
+          all: [
+            { stablecoin_id: "usdt-tether" },
+            { stablecoin_id: "usdc-circle" },
+          ],
+        },
+      ]),
+      new Map<string, DexPriceObs[]>(),
+      1_700_000_004,
+    );
+
+    expect(getCache).not.toHaveBeenCalled();
+    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
+    const [, statements] = latestBatchCall;
+    const prepared = statements as PreparedStatementWithMeta[];
+
+    expect(prepared).toHaveLength(2);
+    expect(prepared.every((stmt) => stmt.sql.includes("DELETE FROM dex_prices"))).toBe(true);
+  });
 });

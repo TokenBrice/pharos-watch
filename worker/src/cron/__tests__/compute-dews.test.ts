@@ -64,6 +64,7 @@ import { computeAndStoreDEWS } from "../compute-dews";
 
 interface MakeDbOptions {
   failDexLiquidity?: boolean;
+  dexPriceRows?: Array<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>;
   signalIds?: string[];
   historyIds?: string[];
   onBind?: (sql: string, args: unknown[]) => void;
@@ -98,6 +99,11 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
               total_tvl_usd: 1_500_000,
             },
           ] as T[],
+        };
+      }
+      if (sql.includes("FROM dex_prices")) {
+        return {
+          results: (opts.dexPriceRows ?? []) as T[],
         };
       }
       if (sql.includes("FROM dex_liquidity_history")) {
@@ -194,6 +200,29 @@ describe("computeAndStoreDEWS", () => {
       sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
     };
     expect(metadata.sourceFailures.some((failure) => failure.source === "dex-liquidity")).toBe(true);
+  });
+
+  it("ignores stale dex price rows when building the DEWS divergence input", async () => {
+    const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDb(sqlSeen, {
+      dexPriceRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.97,
+          updated_at: nowSec - 7200,
+        },
+      ],
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        dexPriceUsd: null,
+      }),
+    );
   });
 
   it("purges orphan stress rows for IDs outside the current eligible set", async () => {

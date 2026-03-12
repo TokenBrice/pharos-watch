@@ -10,6 +10,7 @@ import type { CronResult } from "../lib/db";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput, PoolEntry } from "../lib/dews";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
 
 // Map blacklist symbol → stablecoin IDs
 const BLACKLIST_SYMBOL_TO_IDS: Record<string, string[]> = {
@@ -170,10 +171,14 @@ export async function computeAndStoreDEWS(
   let dexPriceMap = new Map<string, number>();
   try {
     const dexPriceRows = await db
-      .prepare("SELECT stablecoin_id, dex_price_usd FROM dex_prices")
-      .all<{ stablecoin_id: string; dex_price_usd: number }>();
-    dexPriceMap = new Map(dexPriceRows.results.map((r) => [r.stablecoin_id, r.dex_price_usd]));
-    sourceCoverage.dexPrices = dexPriceRows.results.length;
+      .prepare("SELECT stablecoin_id, dex_price_usd, updated_at FROM dex_prices")
+      .all<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>();
+    dexPriceMap = new Map(
+      (dexPriceRows.results ?? [])
+        .filter((row) => (nowSec - row.updated_at) < DEX_PRICE_CHECK_FRESHNESS_SEC)
+        .map((row) => [row.stablecoin_id, row.dex_price_usd]),
+    );
+    sourceCoverage.dexPrices = dexPriceMap.size;
   } catch (error) {
     registerSourceFailure("dex-prices", error, {
       bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,

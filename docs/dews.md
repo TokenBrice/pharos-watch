@@ -84,6 +84,7 @@ Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, nul
 ### S_diverg — Cross-Source Price Divergence
 
 Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
+- DEX input comes only from `dex_prices` rows refreshed within the last 60 minutes; older rows are ignored instead of lingering as live divergence input
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
 - Smoothed with previous reading.
