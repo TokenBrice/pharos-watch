@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchDualPrimaryPrices, computeShadowComparison } from "../enrich-prices";
+import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, computeShadowComparison } from "../enrich-prices";
 import type { PeggedAsset } from "../enrich-prices";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
@@ -518,9 +518,9 @@ describe("enrichMissingPrices", () => {
   });
 });
 
-// --- fetchDualPrimaryPrices tests ---
+// --- fetchPrimaryPrices tests ---
 
-describe("fetchDualPrimaryPrices", () => {
+describe("fetchPrimaryPrices", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -551,12 +551,14 @@ describe("fetchDualPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+    const { results, stats, cgPrices } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
     const result = results.get("usdt-tether")!;
     expect(result.confidence).toBe("high");
-    expect(result.source).toBe("defillama+coingecko");
+    expect(result.source).toBe("coingecko+defillama");
+    expect(result.price).toBe(1.0001);
+    expect(cgPrices.get("tether")).toBe(1.0001);
     expect(stats.high).toBe(1);
     expect(stats.low).toBe(0);
   });
@@ -581,7 +583,7 @@ describe("fetchDualPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
     const result = results.get("usdt-tether")!;
@@ -610,7 +612,7 @@ describe("fetchDualPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchDualPrimaryPrices(
+    const { results, stats } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -646,13 +648,13 @@ describe("fetchDualPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
     const result = results.get("ousg-ondo-finance")!;
     expect(result.confidence).toBe("low");
-    expect(result.source).toBe("defillama");
-    expect(result.price).toBe(110);
+    expect(result.source).toBe("coingecko");
+    expect(result.price).toBe(1.01);
     expect(stats.low).toBe(1);
   });
 
@@ -675,7 +677,7 @@ describe("fetchDualPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
     const result = results.get("usdt-tether")!;
@@ -694,7 +696,7 @@ describe("fetchDualPrimaryPrices", () => {
     ));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(0);
     expect(stats.attempted).toBe(0);
@@ -710,10 +712,35 @@ describe("fetchDualPrimaryPrices", () => {
     ));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(0);
     expect(stats.attempted).toBe(0);
+  });
+
+  it("tracks cgOnly and dlOnly in stats", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "a", name: "A", symbol: "A", geckoId: "a-id", pegType: "peggedUSD", circulating: {} },
+      { id: "b", name: "B", symbol: "B", geckoId: "b-id", pegType: "peggedUSD", circulating: {} },
+    ];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coins.llama.fi")) {
+        return new Response(JSON.stringify({
+          coins: { "coingecko:a-id": { price: 1.0 } }, // only A in DL
+        }), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "b-id": { usd: 1.0 }, // only B in CG
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+    const db = makeTestDb();
+    const { stats } = await fetchPrimaryPrices(assets, db);
+    expect(stats.dlOnly).toBe(1);
+    expect(stats.cgOnly).toBe(1);
+    expect(stats.singleSource).toBe(2);
   });
 });
 

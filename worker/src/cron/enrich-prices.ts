@@ -196,7 +196,7 @@ interface DexScreenerPair {
  *   3. CoinGecko direct API
  *   4. DexScreener search API (best-effort fallback)
  */
-export interface DualPriceResult {
+export interface PrimaryPriceResult {
   price: number;
   source: string;
   confidence: PriceConfidence;
@@ -204,10 +204,12 @@ export interface DualPriceResult {
   cgPrice: number | null;
 }
 
-export interface DualPriceStats {
+export interface PriceValidationStats {
   attempted: number;
   high: number;
   singleSource: number;
+  cgOnly: number;
+  dlOnly: number;
   low: number;
   divergences: { id: string; symbol: string; dlPrice: number; cgPrice: number; bps: number }[];
 }
@@ -216,28 +218,28 @@ export interface DualPriceStats {
  * Fetch prices from both DL coins API and CG direct API in parallel,
  * cross-validate within 50bps, and return a confidence-tagged result per asset.
  */
-export async function fetchDualPrimaryPrices(
+export async function fetchPrimaryPrices(
   assets: PeggedAsset[],
   db: D1Database,
   signal?: AbortSignal,
   references?: PriceValidationReferences,
-): Promise<{ results: Map<string, DualPriceResult>; stats: DualPriceStats }> {
+): Promise<{ results: Map<string, PrimaryPriceResult>; stats: PriceValidationStats; cgPrices: Map<string, number> }> {
   throwIfAborted(signal);
-  const results = new Map<string, DualPriceResult>();
-  const stats: DualPriceStats = { attempted: 0, high: 0, singleSource: 0, low: 0, divergences: [] };
+  const results = new Map<string, PrimaryPriceResult>();
+  const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] };
 
   // Only consider assets with a valid geckoId (no "wrong" tag)
   const candidates = assets.filter(
     (a) => a.geckoId && typeof a.geckoId === "string" && !a.geckoId.includes("wrong"),
   );
-  if (candidates.length === 0) return { results, stats };
+  if (candidates.length === 0) return { results, stats, cgPrices: new Map() };
 
   const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS);
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
 
   if (!dlAllowed && !cgAllowed) {
-    console.warn("[dual-primary] Both DL coins and CG prices circuits are open, skipping");
-    return { results, stats };
+    console.warn("[primary-prices] Both DL coins and CG prices circuits are open, skipping");
+    return { results, stats, cgPrices: new Map() };
   }
 
   // Batch fetch both sources in parallel
@@ -269,12 +271,12 @@ export async function fetchDualPrimaryPrices(
             }
             await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, true);
           } else {
-            console.warn(`[dual-primary] DL coins API returned ${res?.status ?? "no response"}`);
+            console.warn(`[primary-prices] DL coins API returned ${res?.status ?? "no response"}`);
             await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
           }
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[dual-primary] DL coins API failed:", err);
+          console.warn("[primary-prices] DL coins API failed:", err);
           await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
         }
       })(),
@@ -305,13 +307,13 @@ export async function fetchDualPrimaryPrices(
                 }
               }
             } else {
-              console.warn(`[dual-primary] CG price API returned ${res?.status ?? "no response"}`);
+              console.warn(`[primary-prices] CG price API returned ${res?.status ?? "no response"}`);
             }
           }
           await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, true);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[dual-primary] CG price API failed:", err);
+          console.warn("[primary-prices] CG price API failed:", err);
           await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, false);
         }
       })(),
@@ -335,8 +337,8 @@ export async function fetchDualPrimaryPrices(
       const divergenceBps = mid > 0 ? Math.abs(dl - cg) / mid * 10_000 : Infinity;
 
       if (divergenceBps <= DIVERGENCE_THRESHOLD_BPS) {
-        // Both agree — high confidence, prefer DL
-        results.set(asset.id, { price: dl, source: "defillama+coingecko", confidence: "high", dlPrice: dl, cgPrice: cg });
+        // Both agree — high confidence, prefer CG (primary)
+        results.set(asset.id, { price: cg, source: "coingecko+defillama", confidence: "high", dlPrice: dl, cgPrice: cg });
         stats.high++;
       } else {
         const context = buildPriceValidationContext({
@@ -346,7 +348,8 @@ export async function fetchDualPrimaryPrices(
           commodityOunces: asset.commodityOunces,
         });
         const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
-        const chosen = pegRef != null ? (Math.abs(dl - pegRef) <= Math.abs(cg - pegRef) ? dl : cg) : dl;
+        // When diverging: use closer-to-reference, default to CG (primary)
+        const chosen = pegRef != null ? (Math.abs(dl - pegRef) <= Math.abs(cg - pegRef) ? dl : cg) : cg;
         const chosenSource = chosen === dl ? "defillama" : "coingecko";
         results.set(asset.id, { price: chosen, source: chosenSource, confidence: "low", dlPrice: dl, cgPrice: cg });
         stats.low++;
@@ -355,25 +358,27 @@ export async function fetchDualPrimaryPrices(
     } else if (dl != null) {
       results.set(asset.id, { price: dl, source: "defillama", confidence: "single-source", dlPrice: dl, cgPrice: null });
       stats.singleSource++;
+      stats.dlOnly++;
     } else if (cg != null) {
       results.set(asset.id, { price: cg, source: "coingecko", confidence: "single-source", dlPrice: null, cgPrice: cg });
       stats.singleSource++;
+      stats.cgOnly++;
     }
     // else: both missing — skip, falls through to legacy enrichment
   }
 
   if (stats.divergences.length > 0) {
     console.warn(
-      `[dual-primary] ${stats.divergences.length} price divergences: ` +
+      `[primary-prices] ${stats.divergences.length} price divergences: ` +
       stats.divergences.slice(0, 5).map((d) => `${d.symbol}(${d.bps}bps)`).join(", ") +
       (stats.divergences.length > 5 ? ` ...+${stats.divergences.length - 5} more` : ""),
     );
   }
   console.log(
-    `[dual-primary] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
+    `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
   );
 
-  return { results, stats };
+  return { results, stats, cgPrices };
 }
 
 export interface EnrichmentStats {
