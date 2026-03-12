@@ -33,6 +33,23 @@ const ALERT_TYPES = [
   },
 ] as const;
 
+const FOLLOW_MODES = [
+  {
+    key: "per-coin",
+    label: "Per-Coin Follows",
+    description:
+      "Build a watchlist and mix alert types per stablecoin, with thresholds and modes where needed.",
+    example: "/subscribe dews,depeg USDT,USDC",
+  },
+  {
+    key: "all-coins",
+    label: "All-Stablecoin Follows",
+    description:
+      "Turn one alert type on across every tracked stablecoin with a single command, then switch it off later with /set all.",
+    example: "/subscribe safety all",
+  },
+] as const;
+
 const COMMANDS = [
   {
     command: "/subscribe <types> all",
@@ -51,7 +68,7 @@ const COMMANDS = [
   },
   {
     command: "/unsubscribe all",
-    description: "Clear all subscriptions and disable all alerts",
+    description: "Clear all per-coin and all-stablecoin subscriptions",
     example: null,
   },
   {
@@ -76,7 +93,7 @@ const COMMANDS = [
   },
   {
     command: "/list",
-    description: "Show subscribed coins, per-coin settings, and quiet hours",
+    description: "Show global alerts, subscribed coins, settings, and quiet hours",
     example: null,
   },
   {
@@ -179,7 +196,7 @@ export default function TelegramPage() {
           </CardContent>
         </Card>
 
-        {/* Per-Coin Alert Bot */}
+        {/* Alert Bot */}
         <Card
           className="rounded-xl border-l-[3px] border-l-amber-500"
           id="bot"
@@ -187,7 +204,7 @@ export default function TelegramPage() {
           <CardHeader>
             <CardTitle as="h2" className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-amber-700 dark:text-amber-400" />
-              Per-Coin Alert Bot
+              Alert Bot
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-4">
@@ -203,25 +220,53 @@ export default function TelegramPage() {
               sends you cron-driven alerts for the stablecoins you care about.
               DEWS and depeg alerts are near-real-time within the bot&apos;s cron cadence. Safety alerts are checked after the daily safety snapshot. You can subscribe per coin or follow all tracked stablecoins by alert type, with optional per-coin settings and quiet hours.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {ALERT_TYPES.map((alert) => (
-                <div
-                  key={alert.key}
-                  className="rounded-lg border p-3 space-y-1"
-                >
-                  <p className="text-foreground font-medium">
-                    <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
-                      {alert.key}
-                    </span>
-                  </p>
-                  <p className="text-foreground font-medium text-sm">
-                    {alert.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {alert.description}
-                  </p>
-                </div>
-              ))}
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
+                Follow Modes
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {FOLLOW_MODES.map((mode) => (
+                  <div
+                    key={mode.key}
+                    className="rounded-lg border p-3 space-y-2"
+                  >
+                    <p className="text-sm font-medium text-foreground">
+                      {mode.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {mode.description}
+                    </p>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono text-foreground">
+                      {mode.example}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
+                Alert Types
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {ALERT_TYPES.map((alert) => (
+                  <div
+                    key={alert.key}
+                    className="rounded-lg border p-3 space-y-1"
+                  >
+                    <p className="text-foreground font-medium">
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                        {alert.key}
+                      </span>
+                    </p>
+                    <p className="text-foreground font-medium text-sm">
+                      {alert.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {alert.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -264,7 +309,7 @@ export default function TelegramPage() {
                 2
               </span>
               <div className="space-y-3">
-                <p>Subscribe to the coins and alert types you want:</p>
+                <p>Pick a follow mode, then add any tuning you want:</p>
                 <div className="space-y-2">
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
@@ -280,6 +325,14 @@ export default function TelegramPage() {
                     </code>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Safety-grade alerts for every tracked stablecoin
+                    </p>
+                  </div>
+                  <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
+                      /set all safety off
+                    </code>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Turn that global safety stream back off without touching your coin watchlist
                     </p>
                   </div>
                   <div>
@@ -391,7 +444,11 @@ export default function TelegramPage() {
               </table>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Use `all` to follow an alert type across every tracked stablecoin. Unknown tickers get a closest-match suggestion when possible.
+              Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Use{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono text-foreground">
+                all
+              </code>{" "}
+              to follow an alert type across every tracked stablecoin. Unknown tickers get a closest-match suggestion when possible.
             </p>
           </CardContent>
         </Card>
