@@ -23,6 +23,7 @@ const cronMocks = vi.hoisted(() => ({
   dispatchTelegramAlerts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncLiveReserves: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncDexLiquidity: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   logCronRun: vi.fn(async (
@@ -60,6 +61,7 @@ vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeA
 vi.mock("../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
 vi.mock("../cron/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
+vi.mock("../cron/sync-live-reserves", () => ({ syncLiveReserves: cronMocks.syncLiveReserves }));
 vi.mock("../cron/dex-liquidity", () => ({ syncDexLiquidity: cronMocks.syncDexLiquidity }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
 
@@ -234,6 +236,27 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncYieldData.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.syncDexLiquidity.mock.invocationCallOrder[0],
     );
+  });
+
+  it("runs live reserve sync on the dedicated hourly trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      ETHERSCAN_API_KEY: "etherscan",
+      ALCHEMY_API_KEY: "alchemy",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "11 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncLiveReserves).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
+    expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });
 
   it("runs only blacklist on the dedicated :03/:23/:43 trigger", async () => {

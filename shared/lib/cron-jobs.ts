@@ -3,6 +3,7 @@ export type CronGroupKey =
   | "five-minute"
   | "twenty-minute"
   | "half-hourly"
+  | "hourly"
   | "daily"
   | "other";
 
@@ -13,6 +14,7 @@ export const CRON_SCHEDULES = {
   twentyMinuteDexDiscovery: "6,26,46 * * * *",
   twentyMinuteExtendedOffset: "13,33,53 * * * *",
   halfHourlyOffset: "10,40 * * * *",
+  hourlyReserveSync: "11 * * * *",
   fiveMinuteTelegramAlerts: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   daily0800Utc: "0 8 * * *",
   daily0805Utc: "5 8 * * *",
@@ -66,6 +68,12 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     title: "30-minute slot",
     badge: "~30 min",
     description: "Stablecoin charts, DEX liquidity scoring, and yield refresh.",
+  },
+  {
+    key: "hourly",
+    title: "Hourly slot",
+    badge: "~1h",
+    description: "Reserve-sync tuning lane with its own trigger so cadence changes do not perturb daily or half-hourly jobs.",
   },
   {
     key: "daily",
@@ -229,9 +237,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-live-reserves",
     label: "Live reserve sync",
-    group: "daily",
-    intervalSec: 86400,
-    scheduleKey: "daily0800Utc",
+    group: "hourly",
+    intervalSec: 3600,
+    scheduleKey: "hourlyReserveSync",
     triggerMode: "shared",
   },
   {

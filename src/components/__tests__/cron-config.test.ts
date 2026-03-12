@@ -27,6 +27,15 @@ describe("status cron config", () => {
     });
   });
 
+  it("maps live reserve sync to the dedicated hourly slot", () => {
+    expect(getStatusCronDisplay("sync-live-reserves")).toEqual({
+      group: "hourly",
+      label: "Live reserve sync",
+      schedule: "11 * * * *",
+      triggerMode: "shared",
+    });
+  });
+
   it("maps telegram alerts to the dedicated 5-minute slot", () => {
     expect(getStatusCronDisplay("dispatch-telegram-alerts")).toEqual({
       group: "five-minute",

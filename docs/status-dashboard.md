@@ -55,6 +55,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - 5-minute Telegram dispatch lane, with cemetery-announcement sidecar work on the same trigger
   - 20-minute on-chain intake jobs shown together, but labeled as isolated triggers (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`, `sync-dex-discovery`)
   - 30-minute charts / liquidity / yield jobs
+  - hourly reserve-sync tuning lane (`sync-live-reserves`)
   - daily snapshot / digest / coverage-discovery jobs
   - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup, plus the exact cron expression and whether the trigger is shared vs isolated
   - When a leased job is still running, cards surface `running` / `running-stale` state from `crons[*].inFlight`

@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 23 scheduled runtime jobs across 9 trigger slots. `CRON_INTERVALS` / `/api/status` track 22 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally not part of the shared status metadata set.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 23 scheduled runtime jobs across 10 trigger slots. `CRON_INTERVALS` / `/api/status` track 22 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally not part of the shared status metadata set.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -291,7 +291,15 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out and channel posting get their own 6-connection pool and CPU budget. The scheduled handler runs the two jobs sequentially: subscriber alerts first, cemetery channel diff second. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
-### Trigger 8: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
+### Trigger 8: `11 * * * *` (hourly at :11 — live reserve sync tuning lane)
+
+| Job | Function | File | Documentation |
+|-----|----------|------|---------------|
+| `sync-live-reserves` | `syncLiveReserves()` | `worker/src/cron/sync-live-reserves.ts` | This doc (below) |
+
+**Connection budget:** dedicated hourly trigger for reserve-sync tuning. Current implementation is sequential and uses at most one external protocol request at a time.
+
+### Trigger 9: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -299,12 +307,11 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
-| `sync-live-reserves` | `syncLiveReserves()` | `worker/src/cron/sync-live-reserves.ts` | This doc (below) |
 | `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED), `sync-usds-status` (Etherscan), and `sync-live-reserves` (protocol APIs, sequential) use ≤3 concurrent external connections.
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED) and `sync-usds-status` (Etherscan) use ≤2 concurrent external connections on this trigger.
 
-### Trigger 9: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
+### Trigger 10: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
@@ -587,7 +594,7 @@ The three crons below were previously only listed by filename in `docs/architect
 ### sync-usds-status
 
 **File:** `worker/src/cron/sync-usds-status.ts`
-**Schedule:** `0 8 * * *` (daily at 08:00 UTC)
+**Schedule:** `11 * * * *` (hourly at :11 UTC)
 **Data source:** Etherscan V2 API (on-chain reads)
 
 **Purpose:** Monitors whether the USDS token contract has been upgraded to include freeze/blacklist capability (which it currently does not have).
@@ -744,7 +751,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
-| `sync-live-reserves` | 86,400s (24h) | `0 8 * * *` |
+| `sync-live-reserves` | 3,600s (1h) | `11 * * * *` |
 | `sync-bluechip` | 86,400s (24h) | `5 8 * * *` |
 | `daily-digest` | 86,400s (24h) | `5 8 * * *` |
 | `discovery-scan` | 86,400s (24h) | `5 8 * * *` |
@@ -782,7 +789,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/handlers/http.ts` | HTTP request pipeline: CORS, method gating, edge cache, route-context assembly, router dispatch |
 | `worker/src/handlers/scheduled.ts` | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch |
 | `worker/src/handlers/scheduled/context.ts` | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing |
-| `worker/src/handlers/scheduled/*.ts` | Per-trigger slot runners (quarter-hourly, isolated 20-minute lanes, half-hourly, Telegram, and daily slots) |
+| `worker/src/handlers/scheduled/*.ts` | Per-trigger slot runners (quarter-hourly, isolated 20-minute lanes, half-hourly, hourly reserve sync, Telegram, and daily slots) |
 | `worker/src/lib/env.ts` | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides |
 | `worker/wrangler.toml` | Deployment config: custom domain, cron triggers, D1 binding, vars |
 | `worker/src/lib/db.ts` | Database helpers: `logCronRun`, `batchExecute`, cache CRUD, block tracking, price cache, cron lease primitives |
