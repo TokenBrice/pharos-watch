@@ -53,6 +53,7 @@ export const API_PATHS = {
   stablecoins: () => "/api/stablecoins",
   stablecoinDetail: (stablecoinId: string) => `/api/stablecoin/${encodeURIComponent(stablecoinId)}`,
   stablecoinSummary: (stablecoinId: string) => `/api/stablecoin-summary/${encodeURIComponent(stablecoinId)}`,
+  stablecoinReserves: (stablecoinId: string) => `/api/stablecoin-reserves/${encodeURIComponent(stablecoinId)}`,
   stablecoinCharts: () => "/api/stablecoin-charts",
   pegSummary: () => "/api/peg-summary",
   health: () => "/api/health",
@@ -121,6 +122,15 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     handlerKey: "stablecoin-probe-summary",
+    probeGroup: "public",
+  },
+  {
+    path: API_PATHS.stablecoinReserves("iusd-infinifi"),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    handlerKey: "stablecoin-reserves-probe",
     probeGroup: "public",
   },
   {

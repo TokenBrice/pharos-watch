@@ -7,6 +7,7 @@ import {
 } from "./api/cache-handlers";
 import { handleStablecoinDetail } from "./api/stablecoin-detail";
 import { handleStablecoinSummary } from "./api/stablecoin-summary";
+import { handleStablecoinReserves } from "./api/stablecoin-reserves";
 import { handleBlacklist } from "./api/blacklist";
 import { handleDepegEvents } from "./api/depeg-events";
 import { handleBackfillDepegs } from "./api/backfill-depegs";
@@ -76,6 +77,7 @@ const STATIC_ROUTE_HANDLER_BY_KEY: Record<string, StaticRouteHandler> = {
   "stablecoins": ({ db }) => handleStablecoins(db),
   "stablecoin-probe-detail": ({ db, ctx }) => handleStablecoinDetail(db, "usdt-tether", ctx),
   "stablecoin-probe-summary": ({ db }) => handleStablecoinSummary(db, "usdt-tether"),
+  "stablecoin-reserves-probe": ({ db }) => handleStablecoinReserves(db, "iusd-infinifi"),
   "stablecoin-charts": ({ db }) => handleStablecoinCharts(db),
   "blacklist": ({ db, url }) => handleBlacklist(db, url),
   "depeg-events": ({ db, url }) => handleDepegEvents(db, url),
@@ -326,6 +328,15 @@ export function route(
     ctx,
   );
   if (summaryResult) return summaryResult;
+
+  const reservesResult = matchDynamicRoute(
+    path,
+    /^\/api\/stablecoin-reserves\/(.+)$/,
+    (db, id, _ctx) => handleStablecoinReserves(db, id),
+    db,
+    ctx,
+  );
+  if (reservesResult) return reservesResult;
 
   const detailResult = matchDynamicRoute(
     path,
