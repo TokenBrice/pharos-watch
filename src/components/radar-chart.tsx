@@ -37,10 +37,14 @@ interface ReportCardRadarProps {
 
 export function ReportCardRadar({ card, size, labels = "full" }: ReportCardRadarProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
-  const compact = labels === "short" || (labels === "full" && width > 0 && width < 420);
+  const autoCompact = labels === "full" && width > 0 && width < 420;
+  const shortLabels = labels === "short";
+  const compact = shortLabels || autoCompact;
   const effectiveLabels = labels === "none" ? "none" : compact ? "short" : labels;
   const data = buildRadarData(card, effectiveLabels);
   const color = GRADE_RADAR_COLORS[gradeRange(card.overallGrade)] ?? GRADE_RADAR_COLORS.NR;
+  const outerRadius = shortLabels ? "72%" : autoCompact ? "60%" : "80%";
+  const tickFontSize = shortLabels ? 10 : autoCompact ? 9 : 11;
 
   return (
     <div
@@ -57,12 +61,12 @@ export function ReportCardRadar({ card, size, labels = "full" }: ReportCardRadar
           data={data}
           cx="50%"
           cy="50%"
-          outerRadius={compact ? "60%" : "80%"}
+          outerRadius={outerRadius}
         >
           <PolarGrid stroke="currentColor" className="text-border" />
           <PolarAngleAxis
             dataKey="dimension"
-            tick={{ fontSize: compact ? 9 : 11, fill: "currentColor" }}
+            tick={{ fontSize: tickFontSize, fill: "currentColor" }}
             className="text-muted-foreground"
           />
           <Radar dataKey="score" stroke={color} fill={color} fillOpacity={0.25} strokeWidth={2} />

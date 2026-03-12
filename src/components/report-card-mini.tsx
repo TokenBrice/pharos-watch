@@ -47,7 +47,7 @@ export function ReportCardMini({
             : ""
         } ${dimUnaffected ? "opacity-60" : ""}`}
       >
-        <CardContent className="relative flex flex-col items-center gap-3 pt-2 pb-2">
+        <CardContent className="relative flex flex-col items-center gap-2.5 pt-2 pb-2">
           {/* Simulated badge */}
           {isSimulated && (
             <span className="absolute top-1 right-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-500/10 rounded px-1 py-0.5 leading-none">
@@ -115,7 +115,11 @@ export function ReportCardMini({
               Defunct
             </span>
           ) : (
-            <ReportCardRadar card={card} labels="short" size={250} />
+            <div className="w-full max-w-[11rem]">
+              <div className="aspect-[1/1.04]">
+                <ReportCardRadar card={card} labels="short" />
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
