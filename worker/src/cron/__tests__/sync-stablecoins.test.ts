@@ -95,9 +95,10 @@ vi.mock("../enrich-prices", () => ({
   })),
   hasMissingPrice: vi.fn((a: { price?: number | null }) => a.price == null || typeof a.price !== "number" || a.price === 0),
   isReasonablePrice: vi.fn(() => true),
-  fetchDualPrimaryPrices: vi.fn(async () => ({
+  fetchPrimaryPrices: vi.fn(async () => ({
     results: new Map(),
-    stats: { attempted: 0, high: 0, singleSource: 0, low: 0, divergences: [] },
+    stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
+    cgPrices: new Map(),
   })),
   computeShadowComparison: vi.fn(() => ({
     totalCompared: 0,
@@ -147,7 +148,7 @@ vi.mock("../../lib/alerts", () => ({
 }));
 
 import { syncStablecoins } from "../sync-stablecoins";
-import { enrichMissingPrices, fetchDualPrimaryPrices, isReasonablePrice } from "../enrich-prices";
+import { enrichMissingPrices, fetchPrimaryPrices, isReasonablePrice } from "../enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
@@ -219,9 +220,10 @@ describe("syncStablecoins", () => {
       totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0,
     });
     vi.mocked(isReasonablePrice).mockReset().mockImplementation(() => true);
-    vi.mocked(fetchDualPrimaryPrices).mockReset().mockResolvedValue({
+    vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({
       results: new Map(),
-      stats: { attempted: 0, high: 0, singleSource: 0, low: 0, divergences: [] },
+      stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
+      cgPrices: new Map(),
     });
     vi.mocked(detectDepegEvents).mockReset().mockResolvedValue(undefined);
     vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue(undefined);
@@ -248,7 +250,7 @@ describe("syncStablecoins", () => {
       { match: "api.coingecko.com", body: {} },
       // DefiLlama stablecoins API
       { match: "stablecoins.llama.fi", body: dlData },
-      // DL coins API for dual-primary pricing
+      // DL coins API for primary pricing
       { match: "coins.llama.fi/prices", body: { coins: {} } },
     ]);
 
@@ -264,12 +266,12 @@ describe("syncStablecoins", () => {
     );
     expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
     expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "defillama-stablecoins");
-    expect(fetchDualPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined);
+    expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined);
     expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
     expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
-    const dualPrimaryAssets = vi.mocked(fetchDualPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
-    expect(dualPrimaryAssets).toHaveLength(60);
+    const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
+    expect(primaryPriceAssets).toHaveLength(60);
     const enrichmentAssets = vi.mocked(enrichMissingPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
     expect(enrichmentAssets).toHaveLength(60);
   });

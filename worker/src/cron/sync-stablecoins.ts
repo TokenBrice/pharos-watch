@@ -8,7 +8,7 @@ import {
   enrichMissingPrices,
   hasMissingPrice,
   isReasonablePrice,
-  fetchDualPrimaryPrices,
+  fetchPrimaryPrices,
 } from "./enrich-prices";
 import type { PeggedAsset, ShadowComparisonResult } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
@@ -554,7 +554,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
 
   // DefiLlama may emit `gecko_id` (snake_case). Hydrate `geckoId` early so
-  // dual-primary and enrichment passes can still use CoinGecko identifiers.
+  // primary price and enrichment passes can still use CoinGecko identifiers.
   hydrateGeckoIdAliases(llamaData.peggedAssets);
 
   // Normalize chainCirculating: DL returns peg-bucket objects ({peggedUSD: N})
@@ -622,25 +622,26 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const priceValidationShadow = createPriceValidationShadowMetadata();
   const validationContexts = createValidationContextResolver();
 
-  // --- Dual-primary price validation ---
+  // --- Primary price validation ---
   // Cross-validate DL coins API and CG prices for higher confidence
-  const dualPrimaryAbort = returnIfAborted(signal, "dual-primary-prices");
-  if (dualPrimaryAbort) return dualPrimaryAbort;
-  const { results: dualPriceResults, stats: dualPriceStats } = await fetchDualPrimaryPrices(
+  const primaryPricesAbort = returnIfAborted(signal, "primary-prices");
+  if (primaryPricesAbort) return primaryPricesAbort;
+  const { results: primaryPriceResults, stats: priceValidationStats } = await fetchPrimaryPrices(
     llamaData.peggedAssets, db, signal, validationReferences,
   );
 
-  // Shadow mode: compare CG-as-primary prices against old pipeline's DL-sourced prices
+  // Regression monitor: compare CG primary prices against DL list endpoint prices.
+  // This tracks divergence between our primary source and the DL ecosystem baseline.
   let shadowComparison: ShadowComparisonResult | null = null;
   try {
-    // Extract CG prices from dual-primary results (already fetched — no extra API call)
+    // Extract CG prices from primary results (already fetched — no extra API call)
     const shadowCgPrices = new Map<string, number>();
     const oldPrices = new Map<string, number>();
     for (const asset of llamaData.peggedAssets) {
       if (!asset.geckoId) continue;
-      const dual = dualPriceResults.get(asset.id);
-      if (dual?.cgPrice != null && dual.cgPrice > 0) {
-        shadowCgPrices.set(asset.geckoId, dual.cgPrice);
+      const primary = primaryPriceResults.get(asset.id);
+      if (primary?.cgPrice != null && primary.cgPrice > 0) {
+        shadowCgPrices.set(asset.geckoId, primary.cgPrice);
       }
       // Old pipeline price = DL list endpoint price (what we'd lose if CG becomes primary)
       if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
@@ -663,26 +664,26 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     console.warn("[shadow] Shadow comparison failed:", err);
   }
 
-  // Apply dual-primary results — these override the DL list endpoint prices
+  // Apply primary price results — these override the DL list endpoint prices
   for (const asset of llamaData.peggedAssets) {
-    const dual = dualPriceResults.get(asset.id);
-    if (dual) {
-      const legacyAccepted = isReasonablePriceForAsset(asset, dual.price, fxRates);
+    const primary = primaryPriceResults.get(asset.id);
+    if (primary) {
+      const legacyAccepted = isReasonablePriceForAsset(asset, primary.price, fxRates);
       const decision = validatePriceCandidate(
-        dual.price,
+        primary.price,
         validationContexts.get(asset),
         "primary_authoritative",
         validationReferences,
       );
-      recordPriceValidationShadow(priceValidationShadow, "dual_primary_apply", asset, dual.price, legacyAccepted, decision);
+      recordPriceValidationShadow(priceValidationShadow, "dual_primary_apply", asset, primary.price, legacyAccepted, decision);
       if (decision.accepted) {
-        asset.price = dual.price;
-        stampPriceMetadata(asset, dual.source, dual.confidence, syncStartSec);
+        asset.price = primary.price;
+        stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec);
       } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
         stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec);
       }
     } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
-      // DL list provided a price but no dual-primary result — single-source
+      // DL list provided a price but no primary price result — single-source
       stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec);
     }
   }
@@ -928,12 +929,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
   const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
 
-  // Build price source health from dual-primary + enrichment stats
+  // Build price source health from primary price + enrichment stats
   const priceSourceHealth: PriceSourceHealth = {
     sourceDistribution: {
       coingecko: enrichStats.pass3, // CG direct (enrichment pass 3)
-      "defillama+coingecko": dualPriceStats.high,
-      defillama: dualPriceStats.singleSource,
+      "coingecko+defillama": priceValidationStats.high,
+      defillama: priceValidationStats.singleSource,
       "defillama-contract": enrichStats.pass1 + enrichStats.pass1b,
       coinmarketcap: enrichStats.passCmc,
       dexscreener: enrichStats.pass4,
@@ -941,12 +942,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       missing: enrichStats.finalMissing,
     },
     confidenceDistribution: {
-      high: dualPriceStats.high,
-      "single-source": dualPriceStats.singleSource,
-      low: dualPriceStats.low,
+      high: priceValidationStats.high,
+      "single-source": priceValidationStats.singleSource,
+      low: priceValidationStats.low,
       fallback: enrichStats.passCmc + enrichStats.pass4,
     },
-    divergences: dualPriceStats.divergences.slice(0, 10).map((d) => ({
+    divergences: priceValidationStats.divergences.slice(0, 10).map((d) => ({
       id: d.id,
       symbol: d.symbol,
       cgPrice: d.cgPrice,
@@ -966,7 +967,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     validationFailures: 0,
     assetCount: llamaData.peggedAssets.length,
     enrichment: enrichStats,
-    dualPrimary: dualPriceStats,
+    priceValidation: priceValidationStats,
     rejectedPrices: rejectedCount,
     missingPrices: finalMissing,
     priceSourceHealth,

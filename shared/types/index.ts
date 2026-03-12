@@ -1065,7 +1065,7 @@ export interface ShadowComparisonResult {
 export interface PriceSourceHealth {
   sourceDistribution: {
     coingecko: number;
-    "defillama+coingecko": number;
+    "coingecko+defillama": number;
     defillama: number;
     "defillama-contract": number;
     coinmarketcap: number;
