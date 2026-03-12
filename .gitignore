@@ -90,3 +90,5 @@ next-env.d.ts
 migration-*.sql
 d1-backup-*.sql
 worker/d1-backup-*.sql
+
+output/playwright/

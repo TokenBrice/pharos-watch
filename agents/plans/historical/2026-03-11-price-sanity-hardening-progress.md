@@ -4,11 +4,11 @@
 
 ## Current State
 
-**Active ticket:** Deployment of TICKET-004 through TICKET-008  
-**Current gate:** Gates B/C/D/E overridden by user direction; local implementation complete, push/deploy pending  
-**Next action:** Push the remaining price-sanity implementation changes and let GitHub Actions deploy them
+**Active ticket:** Post-deploy gate verification  
+**Current gate:** Gates B-E pending formal verification/closure  
+**Next action:** Complete the remaining observation and downstream sign-off steps before declaring the rollout fully verified
 **Current branch:** `main`
-**Last verified commit:** `e7f4a5f9`
+**Last verified commit:** `d0b33a4c`
 
 ## Ticket Checklist
 
@@ -36,7 +36,7 @@
 - [x] Started
 - [x] Completed
 - [x] Targeted verification passed
-- [ ] Deployed
+- [x] Deployed
 - [ ] Observation window completed
 - [x] Notes captured below
 
@@ -44,7 +44,7 @@
 - [x] Started
 - [x] Completed
 - [x] Targeted verification passed
-- [ ] Deployed
+- [x] Deployed
 - [ ] Observation window completed
 - [x] Notes captured below
 
@@ -72,25 +72,25 @@
 - [x] TICKET-001 complete before any runtime behavior change
 
 ### Gate B
-- [ ] TICKET-003 deployed
+- [x] TICKET-003 deployed
 - [ ] 24h observation completed
 - [ ] Shadow mismatches explained
 - [ ] Top USD assets reviewed
 - [ ] Canary assets reviewed
 
 ### Gate C
-- [ ] TICKET-004 deployed
+- [x] TICKET-004 deployed
 - [ ] 24h observation completed
 - [ ] Sync behavior stable
 - [ ] Canary assets reviewed
 
 ### Gate D
-- [ ] TICKET-005 deployed
+- [x] TICKET-005 deployed
 - [ ] DEX observation window completed
 - [ ] No canary asset unexpectedly lost all usable observations
 
 ### Gate E
-- [ ] TICKET-007 complete
+- [x] TICKET-007 complete
 - [ ] DEWS reviewed
 - [ ] PSI reviewed
 - [ ] digest reviewed
@@ -161,6 +161,10 @@ Record anything that blocks progression:
   - GitHub Actions deploy run `22943416958` completed successfully
   - worker deploy, API smoke, Pages deploy, and UI smoke all passed
   - earlier manual Wrangler-deploy observations should be treated as superseded by the GitHub deployment
+- Full enforcement deployment completed:
+  - commit pushed to `main`: `d0b33a4c`
+  - GitHub Actions deploy run `22946313474` completed successfully
+  - worker deploy, API smoke, Pages deploy, and UI smoke all passed
 - User-directed override:
   - user explicitly instructed execution to continue before the full Gate B 24h window completed
   - current partial Gate B observations before override:
@@ -183,6 +187,9 @@ Record anything that blocks progression:
   - `npm run lint`
   - `npm test`
   - `cd worker && npx tsc --noEmit`
+- Current formal verification state:
+  - implementation is fully deployed
+  - Gates B-E remain open until observation/manual sign-off completes
 
 ## Resume Checklist
 
