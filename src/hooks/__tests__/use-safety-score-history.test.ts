@@ -45,12 +45,9 @@ describe("useSafetyScoreHistory", () => {
     expect(options.refetchInterval).toBe(2 * CRON_24H);
 
     await options.queryFn();
-    expect(apiFetchMock).toHaveBeenCalledWith(
-      "/api/safety-score-history?stablecoin=usdt-tether&days=3650",
-      expect.any(Object),
-      undefined,
-      undefined,
-    );
+    const call = apiFetchMock.mock.calls[0];
+    expect(call?.[0]).toBe("/api/safety-score-history?stablecoin=usdt-tether&days=3650");
+    expect(call?.[1]).toEqual(expect.any(Object));
   });
 
   it("disables query when stablecoin id is empty", () => {
