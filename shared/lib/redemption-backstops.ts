@@ -138,16 +138,6 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     capacityModel: { kind: "supply-ratio", ratio: 0.08 },
     costModel: { kind: "fee-bps", feeBps: 0 },
   },
-  "eura-angle": {
-    version: 1,
-    routeFamily: "psm-swap",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
-    outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-ratio", ratio: 0.30 },
-    costModel: { kind: "fee-bps", feeBps: 10 },
-  },
   "buck-bucket-protocol": {
     version: 1,
     routeFamily: "psm-swap",

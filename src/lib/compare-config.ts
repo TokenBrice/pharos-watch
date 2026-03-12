@@ -44,7 +44,7 @@ export const COMPARISON_PRESETS: readonly ComparePreset[] = [
   {
     title: "Euro Stablecoins",
     description: "EUR-pegged stablecoins",
-    coins: ["eurs-stasis", "eura-angle", "eure-monerium"],
+    coins: ["eurs-stasis", "eure-monerium", "eurc-circle"],
   },
   {
     title: "Tokenized Treasuries",

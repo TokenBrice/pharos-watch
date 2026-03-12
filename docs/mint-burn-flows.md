@@ -132,7 +132,6 @@ Current scope: **84 contract configs** across **81 symbols** (7 critical + 77 ex
 | EURE | eure-monerium | 18 | Extended | Transfer |
 | USN | usn-noon | 18 | Extended | Transfer |
 | EUSD | eusd-electronic-usd | 18 | Extended | Transfer |
-| EURA | eura-angle | 18 | Extended | Transfer |
 | meUSD | meusd-mezo | 18 | Extended | Transfer |
 | MSUSD | msusd-metronome | 18 | Extended | Transfer |
 | NUSD | nusd-neutrl | 18 | Extended | Transfer |

@@ -100,7 +100,6 @@ const ID_MAPPING = [
   { oldId: "329", newId: "nect-beraborrow", symbol: "NECT", name: "Nectar", issuer: "beraborrow", geckoId: "nectar" },
   { oldId: "106", newId: "eusd-electronic-usd", symbol: "EUSD", name: "Electronic USD", issuer: "electronic-usd", geckoId: "electronic-usd" },
   { oldId: "154", newId: "buck-bucket-protocol", symbol: "BUCK", name: "Bucket Protocol BUCK", issuer: "bucket-protocol", geckoId: "bucket-protocol-buck-stablecoin" },
-  { oldId: "55", newId: "eura-angle", symbol: "EURA", name: "EURA", issuer: "angle", geckoId: "ageur" },
   { oldId: "303", newId: "meusd-mezo", symbol: "meUSD", name: "Mezo USD", issuer: "mezo", geckoId: "mezo-usd" },
   { oldId: "305", newId: "uty-xsy", symbol: "UTY", name: "XSY UTY", issuer: "xsy", geckoId: "unity-2" },
   { oldId: "51", newId: "eurs-stasis", symbol: "EURS", name: "Stasis Euro", issuer: "stasis", geckoId: "stasis-eurs" },

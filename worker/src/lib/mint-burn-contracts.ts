@@ -520,12 +520,6 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
   {
-    chain: ETHEREUM, stablecoinId: "eura-angle",
-    dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
     chain: ETHEREUM, stablecoinId: "meusd-mezo",
     dustThreshold: 10_000, startBlock: 21_900_000,
     tier: "extended",
