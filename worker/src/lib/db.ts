@@ -356,6 +356,7 @@ export async function runCronWithLease<T>(
 const CRON_TIMEOUT_MS: Record<string, number> = {
   // Keep app-level timeout below the platform wall-clock limit so we can log
   // a controlled error instead of losing the invocation without a cron_runs row.
+  "sync-stablecoins": 8 * 60_000,
   "sync-dex-liquidity": 13 * 60_000,
   "sync-dex-discovery": 16 * 60_000,
   "sync-blacklist": 12 * 60_000,

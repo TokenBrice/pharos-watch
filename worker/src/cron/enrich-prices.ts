@@ -3,7 +3,7 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { getCache, setCache } from "../lib/db";
-import { throwIfAborted } from "../lib/abort";
+import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { PriceConfidence } from "@shared/types";
 import {
   buildPriceValidationContext,
@@ -387,6 +387,13 @@ export interface EnrichmentStats {
   finalMissing: number;
 }
 
+const CMC_REQUEST_TIMEOUT_MS = 10_000;
+const CMC_MAX_RETRIES = 0;
+const DEXSCREENER_MAX_SEARCHES = 10;
+const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
+const DEXSCREENER_MAX_RETRIES = 0;
+const DEXSCREENER_PASS_BUDGET_MS = 45_000;
+
 interface FetchPriceMapByIdsConfig {
   source: string;
   ids: string[];
@@ -644,7 +651,7 @@ export async function enrichMissingPrices(
         if (shouldCall) {
           try {
             const slugs = cmcCandidates.map((m) => m.asset.cmcSlug!).join(",");
-            const cmcTimeout = AbortSignal.timeout(10_000);
+            const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
             const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
             const cmcRes = await fetchWithRetry(
               `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?slug=${slugs}`,
@@ -655,7 +662,9 @@ export async function enrichMissingPrices(
                   "User-Agent": USER_AGENT,
                 },
                 signal: cmcSignal,
-              }
+              },
+              CMC_MAX_RETRIES,
+              { timeoutMs: CMC_REQUEST_TIMEOUT_MS },
             );
 
             if (cmcRes && cmcRes.ok) {
@@ -718,8 +727,6 @@ export async function enrichMissingPrices(
       .map((a, i) => ({ asset: a, index: i }))
       .filter((m) => hasMissingPrice(m.asset));
 
-    // Cap at 10 searches — if more are missing, something is fundamentally broken upstream
-    const DEXSCREENER_MAX_SEARCHES = 10;
     if (stillMissing.length > DEXSCREENER_MAX_SEARCHES) {
       console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_SEARCHES}`);
     }
@@ -729,16 +736,31 @@ export async function enrichMissingPrices(
     let dexAttempts = 0;
     let dexSuccessfulCalls = 0;
     if (dexscreenerAllowed) {
-      for (const m of stillMissing.slice(0, DEXSCREENER_MAX_SEARCHES)) {
+      const dexCandidates = stillMissing.slice(0, DEXSCREENER_MAX_SEARCHES);
+      const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
+      for (const [idx, m] of dexCandidates.entries()) {
         try {
-          dexAttempts++;
-          // Rate limit: 200ms between DexScreener calls
-          if (pass4Count > 0 || stillMissing.indexOf(m) > 0) {
-            await new Promise((r) => setTimeout(r, 200));
+          // DexScreener is the last, best-effort fallback. Keep the whole pass
+          // time-bounded so a wave of missing prices cannot exhaust the cron slot.
+          if (idx > 0) {
+            await sleepWithSignal(200, signal);
           }
+
+          const remainingBudgetMs = dexBudgetDeadlineMs - Date.now();
+          if (remainingBudgetMs <= 0) {
+            console.warn(
+              `[enrich] DexScreener pass budget exhausted after ${dexAttempts}/${dexCandidates.length} searches`,
+            );
+            break;
+          }
+
+          dexAttempts++;
+          const timeoutMs = Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, remainingBudgetMs);
           const res = await fetchWithRetry(
             `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
-            { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(10_000) }
+            { headers: { "User-Agent": USER_AGENT }, signal },
+            DEXSCREENER_MAX_RETRIES,
+            { timeoutMs },
           );
           if (!res) {
             console.warn(`[enrich] DexScreener returned no response for ${m.asset.symbol}`);
@@ -780,6 +802,7 @@ export async function enrichMissingPrices(
             pass4Count++;
           }
         } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn(`[enrich] DexScreener failed for ${m.asset.symbol}:`, err);
         }
       }

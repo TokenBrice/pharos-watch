@@ -488,6 +488,34 @@ describe("enrichMissingPrices", () => {
     expect(stats.pass4).toBe(1);
     expect(assets[0].price).toBe(0.0005);
   });
+
+  it("does not retry failing DexScreener fallback searches", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "mystery-usd",
+        name: "Mystery USD",
+        symbol: "MUSD",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("dexscreener.com")) {
+        return new Response("upstream error", { status: 500 });
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const stats = await enrichMissingPrices(assets);
+
+    expect(stats.pass4).toBe(0);
+    expect(stats.finalMissing).toBe(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("dexscreener.com");
+  });
 });
 
 // --- fetchDualPrimaryPrices tests ---

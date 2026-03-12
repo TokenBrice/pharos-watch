@@ -398,6 +398,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | Job | Timeout | Reason |
 |-----|---------|--------|
 | Default | 5 min | Standard jobs complete in <60s |
+| `sync-stablecoins` | 8 min | Core quarter-hour pipeline entrypoint now includes dual-primary pricing, supplemental overlays, multi-pass enrichment, and depeg processing; explicit headroom avoids timing out on bounded fallback work |
 | `sync-dex-liquidity` | 13 min | 150+ pool crawl, with headroom below the platform wall-clock limit |
 | `sync-dex-discovery` | 16 min | Multi-source pool staging; isolated trigger allows extended runtime |
 | `sync-blacklist` | 12 min | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime |

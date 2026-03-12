@@ -96,6 +96,8 @@ Third fallback for DEX pool data.
 
 **Rate limit in code**: `RATE_LIMITS.DEXSCREENER_MS = 1100` ms (~54 req/min, conservative) in `worker/src/lib/rate-limit.ts` (used by `worker/src/lib/dexscreener.ts`)
 
+**Stablecoins sync fallback budget**: the last-resort DexScreener search pass in `worker/src/cron/enrich-prices.ts` is intentionally bounded to 10 searches, 5 seconds per request, no retries, and 45 seconds total wall-clock budget. This keeps missing-price fallback from consuming the full `sync-stablecoins` cron window during upstream partial outages.
+
 ---
 
 ## DefiLlama

@@ -51,8 +51,8 @@ Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) 
 2. **Pass 1b:** Multi-chain contract address fallback (tries alternate chain addresses via DefiLlama coins API)
 3. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
 4. **Pass 3:** CoinGecko ID -> CoinGecko direct API
-5. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp)
-6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-aware fallback validation. Primary sync paths now allow deep downside failures for fixed pegs when the move is being evaluated as an authoritative price, while fallback enrichment still rejects isolated bad prints below the lower bound. Commodity tokens still scale gold/silver references by `commodityOunces` for gram- and 1/1000-ounce assets; capped at 10 searches per run)
+5. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt so a best-effort fallback cannot dominate cron runtime)
+6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-aware fallback validation. Primary sync paths now allow deep downside failures for fixed pegs when the move is being evaluated as an authoritative price, while fallback enrichment still rejects isolated bad prints below the lower bound. Commodity tokens still scale gold/silver references by `commodityOunces` for gram- and 1/1000-ounce assets; capped at 10 searches per run, no retries, 5s per-request timeout, 45s total pass budget)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
 
