@@ -7,6 +7,7 @@ import {
   hasMissingPrice,
   fetchPrimaryPrices,
 } from "./enrich-prices";
+import { fetchProtocolPriceOverrides } from "./protocol-price-overrides";
 import type { PeggedAsset } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
@@ -549,6 +550,8 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const { results: primaryPriceResults, stats: priceValidationStats } = await fetchPrimaryPrices(
     llamaData.peggedAssets, db, signal, validationReferences,
   );
+  const protocolPriceOverrides = await fetchProtocolPriceOverrides(llamaData.peggedAssets, signal);
+  const protocolOverrideCount = protocolPriceOverrides.size;
 
   // Apply primary price results — these override the DL list endpoint prices
   for (const asset of llamaData.peggedAssets) {
@@ -570,6 +573,27 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       // DL list provided a price but no primary price result — single-source
       stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec);
     }
+  }
+
+  // Protocol-backed overrides supersede market-source prices when direct redemption
+  // or protocol accounting provides a more authoritative mark.
+  for (const asset of llamaData.peggedAssets) {
+    const override = protocolPriceOverrides.get(asset.id);
+    if (!override) continue;
+
+    const decision = validatePriceCandidate(
+      override.price,
+      validationContexts.get(asset),
+      "primary_authoritative",
+      validationReferences,
+    );
+    if (!decision.accepted) continue;
+
+    asset.price = override.price;
+    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec);
+  }
+  if (protocolOverrideCount > 0) {
+    console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);
   }
 
   // Tag all DL-sourced assets with supplySource
@@ -806,25 +830,45 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
 
   const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
+  const finalSourceDistribution: PriceSourceHealth["sourceDistribution"] = {
+    "coingecko+defillama": 0,
+    coingecko: 0,
+    defillama: 0,
+    "protocol-redeem": 0,
+    "defillama-contract": 0,
+    coinmarketcap: 0,
+    dexscreener: 0,
+    cached: 0,
+    missing: 0,
+  };
+  const finalConfidenceDistribution: PriceSourceHealth["confidenceDistribution"] = {
+    high: 0,
+    "single-source": 0,
+    low: 0,
+    fallback: 0,
+  };
 
-  // Build price source health from primary price + enrichment stats
+  for (const asset of llamaData.peggedAssets) {
+    if (hasMissingPrice(asset)) {
+      finalSourceDistribution.missing++;
+      continue;
+    }
+
+    const source = asset.priceSource;
+    if (source && source in finalSourceDistribution) {
+      finalSourceDistribution[source as keyof typeof finalSourceDistribution]++;
+    }
+
+    const confidence = asset.priceConfidence;
+    if (confidence && confidence in finalConfidenceDistribution) {
+      finalConfidenceDistribution[confidence as keyof typeof finalConfidenceDistribution]++;
+    }
+  }
+
+  // Build price source health from the final resolved asset payload.
   const priceSourceHealth: PriceSourceHealth = {
-    sourceDistribution: {
-      "coingecko+defillama": priceValidationStats.high,
-      coingecko: priceValidationStats.cgOnly,
-      defillama: priceValidationStats.dlOnly,
-      "defillama-contract": enrichStats.pass1 + enrichStats.pass1b,
-      coinmarketcap: enrichStats.passCmc,
-      dexscreener: enrichStats.pass4,
-      cached: 0,
-      missing: enrichStats.finalMissing,
-    },
-    confidenceDistribution: {
-      high: priceValidationStats.high,
-      "single-source": priceValidationStats.singleSource,
-      low: priceValidationStats.low,
-      fallback: enrichStats.passCmc + enrichStats.pass4,
-    },
+    sourceDistribution: finalSourceDistribution,
+    confidenceDistribution: finalConfidenceDistribution,
     divergences: priceValidationStats.divergences.slice(0, 10).map((d) => ({
       id: d.id,
       symbol: d.symbol,

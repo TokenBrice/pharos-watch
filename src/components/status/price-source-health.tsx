@@ -95,7 +95,7 @@ export function PriceSourceHealthCard({
 
         <div className="text-xs text-muted-foreground">
           <span className="font-medium">Sources:</span>{" "}
-          CG+DL {sd["coingecko+defillama"]} · CG-only {sd.coingecko} · DL {sd.defillama} · Contract {sd["defillama-contract"]} · CMC {sd.coinmarketcap} · DexScreener {sd.dexscreener} · Cached {sd.cached}
+          CG+DL {sd["coingecko+defillama"]} · CG-only {sd.coingecko} · DL {sd.defillama} · Protocol {sd["protocol-redeem"]} · Contract {sd["defillama-contract"]} · CMC {sd.coinmarketcap} · DexScreener {sd.dexscreener} · Cached {sd.cached}
         </div>
 
         {divergences.length > 0 && (

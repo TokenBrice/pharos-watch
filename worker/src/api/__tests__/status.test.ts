@@ -74,6 +74,7 @@ describe("handleStatus", () => {
                   coingecko: 14,
                   "coingecko+defillama": 118,
                   defillama: 10,
+                  "protocol-redeem": 1,
                   "defillama-contract": 4,
                   coinmarketcap: 2,
                   dexscreener: 1,

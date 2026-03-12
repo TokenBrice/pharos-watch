@@ -329,7 +329,7 @@ Renders after the Admin Actions section. Shows stablecoins tracked by CoinGecko 
 Renders after the Circuit Breakers section. Shows the current price confidence distribution across all tracked stablecoins:
 
 - **Confidence tiles** — colored metric tiles for `High`, `Single-source`, `Low`, `Fallback`, and `Missing` counts
-- **Source breakdown line** — which price sources contributed to the current sync
+- **Source breakdown line** — which price sources contributed to the current sync, including protocol redemption quotes when they override thin market pricing
 - **Divergences list** — collapsible list of assets where dual-primary sources disagreed by more than 50 bps
 - **Last sync age** — how old the price-health snapshot is
 

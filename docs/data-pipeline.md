@@ -43,6 +43,15 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` fetches prices from 
 
 Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (defillama/coingecko-fallback).
 
+### Protocol-backed Price Overrides
+
+After the CG/DL primary pass is applied, `syncStablecoins()` can still replace market-derived prices for specific redeemable assets when the protocol itself exposes a more authoritative exit quote.
+
+- **Current scope:** `cusd-cap`
+- **Source:** direct Ethereum `eth_call` against Cap's `getBurnAmount(address,uint256)` redemption path for `cUSD -> USDC`
+- **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption
+- **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when the quote validates against peg bounds
+
 ### Enrichment Pipeline
 
 `enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 4-pass system for assets still missing prices after primary fetch:

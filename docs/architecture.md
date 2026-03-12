@@ -371,6 +371,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   ├── stages.ts         # Extracted sync-stablecoins stage helpers (normalize/filter/staleness/supply-history fill)
     │   │   └── supplemental-assets.ts # Extracted supplemental token fetch helpers (gold/silver/CG-only fiat overlays)
     │   ├── enrich-prices.ts      # Dual-primary price validation + 6-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
+    │   ├── protocol-price-overrides.ts # Protocol-backed authoritative price quotes for selected redeemable assets
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)

@@ -254,7 +254,10 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 - Live-enabled coins return `200` even before the first successful sync; the payload includes fallback mode + sync state.
 - The endpoint currently powers the stablecoin detail-page reserve card only. Other analytics surfaces still use curated static reserve metadata.
 
-**Cache:** slow (`public, s-maxage=3600, max-age=300`)
+**Cache:** dynamic
+
+- Live snapshots: slow (`public, s-maxage=3600, max-age=300`)
+- Bootstrap / fallback / stale presentations: shorter (`public, s-maxage=300, max-age=60`) so pre-sync fallback responses do not stay pinned at the edge after the first successful live sync
 
 **Response (200):**
 
@@ -468,7 +471,7 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `pegCurrency`         | `string`                | Peg currency code (`USD`, `EUR`, `GOLD`, etc.)                                                                                                |
 | `governance`          | `string`                | `"centralized"`, `"centralized-dependent"`, `"decentralized"`                                                                                 |
 | `currentDeviationBps` | `number \| null`        | Live price deviation from peg (basis points, signed). `null` for coins with supply < $1M or missing price.                                    |
-| `priceSource`         | `string`                | Primary price source used for current deviation (`defillama`, `coingecko`, `defillama-contract`, `coinmarketcap`, `dexscreener`, `cached`, etc.) |
+| `priceSource`         | `string`                | Primary price source used for current deviation (`defillama`, `coingecko`, `protocol-redeem`, `defillama-contract`, `coinmarketcap`, `dexscreener`, `cached`, etc.) |
 | `priceConfidence`     | `"high" \| "single-source" \| "low" \| "fallback" \| null` | Confidence tier attached to the primary price input |
 | `priceUpdatedAt`      | `number \| null`        | Unix seconds when the primary price was last refreshed; cached fallback prices keep the original cache timestamp |
 | `primaryTrust`        | `"authoritative" \| "confirm_required" \| "unusable"` | Whether the current primary price is trusted to mutate live depeg state directly |
@@ -1721,6 +1724,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
       "coingecko": 14,
       "coingecko+defillama": 118,
       "defillama": 10,
+      "protocol-redeem": 1,
       "defillama-contract": 4,
       "coinmarketcap": 2,
       "dexscreener": 1,
@@ -1813,7 +1817,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 `datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
 
-`priceSourceHealth` is derived from `sync-stablecoins` cron metadata and summarizes price-source distribution, confidence buckets, recent CoinGecko-vs-DefiLlama divergences, and the timestamp of the latest successful price-health snapshot.
+`priceSourceHealth` is derived from the final `sync-stablecoins` asset payload and summarizes resolved price-source distribution, confidence buckets, recent CoinGecko-vs-DefiLlama divergences, and the timestamp of the latest successful price-health snapshot. This includes protocol-backed sources such as direct redemption quotes when they supersede market data.
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
 

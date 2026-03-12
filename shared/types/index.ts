@@ -1248,6 +1248,7 @@ export interface PriceSourceHealth {
     coingecko: number;
     "coingecko+defillama": number;
     defillama: number;
+    "protocol-redeem": number;
     "defillama-contract": number;
     coinmarketcap: number;
     dexscreener: number;

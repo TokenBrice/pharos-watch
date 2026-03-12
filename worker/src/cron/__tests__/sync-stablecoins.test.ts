@@ -103,6 +103,10 @@ vi.mock("../confirm-pending-depegs", () => ({
   confirmPendingDepegs: vi.fn(async () => {}),
 }));
 
+vi.mock("../protocol-price-overrides", () => ({
+  fetchProtocolPriceOverrides: vi.fn(async () => new Map()),
+}));
+
 // Stub resolve-market-cap
 vi.mock("../../lib/resolve-market-cap", () => ({
   resolveMarketCap: vi.fn((...args: unknown[]) => args[0] ?? 0),
@@ -135,6 +139,7 @@ import { enrichMissingPrices, fetchPrimaryPrices } from "../enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import { fetchProtocolPriceOverrides } from "../protocol-price-overrides";
 import { sendAlert } from "../../lib/alerts";
 import * as apiUtils from "../../lib/api-utils";
 
@@ -207,6 +212,7 @@ describe("syncStablecoins", () => {
       stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
       cgPrices: new Map(),
     });
+    vi.mocked(fetchProtocolPriceOverrides).mockReset().mockResolvedValue(new Map());
     vi.mocked(detectDepegEvents).mockReset().mockResolvedValue(undefined);
     vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue(undefined);
   });
@@ -256,6 +262,57 @@ describe("syncStablecoins", () => {
     expect(primaryPriceAssets).toHaveLength(60);
     const enrichmentAssets = vi.mocked(enrichMissingPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
     expect(enrichmentAssets).toHaveLength(60);
+  });
+
+  it("applies protocol-backed price overrides before caching", async () => {
+    const db = makeDb();
+    const writes = trackCacheWrites(db);
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "cusd-cap",
+      name: "Cap cUSD",
+      symbol: "CUSD",
+      price: 0.9866,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      circulating: { peggedUSD: 114_000_000 },
+    };
+
+    vi.mocked(fetchProtocolPriceOverrides).mockResolvedValue(new Map([
+      [
+        "cusd-cap",
+        { price: 0.99999266, source: "protocol-redeem", confidence: "high" },
+      ],
+    ]));
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
+    expect(stablecoinsWrite).toBeDefined();
+
+    const cached = JSON.parse(stablecoinsWrite!.value) as {
+      peggedAssets: Array<{
+        id: string;
+        price: number;
+        priceSource: string;
+        priceConfidence: string | null;
+      }>;
+    };
+    const cusd = cached.peggedAssets.find((asset) => asset.id === "cusd-cap");
+    expect(cusd).toMatchObject({
+      id: "cusd-cap",
+      priceSource: "protocol-redeem",
+      priceConfidence: "high",
+    });
+    expect(cusd?.price).toBeCloseTo(0.99999266, 8);
   });
 
   it("fails the run when DL payload is structurally invalid and fallback is insufficient", async () => {

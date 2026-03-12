@@ -51,4 +51,5 @@ The page is organized into these sections, in order:
 
 - The page is public-facing product copy, so internal workflow references should stay clear and non-novelty-first.
 - When adding a new major data source or externally visible feature surfaced on this page, update this document and the route copy together.
+- Supply/price sourcing now explicitly includes direct protocol redemption quotes for selected redeemable assets, alongside market-data sources.
 - Reserve-transparency sources now include issuer/protocol reserve APIs, dashboards, and direct on-chain vault/accounting reads used for live reserve composition where available, with current examples including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, and Accountable feeds.
