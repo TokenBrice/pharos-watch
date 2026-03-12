@@ -35,6 +35,7 @@ interface HeroCardProps {
   gaugeDeviationBps: number;
   usesFallbackPegRate: boolean;
   pegScoreResult: PegSummaryCoin | null;
+  recordedDepegEventCount: number | null;
   pegScoreBorderClass: string;
   liquidityData: DexLiquidityData | undefined;
   liqBorderClass: string;
@@ -74,6 +75,7 @@ export function HeroCard({
   gaugeDeviationBps,
   usesFallbackPegRate,
   pegScoreResult,
+  recordedDepegEventCount,
   pegScoreBorderClass,
   liquidityData,
   liqBorderClass,
@@ -108,6 +110,19 @@ export function HeroCard({
     pegScoreResult.trackingSpanDays > 0 &&
     pegScoreResult.trackingSpanDays < 30;
 
+  const pegScoreEventLine = (() => {
+    if (!pegScoreResult) return null;
+
+    const scoreWindowCount = pegScoreResult.eventCount;
+    const totalRecorded = recordedDepegEventCount;
+
+    if (totalRecorded == null || totalRecorded === scoreWindowCount) {
+      return `${scoreWindowCount.toLocaleString()} event${scoreWindowCount !== 1 ? "s" : ""}`;
+    }
+
+    return `${totalRecorded.toLocaleString()} recorded · ${scoreWindowCount.toLocaleString()} in 4y window`;
+  })();
+
   const pegScoreContent = !isNavToken ? (
     pegScoreResult?.pegScore != null ? (
       <>
@@ -118,8 +133,13 @@ export function HeroCard({
           <span className="text-sm text-muted-foreground">/100</span>
         </div>
         <p className="text-xs text-muted-foreground font-mono mt-0.5">{pegScoreResult.pegPct.toFixed(1)}% at peg</p>
-        <p className="text-xs text-muted-foreground">
-          {pegScoreResult.eventCount} event{pegScoreResult.eventCount !== 1 ? "s" : ""}
+        <p
+          className="text-xs text-muted-foreground"
+          title={recordedDepegEventCount != null && recordedDepegEventCount !== pegScoreResult.eventCount
+            ? "Recorded count includes full history. Peg score uses a rolling 4-year event window."
+            : undefined}
+        >
+          {pegScoreEventLine}
         </p>
       </>
     ) : tooNewForPegScore ? (

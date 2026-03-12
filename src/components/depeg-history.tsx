@@ -1,8 +1,11 @@
 "use client";
 
-import { useDepegEvents } from "@/hooks/use-depeg-events";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo } from "react";
+import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
+import { useTablePagination } from "@/hooks/use-table-pagination";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -13,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { formatDuration, formatNativePrice, formatEventDate, formatBps } from "@shared/lib/format";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
@@ -29,117 +33,192 @@ function sortEvents(events: DepegEvent[]): DepegEvent[] {
   });
 }
 
+const DEPEG_HISTORY_PAGE_SIZE = 25;
+const EMPTY_EVENTS: DepegEvent[] = [];
+const DEPEG_HISTORY_DESCRIPTION =
+  "Recorded depeg detections for this stablecoin, sorted newest first. Peg score uses a rolling 4-year window.";
+
+function DepegHistoryIntro() {
+  return (
+    <div className="mb-3">
+      <h2 className={DETAIL_SECTION_TITLE_CLASS}>Depeg History</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {DEPEG_HISTORY_DESCRIPTION}
+      </p>
+    </div>
+  );
+}
+
 export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData = true }: { stablecoinId: string; earliestTrackingDate?: string | null; hasPriceData?: boolean }) {
-  const { data, isLoading, error, refetch } = useDepegEvents(stablecoinId);
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    isFetchingNextPage,
+    loadedCount,
+    isFullyLoaded,
+  } = useInfiniteDepegEvents({ stablecoinId });
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
+  const events = data?.events ?? EMPTY_EVENTS;
+  const totalEvents = data?.total ?? events.length;
+  const sorted = useMemo(() => sortEvents(events), [events]);
+  const metrics = isFullyLoaded
+    ? computePegStability(sorted, earliestTrackingDate ?? null)
+    : null;
+  const worstDeviationBps = metrics?.worstDeviationBps ?? null;
+  const {
+    effectivePage,
+    totalPages,
+    paginatedRows,
+    rangeStart,
+    rangeEnd,
+    onPreviousPage,
+    onNextPage,
+  } = useTablePagination(sorted, { pageSize: DEPEG_HISTORY_PAGE_SIZE });
+  const isHydratingFullHistory = totalEvents > loadedCount;
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl">
-        <CardHeader className="pb-1">
-          <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Depeg History
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <Card className="p-4">
+        <DepegHistoryIntro />
+        <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-8 w-full" />
           ))}
-        </CardContent>
+        </div>
       </Card>
     );
   }
 
-  if (error) {
-    return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
+  if (error && !(data?.events?.length)) {
+    return (
+      <Card className="p-4">
+        <DepegHistoryIntro />
+        <QueryErrorNotice error={error} onRetry={() => void refetch()} />
+      </Card>
+    );
   }
 
-  const events = data?.events;
-  if (!error && (!events || events.length === 0)) {
+  if (!error && events.length === 0) {
     const noData = !hasPriceData;
     return (
-      <Card className={`rounded-xl ${noData ? "" : "border-l-[3px] border-l-emerald-500"}`}>
-        <CardHeader className="pb-1">
-          <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Depeg History
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {noData ? (
-            <p className="text-sm text-muted-foreground">No depeg events recorded. No price data available to verify peg status.</p>
-          ) : (
-            <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">No depeg events recorded. This stablecoin has maintained its peg.</p>
-          )}
-        </CardContent>
+      <Card className="p-4">
+        <DepegHistoryIntro />
+        {noData ? (
+          <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              No depeg events recorded. No price data available to verify peg status.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+              No depeg events recorded. This stablecoin has maintained its peg.
+            </p>
+          </div>
+        )}
       </Card>
     );
   }
 
-  const sorted = sortEvents(events!);
-  const metrics = computePegStability(events!, earliestTrackingDate ?? null);
-
   return (
-    <Card className="rounded-xl">
-      <CardHeader className="pb-1">
-        <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Depeg History
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {metrics && (
-          <div className="mb-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <div>
-              <span className="text-muted-foreground">Events </span>
-              <span className="font-mono font-semibold">{metrics.eventCount}</span>
-            </div>
-            {metrics.worstDeviationBps !== null && (
-              <div>
-                <span className="text-muted-foreground">Worst Depeg </span>
-                <span className={`font-mono font-semibold ${deviationColorClass(Math.abs(metrics.worstDeviationBps))}`}>
-                  {formatBps(metrics.worstDeviationBps)}
-                </span>
-              </div>
-            )}
-            <div>
-              <span className="text-muted-foreground">Current Streak </span>
-              {metrics.depeggedNow ? (
-                <span className="inline-flex items-center gap-1.5 font-semibold text-red-700 dark:text-red-400">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-                  </span>
-                  Depegged now
-                </span>
-              ) : metrics.currentStreakDays !== null ? (
-                <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">{metrics.currentStreakDays}d at peg</span>
-              ) : (
-                <span className="font-mono font-semibold text-muted-foreground">—</span>
-              )}
-            </div>
+    <Card className="p-4">
+      <DepegHistoryIntro />
+      {error ? (
+        <div className="mb-4">
+          <QueryErrorNotice error={error} hasData onRetry={() => void refetch()} />
+        </div>
+      ) : null}
+      <div className="mb-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <div>
+          <span className="text-muted-foreground">Events </span>
+          <span className="font-mono font-semibold">{totalEvents.toLocaleString()}</span>
+        </div>
+        {worstDeviationBps != null && (
+          <div>
+            <span className="text-muted-foreground">Worst Depeg </span>
+            <span className={`font-mono font-semibold ${deviationColorClass(Math.abs(worstDeviationBps))}`}>
+              {formatBps(worstDeviationBps)}
+            </span>
           </div>
         )}
-        <div className="overflow-x-auto scroll-shadow">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Direction</TableHead>
-                <TableHead className="text-right">Peak Deviation</TableHead>
-                <TableHead className="text-right">Duration</TableHead>
-                <TableHead className="text-right">Start Price</TableHead>
-                <TableHead className="text-right">Peak Price</TableHead>
-                <TableHead className="text-right">Recovery Price</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sorted.map((event) => (
-                <DepegRow key={event.id} event={event} pegCurrency={pegCurrency} />
-              ))}
-            </TableBody>
-          </Table>
+        {metrics ? (
+          <div>
+            <span className="text-muted-foreground">Current Streak </span>
+            {metrics.depeggedNow ? (
+              <span className="inline-flex items-center gap-1.5 font-semibold text-red-700 dark:text-red-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                </span>
+                Depegged now
+              </span>
+            ) : metrics.currentStreakDays !== null ? (
+              <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">{metrics.currentStreakDays}d at peg</span>
+            ) : (
+              <span className="font-mono font-semibold text-muted-foreground">—</span>
+            )}
+          </div>
+        ) : null}
+      </div>
+      {isHydratingFullHistory ? (
+        <p className="mb-3 text-xs text-muted-foreground">
+          Loading full history... {loadedCount.toLocaleString()} / {totalEvents.toLocaleString()} events
+          {isFetchingNextPage ? "" : " loaded"}
+        </p>
+      ) : null}
+      <div className="rounded-xl border overflow-hidden">
+        <Table>
+          <TableHeader className="bg-muted/80 backdrop-blur-sm">
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Direction</TableHead>
+              <TableHead className="text-right">Peak Deviation</TableHead>
+              <TableHead className="text-right">Duration</TableHead>
+              <TableHead className="hidden lg:table-cell text-right">Start Price</TableHead>
+              <TableHead className="hidden lg:table-cell text-right">Peak Price</TableHead>
+              <TableHead className="hidden lg:table-cell text-right">Recovery Price</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedRows.map((event) => (
+              <DepegRow key={event.id} event={event} pegCurrency={pegCurrency} />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      {isFullyLoaded && totalEvents > 0 ? (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Showing{" "}
+            <span className="font-mono">{rangeStart}</span>
+            &ndash;
+            <span className="font-mono">{rangeEnd}</span>
+            {" "}of{" "}
+            <span className="font-mono">{totalEvents.toLocaleString()}</span> events
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPreviousPage}
+              disabled={effectivePage <= 0}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNextPage}
+              disabled={effectivePage >= totalPages - 1}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-      </CardContent>
+      ) : null}
     </Card>
   );
 }
@@ -151,26 +230,26 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
 
   return (
     <TableRow>
-      <TableCell className="font-mono text-sm">
-        {formatEventDate(event.startedAt)}
+      <TableCell className="whitespace-nowrap text-xs" title={formatEventDate(event.startedAt)}>
+        <span className="font-mono">{formatEventDate(event.startedAt)}</span>
       </TableCell>
       <TableCell>
         <Badge
           variant="outline"
           className={
             event.direction === "below"
-              ? "bg-red-500/15 text-red-600 border-red-500/30 dark:text-red-400"
-              : "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400"
+              ? "border-red-500/20 bg-red-500/10 text-xs text-red-700 dark:text-red-400"
+              : "border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400"
           }
         >
           {event.direction === "below" ? "Below" : "Above"}
         </Badge>
       </TableCell>
-      <TableCell className={`text-right font-mono ${devColor}`}>
+      <TableCell className={`text-right font-mono tabular-nums text-sm ${devColor}`}>
         {event.peakDeviationBps > 0 ? "+" : ""}
         {event.peakDeviationBps} bps
       </TableCell>
-      <TableCell className="text-right font-mono text-sm">
+      <TableCell className="text-right font-mono tabular-nums text-sm">
         {isOngoing ? (
           <span className="inline-flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
@@ -183,13 +262,13 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
           formatDuration(event.startedAt, event.endedAt)
         )}
       </TableCell>
-      <TableCell className="text-right font-mono text-sm">
+      <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
         {formatNativePrice(event.startPrice, pegCurrency, event.pegReference)}
       </TableCell>
-      <TableCell className="text-right font-mono text-sm">
+      <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
         {event.peakPrice != null ? formatNativePrice(event.peakPrice, pegCurrency, event.pegReference) : "—"}
       </TableCell>
-      <TableCell className="text-right font-mono text-sm">
+      <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
         {event.recoveryPrice != null ? formatNativePrice(event.recoveryPrice, pegCurrency, event.pegReference) : "—"}
       </TableCell>
     </TableRow>

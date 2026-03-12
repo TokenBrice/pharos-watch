@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useYieldRankings } from "@/hooks/use-yield-rankings";
@@ -149,9 +150,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   if (!ranking && isLoading && shouldHaveYieldData) {
     return (
       <section id="yield" aria-labelledby="yield-intelligence-heading">
-        <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
+          <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
           <CardHeader className="pb-2">
-            <CardTitle as="h3" id="yield-intelligence-heading" className="text-lg font-semibold tracking-tight">
+            <CardTitle as="h3" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
               Yield Intelligence
             </CardTitle>
           </CardHeader>
@@ -174,9 +175,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   if (!ranking && shouldHaveYieldData) {
     return (
       <section id="yield" aria-labelledby="yield-intelligence-heading">
-        <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
+          <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
           <CardHeader className="pb-2">
-            <CardTitle as="h3" id="yield-intelligence-heading" className="text-lg font-semibold tracking-tight">
+            <CardTitle as="h3" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
               Yield Intelligence
             </CardTitle>
           </CardHeader>
@@ -210,7 +211,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle as="h3" id="yield-intelligence-heading" className="text-lg font-semibold tracking-tight">
+            <CardTitle as="h3" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
               Yield Intelligence
             </CardTitle>
             <span

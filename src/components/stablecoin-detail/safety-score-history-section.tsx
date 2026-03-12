@@ -3,6 +3,7 @@
 import { GradeBadge } from "@/components/grade-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { useSafetyScoreHistory } from "@/hooks/use-safety-score-history";
 import type { SafetyScoreHistoryPoint } from "@shared/types";
 
@@ -44,7 +45,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-1">
-        <CardTitle as="h3" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
           Grade History
         </CardTitle>
       </CardHeader>

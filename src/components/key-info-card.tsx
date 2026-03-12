@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Copy, ExternalLink, Globe } from "lucide-react";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_META } from "@shared/lib/chains";
 import { trackEvent } from "@/lib/analytics";
@@ -22,6 +23,8 @@ function getExplorerUrl(chainKey: string, address: string): string | null {
 
 export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const [openChain, setOpenChain] = useState<string | null>(null);
+  const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
+  const contracts = meta.contracts ?? [];
 
   const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
   const backing = BACKING_BADGE_STYLES[meta.flags.backing];
@@ -29,14 +32,17 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const hasDescription = meta.collateral || meta.pegMechanism;
   const isDecentralized = meta.flags.governance === "decentralized";
   const hasLinks = meta.links && meta.links.length > 0;
-  const hasContracts = meta.contracts && meta.contracts.length > 0;
+  const hasContracts = contracts.length > 0;
+  const mobileContractsPreview = contracts.slice(0, 6);
+  const visibleMobileContracts = showAllContractsMobile ? contracts : mobileContractsPreview;
+  const hiddenMobileContractCount = Math.max(contracts.length - mobileContractsPreview.length, 0);
 
-  const openContract = hasContracts ? (meta.contracts!.find((c) => c.chain === openChain) ?? null) : null;
+  const openContract = hasContracts ? (contracts.find((c) => c.chain === openChain) ?? null) : null;
 
   return (
     <Card className="rounded-xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
           Key Information
         </CardTitle>
       </CardHeader>
@@ -186,37 +192,41 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
               Contract Addresses
             </p>
-            <div className="flex flex-wrap gap-2">
-              {meta.contracts!.map((c) => {
-                const chain = CHAIN_META[c.chain];
-                const isOpen = openChain === c.chain;
-                return (
-                  <button
-                    key={`${c.chain}-${c.address}`}
-                    onClick={() => setOpenChain(isOpen ? null : c.chain)}
-                    className={`pharos-focus-ring flex size-11 items-center justify-center rounded-full ring-2 transition-colors ${
-                      isOpen ? "ring-violet-500" : "ring-transparent hover:ring-muted-foreground/30"
-                    }`}
-                    title={chain?.name ?? c.chain}
-                    aria-label={`${chain?.name ?? c.chain} contract`}
-                  >
-                    {chain?.logoPath ? (
-                      <Image
-                        src={chain.logoPath}
-                        alt={chain.name}
-                        width={28}
-                        height={28}
-                        className={`h-7 w-7 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
-                      />
-                    ) : (
-                      <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                        {(chain?.name ?? c.chain).charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-6 gap-2 sm:hidden">
+              {visibleMobileContracts.map((c) => (
+                <ContractChainButton
+                  key={`${c.chain}-${c.address}`}
+                  chainKey={c.chain}
+                  address={c.address}
+                  isOpen={openChain === c.chain}
+                  onToggle={() => setOpenChain(openChain === c.chain ? null : c.chain)}
+                />
+              ))}
             </div>
+            <div className="hidden flex-wrap gap-2 sm:flex">
+              {contracts.map((c) => (
+                <ContractChainButton
+                  key={`${c.chain}-${c.address}`}
+                  chainKey={c.chain}
+                  address={c.address}
+                  isOpen={openChain === c.chain}
+                  onToggle={() => setOpenChain(openChain === c.chain ? null : c.chain)}
+                />
+              ))}
+            </div>
+            {hiddenMobileContractCount > 0 ? (
+              <button
+                onClick={() => {
+                  if (showAllContractsMobile && openChain && !mobileContractsPreview.some((c) => c.chain === openChain)) {
+                    setOpenChain(null);
+                  }
+                  setShowAllContractsMobile((current) => !current);
+                }}
+                className="pharos-focus-ring mt-3 inline-flex min-h-11 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:hidden"
+              >
+                {showAllContractsMobile ? "Show less" : `Show all ${contracts.length} chains`}
+              </button>
+            ) : null}
             {openContract &&
               (() => {
                 const chain = CHAIN_META[openContract.chain];
@@ -258,5 +268,44 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function ContractChainButton({
+  chainKey,
+  address,
+  isOpen,
+  onToggle,
+}: {
+  chainKey: string;
+  address: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const chain = CHAIN_META[chainKey];
+
+  return (
+    <button
+      onClick={onToggle}
+      className={`pharos-focus-ring flex size-11 items-center justify-center rounded-full ring-2 transition-colors ${
+        isOpen ? "ring-violet-500" : "ring-transparent hover:ring-muted-foreground/30"
+      }`}
+      title={chain?.name ?? chainKey}
+      aria-label={`${chain?.name ?? chainKey} contract ${address}`}
+    >
+      {chain?.logoPath ? (
+        <Image
+          src={chain.logoPath}
+          alt={chain.name}
+          width={28}
+          height={28}
+          className={`h-7 w-7 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
+        />
+      ) : (
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+          {(chain?.name ?? chainKey).charAt(0).toUpperCase()}
+        </div>
+      )}
+    </button>
   );
 }

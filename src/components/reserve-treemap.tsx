@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Treemap, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { ReserveSlice, ReserveRisk } from "@shared/types";
@@ -125,7 +126,7 @@ export function ReserveTreemap({ reserves }: ReserveTreemapProps) {
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
           Reserve Composition
         </CardTitle>
         <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">

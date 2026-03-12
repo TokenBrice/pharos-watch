@@ -1,4 +1,5 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 
 interface AiSummaryProps {
   title: string;
@@ -16,7 +17,7 @@ export function AiSummary({ title, text, updatedAt }: AiSummaryProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle as="h2">{title}</CardTitle>
+          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>{title}</CardTitle>
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             Updated {dateline}
           </span>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { StablecoinMeta } from "@shared/types";
@@ -65,7 +66,7 @@ export function ExploreNextSection({
   return (
     <section className="mt-8 space-y-4" aria-labelledby="explore-next-heading">
       <div className="space-y-1.5">
-        <h2 id="explore-next-heading" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 id="explore-next-heading" className={DETAIL_SECTION_TITLE_CLASS}>
           Explore Next
         </h2>
         <p className="max-w-3xl text-sm text-muted-foreground">

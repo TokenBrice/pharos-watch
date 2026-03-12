@@ -13,6 +13,7 @@ import { ReportCardRadar } from "./radar-chart";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -39,7 +40,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
     return (
       <Card>
         <CardHeader>
-          <CardTitle as="h2">Safety Score</CardTitle>
+          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Safety Score</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
@@ -62,11 +63,11 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle as="h2">
-          <div className="flex items-center justify-between">
-            <span>Safety Score</span>
+      <Card>
+        <CardHeader>
+          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+            <div className="flex items-center justify-between">
+              <span>Safety Score</span>
             <span className="text-xs font-normal text-muted-foreground">
               v{METHODOLOGY_VERSION}
             </span>

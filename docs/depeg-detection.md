@@ -290,7 +290,9 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers based o
 
 - Fetches `/api/depeg-events` with optional `?stablecoin=` filter
 - TanStack Query: `staleTime` = 15 min, `refetchInterval` = 30 min
-- Companion hook `useInfiniteDepegEvents()` pages through `/api/depeg-events?limit=100&offset=...` for `/depeg`
+- Companion hook `useInfiniteDepegEvents({ stablecoinId?, autoLoadAll? })` pages through `/api/depeg-events?limit=100&offset=...`
+- `/depeg` uses the unfiltered infinite hook for the global recent-events feed
+- Stablecoin detail pages use the filtered infinite hook with `autoLoadAll` so the hero can read the full recorded-event `total` while the history table hydrates every page in the background
 
 ### Component: DepegFeed (`depeg-feed.tsx`)
 
@@ -301,10 +303,12 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers based o
 
 ### Component: DepegHistory (`depeg-history.tsx`)
 
-- Table of all events for a single coin (used on stablecoin detail page)
-- Summary metrics: event count, worst deviation, current streak (days at peg or "Depegged now")
+- Stablecoin-detail depeg history table backed by the filtered infinite hook
+- Hero peg-score card now shows the full recorded-event count from `/api/depeg-events.total`; when that differs from the peg-score window count, the UI explicitly labels the 4-year score-window subset
+- Background-hydrates the full per-coin history, then paginates the rendered table client-side at 25 rows per page
+- Summary metrics: recorded event count, worst deviation, current streak (days at peg or "Depegged now")
 - Table columns: Date, Direction (badge), Peak Deviation (signed, colored), Duration (or "Ongoing"), Start Price, Peak Price, Recovery Price
-- Uses `computePegStability()` for metrics
+- Uses `computePegStability()` once the full per-coin history has loaded
 
 ## Peg Stability Metrics (`peg-stability.ts`)
 

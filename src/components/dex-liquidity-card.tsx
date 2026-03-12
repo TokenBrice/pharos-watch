@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
@@ -398,9 +399,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   return (
     <Card className="rounded-xl border-l-[3px] border-l-cyan-500 animate-in fade-in duration-300">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
               DEX Liquidity
             </CardTitle>
             <Badge

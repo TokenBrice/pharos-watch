@@ -110,6 +110,9 @@ Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top
 Detail pages include an `sr-only` `h1` and visually foreground the coin name with:
 
 - `h2`: `text-2xl font-extrabold tracking-tighter`
+- Section and block titles across the detail route use `text-lg font-semibold tracking-tight`
+- Detail metadata badges that qualify a section title (for example liquidity source coverage) sit inline with the title instead of dropping onto a separate row
+- The `Contract Addresses` block shows a one-row, six-item preview on mobile with a `Show all` toggle; `sm+` continues to show the full icon grid
 - A sticky pill-based `LongformScrollspyNav` under the hero; mobile keeps a swipe cue and `min-h-11` tap targets, desktop tightens the pills back down for denser scanning
 - A single `Explore Next` hub at the end of the page, replacing the older stack of repeated research/compare/related link grids with one consolidated crawlable route cluster
 
@@ -302,6 +305,7 @@ Common chip form:
 
 - Standard header: `[&_tr]:border-b bg-muted/80`
 - Sticky directory header (peg pages): `[&_tr]:border-b bg-muted/80 sticky top-0 z-10 backdrop-blur-sm`
+- Stablecoin detail history tables (depeg + mint/burn) use a rounded bordered shell (`rounded-xl border overflow-hidden`) with the muted header treatment and a footer row pairing mono range copy with outline `Previous` / `Next` controls
 
 ### Mobile Directory Table Handling
 

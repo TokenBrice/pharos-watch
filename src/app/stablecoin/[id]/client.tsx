@@ -13,6 +13,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
+import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import {
   useStablecoinDetailViewModel,
   type StablecoinDetailSummary,
@@ -81,6 +82,13 @@ interface StablecoinDetailClientProps {
 export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const viewModel = useStablecoinDetailViewModel({ id, summary, coin, logoSrc });
+  const {
+    data: depegHistoryData,
+  } = useInfiniteDepegEvents({
+    stablecoinId: id,
+    enabled: viewModel.status === "ready" && !viewModel.isNavToken,
+    autoLoadAll: viewModel.status === "ready" && !viewModel.isNavToken,
+  });
 
   if (viewModel.status === "loading") {
     return (
@@ -145,6 +153,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         gaugeDeviationBps={viewModel.gaugeDeviationBps}
         usesFallbackPegRate={viewModel.usesFallbackPegRate}
         pegScoreResult={viewModel.pegScoreResult}
+        recordedDepegEventCount={depegHistoryData?.total ?? null}
         pegScoreBorderClass={viewModel.pegScoreBorderClass}
         liquidityData={viewModel.liquidityData}
         liqBorderClass={viewModel.liqBorderClass}

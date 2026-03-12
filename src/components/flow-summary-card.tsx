@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlowMachineScene } from "@/components/flow-machine-scene";
 import { MintingPressureGauge } from "@/components/minting-pressure-gauge";
@@ -99,7 +100,7 @@ function SummarySkeleton() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3" className="text-sm">
+        <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
           <Skeleton className="h-4 w-28" />
         </CardTitle>
       </CardHeader>
@@ -206,7 +207,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3" className="text-sm">
+        <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
           Mint &amp; Burn Flows
         </CardTitle>
       </CardHeader>
