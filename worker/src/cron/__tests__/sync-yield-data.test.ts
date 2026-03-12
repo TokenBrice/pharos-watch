@@ -914,6 +914,90 @@ describe("syncYieldData", () => {
     configs.length = 0;
   });
 
+  it("keeps yield sync healthy when the retained benchmark is still fresh", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([]),
+          updatedAt: nowSec - 6 * 3600,
+        };
+      }
+      if (key === "risk_free_rate") {
+        return {
+          value: JSON.stringify({
+            rate: 3.71,
+            recordDate: "2025-06-13",
+            fetchedAt: nowSec - 6 * 3600,
+            source: "fred-dgs3mo",
+            isFallback: false,
+            fallbackMode: "fred-api-error-retained",
+          }),
+          updatedAt: nowSec - 6 * 3600,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string | null;
+    };
+
+    expect(result.status).toBeUndefined();
+    expect(metadata.fallbackMode).toBeNull();
+
+    const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
+    expect(rankingsCacheCall).toBeDefined();
+    const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
+      provenance: { benchmark: { fallbackMode: string | null; isFallback: boolean } };
+    };
+    expect(rankingsPayload.provenance.benchmark.fallbackMode).toBe("fred-api-error-retained");
+    expect(rankingsPayload.provenance.benchmark.isFallback).toBe(false);
+  });
+
+  it("marks yield sync degraded when the retained benchmark is older than two days", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([]),
+          updatedAt: nowSec - 49 * 3600,
+        };
+      }
+      if (key === "risk_free_rate") {
+        return {
+          value: JSON.stringify({
+            rate: 3.71,
+            recordDate: "2025-06-10",
+            fetchedAt: nowSec - 49 * 3600,
+            source: "fred-dgs3mo",
+            isFallback: false,
+            fallbackMode: "fred-api-error-retained",
+          }),
+          updatedAt: nowSec - 49 * 3600,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string | null;
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode).toContain("risk-free-rate:fred-api-error-retained");
+  });
+
   it("marks run degraded but still writes yield-rankings cache when safety snapshot coverage is empty", async () => {
     const db = makeDb();
     vi.mocked(getCache).mockResolvedValue(null);

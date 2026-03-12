@@ -8,6 +8,7 @@ import {
   PYS_SCALING_FACTOR,
   DEFAULT_SAFETY_SCORE,
 } from "../lib/constants";
+import { SECONDS } from "../lib/time-constants";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 import {
@@ -33,6 +34,7 @@ import {
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.5;
 const THIRTY_DAYS_SECONDS = 30 * 86400;
 const LOW_SOURCE_TVL_USD = 250_000;
+const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = SECONDS.TWO_DAYS;
 
 const TRACKED_META_BY_ID = new Map(
   TRACKED_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]),
@@ -127,6 +129,12 @@ function getConfidencePriority(tier: ConfidenceTier): number {
     default:
       return 1;
   }
+}
+
+function shouldDegradeForRiskFreeRate(meta: Awaited<ReturnType<typeof loadRiskFreeRateSnapshot>>): boolean {
+  if (!meta.fallbackMode) return false;
+  if (meta.isFallback) return true;
+  return meta.ageSeconds == null || meta.ageSeconds > MAX_RETAINED_RISK_FREE_RATE_AGE_SEC;
 }
 
 function relativeDivergence(a: number, b: number): number {
@@ -823,7 +831,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       degradationReasons.push(`safety-snapshot:${safetySnapshot.reason}`);
     }
   }
-  if (riskFreeRateMeta.fallbackMode) {
+  if (shouldDegradeForRiskFreeRate(riskFreeRateMeta)) {
     degradationReasons.push(`risk-free-rate:${riskFreeRateMeta.fallbackMode}`);
   }
   if (dlPoolsMeta.mode === "unavailable" || dlPoolsMeta.fallbackMode === "cache-parse-failed") {
