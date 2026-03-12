@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 const getReserveAdapterMock = vi.fn();
 const shouldAttemptFetchMock = vi.fn();
@@ -15,6 +16,8 @@ vi.mock("../../lib/circuit-breaker", () => ({
 }));
 
 describe("syncLiveReserves", () => {
+  const configuredCoinCount = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
+
   beforeEach(() => {
     vi.clearAllMocks();
     shouldAttemptFetchMock.mockResolvedValue(true);
@@ -31,10 +34,11 @@ describe("syncLiveReserves", () => {
     const result = await syncLiveReserves(db, new AbortController().signal, {});
 
     expect(result?.status).toBe("ok");
-    expect(result?.itemCount).toBe(1);
+    expect(result?.itemCount).toBe(configuredCoinCount);
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition"))).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
     expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, "live-reserves:infinifi", true);
+    expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(configuredCoinCount);
   });
 
   it("returns degraded when the adapter yields warning metadata", async () => {
@@ -50,7 +54,7 @@ describe("syncLiveReserves", () => {
     const result = await syncLiveReserves(db, new AbortController().signal, {});
 
     expect(result?.status).toBe("degraded");
-    expect(result?.metadata).toContain("\"warningCount\":1");
+    expect(result?.metadata).toContain(`"warningCount":${configuredCoinCount}`);
   });
 
   it("records a skipped sync state when the circuit is open", async () => {

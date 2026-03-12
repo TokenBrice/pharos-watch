@@ -1,5 +1,4 @@
 import type { ZodType } from "zod";
-import type { ReserveSlice } from "@shared/types";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
 

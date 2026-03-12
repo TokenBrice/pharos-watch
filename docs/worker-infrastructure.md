@@ -624,7 +624,7 @@ The three crons below were previously only listed by filename in `docs/architect
 
 **File:** `worker/src/cron/sync-live-reserves.ts`
 **Schedule:** `0 8 * * *` (daily at 08:00 UTC)
-**Data source:** Protocol-specific APIs via adapter registry (`worker/src/cron/reserve-adapters/`)
+**Data source:** Protocol-specific reserve APIs and on-chain vault/accounting reads via adapter registry (`worker/src/cron/reserve-adapters/`)
 
 **Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table and records per-coin operational state in `reserve_sync_state`. Each coin with `liveReservesConfig` declares an adapter, semantics, source inputs, and optional breaker scope. The cron iterates configured coins sequentially, applies per-source circuit breaker logic, and persists both successful snapshots and failed/degraded sync state.
 
@@ -658,7 +658,18 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 | Adapter | Coins | Source |
 |---------|-------|--------|
+| `accountable` | `aznd-mu-digital` | `inputs.primary.kind = "http-json"` -> `https://mu.accountable.capital:10443/dashboard` (`reserves.type`) |
+| `asymmetry` | `usdaf-asymmetry` | `inputs.primary.kind = "http-json"` -> `https://app.asymmetry.finance/api/stats` (`usdaf.branch`) |
+| `btcfi` | `btcusd-btcfi` | `inputs.primary.kind = "http-json"` -> `https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false` + handler metadata |
+| `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro` | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints |
 | `infinifi` | `iusd-infinifi` | `inputs.primary.kind = "http-json"` -> `https://eth-api.infinifi.xyz/api/protocol/data` |
+| `m0` | `m-m0`, `musd-metamask`, `usdn-noble` | `inputs.primary.kind = "http-json"` -> `https://protocol-api.m0.org/graphql` (`CollateralCurrent`) |
+| `evm-branch-balances` | `bold-liquity`, `usnd-nerite` | `inputs.primary.kind = "onchain-evm"` -> branch `ActivePool` ERC-20 balances + DefiLlama prices |
+| `openeden-usdo` | `usdo-openeden` | `inputs.primary.kind = "http-json"` -> `https://prod-gw.openeden.com/usdo/sys/reserve-composition-last` |
+| `reservoir` | `wsrusd-reservoir` | `inputs.primary.kind = "http-json"` -> `https://app.reservoir.xyz/api/reserves/raw` |
+| `erc4626-single-asset` | `syrupusdc-maple`, `syrupusdt-maple` | `inputs.primary.kind = "onchain-evm"` -> Ethereum `totalAssets()` / `asset()` calls against the vault contract |
+| `fx` | `fxusd-f-x-protocol` | `inputs.primary.kind = "http-json"` -> `https://api.aladdin.club/api1/get_fx_tvl` (`data.poolInfo`) |
+| `single-asset` | `lusd-liquity`, `meusd-mezo`, `feusd-felix` | `inputs.primary.kind = "onchain-evm"` or `http-json` -> single-asset probe with fixed 100% composition |
 
 **Operational behavior:**
 

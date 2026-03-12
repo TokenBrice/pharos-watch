@@ -1,0 +1,70 @@
+import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { AdapterResult } from "./index";
+import { fetchJsonWithRetry, requireJsonInput, normalizeSlices } from "./helpers";
+
+interface BtcfiMarketRow {
+  token_handler_id: number;
+  deposit_value?: string;
+}
+
+interface BtcfiHandlerRow {
+  id: number;
+  symbol: string;
+  isStable: boolean;
+}
+
+interface BtcfiParams {
+  handlersUrl: string;
+}
+
+function readParams(config: LiveReservesConfig): BtcfiParams {
+  const params = (config.params ?? {}) as Partial<BtcfiParams>;
+  if (!params.handlersUrl) {
+    throw new Error("btcfi adapter requires params.handlersUrl");
+  }
+  return params as BtcfiParams;
+}
+
+export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]): ReserveSlice[] {
+  const handlerMap = new Map(handlers.map((handler) => [handler.id, handler]));
+  const total = market.reduce((acc, row) => {
+    const handler = handlerMap.get(row.token_handler_id);
+    if (!handler || handler.isStable) return acc;
+    const value = Number(row.deposit_value ?? "0");
+    return Number.isFinite(value) && value > 0 ? acc + value : acc;
+  }, 0);
+
+  if (total <= 0) return [];
+
+  const btcBucket = market.reduce((acc, row) => {
+    const handler = handlerMap.get(row.token_handler_id);
+    if (!handler || handler.isStable) return acc;
+    const value = Number(row.deposit_value ?? "0");
+    return Number.isFinite(value) && value > 0 ? acc + value : acc;
+  }, 0);
+
+  return normalizeSlices([
+    {
+      name: "BTC / WBTC / BTCB / cbBTC",
+      pct: (btcBucket / total) * 100,
+      risk: "medium",
+    },
+  ]);
+}
+
+export async function fetchBtcfiReserves(
+  _coin: StablecoinMeta,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+): Promise<AdapterResult> {
+  const input = requireJsonInput(config.inputs.primary, "btcfi");
+  const params = readParams(config);
+  const [market, handlers] = await Promise.all([
+    fetchJsonWithRetry<BtcfiMarketRow[]>(input.url, signal),
+    fetchJsonWithRetry<BtcfiHandlerRow[]>(params.handlersUrl, signal),
+  ]);
+
+  return {
+    slices: adaptBtcfi(market, handlers),
+  };
+}

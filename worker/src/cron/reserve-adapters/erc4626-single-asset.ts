@@ -1,0 +1,123 @@
+import type {
+  LiveReserveInput,
+  LiveReserveWarning,
+  LiveReservesConfig,
+  ReserveRisk,
+  ReserveSlice,
+  StablecoinMeta,
+} from "@shared/types";
+import type { AdapterContext, AdapterResult } from "./index";
+import {
+  fetchEvmCallHex,
+  parseEvmAddressResult,
+  resolveCoinContractAddress,
+} from "./evm";
+
+const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
+const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
+
+interface SingleAssetSliceConfig {
+  name: string;
+  risk: ReserveRisk;
+  coinId?: string;
+  depType?: ReserveSlice["depType"];
+  expectedAssetAddress?: string;
+}
+
+function isOnChainInput(input: LiveReserveInput): input is Extract<LiveReserveInput, { kind: "onchain-evm" }> {
+  return input.kind === "onchain-evm";
+}
+
+function isReserveRisk(value: unknown): value is ReserveRisk {
+  return value === "very-low"
+    || value === "low"
+    || value === "medium"
+    || value === "high"
+    || value === "very-high";
+}
+
+function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
+  const slice = config.params?.slice;
+  if (!slice || typeof slice !== "object") {
+    throw new Error("erc4626-single-asset adapter requires params.slice");
+  }
+
+  const name = "name" in slice && typeof slice.name === "string"
+    ? slice.name.trim()
+    : "";
+  const risk = "risk" in slice ? slice.risk : undefined;
+
+  if (!name || !isReserveRisk(risk)) {
+    throw new Error("erc4626-single-asset params.slice must include a valid name and risk");
+  }
+
+  return {
+    name,
+    risk,
+    ...("coinId" in slice && typeof slice.coinId === "string" ? { coinId: slice.coinId } : {}),
+    ...("depType" in slice && typeof slice.depType === "string" ? { depType: slice.depType as ReserveSlice["depType"] } : {}),
+    ...("expectedAssetAddress" in slice && typeof slice.expectedAssetAddress === "string"
+      ? { expectedAssetAddress: slice.expectedAssetAddress.toLowerCase() }
+      : {}),
+  };
+}
+
+export async function fetchErc4626SingleAssetReserves(
+  coin: StablecoinMeta,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  _ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const primaryInput = config.inputs.primary;
+  if (!isOnChainInput(primaryInput)) {
+    throw new Error("erc4626-single-asset adapter requires an onchain-evm primary input");
+  }
+
+  const sliceConfig = parseSliceConfig(config);
+  const contractAddress = resolveCoinContractAddress(coin, primaryInput.chain);
+  if (!contractAddress) {
+    throw new Error(`No ${primaryInput.chain} contract configured for ${coin.id}`);
+  }
+
+  const [assetResult, totalAssetsResult] = await Promise.all([
+    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_ASSET_SELECTOR, signal),
+    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_TOTAL_ASSETS_SELECTOR, signal),
+  ]);
+
+  if (!totalAssetsResult) {
+    throw new Error(`ERC-4626 totalAssets() call failed for ${coin.id}`);
+  }
+
+  const warnings: LiveReserveWarning[] = [];
+  const assetAddress = assetResult ? parseEvmAddressResult(assetResult) : null;
+  if (
+    assetAddress
+    && sliceConfig.expectedAssetAddress
+    && assetAddress !== sliceConfig.expectedAssetAddress
+  ) {
+    warnings.push({
+      code: "asset-mismatch",
+      message: `Vault asset() returned ${assetAddress}, expected ${sliceConfig.expectedAssetAddress}`,
+      severity: "warning",
+    });
+  }
+
+  return {
+    slices: [
+      {
+        name: sliceConfig.name,
+        pct: 100,
+        risk: sliceConfig.risk,
+        ...(sliceConfig.coinId ? { coinId: sliceConfig.coinId } : {}),
+        ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
+      },
+    ],
+    ...(warnings.length > 0 ? { warnings } : {}),
+    metadata: {
+      chain: primaryInput.chain,
+      contractAddress,
+      totalAssetsRaw: BigInt(totalAssetsResult).toString(),
+      ...(assetAddress ? { assetAddress } : {}),
+    },
+  };
+}

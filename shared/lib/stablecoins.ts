@@ -592,6 +592,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
     pegMechanism: "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
     proofOfReserves: { type: "self-reported", url: "https://dashboard.m0.org/", provider: "M0 Protocol (on-chain Validator attestations)" },
+    liveReservesConfig: {
+      adapter: "m0",
+      version: 1,
+      semantics: "protocol-reserve",
+      breakerScope: "m0",
+      display: {
+        url: "https://dashboard.m0.org/",
+        label: "M0 Dashboard",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://protocol-api.m0.org/graphql",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://www.m0.org/" },
       { label: "Twitter", url: "https://x.com/m0" },
@@ -1646,6 +1662,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "U.S. Treasury bills via tokenized TBILL and BUIDL tokens held in a bankruptcy-remote segregated account; 100% collateralization ratio maintained",
     pegMechanism: "Rebasing stablecoin fixed at $1; supply rebases daily to distribute yield; mint/redemption at 1:1 with USDC via OpenEden platform",
     proofOfReserves: { type: "real-time", url: "https://openeden.com/usdo/transparency", provider: "Chainlink PoR" },
+    liveReservesConfig: {
+      adapter: "openeden-usdo",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "openeden",
+      display: {
+        url: "https://openeden.com/usdo/transparency",
+        label: "OpenEden Transparency",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://openeden.com/" },
       { label: "Twitter", url: "https://x.com/OpenEden_X" },
@@ -1899,6 +1931,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "United States" },
     proofOfReserves: { type: "real-time", url: "https://dashboard.m0.org", provider: "M0 Protocol" },
+    liveReservesConfig: {
+      adapter: "m0",
+      version: 1,
+      semantics: "protocol-reserve",
+      breakerScope: "m0",
+      display: {
+        url: "https://dashboard.m0.org/",
+        label: "M0 Dashboard",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://protocol-api.m0.org/graphql",
+        },
+      },
+    },
     contracts: [
       { chain: "ethereum", address: "0xaca92e438df0b2401ff60da7e4337b687a2435da", decimals: 6 },
       { chain: "linea", address: "0xaca92e438df0b2401ff60da7e4337b687a2435da", decimals: 6 },
@@ -1969,6 +2017,38 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     governanceQuality: "immutable-code",
     deploymentModel: "third-party-bridge",
     geckoId: "liquity-bold-2",
+    liveReservesConfig: {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "bold-liquity",
+      display: { url: "https://www.liquity.org/bold", label: "Website" },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "alchemy" },
+      },
+      params: {
+        branches: [
+          {
+            name: "wstETH (Lido)",
+            holder: "0x531a8f99c70d6a56a7cee02d6b4281650d7919a0",
+            token: { chain: "ethereum", address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", decimals: 18 },
+            risk: "low",
+          },
+          {
+            name: "WETH",
+            holder: "0xeb5a8c825582965f1d84606e078620a84ab16afe",
+            token: { chain: "ethereum", address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", decimals: 18 },
+            risk: "medium",
+          },
+          {
+            name: "rETH (Rocket Pool)",
+            holder: "0x9074d72cc82dad1e13e454755aa8f144c479532f",
+            token: { chain: "ethereum", address: "0xae78736cd615f374d3085123a210448e74fc6393", decimals: 18 },
+            risk: "low",
+          },
+        ],
+      },
+    },
     yieldBearing: true,
     yieldConfig: { yieldSource: "Stability Pool (via Yearn yBOLD)", yieldType: "governance-set" },
     collateral: "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
@@ -2016,6 +2096,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     llamaId: "8",
     governanceQuality: "immutable-code",
     geckoId: "liquity-usd",
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "lusd-liquity",
+      display: { url: "https://www.liquity.org/", label: "Website" },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "alchemy" },
+      },
+      params: {
+        label: "ETH",
+        risk: "very-low",
+      },
+    },
     deploymentModel: "canonical-bridge",
     collateral: "ETH only; 110% minimum collateralization ratio per Trove (CDP), with a one-time borrowing fee instead of ongoing interest",
     pegMechanism: "Overcollateralized ETH CDPs (Troves) with three peg mechanisms: (1) hard floor at $1 via direct on-chain redemption of LUSD for $1 of ETH from the riskiest Trove; (2) Stability Pool absorbs liquidations at 110% collateral ratio; (3) algorithmically adjusted borrowing and redemption fees throttle arbitrage volume",
@@ -2039,6 +2133,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("fxusd-f-x-protocol", "fxUSD", "fxUSD", "crypto-backed", "decentralized", {
     llamaId: "168",
     geckoId: "f-x-protocol-fxusd",
+    liveReservesConfig: {
+      adapter: "fx",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "fxusd-f-x-protocol",
+      display: { url: "https://fx.aladdin.club/", label: "Website" },
+      inputs: {
+        primary: { kind: "http-json", url: "https://api.aladdin.club/api1/get_fx_tvl" },
+      },
+    },
     yieldBearing: true,
     yieldConfig: { yieldSource: "f(x) Protocol Stability Pool", yieldType: "governance-set" },
     collateral: "wstETH and WBTC deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized",
@@ -2064,6 +2168,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     pegMechanism: "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
     jurisdiction: { country: "United States" },
     proofOfReserves: { type: "real-time", url: "https://dashboard.m0.org/", provider: "M0 Protocol" },
+    liveReservesConfig: {
+      adapter: "m0",
+      version: 1,
+      semantics: "protocol-reserve",
+      breakerScope: "m0",
+      display: {
+        url: "https://dashboard.m0.org/",
+        label: "M0 Dashboard",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://protocol-api.m0.org/graphql",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://noble.xyz/usdn" },
       { label: "Twitter", url: "https://x.com/noble_xyz" },
@@ -2158,6 +2278,23 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "frankencoin",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Frankencoin Savings", yieldType: "governance-set" },
+    liveReservesConfig: {
+      adapter: "collateral-positions-api",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "zchf-frankencoin",
+      display: { url: "https://app.frankencoin.com/", label: "App" },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+        },
+      },
+      params: {
+        pricesUrl: "https://api.frankencoin.com/prices/mapping",
+        otherThresholdPct: 2,
+      },
+    },
     collateral: "ETH, BTC derivatives (WBTC, cbBTC), ETH LSTs (wstETH, LsETH), gold tokens (PAXG, XAUt), tokenized RWAs (SPYon, LENDS, REALU), and governance tokens (CRV, GNO) in oracle-free overcollateralized positions; any collateral can be whitelisted by governance",
     pegMechanism: "Auction-based collateral valuation with veto governance; no price oracle dependency",
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -2413,6 +2550,27 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     llamaId: "303",
     geckoId: "mezo-usd",
     tags: ["Liquity v1 fork"],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "meusd-mezo",
+      display: {
+        url: "https://explorer.mezo.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+        label: "Explorer",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://api.explorer.mezo.org/api/v2/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+        },
+      },
+      params: {
+        label: "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
+        risk: "medium",
+        probe: { kind: "json-path", path: ["total_supply"] },
+      },
+    },
     collateral: "Bitcoin only; minimum 110% collateral ratio",
     pegMechanism: "BTC-only overcollateralized CDP with direct $1 BTC redemption; operates on Mezo (Bitcoin L2, not Ethereum or a Stage 1 L2)",
     links: [
@@ -2504,6 +2662,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "asymmetry-usdaf-2",
     governanceQuality: "immutable-code",
     tags: ["Liquity v2 fork"],
+    liveReservesConfig: {
+      adapter: "asymmetry",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "usdaf-asymmetry",
+      display: { url: "https://app.asymmetry.finance/", label: "App" },
+      inputs: {
+        primary: { kind: "http-json", url: "https://app.asymmetry.finance/api/stats" },
+      },
+    },
     collateral: "wBTC, tBTC, sUSDS, sfrxUSD, scrvUSD, and ysyBOLD in immutable overcollateralized CDP markets on Ethereum",
     pegMechanism: "Overcollateralized CDP with Liquity v2-style redemptions and user-set interest rates; the hard redemption floor is effectively $0.995 because Liquity v2 deployments include a 0.5% fee floor",
     links: [
@@ -2528,6 +2696,68 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     llamaId: "287",
     geckoId: "us-nerite-dollar",
     governanceQuality: "immutable-code",
+    liveReservesConfig: {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "usnd-nerite",
+      display: { url: "https://www.nerite.org/", label: "Website" },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "arbitrum", rpcMode: "alchemy" },
+      },
+      params: {
+        branches: [
+          {
+            name: "tBTC",
+            holder: "0x620fe90b1eacaea936ea199e7b05f998ca65836a",
+            token: { chain: "arbitrum", address: "0x6c84a8f1c29108f47a79964b5fe888d4f4d0de40", decimals: 18 },
+            risk: "medium",
+          },
+          {
+            name: "WETH",
+            holder: "0x9981abdbc8af32f8e660314b3497e4033e15f054",
+            token: { chain: "arbitrum", address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1", decimals: 18 },
+            risk: "medium",
+          },
+          {
+            name: "wstETH (Lido)",
+            holder: "0xfb002caf4d75061959cb40a0b6c294f9b6a86e82",
+            token: { chain: "arbitrum", address: "0x5979d7b546e38e414f7e9822514be443a4800529", decimals: 18 },
+            risk: "low",
+          },
+          {
+            name: "rETH (Rocket Pool)",
+            holder: "0xbc86903e82cd5d815e595e4a0de9b2b7ba9a2042",
+            token: { chain: "arbitrum", address: "0xec70dcb4a1efa46b8f2d97c310c9c4790ba5ffa8", decimals: 18 },
+            risk: "low",
+          },
+          {
+            name: "rsETH",
+            holder: "0x268dc0089d71a89800f3f4aaa3f9a7f0a950c7a7",
+            token: { chain: "arbitrum", address: "0x4186bfc76e2e237523cbc30fd220fe055156b41f", decimals: 18 },
+            risk: "high",
+          },
+          {
+            name: "weETH",
+            holder: "0x7bb26e1e65e41c96bf4b56c6b9037391bcaa04c5",
+            token: { chain: "arbitrum", address: "0x35751007a407ca6feffe80b3cb397736d2cf4dbe", decimals: 18 },
+            risk: "high",
+          },
+          {
+            name: "ARB",
+            holder: "0xff27f56681613dbd002ee89ec895ec2e39ea8d3a",
+            token: { chain: "arbitrum", address: "0x912ce59144191c1204e64559fe8253a0e49e6548", decimals: 18 },
+            risk: "high",
+          },
+          {
+            name: "COMP",
+            holder: "0xc26ff6e1edabafba55ba18854cbc9706b2ec0543",
+            token: { chain: "arbitrum", address: "0x354a6da3fcde098f8389cad84b0182725c6c91de", decimals: 18 },
+            risk: "high",
+          },
+        ],
+      },
+    },
     collateral: "tBTC, WETH, wstETH, rETH, rsETH, weETH, ARB, and COMP in immutable overcollateralized CDP markets on Arbitrum",
     pegMechanism: "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; separate Stability Pools absorb liquidations per collateral market",
     links: [
@@ -2741,6 +2971,24 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     llamaId: "251",
     geckoId: "felix-feusd",
     tags: ["Liquity v2 fork"],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "feusd-felix",
+      display: {
+        url: "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp",
+        label: "Developer docs",
+      },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "hyperevm", rpcMode: "public-rpc" },
+      },
+      params: {
+        label: "WHYPE / HYPE branch collateral",
+        risk: "very-high",
+        rpcUrl: "https://rpc.hyperliquid.xyz/evm",
+      },
+    },
     collateral: "HYPE, kHYPE, wstHYPE, UBTC (feUBTC), ETH, and SOL via overcollateralized CDPs on Hyperliquid (Liquity V2 fork)",
     pegMechanism: "Overcollateralized CDP (Liquity V2 fork) with direct redemption for $1 of collateral; interest-rate-sorted redemption queue (lower-rate positions redeemed first); stability pools absorb liquidations",
     links: [
@@ -2916,6 +3164,29 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Proof of Reserve", url: "https://mu.accountable.capital/" },
     ],
     proofOfReserves: { type: "real-time", url: "https://mu.accountable.capital/", provider: "Accountable" },
+    liveReservesConfig: {
+      adapter: "accountable",
+      version: 1,
+      semantics: "protocol-reserve",
+      breakerScope: "accountable",
+      display: {
+        url: "https://mu.accountable.capital/",
+        label: "Accountable Dashboard",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://mu.accountable.capital:10443/dashboard",
+        },
+      },
+      params: {
+        bucket: "type",
+        riskMap: {
+          "Liquid Bonds": "high",
+          "Short Term Cash": "very-low",
+        },
+      },
+    },
     contracts: [
       { chain: "monad", address: "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8", decimals: 18 },
     ],
@@ -3025,6 +3296,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     llamaId: "183",
     geckoId: "bitcoin-usd-btcfi",
     tags: ["Liquity v1 fork"],
+    liveReservesConfig: {
+      adapter: "btcfi",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "btcusd-btcfi",
+      display: { url: "https://www.btcfi.one/", label: "Website" },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false",
+        },
+      },
+      params: {
+        handlersUrl: "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false",
+      },
+    },
     collateral: "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
     pegMechanism: "Overcollateralized CDP with liquidation mechanisms",
     links: [
@@ -3243,6 +3530,21 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
     pegMechanism: "wsrUSD is a non-rebasing ERC-4626 vault token that accrues yield per block as rUSD is deposited into the srUSD savings vault; token price appreciates continuously from $1.00 as protocol yield accrues; users can unwrap wsrUSD → srUSD → rUSD at any time; rUSD itself is minted 1:1 via a Peg Stability Module (PSM) against USDC, auto-topped every 10 minutes on each chain",
     proofOfReserves: { type: "real-time", url: "https://app.reservoir.xyz/reserves", provider: "Reservoir Protocol (on-chain live balance sheet)" },
+    liveReservesConfig: {
+      adapter: "reservoir",
+      version: 1,
+      semantics: "protocol-reserve",
+      display: {
+        url: "https://app.reservoir.xyz/reserves",
+        label: "Proof of Reserves",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://app.reservoir.xyz/api/reserves/raw",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://reservoir.xyz" },
       { label: "Twitter", url: "https://x.com/reservoir_xyz" },
@@ -3729,6 +4031,23 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     detailProvider: "coingecko",
     geckoId: "decentralized-euro",
     deploymentModel: "canonical-bridge",
+    liveReservesConfig: {
+      adapter: "collateral-positions-api",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "deuro-deuro",
+      display: { url: "https://app.deuro.com/", label: "App" },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://api.deuro.com/ecosystem/collateral/positions/details",
+        },
+      },
+      params: {
+        pricesUrl: "https://api.deuro.com/prices/mapping",
+        otherThresholdPct: 2,
+      },
+    },
     collateral: "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
     pegMechanism: "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
     links: [
@@ -3900,6 +4219,31 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     yieldConfig: { yieldSource: "Maple Finance lending", yieldType: "nav-appreciation" },
     collateral: "USDC deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
     pegMechanism: "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; near-instant redemptions via dynamic liquidity buffer",
+    liveReservesConfig: {
+      adapter: "erc4626-single-asset",
+      version: 1,
+      semantics: "single-asset",
+      display: {
+        url: "https://app.maple.finance/earn",
+        label: "Maple App",
+      },
+      inputs: {
+        primary: {
+          kind: "onchain-evm",
+          chain: "ethereum",
+          rpcMode: "alchemy",
+        },
+      },
+      params: {
+        slice: {
+          name: "USDC-denominated loan receivables",
+          risk: "medium",
+          coinId: "usdc-circle",
+          depType: "wrapper",
+          expectedAssetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://maple.finance/" },
       { label: "Twitter", url: "https://x.com/maplefinance" },
@@ -3924,6 +4268,31 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     yieldConfig: { yieldSource: "Maple Finance lending", yieldType: "nav-appreciation" },
     collateral: "USDT deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
     pegMechanism: "ERC-4626 vault; USDT deposited into Maple lending pools, NAV appreciates with accrued interest; near-instant redemptions via dynamic liquidity buffer",
+    liveReservesConfig: {
+      adapter: "erc4626-single-asset",
+      version: 1,
+      semantics: "single-asset",
+      display: {
+        url: "https://app.maple.finance/earn",
+        label: "Maple App",
+      },
+      inputs: {
+        primary: {
+          kind: "onchain-evm",
+          chain: "ethereum",
+          rpcMode: "alchemy",
+        },
+      },
+      params: {
+        slice: {
+          name: "USDT-denominated loan receivables",
+          risk: "medium",
+          coinId: "usdt-tether",
+          depType: "wrapper",
+          expectedAssetAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://maple.finance/" },
       { label: "Twitter", url: "https://x.com/maplefinance" },

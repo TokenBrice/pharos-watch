@@ -265,7 +265,7 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `reserves`     | `ReserveSlice[]` | Reserve slices currently being shown to the user |
 | `estimated`    | `boolean`        | `true` only when using the classification template fallback |
 | `liveAt`       | `number`         | Unix seconds of the last successful live snapshot, when present |
-| `source`       | `string`         | Adapter key (e.g. `"infinifi"`) when live data exists |
+| `source`       | `string`         | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`) when live data exists |
 | `displayUrl`   | `string`         | Human-readable source link shown in the UI |
 | `sync`         | `object`         | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`) |
 
