@@ -1,0 +1,32 @@
+import { createRateLimiter } from "../../lib/evm-logs";
+import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { syncBlacklist } from "../../cron/sync-blacklist";
+import type { ScheduledRuntimeContext } from "./context";
+
+export async function runTwentyMinuteBlacklistSlot(runtime: ScheduledRuntimeContext): Promise<void> {
+  const etherscanAllowed = await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.ETHERSCAN);
+  if (!etherscanAllowed) {
+    console.warn("[cron] Etherscan circuit open — skipping blacklist sync");
+    return;
+  }
+
+  const etherscanRL = createRateLimiter(4);
+  const etherscanKey = runtime.env.ETHERSCAN_API_KEY ?? null;
+  const blacklistJob = runtime.runLeasedCron("sync-blacklist", (signal, reportProgress) =>
+    syncBlacklist(
+      runtime.db,
+      etherscanKey,
+      runtime.env.TRONGRID_API_KEY ?? null,
+      runtime.env.DRPC_API_KEY ?? null,
+      etherscanRL,
+      signal,
+      reportProgress,
+    ),
+  );
+  runtime.ctx.waitUntil(blacklistJob);
+  runtime.ctx.waitUntil(blacklistJob.then(
+    () => recordOutcome(runtime.db, CIRCUIT_SOURCE.ETHERSCAN, true),
+    () => recordOutcome(runtime.db, CIRCUIT_SOURCE.ETHERSCAN, false),
+  ));
+}

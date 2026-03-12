@@ -106,6 +106,8 @@ src/                              # Next.js frontend (static export)
 │   ├── methodology/              # Detailed methodology documentation
 │   │   ├── page.tsx
 │   │   ├── error.tsx
+│   │   ├── methodology-shared.tsx # Shared methodology page helpers, section metadata, and section-shell primitives
+│   │   ├── methodology-sections.tsx # Long-form methodology section bodies extracted from page.tsx
 │   │   ├── changelog-page-utils.ts # Shared metadata + entry mapping helpers for methodology changelog routes
 │   │   ├── changelog-route-factory.tsx # Config-driven wrapper factory for methodology changelog routes
 │   │   ├── scoring-changelog/page.tsx  # Safety Score methodology changelog
@@ -161,11 +163,7 @@ src/                              # Next.js frontend (static export)
 │   ├── stablecoin-detail/        # Stablecoin detail section components (extracted from page client)
 │   │   ├── hero-card.tsx
 │   │   ├── overview-section.tsx
-│   │   ├── chart-section.tsx
-│   │   ├── info-section.tsx
 │   │   ├── flows-section.tsx
-│   │   ├── liquidity-section.tsx
-│   │   ├── depeg-history-section.tsx
 │   │   ├── explore-next-section.tsx # Consolidated crawlable link hub for taxonomy, compare, and related-coin routes
 │   │   ├── safety-score-history-section.tsx
 │   │   └── notices-and-summary-section.tsx
@@ -184,8 +182,14 @@ src/                              # Next.js frontend (static export)
 │   ├── stablecoin-taxonomy-page.tsx # Shared server-rendered taxonomy landing page shell
 │   ├── stablecoin-table.tsx      # Sortable table with filters
 │   ├── stablecoin-table-logic.ts # Stablecoin table filtering/sorting/export helpers
+│   ├── liquidity-table-logic.ts  # Liquidity leaderboard sorting helpers
+│   ├── flow-table-logic.ts       # Flow leaderboard sorting + badge helpers
+│   ├── depeg-table-logic.ts      # Depeg tracker sorting + severity accent helpers
+│   ├── blacklist-table-logic.ts  # Blacklist table sorting helpers
+│   ├── yield-table-logic.ts      # Yield leaderboard sorting helpers
 │   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
 │   ├── status/                   # Status dashboard component decomposition
+│   │   ├── cron-metadata-summary.ts # Per-job cron metadata summarizer registry for cron-card
 │   ├── flow-brrr-overview.tsx    # Shared Bank Run Gauge + Minting Pressure overview shell
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
 │   ├── flow-table.tsx            # Per-coin flow table with pressure-shift states, volumes, and net flows
@@ -264,21 +268,22 @@ src/                              # Next.js frontend (static export)
 │   └── theme-toggle.tsx          # Dark/light mode toggle
 ├── hooks/
 │   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (detail-token history derived from GET /api/stablecoin/:id)
+│   ├── api-hooks.ts              # Consolidated low-friction GET hooks wired to shared API path builders
 │   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
 │   ├── use-logos.ts              # Static logos from data/logos.json
-│   ├── use-stablecoin-charts.ts  # GET /api/stablecoin-charts
+│   ├── use-stablecoin-charts.ts  # Compatibility re-export for api-hooks.ts
 │   ├── use-blacklist-events.ts   # GET /api/blacklist
 │   ├── use-depeg-events.ts       # GET /api/depeg-events
-│   ├── use-peg-summary.ts        # GET /api/peg-summary
-│   ├── use-bluechip-ratings.ts   # GET /api/bluechip-ratings
-│   ├── use-dex-liquidity.ts      # GET /api/dex-liquidity
-│   ├── use-dex-liquidity-history.ts # GET /api/dex-liquidity-history
-│   ├── use-usds-status.ts        # GET /api/usds-status
-│   ├── use-daily-digest.ts       # GET /api/daily-digest
-│   ├── use-digest-archive.ts    # GET /api/digest-archive
-│   ├── use-digest-snapshot.ts    # GET /api/digest-snapshot (per-date context)
+│   ├── use-peg-summary.ts        # Compatibility re-export for api-hooks.ts
+│   ├── use-bluechip-ratings.ts   # Compatibility re-export for api-hooks.ts
+│   ├── use-dex-liquidity.ts      # Compatibility re-export for api-hooks.ts
+│   ├── use-dex-liquidity-history.ts # Compatibility re-export for api-hooks.ts
+│   ├── use-usds-status.ts        # Compatibility re-export for api-hooks.ts
+│   ├── use-daily-digest.ts       # Compatibility re-export for api-hooks.ts
+│   ├── use-digest-archive.ts    # Compatibility re-export for api-hooks.ts
+│   ├── use-digest-snapshot.ts    # Compatibility re-export for api-hooks.ts
 │   ├── use-endpoint-probes.ts    # Parallel endpoint probes (status page), shared polling helper + admin-header handling
-│   ├── use-health.ts             # GET /api/health using shared polling policy helper
+│   ├── use-health.ts             # Compatibility re-export for api-hooks.ts
 │   ├── use-status.ts             # GET /api/status (admin key auth) using shared polling policy helper
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-sorted-table-rows.ts  # Shared table sorting scaffold (useSort wiring + sorted row memo)
@@ -291,14 +296,14 @@ src/                              # Next.js frontend (static export)
 │   ├── use-stablecoin-detail-view-model.ts # Stablecoin detail query wiring; delegates pure derivation to src/lib/stablecoin-detail-view-model.ts
 │   ├── use-api-query.ts          # Generic typed fetch + polling helper wrapping TanStack Query
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
-│   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
-│   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
-│   ├── use-safety-score-history.ts # GET /api/safety-score-history (per-coin grade transitions)
+│   ├── use-stability-index.ts    # Compatibility re-export for api-hooks.ts
+│   ├── use-report-cards.ts       # Compatibility re-export for api-hooks.ts
+│   ├── use-safety-score-history.ts # Compatibility re-export for api-hooks.ts
 │   ├── use-portfolio.ts          # Portfolio holdings state + browser persistence; delegates codec/analysis to src/lib/portfolio-*.ts
 │   ├── use-preferences.ts        # User preference state (persistent settings)
 │   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
-│   └── use-yield-rankings.ts     # GET /api/yield-rankings (yield leaderboard data)
+│   └── use-yield-rankings.ts     # Compatibility re-export for api-hooks.ts
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
     ├── analytics.ts              # Analytics tracking (page views, events)
@@ -353,7 +358,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
     │   ├── http.ts               # HTTP flow: CORS, edge cache, method/auth gating, router dispatch
-    │   └── scheduled.ts          # Cron flow: trigger-slot orchestration + lease-aware scheduling
+    │   ├── scheduled.ts          # Thin cron entrypoint: init env-aware clients + dispatch to slot runner registry
+    │   └── scheduled/            # Slot runners + shared lease/runtime context for scheduled execution
     ├── router.ts                 # Router-dispatched API handlers (method gating + path dispatch from endpoint contract)
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)

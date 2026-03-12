@@ -38,8 +38,9 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - `src/hooks/use-status.ts`
   - Calls `GET /api/status` with `X-Admin-Key`
   - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
-- `src/hooks/use-health.ts`
-  - Calls `GET /api/health`
+- `src/hooks/api-hooks.ts`
+  - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards`, `GET /api/yield-rankings`, and related read endpoints
+  - Legacy per-hook files (`src/hooks/use-health.ts`, `src/hooks/use-peg-summary.ts`, etc.) now re-export from this module so existing imports and tests stay stable
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups every 60s
   - Manual/admin mutation actions are listed but intentionally not auto-probed
@@ -56,6 +57,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Cards use operator-friendly labels but keep raw job ids visible in monospace for log lookup, plus the exact cron expression and whether the trigger is shared vs isolated
   - When a leased job is still running, cards surface `running` / `running-stale` state from `crons[*].inFlight`
   - Shared display metadata now comes from `shared/lib/cron-jobs.ts`, which also feeds worker interval expectations
+  - Job-specific metadata summaries are resolved through `src/components/status/cron-metadata-summary.ts` instead of a long inline `if` chain inside `cron-card.tsx`
 - The client now groups widgets into six operational lanes instead of one flat vertical list:
   - `Overview`: state machine, divergence counters, summary facts, and remediation-linked causes
   - `Pipeline`: data-quality threshold board, price-source health, liquidity health, dataset freshness, mint/burn reconciliation, and discovery backlog

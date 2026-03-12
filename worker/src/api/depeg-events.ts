@@ -1,10 +1,9 @@
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import {
   withErrorHandler,
-  addFreshnessHeaders,
   resolveOrReject,
   parseIntParam,
-  jsonResponse,
+  jsonFreshResponse,
   getLatestSuccessfulCronTimestamp,
   buildMethodologyEnvelope,
   fetchPaginatedEvents,
@@ -60,14 +59,20 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-stablecoins", latestEventTs);
   const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
 
-  return jsonResponse({ events, total, methodology: buildMethodologyEnvelope({
-    version: methodologyVersion,
-    versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
-    currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
-    currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-    changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
-    asOf: latestEventTs,
-  }) }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.realtime,
-  }, freshnessTs, 900));
+  return jsonFreshResponse({
+    events,
+    total,
+    methodology: buildMethodologyEnvelope({
+      version: methodologyVersion,
+      versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
+      currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
+      currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+      changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+      asOf: latestEventTs,
+    }),
+  }, {
+    cacheControl: CACHE_PROFILES.realtime,
+    updatedAt: freshnessTs,
+    maxAgeSec: 900,
+  });
 });

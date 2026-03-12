@@ -1,15 +1,18 @@
 # Methodology Page Contract
 
-`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. This file maps each section to its code source-of-truth so methodology UI content stays aligned with implementations.
+`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. Shared page chrome, helper components, and section metadata now live in `src/app/methodology/methodology-shared.tsx`, while the long-form section bodies are isolated in `src/app/methodology/methodology-sections.tsx` so authored content no longer sits inside the route shell.
 
 ---
 
 ## Route & Structure
 
-- **Route:** `src/app/methodology/page.tsx`
+- **Route shell:** `src/app/methodology/page.tsx`
+- **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
+- **Section content module:** `src/app/methodology/methodology-sections.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail
 - **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps the dedicated "How to Read This Page" overview card
+- **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`
 - **Version badges:** imported from per-system version modules in `shared/lib/*-version.ts`
 - **Changelog wrappers:** config-driven route wrappers via `src/app/methodology/changelog-route-factory.tsx`
 

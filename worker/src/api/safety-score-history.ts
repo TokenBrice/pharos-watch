@@ -1,7 +1,6 @@
 import {
   withErrorHandler,
   handleStablecoinHistoryRequest,
-  addFreshnessHeaders,
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
@@ -47,16 +46,16 @@ export const handleSafetyScoreHistory = withErrorHandler("safety-score-history",
       prevScore: row.prev_score,
       methodologyVersion: row.methodology_version,
     }),
-    buildHeaders: async ({ db: database, history }) => {
+    freshness: async ({ db: database, history }) => {
       const latestTs = history.length > 0
         ? history[history.length - 1]?.date ?? Math.floor(Date.now() / 1000)
         : Math.floor(Date.now() / 1000);
-      const freshnessTs = await getLatestSuccessfulCronTimestamp(
+      const updatedAt = await getLatestSuccessfulCronTimestamp(
         database,
         "snapshot-safety-grade-history",
         latestTs,
       );
-      return addFreshnessHeaders({}, freshnessTs, 86_400);
+      return { updatedAt, maxAgeSec: 86_400 };
     },
   });
 });

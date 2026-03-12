@@ -1,8 +1,7 @@
 import {
   withErrorHandler,
   parseStablecoinHistoryQuery,
-  jsonResponse,
-  addFreshnessHeaders,
+  jsonFreshResponse,
   getLatestSuccessfulCronTimestamp,
   errorResponse,
 } from "../lib/api-utils";
@@ -96,14 +95,10 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
   const latestHistoryTimestamp = history.length > 0
     ? Math.max(...history.map((row) => (typeof row.date === "number" ? row.date : 0)))
     : await getLatestSuccessfulCronTimestamp(db, "sync-yield-data", Math.floor(Date.now() / 1000));
-  const headers = addFreshnessHeaders(
-    {
-      "Cache-Control": CACHE_PROFILES.slow,
-      "Content-Type": "application/json",
-    },
-    latestHistoryTimestamp,
-    1800,
-  );
 
-  return jsonResponse(history, headers);
+  return jsonFreshResponse(history, {
+    cacheControl: CACHE_PROFILES.slow,
+    updatedAt: latestHistoryTimestamp,
+    maxAgeSec: 1800,
+  });
 });

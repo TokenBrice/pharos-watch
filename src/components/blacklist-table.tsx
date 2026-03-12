@@ -21,7 +21,8 @@ import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 import { SortableTableHead } from "@/components/sortable-table-head";
-import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
+import { useSortedTableRows } from "@/hooks/use-sorted-table-rows";
+import { compareBlacklistRows, type BlacklistSortKey } from "@/components/blacklist-table-logic";
 
 interface BlacklistTableProps {
   events: BlacklistEvent[];
@@ -31,35 +32,11 @@ interface BlacklistTableProps {
 }
 
 export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistTableProps) {
-  type SortKey = "date" | "stablecoin" | "chain" | "event";
-  const compareRows = useCallback(
-    (a: BlacklistEvent, b: BlacklistEvent, sort: TableSortState<SortKey>): number => {
-      let cmp = 0;
-      switch (sort.key) {
-        case "date":
-          cmp = a.timestamp - b.timestamp;
-          break;
-        case "stablecoin":
-          cmp = a.stablecoin.localeCompare(b.stablecoin);
-          break;
-        case "chain":
-          cmp = a.chainName.localeCompare(b.chainName);
-          break;
-        case "event":
-          cmp = a.eventType.localeCompare(b.eventType);
-          break;
-        default:
-          cmp = a.timestamp - b.timestamp;
-      }
-      return sort.direction === "asc" ? cmp : -cmp;
-    },
-    []
-  );
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
-    useSortedTableRows<BlacklistEvent, SortKey>(
+    useSortedTableRows<BlacklistEvent, BlacklistSortKey>(
       events,
       { defaultKey: "date", defaultDirection: "desc" },
-      compareRows
+      compareBlacklistRows,
     );
 
   const paged = useMemo(() => {

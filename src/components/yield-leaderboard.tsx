@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,17 +12,15 @@ import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
-import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { formatCurrency, formatScore, formatApy } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
 import { WARNING_SIGNAL_LABELS } from "@/lib/yield-constants";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
+import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 
 const COLUMN_COUNT = 12;
-
-type SortKey = "pys" | "apy30d" | "safetyScore" | "tvl" | "yieldStability" | "yieldType";
 
 /** Static PYS color classes (Tailwind purge-safe). */
 function getPysColor(pys: number | null): string {
@@ -106,41 +104,6 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     ? typeFiltered.filter((ranking) => ranking.warningSignals.length === 0)
     : typeFiltered;
 
-  const compareRows = useCallback((a: YieldRanking, b: YieldRanking, sort: TableSortState<SortKey>): number => {
-    let aVal: number;
-    let bVal: number;
-    switch (sort.key) {
-      case "pys":
-        aVal = a.pharosYieldScore ?? -1;
-        bVal = b.pharosYieldScore ?? -1;
-        break;
-      case "apy30d":
-        aVal = a.apy30d;
-        bVal = b.apy30d;
-        break;
-      case "safetyScore":
-        aVal = a.safetyScore ?? -1;
-        bVal = b.safetyScore ?? -1;
-        break;
-      case "tvl":
-        aVal = a.sourceTvlUsd ?? 0;
-        bVal = b.sourceTvlUsd ?? 0;
-        break;
-      case "yieldStability":
-        aVal = a.yieldStability ?? -1;
-        bVal = b.yieldStability ?? -1;
-        break;
-      case "yieldType":
-        return sort.direction === "asc"
-          ? a.yieldType.localeCompare(b.yieldType)
-          : b.yieldType.localeCompare(a.yieldType);
-      default:
-        aVal = a.pharosYieldScore ?? -1;
-        bVal = b.pharosYieldScore ?? -1;
-    }
-    return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-  }, []);
-
   const {
     sortKey,
     sortDirection,
@@ -157,10 +120,10 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useSortedPaginatedTable<YieldRanking, SortKey>(warningFiltered, {
+  } = useSortedPaginatedTable<YieldRanking, YieldTableSortKey>(warningFiltered, {
     defaultKey: "pys",
     defaultDirection: "desc",
-    compareRows,
+    compareRows: compareYieldRows,
     pageSize: TABLE_PAGE_SIZE,
     resetPageOnTotalChange: true,
   });

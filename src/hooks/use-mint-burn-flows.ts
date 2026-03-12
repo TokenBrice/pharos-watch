@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { useApiQueryWithMeta, CRON_20MIN } from "./use-api-query";
 import {
   MintBurnFlowsResponseSchema,
@@ -92,10 +93,9 @@ function normalizeMintBurnFlowsResponse(
 
 /** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
 export function useMintBurnFlows(hours = 24) {
-  const qs = hours !== 24 ? `?hours=${hours}` : "";
   const query = useApiQueryWithMeta<MintBurnFlowsResponse>(
     ["mint-burn-flows", "all", hours],
-    `/api/mint-burn-flows${qs}`,
+    API_PATHS.mintBurnFlows(hours !== 24 ? { hours } : undefined),
     CRON_20MIN,
     { schema: MintBurnFlowsResponseSchema, metaMaxAgeSec: MINT_BURN_META_MAX_AGE_SEC },
   );
@@ -115,11 +115,9 @@ export function useMintBurnFlowsCoin(
   hours = 24,
   opts?: { enabled?: boolean },
 ) {
-  const params = new URLSearchParams({ stablecoin: stablecoinId });
-  if (hours !== 24) params.set("hours", hours.toString());
   return useApiQueryWithMeta<MintBurnPerCoinResponse>(
     ["mint-burn-flows", stablecoinId, hours],
-    `/api/mint-burn-flows?${params}`,
+    API_PATHS.mintBurnFlows({ stablecoin: stablecoinId, hours: hours !== 24 ? hours : undefined }),
     CRON_20MIN,
     {
       enabled: !!stablecoinId && (opts?.enabled ?? true),
@@ -145,6 +143,7 @@ export function useMintBurnEvents(
   if (opts?.scope && opts.scope !== "all") params.set("scope", opts.scope);
   if (opts?.limit) params.set("limit", opts.limit.toString());
   if (opts?.offset) params.set("offset", opts.offset.toString());
+  const queryParams = Object.fromEntries(params.entries());
 
   return useApiQueryWithMeta<MintBurnEventsResponse>(
     [
@@ -156,7 +155,7 @@ export function useMintBurnEvents(
       opts?.limit ?? 50,
       opts?.offset ?? 0,
     ],
-    `/api/mint-burn-events?${params}`,
+    API_PATHS.mintBurnEvents(queryParams),
     CRON_20MIN,
     { schema: MintBurnEventsResponseSchema },
   );

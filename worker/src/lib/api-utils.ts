@@ -267,6 +267,9 @@ interface StablecoinHistoryHandlerConfig<TRow, THistory> {
   cacheControl: string;
   fetchRows: (ctx: { db: D1Database; stablecoinId: string; cutoff: number }) => Promise<TRow[]>;
   mapRow: (row: TRow) => THistory;
+  freshness?: (
+    ctx: StablecoinHistoryContext<TRow, THistory>,
+  ) => Promise<{ updatedAt: number; maxAgeSec: number } | null> | { updatedAt: number; maxAgeSec: number } | null;
   buildHeaders?: (
     ctx: StablecoinHistoryContext<TRow, THistory>,
   ) => Promise<Record<string, string>> | Record<string, string>;
@@ -299,9 +302,27 @@ export async function handleStablecoinHistoryRequest<TRow, THistory>(
       })
     : undefined;
 
-  return jsonResponse(history, {
-    "Cache-Control": config.cacheControl,
-    ...(extraHeaders ?? {}),
+  const context = {
+    db,
+    stablecoinId: parsed.stablecoinId,
+    cutoff: parsed.cutoff,
+    rows,
+    history,
+  };
+  const freshness = config.freshness ? await config.freshness(context) : null;
+
+  if (!freshness) {
+    return jsonResponse(history, {
+      "Cache-Control": config.cacheControl,
+      ...(extraHeaders ?? {}),
+    });
+  }
+
+  return jsonFreshResponse(history, {
+    cacheControl: config.cacheControl,
+    updatedAt: freshness.updatedAt,
+    maxAgeSec: freshness.maxAgeSec,
+    headers: extraHeaders,
   });
 }
 
@@ -353,6 +374,29 @@ export function jsonResponse(body: unknown, headers?: Record<string, string>): R
   return new Response(JSON.stringify(body), {
     headers: { "Content-Type": "application/json", ...headers },
   });
+}
+
+interface JsonFreshResponseOptions {
+  cacheControl?: string;
+  updatedAt?: number | null;
+  maxAgeSec?: number;
+  headers?: Record<string, string>;
+}
+
+export function jsonFreshResponse(body: unknown, options: JsonFreshResponseOptions): Response {
+  const headers: Record<string, string> = {
+    ...(options.headers ?? {}),
+  };
+
+  if (options.cacheControl) {
+    headers["Cache-Control"] = options.cacheControl;
+  }
+
+  if (options.updatedAt != null && options.maxAgeSec != null) {
+    return jsonResponse(body, addFreshnessHeaders(headers, options.updatedAt, options.maxAgeSec));
+  }
+
+  return jsonResponse(body, headers);
 }
 
 /** Validate payload with a Zod schema before cache/db write; logs parse issues for observability. */

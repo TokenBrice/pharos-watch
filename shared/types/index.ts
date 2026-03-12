@@ -108,6 +108,29 @@ export type GovernanceQuality =
   | "single-entity"
   | "wrapper";
 
+const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
+const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
+const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "established-alt-l1", "unproven"] as const;
+const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
+const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
+const CUSTODY_MODEL_VALUES = ["onchain", "institutional", "cex"] as const;
+const GOVERNANCE_QUALITY_VALUES = [
+  "immutable-code",
+  "dao-governance",
+  "multisig",
+  "regulated-entity",
+  "single-entity",
+  "wrapper",
+] as const;
+
+const GovernanceTypeSchema = z.enum(GOVERNANCE_TYPE_VALUES);
+const DependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
+const ChainTierSchema = z.enum(CHAIN_TIER_VALUES);
+const DeploymentModelSchema = z.enum(DEPLOYMENT_MODEL_VALUES);
+const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
+const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
+const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);
+
 /** Important notice displayed on a stablecoin's detail page */
 export interface CoinNotice {
   type: "danger" | "warning" | "info";
@@ -427,6 +450,60 @@ export interface DigestInputData {
   }[];
 }
 
+export interface DailyDigestResponse {
+  digest: string | null;
+  digestTitle?: string | null;
+  digestExtended?: string | null;
+  generatedAt?: number | null;
+}
+
+export interface DigestArchiveEntry {
+  digestText: string;
+  digestTitle: string | null;
+  digestExtended: string | null;
+  generatedAt: number;
+  psiScore: number | null;
+  psiBand: string | null;
+  totalMcapUsd: number | null;
+}
+
+export interface DigestArchiveResponse {
+  digests: DigestArchiveEntry[];
+}
+
+export interface StablecoinChartPoint {
+  date: number;
+  totalCirculatingUSD: Record<string, number>;
+}
+
+export interface UsdsStatusResponse {
+  freezeActive: boolean;
+  implementationAddress: string;
+  lastChecked: number;
+}
+
+export interface DigestSnapshotResponse {
+  date: string;
+  inputData: DigestInputData | null;
+  prevInputData: DigestInputData | null;
+  depegEvents: Array<{
+    stablecoinId: string;
+    symbol: string;
+    direction: string;
+    peakDeviationBps: number;
+    startedAt: number;
+    endedAt: number | null;
+  }>;
+  blacklistEvents: Array<{
+    stablecoin: string;
+    chainName: string;
+    eventType: string;
+    address: string;
+    amount: number | null;
+    timestamp: number;
+  }>;
+}
+
 const PegBucketsSchema = z.record(z.string(), z.number());
 const ChainCirculatingSchema = z.record(
   z.string(),
@@ -516,6 +593,8 @@ export interface DeadStablecoin {
 // --- Bluechip safety rating types ---
 
 export type BluechipGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F";
+const BLUECHIP_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"] as const;
+const BluechipGradeSchema = z.enum(BLUECHIP_GRADE_VALUES);
 
 export interface BluechipSmidge {
   stability: string | null;
@@ -683,6 +762,10 @@ export const DEX_GLOBAL_KEY = "__global__";
 // --- Report Card types ---
 
 export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";
+const REPORT_CARD_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const;
+const ReportCardGradeSchema = z.enum(REPORT_CARD_GRADE_VALUES);
+
+export type DimensionKey = "pegStability" | "liquidity" | "resilience" | "decentralization" | "dependencyRisk";
 
 export interface SafetyScoreHistoryPoint {
   date: number;
@@ -695,14 +778,14 @@ export interface SafetyScoreHistoryPoint {
 
 const SafetyScoreHistoryPointSchema = z.object({
   date: z.number(),
-  grade: z.string(),
+  grade: ReportCardGradeSchema,
   score: z.number().nullable(),
-  prevGrade: z.string().nullable(),
+  prevGrade: ReportCardGradeSchema.nullable(),
   prevScore: z.number().nullable(),
   methodologyVersion: z.string(),
 });
 
-export const SafetyScoreHistoryResponseSchema = z.array(SafetyScoreHistoryPointSchema);
+export const SafetyScoreHistoryResponseSchema: z.ZodType<SafetyScoreHistoryResponse> = z.array(SafetyScoreHistoryPointSchema);
 export type SafetyScoreHistoryResponse = SafetyScoreHistoryPoint[];
 
 export interface ReportCardDimension {
@@ -710,8 +793,6 @@ export interface ReportCardDimension {
   score: number | null; // 0-100, null if NR
   detail: string; // Human-readable explanation
 }
-
-export type DimensionKey = "pegStability" | "liquidity" | "resilience" | "decentralization" | "dependencyRisk";
 
 export interface RawDimensionInputs {
   pegScore: number | null;
@@ -746,48 +827,74 @@ export interface ReportCard {
   isDefunct: boolean;
 }
 
-export const ReportCardsResponseSchema = z.object({
-  cards: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-      symbol: z.string(),
-      overallGrade: z.string(),
-      overallScore: z.number().nullable(),
-      baseScore: z.number().nullable(),
-      dimensions: z.record(
-        z.string(),
-        z.object({
-          grade: z.string(),
-          score: z.number().nullable(),
-          detail: z.string(),
-        }),
-      ),
-      ratedDimensions: z.number(),
-      rawInputs: z
-        .object({
-          dependencies: z.array(z.object({ id: z.string() }).passthrough()),
-          navToken: z.boolean(),
-          governanceTier: z.string(),
-        })
-        .passthrough(),
-      dependencies: z.array(z.object({ id: z.string() }).passthrough()).optional(),
-      isDefunct: z.boolean(),
-    }),
-  ),
-  methodology: z.object({
-    version: z.string(),
-    weights: z.record(z.string(), z.number()),
-    pegMultiplierExponent: z.number(),
-    thresholds: z.array(z.object({ grade: z.string(), min: z.number() })),
-  }),
-  dependencyGraph: z.object({
-    edges: z.array(z.object({ from: z.string(), to: z.string() })),
-  }),
-  updatedAt: z.number(),
+const DependencyWeightSchema = z.object({
+  id: z.string(),
+  weight: z.number(),
+  type: DependencyTypeSchema.optional(),
 });
-// Keep hand-written interface — the Zod schema uses z.string() for grades/dimensions
-// but downstream code needs the narrow ReportCardGrade / DimensionKey types.
+
+const ReportCardDimensionSchema = z.object({
+  grade: ReportCardGradeSchema,
+  score: z.number().nullable(),
+  detail: z.string(),
+});
+
+const RawDimensionInputsSchema = z.object({
+  pegScore: z.number().nullable(),
+  activeDepeg: z.boolean(),
+  depegEventCount: z.number(),
+  lastEventAt: z.number().nullable(),
+  liquidityScore: z.number().nullable(),
+  concentrationHhi: z.number().nullable(),
+  bluechipGrade: BluechipGradeSchema.nullable(),
+  canBeBlacklisted: z.union([z.boolean(), z.literal("possible"), z.literal("possible-inherited")]),
+  chainTier: ChainTierSchema,
+  deploymentModel: DeploymentModelSchema,
+  collateralQuality: CollateralQualitySchema,
+  custodyModel: CustodyModelSchema,
+  governanceTier: GovernanceTypeSchema,
+  governanceQuality: GovernanceQualitySchema,
+  dependencies: z.array(DependencyWeightSchema),
+  navToken: z.boolean(),
+});
+
+const ReportCardSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  symbol: z.string(),
+  overallGrade: ReportCardGradeSchema,
+  overallScore: z.number().nullable(),
+  baseScore: z.number().nullable(),
+  dimensions: z.object({
+    pegStability: ReportCardDimensionSchema,
+    liquidity: ReportCardDimensionSchema,
+    resilience: ReportCardDimensionSchema,
+    decentralization: ReportCardDimensionSchema,
+    dependencyRisk: ReportCardDimensionSchema,
+  }),
+  ratedDimensions: z.number(),
+  rawInputs: RawDimensionInputsSchema,
+  dependencies: z.array(DependencyWeightSchema).optional(),
+  isDefunct: z.boolean(),
+});
+
+const ReportCardsMethodologySchema = z.object({
+  version: z.string(),
+  weights: z.object({
+    pegStability: z.number(),
+    liquidity: z.number(),
+    resilience: z.number(),
+    decentralization: z.number(),
+    dependencyRisk: z.number(),
+  }),
+  pegMultiplierExponent: z.number(),
+  thresholds: z.array(z.object({ grade: ReportCardGradeSchema, min: z.number() })),
+});
+
+const ReportCardsDependencyGraphSchema = z.object({
+  edges: z.array(z.object({ from: z.string(), to: z.string() })),
+});
+
 export interface ReportCardsResponse {
   cards: ReportCard[];
   methodology: {
@@ -801,6 +908,13 @@ export interface ReportCardsResponse {
   };
   updatedAt: number;
 }
+
+export const ReportCardsResponseSchema: z.ZodType<ReportCardsResponse> = z.object({
+  cards: z.array(ReportCardSchema),
+  methodology: ReportCardsMethodologySchema,
+  dependencyGraph: ReportCardsDependencyGraphSchema,
+  updatedAt: z.number(),
+});
 
 // --- Stability Index types ---
 
@@ -867,6 +981,12 @@ export interface CacheStatus {
   maxAge: number;
   healthy: boolean;
 }
+
+const CacheStatusSchema = z.object({
+  ageSeconds: z.number().nullable(),
+  maxAge: z.number(),
+  healthy: z.boolean(),
+});
 
 export interface CronRun {
   startedAt: number;
@@ -1168,6 +1288,14 @@ export interface CircuitRecord {
   openedAt: number | null;
 }
 
+const CircuitRecordSchema = z.object({
+  state: z.enum(["closed", "half-open", "open"]),
+  consecutiveFailures: z.number(),
+  lastFailureAt: z.number().nullable(),
+  lastSuccessAt: z.number().nullable(),
+  openedAt: z.number().nullable(),
+});
+
 export interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
   timestamp: number;
@@ -1183,6 +1311,25 @@ export interface HealthResponse {
   };
   circuits: Record<string, CircuitRecord>;
 }
+
+export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
+  status: z.enum(["healthy", "degraded", "stale"]),
+  timestamp: z.number(),
+  caches: z.record(z.string(), CacheStatusSchema),
+  blacklist: z.object({
+    totalEvents: z.number(),
+    missingAmounts: z.number(),
+  }),
+  mintBurn: z.object({
+    totalEvents: z.number(),
+    latestEventTs: z.number().nullable(),
+    latestHourlyTs: z.number().nullable(),
+    freshnessAgeSec: z.number().nullable(),
+    majorStaleCount: z.number(),
+    staleMajorSymbols: z.array(z.string()),
+  }),
+  circuits: z.record(z.string(), CircuitRecordSchema),
+});
 
 // --- Endpoint probe types ---
 
@@ -1345,6 +1492,16 @@ export type YieldType =
   | "nav-appreciation"
   | "governance-set"
   | "lending-opportunity";
+const YIELD_TYPE_VALUES = [
+  "lending-vault",
+  "rebase",
+  "fee-sharing",
+  "lp-receipt",
+  "nav-appreciation",
+  "governance-set",
+  "lending-opportunity",
+] as const;
+const YieldTypeSchema = z.enum(YIELD_TYPE_VALUES);
 
 interface YieldConfig {
   /** DeFiLlama pool UUID for deterministic matching */
@@ -1435,7 +1592,7 @@ export interface YieldHistoryPoint {
 const AltYieldSourceSchema = z.object({
   sourceKey: z.string(),
   yieldSource: z.string(),
-  yieldType: z.string(),
+  yieldType: YieldTypeSchema,
   currentApy: z.number(),
   apy30d: z.number(),
   sourceTvlUsd: z.number().nullable(),
@@ -1530,12 +1687,12 @@ const YieldRankingSchema = z.object({
   apyBase: z.number().nullable(),
   apyReward: z.number().nullable(),
   yieldSource: z.string(),
-  yieldType: z.string(),
+  yieldType: YieldTypeSchema,
   dataSource: z.string(),
   sourceTvlUsd: z.number().nullable(),
   pharosYieldScore: z.number().nullable(),
   safetyScore: z.number().nullable(),
-  safetyGrade: z.string().nullable(),
+  safetyGrade: ReportCardGradeSchema.nullable(),
   yieldToRisk: z.number().nullable(),
   excessYield: z.number().nullable(),
   yieldStability: z.number().nullable(),
@@ -1557,7 +1714,7 @@ export interface YieldRankingsResponse {
   provenance?: YieldRankingsProvenance | null;
 }
 
-export const YieldRankingsResponseSchema = z.object({
+export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.object({
   rankings: z.array(YieldRankingSchema),
   riskFreeRate: z.number(),
   scalingFactor: z.number(),

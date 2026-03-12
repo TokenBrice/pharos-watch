@@ -36,10 +36,65 @@ interface EndpointMethodValidationError {
   allowedMethods: readonly EndpointMethod[];
 }
 
+type QueryParamValue = string | number | boolean | null | undefined;
+
+function buildQueryPath(path: string, params?: Record<string, QueryParamValue>): string {
+  if (!params) return path;
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value == null) continue;
+    searchParams.set(key, String(value));
+  }
+  const query = searchParams.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+export const API_PATHS = {
+  stablecoins: () => "/api/stablecoins",
+  stablecoinDetail: (stablecoinId: string) => `/api/stablecoin/${encodeURIComponent(stablecoinId)}`,
+  stablecoinSummary: (stablecoinId: string) => `/api/stablecoin-summary/${encodeURIComponent(stablecoinId)}`,
+  stablecoinCharts: () => "/api/stablecoin-charts",
+  pegSummary: () => "/api/peg-summary",
+  health: () => "/api/health",
+  blacklist: () => "/api/blacklist",
+  depegEvents: (params?: { stablecoinId?: string; limit?: number; offset?: number }) =>
+    buildQueryPath("/api/depeg-events", {
+      stablecoin: params?.stablecoinId,
+      limit: params?.limit,
+      offset: params?.offset,
+    }),
+  usdsStatus: () => "/api/usds-status",
+  bluechipRatings: () => "/api/bluechip-ratings",
+  dexLiquidity: () => "/api/dex-liquidity",
+  dexLiquidityHistory: (stablecoinId: string, days = 90) =>
+    buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId, days }),
+  supplyHistory: (stablecoinId: string, days?: number) =>
+    buildQueryPath("/api/supply-history", { stablecoin: stablecoinId, days }),
+  dailyDigest: () => "/api/daily-digest",
+  digestArchive: () => "/api/digest-archive",
+  digestSnapshot: (date: string) => buildQueryPath("/api/digest-snapshot", { date }),
+  yieldRankings: () => "/api/yield-rankings",
+  yieldHistory: (stablecoinId: string, days = 90, mode?: string, sourceKey?: string) =>
+    buildQueryPath("/api/yield-history", {
+      stablecoin: stablecoinId,
+      days,
+      mode,
+      sourceKey,
+    }),
+  safetyScoreHistory: (stablecoinId: string, days = 3650) =>
+    buildQueryPath("/api/safety-score-history", { stablecoin: stablecoinId, days }),
+  stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
+  reportCards: () => "/api/report-cards",
+  mintBurnFlows: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-flows", params),
+  mintBurnEvents: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-events", params),
+  stressSignals: (stablecoinId?: string, days?: number) =>
+    buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
+} as const;
+
 export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
   // Public endpoints probed by the status dashboard.
   {
-    path: "/api/stablecoins",
+    path: API_PATHS.stablecoins(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -49,7 +104,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/stablecoin/usdt-tether",
+    path: API_PATHS.stablecoinDetail("usdt-tether"),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -57,10 +112,10 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     handlerKey: "stablecoin-probe-detail",
     probeGroup: "public",
     // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
-    probePath: "/api/stablecoin/pyusd-paypal",
+    probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
   },
   {
-    path: "/api/stablecoin-summary/usdt-tether",
+    path: API_PATHS.stablecoinSummary("usdt-tether"),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -69,7 +124,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/stablecoin-charts",
+    path: API_PATHS.stablecoinCharts(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -78,7 +133,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/peg-summary",
+    path: API_PATHS.pegSummary(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -88,7 +143,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/health",
+    path: API_PATHS.health(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -97,7 +152,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/blacklist",
+    path: API_PATHS.blacklist(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -106,7 +161,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/depeg-events",
+    path: API_PATHS.depegEvents(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -115,7 +170,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/usds-status",
+    path: API_PATHS.usdsStatus(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -124,7 +179,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/bluechip-ratings",
+    path: API_PATHS.bluechipRatings(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -133,7 +188,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/dex-liquidity",
+    path: API_PATHS.dexLiquidity(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -150,7 +205,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: false,
     handlerKey: "dex-liquidity-history",
     probeGroup: "public",
-    probePath: "/api/dex-liquidity-history?stablecoin=usdt-tether",
+    probePath: buildQueryPath("/api/dex-liquidity-history", { stablecoin: "usdt-tether" }),
   },
   {
     path: "/api/supply-history",
@@ -160,10 +215,10 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: false,
     handlerKey: "supply-history",
     probeGroup: "public",
-    probePath: "/api/supply-history?stablecoin=usdt-tether",
+    probePath: API_PATHS.supplyHistory("usdt-tether"),
   },
   {
-    path: "/api/daily-digest",
+    path: API_PATHS.dailyDigest(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -172,7 +227,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/digest-archive",
+    path: API_PATHS.digestArchive(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -190,7 +245,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     // Requires a date-specific snapshot that is not stable enough for a generic canary probe.
   },
   {
-    path: "/api/yield-rankings",
+    path: API_PATHS.yieldRankings(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -206,7 +261,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: false,
     handlerKey: "yield-history",
     probeGroup: "public",
-    probePath: "/api/yield-history?stablecoin=usdt-tether",
+    probePath: buildQueryPath("/api/yield-history", { stablecoin: "usdt-tether" }),
   },
   {
     path: "/api/safety-score-history",
@@ -216,10 +271,10 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: false,
     handlerKey: "safety-score-history",
     probeGroup: "public",
-    probePath: "/api/safety-score-history?stablecoin=usdt-tether",
+    probePath: buildQueryPath("/api/safety-score-history", { stablecoin: "usdt-tether" }),
   },
   {
-    path: "/api/stability-index",
+    path: API_PATHS.stabilityIndex(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -229,7 +284,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/report-cards",
+    path: API_PATHS.reportCards(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,

@@ -1,4 +1,4 @@
-import { withErrorHandler, addFreshnessHeaders, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, jsonFreshResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleDigestArchive = withErrorHandler("digest-archive", async (db: D1Database): Promise<Response> => {
@@ -34,7 +34,9 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
 
   const latestTs = digests.length > 0 ? digests[0].generatedAt : Math.floor(Date.now() / 1000);
 
-  return jsonResponse({ digests }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, latestTs, 86400));
+  return jsonFreshResponse({ digests }, {
+    cacheControl: CACHE_PROFILES.standard,
+    updatedAt: latestTs,
+    maxAgeSec: 86400,
+  });
 });

@@ -1,29 +1,14 @@
-import { withErrorHandler, buildCacheStatuses, type CacheStatus, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, buildCacheStatuses, jsonResponse } from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
 import { buildInClause } from "../lib/db";
 import { CIRCUIT_SOURCE } from "../lib/constants";
+import type { HealthResponse } from "@shared/types";
 import {
   evaluateMintBurnFreshness,
   resolveMintBurnFreshnessConfig,
   type MintBurnFreshnessConfig,
 } from "../lib/mint-burn-health-config";
 import { queryBlacklistGapMetrics } from "../lib/blacklist-gaps";
-
-interface HealthResponse {
-  status: "healthy" | "degraded" | "stale";
-  timestamp: number;
-  caches: Record<string, CacheStatus>;
-  blacklist: { totalEvents: number; missingAmounts: number };
-  mintBurn: {
-    totalEvents: number;
-    latestEventTs: number | null;
-    latestHourlyTs: number | null;
-    freshnessAgeSec: number | null;
-    majorStaleCount: number;
-    staleMajorSymbols: string[];
-  };
-  circuits: Record<string, CircuitRecord>;
-}
 
 interface HealthOptions {
   mintBurnConfig?: MintBurnFreshnessConfig;

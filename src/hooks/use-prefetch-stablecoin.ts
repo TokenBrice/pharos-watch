@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
   createApiQueryFn,
   CRON_15MIN,
@@ -21,33 +22,25 @@ export function usePrefetchStablecoin() {
       timerRef.current = setTimeout(() => {
         queryClient.prefetchQuery({
           queryKey: ["stablecoin-detail", coinId],
-          queryFn: createApiQueryFn(
-            `/api/stablecoin/${encodeURIComponent(coinId)}`
-          ),
+          queryFn: createApiQueryFn(API_PATHS.stablecoinDetail(coinId)),
           staleTime: CRON_1H,
         });
 
         queryClient.prefetchQuery({
           queryKey: ["depeg-events", coinId],
-          queryFn: createApiQueryFn(
-            `/api/depeg-events?stablecoin=${encodeURIComponent(coinId)}`
-          ),
+          queryFn: createApiQueryFn(API_PATHS.depegEvents({ stablecoinId: coinId })),
           staleTime: CRON_15MIN,
         });
 
         queryClient.prefetchQuery({
           queryKey: ["dex-liquidity-history", coinId, 90],
-          queryFn: createApiQueryFn(
-            `/api/dex-liquidity-history?stablecoin=${encodeURIComponent(coinId)}&days=90`
-          ),
+          queryFn: createApiQueryFn(API_PATHS.dexLiquidityHistory(coinId, 90)),
           staleTime: CRON_1H,
         });
 
         queryClient.prefetchQuery({
           queryKey: ["safety-score-history", coinId, 3650],
-          queryFn: createApiQueryFn(
-            `/api/safety-score-history?stablecoin=${encodeURIComponent(coinId)}&days=3650`
-          ),
+          queryFn: createApiQueryFn(API_PATHS.safetyScoreHistory(coinId, 3650)),
           staleTime: CRON_24H,
         });
       }, DEBOUNCE_MS);

@@ -2,19 +2,10 @@
 
 import { useEffect } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { DepegEventsResponseSchema, type DepegEventsResponse } from "@shared/types";
 import { apiFetchWithMeta } from "@/lib/api";
-import { useApiQueryWithMeta, CRON_15MIN } from "./use-api-query";
-
-export function useDepegEvents(stablecoinId?: string) {
-  const params = stablecoinId ? `?stablecoin=${encodeURIComponent(stablecoinId)}` : "";
-  return useApiQueryWithMeta<DepegEventsResponse>(
-    ["depeg-events", stablecoinId],
-    `/api/depeg-events${params}`,
-    CRON_15MIN,
-    { schema: DepegEventsResponseSchema },
-  );
-}
+import { CRON_15MIN } from "./use-api-query";
 
 const DEPEG_EVENTS_PAGE_SIZE = 100;
 
@@ -33,14 +24,7 @@ function buildDepegEventsPath({
   limit: number;
   offset: number;
 }) {
-  const params = new URLSearchParams({
-    limit: String(limit),
-    offset: String(offset),
-  });
-  if (stablecoinId) {
-    params.set("stablecoin", stablecoinId);
-  }
-  return `/api/depeg-events?${params.toString()}`;
+  return API_PATHS.depegEvents({ stablecoinId, limit, offset });
 }
 
 export function useInfiniteDepegEvents({

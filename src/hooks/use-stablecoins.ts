@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types";
 import { useApiQuery, CRON_15MIN, CRON_1H } from "./use-api-query";
 
@@ -12,7 +13,7 @@ export interface SupplyHistoryPoint {
 
 export function useStablecoins() {
   return useApiQuery<StablecoinListResponse>(
-    ["stablecoins"], "/api/stablecoins", CRON_15MIN,
+    ["stablecoins"], API_PATHS.stablecoins(), CRON_15MIN,
     { schema: StablecoinListResponseSchema },
   );
 }
@@ -49,7 +50,7 @@ export function detailToSupplyHistory(detail: StablecoinDetail | undefined): Sup
 export function useSupplyHistory(id: string) {
   const query = useApiQuery<StablecoinDetail>(
     ["stablecoin-detail", id],
-    `/api/stablecoin/${encodeURIComponent(id)}`,
+    API_PATHS.stablecoinDetail(id),
     CRON_1H,
     { enabled: !!id }
   );

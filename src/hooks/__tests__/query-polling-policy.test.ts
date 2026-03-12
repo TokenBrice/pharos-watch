@@ -8,14 +8,18 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: useQueryMock,
 }));
 
-vi.mock("@shared/lib/api-endpoints", () => ({
-  getStrictContractPaths: () => [],
-  getProbePaths: (group: "public" | "admin" | "manual") => {
-    if (group === "public") return ["/api/health"];
-    if (group === "admin") return ["/api/status"];
-    return ["/api/sync-stablecoins"];
-  },
-}));
+vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/api-endpoints")>();
+  return {
+    ...actual,
+    getStrictContractPaths: () => [],
+    getProbePaths: (group: "public" | "admin" | "manual") => {
+      if (group === "public") return ["/api/health"];
+      if (group === "admin") return ["/api/status"];
+      return ["/api/sync-stablecoins"];
+    },
+  };
+});
 
 import { CRON_1MIN, createPollingQueryOptions } from "../use-api-query";
 import { useHealth } from "../use-health";

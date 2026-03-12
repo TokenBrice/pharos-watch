@@ -24,12 +24,12 @@ function DetailSectionSkeleton({ className }: { className: string }) {
   return <Skeleton className={className} />;
 }
 
-const ChartSection = dynamic(() => import("@/components/stablecoin-detail/chart-section").then((mod) => mod.ChartSection), {
+const McapChart = dynamic(() => import("@/components/mcap-chart").then((mod) => mod.McapChart), {
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
-const DepegHistorySection = dynamic(
-  () => import("@/components/stablecoin-detail/depeg-history-section").then((mod) => mod.DepegHistorySection),
+const DepegHistory = dynamic(
+  () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
   {
     loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
   },
@@ -39,7 +39,7 @@ const FlowsSection = dynamic(() => import("@/components/stablecoin-detail/flows-
   loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
 });
 
-const InfoSection = dynamic(() => import("@/components/stablecoin-detail/info-section").then((mod) => mod.InfoSection), {
+const KeyInfoCard = dynamic(() => import("@/components/key-info-card").then((mod) => mod.KeyInfoCard), {
   loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
 });
 
@@ -47,8 +47,8 @@ const YieldDetailSection = dynamic(() => import("@/components/yield-detail-secti
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
-const LiquiditySection = dynamic(
-  () => import("@/components/stablecoin-detail/liquidity-section").then((mod) => mod.LiquiditySection),
+const DexLiquidityCard = dynamic(
+  () => import("@/components/dex-liquidity-card").then((mod) => mod.DexLiquidityCard),
   {
     loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
   },
@@ -186,22 +186,31 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         isNavToken={viewModel.isNavToken}
       />
 
-      <ChartSection supplyHistory={viewModel.supplyHistory} />
+      <section id="chart">
+        <McapChart data={viewModel.supplyHistory} />
+      </section>
 
-      <InfoSection coin={viewModel.coin} />
+      <section id="info" className="space-y-6">
+        <KeyInfoCard meta={viewModel.coin} />
+      </section>
 
       {detailSections.some((section) => section.id === "yield") ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
 
       <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
 
-      <LiquiditySection stablecoinId={viewModel.id} />
+      <section id="liquidity">
+        <DexLiquidityCard stablecoinId={viewModel.id} />
+      </section>
 
-      <DepegHistorySection
-        stablecoinId={viewModel.id}
-        earliestTrackingDate={viewModel.earliestTrackingDate}
-        hasPriceData={viewModel.coinData.price != null}
-        isNavToken={viewModel.isNavToken}
-      />
+      {!viewModel.isNavToken ? (
+        <section id="history">
+          <DepegHistory
+            stablecoinId={viewModel.id}
+            earliestTrackingDate={viewModel.earliestTrackingDate}
+            hasPriceData={viewModel.coinData.price != null}
+          />
+        </section>
+      ) : null}
 
       <FeedbackModal
         open={feedbackOpen}

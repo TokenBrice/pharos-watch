@@ -30,7 +30,7 @@ export function buildApiUrl(path: string): string {
   return `${API_BASE}${path}`;
 }
 
-export function apiRequest(
+function apiRequest(
   path: string,
   init?: RequestInit,
 ): Promise<Response> {

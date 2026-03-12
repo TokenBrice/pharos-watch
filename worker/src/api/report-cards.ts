@@ -1,4 +1,4 @@
-import { withErrorHandler, addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, errorResponse, jsonFreshResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
   buildReportCardsSnapshot,
@@ -16,7 +16,9 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     throw err;
   }
 
-  return jsonResponse(snapshot, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, snapshot.updatedAt, 900));
+  return jsonFreshResponse(snapshot, {
+    cacheControl: CACHE_PROFILES.standard,
+    updatedAt: snapshot.updatedAt,
+    maxAgeSec: 900,
+  });
 });

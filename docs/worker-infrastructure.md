@@ -34,7 +34,7 @@ invocation_logs = true
 
 ## Env Interface
 
-The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus `worker/src/handlers/http.ts` and `worker/src/handlers/scheduled.ts`. `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
+The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus `worker/src/handlers/http.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
 
 | Binding | Type | Required | Used by |
 |---------|------|----------|---------|
@@ -74,7 +74,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 
 ## Module Initialization
 
-Three modules use a lazy-init pattern to receive API keys from the `Env` at runtime. Called at the top of both runtime handler modules (`worker/src/handlers/http.ts` and `worker/src/handlers/scheduled.ts`):
+Three modules use a lazy-init pattern to receive API keys from the `Env` at runtime. Called at the top of both runtime entrypoints (`worker/src/handlers/http.ts` and `worker/src/handlers/scheduled.ts`):
 
 | Initializer | Called in | Purpose |
 |-------------|----------|---------|
@@ -227,9 +227,9 @@ crons = [
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
 | `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
 | `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
-| *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled.ts` | This doc (below) |
+| *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled/quarter-hourly.ts` | This doc (below) |
 
-**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `sync-stablecoins` now reports explicit capability metadata:
+**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled/quarter-hourly.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `sync-stablecoins` now reports explicit capability metadata:
 
 - `capabilities.stablecoinsCache`
 - `capabilities.depegPipeline`
@@ -536,7 +536,7 @@ Default behavior in `runCronWithLease`:
 
 ### Lease Integration Status
 
-Lease primitives are now wired into scheduled cron execution in `worker/src/handlers/scheduled.ts` for all cron jobs.
+Lease primitives are now wired into scheduled cron execution through `worker/src/handlers/scheduled/context.ts`, which is shared by all slot runners.
 When a lease cannot be acquired, the run is skipped (non-fatal) and recorded as `status='skipped_locked'` in `cron_runs`.
 
 ### Block Tracking (Blacklist)
@@ -726,7 +726,9 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 |------|------|
 | `worker/src/index.ts` | Thin worker entry: delegates `fetch`/`scheduled` to handler modules |
 | `worker/src/handlers/http.ts` | HTTP request pipeline: CORS, method gating, edge cache, route-context assembly, router dispatch |
-| `worker/src/handlers/scheduled.ts` | Cron scheduler pipeline: trigger-slot orchestration, `logCronRun`, lease wrappers, staleness alert |
+| `worker/src/handlers/scheduled.ts` | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch |
+| `worker/src/handlers/scheduled/context.ts` | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing |
+| `worker/src/handlers/scheduled/*.ts` | Per-trigger slot runners (quarter-hourly, isolated 20-minute lanes, half-hourly, Telegram, and daily slots) |
 | `worker/src/lib/env.ts` | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides |
 | `worker/wrangler.toml` | Deployment config: custom domain, cron triggers, D1 binding, vars |
 | `worker/src/lib/db.ts` | Database helpers: `logCronRun`, `batchExecute`, cache CRUD, block tracking, price cache, cron lease primitives |

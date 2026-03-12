@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -16,25 +15,17 @@ import { DEWSBadge } from "@/components/dews-badge";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
-import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
-import { attentionScore, type DepegTrackerRow } from "@/lib/depeg-sort";
+import { type DepegTrackerRow } from "@/lib/depeg-sort";
 import type { ThreatBand } from "@shared/lib/classification";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
+import {
+  compareDepegTrackerRows,
+  rowAccentClass,
+  type DepegTableSortKey,
+} from "@/components/depeg-table-logic";
 
 export type { DepegTrackerRow } from "@/lib/depeg-sort";
-
-type SortKey =
-  | "__attention"
-  | "pegScore"
-  | "dewsScore"
-  | "currentDeviationBps"
-  | "pegPct"
-  | "eventCount"
-  | "worstDeviationBps"
-  | "activeDepeg"
-  | "dexAgrees"
-  | "trackingSpanDays";
 
 interface DepegTrackerTableProps {
   rows: DepegTrackerRow[];
@@ -42,69 +33,7 @@ interface DepegTrackerTableProps {
   onRowClick: (id: string) => void;
 }
 
-/** Row left-border class based on severity */
-function rowAccentClass(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "border-l-[3px] border-l-red-500";
-  const band = row.dews?.band ?? "CALM";
-  if (band === "WARNING" || band === "DANGER") return "border-l-[3px] border-l-orange-500";
-  return "";
-}
-
 export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTableProps) {
-  const compareRows = useCallback(
-    (a: DepegTrackerRow, b: DepegTrackerRow, sort: TableSortState<SortKey>): number => {
-      // Default "attention" sort
-      if (sort.key === "__attention") {
-        return attentionScore(b) - attentionScore(a);
-      }
-
-      let aVal: number;
-      let bVal: number;
-      switch (sort.key) {
-        case "pegScore":
-          aVal = a.coin.pegScore ?? -1;
-          bVal = b.coin.pegScore ?? -1;
-          break;
-        case "dewsScore":
-          aVal = a.dews?.score ?? -1;
-          bVal = b.dews?.score ?? -1;
-          break;
-        case "currentDeviationBps":
-          aVal = Math.abs(a.coin.currentDeviationBps ?? 0);
-          bVal = Math.abs(b.coin.currentDeviationBps ?? 0);
-          break;
-        case "pegPct":
-          aVal = a.coin.pegPct;
-          bVal = b.coin.pegPct;
-          break;
-        case "eventCount":
-          aVal = a.coin.eventCount;
-          bVal = b.coin.eventCount;
-          break;
-        case "worstDeviationBps":
-          aVal = Math.abs(a.coin.worstDeviationBps ?? 0);
-          bVal = Math.abs(b.coin.worstDeviationBps ?? 0);
-          break;
-        case "activeDepeg":
-          aVal = a.coin.activeDepeg ? 1 : 0;
-          bVal = b.coin.activeDepeg ? 1 : 0;
-          break;
-        case "dexAgrees":
-          aVal = a.coin.dexPriceCheck?.agrees ? 1 : 0;
-          bVal = b.coin.dexPriceCheck?.agrees ? 1 : 0;
-          break;
-        case "trackingSpanDays":
-          aVal = a.coin.trackingSpanDays;
-          bVal = b.coin.trackingSpanDays;
-          break;
-        default:
-          return attentionScore(b) - attentionScore(a);
-      }
-      return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-    },
-    []
-  );
-
   const {
     sortKey,
     sortDirection,
@@ -120,12 +49,12 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useSortedPaginatedTable<DepegTrackerRow, SortKey>(
+  } = useSortedPaginatedTable<DepegTrackerRow, DepegTableSortKey>(
     rows,
     {
       defaultKey: "__attention",
       defaultDirection: "desc",
-      compareRows,
+      compareRows: compareDepegTrackerRows,
       pageSize: TABLE_PAGE_SIZE,
     },
   );

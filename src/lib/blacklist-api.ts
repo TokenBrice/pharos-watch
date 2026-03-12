@@ -1,3 +1,4 @@
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { ApiFetchError, apiFetch } from "@/lib/api";
 import { BlacklistResponseSchema, type BlacklistEvent, type BlacklistResponse } from "@shared/types";
 
@@ -7,9 +8,9 @@ const BLACKLIST_API_MAX_RETRIES = 2;
 const BLACKLIST_API_RETRY_BASE_MS = 750;
 
 function buildBlacklistPath(offset = 0): string {
-  const params = new URLSearchParams({ limit: String(BLACKLIST_API_PAGE_SIZE) });
-  if (offset > 0) params.set("offset", String(offset));
-  return `/api/blacklist?${params.toString()}`;
+  return offset > 0
+    ? `${API_PATHS.blacklist()}?limit=${BLACKLIST_API_PAGE_SIZE}&offset=${offset}`
+    : `${API_PATHS.blacklist()}?limit=${BLACKLIST_API_PAGE_SIZE}`;
 }
 
 function dedupeBlacklistEvents(events: BlacklistEvent[]): BlacklistEvent[] {
