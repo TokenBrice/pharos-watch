@@ -134,6 +134,7 @@ import { fetchEvmLogsForTopic, getEvmBlockNumber } from "../../lib/evm-logs";
 import { getLastBlock, setLastBlock, batchExecute } from "../../lib/db";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { getChainRpc } from "../../lib/chain-registry";
+import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 
 // --- Helpers ---
 
@@ -449,5 +450,50 @@ describe("syncBlacklist", () => {
     ]);
     expect(meta.zeroCursorConfigs).toContain("base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
     expect(setLastBlock).toHaveBeenCalledWith(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 12345);
+  });
+
+  it("uses configured startBlock and bounded RPC scan windows for zero-cursor configs", async () => {
+    const db = makeDb();
+    const baseConfig = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "base");
+    expect(baseConfig).toBeDefined();
+    const previousStartBlock = baseConfig?.startBlock;
+    if (!baseConfig) return;
+
+    baseConfig.startBlock = 1_000_000;
+    vi.mocked(getLastBlock).mockImplementation(async (_db, configKey: string) =>
+      configKey.startsWith("base-") ? 0 : 100,
+    );
+    vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
+      logs: [],
+      complete: true,
+      scannedToBlock: 1_049_999,
+      calls: 1,
+      maxDepth: 0,
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    try {
+      await syncBlacklist(db, "etherscan-key", "tron-key", null);
+
+      const baseCalls = vi.mocked(fetchAlchemyLogs).mock.calls
+        .filter((call) => call[1] === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
+      const baseCall = baseCalls[baseCalls.length - 1];
+      expect(baseCall?.[3]).toBe(1_000_000);
+      expect(baseCall?.[4]).toBe(1_049_999);
+      expect(setLastBlock).toHaveBeenCalledWith(db, "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 1_049_999);
+    } finally {
+      baseConfig.startBlock = previousStartBlock;
+    }
   });
 });

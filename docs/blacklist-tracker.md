@@ -258,6 +258,8 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
 
 2. **Incremental scan** (per contract config)
    - EVM: fetch logs from `lastBlock + 1` to latest via Etherscan `getLogs` or chain RPC `eth_getLogs`
+   - Selected RPC-log configs seed empty cursors from known contract deployment blocks instead of scanning from genesis
+   - RPC-log chains scan in bounded windows per run (provider-aware for Alchemy vs public fallback) so successful empty windows still advance the cursor
    - Tron: fetch events from `lastTimestamp` via TronGrid `/contracts/{addr}/events`
    - Parse events into `BlacklistRow` objects
    - If the runtime guard is nearly exhausted, the cron stops before starting another config and defers the remainder to the next cycle
@@ -424,7 +426,7 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 | `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key for supported-chain log scans + L1 calls        |
 | `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)                          |
 | `DRPC_API_KEY`      | Secret | No       | dRPC key for L2 archive node balance lookups                         |
-| `ALCHEMY_API_KEY`   | Secret | No       | Preferred chain RPC source for Base/Optimism/Avalanche/BSC log scans |
+| `ALCHEMY_API_KEY`   | Secret | No       | Preferred chain RPC source for Base/Optimism/Avalanche/BSC log scans; strongly recommended for faster historical catch-up on zero-cursor configs |
 
 ---
 
@@ -443,6 +445,7 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 11. **Partial RPC scans now preserve progress:** incomplete Base/Optimism/Avalanche/BSC log scans still advance to the highest safely covered block, so large first-sync backlogs drain over multiple cron runs instead of re-scanning genesis every time.
 12. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
 13. **Legacy mixed-case cursor rows:** older runs may have stored checksum-cased EVM addresses in `blacklist_sync_state`; current reads merge those with lowercase canonical keys to avoid duplicate cursors and redundant rescans.
+14. **RPC bootstrap guards:** Avalanche USDC, Avalanche USDT, and BSC USDT now start from known deployment blocks, and RPC-log scans use bounded per-run block windows. This prevents empty zero-cursor configs from repeatedly attempting impractical genesis-to-head scans.
 
 ---
 

@@ -32,6 +32,12 @@ const BACKFILL_BATCH_SIZE = 50;
 const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc"]);
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
 const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
+const RPC_LOG_SCAN_WINDOWS: Record<string, { alchemy: number; fallback: number }> = {
+  base: { alchemy: 500_000, fallback: 50_000 },
+  optimism: { alchemy: 500_000, fallback: 50_000 },
+  avalanche: { alchemy: 250_000, fallback: 2_000 },
+  bsc: { alchemy: 250_000, fallback: 50_000 },
+};
 
 type SyncBlacklistResult = {
   itemCount: number;
@@ -314,18 +320,27 @@ async function resolveRpcLogTarget(
   chainId: string,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-): Promise<{ rpcUrl: string; chainHead: number } | null> {
+): Promise<{ rpcUrl: string; chainHead: number; scanWindowBlocks: number | null } | null> {
   const rpc = getChainRpc(chainId);
   if (!rpc || rpc.type !== "evm") return null;
 
-  const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-    (url): url is string => typeof url === "string" && url.length > 0,
+  const rpcTargets = [
+    { url: rpc.rpcUrl, alchemyPrimary: rpc.alchemyPrimary === true },
+    { url: rpc.fallbackRpcUrl, alchemyPrimary: false },
+  ].filter(
+    (target): target is { url: string; alchemyPrimary: boolean } =>
+      typeof target.url === "string" && target.url.length > 0,
   );
 
-  for (const rpcUrl of rpcUrls) {
-    const chainHead = await getAlchemyBlockNumber(rpcUrl, budget, signal);
+  for (const target of rpcTargets) {
+    const chainHead = await getAlchemyBlockNumber(target.url, budget, signal);
     if (chainHead != null) {
-      return { rpcUrl, chainHead };
+      const chainWindow = RPC_LOG_SCAN_WINDOWS[chainId];
+      return {
+        rpcUrl: target.url,
+        chainHead,
+        scanWindowBlocks: chainWindow ? (target.alchemyPrimary ? chainWindow.alchemy : chainWindow.fallback) : null,
+      };
     }
   }
 
@@ -371,8 +386,8 @@ async function fetchEvmEventsIncremental(
   let usedRpcLogs = false;
   let scannedToBlock: number | null = null;
   let incomplete = false;
-  let rpcTargetPromise: Promise<{ rpcUrl: string; chainHead: number } | null> | null = null;
-  const getRpcTarget = (): Promise<{ rpcUrl: string; chainHead: number } | null> => {
+  let rpcTargetPromise: Promise<{ rpcUrl: string; chainHead: number; scanWindowBlocks: number | null } | null> | null = null;
+  const getRpcTarget = (): Promise<{ rpcUrl: string; chainHead: number; scanWindowBlocks: number | null } | null> => {
     rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, budget, signal);
     return rpcTargetPromise;
   };
@@ -415,16 +430,19 @@ async function fetchEvmEventsIncremental(
       if (rpcTarget) {
         chainHead = rpcTarget.chainHead;
         usedRpcLogs = true;
+        const scanToBlock = rpcTarget.scanWindowBlocks != null
+          ? Math.min(rpcTarget.chainHead, fromBlock + rpcTarget.scanWindowBlocks - 1)
+          : rpcTarget.chainHead;
 
         const fetchedLogs =
-          fromBlock > rpcTarget.chainHead
-            ? { logs: [], complete: true, scannedToBlock: rpcTarget.chainHead, calls: 0, maxDepth: 0 }
+          fromBlock > scanToBlock
+            ? { logs: [], complete: true, scannedToBlock: scanToBlock, calls: 0, maxDepth: 0 }
             : await fetchAlchemyLogs(
                 rpcTarget.rpcUrl,
                 config.contractAddress,
                 [{ index: 0, value: eventDef.topicHash }],
                 fromBlock,
-                rpcTarget.chainHead,
+                scanToBlock,
                 budget,
                 signal,
               );
@@ -1015,7 +1033,15 @@ export async function syncBlacklist(
         const evmChainId = config.chain.evmChainId!;
         // If lastBlock hit the sentinel (99999999), reset to 0 to re-scan.
         const wasReset = lastBlock >= EVM_SCANNED_TO_LATEST;
-        const fromBlock = wasReset ? 0 : lastBlock > 0 ? lastBlock + 1 : 0;
+        const configuredStartBlock =
+          typeof config.startBlock === "number" && Number.isFinite(config.startBlock) && config.startBlock > 0
+            ? Math.floor(config.startBlock)
+            : 0;
+        const fromBlock = wasReset
+          ? configuredStartBlock
+          : lastBlock > 0
+            ? lastBlock + 1
+            : configuredStartBlock;
         result = await fetchEvmEventsIncremental(
           db,
           config,
@@ -1083,8 +1109,21 @@ export async function syncBlacklist(
           }
           const head = chainHeadCache.get(evmChainId);
           const margin = evmSafetyMarginBlocks(evmChainId);
-          // Fall back: if sentinel was reset, use 0 rather than staying stuck at sentinel
-          newBlock = head ? Math.max(head - margin, lastBlock) : wasReset ? 0 : lastBlock;
+          if (
+            result.usedRpcLogs &&
+            result.scannedToBlock != null &&
+            head != null &&
+            result.scannedToBlock < head
+          ) {
+            newBlock = Math.max(result.scannedToBlock, lastBlock);
+          } else {
+            // Fall back: if sentinel was reset, use the configured start block rather than staying stuck at sentinel.
+            newBlock = head
+              ? Math.max(head - margin, lastBlock)
+              : wasReset
+                ? configuredStartBlock
+                : lastBlock;
+          }
         }
 
         if (newBlock !== lastBlock) {

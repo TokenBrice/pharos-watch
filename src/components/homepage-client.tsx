@@ -120,7 +120,7 @@ function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) 
   return (
     <section className="pharos-card-shell overflow-hidden border border-black/7 bg-[linear-gradient(135deg,oklch(0.985_0.01_248_/_0.98),oklch(0.95_0.018_248_/_0.98))] px-4 py-4 shadow-[0_16px_34px_oklch(0_0_0_/0.08)] sm:px-5 dark:border-white/10 dark:bg-[linear-gradient(135deg,oklch(0.21_0.03_250_/_0.92),oklch(0.16_0.02_250_/_0.98))] dark:shadow-[0_20px_42px_oklch(0_0_0_/0.16)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-center gap-2 text-sky-700 dark:text-sky-200/82">
             <Compass className="h-4 w-4" aria-hidden="true" />
             <p className="pharos-kicker text-sky-700 dark:text-sky-200/82">New to Pharos?</p>
@@ -129,16 +129,16 @@ function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) 
             <h2 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-white sm:text-xl">
               Start with the route that matches your job, not the full feature list.
             </h2>
-            <p className="max-w-3xl text-sm leading-relaxed text-slate-700 dark:text-slate-200/74">
-              The new Start Here page explains what the core signals mean and points you to the right surface for
-              market monitoring, single-coin research, yield, comparison, or alerts.
+            <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200/74">
+              The /start/ page explains what the core signals mean and points you to the right surface for market
+              monitoring, single-coin research, yield, comparison, or alerts.
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <Button asChild className="h-10 rounded-full bg-slate-950 px-5 text-white hover:bg-slate-900 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90">
             <Link href="/start/" onClick={onOpenStartHere}>
-              Open Start Here
+              Start Here
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>

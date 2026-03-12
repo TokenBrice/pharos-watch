@@ -20,6 +20,7 @@ export interface ContractEventConfig {
   stablecoin: BlacklistStablecoin;
   contractAddress: string;
   decimals: number;        // Token decimals (6 for USDC/USDT/XAUT, 18 for PAXG)
+  startBlock?: number;     // Optional deployment/start block for initial sync bootstrapping
   events: {
     signature: string;     // Human-readable event signature
     topicHash: string;     // Keccak256 of the event signature
@@ -35,6 +36,7 @@ interface ContractEventConfigSpec {
   contractSource?: "primary" | "traded";
   contractAddressOverride?: string;
   decimalsOverride?: number;
+  startBlock?: number;
   events: ContractEventConfig["events"];
 }
 
@@ -220,6 +222,7 @@ function resolveBlacklistContractConfig(
     stablecoin: resolveBlacklistStablecoinSymbol(spec.stablecoinId, spec.stablecoin),
     contractAddress: resolvedContract.address,
     decimals: spec.decimalsOverride ?? resolvedContract.decimals,
+    startBlock: spec.startBlock,
     events: spec.events,
   };
 }
@@ -233,7 +236,7 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: BASE, stablecoinId: "usdc-circle", events: USDC_EVENTS },
   { chain: OPTIMISM, stablecoinId: "usdc-circle", events: USDC_EVENTS },
   { chain: POLYGON, stablecoinId: "usdc-circle", events: USDC_EVENTS },
-  { chain: AVALANCHE, stablecoinId: "usdc-circle", events: USDC_EVENTS },
+  { chain: AVALANCHE, stablecoinId: "usdc-circle", startBlock: 7_388_829, events: USDC_EVENTS },
 
   // USDT (EVM)
   { chain: ETHEREUM, stablecoinId: "usdt-tether", events: USDT_EVENTS },
@@ -241,8 +244,8 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: OPTIMISM, stablecoinId: "usdt-tether", events: USDT_EVENTS },
   { chain: OPTIMISM, stablecoinId: "usdt-tether", contractSource: "traded", events: USDT0_EVENTS },
   { chain: POLYGON, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENTS },
-  { chain: AVALANCHE, stablecoinId: "usdt-tether", events: USDT_EVENTS },
-  { chain: BSC, stablecoinId: "usdt-tether", events: USDT_EVENTS },
+  { chain: AVALANCHE, stablecoinId: "usdt-tether", startBlock: 4_663_628, events: USDT_EVENTS },
+  { chain: BSC, stablecoinId: "usdt-tether", startBlock: 176_416, events: USDT_EVENTS },
 
   // USDT (Tron)
   { chain: TRON, stablecoinId: "usdt-tether", events: USDT_EVENTS },
