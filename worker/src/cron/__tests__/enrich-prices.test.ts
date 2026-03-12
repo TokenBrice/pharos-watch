@@ -298,8 +298,6 @@ describe("enrichMissingPrices", () => {
 
     expect(stats.totalMissing).toBe(0);
     expect(stats.pass1).toBe(0);
-    expect(stats.pass2).toBe(0);
-    expect(stats.pass3).toBe(0);
     expect(stats.pass4).toBe(0);
     expect(stats.finalMissing).toBe(0);
   });
@@ -332,62 +330,7 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
-  it("enriches via Pass 2 (geckoId → DL coins API)", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usdt-tether", name: "Tether", symbol: "USDT", price: 0,
-        geckoId: "tether", pegType: "peggedUSD", circulating: {},
-      },
-    ];
-
-    mockFetch([
-      {
-        match: "coins.llama.fi/prices",
-        body: {
-          coins: {
-            "coingecko:tether": { price: 1.001, symbol: "USDT", timestamp: 1718650000, confidence: 0.99 },
-          },
-        },
-      },
-    ]);
-
-    const stats = await enrichMissingPrices(assets);
-
-    expect(stats.totalMissing).toBe(1);
-    expect(stats.pass2).toBe(1);
-    expect(assets[0].price).toBe(1.001);
-    expect(stats.finalMissing).toBe(0);
-  });
-
-  it("falls through to Pass 3 (CG direct) when DL returns no price", async () => {
-    const assets: PeggedAsset[] = [
-      {
-        id: "usdt-tether", name: "Tether", symbol: "USDT", price: 0,
-        geckoId: "tether", pegType: "peggedUSD", circulating: {},
-      },
-    ];
-
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("coins.llama.fi")) {
-        // DL coins API returns no price for this asset
-        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
-      }
-      if (url.includes("coingecko.com")) {
-        // CG returns the price
-        return new Response(JSON.stringify({ tether: { usd: 0.998 } }), { status: 200 });
-      }
-      return new Response("Not found", { status: 404 });
-    }));
-
-    const stats = await enrichMissingPrices(assets);
-
-    expect(stats.totalMissing).toBe(1);
-    expect(stats.pass2).toBe(0);
-    expect(stats.pass3).toBe(1);
-    expect(assets[0].price).toBe(0.998);
-  });
-
-  it("skips assets with 'wrong' geckoId from Pass 2, routes to Pass 3", async () => {
+  it("does not enrich assets with 'wrong' geckoId via contract passes — falls through to CMC/DexScreener", async () => {
     const assets: PeggedAsset[] = [
       {
         id: "usdt-tether", name: "SomeToken", symbol: "TOK", price: 0,
@@ -395,22 +338,19 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
-      }
-      if (url.includes("coingecko.com")) {
-        return new Response(JSON.stringify({ sometoken: { usd: 0.95 } }), { status: 200 });
-      }
-      return new Response("Not found", { status: 404 });
-    }));
+    // All APIs return empty — asset stays unpriced
+    mockFetch([
+      { match: "coins.llama.fi", body: { coins: {} } },
+      { match: "dexscreener.com", body: { pairs: [] } },
+    ]);
 
     const stats = await enrichMissingPrices(assets);
 
-    // "wrong" geckoIds skip Pass 2, go straight to Pass 3
-    expect(stats.pass2).toBe(0);
-    expect(stats.pass3).toBe(1);
-    expect(assets[0].price).toBe(0.95);
+    // "wrong" geckoIds have no contract address, so pass 1/1b skip them.
+    // Without CMC key or DexScreener match, asset stays missing.
+    expect(stats.pass1).toBe(0);
+    expect(stats.pass1b).toBe(0);
+    expect(stats.finalMissing).toBe(1);
   });
 
   it("leaves assets unpriced when all APIs return empty data", async () => {
@@ -425,7 +365,6 @@ describe("enrichMissingPrices", () => {
     // All APIs return 200 but with no useful price data
     mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
-      { match: "coingecko.com", body: {} },
       { match: "dexscreener.com", body: { pairs: [] } },
     ]);
 
@@ -435,8 +374,6 @@ describe("enrichMissingPrices", () => {
     expect(stats.totalMissing).toBe(1);
     expect(stats.finalMissing).toBe(1);
     expect(stats.pass1).toBe(0);
-    expect(stats.pass2).toBe(0);
-    expect(stats.pass3).toBe(0);
     expect(stats.pass4).toBe(0);
   });
 

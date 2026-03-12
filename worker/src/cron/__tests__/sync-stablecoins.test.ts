@@ -91,7 +91,7 @@ vi.mock("../enrich-prices", () => ({
         : undefined,
   })),
   enrichMissingPrices: vi.fn(async () => ({
-    totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0,
+    totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, pass4: 0, finalMissing: 0,
   })),
   hasMissingPrice: vi.fn((a: { price?: number | null }) => a.price == null || typeof a.price !== "number" || a.price === 0),
   isReasonablePrice: vi.fn(() => true),
@@ -217,7 +217,7 @@ describe("syncStablecoins", () => {
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
-      totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0,
+      totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, pass4: 0, finalMissing: 0,
     });
     vi.mocked(isReasonablePrice).mockReset().mockImplementation(() => true);
     vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({

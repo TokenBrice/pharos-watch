@@ -191,10 +191,10 @@ interface DexScreenerPair {
 
 /**
  * Enrich assets that are missing prices via a 4-pass pipeline:
- *   1. Contract addresses via DefiLlama coins API (with multi-chain fallback)
- *   2. CoinGecko IDs via DefiLlama proxy
- *   3. CoinGecko direct API
- *   4. DexScreener search API (best-effort fallback)
+ *   1. Contract addresses via DefiLlama coins API
+ *   1b. Multi-chain contract fallback
+ *   2. CoinMarketCap API (rate-limited)
+ *   3. DexScreener search API (best-effort)
  */
 export interface PrimaryPriceResult {
   price: number;
@@ -385,10 +385,8 @@ export interface EnrichmentStats {
   totalMissing: number;
   pass1: number;
   pass1b: number;
-  pass2: number;
-  pass3: number;
   passCmc: number;
-  pass4: number;
+  pass4: number; // DexScreener (legacy field name)
   finalMissing: number;
 }
 
@@ -415,17 +413,6 @@ function parseDefiLlamaPriceMap(json: unknown): Map<string, number> {
   for (const [id, info] of Object.entries(coins)) {
     if (info?.price != null && info.price > 0) {
       prices.set(id, info.price);
-    }
-  }
-  return prices;
-}
-
-function parseCoinGeckoUsdMap(json: unknown): Map<string, number> {
-  const prices = new Map<string, number>();
-  const data = json as Record<string, { usd?: number }>;
-  for (const [id, info] of Object.entries(data)) {
-    if (info?.usd != null && info.usd > 0) {
-      prices.set(id, info.usd);
     }
   }
   return prices;
@@ -464,7 +451,7 @@ export async function enrichMissingPrices(
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
-  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0 };
+  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, pass4: 0, finalMissing: 0 };
 
   // Load FX rates for dynamic price bounds
   let fxRates: Record<string, number> | undefined;
@@ -479,8 +466,6 @@ export async function enrichMissingPrices(
 
   let pass1Count = 0;
   let pass1bCount = 0;
-  let pass2Count = 0;
-  let pass3Count = 0;
   let passCmcCount = 0;
   let pass4Count = 0;
 
@@ -558,78 +543,7 @@ export async function enrichMissingPrices(
       }
     }
 
-    // ── Pass 2: CoinGecko IDs via DefiLlama proxy ──
-    const geckoPass: { index: number; geckoId: string }[] = [];
-    const wrongGeckoPass: { index: number; geckoId: string }[] = [];
-    for (let i = 0; i < assets.length; i++) {
-      const a = assets[i];
-      if (!hasMissingPrice(a)) continue;
-      const geckoId = a.geckoId as string | undefined;
-      if (!geckoId) continue;
-      if (geckoId.includes("wrong")) {
-        // Strip "wrong" suffix to get the real geckoId for Pass 3
-        const cleanId = geckoId.replace(/-?wrong-?/g, "").replace(/-$/, "");
-        if (cleanId) wrongGeckoPass.push({ index: i, geckoId: cleanId });
-      } else {
-        geckoPass.push({ index: i, geckoId });
-      }
-    }
-
-    const afterPass2: { index: number; geckoId: string }[] = [];
-    if (geckoPass.length > 0) {
-      throwIfAborted(signal);
-      const pass2Prices = await fetchPriceMapByIds({
-        source: "DefiLlama coins API (pass 2)",
-        ids: geckoPass.map((m) => `coingecko:${m.geckoId}`),
-        buildUrl: (ids) => `${DEFILLAMA_COINS}/prices/current/${ids.join(",")}`,
-        parseResponse: parseDefiLlamaPriceMap,
-        signal,
-      });
-      if (pass2Prices) {
-        for (const m of geckoPass) {
-          const price = pass2Prices.get(`coingecko:${m.geckoId}`);
-          if (price != null) {
-            applyResolvedPrice(assets[m.index], price, "defillama", "single-source");
-            pass2Count++;
-          } else {
-            afterPass2.push(m);
-          }
-        }
-      } else {
-        afterPass2.push(...geckoPass);
-      }
-    }
-    // "wrong" geckoIds skip Pass 2 but go straight to Pass 3
-    afterPass2.push(...wrongGeckoPass);
-
-    // ── Pass 3: CoinGecko direct API ──
-    if (afterPass2.length > 0) {
-      throwIfAborted(signal);
-      const pass3Prices = await fetchPriceMapByIds({
-        source: "CoinGecko API (pass 3)",
-        ids: afterPass2.map((m) => m.geckoId),
-        buildUrl: (ids) => cgUrl(`/simple/price?ids=${ids.join(",")}&vs_currencies=usd`),
-        parseResponse: parseCoinGeckoUsdMap,
-        signal,
-        requestInit: {
-          headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
-        },
-        onFetchFailure: (status) => {
-          console.warn(`[enrich] CoinGecko API returned ${status ?? "no response"}`);
-        },
-      });
-      if (pass3Prices) {
-        for (const m of afterPass2) {
-          const price = pass3Prices.get(m.geckoId);
-          if (price != null) {
-            applyResolvedPrice(assets[m.index], price, "coingecko", "single-source");
-            pass3Count++;
-          }
-        }
-      }
-    }
-
-    // ── Pass 3.5: CoinMarketCap API (fallback for assets with cmcSlug) ──
+    // ── Pass 2: CoinMarketCap API (fallback for assets with cmcSlug) ──
     const cmcAllowed =
       cmcApiKey != null && db != null
         ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.CMC_PRICES)
@@ -724,10 +638,10 @@ export async function enrichMissingPrices(
         }
       }
     } else if (cmcApiKey && !cmcAllowed) {
-      console.warn("[enrich] CoinMarketCap circuit open — skipping pass 3.5");
+      console.warn("[enrich] CoinMarketCap circuit open — skipping pass 2");
     }
 
-    // ── Pass 4: DexScreener search API (best-effort fallback) ──
+    // ── Pass 3: DexScreener search API (best-effort fallback) ──
     const stillMissing = assets
       .map((a, i) => ({ asset: a, index: i }))
       .filter((m) => hasMissingPrice(m.asset));
@@ -815,29 +729,28 @@ export async function enrichMissingPrices(
         if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexSuccessfulCalls > 0);
       }
     } else if (stillMissing.length > 0) {
-      console.warn("[enrich] DexScreener circuit open — skipping pass 4");
+      console.warn("[enrich] DexScreener circuit open — skipping pass 3");
     }
 
     // ── Summary log ──
     const finalMissing = assets.filter(hasMissingPrice).length;
-    const totalEnriched = pass1Count + pass1bCount + pass2Count + pass3Count + passCmcCount + pass4Count;
+    const totalEnriched = pass1Count + pass1bCount + passCmcCount + pass4Count;
     if (totalMissing > 0) {
       console.log(
         `[enrich] ${totalMissing} assets missing prices → ` +
         `Pass 1: +${pass1Count}, Pass 1b (multi-chain): +${pass1bCount}, ` +
-        `Pass 2: +${pass2Count}, Pass 3: +${pass3Count}, ` +
-        `Pass CMC: +${passCmcCount}, ` +
-        `Pass 4 (DexScreener): +${pass4Count}, still missing: ${finalMissing}`
+        `Pass 2 (CMC): +${passCmcCount}, ` +
+        `Pass 3 (DexScreener): +${pass4Count}, still missing: ${finalMissing}`
       );
     }
     if (totalEnriched > 0) {
       console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
     }
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, passCmc: passCmcCount, pass4: pass4Count, finalMissing };
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, pass4: pass4Count, finalMissing };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[sync-stablecoins] Price enrichment failed:", err);
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, passCmc: passCmcCount, pass4: pass4Count, finalMissing: totalMissing };
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, pass4: pass4Count, finalMissing: totalMissing };
   }
 }
 

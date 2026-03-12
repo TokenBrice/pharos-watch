@@ -932,13 +932,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Build price source health from primary price + enrichment stats
   const priceSourceHealth: PriceSourceHealth = {
     sourceDistribution: {
-      coingecko: enrichStats.pass3, // CG direct (enrichment pass 3)
       "coingecko+defillama": priceValidationStats.high,
-      defillama: priceValidationStats.singleSource,
+      coingecko: priceValidationStats.cgOnly,
+      defillama: priceValidationStats.dlOnly,
       "defillama-contract": enrichStats.pass1 + enrichStats.pass1b,
       coinmarketcap: enrichStats.passCmc,
       dexscreener: enrichStats.pass4,
-      cached: enrichStats.pass2, // DL coins API proxy (pass 2) — effectively a cache of CG
+      cached: 0,
       missing: enrichStats.finalMissing,
     },
     confidenceDistribution: {
