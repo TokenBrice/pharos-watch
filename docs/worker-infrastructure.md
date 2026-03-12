@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 22 named runtime jobs across 9 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 22 scheduled runtime jobs across 9 trigger slots. `CRON_INTERVALS` / `/api/status` track 21 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally not part of the shared status metadata set.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -430,8 +430,8 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CG_DETAIL_PLATFORMS` | `coingecko-detail-platforms` | `GET /api/stablecoin/:id` (CoinGecko-only detail provider) |
 | `CG_MCAP` | `coingecko-mcap` | `sync-stablecoins` (CG supply fallback) |
 | `CG_DISCOVERY` | `coingecko-discovery` | `discovery-scan` |
-| `CMC_PRICES` | `coinmarketcap-prices` | `enrich-prices` pass 3.5 fallback |
-| `DEXSCREENER_PRICES` | `dexscreener-prices` | `enrich-prices` pass 4 fallback |
+| `CMC_PRICES` | `coinmarketcap-prices` | `enrich-prices` pass 2 fallback |
+| `DEXSCREENER_PRICES` | `dexscreener-prices` | `enrich-prices` pass 3 fallback |
 | `TREASURY_RATES` | `treasury-rates` | `fetch-tbill-rate` |
 | `ETHERSCAN` | `etherscan` | `sync-blacklist` |
 | `ALCHEMY` | `alchemy` | `sync-mint-burn` |
