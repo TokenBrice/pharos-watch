@@ -658,11 +658,13 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 | Adapter | Coins | Source |
 |---------|-------|--------|
-| `accountable` | `aznd-mu-digital`, `yusd-aegis` | `inputs.primary.kind = "http-json"` -> Accountable dashboard JSON feeds such as `https://mu.accountable.capital:10443/dashboard` (`reserves.type`) and `https://aegis.accountable.capital:10443/dashboard/YUSD` (`reserves.reserves_split`) |
+| `accountable` | `aznd-mu-digital`, `yusd-aegis`, `usn-noon`, `nusd-neutrl`, `yzusd-yuzu` | `inputs.primary.kind = "http-json"` -> Accountable dashboard JSON feeds such as `https://mu.accountable.capital:10443/dashboard`, `https://aegis.accountable.capital:10443/dashboard/YUSD`, and `https://cache.accountable.capital/dashboard/<slug>` using bucket families like `type`, `reserves_split`, `deployment`, `type_split`, and `exposure_split` |
 | `asymmetry` | `usdaf-asymmetry` | `inputs.primary.kind = "http-json"` -> `https://app.asymmetry.finance/api/stats` (`usdaf.branch`) |
 | `btcfi` | `btcusd-btcfi` | `inputs.primary.kind = "http-json"` -> `https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false` + handler metadata |
 | `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro` | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints |
 | `crvusd` | `crvusd-curve` | `inputs.primary.kind = "http-json"` -> `https://prices.curve.finance/v1/crvusd/markets` |
+| `ethena` | `usde-ethena` | `inputs.primary.kind = "http-json"` -> `https://app.ethena.fi/api/positions/current/collateral` |
+| `falcon` | `usdf-falcon` | `inputs.primary.kind = "http-json"` -> `https://api.falcon.finance/api/v1/transparency` |
 | `infinifi` | `iusd-infinifi` | `inputs.primary.kind = "http-json"` -> `https://eth-api.infinifi.xyz/api/protocol/data` |
 | `m0` | `m-m0`, `musd-metamask`, `usdn-noble` | `inputs.primary.kind = "http-json"` -> `https://protocol-api.m0.org/graphql` (`CollateralCurrent`) |
 | `mento` | `cusd-celo`, `ceur-celo` | `inputs.primary.kind = "http-html"` -> `https://reserve.mento.org/` (server-rendered `reserveComposition`) |

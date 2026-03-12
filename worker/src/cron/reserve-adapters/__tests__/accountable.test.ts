@@ -70,4 +70,115 @@ describe("adaptAccountableTypeBreakdown", () => {
       { name: "Insurance Fund Usage", pct: 0.1, risk: "very-high" },
     ]);
   });
+
+  it("maps deployment object buckets into reserve slices", () => {
+    const slices = adaptAccountableTypeBreakdown(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.013,
+          ts: "1773337732067",
+          reserves: {
+            deployment: {
+              "Private Credit (Fasanara FTAC)": 60,
+              "DeFi Lending": 20,
+              "CLOs (JAAA)": 15,
+              "Funding Rate (BTC)": 5,
+            },
+          },
+        },
+      },
+      {
+        bucket: "deployment",
+        riskMap: {
+          "Private Credit (Fasanara FTAC)": "high",
+          "DeFi Lending": "medium",
+          "CLOs (JAAA)": "high",
+          "Funding Rate (BTC)": "high",
+        },
+      },
+    );
+
+    expect(slices).toEqual([
+      { name: "Private Credit (Fasanara FTAC)", pct: 60, risk: "high" },
+      { name: "DeFi Lending", pct: 20, risk: "medium" },
+      { name: "CLOs (JAAA)", pct: 15, risk: "high" },
+      { name: "Funding Rate (BTC)", pct: 5, risk: "high" },
+    ]);
+  });
+
+  it("maps type_split buckets and applies renameMap", () => {
+    const slices = adaptAccountableTypeBreakdown(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.01,
+          ts: "1773337561984",
+          reserves: {
+            type_split: {
+              Stablecoin: 220,
+              ETH: 10,
+              "OTC Aggregate": 15,
+              Other: 5,
+            },
+          },
+        },
+      },
+      {
+        bucket: "type_split",
+        riskMap: {
+          Stablecoin: "low",
+          ETH: "medium",
+          "OTC Aggregate": "high",
+          Other: "high",
+        },
+        renameMap: {
+          Stablecoin: "Stablecoin reserves",
+        },
+      },
+    );
+
+    expect(slices).toEqual([
+      { name: "Stablecoin reserves", pct: 88, risk: "low" },
+      { name: "ETH", pct: 4, risk: "medium" },
+      { name: "OTC Aggregate", pct: 6, risk: "high" },
+      { name: "Other", pct: 2, risk: "high" },
+    ]);
+  });
+
+  it("maps nested exposure_split values into reserve slices", () => {
+    const slices = adaptAccountableTypeBreakdown(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.06,
+          ts: "1773336724281",
+          reserves: {
+            exposure_split: {
+              "[Ethena]_sUSDe_Loop": { "": 50 },
+              "[Maple]_syrupUSDT_Loop": { "": 30 },
+              "[Fluid]_fUSDT0": { "": 20 },
+            },
+          },
+        },
+      },
+      {
+        bucket: "exposure_split",
+        riskMap: {
+          "[Ethena]_sUSDe_Loop": "high",
+          "[Maple]_syrupUSDT_Loop": "high",
+          "[Fluid]_fUSDT0": "low",
+        },
+        renameMap: {
+          "[Fluid]_fUSDT0": "Fluid fUSDT0",
+        },
+      },
+    );
+
+    expect(slices).toEqual([
+      { name: "[Ethena]_sUSDe_Loop", pct: 50, risk: "high" },
+      { name: "[Maple]_syrupUSDT_Loop", pct: 30, risk: "high" },
+      { name: "Fluid fUSDT0", pct: 20, risk: "low" },
+    ]);
+  });
 });

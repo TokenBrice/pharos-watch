@@ -4,6 +4,8 @@ import { fetchBtcfiReserves } from "./btcfi";
 import { fetchCollateralPositionsApiReserves } from "./collateral-positions-api";
 import { fetchCrvUsdReserves } from "./crvusd";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
+import { fetchEthenaReserves } from "./ethena";
+import { fetchFalconReserves } from "./falcon";
 import { fetchFxReserves } from "./fx";
 import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchM0Reserves } from "./m0";
@@ -41,6 +43,8 @@ const ADAPTERS: Record<string, AdapterFn> = {
   crvusd: fetchCrvUsdReserves,
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
+  ethena: fetchEthenaReserves,
+  falcon: fetchFalconReserves,
   fx: fetchFxReserves,
   infinifi: fetchInfiniFiReserves,
   m0: fetchM0Reserves,

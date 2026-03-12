@@ -184,6 +184,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
     pegMechanism: "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     proofOfReserves: { type: "real-time", url: "https://app.ethena.fi/dashboards/transparency", provider: "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk" },
+    liveReservesConfig: {
+      adapter: "ethena",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "ethena",
+      display: {
+        url: "https://app.ethena.fi/dashboards/transparency",
+        label: "Transparency",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://app.ethena.fi/api/positions/current/collateral",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://ethena.fi/" },
       { label: "Twitter", url: "https://x.com/ethena" },
@@ -365,6 +381,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
     pegMechanism: "Overcollateralized synthetic dollar; liquidation mechanisms and arbitrage maintain the $1 peg; delta-neutral strategies power sUSDf yield",
     proofOfReserves: { type: "real-time", url: "https://app.falcon.finance/transparency", provider: "ht.digital" },
+    liveReservesConfig: {
+      adapter: "falcon",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "falcon",
+      display: {
+        url: "https://app.falcon.finance/transparency",
+        label: "Transparency",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://api.falcon.finance/api/v1/transparency",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://falcon.finance/" },
       { label: "Twitter", url: "https://x.com/falconfinance" },
@@ -2450,6 +2482,32 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.noon.capital" },
     ],
     proofOfReserves: { type: "real-time", url: "https://noon.accountable.capital/", provider: "Accountable" },
+    liveReservesConfig: {
+      adapter: "accountable",
+      version: 1,
+      semantics: "protocol-reserve",
+      breakerScope: "accountable",
+      display: {
+        url: "https://noon.accountable.capital/",
+        label: "Accountable Dashboard",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://cache.accountable.capital/dashboard/noon",
+        },
+      },
+      params: {
+        bucket: "deployment",
+        riskMap: {
+          "Private Credit (Fasanara FTAC)": "high",
+          "DeFi Lending": "medium",
+          "CLOs (JAAA)": "high",
+          "Principal Tokens (PTs)": "high",
+          "Funding Rate (BTC)": "high",
+        },
+      },
+    },
     contracts: [
       { chain: "ethereum", address: "0xda67b4284609d2d48e5d10cfac411572727dc1ed", decimals: 18 },
       { chain: "sophon", address: "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6", decimals: 18 },
@@ -2855,6 +2913,37 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     custodyModel: "institutional",
     collateral: "OTC-discounted locked token allocations sourced via STIX with delta-neutral perpetual futures hedges, plus liquid stablecoin reserves (USDC, USDT, USDS, USDe) held at institutional custodians (Fireblocks, Copper, Ceffu)",
     pegMechanism: "1:1 mint and redeem via permissionless router using USDC, USDT, or USDe; peg maintained by arbitrage incentives, delta hedging of derivatives positions, and rapid reserve deployment from liquid stablecoin buffer",
+    liveReservesConfig: {
+      adapter: "accountable",
+      version: 1,
+      semantics: "protocol-reserve",
+      breakerScope: "accountable",
+      display: {
+        url: "https://accountable.neutrl.fi/",
+        label: "Accountable Dashboard",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://cache.accountable.capital/dashboard/neutrl",
+        },
+      },
+      params: {
+        bucket: "type_split",
+        riskMap: {
+          Stablecoin: "low",
+          ETH: "medium",
+          "OTC Aggregate": "high",
+          Other: "high",
+        },
+        renameMap: {
+          Stablecoin: "Stablecoin reserves",
+          ETH: "ETH collateral",
+          "OTC Aggregate": "OTC aggregate positions",
+          Other: "Other reserve assets",
+        },
+      },
+    },
     links: [
       { label: "Website", url: "https://www.neutrl.fi/" },
       { label: "Twitter", url: "https://x.com/Neutrl" },
@@ -2884,6 +2973,51 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Proof of Reserve", url: "https://yuzu.accountable.capital/" },
     ],
     proofOfReserves: { type: "real-time", url: "https://yuzu.accountable.capital/", provider: "Accountable" },
+    liveReservesConfig: {
+      adapter: "accountable",
+      version: 1,
+      semantics: "protocol-reserve",
+      breakerScope: "accountable",
+      display: {
+        url: "https://yuzu.accountable.capital/",
+        label: "Accountable Dashboard",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://cache.accountable.capital/dashboard/yuzu",
+        },
+      },
+      params: {
+        bucket: "exposure_split",
+        riskMap: {
+          "[Fluid]_fUSDT0": "low",
+          "[Maple]_syrupUSDC_Loop": "high",
+          "[Morpho]_sky.money_USDT_Savings": "medium",
+          "[Maple]_syrupUSDC": "medium",
+          "[OpenEden]_cUSDO_Pendle_LP": "high",
+          "Rest_of_Assets": "high",
+          "[Maple]_syrupUSDT_Loop": "high",
+          "[Fluid]_syrupUSDT_Loop": "high",
+          "[Sky]_sUSDS_Loop": "high",
+          "[Paypal]_PYUSD_Loop": "high",
+          "[Ethena]_sUSDe_Loop": "high",
+        },
+        renameMap: {
+          "[Fluid]_fUSDT0": "Fluid fUSDT0",
+          "[Maple]_syrupUSDC_Loop": "Maple syrupUSDC loop",
+          "[Morpho]_sky.money_USDT_Savings": "Morpho Sky money USDT savings",
+          "[Maple]_syrupUSDC": "Maple syrupUSDC",
+          "[OpenEden]_cUSDO_Pendle_LP": "OpenEden cUSDO Pendle LP",
+          "Rest_of_Assets": "Other reserve assets",
+          "[Maple]_syrupUSDT_Loop": "Maple syrupUSDT loop",
+          "[Fluid]_syrupUSDT_Loop": "Fluid syrupUSDT loop",
+          "[Sky]_sUSDS_Loop": "Sky sUSDS loop",
+          "[Paypal]_PYUSD_Loop": "PayPal PYUSD loop",
+          "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop",
+        },
+      },
+    },
     contracts: [
       { chain: "plasma", address: "0x6695c0f8706c5ace3bdf8995073179cca47926dc", decimals: 18 },
     ],
