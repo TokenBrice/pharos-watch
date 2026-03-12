@@ -51,6 +51,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Renders Telegram subscriber adoption metrics, top subscribed coins, custom-preference / quiet-hour counts, and the latest `dispatch-telegram-alerts` delivery summary
 - Cron cards are grouped by trigger slot on the page:
   - 15-minute core ingestion / score recompute
+  - 5-minute Telegram dispatch lane, with cemetery-announcement sidecar work on the same trigger
   - 20-minute on-chain intake jobs shown together, but labeled as isolated triggers (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`, `sync-dex-discovery`)
   - 30-minute charts / liquidity / yield jobs
   - daily snapshot / digest / coverage-discovery jobs
@@ -173,7 +174,7 @@ Additional response fields:
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
-- `datasetFreshness`: last-write timestamps for key operational datasets (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `yield`, `depegs`, `dews`, `digest`)
+- `datasetFreshness`: last-write timestamps for key operational datasets (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
 - `summary`: compact availability rollup (`unhealthyCrons`, `degradedCrons`, `cronErrors`, `worstCacheRatio`)
 
 `dataQuality` now also exposes:

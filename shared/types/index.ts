@@ -1112,10 +1112,12 @@ interface DatasetFreshness {
   blacklist: number | null;
   mintBurn: number | null;
   supply: number | null;
+  safetyGrades: number | null;
   yield: number | null;
   depegs: number | null;
   dews: number | null;
   digest: number | null;
+  discoveryCandidates: number | null;
 }
 
 interface TelegramBotTopStablecoin {

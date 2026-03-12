@@ -10,10 +10,12 @@ const DATASET_META: Record<DatasetKey, { label: string; owners: readonly string[
   blacklist: { label: "Blacklist events", owners: ["sync-blacklist"] },
   mintBurn: { label: "Mint/burn events", owners: ["sync-mint-burn", "sync-mint-burn-extended"] },
   supply: { label: "Supply history", owners: ["snapshot-supply"] },
+  safetyGrades: { label: "Safety grade history", owners: ["snapshot-safety-grade-history"] },
   yield: { label: "Yield data", owners: ["sync-yield-data"] },
   depegs: { label: "Depeg events", owners: ["sync-stablecoins"] },
   dews: { label: "DEWS signals", owners: ["compute-dews"] },
   digest: { label: "Daily digest", owners: ["daily-digest"] },
+  discoveryCandidates: { label: "Discovery candidates", owners: ["sync-stablecoins", "discovery-scan"] },
 };
 
 function getExpectedFreshnessSec(owners: readonly string[]): number | null {

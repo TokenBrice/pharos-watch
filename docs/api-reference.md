@@ -1665,16 +1665,47 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "blacklist": 1771856200,
     "mintBurn": 1771856340,
     "supply": 1771804800,
+    "safetyGrades": 1771804800,
     "yield": 1771856320,
     "depegs": 1771856010,
     "dews": 1771856400,
-    "digest": 1771804800
+    "digest": 1771804800,
+    "discoveryCandidates": 1771856400
   },
   "summary": {
     "unhealthyCrons": 0,
     "degradedCrons": 1,
     "cronErrors": 0,
     "worstCacheRatio": 1.03
+  },
+  "priceSourceHealth": {
+    "sourceDistribution": {
+      "coingecko": 14,
+      "coingecko+defillama": 118,
+      "defillama": 10,
+      "defillama-contract": 4,
+      "coinmarketcap": 2,
+      "dexscreener": 1,
+      "cached": 4,
+      "missing": 3
+    },
+    "confidenceDistribution": {
+      "high": 127,
+      "single-source": 15,
+      "low": 8,
+      "fallback": 6
+    },
+    "divergences": [
+      {
+        "id": "fdusd-first-digital-usd",
+        "symbol": "FDUSD",
+        "cgPrice": 0.9994,
+        "dlPrice": 1.0012,
+        "bps": 18
+      }
+    ],
+    "totalAssets": 156,
+    "lastSync": 1771856400
   },
   "liquidityHealth": {
     "lastRunStatus": "degraded",
@@ -1691,6 +1722,21 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "currentCoverageClasses": { "primary": 80, "mixed": 20, "fallback": 20, "legacy": 0, "unobserved": 36 },
     "previousCoverageClasses": { "primary": 82, "mixed": 18, "fallback": 25, "legacy": 0, "unobserved": 31 }
   },
+  "discoveryCandidates": [
+    {
+      "id": 12,
+      "geckoId": "usdq",
+      "llamaId": null,
+      "name": "USDQ",
+      "symbol": "USDQ",
+      "marketCap": 18200000,
+      "source": "coingecko",
+      "firstSeen": 1771683600,
+      "lastSeen": 1771856400,
+      "daysSeen": 2,
+      "dismissed": false
+    }
+  ],
   "mintBurnReconciliation": {
     "checkedAt": 1771856453,
     "comparedCoins": 42,
@@ -1727,7 +1773,13 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `suppressedMethodologyChanges`).
 
+`datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
+
+`priceSourceHealth` is derived from `sync-stablecoins` cron metadata and summarizes price-source distribution, confidence buckets, recent CoinGecko-vs-DefiLlama divergences, and the timestamp of the latest successful price-health snapshot.
+
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
+
+`discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 
 `mintBurnReconciliation` compares 24h Ethereum mint/burn net flow (`mint_burn_hourly`) against the cached stablecoins payload's Ethereum chain-supply delta (`chainCirculating.ethereum.current - circulatingPrevDay`). It is intended for operator diagnostics, not public scoring.
 

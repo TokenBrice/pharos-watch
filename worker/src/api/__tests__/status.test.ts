@@ -66,7 +66,32 @@ describe("handleStatus", () => {
       {
         match: "cron_runs",
         rows: [
-          makeCronRow("sync-stablecoins"),
+          {
+            ...makeCronRow("sync-stablecoins"),
+            metadata: JSON.stringify({
+              priceSourceHealth: {
+                sourceDistribution: {
+                  coingecko: 14,
+                  "coingecko+defillama": 118,
+                  defillama: 10,
+                  "defillama-contract": 4,
+                  coinmarketcap: 2,
+                  dexscreener: 1,
+                  cached: 4,
+                  missing: 3,
+                },
+                confidenceDistribution: {
+                  high: 127,
+                  "single-source": 15,
+                  low: 8,
+                  fallback: 6,
+                },
+                divergences: [],
+                totalAssets: 156,
+                lastSync: now - 60,
+              },
+            }),
+          },
           {
             ...makeCronRow("sync-dex-liquidity"),
             metadata: JSON.stringify({
@@ -102,6 +127,28 @@ describe("handleStatus", () => {
           makeCronRow("sync-blacklist"),
         ],
       },
+      {
+        match: "MAX(last_seen) as latest FROM discovery_candidates",
+        rows: [],
+        first: { latest: now - 120 },
+      },
+      {
+        match: "SELECT * FROM discovery_candidates WHERE dismissed = 0",
+        rows: [
+          {
+            id: 12,
+            gecko_id: "usdq",
+            llama_id: null,
+            name: "USDQ",
+            symbol: "USDQ",
+            market_cap: 18_200_000,
+            source: "coingecko",
+            first_seen: now - 172_800,
+            last_seen: now - 120,
+            dismissed: 0,
+          },
+        ],
+      },
       // Data quality: stablecoins cache for missing prices
       {
         match: "cache",
@@ -131,7 +178,9 @@ describe("handleStatus", () => {
       dataQuality: Record<string, unknown>;
       telegramBot: Record<string, unknown> | null;
       datasetFreshness: Record<string, number | null>;
+      priceSourceHealth: Record<string, unknown> | null;
       liquidityHealth: Record<string, unknown> | null;
+      discoveryCandidates: Array<Record<string, unknown>> | null;
       mintBurnReconciliation: Record<string, unknown> | null;
     };
 
@@ -143,15 +192,23 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("dataQuality");
     expect(body).toHaveProperty("telegramBot");
     expect(body).toHaveProperty("datasetFreshness");
+    expect(body).toHaveProperty("priceSourceHealth");
     expect(body).toHaveProperty("liquidityHealth");
+    expect(body).toHaveProperty("discoveryCandidates");
     expect(body).toHaveProperty("mintBurnReconciliation");
     expect(typeof body.dbHealthy).toBe("boolean");
     expect(body.datasetFreshness).toHaveProperty("stablecoins");
     expect(body.datasetFreshness).toHaveProperty("mintBurn");
+    expect(body.datasetFreshness).toHaveProperty("safetyGrades");
+    expect(body.datasetFreshness).toHaveProperty("discoveryCandidates");
+    expect(body.priceSourceHealth).toMatchObject({
+      totalAssets: 156,
+    });
     expect(body.liquidityHealth).toMatchObject({
       currentCoverage: 120,
       failedSources: ["defillama-yields"],
     });
+    expect(body.discoveryCandidates).toHaveLength(1);
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 

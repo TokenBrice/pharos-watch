@@ -741,10 +741,12 @@ function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
     blacklist: null,
     mintBurn: null,
     supply: null,
+    safetyGrades: null,
     yield: null,
     depegs: null,
     dews: null,
     digest: null,
+    discoveryCandidates: null,
   };
 }
 
@@ -922,10 +924,12 @@ const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"]
   blacklist: { table: "blacklist_events", column: "timestamp" },
   mintBurn: { table: "mint_burn_events", column: "timestamp" },
   supply: { table: "supply_history", column: "snapshot_date" },
+  safetyGrades: { table: "safety_grade_history", column: "recorded_at" },
   yield: { table: "yield_data", column: "updated_at" },
   depegs: { table: "depeg_events", column: "started_at" },
   dews: { table: "stress_signals", column: "computed_at" },
   digest: { table: "daily_digest", column: "generated_at" },
+  discoveryCandidates: { table: "discovery_candidates", column: "last_seen" },
 };
 
 async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget): Promise<number | null> {
@@ -943,15 +947,28 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget): Pr
 }
 
 async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["datasetFreshness"]> {
-  const [stablecoins, blacklist, mintBurn, supply, yieldTs, depegs, dews, digest] = await Promise.all([
+  const [
+    stablecoins,
+    blacklist,
+    mintBurn,
+    supply,
+    safetyGrades,
+    yieldTs,
+    depegs,
+    dews,
+    digest,
+    discoveryCandidates,
+  ] = await Promise.all([
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.mintBurn),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.supply),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.safetyGrades),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.yield),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.depegs),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.dews),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.digest),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.discoveryCandidates),
   ]);
 
   return {
@@ -959,10 +976,12 @@ async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["data
     blacklist,
     mintBurn,
     supply,
+    safetyGrades,
     yield: yieldTs,
     depegs,
     dews,
     digest,
+    discoveryCandidates,
   };
 }
 
