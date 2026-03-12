@@ -1,9 +1,14 @@
-import { withErrorHandler, buildCacheStatuses, jsonResponse } from "../lib/api-utils";
+import {
+  withErrorHandler,
+  buildCacheStatuses,
+  jsonResponse,
+} from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
 import { buildInClause } from "../lib/db";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { HealthResponse } from "@shared/types";
 import {
+  buildMintBurnSyncHealth,
   evaluateMintBurnFreshness,
   resolveMintBurnFreshnessConfig,
   type MintBurnFreshnessConfig,
@@ -21,6 +26,8 @@ const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   lastSuccessAt: null,
   openedAt: null,
 };
+
+const MINT_BURN_CRON_JOB = "sync-mint-burn";
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database, options?: HealthOptions): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -43,10 +50,16 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
     freshnessAgeSec: null,
     majorStaleCount: 0,
     staleMajorSymbols: [],
+    sync: {
+      lastSuccessfulSyncAt: null,
+      freshnessStatus: "stale",
+      warning: "No successful critical mint/burn sync has been recorded yet.",
+      criticalLaneHealthy: false,
+    },
   };
   try {
     const majorSymbolInClause = buildInClause(mintBurnConfig.majorSymbols);
-    const [counts, latestEvent, latestHourly, majorRows] = await Promise.all([
+    const [counts, latestEvent, latestHourly, majorRows, latestRun, latestSuccessfulSyncAt] = await Promise.all([
       db
       .prepare(
         `SELECT
@@ -69,6 +82,24 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
       )
       .bind(...majorSymbolInClause.binds)
       .all<{ symbol: string; latest: number | null }>(),
+      db
+        .prepare(
+          `SELECT status
+           FROM cron_runs
+           WHERE job = ?
+           ORDER BY started_at DESC
+           LIMIT 1`,
+        )
+        .bind(MINT_BURN_CRON_JOB)
+        .first<{ status: string | null }>(),
+      db
+        .prepare(
+          "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+        )
+        .bind(MINT_BURN_CRON_JOB)
+        .first<{ started_at: number | null }>()
+        .then((row) => row?.started_at ?? null)
+        .catch(() => null),
     ]);
     if (counts) {
       const latestBySymbol = new Map<string, number>();
@@ -76,7 +107,11 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
         if (row.latest != null) latestBySymbol.set(row.symbol, row.latest);
       }
 
-      const freshness = evaluateMintBurnFreshness(now, latestBySymbol, mintBurnConfig);
+      const sync = buildMintBurnSyncHealth(now, latestSuccessfulSyncAt, latestRun?.status ?? null);
+      const rawFreshness = evaluateMintBurnFreshness(now, latestBySymbol, mintBurnConfig);
+      const actionableMajorStaleness =
+        sync.freshnessStatus !== "fresh" || !sync.criticalLaneHealthy;
+      const staleMajorSymbols = actionableMajorStaleness ? rawFreshness.staleMajorSymbols : [];
 
       const latestEventTs = latestEvent?.latest ?? null;
       mintBurn = {
@@ -84,23 +119,22 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
         latestEventTs,
         latestHourlyTs: latestHourly?.latest ?? null,
         freshnessAgeSec: latestEventTs == null ? null : Math.max(0, now - latestEventTs),
-        majorStaleCount: freshness.staleMajorSymbols.length,
-        staleMajorSymbols: freshness.staleMajorSymbols,
+        majorStaleCount: staleMajorSymbols.length,
+        staleMajorSymbols,
+        sync,
       };
 
-      if (freshness.criticalStaleCount > 0 && worstRatioMut < 2.1) {
-        worstRatioMut = 2.1; // stale
+      if (sync.freshnessStatus === "stale" && worstRatioMut < 2.1) {
+        worstRatioMut = 2.1;
+      } else if (
+        (sync.freshnessStatus === "degraded" || latestRun?.status === "error" || latestRun?.status === "degraded")
+        && worstRatioMut < 1.6
+      ) {
+        worstRatioMut = 1.6;
       }
     }
   } catch (err) {
     console.error("[health] Failed to query mint/burn counts:", err);
-  }
-
-  if (mintBurn.majorStaleCount > 0 && worstRatioMut < 1.6) {
-    worstRatioMut = 1.6; // degraded
-  }
-  if (mintBurn.majorStaleCount >= 3 && worstRatioMut < 2.1) {
-    worstRatioMut = 2.1; // stale
   }
 
   // Check circuit breaker states

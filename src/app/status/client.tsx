@@ -391,7 +391,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
   const healthDiffersFromStatus = healthData != null && healthData.status !== data.overallStatus;
   const publicHealthNeedsCallout =
     healthData != null &&
-    (healthData.status !== "healthy" || healthDiffersFromStatus || healthData.mintBurn.majorStaleCount > 0);
+    (healthData.status !== "healthy" || healthDiffersFromStatus);
   const allTransitions = historyData?.transitions ?? data.timeline;
   const latestTransition = allTransitions[0] ?? null;
   const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
@@ -435,19 +435,23 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
   }
   if (publicHealthNeedsCallout && healthData) {
     const divergence = healthDiffersFromStatus ? `Public /api/health differs from /api/status (${data.overallStatus}). ` : "";
-    const mintBurn =
-      healthData.mintBurn.majorStaleCount > 0
-        ? `Mint/burn stale majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}. `
+    const mintBurnWarning =
+      healthData.mintBurn.sync.warning != null
+        ? `${healthData.mintBurn.sync.warning} `
         : "";
-    const freshness =
-      healthData.mintBurn.freshnessAgeSec != null
-        ? `Latest mint/burn event age: ${healthData.mintBurn.freshnessAgeSec}s. `
+    const mintBurnSyncAge =
+      healthData.mintBurn.sync.lastSuccessfulSyncAt != null
+        ? `Last successful mint/burn sync ${formatAge(Math.max(0, data.timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))} ago. `
+        : "";
+    const impactedMajors =
+      healthData.mintBurn.majorStaleCount > 0
+        ? `Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}. `
         : "";
 
     notices.push({
       id: "public-health",
       title: `Public /api/health reports ${healthData.status}`,
-      detail: `${divergence}${mintBurn}${freshness}Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`,
+      detail: `${divergence}${mintBurnWarning}${mintBurnSyncAge}${impactedMajors}Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`,
       tone: healthData.status === "stale" ? "critical" : healthData.status === "degraded" ? "warning" : "neutral",
     });
   }

@@ -540,13 +540,6 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
         threshold: STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,
       });
     }
-  } else {
-    pushCause(dataQualityCauses, {
-      code: "onchain_monitor_unavailable",
-      layer: "data-quality",
-      severity: "info",
-      message: "On-chain supply monitor is unavailable; related checks are suppressed.",
-    });
   }
   if (reserveCompositionCritical) {
     pushCause(dataQualityCauses, {

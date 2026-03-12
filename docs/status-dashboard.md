@@ -154,6 +154,10 @@ Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-c
 - warning threshold: `6h`
 - critical threshold: `24h`
 
+The public `/api/health` lane now keys mint/burn freshness to the critical-lane sync timestamp / latest run status rather than raw event timestamps, matching the `/flows` semantics and avoiding quiet-period false stale alerts.
+
+`dataQuality.onchainSupplyMonitoring === "unavailable"` still renders in the quality cards, but it is no longer promoted to an active cause/watchlist item on its own while the on-chain supply monitor has no live producer.
+
 ### Overall status
 
 `rawOverallStatus` is the worse of `availabilityStatus` and `dataQualityStatus` (`healthy < degraded < stale`).

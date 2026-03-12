@@ -12,6 +12,10 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_CONFIGS, SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../lib/mint-burn-pipeline/sync-state";
 import {
+  buildMintBurnSyncHealth,
+  MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC,
+} from "../lib/mint-burn-health-config";
+import {
   computeFlowIntensity,
   computeGaugeScore,
   detectFlightToQuality,
@@ -128,8 +132,6 @@ const BASELINE_WINDOW_DAYS = 30;
 const FLOW_CACHE_PREFIX = "mint-burn-flows:v2";
 const ETHEREUM_CHAIN_ID = "ethereum";
 const FLOW_DEFAULT_WINDOW_HOURS = 24;
-const FLOW_CRON_INTERVAL_SEC = 20 * 60;
-const FLOW_FRESHNESS_MAX_AGE_SEC = FLOW_CRON_INTERVAL_SEC * 2;
 const MINT_BURN_CRON_JOB = "sync-mint-burn";
 const ETH_BLOCK_TIME_SEC = 12;
 const WINDOW_24H_BLOCKS = Math.ceil(24 * 3600 / ETH_BLOCK_TIME_SEC);
@@ -171,20 +173,8 @@ function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }
   const headers = addFreshnessHeaders({
     "Content-Type": "application/json",
     "Cache-Control": CACHE_PROFILES.standard,
-  }, freshnessTs, FLOW_FRESHNESS_MAX_AGE_SEC);
+  }, freshnessTs, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC);
   return new Response(cached.value, { headers });
-}
-
-function computeFlowFreshnessStatus(
-  nowSec: number,
-  lastSuccessfulSyncAt: number | null,
-): "fresh" | "degraded" | "stale" {
-  if (lastSuccessfulSyncAt == null) return "stale";
-  const ageSec = Math.max(0, nowSec - lastSuccessfulSyncAt);
-  const ratio = ageSec / FLOW_FRESHNESS_MAX_AGE_SEC;
-  if (ratio <= 1) return "fresh";
-  if (ratio <= 1.5) return "degraded";
-  return "stale";
 }
 
 function compareLargestEventRows(a: EventRow, b: EventRow): number {
@@ -304,34 +294,6 @@ function buildBaselineMap(
   }
 
   return baselineMap;
-}
-
-function buildMintBurnSync(
-  nowSec: number,
-  lastSuccessfulSyncAt: number | null,
-  latestRunStatus: string | null,
-) {
-  const freshnessStatus = computeFlowFreshnessStatus(nowSec, lastSuccessfulSyncAt);
-  const criticalLaneHealthy =
-    latestRunStatus === "ok" || latestRunStatus === "degraded" || latestRunStatus === "skipped_locked";
-
-  let warning: string | null = null;
-  if (latestRunStatus === "error") {
-    warning = "Critical mint/burn lane last run errored; cached or partial data may be served.";
-  } else if (latestRunStatus === "degraded") {
-    warning = "Critical mint/burn lane is running in degraded mode; coverage may be partial.";
-  } else if (freshnessStatus === "stale") {
-    warning = "Mint/burn sync freshness is stale versus the 20-minute cron cadence.";
-  } else if (freshnessStatus === "degraded") {
-    warning = "Mint/burn sync freshness is degraded versus the 20-minute cron cadence.";
-  }
-
-  return {
-    lastSuccessfulSyncAt,
-    freshnessStatus,
-    warning,
-    criticalLaneHealthy,
-  };
 }
 
 function buildCoinCoverageMap(
@@ -601,7 +563,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       lastBlocks,
       latestCronSnapshot.chainHead,
     );
-    const sync = buildMintBurnSync(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
+    const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
     // Aggregate per-coin summaries from canonical 24h rows
     const coinAgg = new Map<
@@ -825,7 +787,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
     return jsonResponse(body, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, latestSuccessfulSyncAt, FLOW_FRESHNESS_MAX_AGE_SEC));
+    }, latestSuccessfulSyncAt, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC));
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {
@@ -951,13 +913,13 @@ async function handlePerCoin(
         chainIds: [ETHEREUM_CHAIN_ID],
         label: "Ethereum-only",
       },
-      sync: buildMintBurnSync(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
+      sync: buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     };
 
     await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
     return jsonResponse(body, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, latestSuccessfulSyncAt, FLOW_FRESHNESS_MAX_AGE_SEC));
+    }, latestSuccessfulSyncAt, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC));
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {

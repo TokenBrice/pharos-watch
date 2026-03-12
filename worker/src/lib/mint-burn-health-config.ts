@@ -12,6 +12,9 @@ const MINT_BURN_MAJOR_SYMBOLS = [
 const MINT_BURN_STALE_WARN_SEC = 6 * 3600;
 const MINT_BURN_STALE_CRIT_SEC = 24 * 3600;
 const MINT_BURN_ALERT_COOLDOWN_SEC = 3600;
+const MINT_BURN_CRITICAL_LANE_INTERVAL_SEC = 20 * 60;
+
+export const MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC = MINT_BURN_CRITICAL_LANE_INTERVAL_SEC * 2;
 
 export interface MintBurnFreshnessConfig {
   majorSymbols: string[];
@@ -58,6 +61,15 @@ export interface MintBurnFreshnessEvaluation {
   critDetails: string[];
 }
 
+export type MintBurnSyncFreshnessStatus = "fresh" | "degraded" | "stale";
+
+export interface MintBurnSyncHealth {
+  lastSuccessfulSyncAt: number | null;
+  freshnessStatus: MintBurnSyncFreshnessStatus;
+  warning: string | null;
+  criticalLaneHealthy: boolean;
+}
+
 export function evaluateMintBurnFreshness(
   nowSec: number,
   latestBySymbol: Map<string, number | null | undefined>,
@@ -87,5 +99,45 @@ export function evaluateMintBurnFreshness(
     criticalStaleCount,
     warnDetails,
     critDetails,
+  };
+}
+
+export function computeMintBurnSyncFreshnessStatus(
+  nowSec: number,
+  lastSuccessfulSyncAt: number | null,
+): MintBurnSyncFreshnessStatus {
+  if (lastSuccessfulSyncAt == null) return "stale";
+  const ageSec = Math.max(0, nowSec - lastSuccessfulSyncAt);
+  const ratio = ageSec / MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC;
+  if (ratio <= 1) return "fresh";
+  if (ratio <= 1.5) return "degraded";
+  return "stale";
+}
+
+export function buildMintBurnSyncHealth(
+  nowSec: number,
+  lastSuccessfulSyncAt: number | null,
+  latestRunStatus: string | null,
+): MintBurnSyncHealth {
+  const freshnessStatus = computeMintBurnSyncFreshnessStatus(nowSec, lastSuccessfulSyncAt);
+  const criticalLaneHealthy =
+    latestRunStatus === "ok" || latestRunStatus === "degraded" || latestRunStatus === "skipped_locked";
+
+  let warning: string | null = null;
+  if (latestRunStatus === "error") {
+    warning = "Critical mint/burn lane last run errored; cached or partial data may be served.";
+  } else if (latestRunStatus === "degraded") {
+    warning = "Critical mint/burn lane is running in degraded mode; coverage may be partial.";
+  } else if (freshnessStatus === "stale") {
+    warning = "Mint/burn sync freshness is stale versus the 20-minute cron cadence.";
+  } else if (freshnessStatus === "degraded") {
+    warning = "Mint/burn sync freshness is degraded versus the 20-minute cron cadence.";
+  }
+
+  return {
+    lastSuccessfulSyncAt,
+    freshnessStatus,
+    warning,
+    criticalLaneHealthy,
   };
 }

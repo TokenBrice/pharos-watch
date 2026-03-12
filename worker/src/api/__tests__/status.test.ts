@@ -706,12 +706,18 @@ describe("handleStatus", () => {
         staleOnchainSupply: number;
         onchainSupplyDivergences: number;
       };
+      causes: {
+        dataQuality: Array<{ code: string }>;
+        overall: Array<{ code: string }>;
+      };
     };
 
     expect(body.dataQuality.onchainSupplyMonitoring).toBe("unavailable");
     expect(body.dataQuality.staleOnchainSupply).toBe(0);
     expect(body.dataQuality.onchainSupplyDivergences).toBe(0);
     expect(body.dataQualityStatus).toBe("healthy");
+    expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(false);
+    expect(body.causes.overall.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(false);
   });
 
   it("keeps data quality healthy when blacklist gaps are low-ratio and not recent", async () => {

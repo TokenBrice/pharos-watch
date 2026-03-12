@@ -1390,6 +1390,12 @@ export interface HealthResponse {
     freshnessAgeSec: number | null;
     majorStaleCount: number;
     staleMajorSymbols: string[];
+    sync: {
+      lastSuccessfulSyncAt: number | null;
+      freshnessStatus: "fresh" | "degraded" | "stale";
+      warning: string | null;
+      criticalLaneHealthy: boolean;
+    };
   };
   circuits: Record<string, CircuitRecord>;
 }
@@ -1409,6 +1415,12 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     freshnessAgeSec: z.number().nullable(),
     majorStaleCount: z.number(),
     staleMajorSymbols: z.array(z.string()),
+    sync: z.object({
+      lastSuccessfulSyncAt: z.number().nullable(),
+      freshnessStatus: z.enum(["fresh", "degraded", "stale"]),
+      warning: z.string().nullable(),
+      criticalLaneHealthy: z.boolean(),
+    }),
   }),
   circuits: z.record(z.string(), CircuitRecordSchema),
 });
