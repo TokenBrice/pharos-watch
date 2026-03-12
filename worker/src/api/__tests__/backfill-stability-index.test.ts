@@ -173,7 +173,7 @@ describe("handleBackfillStabilityIndex", () => {
     expect(res.status).toBe(200);
     expect(execCalls).toEqual([
       "DROP TABLE IF EXISTS stability_index_rebuild",
-      expect.stringContaining("CREATE TABLE stability_index_rebuild"),
+      "CREATE TABLE stability_index_rebuild ( computed_at INTEGER PRIMARY KEY, score REAL NOT NULL, band TEXT NOT NULL, components TEXT NOT NULL, input_snapshot TEXT NOT NULL, methodology_version TEXT NOT NULL )",
       "DROP TABLE IF EXISTS stability_index_rebuild",
     ]);
   });

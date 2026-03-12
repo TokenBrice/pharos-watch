@@ -14,6 +14,17 @@ export const handleBackfillStabilityIndex = withErrorHandler(
   "backfill-stability-index",
   async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
     return withAdmin(request, adminKey, async () => {
+      const rebuildTableSql = [
+        "CREATE TABLE stability_index_rebuild (",
+        "computed_at INTEGER PRIMARY KEY,",
+        "score REAL NOT NULL,",
+        "band TEXT NOT NULL,",
+        "components TEXT NOT NULL,",
+        "input_snapshot TEXT NOT NULL,",
+        "methodology_version TEXT NOT NULL",
+        ")",
+      ].join(" ");
+
       const now = Math.floor(Date.now() / 1000);
       const DAY = 86400;
 
@@ -43,16 +54,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
       await db.exec("DROP TABLE IF EXISTS stability_index_rebuild");
-      await db.exec(`
-        CREATE TABLE stability_index_rebuild (
-          computed_at INTEGER PRIMARY KEY,
-          score REAL NOT NULL,
-          band TEXT NOT NULL,
-          components TEXT NOT NULL,
-          input_snapshot TEXT NOT NULL,
-          methodology_version TEXT NOT NULL
-        )
-      `);
+      await db.exec(rebuildTableSql);
 
       // Iterate day by day — build all statements first, then atomically swap
       const stmts: D1PreparedStatement[] = [];
