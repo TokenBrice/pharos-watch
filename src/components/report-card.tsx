@@ -77,9 +77,9 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
         {/* Two-column layout: grade + radar | dimension breakdown */}
         <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
           {/* Left column: grade top-left strip + radar filling full height */}
-          <div className="flex flex-col items-center gap-4 md:flex-row md:items-stretch md:h-full">
+          <div className="flex min-w-0 flex-col items-center gap-4 md:flex-row md:items-stretch md:h-full">
             {/* Grade strip — top-aligned on desktop, centred inline on mobile */}
-            <div className="flex flex-row items-center gap-3 md:flex-col md:justify-start md:items-center md:gap-1 md:pt-1 shrink-0">
+            <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-2 md:flex-col md:justify-start md:items-center md:gap-1 md:pt-1">
               <Badge
                 variant="outline"
                 className={`text-3xl px-5 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
@@ -93,8 +93,8 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                 </span>
               )}
               {card.baseScore != null && card.overallScore != null && card.dimensions.pegStability.score != null && (
-                <details className="mt-2 text-xs text-muted-foreground w-full">
-                  <summary className="pharos-focus-ring cursor-pointer rounded-md transition-colors hover:text-foreground">
+                <details className="mt-1 basis-full text-center text-xs text-muted-foreground md:mt-2 md:text-left">
+                  <summary className="pharos-focus-ring inline-flex cursor-pointer rounded-md transition-colors hover:text-foreground">
                     Show score breakdown
                   </summary>
                   <div className="mt-2 space-y-1.5 pl-1">
@@ -119,7 +119,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
               )}
             </div>
             {/* Radar chart — fills remaining width and full column height on desktop */}
-            <div className="w-full flex-1 min-h-[260px] md:h-full">
+            <div className="min-w-0 w-full flex-1 min-h-[240px] md:h-full md:min-h-[260px]">
               <ReportCardRadar card={card} labels="full" />
             </div>
           </div>
