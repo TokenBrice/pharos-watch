@@ -20,8 +20,8 @@ export default function CoveragePage() {
       title="Coverage"
       statusBadge={{ status: "mature" }}
       leadParagraphs={[
-        `Feature coverage across ${TRACKED_STABLECOINS.length} tracked stablecoins.`,
-        "This matrix shows which Pharos surfaces are available per asset today, with counts and market-cap share so you can distinguish broad long-tail coverage from coverage concentrated in the majors.",
+        `Feature breadth across ${TRACKED_STABLECOINS.length} tracked stablecoins.`,
+        "Start with the feature snapshot to see how wide each Pharos surface reaches by coin count and market-cap share. Then drop into the matrix to inspect what is available on a specific asset.",
       ]}
     >
       <CoveragePageClient />

@@ -75,14 +75,19 @@ Current market-cap weights come from `/api/stablecoins` using `getCirculatingRaw
 
 ---
 
-## Summary Cards
+## Feature Snapshot
 
-Every summary card shows:
+The feature snapshot leads the page. It is the first stop for users who want to understand total Pharos coverage before drilling into individual assets.
+
+Every row shows:
 
 - covered coin count
 - percent of tracked coins
 - percent of tracked market cap
-- a small per-feature breakdown
+- a short per-feature breakdown
+- direct link to the underlying surface when one exists
+
+For `Reserves`, the headline metric intentionally emphasizes `Live` reserve tracking. Curated and estimated reserve views still appear in the breakdown so the row distinguishes true live coverage from metadata-only reserve composition.
 
 Breakdowns are intentionally dense and should stay short:
 
@@ -97,10 +102,14 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 
 ## UX Contract
 
+- The feature snapshot comes first and answers the breadth question before the page shifts into per-coin inspection.
 - Search filters by name and ticker.
 - Quick filters narrow the table to one major feature slice (`Live reserves`, `Yield`, `Flows`, `Blacklist`, `Bluechip`).
 - Default sort is descending live market cap.
-- Horizontal scrolling on mobile is acceptable; the first column stays sticky.
+- On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.
+- From `md` upward, the full comparison table renders with the first column sticky.
+- The per-coin matrix comes second and is explicitly positioned as the asset-level drill-down surface.
+- Coverage notes and the status legend live in an inline disclosure above the matrix, not in a separate explainer block.
 
 The page should continue to render meaningfully when some live datasets are temporarily unavailable. In that case, the matrix still renders with structural coverage where possible and uses the shared stale-data banner to surface data-health issues.
 

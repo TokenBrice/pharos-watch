@@ -34,6 +34,7 @@ export type CoverageTone =
 export interface CoverageStatus {
   kind: string;
   label: string;
+  spokenLabel: string;
   tone: CoverageTone;
   available: boolean;
   sortRank: number;
@@ -43,9 +44,26 @@ export interface CoverageStatus {
 export interface CoverageFeatureDefinition {
   key: CoverageFeatureKey;
   label: string;
+  shortLabel: string;
   description: string;
+  headlineKinds?: readonly string[];
+  headlineCountLabel?: string;
+  headlineCoverageLabel?: (coveragePct: number) => string;
+  headlineShareLabel?: string;
   href?: string;
   external?: boolean;
+}
+
+export interface CoverageFeatureSummary {
+  feature: CoverageFeatureDefinition;
+  availableCount: number;
+  coveragePct: number;
+  coveredMcapUsd: number;
+  mcapSharePct: number | null;
+  countLabel: string;
+  coverageLabel: string;
+  shareLabel: string;
+  breakdown: string;
 }
 
 export interface CoverageRow {
@@ -79,47 +97,60 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   {
     key: "price",
     label: "Price & Depeg",
+    shortLabel: "Price",
     description: "Live price monitoring, peg summary coverage, and depeg event detection.",
     href: "/depeg/",
   },
   {
     key: "safety",
     label: "Safety Score",
+    shortLabel: "Safety",
     description: "Overall report-card grade on the Safety Scores surface.",
     href: "/safety-scores/",
   },
   {
     key: "dex",
     label: "DEX Price",
+    shortLabel: "DEX",
     description: "DEX liquidity observation and price verification confidence.",
     href: "/liquidity/",
   },
   {
     key: "reserves",
     label: "Reserves",
+    shortLabel: "Reserves",
     description: "Reserve composition availability on the stablecoin detail page.",
+    headlineKinds: ["live"],
+    headlineCountLabel: "Live tracking",
+    headlineCoverageLabel: (coveragePct) =>
+      `${coveragePct.toFixed(0)}% with live reserve tracking`,
+    headlineShareLabel: "Live reserve market-cap reach",
   },
   {
     key: "yield",
     label: "Yield",
+    shortLabel: "Yield",
     description: "Current presence in the Yield Intelligence rankings.",
     href: "/yield/",
   },
   {
     key: "flows",
     label: "Flows",
+    shortLabel: "Flows",
     description: "Ethereum mint/burn flow tracking and coverage state.",
     href: "/flows/",
   },
   {
     key: "blacklist",
     label: "Blacklist",
+    shortLabel: "Blacklist",
     description: "Freeze / blacklist event tracking for issuers with supported event coverage.",
     href: "/blacklist/",
   },
   {
     key: "bluechip",
     label: "Bluechip",
+    shortLabel: "Bluechip",
     description: "External Bluechip rating coverage where Bluechip publishes a grade.",
     href: "https://bluechip.org/en/coins",
     external: true,
@@ -127,10 +158,23 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
   {
     key: "dependency",
     label: "Dependency Map",
+    shortLabel: "Dependency",
     description: "Reserve or mechanism dependency edges in the report-card graph.",
     href: "/dependency-map/",
   },
 ] as const;
+
+export const COVERAGE_BADGE_TONE_CLASS: Record<CoverageTone, string> = {
+  emerald:
+    "border-emerald-500/22 bg-emerald-500/8 text-emerald-800 dark:text-emerald-300",
+  sky: "border-sky-500/24 bg-sky-500/8 text-sky-800 dark:text-sky-300",
+  amber:
+    "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-300",
+  violet:
+    "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-300",
+  rose: "border-rose-500/35 bg-rose-500/12 text-rose-800 dark:text-rose-300",
+  slate: "border-border/70 bg-muted/70 text-muted-foreground",
+};
 
 function createStatus(
   kind: string,
@@ -139,10 +183,12 @@ function createStatus(
   available: boolean,
   sortRank: number,
   detail: string,
+  spokenLabel = label,
 ): CoverageStatus {
   return {
     kind,
     label,
+    spokenLabel,
     tone,
     available,
     sortRank,
@@ -207,6 +253,7 @@ export function resolveSafetyCoverage(
     false,
     0,
     "No overall Safety Score is currently assigned.",
+    "Not rated",
   );
 }
 
@@ -258,6 +305,7 @@ export function resolveDexCoverage(
         false,
         0,
         "No observed DEX-liquidity row is currently available.",
+        "Not rated",
       );
     default:
       return createStatus(
@@ -292,6 +340,7 @@ export function resolveReserveCoverage(coin: StablecoinMeta): CoverageStatus {
       false,
       0,
       "No reserve-composition view is currently available.",
+      "No reserves view",
     );
   }
 
@@ -337,6 +386,7 @@ export function resolveYieldCoverage(
     false,
     0,
     "This asset is not currently present in the Yield Intelligence rankings.",
+    "Not ranked",
   );
 }
 
@@ -379,6 +429,7 @@ export function resolveFlowCoverage(
         true,
         1,
         "Ethereum mint/burn tracking is configured, but coverage is still bootstrapping.",
+        "Bootstrapping",
       );
     case "disabled":
       return createStatus(
@@ -397,6 +448,7 @@ export function resolveFlowCoverage(
         false,
         0,
         "No Ethereum mint/burn flow tracking is currently configured.",
+        "Not tracked",
       );
   }
 }
@@ -422,6 +474,7 @@ export function resolveBlacklistCoverage(
     false,
     0,
     "No dedicated blacklist / freeze tracker coverage is configured for this asset.",
+    "Not tracked",
   );
 }
 
@@ -446,6 +499,7 @@ export function resolveBluechipCoverage(
     false,
     0,
     "No Bluechip rating is currently available for this asset.",
+    "Not rated",
   );
 }
 
@@ -470,7 +524,71 @@ export function resolveDependencyCoverage(
     false,
     0,
     "This asset currently has no dependency-graph edge coverage.",
+    "Not included",
   );
+}
+
+function buildCoverageBreakdown(
+  featureKey: CoverageFeatureKey,
+  breakdownMap: Map<string, number>,
+  availableCount: number,
+  totalCount: number,
+) {
+  if (featureKey === "price") {
+    return `tracked ${breakdownMap.get("tracked") ?? 0} · price-only ${breakdownMap.get("price-only") ?? 0}`;
+  }
+  if (featureKey === "dex") {
+    return `primary ${breakdownMap.get("primary") ?? 0} · mixed ${breakdownMap.get("mixed") ?? 0} · fallback ${breakdownMap.get("fallback") ?? 0}`;
+  }
+  if (featureKey === "reserves") {
+    return `live ${breakdownMap.get("live") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
+  }
+  if (featureKey === "flows") {
+    return `full ${breakdownMap.get("full") ?? 0} · partial ${breakdownMap.get("partial-history") ?? 0} · bootstrapping ${breakdownMap.get("bootstrapping") ?? 0}`;
+  }
+  if (featureKey === "safety") {
+    return `rated ${breakdownMap.get("rated") ?? 0} · NR ${breakdownMap.get("nr") ?? 0}`;
+  }
+
+  return `${availableCount} covered · ${totalCount - availableCount} uncovered`;
+}
+
+export function buildCoverageFeatureSummary(
+  feature: CoverageFeatureDefinition,
+  rows: CoverageRow[],
+  totalMcapUsd: number,
+): CoverageFeatureSummary {
+  const availableRows = rows.filter((row) => row.statuses[feature.key].available);
+  const primaryRows = feature.headlineKinds?.length
+    ? rows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
+    : availableRows;
+  const coveredMcapUsd = primaryRows.reduce((sum, row) => sum + row.marketCapUsd, 0);
+  const breakdownMap = new Map<string, number>();
+  const coveragePct = rows.length > 0 ? (primaryRows.length / rows.length) * 100 : 0;
+
+  for (const row of rows) {
+    const kind = row.statuses[feature.key].kind;
+    breakdownMap.set(kind, (breakdownMap.get(kind) ?? 0) + 1);
+  }
+
+  return {
+    feature,
+    availableCount: primaryRows.length,
+    coveragePct,
+    coveredMcapUsd,
+    mcapSharePct: totalMcapUsd > 0 ? (coveredMcapUsd / totalMcapUsd) * 100 : null,
+    countLabel: feature.headlineCountLabel ?? "Coin count",
+    coverageLabel:
+      feature.headlineCoverageLabel?.(coveragePct) ??
+      `${coveragePct.toFixed(0)}% of tracked coins`,
+    shareLabel: feature.headlineShareLabel ?? "Tracked market-cap reach",
+    breakdown: buildCoverageBreakdown(
+      feature.key,
+      breakdownMap,
+      availableRows.length,
+      rows.length,
+    ),
+  };
 }
 
 export function countAvailableFeatures(

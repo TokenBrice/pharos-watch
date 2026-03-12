@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import {
+  buildCoverageFeatureSummary,
   buildCoverageRow,
+  COVERAGE_FEATURES,
   resolveDexCoverage,
   resolveFlowCoverage,
   resolvePriceCoverage,
@@ -82,6 +84,7 @@ describe("coverage helpers", () => {
     expect(resolveFlowCoverage("full").label).toBe("Full");
     expect(resolveFlowCoverage("partial-history").label).toBe("Partial");
     expect(resolveFlowCoverage("bootstrapping").kind).toBe("bootstrapping");
+    expect(resolveFlowCoverage("bootstrapping").spokenLabel).toBe("Bootstrapping");
     expect(resolveFlowCoverage(null).available).toBe(false);
   });
 
@@ -104,5 +107,114 @@ describe("coverage helpers", () => {
     expect(row.advancedCoverageCount).toBe(5);
     expect(row.statuses.yield.available).toBe(false);
     expect(row.statuses.blacklist.available).toBe(false);
+  });
+
+  it("builds per-feature summaries with breakdown text and market-cap share", () => {
+    const rows = [
+      buildCoverageRow({
+        coin: makeCoin({
+          id: "one",
+          symbol: "ONE",
+          reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+        }),
+        marketCapUsd: 800,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        hasYieldCoverage: true,
+        flowCoverageStatus: "full",
+        bluechipGrade: "A",
+        hasDependencyCoverage: true,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({
+          id: "two",
+          symbol: "TWO",
+          flags: {
+            backing: "rwa-backed",
+            governance: "centralized",
+            pegCurrency: "USD",
+            yieldBearing: false,
+            rwa: true,
+            navToken: true,
+          },
+        }),
+        marketCapUsd: 200,
+        hasPegCoverage: false,
+        safetyScore: null,
+        dexCoverageClass: "unobserved",
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        bluechipGrade: null,
+        hasDependencyCoverage: false,
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(
+      COVERAGE_FEATURES.find((feature) => feature.key === "price")!,
+      rows,
+      1_000,
+    );
+
+    expect(summary.availableCount).toBe(2);
+    expect(summary.coveragePct).toBe(100);
+    expect(summary.mcapSharePct).toBe(100);
+    expect(summary.breakdown).toBe("tracked 1 · price-only 1");
+  });
+
+  it("uses live reserve tracking as the headline metric for reserve summaries", () => {
+    const rows = [
+      buildCoverageRow({
+        coin: makeCoin({
+          id: "live",
+          symbol: "LIVE",
+          liveReservesConfig: {
+            adapter: "test",
+            version: 1,
+            semantics: "attestation-mix",
+            inputs: {
+              primary: { kind: "http-json", url: "https://example.com/reserves" },
+            },
+          },
+        }),
+        marketCapUsd: 700,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        bluechipGrade: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({
+          id: "curated",
+          symbol: "CUR",
+          reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+        }),
+        marketCapUsd: 300,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        bluechipGrade: null,
+        hasDependencyCoverage: false,
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(
+      COVERAGE_FEATURES.find((feature) => feature.key === "reserves")!,
+      rows,
+      1_000,
+    );
+
+    expect(summary.countLabel).toBe("Live tracking");
+    expect(summary.availableCount).toBe(1);
+    expect(summary.coveragePct).toBe(50);
+    expect(summary.mcapSharePct).toBe(70);
+    expect(summary.coverageLabel).toBe("50% with live reserve tracking");
+    expect(summary.shareLabel).toBe("Live reserve market-cap reach");
+    expect(summary.breakdown).toBe("live 1 · curated 1 · estimated 0");
   });
 });
