@@ -1,30 +1,201 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, BarChart3, Droplets, ExternalLink, Flame, FlaskConical, Gauge, Github, Layers, Network, Newspaper, Radio, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  BarChart3,
+  Droplets,
+  ExternalLink,
+  Flame,
+  FlaskConical,
+  Gauge,
+  Github,
+  Layers,
+  Network,
+  Newspaper,
+  Radio,
+  ShieldAlert,
+  ShieldCheck,
+  Skull,
+  type LucideIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 const DATA_SOURCE_GROUPS = [
   { label: "Supply & Price", sources: "DefiLlama, CoinGecko, CoinMarketCap, DexScreener" },
-  { label: "On-chain Reads & Events", sources: "Etherscan v2 (freeze events), TronGrid, Alchemy & dRPC (EVM RPCs, including Ethereum mint/burn flows and direct Liquity/B.Protocol reads)" },
-  { label: "Ratings & Reference", sources: "Bluechip, ECB via Frankfurter, fawazahmed0/exchange-api (CNH and non-ECB FX), gold-api.com, FRED DGS3MO (T-bill rates)" },
-  { label: "DEX Data", sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, GeckoTerminal, DexScreener" },
+  {
+    label: "On-chain Reads & Events",
+    sources:
+      "Etherscan v2 (freeze events), TronGrid, Alchemy & dRPC (EVM RPCs, including Ethereum mint/burn flows and direct Liquity/B.Protocol reads)",
+  },
+  {
+    label: "Ratings & Reference",
+    sources:
+      "Bluechip, ECB via Frankfurter, fawazahmed0/exchange-api (CNH and non-ECB FX), gold-api.com, FRED DGS3MO (T-bill rates)",
+  },
+  {
+    label: "DEX Data",
+    sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, GeckoTerminal, DexScreener",
+  },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest)" },
 ] as const;
 
+const INLINE_EXTERNAL_LINK_CLASS =
+  "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-foreground";
+const CTA_BUTTON_CLASS =
+  "min-h-11 w-full justify-between rounded-2xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
+
+type AboutTone = "brand" | "data" | "insight" | "classification" | "neutral";
+
+interface AboutFeatureItem {
+  title: string;
+  description: ReactNode;
+  icon: LucideIcon;
+  href?: string;
+  external?: boolean;
+  linkLabel?: string;
+}
+
+function getToneClasses(tone: AboutTone) {
+  switch (tone) {
+    case "brand":
+      return {
+        border: "border-l-frost-blue",
+        kicker: "text-sky-700 dark:text-frost-blue/82",
+        icon: "text-sky-700 dark:text-frost-blue/82",
+        rule: "from-frost-blue/35 to-transparent",
+      };
+    case "data":
+      return {
+        border: "border-l-amber-500",
+        kicker: "text-amber-700 dark:text-amber-400",
+        icon: "text-amber-700 dark:text-amber-400",
+        rule: "from-amber-500/35 to-transparent",
+      };
+    case "insight":
+      return {
+        border: "border-l-emerald-500",
+        kicker: "text-emerald-700 dark:text-emerald-400",
+        icon: "text-emerald-700 dark:text-emerald-400",
+        rule: "from-emerald-500/35 to-transparent",
+      };
+    case "classification":
+      return {
+        border: "border-l-violet-500",
+        kicker: "text-violet-700 dark:text-violet-400",
+        icon: "text-violet-700 dark:text-violet-400",
+        rule: "from-violet-500/35 to-transparent",
+      };
+    default:
+      return {
+        border: "border-l-zinc-500",
+        kicker: "text-muted-foreground",
+        icon: "text-muted-foreground",
+        rule: "from-border to-transparent",
+      };
+  }
+}
+
 function PipelineSources() {
   return (
-    <>
-      {DATA_SOURCE_GROUPS.map((g) => (
-        <div key={g.label}>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{g.label}</p>
-          <p className="text-sm text-foreground">{g.sources}</p>
+    <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+      {DATA_SOURCE_GROUPS.map((group) => (
+        <div key={group.label} className="space-y-1.5">
+          <dt className="pharos-kicker">{group.label}</dt>
+          <dd className="text-sm leading-relaxed text-foreground">{group.sources}</dd>
         </div>
       ))}
+    </dl>
+  );
+}
+
+function AboutFeatureRow({ item, tone }: { item: AboutFeatureItem; tone: AboutTone }) {
+  const toneClasses = getToneClasses(tone);
+  const rowClassName = cn(
+    "flex min-h-11 gap-3 rounded-xl px-2 py-4 sm:px-3",
+    item.href && "pharos-focus-ring pharos-interactive-card group hover:bg-muted/20",
+  );
+
+  const content = (
+    <>
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75">
+        <item.icon className={cn("h-4 w-4", toneClasses.icon)} aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">{item.title}</h3>
+        <div className="text-sm leading-relaxed text-muted-foreground">{item.description}</div>
+        {item.href ? (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground group-focus-visible:text-foreground">
+            {item.linkLabel ?? (item.external ? "Open source" : "Open route")}
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </span>
+        ) : null}
+      </div>
     </>
+  );
+
+  if (!item.href) {
+    return <article className={rowClassName}>{content}</article>;
+  }
+
+  if (item.external) {
+    return (
+      <a href={item.href} target="_blank" rel="noopener noreferrer" className={rowClassName}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={item.href} className={rowClassName}>
+      {content}
+    </Link>
+  );
+}
+
+function AboutFeatureSection({
+  eyebrow,
+  title,
+  intro,
+  items,
+  tone,
+  footer,
+}: {
+  eyebrow: string;
+  title: string;
+  intro: ReactNode;
+  items: readonly AboutFeatureItem[];
+  tone: AboutTone;
+  footer?: ReactNode;
+}) {
+  const toneClasses = getToneClasses(tone);
+
+  return (
+    <Card className={cn("rounded-xl border-l-[3px]", toneClasses.border)}>
+      <CardHeader className="space-y-2">
+        <div className="flex items-center gap-3">
+          <p className={cn("pharos-kicker", toneClasses.kicker)}>{eyebrow}</p>
+          <div className={cn("h-px flex-1 bg-gradient-to-r", toneClasses.rule)} />
+        </div>
+        <CardTitle as="h2">{title}</CardTitle>
+        <div className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{intro}</div>
+      </CardHeader>
+      <CardContent className="space-y-0">
+        <div className="divide-y divide-border/60">
+          {items.map((item) => (
+            <AboutFeatureRow key={item.title} item={item} tone={tone} />
+          ))}
+        </div>
+        {footer ? <div className="mt-4 border-t border-border/60 pt-4">{footer}</div> : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -46,13 +217,118 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
+  const trackedFeatures: AboutFeatureItem[] = [
+    {
+      title: `${TRACKED_STABLECOINS.length} stablecoins`,
+      description: "Coverage across every major chain, classified by governance, backing, and peg currency.",
+      icon: BarChart3,
+    },
+    {
+      title: `${DEAD_STABLECOINS.length} coins in the Cemetery`,
+      description:
+        "Algorithmic failures, rug pulls, regulatory shutdowns, and the quiet abandonments worth remembering.",
+      icon: Skull,
+      href: "/cemetery/",
+      linkLabel: "Open cemetery",
+    },
+    {
+      title: "Blacklist Tracker",
+      description:
+        "USDC, USDT, PAXG, and XAUT blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron.",
+      icon: ShieldAlert,
+      href: "/blacklist/",
+      linkLabel: "Open blacklist tracker",
+    },
+    {
+      title: "Peg Tracker",
+      description: "Composite peg scores, depeg event detection, heatmaps, and four years of history on the dashboard.",
+      icon: Activity,
+      href: "/",
+      linkLabel: "Open dashboard",
+    },
+    {
+      title: "Bluechip safety ratings",
+      description: "Independent SMIDGE coverage for rated stablecoins, pulled in as an outside reference signal.",
+      icon: ShieldCheck,
+      href: "https://bluechip.org",
+      external: true,
+      linkLabel: "Review source",
+    },
+    {
+      title: "DEX liquidity",
+      description: "Pool depth, volume, quality-adjusted TVL, durability, and cross-chain presence scored 0-100.",
+      icon: Droplets,
+      href: "/liquidity/",
+      linkLabel: "Open liquidity tracker",
+    },
+    {
+      title: "Mint and burn flows",
+      description:
+        "Ethereum mint and burn monitoring via Alchemy JSON-RPC, including the Bank Run Gauge and flight-to-quality detection.",
+      icon: Flame,
+      href: "/flows/",
+      linkLabel: "Open flow tracker",
+    },
+  ];
+
+  const computedFeatures: AboutFeatureItem[] = [
+    {
+      title: "Daily Digest",
+      description:
+        "A daily briefing on stablecoin market conditions covering supply shifts, depeg alerts, and liquidity changes.",
+      icon: Newspaper,
+      href: "/digest/",
+      linkLabel: "Open digest",
+    },
+    {
+      title: "Pharos Stability Index (PSI)",
+      description:
+        "A daily ecosystem health score that rolls peg integrity, supply growth, and liquidity depth into a 0-100 signal.",
+      icon: Gauge,
+      href: "/stability-index/",
+      linkLabel: "Open stability index",
+    },
+    {
+      title: "Safety Grades",
+      description:
+        "Composite A+ to F grades built from liquidity, resilience, decentralization, dependency risk, and peg behavior.",
+      icon: FlaskConical,
+      href: "/safety-scores/",
+      linkLabel: "Open scorecards",
+    },
+    {
+      title: "Contagion Map",
+      description:
+        "A live dependency graph showing how collateral relationships can transmit stress through the ecosystem.",
+      icon: Network,
+      href: "/dependency-map/",
+      linkLabel: "Open dependency map",
+    },
+    {
+      title: "Systemic Risk Scoreboard",
+      description:
+        "The highest-impact single-coin failure scenarios, surfaced inside the scorecard stress panel before a crisis makes them obvious.",
+      icon: Layers,
+      href: "/safety-scores/",
+      linkLabel: "Open stress panel",
+    },
+    {
+      title: "Depeg Early Warning (DEWS)",
+      description:
+        "A per-coin stress score refreshed every 15 minutes from supply velocity, pool balance drift, liquidity erosion, price confidence, source divergence, blacklist activity, mint and burn flow, and yield anomalies.",
+      icon: ShieldAlert,
+    },
+  ];
+
   return (
     <FeaturePageShell
       breadcrumbName="About Pharos"
       path="/about/"
       title="About Pharos"
-      leadParagraphs={["Open stablecoin analytics dashboard, built with love and care."]}
-      preface={(
+      leadParagraphs={[
+        "A practitioner-built watchtower for stablecoins: market structure, peg stress, liquidity, dependency risk, and the failures everyone else stops tracking.",
+      ]}
+      preface={
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -96,488 +372,306 @@ export default function AboutPage() {
             }),
           }}
         />
-      )}
+      }
     >
       <div className="space-y-8">
-      <Card className="rounded-xl border-l-[3px] border-l-sky-500">
-        <CardHeader>
-          <CardTitle as="h2">Why Pharos?</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-5 text-sm text-muted-foreground leading-relaxed">
-          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-            <Image
-              src="/tokenbrice.png"
-              alt="TokenBrice"
-              width={80}
-              height={80}
-              className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
-            />
-            <Image
-              src="/claude.png"
-              alt="Claude"
-              width={80}
-              height={80}
-              className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
-            />
-            <Image
-              src="/codex.svg"
-              alt="Codex"
-              width={80}
-              height={80}
-              className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
-            />
-            <Image
-              src="/cmcs-logo.png"
-              alt="cmcs"
-              width={80}
-              height={80}
-              className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
-            />
-          </div>
-          <div className="space-y-3">
-            <p>
-              Pharos is a project by{" "}
-              <a
-                href="https://tokenbrice.xyz/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-              >
-                TokenBrice
-                <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
-              </a>
-              {" "}and{" "}
-              <a
-                href="https://www.anthropic.com/claude-code"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-              >
-                Claude
-                <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
-              </a>
-              {", and "}
-              <a
-                href="https://openai.com/codex/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-              >
-                Codex
-                <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
-              </a>
-              . It puts the stablecoin data you want to monitor in one place: honest
-              classification, depeg and freeze tracking, liquidity scoring, daily digests and a graveyard for the ones that didn&apos;t make it.
-            </p>
-            <p>
-              Development is orchestrated via{" "}
-              <a
-                href="https://github.com/TokenBrice/cmcs"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors font-mono"
-              >
-                cmcs
-                <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
-              </a>
-              {" "}— a Claude-master / Codex-slave workflow where Claude acts as architect and orchestrator, dispatching parallel Codex agents to implement features autonomously.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Section 2: What Pharos Tracks (Feature Icon Grid) */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">What Pharos Tracks</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-amber-700 dark:text-amber-400" />
-                <span className="font-bold">{TRACKED_STABLECOINS.length} Stablecoins</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Tracked across every major chain, classified by governance, backing, and peg currency
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Skull className="h-5 w-5 text-zinc-700 dark:text-zinc-400" />
-                <Link href="/cemetery" className="font-bold underline underline-offset-4 hover:text-zinc-500 transition-colors">{DEAD_STABLECOINS.length} in the Cemetery</Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Algorithmic failures, rug pulls, regulatory shutdowns, and quiet abandonments
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-red-700 dark:text-red-400" />
-                <Link href="/blacklist" className="font-bold underline underline-offset-4 hover:text-red-500 transition-colors">Blacklist Tracker</Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                USDC, USDT, PAXG &amp; XAUT blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
-                <Link href="/" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
-                  Peg Tracker
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Composite peg scores, depeg event detection, heatmaps, and 4 years of history
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-sky-700 dark:text-sky-400" />
-                <span className="font-bold">Safety Ratings</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Independent Bluechip SMIDGE grades for rated stablecoins via{" "}
+        <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">Why it exists</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
+            </div>
+            <CardTitle as="h2">Why Pharos?</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-5">
+            <div className="flex flex-wrap gap-3 lg:max-w-[18rem]">
+              <Image
+                src="/tokenbrice.png"
+                alt="TokenBrice"
+                width={80}
+                height={80}
+                className="h-16 w-16 rounded-xl sm:h-20 sm:w-20"
+              />
+              <Image
+                src="/claude.png"
+                alt="Claude"
+                width={80}
+                height={80}
+                className="h-16 w-16 rounded-xl sm:h-20 sm:w-20"
+              />
+              <Image
+                src="/codex.svg"
+                alt="Codex"
+                width={80}
+                height={80}
+                className="h-16 w-16 rounded-xl sm:h-20 sm:w-20"
+              />
+            </div>
+            <div className="space-y-3">
+              <p>
+                Pharos is a project by{" "}
                 <a
-                  href="https://bluechip.org"
+                  href="https://tokenbrice.xyz/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+                  className={INLINE_EXTERNAL_LINK_CLASS}
                 >
-                  bluechip.org
-                  <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+                  TokenBrice
+                  <ExternalLink className="h-3.5 w-3.5" />
                 </a>
+                ,{" "}
+                <a
+                  href="https://www.anthropic.com/claude-code"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={INLINE_EXTERNAL_LINK_CLASS}
+                >
+                  Claude
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                , and{" "}
+                <a
+                  href="https://openai.com/codex/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={INLINE_EXTERNAL_LINK_CLASS}
+                >
+                  Codex
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                . It puts the stablecoin picture you actually need in one place: honest classification, peg and freeze
+                tracking, liquidity depth, systemic spillovers, and a graveyard for the ones that did not make it.
               </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Droplets className="h-5 w-5 text-cyan-700 dark:text-cyan-400" />
-                <Link href="/liquidity" className="font-bold underline underline-offset-4 hover:text-cyan-500 transition-colors">
-                  DEX Liquidity
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Pool depth, volume, quality-adjusted TVL, durability, and cross-chain presence scored 0&ndash;100
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Flame className="h-5 w-5 text-orange-700 dark:text-orange-400" />
-                <Link href="/flows" className="font-bold underline underline-offset-4 hover:text-orange-500 transition-colors">
-                  Mint/Burn Flows
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Ethereum mint and burn event monitoring via Alchemy JSON-RPC, with a Bank Run Gauge and flight-to-quality detection
-              </p>
-            </CardContent>
-          </Card>
-
-        </div>
-      </div>
-
-      {/* Section 3: What Pharos Computes */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">What Pharos Computes</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Newspaper className="h-5 w-5 text-orange-700 dark:text-orange-400" />
-                <Link href="/digest" className="font-bold underline underline-offset-4 hover:text-orange-500 transition-colors">
-                  Daily Digest
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                AI-written daily briefing on stablecoin market conditions covering supply shifts, depeg alerts, and liquidity changes, updated every morning
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Gauge className="h-5 w-5 text-indigo-700 dark:text-indigo-400" />
-                <a href="/stability-index" className="font-bold hover:underline">Pharos Stability Index (PSI)</a>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Daily health score for the stablecoin ecosystem: aggregates peg integrity, supply growth, and liquidity depth into a 0&ndash;100 score
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <FlaskConical className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
-                <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
-                  Safety Grades
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Comprehensive A+&ndash;F stablecoin grades: four base dimensions (liquidity, resilience, decentralization, dependency risk) with a peg stability multiplier
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Network className="h-5 w-5 text-rose-700 dark:text-rose-400" />
-                <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-rose-500 transition-colors">
-                  Contagion Map
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Simulates the failure of any tracked stablecoin and traces how it cascades through dependent coins, quantifying ecosystem-wide contagion risk
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Layers className="h-5 w-5 text-violet-700 dark:text-violet-400" />
-                <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-violet-500 transition-colors">
-                  Systemic Risk Scoreboard
-                </Link>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Pre-computes the most damaging single-coin failure scenarios across the ecosystem to reveal which failures would cause the most collateral damage
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-amber-700 dark:text-amber-400" />
-                <span className="font-bold">Depeg Early Warning (DEWS)</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Per-coin forward-looking stress score (0&ndash;100) computed every 15 minutes from 8 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Telegram bot (<Link href="/telegram">@PharosWatchBot</Link>) for per-coin alerts on DEWS state changes, depeg events, and safety grade changes.
-        </p>
-      </div>
-
-      {/* Section: Learn More About Pharos */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Learn More About Pharos</h2>
-        <Card className="rounded-xl border-l-[3px] border-l-sky-500">
-          <CardContent className="flex items-start gap-4 text-sm text-muted-foreground leading-relaxed">
-            <Radio className="h-5 w-5 text-sky-700 dark:text-sky-400 mt-0.5 shrink-0" />
-            <div className="space-y-2">
               <p>
-                TokenBrice walked through Pharos live on Leviathan News — covering the motivation behind the project, how the data pipeline works, and what each metric means in practice.
+                Development runs through{" "}
+                <a
+                  href="https://github.com/TokenBrice/cmcs"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(INLINE_EXTERNAL_LINK_CLASS, "font-mono")}
+                >
+                  cmcs
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>{" "}
+                and a Claude-led, Codex-executed workflow where Claude acts as architect and orchestrator, dispatching
+                Codex agents to implement features in parallel.
               </p>
-              <a
-                href="https://x.com/i/broadcasts/1qxvvkeMlyAxB"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-              >
-                Watch the broadcast on Leviathan News
-                <ExternalLink className="inline h-3.5 w-3.5" />
-              </a>
+            </div>
+          </CardContent>
+        </Card>
+
+        <AboutFeatureSection
+          eyebrow="Coverage"
+          title="What Pharos Tracks"
+          intro="The raw monitoring layer: live supply, peg behavior, blacklist activity, liquidity depth, and chain-level flow data pulled into one operating picture."
+          items={trackedFeatures}
+          tone="data"
+        />
+
+        <AboutFeatureSection
+          eyebrow="Signals"
+          title="What Pharos Computes"
+          intro="The analysis layer: digest summaries, ecosystem health scoring, dependency spillovers, safety grades, and forward-looking depeg pressure."
+          items={computedFeatures}
+          tone="insight"
+          footer={
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Telegram alerts cover DEWS state changes, depeg events, and safety grade changes.
+              </p>
+              <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+                <Link href="/telegram/">
+                  Open @PharosWatchBot
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          }
+        />
+
+        <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">In the wild</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
+            </div>
+            <CardTitle as="h2">Live Walkthrough</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-start">
+            <Radio className="mt-0.5 h-5 w-5 shrink-0 text-sky-700 dark:text-frost-blue/82" />
+            <div className="space-y-3">
+              <p>
+                TokenBrice walked through Pharos live on Leviathan News, covering the motivation behind the project, how
+                the data pipeline works, and how the main risk signals should be read in practice.
+              </p>
+              <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+                <a href="https://x.com/i/broadcasts/1qxvvkeMlyAxB" target="_blank" rel="noopener noreferrer">
+                  Watch the Leviathan News broadcast
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker text-violet-700 dark:text-violet-400">Governance lens</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-violet-500/35 to-transparent" />
+            </div>
+            <CardTitle as="h2">Classification</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Pharos classifies stablecoins into three governance tiers:{" "}
+              <span className="font-medium text-foreground">CeFi</span> (fully centralized),{" "}
+              <span className="font-medium text-foreground">CeFi-Dependent</span> (decentralized infrastructure but
+              reliant on centralized collateral or peg mechanisms), and{" "}
+              <span className="font-medium text-foreground">DeFi</span> (fully on-chain, no centralized custody
+              dependency). The classification reflects actual infrastructure dependency, not marketing claims.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl border-l-[3px] border-l-amber-500">
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker text-amber-700 dark:text-amber-400">Source flow</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/35 to-transparent" />
+            </div>
+            <CardTitle as="h2">Data Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              All data is fetched server-side by a Cloudflare Worker and cached in D1. The browser never calls external
+              APIs directly.
+            </p>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-foreground">Source groups</p>
+                <PipelineSources />
+              </div>
+              <div className="space-y-4 lg:border-l lg:border-border/60 lg:pl-6">
+                <p className="text-sm font-semibold text-foreground">Processing path</p>
+                <ol className="space-y-4">
+                  <li className="flex gap-3">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-xs font-semibold text-foreground">
+                      1
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Sources</p>
+                      <p>
+                        Market, on-chain, ratings, FX, commodity, and digest inputs are collected on a fixed schedule.
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-xs font-semibold text-foreground">
+                      2
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Cloudflare Worker + D1</p>
+                      <p>
+                        Cron jobs sync every 15 minutes, normalize the data, and cache the results for the public API.
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-xs font-semibold text-foreground">
+                      3
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Static dashboard</p>
+                      <p>
+                        Next.js pages on Cloudflare Pages consume the worker outputs and render the stablecoin view
+                        without direct third-party calls.
+                      </p>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl border-l-[3px] border-l-amber-500">
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker text-amber-700 dark:text-amber-400">Scoring details</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/35 to-transparent" />
+            </div>
+            <CardTitle as="h2">Methodology</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Pharos grades every stablecoin across four base dimensions, with peg stability acting as a multiplier on
+              top. The methodology page covers the full grading formula, peg score computation, DEX liquidity scoring,
+              and contagion stress-test design.
+            </p>
+            <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+              <Link href="/methodology/">
+                Read the full methodology
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker">Important context</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+            </div>
+            <CardTitle as="h2">Disclaimer</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Pharos is an informational tool, not a licensed financial advisor. Nothing on this site constitutes
+              financial, investment, or legal advice. All data is provided as-is and may contain errors or delays.
+              Always do your own research and consult a qualified professional before making financial decisions.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">Reach out</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
+            </div>
+            <CardTitle as="h2">Get in Touch</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Pharos is fully open source. If you spot a bad data point, want a stablecoin added, or want to understand
+              how something is computed, open the code or reach out directly.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+                <a href="https://github.com/TokenBrice/stablecoin-dashboard" target="_blank" rel="noopener noreferrer">
+                  <Github className="h-4 w-4" />
+                  View on GitHub
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+                <a href="https://x.com/PharosWatch" target="_blank" rel="noopener noreferrer">
+                  @PharosWatch
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+                <a href="https://tokenbrice.xyz/" target="_blank" rel="noopener noreferrer">
+                  tokenbrice.xyz
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Section 4: Classification */}
-      <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-        <CardHeader>
-          <CardTitle as="h2">Classification</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground leading-relaxed">
-          <p>
-            Pharos classifies stablecoins into three governance tiers:{" "}
-            <span className="text-foreground font-medium">CeFi</span> (fully centralized),{" "}
-            <span className="text-foreground font-medium">CeFi-Dependent</span> (decentralized infrastructure but reliant on centralized collateral or peg mechanisms), and{" "}
-            <span className="text-foreground font-medium">DeFi</span> (fully on-chain, no centralized custody dependency).
-            This reflects actual infrastructure dependency, not marketing claims.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Section 4: Data Pipeline Diagram */}
-      <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
-        <CardHeader>
-          <CardTitle as="h2">Data Pipeline</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5 text-sm text-muted-foreground leading-relaxed">
-          <p>
-            All data is fetched server-side by a Cloudflare Worker and cached in D1. The browser never calls external APIs.
-          </p>
-
-          {/* Desktop: horizontal 5-column grid */}
-          <div className="hidden md:grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 items-start">
-            {/* Sources column */}
-            <div className="space-y-4 rounded-lg border p-4">
-              <p className="text-foreground font-medium text-center">Sources</p>
-              <div className="space-y-3">
-                <PipelineSources />
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div className="flex items-center self-center text-muted-foreground text-xl font-bold">
-              &rarr;
-            </div>
-
-            {/* Worker column */}
-            <div className="rounded-lg border p-4 text-center self-center">
-              <p className="text-foreground font-medium">Cloudflare Worker + D1</p>
-              <p className="text-xs text-muted-foreground mt-1">Cron sync every 15 min</p>
-            </div>
-
-            {/* Arrow */}
-            <div className="flex items-center self-center text-muted-foreground text-xl font-bold">
-              &rarr;
-            </div>
-
-            {/* Dashboard column */}
-            <div className="rounded-lg border p-4 text-center self-center">
-              <p className="text-foreground font-medium">Static Dashboard</p>
-              <p className="text-xs text-muted-foreground mt-1">Next.js on Cloudflare Pages</p>
-            </div>
-          </div>
-
-          {/* Mobile: vertical stack */}
-          <div className="flex flex-col items-center gap-3 md:hidden">
-            {/* Sources */}
-            <div className="w-full space-y-3 rounded-lg border p-4">
-              <p className="text-foreground font-medium text-center">Sources</p>
-              <div className="space-y-3">
-                <PipelineSources />
-              </div>
-            </div>
-
-            {/* Arrow down */}
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-
-            {/* Worker */}
-            <div className="w-full rounded-lg border p-4 text-center">
-              <p className="text-foreground font-medium">Cloudflare Worker + D1</p>
-              <p className="text-xs text-muted-foreground mt-1">Cron sync every 15 min</p>
-            </div>
-
-            {/* Arrow down */}
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-
-            {/* Dashboard */}
-            <div className="w-full rounded-lg border p-4 text-center">
-              <p className="text-foreground font-medium">Static Dashboard</p>
-              <p className="text-xs text-muted-foreground mt-1">Next.js on Cloudflare Pages</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Methodology link */}
-      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-        <CardHeader>
-          <CardTitle as="h2">Methodology</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-          <p>
-            Pharos grades every stablecoin across four dimensions &mdash; liquidity, resilience,
-            decentralization, and dependency risk &mdash; with a peg stability multiplier.
-            The methodology page covers the full grading formula, peg score computation,
-            DEX liquidity scoring, and contagion stress test design.
-          </p>
-          <p>
-            <Link
-              href="/methodology"
-              className="text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors"
-            >
-              Read the full methodology &rarr;
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Section 7: Disclaimer */}
-      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-        <CardHeader>
-          <CardTitle as="h2">Disclaimer</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-          <p>
-            Pharos is an informational tool, not a licensed financial advisor. Nothing on this site
-            constitutes financial, investment, or legal advice. All data is provided as-is and may contain
-            errors or delays. Always do your own research and consult a qualified professional before making
-            financial decisions.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Section 8: Footer */}
-      <Card className="rounded-xl border-l-[3px] border-l-sky-500">
-        <CardHeader>
-          <CardTitle as="h2">Get in Touch</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
-          <p>
-            Pharos is fully open source.{" "}
-            <a
-              href="https://github.com/TokenBrice/stablecoin-dashboard"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-            >
-              <Github className="inline h-3.5 w-3.5" />
-              View on GitHub
-              <ExternalLink className="inline h-3.5 w-3.5" />
-            </a>
-          </p>
-          <p>
-            Questions, corrections, or stablecoins we should add? Reach out on{" "}
-            <a
-              href="https://x.com/PharosWatch"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-            >
-              @PharosWatch
-              <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
-            </a>
-            {" "}or{" "}
-            <a
-              href="https://tokenbrice.xyz/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-            >
-              tokenbrice.xyz
-              <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
-            </a>
-            .
-          </p>
-        </CardContent>
-      </Card>
-    </div>
     </FeaturePageShell>
   );
 }
