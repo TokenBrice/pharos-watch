@@ -57,7 +57,6 @@ function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false
 
   return (
     <g transform={`translate(${cx}, ${cy})`}>
-      <title>{`${payload.name} (${payload.symbol})`}</title>
       <circle r={haloRadius} fill="var(--color-background)" opacity={0.9} />
       {payload.logoSrc ? (
         <>
