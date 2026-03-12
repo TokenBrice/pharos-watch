@@ -587,7 +587,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("m-m0", "M by M0", "M", "rwa-backed", "centralized", {
     llamaId: "213",
     rwa: true,
-    geckoId: "m",
     deploymentModel: "third-party-bridge",
     collateral: "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
     pegMechanism: "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
