@@ -26,12 +26,49 @@ interface CategoryStatsProps {
   reportCards?: Record<string, ReportCard>;
 }
 
+function LegendRow({
+  label,
+  value,
+  meta,
+  dotClassName,
+  labelClassName,
+}: {
+  label: string;
+  value: string;
+  meta?: string;
+  dotClassName: string;
+  labelClassName?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <div className={`h-2 w-2 shrink-0 rounded-full ${dotClassName}`} />
+        <span className={`truncate font-medium ${labelClassName ?? ""}`}>{label}</span>
+      </div>
+      <div className="flex shrink-0 items-baseline gap-1.5">
+        <span className="font-mono text-xs font-bold">{value}</span>
+        {meta ? <span className="font-mono text-xs text-muted-foreground">{meta}</span> : null}
+      </div>
+    </div>
+  );
+}
+
 export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
   const stats = useMemo(() => {
     if (!data) return null;
 
     const trackedIds = TRACKED_IDS;
     const trackedData = data.filter((c) => trackedIds.has(c.id));
+    const rankedByMcap = trackedData
+      .map((coin) => ({
+        id: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+        mcap: getCirculatingRaw(coin),
+      }))
+      .filter((coin) => coin.mcap > 0)
+      .sort((a, b) => b.mcap - a.mcap);
+    const totalMcap = rankedByMcap.reduce((sum, coin) => sum + coin.mcap, 0);
 
     // Breakdown by governance
     const gov = computeGovernanceBreakdown(trackedData);
@@ -65,28 +102,53 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
     const altPegs = Object.entries(pegTotals)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 4);
-
-    // Safety score breakdown by grade tier
-    let gradeA = 0;
-    let gradeB = 0;
-    let gradeC = 0;
-    let gradeDF = 0;
-    let gradeNR = 0;
-    if (reportCards) {
-      for (const card of Object.values(reportCards)) {
-        if (card.isDefunct) continue;
-        const g = card.overallGrade;
-        if (g === "A+" || g === "A" || g === "A-") gradeA++;
-        else if (g === "B+" || g === "B" || g === "B-") gradeB++;
-        else if (g === "C+" || g === "C" || g === "C-") gradeC++;
-        else if (g === "D" || g === "F") gradeDF++;
-        else gradeNR++;
-      }
-    }
-    const gradeTotal = gradeA + gradeB + gradeC + gradeDF;
+    const topTwo = rankedByMcap.slice(0, 2);
+    const topTen = rankedByMcap.slice(0, 10);
+    const topTwoMcap = topTwo.reduce((sum, coin) => sum + coin.mcap, 0);
+    const topTenMcap = topTen.reduce((sum, coin) => sum + coin.mcap, 0);
+    const tailMcap = Math.max(totalMcap - topTenMcap, 0);
+    const tailCount = Math.max(rankedByMcap.length - topTen.length, 0);
+    const dominantLabel = topTwo.map((coin) => coin.symbol).join(" + ") || "Top 2";
+    const leaders = rankedByMcap.slice(0, 4).map((coin) => ({
+      ...coin,
+      sharePct: totalMcap > 0 ? (coin.mcap / totalMcap) * 100 : 0,
+    }));
+    const concentrationSegments = [
+      {
+        label: dominantLabel,
+        shortLabel: "Top 2",
+        pct: totalMcap > 0 ? (topTwoMcap / totalMcap) * 100 : 0,
+        countLabel: `${topTwo.length} coins`,
+        bg: "bg-sky-500",
+        text: "text-sky-700 dark:text-sky-400",
+      },
+      {
+        label: "Next 8",
+        shortLabel: "Next 8",
+        pct: totalMcap > 0 ? ((topTenMcap - topTwoMcap) / totalMcap) * 100 : 0,
+        countLabel: `${Math.max(topTen.length - topTwo.length, 0)} coins`,
+        bg: "bg-slate-400",
+        text: "text-slate-700 dark:text-slate-300",
+      },
+      {
+        label: "Long tail",
+        shortLabel: "Tail",
+        pct: totalMcap > 0 ? (tailMcap / totalMcap) * 100 : 0,
+        countLabel: `${tailCount} coins`,
+        bg: "bg-zinc-600",
+        text: "text-zinc-700 dark:text-zinc-400",
+      },
+    ].filter((segment) => segment.pct > 0);
 
     return {
-      gradeA, gradeB, gradeC, gradeDF, gradeNR, gradeTotal,
+      totalMcap,
+      leaders,
+      dominantLabel,
+      concentrationSegments,
+      topTwoPct: totalMcap > 0 ? (topTwoMcap / totalMcap) * 100 : 0,
+      topTenPct: totalMcap > 0 ? (topTenMcap / totalMcap) * 100 : 0,
+      tailPct: totalMcap > 0 ? (tailMcap / totalMcap) * 100 : 0,
+      tailCount,
       centralizedMcap: gov.centralizedMcap,
       dependentMcap: gov.dependentMcap,
       decentralizedMcap: gov.decentralizedMcap,
@@ -95,21 +157,23 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
       defiPct: gov.defiPct,
       collateralMcap, collateralTotal,
       altPegs, altTotal,
+      altPegCount: Object.keys(pegTotals).length,
     };
   }, [data, reportCards]);
 
   if (!stats) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
           {SKELETON_CARDS.map((i) => (
-            <Card key={i} className="rounded-xl">
+            <Card key={i} className={i === 0 ? "rounded-xl xl:row-span-2" : "rounded-xl"}>
               <CardHeader className="pb-1">
                 <Skeleton className="h-3 w-24" />
               </CardHeader>
               <CardContent className="space-y-2">
-                <Skeleton className="h-8 w-32" />
-                <Skeleton className="h-3 w-20" />
+                <Skeleton className={i === 0 ? "h-10 w-36" : "h-8 w-32"} />
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-3 w-full" />
               </CardContent>
             </Card>
           ))}
@@ -120,122 +184,106 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <MetricStatCard
-          borderColorClass="border-l-blue-500"
-          title="By Safety Score"
-          contentClassName="space-y-2"
+          borderColorClass="border-l-slate-500"
+          title="Market Concentration"
+          headerRight={<span className="font-mono text-[11px] text-muted-foreground">{formatCurrency(stats.totalMcap, 0)}</span>}
+          className="h-full xl:row-span-2"
+          contentClassName="flex h-full flex-col gap-4"
         >
-            {stats.gradeTotal > 0 ? (
-              <>
-                <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
-                  <div className="h-full bg-emerald-500" style={{ width: `${(stats.gradeA / stats.gradeTotal) * 100}%` }} />
-                  <div className="h-full bg-blue-500" style={{ width: `${(stats.gradeB / stats.gradeTotal) * 100}%` }} />
-                  <div className="h-full bg-amber-500" style={{ width: `${(stats.gradeC / stats.gradeTotal) * 100}%` }} />
-                  <div className="h-full bg-red-500" style={{ width: `${(stats.gradeDF / stats.gradeTotal) * 100}%` }} />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-1 2xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Top 2 dominance</p>
+                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <p className="font-mono text-4xl font-black leading-none tracking-tight text-foreground">
+                    {stats.topTwoPct.toFixed(1)}%
+                  </p>
+                  <p className="pb-1 text-sm text-muted-foreground">{stats.dominantLabel}</p>
                 </div>
-                <div className="space-y-1">
-                  {([
-                    { label: "A tier", count: stats.gradeA, bg: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400" },
-                    { label: "B tier", count: stats.gradeB, bg: "bg-blue-500", text: "text-blue-700 dark:text-blue-400" },
-                    { label: "C tier", count: stats.gradeC, bg: "bg-amber-500", text: "text-amber-700 dark:text-amber-400" },
-                    { label: "D / F", count: stats.gradeDF, bg: "bg-red-500", text: "text-red-700 dark:text-red-400" },
-                  ] as const).map((t) => (
-                    <div key={t.label} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <div className={`h-2 w-2 rounded-full ${t.bg}`} />
-                        <span className={`font-medium ${t.text}`}>{t.label}</span>
-                      </div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-bold font-mono text-xs">{t.count}</span>
-                        <span className="text-muted-foreground text-xs font-mono">{stats.gradeTotal > 0 ? ((t.count / stats.gradeTotal) * 100).toFixed(0) : 0}%</span>
-                      </div>
+                <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  The top 10 stablecoins control {stats.topTenPct.toFixed(1)}% of tracked market cap. The remaining{" "}
+                  {stats.tailCount} coins make up {stats.tailPct.toFixed(1)}% of the market.
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted/35">
+                  {stats.concentrationSegments.map((segment) => (
+                    <div key={segment.label} className={segment.bg} style={{ width: `${segment.pct}%` }} />
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {stats.concentrationSegments.map((segment) => (
+                    <div key={segment.label} className="flex items-center gap-2 text-xs">
+                      <div className={`h-2 w-2 rounded-full ${segment.bg}`} />
+                      <span className={`font-medium ${segment.text}`}>{segment.shortLabel}</span>
+                      <span className="font-mono text-muted-foreground">{segment.pct.toFixed(1)}%</span>
+                      <span className="font-mono text-muted-foreground/75">{segment.countLabel}</span>
                     </div>
                   ))}
                 </div>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground">Loading scores…</p>
-            )}
+              </div>
+            </div>
+
+            <div className="space-y-3 border-t border-border/50 pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0 xl:border-t xl:pl-0 xl:pt-4 2xl:border-l 2xl:border-t-0 2xl:pl-4 2xl:pt-0">
+              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Largest names</p>
+              <div className="space-y-2.5">
+                {stats.leaders.map((leader) => (
+                  <div key={leader.id} className="flex items-baseline justify-between gap-3 border-b border-border/35 pb-2 last:border-b-0 last:pb-0">
+                    <div className="min-w-0">
+                      <p className="font-mono text-sm font-semibold text-foreground">{leader.symbol}</p>
+                      <p className="truncate text-xs text-muted-foreground">{leader.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-sm font-semibold text-foreground">{leader.sharePct.toFixed(1)}%</p>
+                      <p className="font-mono text-xs text-muted-foreground">{formatCurrency(leader.mcap, 0)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </MetricStatCard>
         <MetricStatCard
           borderColorClass="border-l-yellow-500"
-          title="By Governance"
+          title="Stablecoin Types"
+          className="h-full"
           contentClassName="space-y-2"
         >
-            <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
-              <div className="h-full bg-yellow-500" style={{ width: `${stats.cefiPct}%` }} />
-              <div className="h-full bg-orange-500" style={{ width: `${stats.depPct}%` }} />
-              <div className="h-full bg-green-500" style={{ width: `${stats.defiPct}%` }} />
-            </div>
-            <div className="space-y-1">
-              {([
-                { label: "CeFi", pct: stats.cefiPct, mcap: stats.centralizedMcap, ...GOVERNANCE_TIER_COLORS.centralized },
-                { label: "CeFi-Dep", pct: stats.depPct, mcap: stats.dependentMcap, ...GOVERNANCE_TIER_COLORS["centralized-dependent"] },
-                { label: "DeFi", pct: stats.defiPct, mcap: stats.decentralizedMcap, ...GOVERNANCE_TIER_COLORS.decentralized },
-              ] as const).map((t) => (
-                <div key={t.label} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <div className={`h-2 w-2 rounded-full ${t.bg}`} />
-                    <span className={`font-medium ${t.text}`}>{t.label}</span>
-                  </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-bold font-mono text-xs">{t.pct.toFixed(1)}%</span>
-                    <span className="text-muted-foreground text-xs font-mono">{formatCurrency(t.mcap, 0)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-yellow-500" style={{ width: `${stats.cefiPct}%` }} />
+            <div className="h-full bg-orange-500" style={{ width: `${stats.depPct}%` }} />
+            <div className="h-full bg-green-500" style={{ width: `${stats.defiPct}%` }} />
+          </div>
+          <div className="space-y-1">
+            {([
+              { label: "Centralized", pct: stats.cefiPct, mcap: stats.centralizedMcap, ...GOVERNANCE_TIER_COLORS.centralized },
+              { label: "Centralized-Dependent", pct: stats.depPct, mcap: stats.dependentMcap, ...GOVERNANCE_TIER_COLORS["centralized-dependent"] },
+              { label: "Decentralized", pct: stats.defiPct, mcap: stats.decentralizedMcap, ...GOVERNANCE_TIER_COLORS.decentralized },
+            ] as const).map((tier) => (
+              <LegendRow
+                key={tier.label}
+                label={tier.label}
+                value={`${tier.pct.toFixed(1)}%`}
+                meta={formatCurrency(tier.mcap, 0)}
+                dotClassName={tier.bg}
+                labelClassName={tier.text}
+              />
+            ))}
+          </div>
         </MetricStatCard>
         <MetricStatCard
-          borderColorClass="border-l-sky-500"
-          title={
-            <>
-              By Collateral <span className="normal-case font-normal">(USDT &amp; USDC excluded)</span>
-            </>
-          }
+          borderColorClass="border-l-violet-500"
+          title="Alternative Pegs (Not USD)"
+          headerRight={<span className="font-mono text-[11px] text-muted-foreground">{stats.altPegCount} pegs</span>}
+          className="h-full"
           contentClassName="space-y-2"
         >
-            {stats.collateralTotal > 0 ? (
-              <>
-                <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
-                  {COLLATERAL_TIERS.map((t) => {
-                    const mcap = stats.collateralMcap[t.key] ?? 0;
-                    const pct = (mcap / stats.collateralTotal) * 100;
-                    return pct > 0 ? <div key={t.key} className={`h-full ${t.bg}`} style={{ width: `${pct}%` }} /> : null;
-                  })}
-                </div>
-                <div className="space-y-1">
-                  {COLLATERAL_TIERS.map((t) => {
-                    const mcap = stats.collateralMcap[t.key] ?? 0;
-                    if (mcap === 0) return null;
-                    const pct = (mcap / stats.collateralTotal) * 100;
-                    return (
-                      <div key={t.key} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-1.5">
-                          <div className={`h-2 w-2 rounded-full ${t.bg}`} />
-                          <span className={`font-medium ${t.text}`}>{t.label}</span>
-                        </div>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="font-bold font-mono text-xs">{pct.toFixed(1)}%</span>
-                          <span className="text-muted-foreground text-xs font-mono">{formatCurrency(mcap, 0)}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground">Loading…</p>
-            )}
-        </MetricStatCard>
-        {stats.altTotal > 0 && (
-          <MetricStatCard
-            borderColorClass="border-l-violet-500"
-            title="By Peg (USD excluded)"
-            contentClassName="space-y-2"
-          >
-              <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
+          {stats.altTotal > 0 ? (
+            <>
+              <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
                 {stats.altPegs.map(([peg, mcap]) => {
                   const pct = (mcap / stats.altTotal) * 100;
                   const bg = PEG_META[peg]?.bgColor ?? "bg-muted-foreground";
@@ -248,21 +296,65 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                   const textColor = PEG_META[peg]?.textColor ?? "text-muted-foreground";
                   const bgColor = PEG_META[peg]?.bgColor ?? "bg-muted-foreground";
                   return (
-                    <div key={peg} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <div className={`h-2 w-2 rounded-full ${bgColor}`} />
-                        <span className={`font-medium ${textColor}`}>{PEG_META[peg]?.label ?? peg}</span>
-                      </div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-bold font-mono text-xs">{pct.toFixed(1)}%</span>
-                        <span className="text-muted-foreground text-xs font-mono">{formatCurrency(mcap, 0)}</span>
-                      </div>
-                    </div>
+                    <LegendRow
+                      key={peg}
+                      label={PEG_META[peg]?.label ?? peg}
+                      value={`${pct.toFixed(1)}%`}
+                      meta={formatCurrency(mcap, 0)}
+                      dotClassName={bgColor}
+                      labelClassName={textColor}
+                    />
                   );
                 })}
               </div>
-          </MetricStatCard>
-        )}
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">No non-USD peg market cap is available right now.</p>
+          )}
+        </MetricStatCard>
+        <MetricStatCard
+          borderColorClass="border-l-sky-500"
+          title={
+            <>
+              Collateral Quality <span className="normal-case font-normal">(USDT &amp; USDC excluded)</span>
+            </>
+          }
+          className="h-full xl:col-span-2"
+          contentClassName="space-y-2"
+        >
+          {stats.collateralTotal > 0 ? (
+            <>
+              <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                {COLLATERAL_TIERS.map((tier) => {
+                  const mcap = stats.collateralMcap[tier.key] ?? 0;
+                  const pct = (mcap / stats.collateralTotal) * 100;
+                  return pct > 0 ? <div key={tier.key} className={`h-full ${tier.bg}`} style={{ width: `${pct}%` }} /> : null;
+                })}
+              </div>
+              <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                {COLLATERAL_TIERS.map((tier) => {
+                  const mcap = stats.collateralMcap[tier.key] ?? 0;
+                  if (mcap === 0) return null;
+                  const pct = (mcap / stats.collateralTotal) * 100;
+                  return (
+                    <LegendRow
+                      key={tier.key}
+                      label={tier.label}
+                      value={`${pct.toFixed(1)}%`}
+                      meta={formatCurrency(mcap, 0)}
+                      dotClassName={tier.bg}
+                      labelClassName={tier.text}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Collateral quality loads when safety-score market-cap context is available.
+            </p>
+          )}
+        </MetricStatCard>
       </div>
     </div>
   );

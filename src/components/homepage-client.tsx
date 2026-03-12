@@ -15,7 +15,6 @@ import { MarketHighlights } from "@/components/market-highlights";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterBar } from "@/components/filter-bar";
-import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -157,6 +156,26 @@ function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) 
   );
 }
 
+function HomepageSectionBand({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="pharos-kicker">{eyebrow}</p>
+      <div className="space-y-1">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
@@ -252,76 +271,90 @@ export function HomepageClient() {
         </section>
       </SectionErrorBoundary>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
-        <SectionErrorBoundary name="dews-radar">
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
-              <Link
-                href="/depeg/"
-                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
-              >
-                View Depeg Tracker
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <DEWSSummary logos={logos} showHeader={false} />
-          </section>
-        </SectionErrorBoundary>
-        <SectionErrorBoundary name="mint-burn-snapshot">
-          <HomepageFlowOverview />
-        </SectionErrorBoundary>
-      </div>
+      <section className="space-y-6 border-t border-border/50 pt-6">
+        <HomepageSectionBand
+          eyebrow="Core Monitoring"
+          title="Live system stress and market health"
+          description="Use these surfaces to scan depeg risk, mint and burn pressure, safety distribution, and the market-wide stability regime before drilling into a single coin."
+        />
 
-      <SectionErrorBoundary name="charts">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <section className="flex h-full flex-col space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-xl font-semibold tracking-tight">Safety Scores Overview</h2>
-              <Link
-                href="/safety-scores/"
-                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
-              >
-                View Safety Scores
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <HomepageSafetyOverview
-              cards={reportCardsData?.cards}
-              peggedAssets={data?.peggedAssets}
-              className="h-full"
-            />
-          </section>
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-xl font-semibold tracking-tight">Pharos Stability Index History</h2>
-              <Link
-                href="/stability-index/"
-                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
-              >
-                More Information on PSI
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} showHeader={false} />
-          </section>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
+          <SectionErrorBoundary name="dews-radar">
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
+                <Link
+                  href="/depeg/"
+                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                >
+                  View Depeg Tracker
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <DEWSSummary logos={logos} showHeader={false} />
+            </section>
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="mint-burn-snapshot">
+            <HomepageFlowOverview />
+          </SectionErrorBoundary>
         </div>
-      </SectionErrorBoundary>
 
-      <FeatureHighlights />
+        <SectionErrorBoundary name="charts">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <section className="flex h-full flex-col space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xl font-semibold tracking-tight">Safety Scores Overview</h2>
+                <Link
+                  href="/safety-scores/"
+                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                >
+                  View Safety Scores
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <HomepageSafetyOverview
+                cards={reportCardsData?.cards}
+                peggedAssets={data?.peggedAssets}
+                className="h-full"
+              />
+            </section>
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xl font-semibold tracking-tight">Pharos Stability Index History</h2>
+                <Link
+                  href="/stability-index/"
+                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                >
+                  More Information on PSI
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+              <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} showHeader={false} />
+            </section>
+          </div>
+        </SectionErrorBoundary>
+      </section>
 
-      <SectionErrorBoundary name="stats">
-        <section>
-          <h2 className="text-xl font-semibold tracking-tight mb-4">Stablecoin Distribution</h2>
-          <CategoryStats data={data?.peggedAssets} reportCards={reportCardMap} />
-        </section>
-      </SectionErrorBoundary>
+      <section className="space-y-6 border-t border-border/50 pt-6">
+        <HomepageSectionBand
+          eyebrow="Research Surfaces"
+          title="Distribution and market structure"
+          description="These charts shift from live monitoring to deeper context: cohort mix, total market-cap regime changes, and the growth of non-USD pegs across the ecosystem."
+        />
 
-      <SectionErrorBoundary name="marketcap">
-        <TotalMcapChart />
-      </SectionErrorBoundary>
+        <SectionErrorBoundary name="stats">
+          <section>
+            <h2 className="mb-4 text-xl font-semibold tracking-tight">Stablecoin Market Structure</h2>
+            <CategoryStats data={data?.peggedAssets} reportCards={reportCardMap} />
+          </section>
+        </SectionErrorBoundary>
 
-      <PegDiversityChart />
+        <SectionErrorBoundary name="marketcap">
+          <TotalMcapChart />
+        </SectionErrorBoundary>
+
+        <PegDiversityChart />
+      </section>
 
       <section className="space-y-2 border-t border-border/50 pt-6">
         <p className="mx-auto max-w-5xl text-center text-xs leading-loose text-muted-foreground">

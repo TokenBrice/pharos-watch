@@ -177,7 +177,7 @@ src/                              # Next.js frontend (static export)
 │   ├── start-here-visit-marker.tsx # Client marker that retires the homepage Start Here callout after /start/ is visited
 │   ├── command-palette.tsx       # ⌘K command palette for quick navigation
 │   ├── scroll-to-top.tsx         # Scroll-to-top button
-│   ├── homepage-client.tsx       # Homepage interactive wrapper + first-session Start Here callout gating
+│   ├── homepage-client.tsx       # Homepage dashboard composition, section taxonomy framing, and first-session Start Here gating
 │   ├── homepage-flow-overview.tsx # Homepage mint/burn snapshot block (FlowBrrrOverview wrapper)
 │   ├── homepage-safety-overview.tsx # Homepage safety snapshot block (report-card distribution + largest coins)
 │   ├── stablecoin-filtered-table.tsx # Shared hydrated table wrapper for peg/backing/governance landing pages
@@ -193,7 +193,7 @@ src/                              # Next.js frontend (static export)
 │   ├── flow-summary-card.tsx     # Detail-page flow summary card with net-flow + pressure-shift signals
 │   ├── filter-bar.tsx            # Homepage filter bar (classification dropdowns)
 │   ├── kpi-bar.tsx               # Homepage KPI bar (total supply, dominance, etc.)
-│   ├── category-stats.tsx        # Summary cards (total, by type, by backing)
+│   ├── category-stats.tsx        # Homepage market-structure cards (concentration, governance, collateral, peg mix)
 │   ├── peg-diversity-chart.tsx   # Non-USD peg supply stacked area chart
 │   ├── total-mcap-chart.tsx      # Full-width market cap area chart
 │   ├── market-highlights.tsx     # Biggest depegs + fastest movers
@@ -221,7 +221,6 @@ src/                              # Next.js frontend (static export)
 │   ├── cemetery-charts.tsx       # Cemetery statistics charts
 │   ├── stablecoin-logo.tsx       # Logo component with fallback
 │   ├── coin-notice.tsx           # Coin-specific warning/info notices (detail page)
-│   ├── feature-highlights.tsx    # Homepage feature highlight cards
 │   ├── section-error-boundary.tsx # Section-level error boundary wrapper
 │   ├── site-header.tsx           # Site header with nav and search
 │   ├── bluechip-header-badge.tsx # Bluechip grade badge in header
