@@ -37,8 +37,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
 2. `deploy-worker` (needs `validate`):
-   - Apply D1 migrations
-   - Deploy worker
+   - Apply D1 migrations with the local worker-pinned Wrangler CLI
+   - Deploy worker with the local worker-pinned Wrangler CLI
    - Sync routes/domains/cron triggers with `wrangler triggers deploy`
 3. `smoke-api` (needs `deploy-worker`):
    - Run `npm run test:smoke-api`
@@ -55,6 +55,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
 
 This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, then runs a fast post-deploy browser sanity check on the live site.
+
+The workflow uses `actions/checkout@v5` and `actions/setup-node@v6` pinned by commit SHA so the GitHub-hosted JS actions run on Node 24. Worker deploys intentionally avoid `cloudflare/wrangler-action`; CI installs Wrangler from `worker/package-lock.json` and invokes it directly with `npx --no-install`.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production.
 
@@ -79,6 +81,7 @@ export default defineConfig({
 ```
 
 **Locations:**
+
 - `src/lib/__tests__/` — frontend library tests (pure functions)
 - `src/components/__tests__/` — component-level pure/helper logic tests
 - `src/hooks/__tests__/` — hook utility/state tests
@@ -136,19 +139,20 @@ const spy = mockFetch([
 
 Factory functions that return complete DB rows with sensible defaults. Pass `overrides` for specific values.
 
-| Factory | Returns |
-|---------|---------|
-| `makeAsset()` | DL pegged asset (id, symbol, price, pegType, circulating, chainCirculating) |
-| `makeBlacklistRow()` | blacklist_events row |
-| `makeDepegRow()` | depeg_events row |
-| `makeSupplyRow()` | supply_history row |
-| `makeMintBurnRow()` | mint_burn_events row |
-| `makeDexLiquidityRow()` | dex_liquidity row (with v2 fields) |
-| `makeYieldHistoryRow()` | yield_history row |
-| `makeDexLiquidityHistoryRow()` | dex_liquidity_history row |
-| `makeDigestRow()` | daily_digest row |
+| Factory                        | Returns                                                                     |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `makeAsset()`                  | DL pegged asset (id, symbol, price, pegType, circulating, chainCirculating) |
+| `makeBlacklistRow()`           | blacklist_events row                                                        |
+| `makeDepegRow()`               | depeg_events row                                                            |
+| `makeSupplyRow()`              | supply_history row                                                          |
+| `makeMintBurnRow()`            | mint_burn_events row                                                        |
+| `makeDexLiquidityRow()`        | dex_liquidity row (with v2 fields)                                          |
+| `makeYieldHistoryRow()`        | yield_history row                                                           |
+| `makeDexLiquidityHistoryRow()` | dex_liquidity_history row                                                   |
+| `makeDigestRow()`              | daily_digest row                                                            |
 
 Example:
+
 ```ts
 import { makeBlacklistRow } from "./helpers/fixtures";
 
@@ -184,171 +188,171 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 ### Frontend Library Tests (`src/lib/__tests__/`)
 
-| File | Module Under Test | What It Covers |
-|------|-------------------|----------------|
-| `format.test.ts` | `shared/lib/format.ts` | `formatCurrency`, `formatBps`, `formatPegDeviation`, `formatPercentChange`, `formatSupply`, `formatAddress`, `formatDuration`, `formatNativePrice`, `formatPegStability`, `formatDeathDate`, `formatDeathDateShort` |
-| `supply.test.ts` | `shared/lib/supply.ts` | `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, `getPrevWeekRaw`, `getPrevMonthRaw` |
-| `classification.test.ts` | `shared/lib/classification.ts` | Label maps, short label consistency, color map integrity, `PEG_CURRENCY_COUNT` |
-| `report-cards.test.ts` | `shared/lib/report-cards.ts` | Grade computation, dimension scorers, peg multiplier, dependency risk, stress test |
-| `reserve-templates.test.ts` | `shared/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
-| `reserve-coinid-validation.test.ts` | `shared/lib/reserve-templates.ts` | Reserve slice `coinId` references match tracked stablecoin IDs |
-| `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | DEX pool configs cover all stablecoins with DEX presence |
-| `api-endpoints.test.ts` | `shared/lib/api-endpoints.ts` | Endpoint registry invariants: probe groups, status actions, cache/method flags, strict contract path uniqueness, smoke assertion alignment |
-| `api-fetch-contracts.test.ts` | `shared/types/index.ts` + `src/lib/api.ts` | Shared Zod contracts and frontend API helpers stay aligned on critical endpoints |
-| `critical-invariants.test.ts` | Shared methodology constants and schema invariants | Cross-surface invariants for contracts, methodology metadata, and route-critical defaults |
-| `blacklist-api.test.ts` | `src/lib/blacklist-api.ts` | Query param encoding and API path generation for blacklist filters |
-| `methodology-version.test.ts` | `shared/lib/methodology-version.ts` | Version-window resolution, labels, and changelog selection logic |
-| `mint-burn-timeframes.test.ts` | `src/lib/mint-burn-timeframes.ts` | Timeframe presets and label semantics for flow views |
-| `peg-scoring.test.ts` | `shared/lib/peg-score.ts` + `src/lib/peg-stability.ts` | Peg score computation helpers plus UI-facing peg-stability formatting |
-| `stablecoin-detail-derive.test.ts` | `src/lib/stablecoin-detail-derive.ts` | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback |
-| `stablecoin-schema-compat.test.ts` | `shared/lib/stablecoins.ts` + schemas | Tracked stablecoin metadata remains compatible with shared schemas |
-| `yield-scatter.test.ts` | `src/lib/yield-scatter.ts` | Scatterplot point derivation and label bucketing for yield views |
-| `severity-colors.test.ts` | `src/lib/severity-colors.ts` | Deviation threshold classes/icons/hex mapping, score-tier thresholds, peg/durability color helpers |
+| File                                | Module Under Test                                      | What It Covers                                                                                                                                                                                                      |
+| ----------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `format.test.ts`                    | `shared/lib/format.ts`                                 | `formatCurrency`, `formatBps`, `formatPegDeviation`, `formatPercentChange`, `formatSupply`, `formatAddress`, `formatDuration`, `formatNativePrice`, `formatPegStability`, `formatDeathDate`, `formatDeathDateShort` |
+| `supply.test.ts`                    | `shared/lib/supply.ts`                                 | `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, `getPrevWeekRaw`, `getPrevMonthRaw`                                                                                                                          |
+| `classification.test.ts`            | `shared/lib/classification.ts`                         | Label maps, short label consistency, color map integrity, `PEG_CURRENCY_COUNT`                                                                                                                                      |
+| `report-cards.test.ts`              | `shared/lib/report-cards.ts`                           | Grade computation, dimension scorers, peg multiplier, dependency risk, stress test                                                                                                                                  |
+| `reserve-templates.test.ts`         | `shared/lib/reserve-templates.ts`                      | Reserve composition templates, `getReserves()`, `deriveDependencies()`                                                                                                                                              |
+| `reserve-coinid-validation.test.ts` | `shared/lib/reserve-templates.ts`                      | Reserve slice `coinId` references match tracked stablecoin IDs                                                                                                                                                      |
+| `liquidity-coverage.test.ts`        | `src/lib/dex-constants.ts`                             | DEX pool configs cover all stablecoins with DEX presence                                                                                                                                                            |
+| `api-endpoints.test.ts`             | `shared/lib/api-endpoints.ts`                          | Endpoint registry invariants: probe groups, status actions, cache/method flags, strict contract path uniqueness, smoke assertion alignment                                                                          |
+| `api-fetch-contracts.test.ts`       | `shared/types/index.ts` + `src/lib/api.ts`             | Shared Zod contracts and frontend API helpers stay aligned on critical endpoints                                                                                                                                    |
+| `critical-invariants.test.ts`       | Shared methodology constants and schema invariants     | Cross-surface invariants for contracts, methodology metadata, and route-critical defaults                                                                                                                           |
+| `blacklist-api.test.ts`             | `src/lib/blacklist-api.ts`                             | Query param encoding and API path generation for blacklist filters                                                                                                                                                  |
+| `methodology-version.test.ts`       | `shared/lib/methodology-version.ts`                    | Version-window resolution, labels, and changelog selection logic                                                                                                                                                    |
+| `mint-burn-timeframes.test.ts`      | `src/lib/mint-burn-timeframes.ts`                      | Timeframe presets and label semantics for flow views                                                                                                                                                                |
+| `peg-scoring.test.ts`               | `shared/lib/peg-score.ts` + `src/lib/peg-stability.ts` | Peg score computation helpers plus UI-facing peg-stability formatting                                                                                                                                               |
+| `stablecoin-detail-derive.test.ts`  | `src/lib/stablecoin-detail-derive.ts`                  | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback                                                                                              |
+| `stablecoin-schema-compat.test.ts`  | `shared/lib/stablecoins.ts` + schemas                  | Tracked stablecoin metadata remains compatible with shared schemas                                                                                                                                                  |
+| `yield-scatter.test.ts`             | `src/lib/yield-scatter.ts`                             | Scatterplot point derivation and label bucketing for yield views                                                                                                                                                    |
+| `severity-colors.test.ts`           | `src/lib/severity-colors.ts`                           | Deviation threshold classes/icons/hex mapping, score-tier thresholds, peg/durability color helpers                                                                                                                  |
 
 ### Frontend Component Tests (`src/__tests__/`)
 
-| File | What It Covers |
-|------|----------------|
-| `depeg-tracker-sort.test.ts` | Depeg event sorting logic |
-| `page-metadata.test.ts` | Metadata generation and canonical route wiring for indexable pages |
-| `portfolio-categorize.test.ts` | Portfolio upstream exposure categorization |
+| File                           | What It Covers                                                     |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `depeg-tracker-sort.test.ts`   | Depeg event sorting logic                                          |
+| `page-metadata.test.ts`        | Metadata generation and canonical route wiring for indexable pages |
+| `portfolio-categorize.test.ts` | Portfolio upstream exposure categorization                         |
 
 ### Component / Hook Utility Tests
 
-| File | What It Covers |
-|------|----------------|
-| `src/components/__tests__/cron-card.test.tsx` | Status cron-card server-render summaries for self-check, DEX discovery, and scoring runs |
-| `src/components/__tests__/cron-config.test.ts` | Status cron config labeling and schedule presentation |
-| `src/components/__tests__/dews-summary.test.ts` | DEWS radar tap/click interaction resolver logic |
-| `src/components/__tests__/liquidity-stats.test.ts` | Liquidity headline stat formatting and NR handling |
-| `src/components/__tests__/liquidity-table.test.ts` | Liquidity row comparator behavior and filter-driven pagination reset flow |
+| File                                                             | What It Covers                                                                                             |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `src/components/__tests__/cron-card.test.tsx`                    | Status cron-card server-render summaries for self-check, DEX discovery, and scoring runs                   |
+| `src/components/__tests__/cron-config.test.ts`                   | Status cron config labeling and schedule presentation                                                      |
+| `src/components/__tests__/dews-summary.test.ts`                  | DEWS radar tap/click interaction resolver logic                                                            |
+| `src/components/__tests__/liquidity-stats.test.ts`               | Liquidity headline stat formatting and NR handling                                                         |
+| `src/components/__tests__/liquidity-table.test.ts`               | Liquidity row comparator behavior and filter-driven pagination reset flow                                  |
 | `src/components/__tests__/safety-score-history-section.test.tsx` | Safety Score detail timeline seed/transition labeling and conditional suppression when loading/error/empty |
-| `src/hooks/__tests__/use-count-up.test.ts` | Opt-in jsdom hook test for count-up animation timing and reduced-motion behavior |
-| `src/hooks/__tests__/use-entrance-sequence.test.ts` | Opt-in jsdom hook test for staged reveal sequencing |
-| `src/hooks/__tests__/use-url-filters.test.ts` | URL param state helpers and encoding rules |
-| `src/hooks/__tests__/query-polling-policy.test.ts` | Shared polling policy wiring (`staleTime`, `refetchInterval`, `retry`) for status-page hooks |
-| `src/hooks/__tests__/use-safety-score-history.test.ts` | Safety Score history hook query-key scoping, daily polling policy, and endpoint path wiring |
-| `src/hooks/__tests__/use-sort.test.ts` | Table sort state transitions and keyboard activation key gating |
-| `src/hooks/__tests__/use-sorted-table-rows.test.ts` | Pure table row sorting helper behavior and immutability |
-| `src/hooks/__tests__/use-table-pagination.test.ts` | Pagination derivation + persisted page reset semantics when row totals change |
+| `src/hooks/__tests__/use-count-up.test.ts`                       | Opt-in jsdom hook test for count-up animation timing and reduced-motion behavior                           |
+| `src/hooks/__tests__/use-entrance-sequence.test.ts`              | Opt-in jsdom hook test for staged reveal sequencing                                                        |
+| `src/hooks/__tests__/use-url-filters.test.ts`                    | URL param state helpers and encoding rules                                                                 |
+| `src/hooks/__tests__/query-polling-policy.test.ts`               | Shared polling policy wiring (`staleTime`, `refetchInterval`, `retry`) for status-page hooks               |
+| `src/hooks/__tests__/use-safety-score-history.test.ts`           | Safety Score history hook query-key scoping, daily polling policy, and endpoint path wiring                |
+| `src/hooks/__tests__/use-sort.test.ts`                           | Table sort state transitions and keyboard activation key gating                                            |
+| `src/hooks/__tests__/use-sorted-table-rows.test.ts`              | Pure table row sorting helper behavior and immutability                                                    |
+| `src/hooks/__tests__/use-table-pagination.test.ts`               | Pagination derivation + persisted page reset semantics when row totals change                              |
 
 ### Worker Library Tests (`worker/src/lib/__tests__/`)
 
-| File | Module Under Test | What It Covers |
-|------|-------------------|----------------|
-| `alerts.test.ts` | `worker/src/lib/alerts.ts` | Webhook transport semantics, non-2xx failure handling, return-value contract |
-| `api-utils.test.ts` | `worker/src/lib/api-utils.ts` | `parseIntParam`, `parseStablecoinHistoryQuery`, `jsonResponse`, `errorResponse`, `withErrorHandler`, `createCacheHandler` |
-| `mint-burn-scoring.test.ts` | `worker/src/lib/mint-burn-scoring.ts` | `computeFlowIntensity`, `computeGaugeScore`, `detectFlightToQuality`, `getGaugeBand` |
-| `evm-logs.test.ts` | `worker/src/lib/evm-logs.ts` | `buildTopicParams`, `decodeAddress`, `decodeUint256`, `createBudget`, `budgetExhausted`, `createRateLimiter`, `fetchEvmLogsForTopics` |
-| `resolve-market-cap.test.ts` | `worker/src/lib/resolve-market-cap.ts` | `resolveMarketCap` — CG vs computed mcap agreement, frozen data detection |
-| `dews.test.ts` | `worker/src/lib/dews.ts` | `computeDEWS` — DEWS scoring, sub-signal computation, threat band assignment |
-| `circuit-breaker.test.ts` | `worker/src/lib/circuit-breaker.ts` | Circuit state machine: closed/open/half-open transitions, probe intervals, alerts |
-| `stability-index.test.ts` | `worker/src/lib/stability-index.ts` | PSI computation and component scoring |
-| `safety-scores.test.ts` | `worker/src/lib/safety-scores.ts` | Shared safety score snapshot helper parity modes (`map` vs `full-grades`) |
-| `report-cards-snapshot.test.ts` | `worker/src/lib/report-cards-snapshot.ts` | Shared report-card snapshot parity with `/api/report-cards` and cache-unavailable behavior |
-| `peg-analytics.test.ts` | `worker/src/lib/peg-analytics.ts` | Shared peg analytics derivation (`eventsByCoin`, `pegDataById`) |
-| `stablecoins-cache.test.ts` | `worker/src/lib/stablecoins-cache.ts` | Strict/lenient cache loading, missing cache behavior, malformed payloads, legacy array compatibility, FX fallback-rate filtering |
-| `abort.test.ts` | `worker/src/lib/abort.ts` | Abort reason normalization, `throwIfAborted`, timed sleep resolution, abort-driven sleep rejection |
-| `coingecko-onchain.test.ts` | `worker/src/lib/coingecko-onchain.ts` | API-key availability flag, request pacing, token/pool fetch response handling, volume parsing |
-| `auth.test.ts` | `worker/src/lib/auth.ts` | Timing-safe admin auth guards, header parsing, and unauthorized responses |
-| `db-utils.test.ts` | `worker/src/lib/db.ts` helpers | SQL helper composition and pagination/query utility behavior |
-| `idempotency.test.ts` | `worker/src/lib/idempotency.ts` | Idempotency-key dedupe, replay semantics, and conflict handling |
-| `log-cron-run.test.ts` | `worker/src/lib/db.ts` cron wrapper | Success/error/skipped logging and prune fallback behavior |
-| `mint-burn-bridge-classifier.test.ts` | `worker/src/lib/mint-burn-pipeline/classification.ts` | CCIP bridge-burn classification and review fallbacks |
-| `mint-burn-contracts.test.ts` | `worker/src/lib/mint-burn-contracts.ts` | Contract config invariants, decimals, and event definition coverage |
-| `twitter.test.ts` | `worker/src/lib/twitter.ts` | Digest tweet text building, first-mention cashtag injection, truncation, OAuth posting/error handling |
-| `status-reliability.test.ts` | `worker/src/lib/status-reliability.ts` | Hysteresis transitions, state snapshot staleness, transition listing, probe persistence, discrepancy streak/alert state |
-| `cron-leases.test.ts` | `worker/src/lib/db.ts` | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease` |
-| `mint-burn-pipeline.test.ts` | `worker/src/lib/mint-burn-pipeline/*` | Shared ingestion helpers: inserted/ignored accounting, burn counters, affected-hour aggregation, sync-state upsert modes |
-| `mint-burn-price-heal.test.ts` | `worker/src/lib/mint-burn-pipeline/price-heal.ts` | NULL-price auto-heal path, 48h cutoff, and affected-hour collection |
-| `mint-burn-roundtrip.test.ts` | `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts` | Same-transaction roundtrip tagging semantics |
-| `psi-recompute.test.ts` | `worker/src/lib/psi-recompute.ts` | PSI recomputation triggers and rebuild selection logic |
-| `telegram-alerts.test.ts` | `worker/src/lib/telegram-alerts.ts` | Alert subscription filters and message rendering |
-| `telegram.test.ts` | `worker/src/lib/telegram.ts` | Telegram Bot API send/reply behavior and error handling |
+| File                                  | Module Under Test                                          | What It Covers                                                                                                                        |
+| ------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `alerts.test.ts`                      | `worker/src/lib/alerts.ts`                                 | Webhook transport semantics, non-2xx failure handling, return-value contract                                                          |
+| `api-utils.test.ts`                   | `worker/src/lib/api-utils.ts`                              | `parseIntParam`, `parseStablecoinHistoryQuery`, `jsonResponse`, `errorResponse`, `withErrorHandler`, `createCacheHandler`             |
+| `mint-burn-scoring.test.ts`           | `worker/src/lib/mint-burn-scoring.ts`                      | `computeFlowIntensity`, `computeGaugeScore`, `detectFlightToQuality`, `getGaugeBand`                                                  |
+| `evm-logs.test.ts`                    | `worker/src/lib/evm-logs.ts`                               | `buildTopicParams`, `decodeAddress`, `decodeUint256`, `createBudget`, `budgetExhausted`, `createRateLimiter`, `fetchEvmLogsForTopics` |
+| `resolve-market-cap.test.ts`          | `worker/src/lib/resolve-market-cap.ts`                     | `resolveMarketCap` — CG vs computed mcap agreement, frozen data detection                                                             |
+| `dews.test.ts`                        | `worker/src/lib/dews.ts`                                   | `computeDEWS` — DEWS scoring, sub-signal computation, threat band assignment                                                          |
+| `circuit-breaker.test.ts`             | `worker/src/lib/circuit-breaker.ts`                        | Circuit state machine: closed/open/half-open transitions, probe intervals, alerts                                                     |
+| `stability-index.test.ts`             | `worker/src/lib/stability-index.ts`                        | PSI computation and component scoring                                                                                                 |
+| `safety-scores.test.ts`               | `worker/src/lib/safety-scores.ts`                          | Shared safety score snapshot helper parity modes (`map` vs `full-grades`)                                                             |
+| `report-cards-snapshot.test.ts`       | `worker/src/lib/report-cards-snapshot.ts`                  | Shared report-card snapshot parity with `/api/report-cards` and cache-unavailable behavior                                            |
+| `peg-analytics.test.ts`               | `worker/src/lib/peg-analytics.ts`                          | Shared peg analytics derivation (`eventsByCoin`, `pegDataById`)                                                                       |
+| `stablecoins-cache.test.ts`           | `worker/src/lib/stablecoins-cache.ts`                      | Strict/lenient cache loading, missing cache behavior, malformed payloads, legacy array compatibility, FX fallback-rate filtering      |
+| `abort.test.ts`                       | `worker/src/lib/abort.ts`                                  | Abort reason normalization, `throwIfAborted`, timed sleep resolution, abort-driven sleep rejection                                    |
+| `coingecko-onchain.test.ts`           | `worker/src/lib/coingecko-onchain.ts`                      | API-key availability flag, request pacing, token/pool fetch response handling, volume parsing                                         |
+| `auth.test.ts`                        | `worker/src/lib/auth.ts`                                   | Timing-safe admin auth guards, header parsing, and unauthorized responses                                                             |
+| `db-utils.test.ts`                    | `worker/src/lib/db.ts` helpers                             | SQL helper composition and pagination/query utility behavior                                                                          |
+| `idempotency.test.ts`                 | `worker/src/lib/idempotency.ts`                            | Idempotency-key dedupe, replay semantics, and conflict handling                                                                       |
+| `log-cron-run.test.ts`                | `worker/src/lib/db.ts` cron wrapper                        | Success/error/skipped logging and prune fallback behavior                                                                             |
+| `mint-burn-bridge-classifier.test.ts` | `worker/src/lib/mint-burn-pipeline/classification.ts`      | CCIP bridge-burn classification and review fallbacks                                                                                  |
+| `mint-burn-contracts.test.ts`         | `worker/src/lib/mint-burn-contracts.ts`                    | Contract config invariants, decimals, and event definition coverage                                                                   |
+| `twitter.test.ts`                     | `worker/src/lib/twitter.ts`                                | Digest tweet text building, first-mention cashtag injection, truncation, OAuth posting/error handling                                 |
+| `status-reliability.test.ts`          | `worker/src/lib/status-reliability.ts`                     | Hysteresis transitions, state snapshot staleness, transition listing, probe persistence, discrepancy streak/alert state               |
+| `cron-leases.test.ts`                 | `worker/src/lib/db.ts`                                     | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease`                                                          |
+| `mint-burn-pipeline.test.ts`          | `worker/src/lib/mint-burn-pipeline/*`                      | Shared ingestion helpers: inserted/ignored accounting, burn counters, affected-hour aggregation, sync-state upsert modes              |
+| `mint-burn-price-heal.test.ts`        | `worker/src/lib/mint-burn-pipeline/price-heal.ts`          | NULL-price auto-heal path, 48h cutoff, and affected-hour collection                                                                   |
+| `mint-burn-roundtrip.test.ts`         | `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts` | Same-transaction roundtrip tagging semantics                                                                                          |
+| `psi-recompute.test.ts`               | `worker/src/lib/psi-recompute.ts`                          | PSI recomputation triggers and rebuild selection logic                                                                                |
+| `telegram-alerts.test.ts`             | `worker/src/lib/telegram-alerts.ts`                        | Alert subscription filters and message rendering                                                                                      |
+| `telegram.test.ts`                    | `worker/src/lib/telegram.ts`                               | Telegram Bot API send/reply behavior and error handling                                                                               |
 
 ### API Contract Tests (`worker/src/api/__tests__/`)
 
-| File | Handler | Modes Tested |
-|------|---------|--------------|
-| `router-contract.test.ts` | `route` + strict frontend contract paths | All strict paths resolve in `worker/src/router.ts`, unknown paths return null, mutating admin GET guards hold (with audit dry-run exception) |
-| `backfill-depegs.test.ts` | `handleBackfillDepegs` | Auth guard, unknown stablecoin 404, out-of-range batch no-op |
-| `backfill-depegs-helpers.test.ts` | `backfill-depegs` helper logic | Supply parsing/nearest-snapshot lookup, historical secondary-FX caching, FX lookup fallback/nearest selection, large-cap depeg confirmation behavior |
-| `backfill-supply-history.test.ts` | `handleBackfillSupplyHistory` | Auth guard, unknown stablecoin 404, out-of-range batch no-op, USD insertion path |
-| `backfill-cg-prices.test.ts` | `handleBackfillCgPrices` | Auth guard, unknown stablecoin 404, out-of-range batch no-op, NULL-price fill |
-| `backfill-stability-index.test.ts` | `handleBackfillStabilityIndex` | Auth guard, no-events 404, rebuild success shape |
-| `audit-depeg-history.test.ts` | `handleAuditDepegHistory` | GET dry-run vs POST behavior, auth guard, and audit summary shape |
-| `backfill-dews.test.ts` | `handleBackfillDEWS` | Admin auth, query parsing, and DEWS backtest response shape |
-| `blacklist.test.ts` | `handleBlacklist` | 200 with events, empty results, 400 invalid params, camelCase mapping, X-Data-Age |
-| `depeg-events.test.ts` | `handleDepegEvents` | 200 with events, empty results, 400 invalid params, camelCase mapping |
-| `supply-history.test.ts` | `handleSupplyHistory` | 200 with history, empty, 400 missing/invalid stablecoin |
-| `dex-liquidity-history.test.ts` | `handleDexLiquidityHistory` | 200 with history, empty, 400 missing/invalid stablecoin, coverage-confidence fields |
-| `yield-history.test.ts` | `handleYieldHistory` | 200 with history, empty, 400 missing/invalid stablecoin, camelCase |
-| `safety-score-history.test.ts` | `handleSafetyScoreHistory` | 200 with history/empty, 400 missing/invalid stablecoin, freshness headers |
-| `mint-burn-events.test.ts` | `handleMintBurnEvents` | 200 with events, camelCase mapping, invalid stablecoin/direction/chain/burnType guards, freshness headers |
-| `cache-passthrough.test.ts` | stablecoins, charts, usds, bluechip, yield-rankings | 503 cache miss, 200 with _meta, X-Data-Age |
-| `dex-liquidity.test.ts` | `handleDexLiquidity` | 200 with liquidity map, empty map, coverage-confidence fields, degraded Warning header, X-Data-Age |
-| `peg-summary.test.ts` | `handlePegSummary` | 503 cache miss, 200 with coins + summary, X-Data-Age |
-| `report-cards.test.ts` | `handleReportCards` | 503 cache miss, 200 with cards/methodology/dependencyGraph |
-| `stablecoin-detail.test.ts` | `handleStablecoinDetail` | Upstream retry/timeout fallback behavior, stale-cache fallback, parse-failure diagnostics |
-| `stablecoin-summary.test.ts` | `handleStablecoinSummary` | 503 cache-miss/corrupt-cache handling, 404 unknown coin, 200 compact supply/price summary + freshness headers |
-| `stablecoin-detail-commodity.test.ts` | `fetchCommodityTokens` helper | DefiLlama-empty fallback to CoinGecko market-chart + failure fallback to empty |
-| `stablecoin-detail-defillama.test.ts` | `normalizeDefiLlamaDetailBody` helper | Non-USD normalization branches, USD no-op behavior, invalid JSON throw path |
-| `daily-digest.test.ts` | `handleDailyDigest` | 200 with null digest, 200 with digest text, X-Data-Age |
-| `digest-archive.test.ts` | `handleDigestArchive` | 200 empty, 200 with digests, PSI/mcap from input_data, null input_data |
-| `digest-snapshot.test.ts` | `handleDigestSnapshot` | 400 missing/invalid date, 404 no digest, 200 with snapshot |
-| `health.test.ts` | `handleHealth` | 200 health status shape, Cache-Control: no-store |
-| `feedback.test.ts` | `handleFeedback` | Payload validation, rate limiting, verification routing, and GitHub mode selection |
-| `mint-burn-flows.test.ts` | `handleMintBurnFlows` | Aggregate (gauge + coins[]), Per-coin (flat + chains[]), 404 |
-| `backfill-mint-burn.test.ts` | `handleBackfillMintBurn` | Auth/validation, chunked ingestion progression, `done/nextFromBlock` semantics |
-| `backfill-mint-burn-prices.test.ts` | `handleBackfillMintBurnPrices` | NULL-price backfill aggregation and response summary shape |
-| `stability-index.test.ts` | `handleStabilityIndex` | Summary, Detail (with components in history) |
-| `status.test.ts` | `handleStatus` | Admin status payload synthesis, cache/cron health aggregation, liquidity health extraction, and probe sections |
-| `status-history.test.ts` | `handleStatusHistory` | Timeline/probe history pagination and range filters |
-| `stress-signals.test.ts` | `handleStressSignals` | DEWS scores, threat bands, signal components |
-| `telegram-webhook.test.ts` | `handleTelegramWebhook` | Command routing, subscription state changes, and webhook auth validation |
+| File                                  | Handler                                             | Modes Tested                                                                                                                                         |
+| ------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `router-contract.test.ts`             | `route` + strict frontend contract paths            | All strict paths resolve in `worker/src/router.ts`, unknown paths return null, mutating admin GET guards hold (with audit dry-run exception)         |
+| `backfill-depegs.test.ts`             | `handleBackfillDepegs`                              | Auth guard, unknown stablecoin 404, out-of-range batch no-op                                                                                         |
+| `backfill-depegs-helpers.test.ts`     | `backfill-depegs` helper logic                      | Supply parsing/nearest-snapshot lookup, historical secondary-FX caching, FX lookup fallback/nearest selection, large-cap depeg confirmation behavior |
+| `backfill-supply-history.test.ts`     | `handleBackfillSupplyHistory`                       | Auth guard, unknown stablecoin 404, out-of-range batch no-op, USD insertion path                                                                     |
+| `backfill-cg-prices.test.ts`          | `handleBackfillCgPrices`                            | Auth guard, unknown stablecoin 404, out-of-range batch no-op, NULL-price fill                                                                        |
+| `backfill-stability-index.test.ts`    | `handleBackfillStabilityIndex`                      | Auth guard, no-events 404, rebuild success shape                                                                                                     |
+| `audit-depeg-history.test.ts`         | `handleAuditDepegHistory`                           | GET dry-run vs POST behavior, auth guard, and audit summary shape                                                                                    |
+| `backfill-dews.test.ts`               | `handleBackfillDEWS`                                | Admin auth, query parsing, and DEWS backtest response shape                                                                                          |
+| `blacklist.test.ts`                   | `handleBlacklist`                                   | 200 with events, empty results, 400 invalid params, camelCase mapping, X-Data-Age                                                                    |
+| `depeg-events.test.ts`                | `handleDepegEvents`                                 | 200 with events, empty results, 400 invalid params, camelCase mapping                                                                                |
+| `supply-history.test.ts`              | `handleSupplyHistory`                               | 200 with history, empty, 400 missing/invalid stablecoin                                                                                              |
+| `dex-liquidity-history.test.ts`       | `handleDexLiquidityHistory`                         | 200 with history, empty, 400 missing/invalid stablecoin, coverage-confidence fields                                                                  |
+| `yield-history.test.ts`               | `handleYieldHistory`                                | 200 with history, empty, 400 missing/invalid stablecoin, camelCase                                                                                   |
+| `safety-score-history.test.ts`        | `handleSafetyScoreHistory`                          | 200 with history/empty, 400 missing/invalid stablecoin, freshness headers                                                                            |
+| `mint-burn-events.test.ts`            | `handleMintBurnEvents`                              | 200 with events, camelCase mapping, invalid stablecoin/direction/chain/burnType guards, freshness headers                                            |
+| `cache-passthrough.test.ts`           | stablecoins, charts, usds, bluechip, yield-rankings | 503 cache miss, 200 with \_meta, X-Data-Age                                                                                                          |
+| `dex-liquidity.test.ts`               | `handleDexLiquidity`                                | 200 with liquidity map, empty map, coverage-confidence fields, degraded Warning header, X-Data-Age                                                   |
+| `peg-summary.test.ts`                 | `handlePegSummary`                                  | 503 cache miss, 200 with coins + summary, X-Data-Age                                                                                                 |
+| `report-cards.test.ts`                | `handleReportCards`                                 | 503 cache miss, 200 with cards/methodology/dependencyGraph                                                                                           |
+| `stablecoin-detail.test.ts`           | `handleStablecoinDetail`                            | Upstream retry/timeout fallback behavior, stale-cache fallback, parse-failure diagnostics                                                            |
+| `stablecoin-summary.test.ts`          | `handleStablecoinSummary`                           | 503 cache-miss/corrupt-cache handling, 404 unknown coin, 200 compact supply/price summary + freshness headers                                        |
+| `stablecoin-detail-commodity.test.ts` | `fetchCommodityTokens` helper                       | DefiLlama-empty fallback to CoinGecko market-chart + failure fallback to empty                                                                       |
+| `stablecoin-detail-defillama.test.ts` | `normalizeDefiLlamaDetailBody` helper               | Non-USD normalization branches, USD no-op behavior, invalid JSON throw path                                                                          |
+| `daily-digest.test.ts`                | `handleDailyDigest`                                 | 200 with null digest, 200 with digest text, X-Data-Age                                                                                               |
+| `digest-archive.test.ts`              | `handleDigestArchive`                               | 200 empty, 200 with digests, PSI/mcap from input_data, null input_data                                                                               |
+| `digest-snapshot.test.ts`             | `handleDigestSnapshot`                              | 400 missing/invalid date, 404 no digest, 200 with snapshot                                                                                           |
+| `health.test.ts`                      | `handleHealth`                                      | 200 health status shape, Cache-Control: no-store                                                                                                     |
+| `feedback.test.ts`                    | `handleFeedback`                                    | Payload validation, rate limiting, verification routing, and GitHub mode selection                                                                   |
+| `mint-burn-flows.test.ts`             | `handleMintBurnFlows`                               | Aggregate (gauge + coins[]), Per-coin (flat + chains[]), 404                                                                                         |
+| `backfill-mint-burn.test.ts`          | `handleBackfillMintBurn`                            | Auth/validation, chunked ingestion progression, `done/nextFromBlock` semantics                                                                       |
+| `backfill-mint-burn-prices.test.ts`   | `handleBackfillMintBurnPrices`                      | NULL-price backfill aggregation and response summary shape                                                                                           |
+| `stability-index.test.ts`             | `handleStabilityIndex`                              | Summary, Detail (with components in history)                                                                                                         |
+| `status.test.ts`                      | `handleStatus`                                      | Admin status payload synthesis, cache/cron health aggregation, liquidity health extraction, and probe sections                                       |
+| `status-history.test.ts`              | `handleStatusHistory`                               | Timeline/probe history pagination and range filters                                                                                                  |
+| `stress-signals.test.ts`              | `handleStressSignals`                               | DEWS scores, threat bands, signal components                                                                                                         |
+| `telegram-webhook.test.ts`            | `handleTelegramWebhook`                             | Command routing, subscription state changes, and webhook auth validation                                                                             |
 
 ### Worker Entrypoint Tests (`worker/src/__tests__/`)
 
-| File | Module Under Test | What It Covers |
-|------|-------------------|----------------|
-| `index.fetch.test.ts` | `worker.fetch` | CORS preflight, method guards, edge-cache hit/miss behavior, cache-bypass paths |
+| File                      | Module Under Test  | What It Covers                                                                                    |
+| ------------------------- | ------------------ | ------------------------------------------------------------------------------------------------- |
+| `index.fetch.test.ts`     | `worker.fetch`     | CORS preflight, method guards, edge-cache hit/miss behavior, cache-bypass paths                   |
 | `index.scheduled.test.ts` | `worker.scheduled` | Cron fan-out wiring and chained dependencies (`stablecoins -> snapshot/PSI/DEWS`, `dex -> yield`) |
 
 ### Cron Tests (`worker/src/cron/__tests__/`)
 
-| File | Cron Under Test | What It Covers |
-|------|-----------------|----------------|
-| `sync-stablecoins.test.ts` | `sync-stablecoins.ts` | Main/fallback validation guards, stale detection, depeg handoff, cache-write invariants |
-| `sync-stablecoins-stages.test.ts` | `sync-stablecoins/stages.ts` | Extracted pure stage helpers (structural filtering, chain normalization, staleness summary) |
-| `sync-stablecoin-charts.test.ts` | `sync-stablecoin-charts.ts` | Chart sync cache writes, retention, and error handling |
-| `detect-depegs.test.ts` | `detect-depegs.ts` | Stable prices, depeg open/close/update, direction change, NAV skip, supply threshold, DEX cross-validation, duplicate merge |
-| `compute-dews.test.ts` | `compute-dews.ts` | DEWS cache writes, metadata, and no-data handling |
-| `daily-digest.test.ts` | `daily-digest.ts` | Digest generation control flow, posting toggles, and cache persistence |
-| `dispatch-telegram-alerts.test.ts` | `dispatch-telegram-alerts.ts` | Snapshot diffs, rate guards, and subscriber fan-out behavior |
-| `sync-dex-liquidity.test.ts` | `dex-liquidity/orchestrator.ts` | Catastrophic throw path, degraded status propagation, success path |
-| `dex-liquidity-fallbacks.test.ts` | `dex-liquidity/fetch-fallbacks.ts` | DexScreener and CoinGecko ticker fallback ingestion behavior |
-| `enrich-prices.test.ts` | `enrich-prices.ts` | `isReasonablePrice` for all peg types (USD, EUR, JPY, IDR, GOLD, SILVER, etc.), FX-rate-aware bounds, `hasMissingPrice` edge cases |
-| `fetch-tbill-rate.test.ts` | `fetch-tbill-rate.ts` | FRED parsing, cache updates, and degraded fallback behavior |
-| `snapshot-psi.test.ts` | `snapshot-psi.ts` | Daily PSI snapshot writes and methodology-version attribution |
-| `snapshot-supply.test.ts` | `snapshot-supply.ts` | Cache missing, stale cache (>1200s), valid insert for PSI-eligible assets, zero supply skip |
-| `snapshot-safety-grade-history.test.ts` | `snapshot-safety-grade-history.ts` | Seed rows, grade-change inserts, unchanged-grade idempotent reruns |
-| `stability-index.test.ts` | `stability-index.ts` | Cron PSI recomputation and cache/history persistence behavior |
-| `status-self-check.test.ts` | `status-self-check.ts` | Probe modes, latency summaries, and hysteresis persistence |
-| `sync-blacklist.test.ts` | `sync-blacklist.ts` | Incremental multi-chain sync, enrichment, and state advancement |
-| `sync-bluechip.test.ts` | `sync-bluechip.ts` | Bluechip scrape normalization and cache writes |
-| `sync-usds-status.test.ts` | `sync-usds-status.ts` | USDS implementation/freeze-module on-chain checks |
-| `yield-helpers.test.ts` | `yield-helpers.ts` | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool` |
-| `sync-fx-rates.test.ts` | `sync-fx-rates.ts` | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for CNH/RUB/UAH/ARS |
-| `sync-yield-data.test.ts` | `sync-yield-data.ts` | Yield ranking sync, validation guard, fallback behavior and ranking parity |
-| `dex-liquidity-pool-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | Symbol parsing, pool classification, quality multipliers, chain-map toggles, durability/liquidity scoring branches, protocol normalization, pair/stress helpers |
-| `dex-liquidity-process-pools.test.ts` | `dex-liquidity/process-pools.ts` | Pool filtering, address/symbol matching, collision safety, Curve/Uni v3/Aerodrome enrichment, weighted metric accumulation |
-| `dex-liquidity-price-sanity.test.ts` | `dex-liquidity/price-sanity.ts` | DEX observation plausibility bounds and anomaly rejection |
-| `dex-liquidity-scoring.test.ts` | `dex-liquidity/scoring.ts` | Pool filtering/scaling, per-coin/global aggregate recomputation, confidence-gated depth stability, DEX price median persistence |
-| `confirm-pending-depegs.test.ts` | `confirm-pending-depegs.ts` | Pending depeg state-machine decisions, secondary confirmation paths, missing dex table handling, abort propagation |
-| `dex-liquidity-persistence.test.ts` | `dex-liquidity/persistence.ts` | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior |
-| `sync-mint-burn.test.ts` | `sync-mint-burn.ts` | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior |
-| `worker/src/cron/dex-discovery/__tests__/orchestrator.test.ts` | `dex-discovery/orchestrator.ts` | Discovery tiering, backoff cadence, staged-pool writes, and budget exhaustion behavior |
-| `worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts` | `dex-liquidity/staging-merge.ts` | Staged-pool confidence decay, default filling, and merge-selection semantics |
+| File                                                            | Cron Under Test                    | What It Covers                                                                                                                                                  |
+| --------------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sync-stablecoins.test.ts`                                      | `sync-stablecoins.ts`              | Main/fallback validation guards, stale detection, depeg handoff, cache-write invariants                                                                         |
+| `sync-stablecoins-stages.test.ts`                               | `sync-stablecoins/stages.ts`       | Extracted pure stage helpers (structural filtering, chain normalization, staleness summary)                                                                     |
+| `sync-stablecoin-charts.test.ts`                                | `sync-stablecoin-charts.ts`        | Chart sync cache writes, retention, and error handling                                                                                                          |
+| `detect-depegs.test.ts`                                         | `detect-depegs.ts`                 | Stable prices, depeg open/close/update, direction change, NAV skip, supply threshold, DEX cross-validation, duplicate merge                                     |
+| `compute-dews.test.ts`                                          | `compute-dews.ts`                  | DEWS cache writes, metadata, and no-data handling                                                                                                               |
+| `daily-digest.test.ts`                                          | `daily-digest.ts`                  | Digest generation control flow, posting toggles, and cache persistence                                                                                          |
+| `dispatch-telegram-alerts.test.ts`                              | `dispatch-telegram-alerts.ts`      | Snapshot diffs, rate guards, and subscriber fan-out behavior                                                                                                    |
+| `sync-dex-liquidity.test.ts`                                    | `dex-liquidity/orchestrator.ts`    | Catastrophic throw path, degraded status propagation, success path                                                                                              |
+| `dex-liquidity-fallbacks.test.ts`                               | `dex-liquidity/fetch-fallbacks.ts` | DexScreener and CoinGecko ticker fallback ingestion behavior                                                                                                    |
+| `enrich-prices.test.ts`                                         | `enrich-prices.ts`                 | `isReasonablePrice` for all peg types (USD, EUR, JPY, IDR, GOLD, SILVER, etc.), FX-rate-aware bounds, `hasMissingPrice` edge cases                              |
+| `fetch-tbill-rate.test.ts`                                      | `fetch-tbill-rate.ts`              | FRED parsing, cache updates, and degraded fallback behavior                                                                                                     |
+| `snapshot-psi.test.ts`                                          | `snapshot-psi.ts`                  | Daily PSI snapshot writes and methodology-version attribution                                                                                                   |
+| `snapshot-supply.test.ts`                                       | `snapshot-supply.ts`               | Cache missing, stale cache (>1200s), valid insert for PSI-eligible assets, zero supply skip                                                                     |
+| `snapshot-safety-grade-history.test.ts`                         | `snapshot-safety-grade-history.ts` | Seed rows, grade-change inserts, unchanged-grade idempotent reruns                                                                                              |
+| `stability-index.test.ts`                                       | `stability-index.ts`               | Cron PSI recomputation and cache/history persistence behavior                                                                                                   |
+| `status-self-check.test.ts`                                     | `status-self-check.ts`             | Probe modes, latency summaries, and hysteresis persistence                                                                                                      |
+| `sync-blacklist.test.ts`                                        | `sync-blacklist.ts`                | Incremental multi-chain sync, enrichment, and state advancement                                                                                                 |
+| `sync-bluechip.test.ts`                                         | `sync-bluechip.ts`                 | Bluechip scrape normalization and cache writes                                                                                                                  |
+| `sync-usds-status.test.ts`                                      | `sync-usds-status.ts`              | USDS implementation/freeze-module on-chain checks                                                                                                               |
+| `yield-helpers.test.ts`                                         | `yield-helpers.ts`                 | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool`                           |
+| `sync-fx-rates.test.ts`                                         | `sync-fx-rates.ts`                 | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for CNH/RUB/UAH/ARS                                                   |
+| `sync-yield-data.test.ts`                                       | `sync-yield-data.ts`               | Yield ranking sync, validation guard, fallback behavior and ranking parity                                                                                      |
+| `dex-liquidity-pool-helpers.test.ts`                            | `dex-liquidity/pool-helpers.ts`    | Symbol parsing, pool classification, quality multipliers, chain-map toggles, durability/liquidity scoring branches, protocol normalization, pair/stress helpers |
+| `dex-liquidity-process-pools.test.ts`                           | `dex-liquidity/process-pools.ts`   | Pool filtering, address/symbol matching, collision safety, Curve/Uni v3/Aerodrome enrichment, weighted metric accumulation                                      |
+| `dex-liquidity-price-sanity.test.ts`                            | `dex-liquidity/price-sanity.ts`    | DEX observation plausibility bounds and anomaly rejection                                                                                                       |
+| `dex-liquidity-scoring.test.ts`                                 | `dex-liquidity/scoring.ts`         | Pool filtering/scaling, per-coin/global aggregate recomputation, confidence-gated depth stability, DEX price median persistence                                 |
+| `confirm-pending-depegs.test.ts`                                | `confirm-pending-depegs.ts`        | Pending depeg state-machine decisions, secondary confirmation paths, missing dex table handling, abort propagation                                              |
+| `dex-liquidity-persistence.test.ts`                             | `dex-liquidity/persistence.ts`     | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior              |
+| `sync-mint-burn.test.ts`                                        | `sync-mint-burn.ts`                | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior                                                             |
+| `worker/src/cron/dex-discovery/__tests__/orchestrator.test.ts`  | `dex-discovery/orchestrator.ts`    | Discovery tiering, backoff cadence, staged-pool writes, and budget exhaustion behavior                                                                          |
+| `worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts` | `dex-liquidity/staging-merge.ts`   | Staged-pool confidence decay, default filling, and merge-selection semantics                                                                                    |
 
 ## Conventions
 
@@ -404,6 +408,7 @@ In addition to the global 55% line threshold, CI enforces a critical-path gate v
 Gate script: `scripts/check-critical-coverage.mjs`
 
 Current critical file set:
+
 - `src/lib/api.ts`
 - `worker/src/lib/api-utils.ts`
 - `worker/src/cron/sync-stablecoins.ts`
@@ -413,9 +418,9 @@ Current critical file set:
 - `worker/src/api/dex-liquidity.ts`
 - `worker/src/api/stress-signals.ts`
 - `worker/src/api/mint-burn-flows.ts`
-- `worker/src/lib/alerts.ts` *(explicit threshold: 80% lines)*
-- `worker/src/api/stablecoin-detail.ts` *(explicit threshold: 30% lines)*
-- `worker/src/cron/dex-liquidity/orchestrator.ts` *(explicit threshold: 55% lines)*
+- `worker/src/lib/alerts.ts` _(explicit threshold: 80% lines)_
+- `worker/src/api/stablecoin-detail.ts` _(explicit threshold: 30% lines)_
+- `worker/src/cron/dex-liquidity/orchestrator.ts` _(explicit threshold: 55% lines)_
 
 ### Critical Test Suites
 
@@ -436,6 +441,7 @@ These are the narrow suites used to lock behavior parity before and after the Ti
 ## Adding a New Test
 
 **Frontend library test:**
+
 1. Create `src/lib/__tests__/<module>.test.ts`.
 2. Import from the module under test using the canonical boundary:
    - `@shared/*` for runtime-shared modules
@@ -467,7 +473,7 @@ describe("handleBlacklist", () => {
   it("returns 200 with events array", async () => {
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     expect(res.status).toBe(200);
-    const body = await res.json() as { events: unknown[]; total: number };
+    const body = (await res.json()) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
   });
@@ -488,7 +494,9 @@ vi.mock("../../lib/fetch-retry", () => ({
 import { syncFxRates } from "../sync-fx-rates";
 
 describe("syncFxRates", () => {
-  afterEach(() => { vi.restoreAllMocks(); });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it("falls back gracefully when frankfurter.app returns 503", async () => {
     mockFetch([{ match: "frankfurter.app", body: {}, status: 503 }]);
@@ -507,18 +515,19 @@ describe("syncFxRates", () => {
 
 **Custom rules** — React Compiler rules are downgraded to warnings since they flag valid patterns that work correctly at runtime:
 
-| Rule | Level | Reason |
-|------|-------|--------|
-| `react-hooks/preserve-manual-memoization` | warn | Compiler can't optimize `useMemo([data])` when body accesses `data.current.*` sub-properties |
-| `react-hooks/set-state-in-effect` | warn | Standard pattern for reading localStorage/sessionStorage on mount |
-| `react-hooks/purity` | warn | `Date.now()` in render is intentional for timestamp-based UIs |
-| `react-hooks/incompatible-library` | warn | TanStack Virtual `useVirtualizer()` — known library limitation |
+| Rule                                      | Level | Reason                                                                                       |
+| ----------------------------------------- | ----- | -------------------------------------------------------------------------------------------- |
+| `react-hooks/preserve-manual-memoization` | warn  | Compiler can't optimize `useMemo([data])` when body accesses `data.current.*` sub-properties |
+| `react-hooks/set-state-in-effect`         | warn  | Standard pattern for reading localStorage/sessionStorage on mount                            |
+| `react-hooks/purity`                      | warn  | `Date.now()` in render is intentional for timestamp-based UIs                                |
+| `react-hooks/incompatible-library`        | warn  | TanStack Virtual `useVirtualizer()` — known library limitation                               |
 
 **Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.worktrees/`, `worktrees/`, `.codex-autorunner/`, `worker/.wrangler/` (auto-generated build artifacts).
 
 ### Zod Runtime Validation
 
 Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current schema-validated response paths include:
+
 - `StablecoinListResponseSchema`
 - `DepegEventsResponseSchema`
 - `PegSummaryResponseSchema`
@@ -535,6 +544,7 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current s
 On validation failure, hooks log warnings and return data in degraded mode rather than hard-crashing the UI.
 
 When adding a new API endpoint:
+
 1. Define the response schema in `shared/types/index.ts` if the response has nested arrays or objects accessed via `.find()` / `.map()`
 2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes

@@ -80,15 +80,17 @@ Defined in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `validate`
 2. `deploy-worker`
-   - applies D1 migrations
-   - runs `wrangler deploy`
-   - runs `wrangler triggers deploy` to explicitly sync cron/routes/domain triggers after the worker deploy
+   - applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`
+   - runs `cd worker && npx --no-install wrangler deploy`
+   - runs `cd worker && npx --no-install wrangler triggers deploy` to explicitly sync cron/routes/domain triggers after the worker deploy
 3. `smoke-api`
 4. `deploy-pages`
    - uses explicit Wrangler CLI retries for transient Pages API failures during `pages deploy`
 5. `smoke-ui`
 
-Action dependencies in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
+GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
+
+Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The workflow installs Wrangler from `worker/package-lock.json` and runs it with `npx --no-install` so worker deploys are not blocked by GitHub Actions runtime deprecations in third-party JS actions.
 
 Deployment stops on the first failed job.
 
