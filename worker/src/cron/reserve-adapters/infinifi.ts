@@ -1,0 +1,105 @@
+import type { ReserveSlice } from "@shared/types";
+import { fetchWithRetry } from "../../lib/fetch-retry";
+
+interface InfiniFiFarm {
+  name: string;
+  label: string;
+  assetsNormalized: number;
+  type: "LIQUID" | "ILLIQUID" | "PROTOCOL";
+  underlyingAssetSymbol: string;
+}
+
+interface InfiniFiProtocolData {
+  code: string;
+  data: {
+    stats: { asset: { totalTVLAssetNormalized: number } };
+    farms: InfiniFiFarm[];
+  };
+}
+
+interface FarmRiskConfig {
+  risk: ReserveSlice["risk"];
+  coinId?: string;
+  depType?: ReserveSlice["depType"];
+}
+
+const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
+  "fasanara-rwa-farm":       { risk: "high" },
+  "fasanara-gdaf":           { risk: "high" },
+  "falconx-farm":            { risk: "high" },
+  "morpho-v2-sentora-pyusd": { risk: "high" },
+  "maple-farm-institutional": { risk: "high" },
+  "maple-farm-syrup":        { risk: "high" },
+  "spark-sUSDC-refcode":     { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+  "fluid-fUSDC":             { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+  "aavev3":                  { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+  "aavev3-horizon-usdc":     { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+  "aavev3-rlusd-farm":       { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+  "euler-sentora-usdc":      { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+  "morpho-steakUSDCinfinifi": { risk: "medium" },
+  "capfarm":                 { risk: "medium" },
+  "tokemak-autoUSD":         { risk: "medium" },
+  "gauntlet-alpha-farm":     { risk: "medium" },
+  "reservoir-wsrUSD":        { risk: "medium" },
+  "sGHO":                    { risk: "medium" },
+};
+
+export interface AdaptInfiniFiResult {
+  slices: ReserveSlice[];
+  /** Farm names not found in FARM_RISK_MAP (for operator awareness). */
+  unknownFarms: string[];
+}
+
+/** Convert raw InfiniFi protocol data to ReserveSlice[]. Pure function — no I/O. */
+export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResult {
+  const tvl = payload.data.stats.asset.totalTVLAssetNormalized;
+  if (!tvl || tvl <= 0) return { slices: [], unknownFarms: [] };
+
+  const activeFarms = payload.data.farms.filter(
+    (f) => f.type !== "PROTOCOL" && f.assetsNormalized > 0,
+  );
+
+  const unknownFarms: string[] = [];
+
+  const rawSlices = activeFarms.map((f) => {
+    const config = FARM_RISK_MAP[f.name];
+    if (!config) unknownFarms.push(f.name);
+    const risk: ReserveSlice["risk"] = config?.risk
+      ?? (f.type === "LIQUID" ? "low" : "medium");
+    return {
+      name: f.label,
+      pct: Math.round((f.assetsNormalized / tvl) * 100),
+      risk,
+      ...(config?.coinId ? { coinId: config.coinId } : {}),
+      ...(config?.depType ? { depType: config.depType } : {}),
+    } satisfies ReserveSlice;
+  }).filter((s) => s.pct > 0);
+
+  // Adjust largest slice so total sums to exactly 100
+  const sum = rawSlices.reduce((acc, s) => acc + s.pct, 0);
+  if (sum !== 100 && rawSlices.length > 0) {
+    const maxIdx = rawSlices.reduce(
+      (maxI, s, i, arr) => (s.pct > arr[maxI].pct ? i : maxI),
+      0,
+    );
+    const adjustment = 100 - sum;
+    if (rawSlices[maxIdx].pct + adjustment > 0) {
+      rawSlices[maxIdx].pct += adjustment;
+    }
+  }
+
+  return { slices: rawSlices, unknownFarms };
+}
+
+/** Fetch + adapt infiniFi protocol data. Uses fetchWithRetry for resilience. */
+export async function fetchInfiniFiReserves(
+  url: string,
+  signal: AbortSignal,
+): Promise<AdaptInfiniFiResult> {
+  const res = await fetchWithRetry(url, { signal }, 2, { timeoutMs: 10_000 });
+  if (!res) throw new Error("infiniFi API: fetchWithRetry returned null (all retries failed)");
+  if (!res.ok) throw new Error(`infiniFi API ${res.status}`);
+  const payload = await res.json() as InfiniFiProtocolData;
+  if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
+  return adaptInfiniFi(payload);
+}
