@@ -3,6 +3,7 @@ import { snapshotSafetyGradeHistory } from "../../cron/snapshot-safety-grade-his
 import { fetchTbillRate } from "../../cron/fetch-tbill-rate";
 import { snapshotPsiDaily } from "../../cron/snapshot-psi";
 import { syncUsdsStatus } from "../../cron/sync-usds-status";
+import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import type { ScheduledRuntimeContext } from "./context";
 
 export function runDaily0800Slot(runtime: ScheduledRuntimeContext): void {
@@ -17,4 +18,12 @@ export function runDaily0800Slot(runtime: ScheduledRuntimeContext): void {
     "sync-usds-status",
     (signal) => syncUsdsStatus(runtime.db, runtime.env.ETHERSCAN_API_KEY ?? null, signal),
   ));
+  runtime.ctx.waitUntil(
+    runtime.runLeasedCron("sync-live-reserves", (signal) =>
+      syncLiveReserves(runtime.db, signal, {
+        etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
+        alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
+      }),
+    ),
+  );
 }

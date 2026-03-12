@@ -227,6 +227,14 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     triggerMode: "shared",
   },
   {
+    job: "sync-live-reserves",
+    label: "Live reserve sync",
+    group: "daily",
+    intervalSec: 86400,
+    scheduleKey: "daily0800Utc",
+    triggerMode: "shared",
+  },
+  {
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",
