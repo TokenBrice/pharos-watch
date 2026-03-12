@@ -1,10 +1,11 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { StablecoinMeta } from "@shared/types";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
+import { CIRCUIT_SOURCE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import { throwIfAborted } from "../../lib/abort";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import type { DefiLlamaCoinPrice, PeggedAsset } from "../enrich-prices";
 
 const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(
@@ -132,6 +133,7 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
           priceSource: priceResolution.source,
           priceConfidence: "single-source",
           priceUpdatedAt: Math.floor(Date.now() / 1000),
+          supplySource: "coingecko-fallback",
           circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
@@ -164,6 +166,7 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
     }
 
     const mcapMap: Record<string, number> = {};
+    const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
     const tvlHistoryMap: Record<string, { date: number; totalLiquidityUSD: number }[]> = {};
     const protocolFetches = GOLD_METAS
       .filter((token) => token.protocolSlug)
@@ -176,7 +179,10 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
           if (!res) return;
 
           const data = (await res.json()) as { mcap?: number; tvl?: { date: number; totalLiquidityUSD: number }[] };
-          if (data.mcap) mcapMap[token.id] = data.mcap;
+          if (data.mcap) {
+            mcapMap[token.id] = data.mcap;
+            mcapSourceById[token.id] = "defillama";
+          }
           if (data.tvl) tvlHistoryMap[token.id] = data.tvl;
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -188,7 +194,10 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
     for (const token of GOLD_METAS) {
       if (mcapMap[token.id] != null && mcapMap[token.id] > 0) continue;
       const mcap = token.geckoId ? toPositiveFiniteNumber(cgData[token.geckoId]?.usd_market_cap) : undefined;
-      if (mcap != null) mcapMap[token.id] = mcap;
+      if (mcap != null) {
+        mcapMap[token.id] = mcap;
+        mcapSourceById[token.id] = "coingecko-fallback";
+      }
     }
 
     const nowSec = Math.floor(Date.now() / 1000);
@@ -255,6 +264,7 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
           priceSource: priceResolution.source,
           priceConfidence: "single-source",
           priceUpdatedAt: Math.floor(Date.now() / 1000),
+          supplySource: mcapSourceById[meta.id] ?? "coingecko-fallback",
           circulating: { [pKey]: mcap },
           circulatingPrevDay: prevDay != null ? { [pKey]: prevDay } : null,
           circulatingPrevWeek: prevWeek != null ? { [pKey]: prevWeek } : null,
@@ -317,6 +327,7 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: Abor
           priceSource: priceResolution.source,
           priceConfidence: "single-source",
           priceUpdatedAt: Math.floor(Date.now() / 1000),
+          supplySource: "coingecko-fallback",
           circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
@@ -333,7 +344,7 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: Abor
   }
 }
 
-export async function fetchCoinGeckoMarketData(signal?: AbortSignal): Promise<CoinGeckoMcapData> {
+export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSignal): Promise<CoinGeckoMcapData> {
   const ids = [
     ...COMMODITY_TOKENS.filter((token) => !token.protocolSlug).map((token) => token.geckoId).filter(Boolean),
     ...FIAT_CG_METAS.map((token) => token.geckoId).filter(Boolean),
@@ -341,6 +352,12 @@ export async function fetchCoinGeckoMarketData(signal?: AbortSignal): Promise<Co
 
   if (!ids) return {};
   throwIfAborted(signal);
+
+  const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_MCAP);
+  if (!cgAllowed) {
+    console.warn("[sync-stablecoins] CoinGecko market-cap circuit open — skipping supplemental mcap fetch");
+    return {};
+  }
 
   const res = await fetchWithRetry(
     cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`),
@@ -352,10 +369,20 @@ export async function fetchCoinGeckoMarketData(signal?: AbortSignal): Promise<Co
 
   if (!res || !res.ok) {
     console.error(`[sync-stablecoins] CoinGecko batch mcap fetch failed: ${res?.status ?? "no response"}`);
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, false);
     return {};
   }
 
-  return (await res.json()) as CoinGeckoMcapData;
+  try {
+    const data = (await res.json()) as CoinGeckoMcapData;
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, true);
+    return data;
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.error("[sync-stablecoins] CoinGecko batch mcap payload parse failed:", err);
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, false);
+    return {};
+  }
 }
 
 export async function fetchSupplementalTrackedTokens(
