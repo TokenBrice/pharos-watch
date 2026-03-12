@@ -83,18 +83,10 @@ vi.mock("@shared/lib/stablecoins", () => {
 
 // Stub enrich-prices to avoid complex 4-pass pipeline
 vi.mock("../enrich-prices", () => ({
-  buildPriceReasonablenessOptions: vi.fn((input?: { navToken?: unknown; commodityOunces?: unknown }) => ({
-    navToken: !!input?.navToken,
-    commodityOunces:
-      typeof input?.commodityOunces === "number" && Number.isFinite(input.commodityOunces) && input.commodityOunces > 0
-        ? input.commodityOunces
-        : undefined,
-  })),
   enrichMissingPrices: vi.fn(async () => ({
     totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, pass4: 0, finalMissing: 0,
   })),
   hasMissingPrice: vi.fn((a: { price?: number | null }) => a.price == null || typeof a.price !== "number" || a.price === 0),
-  isReasonablePrice: vi.fn(() => true),
   fetchPrimaryPrices: vi.fn(async () => ({
     results: new Map(),
     stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
@@ -148,7 +140,7 @@ vi.mock("../../lib/alerts", () => ({
 }));
 
 import { syncStablecoins } from "../sync-stablecoins";
-import { enrichMissingPrices, fetchPrimaryPrices, isReasonablePrice } from "../enrich-prices";
+import { enrichMissingPrices, fetchPrimaryPrices } from "../enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
@@ -219,7 +211,6 @@ describe("syncStablecoins", () => {
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
       totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, pass4: 0, finalMissing: 0,
     });
-    vi.mocked(isReasonablePrice).mockReset().mockImplementation(() => true);
     vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({
       results: new Map(),
       stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
@@ -681,49 +672,7 @@ describe("syncStablecoins", () => {
     expect(normalized?.priceUpdatedAt).toBe(nowSec - 60);
   });
 
-  it("passes commodityOunces into price sanity checks for fractional gold tokens", async () => {
-    const db = makeDb();
-    const dlData = makeDlResponse(60);
-    const target = dlData.peggedAssets[0] as Record<string, unknown>;
-    target.id = "ggbr-goldfish-gold";
-    target.name = "Goldfish Gold";
-    target.symbol = "GGBR";
-    target.geckoId = "goldfish-gold";
-    target.price = 5.15;
-    target.pegType = "peggedGOLD";
-    target.circulating = { peggedGOLD: 26_000_000 };
-
-    vi.mocked(isReasonablePrice).mockImplementation((_price, _pegType, _fxRates, opts) => opts?.commodityOunces === 0.001);
-
-    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
-
-    mockFetch([
-      { match: "api.coingecko.com", body: {} },
-      { match: "stablecoins.llama.fi", body: dlData },
-      { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
-
-    const result = await syncStablecoins(db);
-
-    expect(result.itemCount).toBe(60);
-    expect(vi.mocked(isReasonablePrice)).toHaveBeenCalledWith(
-      5.15,
-      "peggedGOLD",
-      undefined,
-      expect.objectContaining({ commodityOunces: 0.001 }),
-    );
-    const finalValidationCall = validateSpy.mock.calls.find(
-      (call) => call[2] === "sync-stablecoins:stablecoins"
-    );
-    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
-    const normalized = payload?.peggedAssets.find((a) => a.id === "ggbr-goldfish-gold");
-    expect(normalized?.price).toBe(5.15);
-  });
-
   it("allows deep downside prices in sync-time primary validation when FX cache is stale", async () => {
-    const actual = await vi.importActual<typeof import("../enrich-prices")>("../enrich-prices");
-    vi.mocked(isReasonablePrice).mockImplementation(actual.isReasonablePrice);
-
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -760,47 +709,12 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(db);
 
     expect(result.itemCount).toBe(60);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      priceValidationShadow?: { mismatched: number; mismatchBreakdown?: Record<string, number> };
-    };
-    expect(metadata.priceValidationShadow?.mismatched).toBeGreaterThan(0);
-    expect(metadata.priceValidationShadow?.mismatchBreakdown?.pre_reject).toBeGreaterThan(0);
     const finalValidationCall = validateSpy.mock.calls.find(
       (call) => call[2] === "sync-stablecoins:stablecoins"
     );
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const normalized = payload?.peggedAssets.find((a) => a.id === "jpyc-jpyc");
     expect(normalized?.price).toBe(0.0005);
-  });
-
-  it("caps sync shadow mismatch samples at 10 entries", async () => {
-    const actual = await vi.importActual<typeof import("../enrich-prices")>("../enrich-prices");
-    vi.mocked(isReasonablePrice).mockImplementation(actual.isReasonablePrice);
-
-    const db = makeDb();
-    const dlData = makeDlResponse(60);
-    for (let i = 0; i < 12; i++) {
-      const asset = dlData.peggedAssets[i] as Record<string, unknown>;
-      asset.id = `jpy-shadow-${i}`;
-      asset.symbol = `JP${i}`;
-      asset.price = 0.0005;
-      asset.pegType = "peggedJPY";
-    }
-
-    mockFetch([
-      { match: "api.coingecko.com", body: {} },
-      { match: "stablecoins.llama.fi", body: dlData },
-      { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
-
-    const result = await syncStablecoins(db);
-
-    expect(result.itemCount).toBe(60);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      priceValidationShadow?: { mismatched: number; sampleMismatches?: Array<unknown> };
-    };
-    expect(metadata.priceValidationShadow?.mismatched).toBeGreaterThanOrEqual(12);
-    expect(metadata.priceValidationShadow?.sampleMismatches).toHaveLength(10);
   });
 
   it("adds tracked gold supplemental assets when DefiLlama price data is empty but CoinGecko still has price and market cap", async () => {

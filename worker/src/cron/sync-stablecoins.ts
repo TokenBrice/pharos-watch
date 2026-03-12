@@ -1,13 +1,11 @@
 import { setCacheIfNewer, getCache, getPriceCache, savePriceCache } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import {
-  buildPriceReasonablenessOptions,
   computeShadowComparison,
   enrichMissingPrices,
   hasMissingPrice,
-  isReasonablePrice,
   fetchPrimaryPrices,
 } from "./enrich-prices";
 import type { PeggedAsset, ShadowComparisonResult } from "./enrich-prices";
@@ -38,7 +36,6 @@ import {
   buildPriceValidationContext,
   validatePriceCandidate,
   type PriceValidationContext,
-  type PriceValidationDecision,
   type PriceValidationReferences,
 } from "../lib/price-validation";
 
@@ -49,24 +46,6 @@ type StablecoinsPayload = {
   peggedAssets: PeggedAsset[];
   fxFallbackRates?: Record<string, number>;
 };
-
-interface PriceValidationShadowMetadata {
-  compared: number;
-  matched: number;
-  mismatched: number;
-  mismatchRate: number;
-  mismatchBreakdown: Record<string, number>;
-  sampleMismatches: Array<{
-    stage: string;
-    id: string;
-    symbol: string;
-    price: number;
-    legacyAccepted: boolean;
-    newAccepted: boolean;
-    reasonCode: string;
-    referenceType: string;
-  }>;
-}
 
 type SyncCacheWriteMode = "main-write" | "fallback-write" | "blocked-invalid-payload" | "no-write";
 interface SyncCapabilities {
@@ -129,17 +108,6 @@ function summarizeValidationIssues(issues: string): string {
   return `${issues.slice(0, VALIDATION_ISSUES_MAX_CHARS)}...`;
 }
 
-function createPriceValidationShadowMetadata(): PriceValidationShadowMetadata {
-  return {
-    compared: 0,
-    matched: 0,
-    mismatched: 0,
-    mismatchRate: 0,
-    mismatchBreakdown: {},
-    sampleMismatches: [],
-  };
-}
-
 function shadowDecisionModeForAsset(asset: PeggedAsset): "primary_authoritative" | "fallback_enrichment" {
   return asset.priceConfidence === "fallback" ||
     asset.priceSource === "coinmarketcap" ||
@@ -168,35 +136,6 @@ function createValidationContextResolver(): {
       return context;
     },
   };
-}
-
-function recordPriceValidationShadow(
-  stats: PriceValidationShadowMetadata,
-  stage: string,
-  asset: PeggedAsset,
-  price: number,
-  legacyAccepted: boolean,
-  decision: PriceValidationDecision,
-): void {
-  stats.compared += 1;
-  if (legacyAccepted === decision.accepted) {
-    stats.matched += 1;
-  } else {
-    stats.mismatched += 1;
-    stats.mismatchBreakdown[stage] = (stats.mismatchBreakdown[stage] ?? 0) + 1;
-    if (stats.sampleMismatches.length < 10) {
-      stats.sampleMismatches.push({
-        stage,
-        id: String(asset.id),
-        symbol: asset.symbol,
-        price,
-        legacyAccepted,
-        newAccepted: decision.accepted,
-        reasonCode: decision.reasonCode,
-        referenceType: decision.referenceType,
-      });
-    }
-  }
 }
 
 function buildSyncMetadata(
@@ -273,23 +212,6 @@ function hydrateGeckoIdAliases(assets: PeggedAsset[]): void {
     const geckoId = resolveGeckoId(asset);
     if (geckoId) asset.geckoId = geckoId;
   }
-}
-
-function isReasonablePriceForAsset(
-  asset: PeggedAsset,
-  price: number,
-  fxRates?: Record<string, number>,
-): boolean {
-  const meta = TRACKED_META_BY_ID.get(String(asset.id));
-  return isReasonablePrice(
-    price,
-    asset.pegType as string | undefined,
-    fxRates,
-    buildPriceReasonablenessOptions({
-      navToken: meta?.flags?.navToken ?? asset.navToken,
-      commodityOunces: meta?.commodityOunces ?? asset.commodityOunces,
-    }),
-  );
 }
 
 function stampPriceMetadata(
@@ -604,7 +526,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Always prefer curated metadata over DefiLlama fields; includes known address patches.
   applyTrackedAssetOverrides(llamaData.peggedAssets);
 
-  // Load FX rates early for dynamic price bounds in isReasonablePrice
+  // Load FX rates early for dynamic price bounds in validatePriceCandidate
   let fxRates: Record<string, number> | undefined;
   const fxCacheEarly = await getCache(db, "fx-rates");
   const maxFxAgeSec = 6 * 3600;
@@ -619,7 +541,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const validationReferences: PriceValidationReferences | undefined = fxRates
     ? { rates: fxRates, type: "fresh", updatedAt: fxCacheEarly?.updatedAt ?? syncStartSec }
     : undefined;
-  const priceValidationShadow = createPriceValidationShadowMetadata();
   const validationContexts = createValidationContextResolver();
 
   // --- Primary price validation ---
@@ -668,14 +589,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   for (const asset of llamaData.peggedAssets) {
     const primary = primaryPriceResults.get(asset.id);
     if (primary) {
-      const legacyAccepted = isReasonablePriceForAsset(asset, primary.price, fxRates);
       const decision = validatePriceCandidate(
         primary.price,
         validationContexts.get(asset),
         "primary_authoritative",
         validationReferences,
       );
-      recordPriceValidationShadow(priceValidationShadow, "dual_primary_apply", asset, primary.price, legacyAccepted, decision);
       if (decision.accepted) {
         asset.price = primary.price;
         stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec);
@@ -702,14 +621,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       typeof asset.price === "number" &&
       asset.price !== 0
     ) {
-      const legacyAccepted = isReasonablePriceForAsset(asset, asset.price, fxRates);
       const decision = validatePriceCandidate(
         asset.price,
         validationContexts.get(asset),
         "primary_authoritative",
         validationReferences,
       );
-      recordPriceValidationShadow(priceValidationShadow, "pre_reject", asset, asset.price, legacyAccepted, decision);
       if (!decision.accepted) {
         console.warn(`[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
         asset.price = 0; // hasMissingPrice() treats 0 as missing
@@ -738,14 +655,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   let rejectedCount = 0;
   for (const asset of llamaData.peggedAssets) {
     if (asset.price != null && typeof asset.price === "number") {
-      const legacyAccepted = isReasonablePriceForAsset(asset, asset.price, fxRates);
       const decision = validatePriceCandidate(
         asset.price,
         validationContexts.get(asset),
         shadowDecisionModeForAsset(asset),
         validationReferences,
       );
-      recordPriceValidationShadow(priceValidationShadow, "post_enrichment_reject", asset, asset.price, legacyAccepted, decision);
       if (!decision.accepted) {
         console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
         asset.price = null;
@@ -785,14 +700,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
       if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL) {
-        const legacyAccepted = isReasonablePriceForAsset(asset, cached.price, fxRates);
         const decision = validatePriceCandidate(
           cached.price,
           validationContexts.get(asset),
           "fallback_enrichment",
           validationReferences,
         );
-        recordPriceValidationShadow(priceValidationShadow, "cached_fallback", asset, cached.price, legacyAccepted, decision);
         if (decision.accepted) {
           asset.price = cached.price;
           stampPriceMetadata(asset, "cached", "fallback", cached.updatedAt);
@@ -972,12 +885,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     missingPrices: finalMissing,
     priceSourceHealth,
     shadowComparison,
-    priceValidationShadow: {
-      ...priceValidationShadow,
-      mismatchRate: priceValidationShadow.compared > 0
-        ? priceValidationShadow.mismatched / priceValidationShadow.compared
-        : 0,
-    },
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
   if (depegErrorCount > 0) {
