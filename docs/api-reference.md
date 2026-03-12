@@ -246,6 +246,26 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
 
 ---
 
+### `GET /api/stablecoin-reserves/:id`
+
+Returns live reserve composition for a stablecoin synced from its configured live data source. Only coins with a `liveReservesConfig` in their metadata have records. Returns `404` when no live data exists (cron not yet run).
+
+**Cache:** slow (`public, s-maxage=3600, max-age=300`)
+
+**Response (200):**
+
+| Field          | Type             | Description                              |
+|----------------|------------------|------------------------------------------|
+| `stablecoinId` | `string`         | Pharos coin ID                           |
+| `slices`       | `ReserveSlice[]` | Live reserve composition                 |
+| `fetchedAt`    | `number`         | Unix seconds of last sync                |
+| `source`       | `string`         | Adapter key (e.g., `"infinifi"`)         |
+| `estimated`    | `false`          | Always false — live data only            |
+
+**Response (404):** `{ "error": "Not found" }`
+
+---
+
 ### `GET /api/stablecoin-charts`
 
 Aggregate historical supply chart data across all stablecoins, broken down by peg type. Updated every 15 minutes.

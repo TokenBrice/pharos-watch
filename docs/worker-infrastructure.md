@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 22 scheduled runtime jobs across 9 trigger slots. `CRON_INTERVALS` / `/api/status` track 21 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally not part of the shared status metadata set.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 23 scheduled runtime jobs across 9 trigger slots. `CRON_INTERVALS` / `/api/status` track 22 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally not part of the shared status metadata set.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -299,9 +299,10 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
+| `sync-live-reserves` | `syncLiveReserves()` | `worker/src/cron/sync-live-reserves.ts` | This doc (below) |
 | `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED) and `sync-usds-status` (Etherscan) use ≤2 concurrent external connections.
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED), `sync-usds-status` (Etherscan), and `sync-live-reserves` (protocol APIs, sequential) use ≤3 concurrent external connections.
 
 ### Trigger 9: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
@@ -437,6 +438,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `ALCHEMY` | `alchemy` | `sync-mint-burn` |
 | `TWITTER_API` | `twitter-api` | `daily-digest` social posting |
 | `TELEGRAM_API` | `telegram-api` | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
+| `LIVE_RESERVES` | `live-reserves` | `sync-live-reserves` |
 
 ---
 
@@ -611,6 +613,33 @@ The three crons below were previously only listed by filename in `docs/architect
    - If probe fails entirely: preserve cached status, don't update
 5. Store `{ freezeActive, implementationAddress, lastChecked }` via `setCacheIfNewer()`
 
+### sync-live-reserves
+
+**File:** `worker/src/cron/sync-live-reserves.ts`
+**Schedule:** `0 8 * * *` (daily at 08:00 UTC)
+**Data source:** Protocol-specific APIs via adapter registry (`worker/src/cron/reserve-adapters/`)
+
+**Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table. Uses a generic adapter pattern — each coin with a `liveReservesConfig` in metadata declares an adapter key + URL. The cron iterates configured coins sequentially, applies circuit breaker logic, and upserts results.
+
+**D1 table: `reserve_composition`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `stablecoin_id` | TEXT PK | Pharos coin ID |
+| `slices` | TEXT | JSON-serialized `ReserveSlice[]` |
+| `fetched_at` | INTEGER | Unix seconds of last successful sync |
+| `source` | TEXT | Adapter key used (e.g., `"infinifi"`) |
+
+Only coins with `liveReservesConfig` set in their metadata appear in this table. One row per coin (latest snapshot only).
+
+**Registered adapters:**
+
+| Adapter | Coins | Source |
+|---------|-------|--------|
+| `infinifi` | `iusd-infinifi` | `https://eth-api.infinifi.xyz/api/protocol/data` |
+
+**Adding a new adapter:** Create `worker/src/cron/reserve-adapters/<protocol>.ts`, register in `index.ts`, and add `liveReservesConfig` to the coin metadata. The cron, API, circuit breaker, and frontend all pick it up automatically.
+
 ### sync-bluechip
 
 **File:** `worker/src/cron/sync-bluechip.ts`
@@ -691,6 +720,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
+| `sync-live-reserves` | 86,400s (24h) | `0 8 * * *` |
 | `sync-bluechip` | 86,400s (24h) | `5 8 * * *` |
 | `daily-digest` | 86,400s (24h) | `5 8 * * *` |
 | `discovery-scan` | 86,400s (24h) | `5 8 * * *` |
