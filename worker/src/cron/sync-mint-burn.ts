@@ -36,6 +36,7 @@ import {
 } from "../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipeline/types";
 import type { CronProgressReporter } from "../lib/db";
+import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
 const MAX_SCAN_RANGE = 50_000;
@@ -358,7 +359,7 @@ export async function syncMintBurn(
     SQL_IN_CHUNK_SIZE,
   );
 
-  await reportProgress?.({
+  await reportCronProgress(reportProgress, {
     stage: lane === "extended" ? "extended-queue" : lane === "critical" ? "critical-queue" : "queue",
     itemsDone: 0,
     itemsTotal: configs.length,
@@ -369,7 +370,7 @@ export async function syncMintBurn(
       contractsEnabled: enabledConfigs.length,
       contractsTotal,
     },
-  });
+  }, budget);
 
   let rowsRead = 0;
   let rowsParsed = 0;
@@ -424,7 +425,7 @@ export async function syncMintBurn(
       requestBudgetLimit: 0,
       requestBudgetUsed: 0,
     };
-    await reportProgress?.({
+    await reportCronProgress(reportProgress, {
       stage: "scan-config",
       itemsDone: i,
       itemsTotal: configs.length,
@@ -435,10 +436,8 @@ export async function syncMintBurn(
         configKey: key,
         symbol: config.symbol,
         tier,
-        budgetUsed: budget.count,
-        budgetLimit: budget.limit,
       },
-    });
+    }, budget);
     const finalizeSummary = (criticalOutcome: "satisfied" | "unsatisfied" | "n/a" = "n/a"): void => {
       if (tier === "critical") {
         if (criticalOutcome === "satisfied") {
@@ -716,7 +715,7 @@ export async function syncMintBurn(
   }
 
   await recalcAffectedHours(db, affectedHours);
-  await reportProgress?.({
+  await reportCronProgress(reportProgress, {
     stage: "recalc-hours",
     itemsDone: configs.length,
     itemsTotal: configs.length,
@@ -725,10 +724,8 @@ export async function syncMintBurn(
       lane,
       jobName,
       affectedHours: affectedHours.size,
-      budgetUsed: budget.count,
-      budgetLimit: budget.limit,
     },
-  });
+  }, budget);
 
   const laggingConfigs = configs
     .map((config) => {
@@ -789,7 +786,7 @@ export async function syncMintBurn(
     }
   }
 
-  const metadata = JSON.stringify({
+  const metadata = JSON.stringify(withBudgetMetadata(budget, {
     lane,
     jobName,
     chainHead,
@@ -809,8 +806,6 @@ export async function syncMintBurn(
     contractsProcessed,
     contractsSkipped,
     contractsDeferredExtended,
-    budgetUsed: budget.count,
-    budgetLimit: budget.limit,
     apiErrors,
     validationFailures: apiErrors,
     fallbackMode: null,
@@ -834,9 +829,9 @@ export async function syncMintBurn(
     runStatePersistenceFailed,
     nullPricesHealed,
     nullPriceBacklog,
-  });
+  }));
 
-  await reportProgress?.({
+  await reportCronProgress(reportProgress, {
     stage: "complete",
     itemsDone: configs.length,
     itemsTotal: configs.length,
@@ -847,10 +842,8 @@ export async function syncMintBurn(
       status,
       contractsProcessed,
       contractsSkipped,
-      budgetUsed: budget.count,
-      budgetLimit: budget.limit,
     },
-  });
+  }, budget);
 
   console.log(`[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests (${status})`);
 

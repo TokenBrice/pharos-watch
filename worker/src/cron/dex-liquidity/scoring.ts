@@ -1,5 +1,6 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import { getCache, batchExecute } from "../../lib/db";
+import { batchExecute } from "../../lib/db";
+import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type {
   LiquidityMetrics,
   FullScoreResult,
@@ -468,16 +469,13 @@ export async function computeDexPrices(
 
   // Load primary prices from stablecoins cache for comparison
   const primaryPrices = new Map<string, number>();
-  const cached = await getCache(db, "stablecoins");
-  if (cached) {
-    try {
-      const { peggedAssets } = JSON.parse(cached.value) as { peggedAssets: { id: string; price?: number | null }[] };
-      for (const a of peggedAssets) {
-        if (a.price != null && typeof a.price === "number" && a.price > 0) {
-          primaryPrices.set(a.id, a.price);
-        }
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  if (stablecoinsCache.kind === "ok") {
+    for (const asset of stablecoinsCache.payload.peggedAssets) {
+      if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
+        primaryPrices.set(asset.id, asset.price);
       }
-    } catch { /* ignore malformed cache */ }
+    }
   }
 
   const priceStmts: D1PreparedStatement[] = [];

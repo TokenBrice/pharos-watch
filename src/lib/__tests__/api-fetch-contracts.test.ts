@@ -44,7 +44,20 @@ describe("api contract validation policy", () => {
     expect(result).toEqual(body);
   });
 
-  it("keeps permissive behavior on non-strict endpoint schema mismatch", async () => {
+  it("throws on schema mismatch by default whenever a schema is provided", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ something: "unexpected" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(
+      apiFetch("/api/daily-digest", z.object({ digest: z.string() }))
+    ).rejects.toBeInstanceOf(SchemaValidationError);
+  });
+
+  it("keeps permissive behavior only when warn mode is explicit", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const raw = { something: "unexpected" };
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -54,7 +67,12 @@ describe("api contract validation policy", () => {
       })
     );
 
-    const result = await apiFetch("/api/daily-digest", z.object({ digest: z.string() }));
+    const result = await apiFetch(
+      "/api/daily-digest",
+      z.object({ digest: z.string() }),
+      undefined,
+      "warn",
+    );
 
     expect(result).toEqual(raw);
     expect(warn).toHaveBeenCalledOnce();
@@ -143,7 +161,7 @@ describe("api contract validation policy", () => {
       })
     );
 
-    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }));
+    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
     expect(result.meta?.warning).toContain("Response is stale");
     expect(result.meta?.status).toBe("stale");
   });

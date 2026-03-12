@@ -267,7 +267,7 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
             />
             <Tooltip
               {...RECHARTS_TOOLTIP_STYLES}
-              formatter={(value: number | undefined) => [formatCurrency(value ?? 0), "TVL"]}
+              formatter={(value) => [formatCurrency(typeof value === "number" ? value : Number(value ?? 0) || 0), "TVL"]}
             />
             <Area type="monotone" dataKey="tvl" stroke={CHART_BLUE} fill="url(#tvlGradient)" strokeWidth={1.5} />
           </AreaChart>

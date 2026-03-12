@@ -127,7 +127,7 @@ When `type === "data-correction"` and a valid `stablecoinId` is provided, the wo
 |--------|--------|
 | Cached price | `coin.price` from the cached DefiLlama payload |
 | Circulating supply | Sum of `coin.circulating` values |
-| Peg deviation | `((price - 1.0) / 1.0) * 100` |
+| Peg deviation | `((price - pegReference) / pegReference) * 100` using the tracked peg currency |
 | Cache age | `now - cache.updatedAt` in seconds |
 
 The verification result produces one of three GitHub labels:
@@ -140,7 +140,7 @@ The verification result produces one of three GitHub labels:
 
 The full snapshot block is embedded in the GitHub issue body as a `**--- Auto-Verification Snapshot ---**` section.
 
-**Limitation:** `pegRef` is hardcoded to `1.0`, so non-USD stablecoins will show inflated deviation. The snapshot is still useful for triage context.
+For non-USD pegs, the worker now derives `pegReference` from the tracked peg type plus cached fallback rates (`peggedEUR`, `peggedGOLD`, etc.). Commodity pegs also respect `commodityOunces`, so tokens such as XAUT and PAXG are compared against per-token gold references rather than `$1`.
 
 #### GitHub routing
 

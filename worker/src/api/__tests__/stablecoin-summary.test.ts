@@ -33,7 +33,7 @@ describe("handleStablecoinSummary", () => {
     const res = await handleStablecoinSummary(db, "usdt-tether");
 
     expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "Data not yet available" });
+    expect(await res.json()).toEqual({ error: "Cached stablecoins data is corrupt" });
   });
 
   it("returns 503 when stablecoins cache is corrupt", async () => {

@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types";
+import {
+  StablecoinListResponseSchema,
+  SupplyHistoryResponseSchema,
+  type StablecoinListResponse,
+  type SupplyHistoryPoint,
+} from "@shared/types";
 import { useApiQuery, CRON_15MIN, CRON_1H } from "./use-api-query";
 
-export interface SupplyHistoryPoint {
-  date: number;
-  circulatingUsd: number;
-  price: number | null;
-}
+export type { SupplyHistoryPoint } from "@shared/types";
 
 export function useStablecoins() {
   return useApiQuery<StablecoinListResponse>(
@@ -18,47 +18,19 @@ export function useStablecoins() {
   );
 }
 
-/** Stablecoin detail shape (tokens array from DL, CG, or commodity paths) */
-interface DetailToken {
-  date: number;
-  totalCirculatingUSD?: Record<string, number>;
-  totalCirculating?: Record<string, number>;
-  circulating?: Record<string, number>;
-}
-
-export interface StablecoinDetail {
-  tokens?: DetailToken[];
-}
-
-/** Sum all peg-type values in a circulating object (values are already in USD). */
-function sumCirculating(obj: Record<string, number> | undefined): number {
-  if (!obj) return 0;
-  return Object.values(obj).reduce((s, v) => s + (v ?? 0), 0);
-}
-
-/** Transform detail tokens into SupplyHistoryPoint array. */
-export function detailToSupplyHistory(detail: StablecoinDetail | undefined): SupplyHistoryPoint[] {
-  if (!detail?.tokens) return [];
-  return detail.tokens
-    .map((t) => {
-      const usd = sumCirculating(t.totalCirculatingUSD) || sumCirculating(t.circulating);
-      return { date: t.date, circulatingUsd: usd, price: null as number | null };
-    })
-    .filter((d) => d.circulatingUsd > 0);
-}
-
-export function useSupplyHistory(id: string) {
-  const query = useApiQuery<StablecoinDetail>(
-    ["stablecoin-detail", id],
-    API_PATHS.stablecoinDetail(id),
+export function useSupplyHistory(id: string, days = 1825) {
+  const query = useApiQuery<SupplyHistoryPoint[]>(
+    ["supply-history", id, days],
+    API_PATHS.supplyHistory(id, days),
     CRON_1H,
-    { enabled: !!id }
+    {
+      enabled: !!id,
+      schema: SupplyHistoryResponseSchema,
+    },
   );
 
-  const data = useMemo(() => detailToSupplyHistory(query.data), [query.data]);
-
   return {
-    data,
+    data: query.data ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,

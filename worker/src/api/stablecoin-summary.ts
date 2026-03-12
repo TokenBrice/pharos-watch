@@ -6,48 +6,27 @@ import {
   withErrorHandler,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { getCache } from "../lib/db";
-
-interface StablecoinsCachePayload {
-  peggedAssets: StablecoinData[];
-}
-
-function sumSupplyBuckets(buckets: Record<string, number> | null | undefined): number {
-  if (!buckets) {
-    return 0;
-  }
-  return Object.values(buckets).reduce((acc, value) => (Number.isFinite(value) ? acc + value : acc), 0);
-}
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { sumPegBuckets } from "@shared/lib/supply";
 
 export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", async (
   db: D1Database,
   id: string,
 ): Promise<Response> => {
-  const cached = await getCache(db, "stablecoins");
-  if (!cached) {
-    return errorResponse(503, "Data not yet available");
-  }
-
-  let parsed: StablecoinsCachePayload;
-  try {
-    parsed = JSON.parse(cached.value) as StablecoinsCachePayload;
-  } catch {
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  if (stablecoinsCache.kind !== "ok") {
     return errorResponse(503, "Cached stablecoins data is corrupt");
   }
 
-  if (!parsed.peggedAssets || !Array.isArray(parsed.peggedAssets)) {
-    return errorResponse(503, "Cached stablecoins data is corrupt");
-  }
-
-  const coin = parsed.peggedAssets.find((item) => item.id === id);
+  const coin = stablecoinsCache.payload.peggedAssets.find((item: StablecoinData) => item.id === id);
   if (!coin) {
     return errorResponse(404, `Stablecoin ${id} not found`);
   }
 
-  const currentSupplyUsd = sumSupplyBuckets(coin.circulating);
-  const prevDaySupplyUsd = sumSupplyBuckets(coin.circulatingPrevDay);
-  const prevWeekSupplyUsd = sumSupplyBuckets(coin.circulatingPrevWeek);
-  const prevMonthSupplyUsd = sumSupplyBuckets(coin.circulatingPrevMonth);
+  const currentSupplyUsd = sumPegBuckets(coin.circulating);
+  const prevDaySupplyUsd = sumPegBuckets(coin.circulatingPrevDay);
+  const prevWeekSupplyUsd = sumPegBuckets(coin.circulatingPrevWeek);
+  const prevMonthSupplyUsd = sumPegBuckets(coin.circulatingPrevMonth);
 
   return jsonResponse({
     id: coin.id,
@@ -70,8 +49,8 @@ export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", as
       change30d: currentSupplyUsd - prevMonthSupplyUsd,
     },
     chainCount: coin.chains.length,
-    updatedAt: cached.updatedAt,
+    updatedAt: stablecoinsCache.updatedAt,
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,
-  }, cached.updatedAt, 600));
+  }, stablecoinsCache.updatedAt, 600));
 });

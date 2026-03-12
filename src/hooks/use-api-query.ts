@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { ApiFetchError, apiFetch, apiFetchWithMeta, type ApiMeta } from "@/lib/api";
+import { ApiFetchError, apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
 export {
   CRON_1MIN,
   CRON_15MIN,
@@ -24,18 +24,20 @@ interface ApiQueryOptions<T> extends PollingQueryControlOptions {
   schema?: ZodType<T>;
   fetchInit?: RequestInit;
   metaMaxAgeSec?: number;
+  contractMode?: ApiContractMode;
 }
 
 export function createApiQueryFn<T>(
   path: string,
   schema?: ZodType<T>,
   fetchInit?: RequestInit,
+  contractMode?: ApiContractMode,
 ): () => Promise<T> {
   return () => {
     if (fetchInit) {
-      return apiFetch<T>(path, schema, fetchInit);
+      return apiFetch<T>(path, schema, fetchInit, contractMode);
     }
-    return apiFetch<T>(path, schema);
+    return apiFetch<T>(path, schema, undefined, contractMode);
   };
 }
 
@@ -50,6 +52,7 @@ export function createAdminApiQueryFn<T>(
   schema?: ZodType<T>,
   fetchInit?: RequestInit,
   unauthorizedMessage = "Invalid admin key",
+  contractMode?: ApiContractMode,
 ): () => Promise<T> {
   return async () => {
     try {
@@ -63,6 +66,7 @@ export function createAdminApiQueryFn<T>(
           ...fetchInit,
           headers,
         },
+        contractMode,
       );
     } catch (err) {
       if (err instanceof ApiFetchError && err.status === 401) {
@@ -78,12 +82,13 @@ export function createApiQueryFnWithMeta<T>(
   schema?: ZodType<T>,
   fetchInit?: RequestInit,
   metaMaxAgeSec?: number,
+  contractMode?: ApiContractMode,
 ): () => Promise<{ data: T; meta: ApiMeta | null }> {
   return () => {
     if (fetchInit) {
-      return apiFetchWithMeta<T>(path, schema, fetchInit, metaMaxAgeSec);
+      return apiFetchWithMeta<T>(path, schema, fetchInit, metaMaxAgeSec, contractMode);
     }
-    return apiFetchWithMeta<T>(path, schema, undefined, metaMaxAgeSec);
+    return apiFetchWithMeta<T>(path, schema, undefined, metaMaxAgeSec, contractMode);
   };
 }
 
@@ -151,7 +156,7 @@ export function useApiQuery<T>(
 ): UseQueryResult<T, Error> {
   return usePollingQuery(
     key,
-    createApiQueryFn(path, opts?.schema, opts?.fetchInit),
+    createApiQueryFn(path, opts?.schema, opts?.fetchInit, opts?.contractMode),
     cronInterval,
     {
       enabled: opts?.enabled,
@@ -175,6 +180,7 @@ export function useAdminApiQuery<T>(
       opts.schema,
       opts.fetchInit,
       opts.unauthorizedMessage,
+      opts.contractMode,
     ),
     cronInterval,
     {
@@ -200,7 +206,7 @@ export function useApiQueryWithMeta<T>(
   const metaMaxAgeSec = opts?.metaMaxAgeSec ?? Math.max(1, Math.round(cronInterval / 1000));
   const query = usePollingQuery(
     key,
-    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, metaMaxAgeSec),
+    createApiQueryFnWithMeta(path, opts?.schema, opts?.fetchInit, metaMaxAgeSec, opts?.contractMode),
     cronInterval,
     {
       enabled: opts?.enabled,

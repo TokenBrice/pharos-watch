@@ -9,7 +9,7 @@ import {
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { MINT_BURN_CONFIGS, SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../lib/mint-burn-pipeline/sync-state";
 import {
   buildMintBurnSyncHealth,
@@ -28,6 +28,8 @@ import {
   getNetFlowDirection24h,
   getPressureShiftState,
 } from "@shared/lib/mint-burn-signals";
+import { loadReportCardCache } from "../lib/report-card-cache";
+import { buildFlightToQualityClassification } from "../lib/flight-to-quality-classification";
 
 // ---------------------------------------------------------------------------
 // Safe-haven classification (flight-to-quality)
@@ -36,54 +38,8 @@ import {
 /** All tracked stablecoin IDs from config */
 const TRACKED_IDS = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));
 
-/** Max age for report card cache before falling back to hardcoded set (2 hours) */
+/** Max age for report card cache before FTQ classification is treated as unavailable (2 hours) */
 const REPORT_CARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
-
-/** Score thresholds for grade-based FTQ classification */
-const SAFE_SCORE_THRESHOLD = 65; // B+ or better → "safe"
-const RISKY_SCORE_THRESHOLD = 50; // Below C → "risky"
-
-interface ReportCardCache {
-  scores: Record<string, { score: number; grade: string }>;
-  updatedAt: number;
-}
-
-/**
- * Build safe/risky ID sets from report card cache.
- * Returns null if cache is missing, unparseable, or stale (>2h).
- */
-async function getGradeBasedClassification(
-  db: D1Database,
-): Promise<{ safeIds: Set<string>; riskyIds: Set<string> } | null> {
-  const cached = await getCache(db, "report_card_cache");
-  if (!cached) return null;
-
-  try {
-    const data = JSON.parse(cached.value) as ReportCardCache;
-    if (!data.scores || !data.updatedAt) return null;
-
-    // Stale check: updatedAt is epoch seconds in cache, compare with current time
-    const ageMs = Date.now() - data.updatedAt * 1000;
-    if (ageMs > REPORT_CARD_MAX_AGE_MS) return null;
-
-    const safeIds = new Set<string>();
-    const riskyIds = new Set<string>();
-
-    for (const [id, entry] of Object.entries(data.scores)) {
-      if (!TRACKED_IDS.has(id)) continue;
-      if (entry.score >= SAFE_SCORE_THRESHOLD) {
-        safeIds.add(id);
-      } else if (entry.score < RISKY_SCORE_THRESHOLD) {
-        riskyIds.add(id);
-      }
-      // Scores between 50-64 are "neutral" — don't contribute to FTQ
-    }
-
-    return { safeIds, riskyIds };
-  } catch {
-    return null;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // DB row types
@@ -414,7 +370,10 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     const baselineWindowStart = nowDayTs - BASELINE_WINDOW_DAYS * DAY_SEC;
 
     // Load grade-based classification (falls back to hardcoded SAFE_HAVEN_IDS if unavailable)
-    const gradeClassification = await getGradeBasedClassification(db);
+    const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_MAX_AGE_MS });
+    const gradeClassification = reportCardCache.kind === "ok"
+      ? buildFlightToQualityClassification(reportCardCache.payload)
+      : null;
 
     // Load stablecoins cache for mcap lookup
     const mcapById = new Map<string, number>();
@@ -636,8 +595,12 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     let riskyNet24h = 0;
     let trackedMcapUsd = 0;
 
-    if (!gradeClassification) {
-      console.warn("Report card cache stale/missing, falling back to hardcoded SAFE_HAVEN_IDS");
+    const classificationWarning = reportCardCache.kind === "ok"
+      ? null
+      : `Report-card FTQ classification unavailable (${reportCardCache.reason})`;
+    const classificationSource = reportCardCache.kind === "ok" ? "report-card-cache" : "unavailable";
+    if (classificationWarning) {
+      console.warn(`[mint-burn-flows] ${classificationWarning}`);
     }
 
     const seenCoinIds = new Set<string>();
@@ -681,13 +644,6 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
           riskyNet24h += netFlow24h;
         }
         // Neutral coins don't contribute to FTQ signal
-      } else {
-        // Fallback: hardcoded safe-haven set, everything else is risky
-        if (SAFE_HAVEN_IDS.has(id)) {
-          safeNet24h += netFlow24h;
-        } else {
-          riskyNet24h += netFlow24h;
-        }
       }
 
       const largest = largestEventMap.get(id);
@@ -769,6 +725,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
         intensitySemantics: "signed-v2",
         flightToQuality: ftq.active,
         flightIntensity: ftq.intensity,
+        classificationSource,
         // Use deduped stablecoin count (configs can include multiple contracts/chains per coin).
         trackedCoins: coins.length,
         trackedMcapUsd,
@@ -781,7 +738,10 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
         chainIds: [ETHEREUM_CHAIN_ID],
         label: "Ethereum-only",
       },
-      sync,
+      sync: {
+        ...sync,
+        classificationWarning,
+      },
     };
 
     await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);

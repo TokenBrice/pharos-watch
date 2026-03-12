@@ -211,8 +211,9 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
   );
 
   const handleClick = useCallback(
-    (entry: ScatterDataPoint) => {
-      if (entry?.id) onDotClick(entry.id);
+    (entry: unknown) => {
+      const point = entry as Partial<ScatterDataPoint> | undefined;
+      if (point && typeof point.id === "string") onDotClick(point.id);
     },
     [onDotClick],
   );

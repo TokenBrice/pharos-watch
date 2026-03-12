@@ -2,13 +2,14 @@
 
 import { useCallback, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
   useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
   useReportCards,
 } from "@/hooks/api-hooks";
-import { useStablecoins, detailToSupplyHistory } from "@/hooks/use-stablecoins";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { apiFetch } from "@/lib/api";
 import { CRON_1H, CRON_20MIN } from "@/hooks/use-api-query";
@@ -16,8 +17,12 @@ import { CHART_PALETTE } from "@/lib/chart-colors";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { MintBurnPerCoinResponseSchema, type ReportCard } from "@shared/types";
-import type { StablecoinDetail } from "@/hooks/use-stablecoins";
+import {
+  MintBurnPerCoinResponseSchema,
+  SupplyHistoryResponseSchema,
+  type ReportCard,
+  type SupplyHistoryPoint,
+} from "@shared/types";
 
 interface UseCompareDataModelOptions {
   selectedIds: string[];
@@ -74,8 +79,12 @@ export function useCompareDataModel({
 
   const detailQueries = useQueries({
     queries: selectedIds.map((id) => ({
-      queryKey: ["stablecoin-detail", id],
-      queryFn: () => apiFetch<StablecoinDetail>(`/api/stablecoin/${encodeURIComponent(id)}`),
+      queryKey: ["supply-history", id, 1825],
+      queryFn: () =>
+        apiFetch<SupplyHistoryPoint[]>(
+          API_PATHS.supplyHistory(id, 1825),
+          SupplyHistoryResponseSchema,
+        ),
       staleTime: CRON_1H,
       enabled: !!id,
     })),
@@ -132,8 +141,7 @@ export function useCompareDataModel({
   const supplySeries = useMemo(() => {
     return selectedIds
       .map((id, index) => {
-        const detail = detailQueries[index]?.data;
-        const history = detailToSupplyHistory(detail);
+        const history = detailQueries[index]?.data ?? [];
         if (history.length === 0) return null;
         const meta = TRACKED_META_BY_ID.get(id);
         return {

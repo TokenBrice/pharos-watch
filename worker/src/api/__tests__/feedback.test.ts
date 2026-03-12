@@ -242,6 +242,98 @@ describe("handleFeedback", () => {
     expect(body.ok).toBe(true);
   });
 
+  it("uses the EUR peg reference for EUR-pegged data-correction auto-verification", async () => {
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      {
+        match: "cache",
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            peggedAssets: [
+              {
+                id: "eurc-circle",
+                price: 1.08,
+                pegType: "peggedEUR",
+                circulating: { peggedEUR: 5_000_000 },
+              },
+            ],
+            fxFallbackRates: {
+              peggedEUR: 1.1,
+            },
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+    ]);
+
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 })
+    );
+
+    const res = await handleFeedback(
+      db,
+      makeRequest(makeFeedbackBody({
+        type: "data-correction",
+        description: "EURC appears to be showing the wrong peg deviation.",
+        stablecoinId: "eurc-circle",
+        stablecoinName: "EURC",
+      })),
+      makeEnv()
+    );
+
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { body: string };
+    expect(issuePayload.body).toContain("**Peg deviation:** -1.818%");
+  });
+
+  it("uses the commodity peg reference for gold-pegged auto-verification", async () => {
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      {
+        match: "cache",
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            peggedAssets: [
+              {
+                id: "xaut-tether",
+                price: 2990,
+                pegType: "peggedGOLD",
+                circulating: { peggedGOLD: 8_000_000 },
+              },
+            ],
+            fxFallbackRates: {
+              peggedGOLD: 3025,
+            },
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+    ]);
+
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 6, number: 47 }), { status: 201 })
+    );
+
+    const res = await handleFeedback(
+      db,
+      makeRequest(makeFeedbackBody({
+        type: "data-correction",
+        description: "XAUT looks off relative to spot gold.",
+        stablecoinId: "xaut-tether",
+        stablecoinName: "Tether Gold",
+      })),
+      makeEnv()
+    );
+
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { body: string };
+    expect(issuePayload.body).toContain("**Peg deviation:** -1.157%");
+  });
+
   it("tries GitHub Discussion first for feature-request, falls back to issue", async () => {
     const db = mockD1([
       { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },

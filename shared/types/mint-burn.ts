@@ -11,6 +11,7 @@ const MintBurnGaugeSchema = z.object({
   intensitySemantics: z.enum(["midpoint-v1", "signed-v2"]).optional(),
   flightToQuality: z.boolean(),
   flightIntensity: z.number(),
+  classificationSource: z.enum(["report-card-cache", "unavailable"]).optional(),
   trackedCoins: z.number(),
   trackedMcapUsd: z.number(),
 });
@@ -26,6 +27,7 @@ const MintBurnSyncSchema = z.object({
   lastSuccessfulSyncAt: z.number().nullable(),
   freshnessStatus: z.enum(["fresh", "degraded", "stale"]),
   warning: z.string().nullable(),
+  classificationWarning: z.string().nullable().optional(),
   criticalLaneHealthy: z.boolean(),
 });
 export type MintBurnSync = z.infer<typeof MintBurnSyncSchema>;

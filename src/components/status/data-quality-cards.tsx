@@ -6,6 +6,13 @@ interface DataQualityCardsProps {
     nowSeconds: number;
     stablecoinsCacheStatus: "ok" | "degraded" | "error";
     stablecoinsCacheReason: string | null;
+    blacklistGapStatus: "ok" | "failed";
+    activeDepegStatus: "ok" | "failed";
+    onchainSupplyQueryStatus: "ok" | "failed" | "unavailable";
+    sourceFailures: Array<{
+      source: "stablecoins-cache" | "blacklist-gaps" | "active-depegs" | "onchain-supply";
+      message: string;
+    }>;
     totalStablecoins: number;
     missingPrices: number;
     blacklistMissingAmounts: number;
@@ -27,6 +34,9 @@ interface DataQualityCardsProps {
 export function DataQualityCards({ dq }: DataQualityCardsProps) {
   type Severity = "green" | "amber" | "red" | "neutral";
   const onchainUnavailable = dq.onchainSupplyMonitoring === "unavailable";
+  const blacklistQueryFailed = dq.blacklistGapStatus === "failed";
+  const activeDepegQueryFailed = dq.activeDepegStatus === "failed";
+  const onchainQueryFailed = dq.onchainSupplyQueryStatus === "failed";
   const missingPriceRatio = dq.totalStablecoins > 0 ? dq.missingPrices / dq.totalStablecoins : 0;
   const cacheIssueDetail = dq.stablecoinsCacheReason
     ? `cache ${dq.stablecoinsCacheStatus}: ${dq.stablecoinsCacheReason}`
@@ -59,9 +69,13 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
     },
     {
       label: "Blacklist Gaps",
-      value: dq.blacklistMissingAmounts,
-      detail: `${dq.blacklistMissingAmounts}/${dq.blacklistTotal} (${(dq.blacklistMissingRatio * 100).toFixed(2)}%) · recent ${dq.blacklistRecentMissingAmounts}/${Math.round(dq.blacklistRecentWindowSec / HOUR_SECONDS)}h · warn >=0.5%, stale >=2%`,
-      severity: dq.blacklistMissingRatio >= 0.02
+      value: blacklistQueryFailed ? "ERR" : dq.blacklistMissingAmounts,
+      detail: blacklistQueryFailed
+        ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "blacklist-gaps")?.message ?? "blacklist gaps unavailable"}`
+        : `${dq.blacklistMissingAmounts}/${dq.blacklistTotal} (${(dq.blacklistMissingRatio * 100).toFixed(2)}%) · recent ${dq.blacklistRecentMissingAmounts}/${Math.round(dq.blacklistRecentWindowSec / HOUR_SECONDS)}h · warn >=0.5%, stale >=2%`,
+      severity: blacklistQueryFailed
+        ? "red"
+        : dq.blacklistMissingRatio >= 0.02
         ? "red"
         : dq.blacklistRecentMissingAmounts > 0 || dq.blacklistMissingRatio >= 0.005
           ? "amber"
@@ -69,27 +83,37 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
     },
     {
       label: "On-chain Divergences",
-      value: onchainUnavailable ? "—" : dq.onchainSupplyDivergences,
-      detail: onchainUnavailable
+      value: onchainQueryFailed ? "ERR" : onchainUnavailable ? "—" : dq.onchainSupplyDivergences,
+      detail: onchainQueryFailed
+        ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "onchain-supply")?.message ?? "on-chain supply unavailable"}`
+        : onchainUnavailable
         ? "monitor unavailable"
         : `${dq.onchainSupplyDivergences}/${dq.onchainSupplyTrackedCoins} (${(dq.onchainDivergenceRatio * 100).toFixed(1)}%) >5% off · warn >=10%, stale >=25%`,
-      severity: onchainUnavailable
+      severity: onchainQueryFailed
+        ? "red"
+        : onchainUnavailable
         ? "neutral"
         : dq.onchainDivergenceRatio >= 0.25 ? "red" : dq.onchainDivergenceRatio >= 0.1 ? "amber" : "green",
     },
     {
       label: "Active Depegs",
-      value: dq.activeDepegs,
-      detail: "informational only; active depegs do not change /status health",
-      severity: "neutral",
+      value: activeDepegQueryFailed ? "ERR" : dq.activeDepegs,
+      detail: activeDepegQueryFailed
+        ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "active-depegs")?.message ?? "active depegs unavailable"}`
+        : "informational only; active depegs do not change /status health",
+      severity: activeDepegQueryFailed ? "red" : "neutral",
     },
     {
       label: "Stale On-chain",
-      value: onchainUnavailable ? "—" : dq.staleOnchainSupply,
-      detail: onchainUnavailable
+      value: onchainQueryFailed ? "ERR" : onchainUnavailable ? "—" : dq.staleOnchainSupply,
+      detail: onchainQueryFailed
+        ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "onchain-supply")?.message ?? "on-chain freshness unavailable"}`
+        : onchainUnavailable
         ? onchainStalenessDetail
         : `${onchainStalenessDetail} · ${(dq.onchainStaleRatio * 100).toFixed(1)}% · latest sample ${onchainLatestAge != null ? `${Math.round(onchainLatestAge / HOUR_SECONDS)}h ago` : "—"} · warn >=10%, stale >=25%`,
-      severity: onchainUnavailable
+      severity: onchainQueryFailed
+        ? "red"
+        : onchainUnavailable
         ? "neutral"
         : dq.onchainStaleRatio >= 0.25 ? "red" : dq.onchainStaleRatio >= 0.1 ? "amber" : "green",
     },

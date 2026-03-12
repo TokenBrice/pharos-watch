@@ -2,6 +2,8 @@ import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
 
+export type ApiContractMode = "strict" | "warn";
+
 export function resolveApiBase(
   hostname?: string | null,
   envBase: string | undefined = process.env.NEXT_PUBLIC_API_BASE,
@@ -64,22 +66,10 @@ export class ApiFetchError extends Error {
   }
 }
 
-function normalizePath(path: string): string {
-  try {
-    return new URL(path, API_BASE || "http://localhost").pathname;
-  } catch {
-    return path.split("?")[0] ?? path;
-  }
-}
-
 function formatIssues(
   issues: readonly { path: readonly PropertyKey[]; message: string }[],
 ): string {
   return issues.map((i) => `${i.path.map(String).join(".")}: ${i.message}`).join(", ");
-}
-
-function isStrictContractPath(path: string): boolean {
-  return STRICT_CONTRACT_PATHS.has(normalizePath(path));
 }
 
 async function buildFetchError(path: string, res: Response): Promise<ApiFetchError> {
@@ -101,6 +91,14 @@ export interface ApiMeta {
   warning?: string | null;
 }
 
+function resolveContractMode(
+  schema: ZodType<unknown> | undefined,
+  mode: ApiContractMode | undefined,
+): ApiContractMode | null {
+  if (!schema) return null;
+  return mode ?? "strict";
+}
+
 // --- Standard fetch (no meta) ---
 
 /** Fetch JSON from the API. Throws on non-OK responses.
@@ -110,6 +108,7 @@ export async function apiFetch<T>(
   path: string,
   schema?: ZodType<T>,
   init?: RequestInit,
+  contractMode?: ApiContractMode,
 ): Promise<T> {
   const res = await apiRequest(path, init);
   if (!res.ok) throw await buildFetchError(path, res);
@@ -117,10 +116,11 @@ export async function apiFetch<T>(
   const data: unknown = await res.json();
 
   if (schema) {
+    const resolvedMode = resolveContractMode(schema, contractMode);
     const result = schema.safeParse(data);
     if (!result.success) {
       const issues = formatIssues(result.error.issues);
-      if (isStrictContractPath(path)) {
+      if (resolvedMode === "strict") {
         throw new SchemaValidationError(path, issues);
       }
       console.warn(`[API] Schema validation failed for ${path}:`, issues);
@@ -140,6 +140,7 @@ export async function apiFetchWithMeta<T>(
   schema?: ZodType<T>,
   init?: RequestInit,
   maxAgeSec = 900,
+  contractMode?: ApiContractMode,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
   const res = await apiRequest(path, init);
   if (!res.ok) throw await buildFetchError(path, res);
@@ -185,10 +186,11 @@ export async function apiFetchWithMeta<T>(
 
   // Schema validation (same graceful degradation as apiFetch)
   if (schema) {
+    const resolvedMode = resolveContractMode(schema, contractMode);
     const result = schema.safeParse(data);
     if (!result.success) {
       const issues = formatIssues(result.error.issues);
-      if (isStrictContractPath(path)) {
+      if (resolvedMode === "strict") {
         throw new SchemaValidationError(path, issues);
       }
       console.warn(`[API] Schema validation failed for ${path}:`, issues);

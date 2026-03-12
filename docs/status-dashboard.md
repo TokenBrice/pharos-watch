@@ -155,6 +155,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor:
   - `onchainDivergenceRatio >= 0.25`
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
+  - any critical data-quality subquery failed (`dataQuality.sourceFailures.length > 0`)
   - `missingPriceRatio > 0.15`
   - `blacklistRecentMissingAmounts > 0` (last 24h)
   - `blacklistMissingRatio >= 0.005` (0.5%)
@@ -203,8 +204,14 @@ Additional response fields:
 
 - `stablecoinsCacheStatus`: `ok | degraded | error`
 - `stablecoinsCacheReason`: machine-readable reason when the stablecoins cache is unavailable or transitional
+- `blacklistGapStatus`: `ok | failed`
+- `activeDepegStatus`: `ok | failed`
+- `onchainSupplyQueryStatus`: `ok | failed | unavailable`
+- `sourceFailures`: list of failed critical subqueries with machine-readable source keys and error messages
 
 This prevents `/status` from silently treating a broken stablecoins cache as `0 / 0` healthy price coverage.
+
+When one of those critical subqueries fails, `/api/status` now degrades `dataQualityStatus` and the status cards render `ERR` for the affected metric instead of showing a misleading `0`.
 
 ### Live reserve sync health
 

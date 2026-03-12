@@ -161,7 +161,7 @@ Current scope: **84 contract configs** across **81 symbols** (7 critical + 77 ex
 | apxUSD | apxusd-apyx | 18 | Extended | Transfer |
 | reUSD | reusd-re-protocol | 18 | Risky | Deposited + InstantRedemptionProcessed (2 configs, Ethereum) |
 
-Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.
+Flight-to-quality classification is now **report-card-cache driven only**. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, FTQ classification is marked unavailable in the response (`gauge.classificationSource = "unavailable"`, `sync.classificationWarning != null`) instead of silently falling back to a hardcoded safe-haven list.
 
 Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to exclude flash loan / atomic arb noise from aggregation.
 

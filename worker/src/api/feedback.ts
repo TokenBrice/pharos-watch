@@ -1,9 +1,12 @@
 // worker/src/api/feedback.ts
 
-import { getCache } from "../lib/db";
 import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { checkFeedbackRateLimit } from "../lib/rate-limit";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { sumPegBuckets } from "@shared/lib/supply";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,26 +46,25 @@ async function verifyDataCorrection(
   stablecoinId: string
 ): Promise<VerificationResult> {
   try {
-    const cached = await getCache(db, "stablecoins");
-    if (!cached) throw new Error("stablecoins cache empty");
+    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+    if (stablecoinsCache.kind !== "ok") {
+      throw new Error(`stablecoins cache ${stablecoinsCache.reason}`);
+    }
 
-    const parsed = JSON.parse(cached.value) as {
-      peggedAssets?: Array<{ id: string; price?: number | null; circulating?: Record<string, number> }>;
-    };
-    const assets = parsed.peggedAssets ?? [];
-    const coin = assets.find((a) => a.id === stablecoinId);
+    const coin = stablecoinsCache.payload.peggedAssets.find((asset) => asset.id === stablecoinId);
 
     if (!coin) throw new Error(`coin ${stablecoinId} not found in cache`);
 
+    const meta = TRACKED_META_BY_ID.get(stablecoinId);
     const price = coin.price ?? null;
-    const totalUSD = coin.circulating
-      ? Object.values(coin.circulating).reduce((s, v) => s + (v ?? 0), 0)
-      : 0;
-
-    const cacheAgeSec = Math.floor(Date.now() / 1000) - cached.updatedAt;
-    const pegRef = 1.0;
-    // pegRef is hardcoded to 1.0; non-USD stablecoins will show inflated deviation.
-    // The snapshot still provides useful price/supply data for triage.
+    const totalUSD = sumPegBuckets(coin.circulating);
+    const cacheAgeSec = Math.floor(Date.now() / 1000) - stablecoinsCache.updatedAt;
+    const pegRates = derivePegRates(
+      stablecoinsCache.payload.peggedAssets,
+      TRACKED_META_BY_ID,
+      stablecoinsCache.payload.fxFallbackRates,
+    );
+    const pegRef = getPegReference(coin.pegType, pegRates.rates, meta?.commodityOunces);
 
     let deviationStr = "N/A";
     let verifiedLabel: VerificationResult["verifiedLabel"] = "verified: unconfirmed";

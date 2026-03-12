@@ -7,12 +7,12 @@ import { SafetyScoresCard, type SafetyScoresCardData } from "../lib/og-templates
 import { DepegCard, type DepegCardData } from "../lib/og-templates/depeg-card";
 import { StabilityIndexCard, type StabilityIndexCardData } from "../lib/og-templates/stability-index-card";
 import { resolveOrReject } from "../lib/api-utils";
-import { getCache } from "../lib/db";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
-import type { StablecoinData } from "@shared/types";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { loadReportCardCache } from "../lib/report-card-cache";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -83,24 +83,6 @@ async function renderPng(element: React.ReactNode): Promise<Uint8Array> {
 }
 
 // ---------------------------------------------------------------------------
-// Stablecoins cache loader (shared across sub-handlers)
-// ---------------------------------------------------------------------------
-
-interface StablecoinsCachePayload {
-  peggedAssets: StablecoinData[];
-}
-
-async function loadStablecoins(db: D1Database): Promise<StablecoinsCachePayload | null> {
-  const cached = await getCache(db, "stablecoins");
-  if (!cached) return null;
-  try {
-    return JSON.parse(cached.value) as StablecoinsCachePayload;
-  } catch {
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // /api/og/stablecoin/:id
 // ---------------------------------------------------------------------------
 
@@ -118,7 +100,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   // Parallel queries: stablecoins cache, dex liquidity, DEWS, PSI, report card, 7d price sparkline, active depeg, 7d flow
   const [stablecoinsPayload, dexLiqMap, dewsRow, psiRow, reportCardRow, sparklineRows, activeDepegRow, flowRow] =
     await Promise.all([
-      loadStablecoins(db),
+      loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
       loadDexLiquidityMap(db),
       db
         .prepare(
@@ -131,17 +113,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
           "SELECT score, band FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1",
         )
         .first<{ score: number; band: string }>(),
-      getCache(db, "report_card_cache").then((cached) => {
-        if (!cached) return null;
-        try {
-          const data = JSON.parse(cached.value) as {
-            scores: Record<string, { score: number; grade: string }>;
-          };
-          return data.scores?.[id] ?? null;
-        } catch {
-          return null;
-        }
-      }),
+      loadReportCardCache(db).then((result) => (result.kind === "ok" ? result.payload.scores?.[id] ?? null : null)),
       db
         .prepare(
           "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 7",
@@ -164,11 +136,11 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
         .first<{ net_flow: number | null }>(),
     ]);
 
-  if (!stablecoinsPayload) {
+  if (!hasUsableStablecoinsPayload(stablecoinsPayload)) {
     return new Response("Data not yet available", { status: 503, headers: { "Content-Type": "text/plain" } });
   }
 
-  const coin = stablecoinsPayload.peggedAssets.find((a) => a.id === id);
+  const coin = stablecoinsPayload.payload.peggedAssets.find((a) => a.id === id);
   if (!coin) {
     return new Response("Stablecoin not found in cache", { status: 404, headers: { "Content-Type": "text/plain" } });
   }
@@ -209,8 +181,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
 // ---------------------------------------------------------------------------
 
 async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
-  const cached = await getCache(db, "report_card_cache");
-  const stablecoinsPayload = await loadStablecoins(db);
+  const stablecoinsPayload = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
 
   const gradeDistribution: Record<string, number> = {
     "A+": 0, A: 0, "A-": 0,
@@ -223,30 +194,24 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   let ratedCount = 0;
   let totalCoins = TRACKED_IDS.size;
 
-  if (cached) {
-    try {
-      const data = JSON.parse(cached.value) as {
-        scores: Record<string, { score: number; grade: string }>;
-      };
-      for (const [, entry] of Object.entries(data.scores)) {
-        const grade = entry.grade;
-        if (grade in gradeDistribution) {
-          gradeDistribution[grade]++;
-        } else {
-          gradeDistribution["NR"]++;
-        }
-        if (entry.score > 0) {
-          pulseScore += entry.score;
-          ratedCount++;
-        }
+  const reportCardCache = await loadReportCardCache(db);
+  if (reportCardCache.kind === "ok") {
+    for (const [, entry] of Object.entries(reportCardCache.payload.scores)) {
+      const grade = entry.grade;
+      if (grade in gradeDistribution) {
+        gradeDistribution[grade]++;
+      } else {
+        gradeDistribution["NR"]++;
       }
-    } catch {
-      // Use defaults
+      if (entry.score > 0) {
+        pulseScore += entry.score;
+        ratedCount++;
+      }
     }
   }
 
-  if (stablecoinsPayload) {
-    totalCoins = stablecoinsPayload.peggedAssets.length;
+  if (hasUsableStablecoinsPayload(stablecoinsPayload)) {
+    totalCoins = stablecoinsPayload.payload.peggedAssets.length;
   }
 
   const avgScore = ratedCount > 0 ? pulseScore / ratedCount : 0;

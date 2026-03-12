@@ -645,6 +645,65 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.headers.get("Warning")).toBeNull();
   });
 
+  it("marks FTQ classification unavailable when report-card cache is missing", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          chain_id: "ethereum",
+          hour_ts: now - 3600,
+          mint_count: 1,
+          burn_count: 0,
+          mint_volume_usd: 15_000_000,
+          burn_volume_usd: 5_000_000,
+          net_flow_usd: 10_000_000,
+        }],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 10_000_000 }],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+      },
+      { match: "FROM mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        matchBinds: ["report_card_cache"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: stablecoinsCache, updated_at: now }],
+        first: { key: "stablecoins", value: stablecoinsCache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    expect(body.gauge.classificationSource).toBe("unavailable");
+    expect(body.sync?.classificationWarning).toContain("missing-cache");
+    expect(body.gauge.flightToQuality).toBe(false);
+    expect(body.gauge.flightIntensity).toBe(0);
+  });
+
   it("keeps freshness healthy through one missed critical-lane slot", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));

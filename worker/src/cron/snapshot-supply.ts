@@ -1,7 +1,8 @@
-import { getCache, batchExecute } from "../lib/db";
+import { batchExecute } from "../lib/db";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { CronResult } from "../lib/db";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
   if (_signal?.aborted) {
@@ -12,18 +13,18 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
     };
   }
 
-  const cached = await getCache(db, "stablecoins");
-  if (!cached) {
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  if (stablecoinsCache.kind !== "ok") {
     console.error("[snapshot-supply] No stablecoins cache found");
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "cache_missing" }),
+      metadata: JSON.stringify({ reason: stablecoinsCache.reason }),
     };
   }
 
   // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data
-  const cacheAge = Math.floor(Date.now() / 1000) - cached.updatedAt;
+  const cacheAge = Math.floor(Date.now() / 1000) - stablecoinsCache.updatedAt;
   if (cacheAge > 1200) {
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>1200s), skipping snapshot`);
     return {
@@ -36,18 +37,6 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>600s), proceeding with degraded freshness`);
   }
 
-  const data = JSON.parse(cached.value) as {
-    peggedAssets: { id: string; price?: number | null; circulating?: Record<string, number> }[];
-  };
-  if (!data.peggedAssets) {
-    console.error("[snapshot-supply] No peggedAssets in cache");
-    return {
-      status: "degraded",
-      itemCount: 0,
-      metadata: JSON.stringify({ reason: "cache_payload_missing_pegged_assets" }),
-    };
-  }
-
   const trackedIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((s) => s.id));
 
   // Floor to UTC midnight
@@ -58,7 +47,7 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
 
   const stmts: D1PreparedStatement[] = [];
 
-  for (const asset of data.peggedAssets) {
+  for (const asset of stablecoinsCache.payload.peggedAssets) {
     if (!trackedIds.has(asset.id)) continue;
 
     const circ = asset.circulating;

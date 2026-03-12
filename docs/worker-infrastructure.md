@@ -838,7 +838,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/redemption-backstop-sources.ts` | Redemption-route resolver: capacity models, docs, costs, and effective-exit scoring inputs |
 | `worker/src/lib/redemption-backstops-store.ts` | D1 snapshot storage + `GET /api/redemption-backstops` response builder |
 | `worker/src/lib/psi-recompute.ts` | Shared historical PSI day-input builder used by audit/backfill admin APIs |
-| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit vault overrides, `startBlock`, and `SAFE_HAVEN_IDS` |
+| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit vault overrides, `startBlock`, and per-config tiering metadata |
 | `worker/src/lib/mint-burn-scoring.ts` | FIS computation, gauge bands, flight-to-quality detection (pure functions) |
 | `worker/src/cron/sync-stablecoin-charts.ts` | Chart sync: DefiLlama charts, FX fix, downsampling |
 | `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation |

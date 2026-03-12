@@ -239,6 +239,14 @@ export interface DexLiquidityHistoryPoint {
   methodologyVersion: string;
 }
 
+const SupplyHistoryPointSchema = z.object({
+  date: z.number(),
+  circulatingUsd: z.number(),
+  price: z.number().nullable(),
+});
+export type SupplyHistoryPoint = z.infer<typeof SupplyHistoryPointSchema>;
+export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);
+
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
 export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema);
 
