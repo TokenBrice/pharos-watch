@@ -42,8 +42,8 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         .all<PsiSupplyRow>();
       const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
+      await db.exec("DROP TABLE IF EXISTS stability_index_rebuild");
       await db.exec(`
-        DROP TABLE IF EXISTS stability_index_rebuild;
         CREATE TABLE stability_index_rebuild (
           computed_at INTEGER PRIMARY KEY,
           score REAL NOT NULL,
@@ -51,7 +51,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
           components TEXT NOT NULL,
           input_snapshot TEXT NOT NULL,
           methodology_version TEXT NOT NULL
-        );
+        )
       `);
 
       // Iterate day by day — build all statements first, then atomically swap

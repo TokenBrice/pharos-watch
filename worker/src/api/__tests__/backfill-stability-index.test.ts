@@ -31,10 +31,12 @@ function makeDb(options?: {
     snapshot_date: number;
     circulating_usd: number;
   }>;
+  onExec?: (sql: string) => void;
 }): D1Database {
   const earliest = options?.earliest ?? null;
   const depegRows = options?.depegRows ?? [];
   const supplyRows = options?.supplyRows ?? [];
+  const onExec = options?.onExec;
 
   const stmt = (sql: string) => ({
     bind: (..._args: unknown[]) => ({
@@ -67,7 +69,10 @@ function makeDb(options?: {
     batch: async (stmts: D1PreparedStatement[]) => (
       stmts.map(() => ({ success: true, meta: { changes: 1 } }))
     ),
-    exec: async () => ({ count: 0, duration: 0 }),
+    exec: async (sql: string) => {
+      onExec?.(sql);
+      return { count: 0, duration: 0 };
+    },
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
 }
@@ -136,5 +141,40 @@ describe("handleBackfillStabilityIndex", () => {
     const body = (await res.json()) as { ok: boolean; daysBackfilled: number };
     expect(body.ok).toBe(true);
     expect(body.daysBackfilled).toBeGreaterThanOrEqual(2);
+  });
+
+  it("runs rebuild table DDL as separate exec statements", async () => {
+    const execCalls: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const start = nowSec - 86400;
+    const day = Math.floor(nowSec / 86400) * 86400;
+
+    const res = await handleBackfillStabilityIndex(
+      makeDb({
+        earliest: start,
+        depegRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            peak_deviation_bps: -120,
+            peg_reference: 1,
+            started_at: start,
+            ended_at: null,
+          },
+        ],
+        supplyRows: [
+          { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000 },
+        ],
+        onExec: (sql) => execCalls.push(sql),
+      }),
+      "secret",
+      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(execCalls).toEqual([
+      "DROP TABLE IF EXISTS stability_index_rebuild",
+      expect.stringContaining("CREATE TABLE stability_index_rebuild"),
+      "DROP TABLE IF EXISTS stability_index_rebuild",
+    ]);
   });
 });
