@@ -39,7 +39,7 @@ When changing any scoring methodology, update all three surfaces in the same cha
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples (`src/app/methodology/page.tsx`).
+3. `/methodology` page copy and worked examples (`src/app/methodology/methodology-sections.tsx`; update `page.tsx` only when shell/layout wiring changes).
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
 
@@ -56,4 +56,5 @@ If a versioned methodology changes, bump the corresponding version module in `sh
 
 ## Changelog
 
+- **v3.4** (2026-03-12): Corrected the update contract so methodology-copy edits point to `methodology-sections.tsx`, which is where the authored long-form content and worked examples now live.
 - **v3.3** (2026-03-09): Separated discovery pipeline with staged pool confidence decay. Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on an independent 20-minute cron with 3x more budget. Staged pools merge into scoring with freshness confidence decay (`max(0.5, 1 - ageHours/48)`) and explicit defaults contract. Chain-aware source routing reduces wasted API calls. Tiered priority with exponential backoff prevents looping on pool-less coins.

@@ -256,7 +256,7 @@ export default function AboutPage() {
     },
     {
       title: "DEX liquidity",
-      description: "Pool depth, volume, quality-adjusted TVL, durability, and cross-chain presence scored 0-100.",
+      description: "Pool depth, volume, quality-adjusted TVL, durability, and pair diversity scored 0-100.",
       icon: Droplets,
       href: "/liquidity/",
       linkLabel: "Open liquidity tracker",

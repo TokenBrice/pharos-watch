@@ -642,7 +642,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual(cachedBody);
-    expect(res.headers.get("Warning") ?? "").toContain("Served cached mint/burn flows due transient backend error");
+    expect(res.headers.get("Warning")).toBeNull();
   });
 
   it("keeps freshness healthy through one missed critical-lane slot", async () => {

@@ -50,7 +50,12 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for sUSDe only in `ON_CHAIN_RATE_CONFIGS` (contract `0x9D39...7497`, selector `0x07a2d13a` = `convertToAssets(uint256)`).
+Currently configured for:
+
+- `usde-ethena` via the `sUSDe` vault (`0x9D39...7497`)
+- `dusd-dtrinity` via the `sdUSD` vault (`0x4aCB...F6Fe`)
+
+Both entries use selector `0x07a2d13a` (`convertToAssets(uint256)`).
 
 **APY formula:**
 
@@ -162,9 +167,9 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 
 | Tier   | Protocols                                                                |
 | ------ | ------------------------------------------------------------------------ |
-| Tier 1 | aave-v3, compound-v3, sparklend, spark-savings, maple, yearn-finance     |
-| Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle |
-| Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx    |
+| Tier 1 | aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance |
+| Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
+| Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending |
 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL.
 

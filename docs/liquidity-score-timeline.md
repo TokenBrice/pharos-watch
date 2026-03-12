@@ -1,6 +1,17 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v3.4` (2026-02-19 -> 2026-03-09).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.0` (2026-02-19 -> 2026-03-10).
+
+---
+
+## v4.0 - Log-scale volume, cross-chain removal, durability rebalance (Mar 10, 2026)
+
+**Commit:** `unreleased`
+
+- Volume activity moved from a linear scale to `33.3 * log10(vtRatio / 0.005)`, lifting mid-market scores without letting extreme churn dominate
+- The cross-chain component was removed from the composite score, with its weight redistributed to TVL depth and pool quality
+- Durability weights were rebalanced to `15% organic fraction`, `35% TVL stability`, `25% volume consistency`, and `25% maturity`
+- Locked-liquidity was removed from durability because the discovery-stage data is not reliable enough to keep scoring it directly
 
 ---
 

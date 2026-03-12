@@ -39,7 +39,7 @@ Cemetery coins get a permanent F.
 ### Liquidity Details
 
 - Direct passthrough of DEX liquidity composite score (see `docs/dex-liquidity.md`)
-- The composite already weighs TVL depth, volume, pool quality, durability, pair diversity, and cross-chain breadth
+- The composite already weighs TVL depth, volume, pool quality, durability, and pair diversity; chain coverage remains descriptive liquidity context, not a scored component
 - High concentration (HHI > 0.5) noted in detail text but no additional penalty applied
 
 ### Resilience Details

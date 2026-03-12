@@ -63,6 +63,7 @@ Verified entry point for the `/docs` corpus. Use this file to find the authorita
 - [mint-burn-flows-timeline.md](./mint-burn-flows-timeline.md) - mint/burn methodology version history
 - [report-cards-timeline.md](./report-cards-timeline.md) - report-card scoring version history
 - [stability-index-timeline.md](./stability-index-timeline.md) - PSI version history
+- [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) - yield methodology version history
 
 ## Reference Artifact
 

@@ -1,6 +1,18 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.6` (2026-03-01 -> 2026-03-09).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.7` (2026-03-01 -> 2026-03-10).
+
+---
+
+## v4.7 - Closed-day baseline, fixed aggregate 24h semantics, and coverage disclosures (Mar 10, 2026)
+
+**Commit:** `unreleased`
+
+- Pressure Shift now compares live 24-hour flows against the last 30 fully closed UTC-day baselines instead of mixing the active day into the baseline
+- Aggregate `GET /api/mint-burn-flows?hours=N` keeps per-coin 24h fields fixed to the canonical 24-hour window while only `hourly[]` respects `hours`
+- Aggregate flow responses now expose `scope`, `sync`, `windowHours`, and per-coin `coverage` metadata
+- The public `/flows` page now labels the feature as Ethereum-only and visibly marks partial-history or lagging-coverage states
+- Flow freshness is keyed to successful sync timestamps instead of latest event timestamps, avoiding false stale warnings during quiet periods
 
 ---
 

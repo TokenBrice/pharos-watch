@@ -172,10 +172,6 @@ function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }
     "Content-Type": "application/json",
     "Cache-Control": CACHE_PROFILES.standard,
   }, freshnessTs, FLOW_FRESHNESS_MAX_AGE_SEC);
-  const fallbackWarning = "199 - \"Served cached mint/burn flows due transient backend error\"";
-  headers.Warning = headers.Warning
-    ? `${headers.Warning}, ${fallbackWarning}`
-    : fallbackWarning;
   return new Response(cached.value, { headers });
 }
 
