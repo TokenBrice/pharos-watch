@@ -5,6 +5,7 @@ import { errorResponse } from "../../lib/api-utils";
 export const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
 export const DETAIL_UPSTREAM_MAX_RETRIES = 2;
+export const DETAIL_HISTORY_MAX_AGE_SECONDS = 3 * 86400;
 
 export type DetailCacheEntry = { value: string; updatedAt: number } | null;
 
@@ -107,6 +108,26 @@ export function buildPriceMapByDate(
     priceMap.set(dateKeyFromTimestampMs(ts), price);
   }
   return priceMap;
+}
+
+export function getLatestDetailTokenDate(tokens: ReadonlyArray<Record<string, unknown>>): number | null {
+  let latestDate: number | null = null;
+
+  for (const token of tokens) {
+    const date = token.date;
+    if (typeof date !== "number" || !Number.isFinite(date)) continue;
+    if (latestDate == null || date > latestDate) latestDate = date;
+  }
+
+  return latestDate;
+}
+
+export function isDetailHistoryFresh(
+  tokens: ReadonlyArray<Record<string, unknown>>,
+  nowSec = Math.floor(Date.now() / 1000),
+): boolean {
+  const latestDate = getLatestDetailTokenDate(tokens);
+  return latestDate != null && nowSec - latestDate <= DETAIL_HISTORY_MAX_AGE_SECONDS;
 }
 
 export function buildTokenRowsFromMarketCaps(

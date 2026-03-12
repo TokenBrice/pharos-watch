@@ -12,6 +12,8 @@ import {
   createFreshCacheHitResponse,
   createFreshUpstreamResponse,
   fetchSupplyHistoryFallback,
+  getLatestDetailTokenDate,
+  isDetailHistoryFresh,
   staleCacheOrError,
   DETAIL_UPSTREAM_MAX_RETRIES,
   DETAIL_UPSTREAM_TIMEOUT_MS,
@@ -46,10 +48,25 @@ export const handleStablecoinDetail = withErrorHandler(
       }
     };
     const pegType = `pegged${meta?.flags.pegCurrency ?? "USD"}`;
-    const trySupplyHistoryFallback = async (reason: string): Promise<Response | null> => {
+    const loadSupplyHistoryFallback = async (
+      reason: string,
+      latestTokenDate?: number | null,
+    ): Promise<Record<string, unknown>[]> => {
       const tokens = await fetchSupplyHistoryFallback(db, id, pegType);
+      if (tokens.length > 0) {
+        const latestSuffix = latestTokenDate != null ? ` latest=${latestTokenDate}` : "";
+        console.warn(
+          `[detail] fallback source=supply_history stablecoin=${id} reason=${reason} points=${tokens.length}${latestSuffix}`,
+        );
+      }
+      return tokens;
+    };
+    const trySupplyHistoryFallback = async (
+      reason: string,
+      latestTokenDate?: number | null,
+    ): Promise<Response | null> => {
+      const tokens = await loadSupplyHistoryFallback(reason, latestTokenDate);
       if (tokens.length === 0) return null;
-      console.warn(`[detail] fallback source=supply_history stablecoin=${id} reason=${reason} points=${tokens.length}`);
       const body = JSON.stringify({ tokens });
       queueCacheWrite(body);
       return createFreshUpstreamResponse(body);
@@ -76,7 +93,15 @@ export const handleStablecoinDetail = withErrorHandler(
       try {
         let tokens = await fetchCommodityTokens(config);
         if (tokens.length === 0) {
-          const fallbackTokens = await fetchSupplyHistoryFallback(db, id, config.pegType);
+          const fallbackTokens = await loadSupplyHistoryFallback("commodity-history-empty");
+          if (fallbackTokens.length > 0) {
+            tokens = fallbackTokens;
+          }
+        } else if (!isDetailHistoryFresh(tokens)) {
+          const fallbackTokens = await loadSupplyHistoryFallback(
+            "commodity-history-stale",
+            getLatestDetailTokenDate(tokens),
+          );
           if (fallbackTokens.length > 0) {
             tokens = fallbackTokens;
           }
@@ -108,9 +133,21 @@ export const handleStablecoinDetail = withErrorHandler(
           geckoId: meta.geckoId!,
           pegType,
         });
-        await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, tokens.length > 0);
+        const historyFresh = isDetailHistoryFresh(tokens);
+        await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, tokens.length > 0 && historyFresh);
         if (tokens.length === 0) {
-          tokens = await fetchSupplyHistoryFallback(db, id, pegType);
+          const fallbackTokens = await loadSupplyHistoryFallback("coingecko-history-empty");
+          if (fallbackTokens.length > 0) {
+            tokens = fallbackTokens;
+          }
+        } else if (!historyFresh) {
+          const fallbackTokens = await loadSupplyHistoryFallback(
+            "coingecko-history-stale",
+            getLatestDetailTokenDate(tokens),
+          );
+          if (fallbackTokens.length > 0) {
+            tokens = fallbackTokens;
+          }
         }
 
         const body = JSON.stringify({ tokens });

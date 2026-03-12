@@ -158,7 +158,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 ### `GET /api/stablecoin/:id`
 
 Historical price and supply chart data for a single stablecoin. Proxies DefiLlama (or CoinGecko for commodity/CG-only tokens) with a 5-minute server-side cache.
-All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on upstream/parse failures, logs include source tags and stablecoin ID before stale-cache fallback or `supply_history` reconstruction.
+All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on upstream/parse failures, or when CoinGecko-derived history is empty/stale, logs include source tags and stablecoin ID before stale-cache fallback or `supply_history` reconstruction. CoinGecko history is treated as stale when its newest point is more than 72 hours old.
 
 **Path parameter:** `:id` — Pharos stablecoin ID.
 

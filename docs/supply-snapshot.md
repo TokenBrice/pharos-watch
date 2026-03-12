@@ -160,7 +160,7 @@ ORDER BY snapshot_date ASC
 
 ### GET /api/stablecoin/{id} (detail --- supply_history fallback)
 
-For CoinGecko-only coins (ID starts with `cg-`), commodity tokens (gold/silver), or any coin where external APIs return no data, the detail endpoint falls back to the `supply_history` table and reconstructs the `DetailToken` format.
+For CoinGecko-only coins, commodity tokens (gold/silver), or any coin where external detail APIs return empty or stale history, the detail endpoint falls back to the `supply_history` table and reconstructs the `DetailToken` format. CoinGecko-derived history is treated as stale when its newest point is more than 72 hours behind wall clock time, which prevents per-coin charts from freezing on an old market-cap series when D1 already has fresher daily snapshots.
 
 ### POST /api/backfill-supply-history (admin)
 

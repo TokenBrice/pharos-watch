@@ -251,4 +251,36 @@ describe("handleStablecoinDetail", () => {
     const body = (await res.json()) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
   });
+
+  it("falls back to supply_history when gecko-only market chart history is stale", async () => {
+    const geckoOnlyId = Array.from(TRACKED_META_BY_ID.entries()).find(([, meta]) => {
+      const entry = meta as { geckoId?: string | null; llamaId?: string | null };
+      return Boolean(entry.geckoId) && !entry.llamaId;
+    })?.[0];
+    expect(typeof geckoOnlyId).toBe("string");
+
+    const staleTsMs = (Math.floor(Date.now() / 1000) - 40 * 86400) * 1000;
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      {
+        match: "supply_history",
+        rows: [{ snapshot_date: 1700000000, circulating_usd: 61_000_000, price: 1.0 }],
+      },
+    ]);
+
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({
+      market_caps: [[staleTsMs, 55_000_000]],
+      prices: [[staleTsMs, 1.05]],
+    }), { status: 200 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, geckoOnlyId!, ctx);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      tokens: Array<{ totalCirculatingUSD?: Record<string, number> }>;
+    };
+    expect(body.tokens).toHaveLength(1);
+    expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(61_000_000);
+  });
 });
