@@ -239,7 +239,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                   : dep.type === "mechanism" ? " (mechanism-critical)"
                   : "";
                 return (
-                  <span key={dep.id}>
+                  <span key={`${dep.id}-${dep.type}`}>
                     {i > 0 && ", "}
                     <Link
                       href={buildStablecoinUrl(dep.id)}

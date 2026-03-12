@@ -1,4 +1,4 @@
-import type { DependencyWeight, ReserveSlice, StablecoinMeta } from "../types";
+import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../types";
 
 export interface ReserveResult {
   reserves: ReserveSlice[];
@@ -116,9 +116,18 @@ export function deriveDependencies(meta: Pick<StablecoinMeta, 'reserves' | 'depe
   const linked = reserves.filter((r) => r.coinId);
   if (linked.length === 0) return meta.dependencies ?? [];
 
-  return linked.map((r) => ({
-    id: r.coinId!,
-    weight: r.pct / 100,
-    type: r.depType ?? "collateral",
-  }));
+  // Aggregate by (coinId, depType) — multiple reserve slices backed by the
+  // same upstream coin (e.g. two sUSDe strategies) are one dependency.
+  const map = new Map<string, { id: string; weight: number; type: DependencyType }>();
+  for (const r of linked) {
+    const type: DependencyType = r.depType ?? "collateral";
+    const key = `${r.coinId}::${type}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.weight += r.pct / 100;
+    } else {
+      map.set(key, { id: r.coinId!, weight: r.pct / 100, type });
+    }
+  }
+  return Array.from(map.values());
 }

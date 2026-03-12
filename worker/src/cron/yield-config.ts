@@ -97,6 +97,7 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
   // infiniFi USD -> siUSD (savings wrapper, $157M TVL)
   "iusd-infinifi": {
     variantSymbol: "siUSD",
+    variantAddress: "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
     variantChain: "ethereum",
     yieldSource: "infiniFi savings (siUSD)",
     yieldType: "lending-vault",
@@ -323,6 +324,15 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     stablecoinId: "dusd-dtrinity", // dUSD — reads sdUSD vault exchange rate to derive APY
     chain: "ethereum",
     contract: "0x4aCBcFa29fb085097c5f31783403EF7A7930F6Fe",
+    selector: "0x07a2d13a", // convertToAssets(uint256)
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "iusd-infinifi", // iUSD — reads siUSD vault exchange rate to derive APY
+    chain: "ethereum",
+    contract: "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
     selector: "0x07a2d13a", // convertToAssets(uint256)
     decimals: 18,
     inputAmount:

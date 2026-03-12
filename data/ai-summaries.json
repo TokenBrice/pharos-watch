@@ -1,17 +1,17 @@
 {
   "355": {
     "title": "The Circle Spinout Nobody Googles",
-    "text": "OpenTrade was spun out from Circle, which is why its vault contracts run on Circle's own open-source Perimeter Protocol — an origin that lends credibility and implies institutional DNA without requiring Circle's blessing. XMMF holds Fidelity's USD Money Market Fund through a Cayman SPC with J.P. Morgan as both custodian and broker, which is institutional plumbing worthy of a product ten times its $39 million size. Avalanche hosts roughly three-quarters of supply, an unusual distribution for an EVM-native product, explained by early partnerships with Avalanche-native institutional DeFi integrations. With no CoinGecko listing and no DefiLlama stablecoin coverage, XMMF exists almost entirely within the authenticated OpenTrade dashboard and a handful of Avalanche protocols — the tokenized equivalent of a well-run operation that has no particular interest in being discovered.",
+    "text": "OpenTrade was spun out from Circle, which is why its vault contracts run on Circle's own open-source Perimeter Protocol \u2014 an origin that lends credibility and implies institutional DNA without requiring Circle's blessing. XMMF holds Fidelity's USD Money Market Fund through a Cayman SPC with J.P. Morgan as both custodian and broker, which is institutional plumbing worthy of a product ten times its $39 million size. Avalanche hosts roughly three-quarters of supply, an unusual distribution for an EVM-native product, explained by early partnerships with Avalanche-native institutional DeFi integrations. With no CoinGecko listing and no DefiLlama stablecoin coverage, XMMF exists almost entirely within the authenticated OpenTrade dashboard and a handful of Avalanche protocols \u2014 the tokenized equivalent of a well-run operation that has no particular interest in being discovered.",
     "updatedAt": "2026-03-03"
   },
   "usdt-tether": {
     "title": "Too Big to Depeg",
-    "text": "The 800-pound gorilla of stablecoins commands more market cap than most countries' GDP and settles more volume daily than Visa. Despite years of \"where are the reserves?\" discourse, Tether keeps printing — and keeps getting redeemed at par. Its BDO Italia attestations have quieted skeptics somewhat, but the real moat is simpler: when every exchange, DeFi protocol, and OTC desk denominates in USDT, switching costs approach infinity. Love it or hate it, the market has voted with its liquidity.",
+    "text": "The 800-pound gorilla of stablecoins commands more market cap than most countries' GDP and settles more volume daily than Visa. Despite years of \"where are the reserves?\" discourse, Tether keeps printing \u2014 and keeps getting redeemed at par. Its BDO Italia attestations have quieted skeptics somewhat, but the real moat is simpler: when every exchange, DeFi protocol, and OTC desk denominates in USDT, switching costs approach infinity. Love it or hate it, the market has voted with its liquidity.",
     "updatedAt": "2026-02-22"
   },
   "usdc-circle": {
     "title": "The Regulated Runner-Up",
-    "text": "Circle's USDC is what happens when you build a stablecoin for compliance officers. Full monthly attestations from Deloitte, SEC registration, and a BlackRock-managed reserve fund make it the institutional darling of the space. The March 2023 SVB depeg briefly shattered its reputation for safety — and its market cap still hasn't fully recovered to pre-crisis levels. For anyone who needs a stablecoin their legal team won't flinch at, USDC remains the default.",
+    "text": "Circle's USDC is what happens when you build a stablecoin for compliance officers. Full monthly attestations from Deloitte, SEC registration, and a BlackRock-managed reserve fund make it the institutional darling of the space. The March 2023 SVB depeg briefly shattered its reputation for safety \u2014 and its market cap still hasn't fully recovered to pre-crisis levels. For anyone who needs a stablecoin their legal team won't flinch at, USDC remains the default.",
     "updatedAt": "2026-02-22"
   },
   "dai-makerdao": {
@@ -81,7 +81,7 @@
   },
   "eurc-circle": {
     "title": "The Euro's Best On-Chain Bet",
-    "text": "Circle's euro stablecoin brings the same reserve transparency and regulatory posture as USDC to the eurozone. MiCA-compliant and fully backed, EURC is positioning itself as the default EUR stablecoin before regulations force weaker competitors out. The euro stablecoin market is nascent enough that first-mover advantage still matters — and Circle is determined to be the name that sticks.",
+    "text": "Circle's euro stablecoin brings the same reserve transparency and regulatory posture as USDC to the eurozone. MiCA-compliant and fully backed, EURC is positioning itself as the default EUR stablecoin before regulations force weaker competitors out. The euro stablecoin market is nascent enough that first-mover advantage still matters \u2014 and Circle is determined to be the name that sticks.",
     "updatedAt": "2026-02-22"
   },
   "eurs-stasis": {
@@ -96,12 +96,12 @@
   },
   "eura-angle": {
     "title": "Angle's DeFi Euro",
-    "text": "Angle Protocol's EURA is one of the few crypto-backed euro stablecoins — an overcollateralized design in a market dominated by RWA-backed issuers. Its centralized-dependent governance means community involvement with practical guardrails. For DeFi purists who want a euro without bank dependencies, EURA is one of the few options on the menu.",
+    "text": "Angle Protocol's EURA is one of the few crypto-backed euro stablecoins \u2014 an overcollateralized design in a market dominated by RWA-backed issuers. Its centralized-dependent governance means community involvement with practical guardrails. For DeFi purists who want a euro without bank dependencies, EURA is one of the few options on the menu.",
     "updatedAt": "2026-02-22"
   },
   "fpi-frax": {
     "title": "Frax's Inflation Hedge",
-    "text": "Frax Price Index is pegged not to a currency but to the CPI — a stablecoin that tries to preserve purchasing power rather than nominal value. It's algorithmic, experimental, and philosophically interesting: why peg to a dollar that loses value annually when you can peg to the cost of living? The execution challenges of maintaining a CPI peg are considerable, but the concept alone makes FPI the most intellectually honest \"stable\" coin in the market.",
+    "text": "Frax Price Index is pegged not to a currency but to the CPI \u2014 a stablecoin that tries to preserve purchasing power rather than nominal value. It's algorithmic, experimental, and philosophically interesting: why peg to a dollar that loses value annually when you can peg to the cost of living? The execution challenges of maintaining a CPI peg are considerable, but the concept alone makes FPI the most intellectually honest \"stable\" coin in the market.",
     "updatedAt": "2026-02-22"
   },
   "uusd-youves": {
@@ -141,12 +141,12 @@
   },
   "fdusd-first-digital": {
     "title": "Binance's Current Favorite",
-    "text": "First Digital USD rose to prominence as Binance's preferred stablecoin after BUSD's regulatory demise. Hong Kong-based and reserve-backed, it serves as the default trading pair on the world's largest exchange. Its fate is tied to Binance's continued endorsement — a single point of dependency that the market has apparently accepted.",
+    "text": "First Digital USD rose to prominence as Binance's preferred stablecoin after BUSD's regulatory demise. Hong Kong-based and reserve-backed, it serves as the default trading pair on the world's largest exchange. Its fate is tied to Binance's continued endorsement \u2014 a single point of dependency that the market has apparently accepted.",
     "updatedAt": "2026-02-22"
   },
   "pyusd-paypal": {
     "title": "Big Fintech's Entry Ticket",
-    "text": "PayPal's stablecoin proves that when a payments giant with 400 million users issues a dollar token, people notice. Paxos-issued and fully reserved in treasuries and cash, PYUSD's regulatory credentials are impeccable. Its challenge isn't trust — it's utility. Until DeFi and PayPal's walled garden meaningfully converge, it risks being the best-credentialed stablecoin nobody uses on-chain.",
+    "text": "PayPal's stablecoin proves that when a payments giant with 400 million users issues a dollar token, people notice. Paxos-issued and fully reserved in treasuries and cash, PYUSD's regulatory credentials are impeccable. Its challenge isn't trust \u2014 it's utility. Until DeFi and PayPal's walled garden meaningfully converge, it risks being the best-credentialed stablecoin nobody uses on-chain.",
     "updatedAt": "2026-02-22"
   },
   "gyen-gyen": {
@@ -166,7 +166,7 @@
   },
   "usde-ethena": {
     "title": "The Basis Trade, Tokenized",
-    "text": "Ethena's USDe pioneered the delta-neutral stablecoin: hold spot crypto, short the perps, pocket the funding rate. It works beautifully in bull markets when longs pay shorts handsomely for leverage. The catch? When funding flips negative — as it inevitably does — the insurance fund becomes the only thing between USDe and a death spiral. It's a sophisticated yield product wearing a stablecoin's clothing.",
+    "text": "Ethena's USDe pioneered the delta-neutral stablecoin: hold spot crypto, short the perps, pocket the funding rate. It works beautifully in bull markets when longs pay shorts handsomely for leverage. The catch? When funding flips negative \u2014 as it inevitably does \u2014 the insurance fund becomes the only thing between USDe and a death spiral. It's a sophisticated yield product wearing a stablecoin's clothing.",
     "updatedAt": "2026-02-22"
   },
   "aeur-anchored-coins": {
@@ -211,7 +211,7 @@
   },
   "buidl-blackrock": {
     "title": "When BlackRock Calls It a Token",
-    "text": "BlackRock's tokenized money market fund is what happens when the world's largest asset manager decides blockchain isn't a meme. BUIDL doesn't try to be a DeFi building block — it's institutional plumbing with an ERC-20 wrapper. When Larry Fink's firm validates tokenization, the rest of TradFi starts returning phone calls.",
+    "text": "BlackRock's tokenized money market fund is what happens when the world's largest asset manager decides blockchain isn't a meme. BUIDL doesn't try to be a DeFi building block \u2014 it's institutional plumbing with an ERC-20 wrapper. When Larry Fink's firm validates tokenization, the rest of TradFi starts returning phone calls.",
     "updatedAt": "2026-02-22"
   },
   "btcusd-btcfi": {
@@ -251,12 +251,12 @@
   },
   "usds-sky": {
     "title": "The Artist Formerly Known as DAI",
-    "text": "Sky Dollar is MakerDAO's rebranded stablecoin, the culmination of Rune Christensen's \"Endgame\" vision to make the protocol more normie-friendly. Under the hood it's the same overcollateralized vaults and PSM modules — just with a fresh coat of paint and a governance structure that's still figuring itself out. Whether the rebrand was genius marketing or unnecessary complexity remains the market's most polite disagreement.",
+    "text": "Sky Dollar is MakerDAO's rebranded stablecoin, the culmination of Rune Christensen's \"Endgame\" vision to make the protocol more normie-friendly. Under the hood it's the same overcollateralized vaults and PSM modules \u2014 just with a fresh coat of paint and a governance structure that's still figuring itself out. Whether the rebrand was genius marketing or unnecessary complexity remains the market's most polite disagreement.",
     "updatedAt": "2026-02-22"
   },
   "m-m0": {
     "title": "The Middleman's Stablecoin",
-    "text": "M0's M token is a middleware play: rather than competing with USDC or USDT directly, it provides infrastructure for other stablecoins and fintechs to build on. Its RWA-backed reserves and centralized-dependent governance aim for a middle ground between Tether's opacity and Circle's centralization. The \"protocol for stablecoins\" pitch is elegant in theory — the question is whether the market wants a meta-stablecoin layer.",
+    "text": "M0's M token is a middleware play: rather than competing with USDC or USDT directly, it provides infrastructure for other stablecoins and fintechs to build on. Its RWA-backed reserves and centralized-dependent governance aim for a middle ground between Tether's opacity and Circle's centralization. The \"protocol for stablecoins\" pitch is elegant in theory \u2014 the question is whether the market wants a meta-stablecoin layer.",
     "updatedAt": "2026-02-22"
   },
   "usdm-moneta": {
@@ -281,7 +281,7 @@
   },
   "usdtb-ethena": {
     "title": "Ethena's Safe Side",
-    "text": "If USDe is the exciting sibling, USDtb is the responsible one — backed by BlackRock's BUIDL fund rather than delta-neutral trades. Ethena built it for users who want the ecosystem without the basis-trade risk, creating a safety valve that also serves as USDe's backstop. It's the stablecoin equivalent of keeping a boring index fund alongside your options portfolio.",
+    "text": "If USDe is the exciting sibling, USDtb is the responsible one \u2014 backed by BlackRock's BUIDL fund rather than delta-neutral trades. Ethena built it for users who want the ecosystem without the basis-trade risk, creating a safety valve that also serves as USDe's backstop. It's the stablecoin equivalent of keeping a boring index fund alongside your options portfolio.",
     "updatedAt": "2026-02-22"
   },
   "zeusd-zoth": {
@@ -291,7 +291,7 @@
   },
   "zchf-frankencoin": {
     "title": "Swiss Stubbornness, Tokenized",
-    "text": "Frankencoin is a genuinely decentralized Swiss franc stablecoin — no foundation, no team tokens, no VC backing. Its auction-based liquidation mechanism and minimalist governance are a throwback to crypto's original ethos. The Swiss franc peg serves a niche audience, but Frankencoin proves that small, well-designed protocols can survive without a marketing budget.",
+    "text": "Frankencoin is a genuinely decentralized Swiss franc stablecoin \u2014 no foundation, no team tokens, no VC backing. Its auction-based liquidation mechanism and minimalist governance are a throwback to crypto's original ethos. The Swiss franc peg serves a niche audience, but Frankencoin proves that small, well-designed protocols can survive without a marketing budget.",
     "updatedAt": "2026-02-22"
   },
   "usn-noon": {
@@ -316,7 +316,7 @@
   },
   "usyc-hashnote": {
     "title": "Treasury Yields On-Chain",
-    "text": "Hashnote's USYC is a tokenized money market fund that passes T-bill yields directly to holders. It's RWA-backed, yield-bearing, and about as exciting as its underlying asset — which is precisely the point. In a world of exotic DeFi yields, sometimes the most radical product is just a savings account with an ERC-20 wrapper.",
+    "text": "Hashnote's USYC is a tokenized money market fund that passes T-bill yields directly to holders. It's RWA-backed, yield-bearing, and about as exciting as its underlying asset \u2014 which is precisely the point. In a world of exotic DeFi yields, sometimes the most radical product is just a savings account with an ERC-20 wrapper.",
     "updatedAt": "2026-02-22"
   },
   "eurr-stablr": {
@@ -356,7 +356,7 @@
   },
   "rlusd-ripple": {
     "title": "Ripple's Dollar Bet",
-    "text": "After years of fighting the SEC over XRP, Ripple launched its own stablecoin with NYDFS approval — a plot twist even Ripple skeptics didn't see coming. RLUSD is built for Ripple's payments network, aiming to be the bridge asset that XRP never became for institutional transfers. Fully reserved and centrally managed, it's less a DeFi primitive and more a cross-border payments tool.",
+    "text": "After years of fighting the SEC over XRP, Ripple launched its own stablecoin with NYDFS approval \u2014 a plot twist even Ripple skeptics didn't see coming. RLUSD is built for Ripple's payments network, aiming to be the bridge asset that XRP never became for institutional transfers. Fully reserved and centrally managed, it's less a DeFi primitive and more a cross-border payments tool.",
     "updatedAt": "2026-02-22"
   },
   "feusd-felix": {
@@ -371,7 +371,7 @@
   },
   "eurcv-societe-generale-forge": {
     "title": "SocGen's Blockchain Experiment",
-    "text": "EUR CoinVertible is issued by SG-FORGE, the digital asset arm of French banking giant Société Générale. It's a fully regulated, MiCA-compliant euro stablecoin from a systemically important bank — which is either the future of tokenized money or a corporate innovation lab's pet project. Either way, when a bank with over a trillion euros in assets issues a stablecoin, the industry takes notes.",
+    "text": "EUR CoinVertible is issued by SG-FORGE, the digital asset arm of French banking giant Soci\u00e9t\u00e9 G\u00e9n\u00e9rale. It's a fully regulated, MiCA-compliant euro stablecoin from a systemically important bank \u2014 which is either the future of tokenized money or a corporate innovation lab's pet project. Either way, when a bank with over a trillion euros in assets issues a stablecoin, the industry takes notes.",
     "updatedAt": "2026-02-22"
   },
   "yusd-aegis": {
@@ -475,9 +475,9 @@
     "updatedAt": "2026-02-22"
   },
   "iusd-infinifi": {
-    "title": "Fractional Reserve, On Purpose",
-    "text": "InfiniFi openly replicates traditional banking's fractional reserve model on-chain, deploying your USDC across Aave, Pendle, and Ethena while offering tiered yields based on lock-up duration. The transparency is refreshing -- most DeFi protocols do this implicitly while pretending they don't. The hack of related entity Infini in February 2025, caused by a developer who retained admin keys, is a sobering reminder that access control failures don't care about your yield curves.",
-    "updatedAt": "2026-02-22"
+    "title": "Private Credit, Public Interface",
+    "text": "InfiniFi's pitch hasn't changed \u2014 fractional reserve USDC vault, tiered lock-ups for tiered yield \u2014 but what's in the vault has. The portfolio that once ran on Ethena sUSDe and Pendle PTs now deploys 80% of its $171M into institutional private credit: Fasanara Capital at 9% APY, FalconX prime brokerage at 6.25%, Sentora's PYUSD strategy at 6%. The liquid 20% exists to service redemptions, not generate returns. This is less DeFi yield aggregator and more on-chain credit fund with a tiered savings product on top. The 5.4% siUSD APY is real because the underlying credit risk is real, and the adequacy of a $33M liquid buffer against a $171M book is ultimately a function of how many users check their lock-up terms before they need cash.",
+    "updatedAt": "2026-03-12"
   },
   "pht-pht": {
     "title": "Peso Stablecoin Pioneer",
@@ -516,7 +516,7 @@
   },
   "usdai-usd-ai": {
     "title": "AI Meets RWA",
-    "text": "USD.AI blends the two hottest crypto narratives — artificial intelligence and real-world assets — into a single stablecoin product. Its centralized-dependent governance suggests human oversight where it counts, while the AI branding does the marketing work. Whether the \"AI\" label reflects genuine innovation or narrative arbitrage is left as an exercise for the reader.",
+    "text": "USD.AI blends the two hottest crypto narratives \u2014 artificial intelligence and real-world assets \u2014 into a single stablecoin product. Its centralized-dependent governance suggests human oversight where it counts, while the AI branding does the marketing work. Whether the \"AI\" label reflects genuine innovation or narrative arbitrage is left as an exercise for the reader.",
     "updatedAt": "2026-02-22"
   },
   "usx-solstice": {
@@ -646,117 +646,117 @@
   },
   "aid-gaib": {
     "title": "GPU Yield, Dollarized",
-    "text": "GAIB's AID is a conventional dollar stablecoin — T-bills and stablecoin reserves, 1:1 mint and burn — whose entire reason for existing is its companion token sAID, which accrues yield from GPU and AI infrastructure financing deals. The structure neatly separates stable value (AID) from exotic yield (sAID), letting users choose their risk exposure. At $21 million market cap it's early-stage even by RWA standards, betting that AI compute demand will create a durable yield substrate. Whether GPU financing agreements produce reliable enough cash flows to back a yield product is genuinely untested — but in a market where every new stablecoin needs a narrative, \"AI infrastructure yield\" is at least more substantive than most.",
+    "text": "GAIB's AID is a conventional dollar stablecoin \u2014 T-bills and stablecoin reserves, 1:1 mint and burn \u2014 whose entire reason for existing is its companion token sAID, which accrues yield from GPU and AI infrastructure financing deals. The structure neatly separates stable value (AID) from exotic yield (sAID), letting users choose their risk exposure. At $21 million market cap it's early-stage even by RWA standards, betting that AI compute demand will create a durable yield substrate. Whether GPU financing agreements produce reliable enough cash flows to back a yield product is genuinely untested \u2014 but in a market where every new stablecoin needs a narrative, \"AI infrastructure yield\" is at least more substantive than most.",
     "updatedAt": "2026-03-02"
   },
   "apxusd-apyx": {
     "title": "Dividends as Collateral",
-    "text": "Apyx introduced what might be the most creative collateral backing in stablecoins: preferred shares from Digital Asset Treasury companies — publicly traded equity from firms like Strategy that hold large crypto positions. The theory is that variable-rate preferred shares trade near par regardless of crypto price volatility, providing stable collateral for a dollar token. Launched on Ethereum in February 2026 with DeFi Development Corp as an early investor, apxUSD is so new that market cap data barely exists. The Protocol-Owned Liquidity buffer is meant to absorb stress, but the underlying question is whether equity dividends from crypto-holding companies are truly uncorrelated with the crypto market they depend on.",
+    "text": "Apyx introduced what might be the most creative collateral backing in stablecoins: preferred shares from Digital Asset Treasury companies \u2014 publicly traded equity from firms like Strategy that hold large crypto positions. The theory is that variable-rate preferred shares trade near par regardless of crypto price volatility, providing stable collateral for a dollar token. Launched on Ethereum in February 2026 with DeFi Development Corp as an early investor, apxUSD is so new that market cap data barely exists. The Protocol-Owned Liquidity buffer is meant to absorb stress, but the underlying question is whether equity dividends from crypto-holding companies are truly uncorrelated with the crypto market they depend on.",
     "updatedAt": "2026-03-02"
   },
   "jpyc-jpyc": {
     "title": "The Yen's Licensed Pioneer",
-    "text": "Japan's first FSA-approved yen stablecoin occupies an enviable regulatory position — Type II Funds Transfer license, 100% JGB-backed reserves, zero transaction fees — and a laughable market cap of $17 million. JPYC Inc. has set a 10-trillion-yen target that would require 3,400x growth, which is either visionary ambition or Japanese corporate optimism at its finest. The real threat isn't GYEN (regulated in New York but locked out of Japan's domestic market) but Progmat Coin, a joint venture from Mitsubishi UFJ, Sumitomo Mitsui, and Mizuho — three megabanks whose combined balance sheet makes JPYC look like a rounding error. Being first to market matters less when the second movers have trillion-dollar balance sheets.",
+    "text": "Japan's first FSA-approved yen stablecoin occupies an enviable regulatory position \u2014 Type II Funds Transfer license, 100% JGB-backed reserves, zero transaction fees \u2014 and a laughable market cap of $17 million. JPYC Inc. has set a 10-trillion-yen target that would require 3,400x growth, which is either visionary ambition or Japanese corporate optimism at its finest. The real threat isn't GYEN (regulated in New York but locked out of Japan's domestic market) but Progmat Coin, a joint venture from Mitsubishi UFJ, Sumitomo Mitsui, and Mizuho \u2014 three megabanks whose combined balance sheet makes JPYC look like a rounding error. Being first to market matters less when the second movers have trillion-dollar balance sheets.",
     "updatedAt": "2026-03-02"
   },
   "xaut-tether": {
     "title": "Tether Mints Bullion",
-    "text": "Tether's gold token commands half the $6 billion tokenized gold market, which sounds impressive until you notice that share was 60% six months ago. XAUT works exactly like you'd expect from Tether: BDO Italia attestations, undisclosed Swiss custodian, El Salvador jurisdiction, and a market that trades on brand recognition over transparency. The real story is that Tether bought 27 tons of physical gold in 2025, making it one of the larger non-sovereign gold accumulators — the tokenized wrapper is almost an afterthought. With gold's 65% rally inflating all boats, the question is whether XAUT's eroding market share matters when the pie keeps growing.",
+    "text": "Tether's gold token commands half the $6 billion tokenized gold market, which sounds impressive until you notice that share was 60% six months ago. XAUT works exactly like you'd expect from Tether: BDO Italia attestations, undisclosed Swiss custodian, El Salvador jurisdiction, and a market that trades on brand recognition over transparency. The real story is that Tether bought 27 tons of physical gold in 2025, making it one of the larger non-sovereign gold accumulators \u2014 the tokenized wrapper is almost an afterthought. With gold's 65% rally inflating all boats, the question is whether XAUT's eroding market share matters when the pie keeps growing.",
     "updatedAt": "2026-03-02"
   },
   "paxg-paxos": {
     "title": "Fort Knox With a Charter",
-    "text": "The only federally regulated gold token in existence, PAXG operates under Paxos's OCC national trust charter with KPMG monthly attestations and allocated bars at Brink's London. At $2.5 billion it holds roughly 40% of the tokenized gold market — the permanent second to Tether Gold, but the first choice for anyone whose compliance department has veto power. While XAUT trades on Tether's distribution, PAXG trades on verifiable custody: allocated bars with serial numbers, bankruptcy-remote trust structure, and the kind of regulatory paper trail that makes institutional allocators comfortable. In a market where gold itself is the product, trust infrastructure is the only real differentiator.",
+    "text": "The only federally regulated gold token in existence, PAXG operates under Paxos's OCC national trust charter with KPMG monthly attestations and allocated bars at Brink's London. At $2.5 billion it holds roughly 40% of the tokenized gold market \u2014 the permanent second to Tether Gold, but the first choice for anyone whose compliance department has veto power. While XAUT trades on Tether's distribution, PAXG trades on verifiable custody: allocated bars with serial numbers, bankruptcy-remote trust structure, and the kind of regulatory paper trail that makes institutional allocators comfortable. In a market where gold itself is the product, trust infrastructure is the only real differentiator.",
     "updatedAt": "2026-03-02"
   },
   "kau-kinesis": {
     "title": "Gold That Pays Rent",
-    "text": "Kinesis cracked the code that other gold tokens missed: people want yield. KAU holders earn a share of 15% of all platform transaction fees, paid monthly in additional gold — a model that propelled it from negligible to 8% market share in just twelve weeks. At $388 million it's still dwarfed by the XAUT-PAXG duopoly, but the trajectory is the story. Add a virtual Mastercard for point-of-sale gold spending and you get something genuinely different: gold that functions as money, not just an asset. The catch is that yield depends entirely on Kinesis's transaction volume — if trading dries up, so does the rent check.",
+    "text": "Kinesis cracked the code that other gold tokens missed: people want yield. KAU holders earn a share of 15% of all platform transaction fees, paid monthly in additional gold \u2014 a model that propelled it from negligible to 8% market share in just twelve weeks. At $388 million it's still dwarfed by the XAUT-PAXG duopoly, but the trajectory is the story. Add a virtual Mastercard for point-of-sale gold spending and you get something genuinely different: gold that functions as money, not just an asset. The catch is that yield depends entirely on Kinesis's transaction volume \u2014 if trading dries up, so does the rent check.",
     "updatedAt": "2026-03-02"
   },
   "xaum-matrixdock": {
     "title": "Asia's Institutional Bullion",
-    "text": "Matrixdock's gold token sits at $70 million — a rounding error next to XAUT and PAXG — but its strategy is infrastructure, not retail. Bureau Veritas-audited bars in Singapore and Hong Kong vaults, a February 2026 expansion to Solana, and a partnership with Bhutan's Gelephu Mindfulness City for sovereign gold tokenization all point to the same thesis: institutional RWA rails for Asia-Pacific. Whether XAUm becomes the region's gold standard or remains a well-audited footnote depends on whether institutions actually prefer Asia-domiciled custody over London and Swiss vaults.",
+    "text": "Matrixdock's gold token sits at $70 million \u2014 a rounding error next to XAUT and PAXG \u2014 but its strategy is infrastructure, not retail. Bureau Veritas-audited bars in Singapore and Hong Kong vaults, a February 2026 expansion to Solana, and a partnership with Bhutan's Gelephu Mindfulness City for sovereign gold tokenization all point to the same thesis: institutional RWA rails for Asia-Pacific. Whether XAUm becomes the region's gold standard or remains a well-audited footnote depends on whether institutions actually prefer Asia-domiciled custody over London and Swiss vaults.",
     "updatedAt": "2026-03-02"
   },
   "gold-vro": {
     "title": "Gold in the Free Ports",
-    "text": "VeraOne stores its gold in the Geneva Free Ports — the same duty-free Swiss storage complex favored by art collectors and sovereign wealth funds — which gives VRO perhaps the most interesting custody story in tokenized gold and absolutely none of the liquidity to match. At $48 million market cap with minimal trading volume, it's a micro-cap gold gram token that proves having premium vault infrastructure doesn't automatically attract premium capital. The 1 VRO = 1 gram denomination makes it accessible on paper, but without meaningful exchange listings or DeFi integrations, accessibility remains theoretical.",
+    "text": "VeraOne stores its gold in the Geneva Free Ports \u2014 the same duty-free Swiss storage complex favored by art collectors and sovereign wealth funds \u2014 which gives VRO perhaps the most interesting custody story in tokenized gold and absolutely none of the liquidity to match. At $48 million market cap with minimal trading volume, it's a micro-cap gold gram token that proves having premium vault infrastructure doesn't automatically attract premium capital. The 1 VRO = 1 gram denomination makes it accessible on paper, but without meaningful exchange listings or DeFi integrations, accessibility remains theoretical.",
     "updatedAt": "2026-03-02"
   },
   "cgo-comtech": {
     "title": "DMCC-Stamped Bullion",
-    "text": "Dubai's contribution to tokenized gold arrives with serious pedigree: DMCC endorsement, Transguard vault custody under the Emirates Group umbrella, individually serialized 24-karat bars registered on DMCC Tradeflow, and a sleek redemption-via-app workflow. At $18 million market cap, none of that pedigree has translated into meaningful adoption. CGO occupies the same awkward position as several regional gold tokens — impeccable local credentials, negligible global presence. The UAE's regulatory clarity on tokenized commodities is genuinely ahead of most jurisdictions, but clarity alone doesn't create liquidity.",
+    "text": "Dubai's contribution to tokenized gold arrives with serious pedigree: DMCC endorsement, Transguard vault custody under the Emirates Group umbrella, individually serialized 24-karat bars registered on DMCC Tradeflow, and a sleek redemption-via-app workflow. At $18 million market cap, none of that pedigree has translated into meaningful adoption. CGO occupies the same awkward position as several regional gold tokens \u2014 impeccable local credentials, negligible global presence. The UAE's regulatory clarity on tokenized commodities is genuinely ahead of most jurisdictions, but clarity alone doesn't create liquidity.",
     "updatedAt": "2026-03-02"
   },
   "dgld-gold-token-sa": {
     "title": "Heritage Gold, Rebooted",
-    "text": "DGLD is backed by PAMP gold bars — the Swiss refiner whose name is synonymous with premium bullion — which makes its six-year disappearance and recent revival all the more puzzling. MKS PAMP relaunched DGLD in late 2025 with a Base deployment via Aerodrome, real-time reserve verification through on-chain bar serial numbers, and VQF/FINMA regulatory oversight. At somewhere between $3 million and $17 million (the data can't even agree), DGLD has the most prestigious gold backing in crypto and the least market traction. A 60-year refining heritage turns out to be necessary but wildly insufficient for winning the tokenized gold race.",
+    "text": "DGLD is backed by PAMP gold bars \u2014 the Swiss refiner whose name is synonymous with premium bullion \u2014 which makes its six-year disappearance and recent revival all the more puzzling. MKS PAMP relaunched DGLD in late 2025 with a Base deployment via Aerodrome, real-time reserve verification through on-chain bar serial numbers, and VQF/FINMA regulatory oversight. At somewhere between $3 million and $17 million (the data can't even agree), DGLD has the most prestigious gold backing in crypto and the least market traction. A 60-year refining heritage turns out to be necessary but wildly insufficient for winning the tokenized gold race.",
     "updatedAt": "2026-03-02"
   },
   "kag-kinesis": {
     "title": "The Lonely Ounce",
-    "text": "In a world where tokenized gold has surged past $6 billion, tokenized silver remains a ghost town — and KAG is effectively its only resident. At $16 million market cap, Kinesis Silver offers the same yield-sharing model as its gold sibling KAU, but without the macro tailwind: silver was flat while gold rallied 65% in 2025. The thesis is straightforward — if precious metals tokenization is real, silver must eventually follow gold — but \"eventually\" is doing a lot of heavy lifting. For now, KAG is less a product and more a bet on silver's relevance in an increasingly gold-obsessed market.",
+    "text": "In a world where tokenized gold has surged past $6 billion, tokenized silver remains a ghost town \u2014 and KAG is effectively its only resident. At $16 million market cap, Kinesis Silver offers the same yield-sharing model as its gold sibling KAU, but without the macro tailwind: silver was flat while gold rallied 65% in 2025. The thesis is straightforward \u2014 if precious metals tokenization is real, silver must eventually follow gold \u2014 but \"eventually\" is doing a lot of heavy lifting. For now, KAG is less a product and more a bet on silver's relevance in an increasingly gold-obsessed market.",
     "updatedAt": "2026-03-02"
   },
   "eurq-quantoz": {
     "title": "The Enterprise Euro",
-    "text": "Quantoz built EURQ for corporate treasurers, not DeFi degens — MiCA-compliant, DNB-regulated, 102% reserved in government bonds and Tier 1 bank deposits, with direct SEPA integration and a minimum transaction size that explicitly filters out retail. At 89 million euros in circulation it's the second-largest regulated euro stablecoin behind Circle's EURC, carving a niche in programmable corporate payments where compliance is a feature, not a tax. The 2% over-collateralization buffer is a quiet flex: enough to signal conservatism without dragging capital efficiency. Whether the enterprise market actually wants an on-chain euro or just talks about it at conferences remains the open question.",
+    "text": "Quantoz built EURQ for corporate treasurers, not DeFi degens \u2014 MiCA-compliant, DNB-regulated, 102% reserved in government bonds and Tier 1 bank deposits, with direct SEPA integration and a minimum transaction size that explicitly filters out retail. At 89 million euros in circulation it's the second-largest regulated euro stablecoin behind Circle's EURC, carving a niche in programmable corporate payments where compliance is a feature, not a tax. The 2% over-collateralization buffer is a quiet flex: enough to signal conservatism without dragging capital efficiency. Whether the enterprise market actually wants an on-chain euro or just talks about it at conferences remains the open question.",
     "updatedAt": "2026-03-02"
   },
   "deuro-deuro": {
     "title": "The Oracle-Free Euro",
-    "text": "Born from the same codebase as Frankencoin (ZCHF), dEURO takes the contrarian position that price oracles are a point of failure, not a feature. Its CDP model uses internal auctions instead of external price feeds — a design that trades capital efficiency for resilience against oracle manipulation. Collateral ranges from BTC and ETH to XAUT and even USDC, making it less a purist crypto stablecoin and more an omnivorous CDP that happens to denominate in euros. With governance fully transferred to token holders and no founder control over contracts, dEURO is genuinely decentralized in a euro stablecoin market where that word usually means \"we have a multisig.\" MiCA's evolving stance on decentralized stablecoins could be either tailwind or existential threat.",
+    "text": "Born from the same codebase as Frankencoin (ZCHF), dEURO takes the contrarian position that price oracles are a point of failure, not a feature. Its CDP model uses internal auctions instead of external price feeds \u2014 a design that trades capital efficiency for resilience against oracle manipulation. Collateral ranges from BTC and ETH to XAUT and even USDC, making it less a purist crypto stablecoin and more an omnivorous CDP that happens to denominate in euros. With governance fully transferred to token holders and no founder control over contracts, dEURO is genuinely decentralized in a euro stablecoin market where that word usually means \"we have a multisig.\" MiCA's evolving stance on decentralized stablecoins could be either tailwind or existential threat.",
     "updatedAt": "2026-03-02"
   },
   "zarp-zarp": {
     "title": "The Rand's Digital Outpost",
-    "text": "South Africa's lone stablecoin contender holds about $3.6 million in circulation — modest by any standard, but backed by Old Mutual Wealth, one of the continent's largest financial institutions. The reserves are independently audited by Kempen, held strictly for redemption purposes, and cover the full supply at 1:1. ZARP's problem isn't credibility; it's relevance. With an FSCA CASP license still pending and South African crypto regulation in perpetual draft mode, adoption has plateaued despite deployment across Ethereum, Base, Polygon, and Solana. For a country with genuine demand for stable local-currency rails, the market has responded with a collective shrug.",
+    "text": "South Africa's lone stablecoin contender holds about $3.6 million in circulation \u2014 modest by any standard, but backed by Old Mutual Wealth, one of the continent's largest financial institutions. The reserves are independently audited by Kempen, held strictly for redemption purposes, and cover the full supply at 1:1. ZARP's problem isn't credibility; it's relevance. With an FSCA CASP license still pending and South African crypto regulation in perpetual draft mode, adoption has plateaued despite deployment across Ethereum, Base, Polygon, and Solana. For a country with genuine demand for stable local-currency rails, the market has responded with a collective shrug.",
     "updatedAt": "2026-03-02"
   },
   "syrupusdc-maple": {
     "title": "Institutional Lending, Vaulted",
-    "text": "Maple Finance's syrupUSDC has quietly become one of the largest yield-bearing stablecoins at $2.6 billion in deposits, all channeled into overcollateralized institutional loans returning 5-9% APY. The ERC-4626 vault design makes it composable enough that Aave V3, Morpho, and Pendle have all integrated it — meaning your lending yield can itself be lent, borrowed against, or split into principal and yield tranches. Base expansion in January 2026 saw a $50 million deposit cap fill immediately. The risk is the one that always haunts institutional credit: borrowers default, and \"overcollateralized\" is only as good as the collateral's liquidation value in a downturn.",
+    "text": "Maple Finance's syrupUSDC has quietly become one of the largest yield-bearing stablecoins at $2.6 billion in deposits, all channeled into overcollateralized institutional loans returning 5-9% APY. The ERC-4626 vault design makes it composable enough that Aave V3, Morpho, and Pendle have all integrated it \u2014 meaning your lending yield can itself be lent, borrowed against, or split into principal and yield tranches. Base expansion in January 2026 saw a $50 million deposit cap fill immediately. The risk is the one that always haunts institutional credit: borrowers default, and \"overcollateralized\" is only as good as the collateral's liquidation value in a downturn.",
     "updatedAt": "2026-03-02"
   },
   "syrupusdt-maple": {
     "title": "The Mirror Vault",
-    "text": "Maple's USDT counterpart to syrupUSDC runs on identical mechanics — ERC-4626 vault, institutional borrower pool, overcollateralized credit lines — but with $1.1 billion in deposits, it's the smaller sibling. The distinction matters less than it appears: both feed from the same Maple lending infrastructure, and yield differentials between the two are negligible. Ethereum-only deployment (no Base or Arbitrum yet) limits its DeFi composability compared to syrupUSDC, which may explain the size gap. For yield-seekers who prefer their stablecoin exposure in Tether rather than Circle, syrupUSDT is the vault; the economics are otherwise indistinguishable.",
+    "text": "Maple's USDT counterpart to syrupUSDC runs on identical mechanics \u2014 ERC-4626 vault, institutional borrower pool, overcollateralized credit lines \u2014 but with $1.1 billion in deposits, it's the smaller sibling. The distinction matters less than it appears: both feed from the same Maple lending infrastructure, and yield differentials between the two are negligible. Ethereum-only deployment (no Base or Arbitrum yet) limits its DeFi composability compared to syrupUSDC, which may explain the size gap. For yield-seekers who prefer their stablecoin exposure in Tether rather than Circle, syrupUSDT is the vault; the economics are otherwise indistinguishable.",
     "updatedAt": "2026-03-02"
   },
   "yousd-yield-optimizer": {
     "title": "Fifty Strategies, One Token",
-    "text": "YO Protocol's yoUSD automates what DeFi power users do manually — rebalancing USDC across 50+ yield sources on Ethereum, Base, Arbitrum, and Unichain, ranked by risk scores with per-pool and per-protocol concentration caps. The result: 8.64% annualized returns since March 2025 with zero negative months, which is the kind of track record that looks miraculous until you remember it was built during a bull market. Backed by Paradigm, Haun Ventures, and Coinbase Ventures, the $28 million in deposits is modest but growing. The real tension is philosophical: yoUSD is a sophisticated yield aggregator wearing a stablecoin's clothing, and its NAV appreciation model means your \"dollar\" is worth $1.07 and climbing — stable in the sense that it never goes down, not that it stays at one.",
+    "text": "YO Protocol's yoUSD automates what DeFi power users do manually \u2014 rebalancing USDC across 50+ yield sources on Ethereum, Base, Arbitrum, and Unichain, ranked by risk scores with per-pool and per-protocol concentration caps. The result: 8.64% annualized returns since March 2025 with zero negative months, which is the kind of track record that looks miraculous until you remember it was built during a bull market. Backed by Paradigm, Haun Ventures, and Coinbase Ventures, the $28 million in deposits is modest but growing. The real tension is philosophical: yoUSD is a sophisticated yield aggregator wearing a stablecoin's clothing, and its NAV appreciation model means your \"dollar\" is worth $1.07 and climbing \u2014 stable in the sense that it never goes down, not that it stays at one.",
     "updatedAt": "2026-03-02"
   },
   "ustb-superstate": {
     "title": "T-Bills Awaiting a Charter",
-    "text": "Superstate's USTB is what happens when a fintech company decides the path to institutional credibility runs through the SEC's traditional fund registration process. At ~$876 million it is one of the larger tokenized T-bill products, trading at ~$11/share — a number that surprises anyone who expects a stablecoin dashboard entry to hold at $1. BNY Mellon holds the segregated account, Ernst & Young signs off annually, and sub-advisor Federated Hermes manages the actual T-bills while Superstate handles the on-chain tokenization. A pending conversion to a Section 2(a)(7) registered money market fund would make it the first on-chain MMF with that designation, unlocking institutional mandates currently blocked by fund policy. USTB's real market position is as yield-bearing infrastructure: it appears in the collateral stacks of frxUSD, m^0, and other stablecoins that want T-bill exposure without managing the compliance themselves.",
+    "text": "Superstate's USTB is what happens when a fintech company decides the path to institutional credibility runs through the SEC's traditional fund registration process. At ~$876 million it is one of the larger tokenized T-bill products, trading at ~$11/share \u2014 a number that surprises anyone who expects a stablecoin dashboard entry to hold at $1. BNY Mellon holds the segregated account, Ernst & Young signs off annually, and sub-advisor Federated Hermes manages the actual T-bills while Superstate handles the on-chain tokenization. A pending conversion to a Section 2(a)(7) registered money market fund would make it the first on-chain MMF with that designation, unlocking institutional mandates currently blocked by fund policy. USTB's real market position is as yield-bearing infrastructure: it appears in the collateral stacks of frxUSD, m^0, and other stablecoins that want T-bill exposure without managing the compliance themselves.",
     "updatedAt": "2026-03-03"
   },
   "ousg-ondo-finance": {
     "title": "The Hundred-Dollar Stablecoin",
-    "text": "OUSG entered the market as a tokenized T-bill fund and quietly became BlackRock's largest single on-chain client — Ondo I LP migrated $95 million into BUIDL in March 2024 and has held that position since, making OUSG essentially a first-class derivative of BlackRock's tokenized money market presence. At roughly $113 per token, it is the least dollar-like entry on any stablecoin dashboard, which is why Ondo maintains rOUSG — a rebasing sibling that stays at $1 while OUSG appreciates. The November 2025 closure of an SEC investigation without charges removed the key regulatory overhang that had been suppressing institutional inflows. Restricted to U.S. Qualified Purchasers with on-chain KYC enforcement — tokens literally cannot transfer to non-whitelisted addresses — OUSG is less a stablecoin and more a tokenized mutual fund that borrowed the infrastructure.",
+    "text": "OUSG entered the market as a tokenized T-bill fund and quietly became BlackRock's largest single on-chain client \u2014 Ondo I LP migrated $95 million into BUIDL in March 2024 and has held that position since, making OUSG essentially a first-class derivative of BlackRock's tokenized money market presence. At roughly $113 per token, it is the least dollar-like entry on any stablecoin dashboard, which is why Ondo maintains rOUSG \u2014 a rebasing sibling that stays at $1 while OUSG appreciates. The November 2025 closure of an SEC investigation without charges removed the key regulatory overhang that had been suppressing institutional inflows. Restricted to U.S. Qualified Purchasers with on-chain KYC enforcement \u2014 tokens literally cannot transfer to non-whitelisted addresses \u2014 OUSG is less a stablecoin and more a tokenized mutual fund that borrowed the infrastructure.",
     "updatedAt": "2026-03-03"
   },
   "cg-uscc": {
     "title": "The Basis Trade, Institutionalized",
-    "text": "Calling USCC an RWA fund is technically accurate and culturally misleading — roughly half the portfolio consists of crypto cash-and-carry trades running long BTC, ETH, SOL, and XRP spot against short futures, with T-bills and Superstate's own USTB providing the buffer. The structure targets T-bill-plus returns without directional crypto exposure, a delta-neutral thesis compelling enough that Aave V3 absorbed $123 million of it as collateral and Sky (MakerDAO) allocated another $100 million. Whether the basis trade delivers consistent premium over T-bills depends on futures markets staying in contango — which tends to be true in bull markets and suspiciously fragile when it matters most. USCC is Superstate's more interesting product: less obvious than a T-bill fund, and less obvious about what its risk profile actually looks like during a crypto deleveraging event.",
+    "text": "Calling USCC an RWA fund is technically accurate and culturally misleading \u2014 roughly half the portfolio consists of crypto cash-and-carry trades running long BTC, ETH, SOL, and XRP spot against short futures, with T-bills and Superstate's own USTB providing the buffer. The structure targets T-bill-plus returns without directional crypto exposure, a delta-neutral thesis compelling enough that Aave V3 absorbed $123 million of it as collateral and Sky (MakerDAO) allocated another $100 million. Whether the basis trade delivers consistent premium over T-bills depends on futures markets staying in contango \u2014 which tends to be true in bull markets and suspiciously fragile when it matters most. USCC is Superstate's more interesting product: less obvious than a T-bill fund, and less obvious about what its risk profile actually looks like during a crypto deleveraging event.",
     "updatedAt": "2026-03-03"
   },
   "mtbill-midas": {
     "title": "Europe's T-Bill Token",
-    "text": "mTBILL is Midas's compliance-first answer to the tokenized T-bill race: a BlackRock IB01 ETF wrapper issued as a Liechtenstein FMA-approved MiFID II instrument, which is exactly the bureaucratic sentence required to legally sell T-bill exposure to European professionals. Ankura Trust provides daily on-chain NAV attestations, custody sits at Maerki Baumann in Switzerland, and the token contract is identical on Ethereum and Base — convenient deployment, if mildly unusual. The 'not available to U.S. or UK retail persons' restriction is the mirror image of USTB and OUSG's American access gates, carving out a European institutional niche in a market dominated by U.S. issuers. At $47 million mTBILL is the infrastructure layer in Midas's product stack — mF-ONE's liquidity sleeve depends on it, and it functions as stable collateral in third-party structured products.",
+    "text": "mTBILL is Midas's compliance-first answer to the tokenized T-bill race: a BlackRock IB01 ETF wrapper issued as a Liechtenstein FMA-approved MiFID II instrument, which is exactly the bureaucratic sentence required to legally sell T-bill exposure to European professionals. Ankura Trust provides daily on-chain NAV attestations, custody sits at Maerki Baumann in Switzerland, and the token contract is identical on Ethereum and Base \u2014 convenient deployment, if mildly unusual. The 'not available to U.S. or UK retail persons' restriction is the mirror image of USTB and OUSG's American access gates, carving out a European institutional niche in a market dominated by U.S. issuers. At $47 million mTBILL is the infrastructure layer in Midas's product stack \u2014 mF-ONE's liquidity sleeve depends on it, and it functions as stable collateral in third-party structured products.",
     "updatedAt": "2026-03-03"
   },
   "wsrusd-reservoir": {
     "title": "Ashes to APY",
-    "text": "Reservoir's rUSD processed $285M in redemptions 'without failure' in November 2025, then flatlined below $700K — the protocol's precise way of surviving a bank run while losing the patient. The protocol reincarnated as wsrUSD, an ERC-4626 NAV vault now at ~$96M, backing its stablecoin with an unusually varied diet: T-bills for bear-market floors, overcollateralized Morpho and Euler lending for DeFi rates, and crypto funding-rate strategies to capture bull-market upside. That flexibility is genuine; consistently beating benchmark yields through conditions that crushed simpler peers is not nothing. The catch is the governance label: allocations are voted by token holders, executed via multisig, and managed by named curators like Steakhouse and Gauntlet — all defensible arrangements, just a different thing from the 'permissionless and decentralized' framing that opens every piece of Reservoir marketing.",
+    "text": "Reservoir's rUSD processed $285M in redemptions 'without failure' in November 2025, then flatlined below $700K \u2014 the protocol's precise way of surviving a bank run while losing the patient. The protocol reincarnated as wsrUSD, an ERC-4626 NAV vault now at ~$96M, backing its stablecoin with an unusually varied diet: T-bills for bear-market floors, overcollateralized Morpho and Euler lending for DeFi rates, and crypto funding-rate strategies to capture bull-market upside. That flexibility is genuine; consistently beating benchmark yields through conditions that crushed simpler peers is not nothing. The catch is the governance label: allocations are voted by token holders, executed via multisig, and managed by named curators like Steakhouse and Gauntlet \u2014 all defensible arrangements, just a different thing from the 'permissionless and decentralized' framing that opens every piece of Reservoir marketing.",
     "updatedAt": "2026-03-03"
   },
   "dusd-dtrinity": {
     "title": "The Borrower's Stablecoin",
-    "text": "dUSD inverts the usual stablecoin economic model: instead of rewarding passive holders, it redirects float revenue from its USDC/USDT/sUSDS reserve to subsidize borrowers who take dUSD loans through dLEND, its Aave V3 fork. The mechanism is coherent — higher subsidized demand means higher utilization, which means higher yields for lenders, which attracts more reserves, which funds more subsidies — a flywheel that looks elegant at $2M circulating supply and unproven at any larger scale. Being backed entirely by other stablecoins creates a dependency stack: the peg inherits the counterparty risk of Circle, Tether, Sky, and Frax simultaneously, while the AMO and SMO add operational complexity that most comparably sized protocols don't carry. Deployed across Ethereum, Fraxtal, Katana, and Sonic with chain-isolated reserves, dTRINITY has built a sophisticated protocol for a market that has not yet shown up.",
+    "text": "dUSD inverts the usual stablecoin economic model: instead of rewarding passive holders, it redirects float revenue from its USDC/USDT/sUSDS reserve to subsidize borrowers who take dUSD loans through dLEND, its Aave V3 fork. The mechanism is coherent \u2014 higher subsidized demand means higher utilization, which means higher yields for lenders, which attracts more reserves, which funds more subsidies \u2014 a flywheel that looks elegant at $2M circulating supply and unproven at any larger scale. Being backed entirely by other stablecoins creates a dependency stack: the peg inherits the counterparty risk of Circle, Tether, Sky, and Frax simultaneously, while the AMO and SMO add operational complexity that most comparably sized protocols don't carry. Deployed across Ethereum, Fraxtal, Katana, and Sonic with chain-isolated reserves, dTRINITY has built a sophisticated protocol for a market that has not yet shown up.",
     "updatedAt": "2026-03-10"
   }
 }
