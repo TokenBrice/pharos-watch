@@ -116,6 +116,13 @@ export interface StatusTransition {
 export interface DataQuality {
   stablecoinsCacheStatus: "ok" | "degraded" | "error";
   stablecoinsCacheReason: string | null;
+  blacklistGapStatus: "ok" | "failed";
+  activeDepegStatus: "ok" | "failed";
+  onchainSupplyQueryStatus: "ok" | "failed" | "unavailable";
+  sourceFailures: Array<{
+    source: "stablecoins-cache" | "blacklist-gaps" | "active-depegs" | "onchain-supply";
+    message: string;
+  }>;
   totalStablecoins: number;
   missingPrices: number;
   blacklistMissingAmounts: number;
