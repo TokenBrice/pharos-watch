@@ -5,7 +5,9 @@ import Image from "next/image";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import { formatCurrency, formatDeathDate } from "@shared/lib/format";
 import type { DeadStablecoin, CauseOfDeath } from "@shared/types";
+import { buildCemeteryYearSections } from "@/lib/cemetery";
 import { YEAR_MS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 /**
  * Visual note: This component uses hardcoded dark-palette colors (slate, rgba shadows)
@@ -277,7 +279,7 @@ function Tombstone({
         {/* Hammer smashing into tombstone for regulatory kills */}
         {shape === "hammer" && <HammerStrike size={size} />}
 
-        <span className="text-[9px] text-muted-foreground/30 tracking-widest">
+        <span className="text-[9px] text-muted-foreground/40 tracking-widest">
           R.I.P.
         </span>
 
@@ -305,12 +307,12 @@ function Tombstone({
           {coin.symbol}
         </span>
 
-        <span className="text-xs font-mono tabular-nums text-muted-foreground">
+        <span className="text-[11px] font-mono tabular-nums text-muted-foreground/90">
           {formatDeathDate(coin.deathDate)}
         </span>
 
         {coin.epitaph && (
-          <span className="text-xs italic text-muted-foreground/70 text-center leading-tight px-1.5">
+          <span className="text-[11px] italic text-muted-foreground/80 text-center leading-snug px-2">
             {coin.epitaph}
           </span>
         )}
@@ -359,6 +361,7 @@ interface CemeteryTombstonesProps {
 
 export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps) {
   const [flowers, setFlowers] = useState<Record<string, number>>({});
+  const sections = buildCemeteryYearSections(coins);
 
   const handlePayRespects = useCallback((symbol: string) => {
     setFlowers((prev) => {
@@ -371,16 +374,35 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
   return (
     <div>
       <div className="relative pb-8">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-5 gap-y-8 justify-items-center pt-6 pb-4">
-          {coins.map((coin, i) => (
-            <Tombstone
-              key={coin.symbol}
-              coin={coin}
-              index={i}
-              onSelect={onSelect}
-              flowerCount={flowers[coin.symbol] ?? 0}
-              onPayRespects={() => handlePayRespects(coin.symbol)}
-            />
+        <div className="space-y-6 pb-4">
+          {sections.map((section) => (
+            <section key={section.year} className="space-y-5">
+              <div className="flex items-end justify-between gap-4 border-b border-border/60 pb-2">
+                <h3 className="text-lg font-semibold tracking-tight">{section.year}</h3>
+                <div className="text-right text-xs text-muted-foreground">
+                  <div>{section.coins.length} graves</div>
+                </div>
+              </div>
+
+              {section.coins.length > 0 && (
+                <div
+                  className={cn(
+                    "grid grid-cols-2 justify-items-center gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6",
+                  )}
+                >
+                  {section.coins.map((coin, i) => (
+                    <Tombstone
+                      key={coin.symbol}
+                      coin={coin}
+                      index={i}
+                      onSelect={onSelect}
+                      flowerCount={flowers[coin.symbol] ?? 0}
+                      onPayRespects={() => handlePayRespects(coin.symbol)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           ))}
         </div>
 
@@ -389,7 +411,7 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 pt-3 border-t mt-2">
+      <div className="mt-2 flex flex-wrap gap-3 border-t pt-3">
         {Object.entries(CAUSE_META).map(([key, meta]) => (
           <div key={key} className="flex items-center gap-1.5">
             <div
@@ -402,7 +424,7 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
           </div>
         ))}
         <span className="ml-auto text-xs text-muted-foreground/50 italic">
-          Tombstone size reflects peak market cap
+          Order follows the archive toggle. Tombstone size reflects peak market cap.
         </span>
       </div>
     </div>

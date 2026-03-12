@@ -6,6 +6,7 @@ import { CemeteryCharts } from "@/components/cemetery-charts";
 import { FaqSection } from "@/components/faq-section";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { FaqItem } from "@/lib/faq";
+import { sortCemeteryCoins } from "@/lib/cemetery";
 
 const cemeteryDescription = `A memorial to ${DEAD_STABLECOINS.length} fallen stablecoins. From TerraUSD to HUSD: what went wrong, when, and why.`;
 
@@ -36,6 +37,8 @@ const FAQ_ITEMS = [
 ] as const satisfies readonly FaqItem[];
 
 export default function CemeteryPage() {
+  const schemaCoins = sortCemeteryCoins(DEAD_STABLECOINS, "newest");
+
   return (
     <div className="space-y-6">
       <BreadcrumbJsonLd name="Stablecoin Cemetery" path="/cemetery/" />
@@ -48,7 +51,7 @@ export default function CemeteryPage() {
             name: "Stablecoin Cemetery",
             description: `${DEAD_STABLECOINS.length} defunct, depegged, and discontinued stablecoins documented with cause of death and obituaries.`,
             numberOfItems: DEAD_STABLECOINS.length,
-            itemListElement: DEAD_STABLECOINS.map((coin, i) => ({
+            itemListElement: schemaCoins.map((coin, i) => ({
               "@type": "ListItem",
               position: i + 1,
               name: `${coin.name} (${coin.symbol})`,
@@ -65,7 +68,7 @@ export default function CemeteryPage() {
         </nav>
         <h1 className="text-4xl font-extrabold tracking-tighter">Stablecoin Cemetery</h1>
         <p className="text-sm text-muted-foreground">
-          Defunct, depegged, and discontinued. A memorial to fallen stablecoins.{" "}
+          Defunct, depegged, and discontinued. Newest graves surface first, and the biggest collapses stand tallest.{" "}
           <span className="hidden md:inline">Press F on hover to pay respects.</span>
         </p>
       </div>
