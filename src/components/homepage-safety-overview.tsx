@@ -191,7 +191,9 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
         <div className={cn("overflow-hidden rounded-xl border px-3 py-2", pulse.ring, pulse.bg)}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Market Safety Pulse</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                MCAP-WEIGHTED Market Safety Pulse
+              </p>
               <div className="mt-1 flex items-end gap-2">
                 <p className={cn("text-3xl font-black leading-none tracking-tight sm:text-4xl", pulse.accent)}>
                   {pulseGrade}
@@ -202,7 +204,6 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">MCap-weighted</p>
               <p className="mt-1 font-mono text-lg font-semibold tabular-nums">Avg {avgScore ?? "NR"}</p>
             </div>
           </div>
