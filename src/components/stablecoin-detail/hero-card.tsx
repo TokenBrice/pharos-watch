@@ -124,7 +124,7 @@ export function HeroCard({
       </>
     ) : tooNewForPegScore ? (
       <details className="group">
-        <summary className="cursor-pointer list-none">
+        <summary className="pharos-focus-ring cursor-pointer list-none rounded-md [&::-webkit-details-marker]:hidden">
           <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground flex items-center gap-1.5">
             NR
             <span className="text-xs font-sans font-normal text-muted-foreground/50 group-open:hidden">why?</span>
@@ -167,7 +167,7 @@ export function HeroCard({
     <Card className="rounded-xl gap-0">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 pt-3 pb-2.5 border-b border-border/30">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">
+          <Link href="/" className="pharos-focus-ring rounded-sm transition-colors hover:text-foreground">
             Dashboard
           </Link>
           <span>/</span>
@@ -178,7 +178,7 @@ export function HeroCard({
         <div className="flex items-center gap-2">
           <Link
             href={compareHref}
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground lg:min-h-9 lg:rounded-md lg:px-2 lg:py-1"
           >
             <ArrowLeftRight className="h-3.5 w-3.5" />
             {primaryComparisonPage ? `Compare ${coin.symbol}` : "Compare"}
@@ -253,7 +253,7 @@ export function HeroCard({
                 </p>
                 <button
                   onClick={onOpenFeedback}
-                  className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-h-11"
+                  className="pharos-focus-ring mt-2 flex min-h-11 items-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <Flag className="h-3 w-3" />
                   Report data issue
@@ -288,7 +288,7 @@ export function HeroCard({
           </div>
 
           <details className="rounded-2xl border border-border/60 bg-background/45">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">
+            <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-2xl px-4 py-3 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
               More market detail
             </summary>
             <div className="grid gap-3 border-t border-border/50 px-4 pb-4 pt-4 sm:grid-cols-2">
@@ -381,7 +381,7 @@ export function HeroCard({
                 </p>
                 <button
                   onClick={onOpenFeedback}
-                  className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-h-11 sm:min-h-0"
+                  className="pharos-focus-ring mt-2 flex min-h-11 items-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-0"
                 >
                   <Flag className="h-3 w-3" />
                   Report data issue

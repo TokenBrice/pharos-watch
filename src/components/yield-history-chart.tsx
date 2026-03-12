@@ -8,10 +8,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useYieldHistory } from "@/hooks/use-yield-history";
@@ -326,6 +326,7 @@ export function YieldHistoryChart({
 }: YieldHistoryChartProps) {
   const [days, setDays] = useState(() => normalizeDefaultDays(defaultDays));
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const historyQuery = useYieldHistory(stablecoinId, days);
 
@@ -459,12 +460,15 @@ export function YieldHistoryChart({
       />
       <ChartShell compact={compact}>
         <div
-          className={cn("w-full", chartHeightClass)}
+          ref={chartContainerRef}
+          className={cn("min-w-0 w-full", chartHeightClass)}
           role="figure"
           aria-label={`Yield history chart showing ${chartData.length} APY data points`}
         >
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          {isChartReady ? (
             <ComposedChart
+              width={width}
+              height={height}
               data={chartData}
               margin={compact ? { top: 8, right: 8, bottom: 8, left: 0 } : { top: 12, right: 18, bottom: 12, left: 0 }}
             >
@@ -578,7 +582,9 @@ export function YieldHistoryChart({
                 isAnimationActive={false}
               />
             </ComposedChart>
-          </ResponsiveContainer>
+          ) : (
+            <ChartSkeleton className={cn("w-full rounded-xl", chartHeightClass)} />
+          )}
         </div>
       </ChartShell>
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">

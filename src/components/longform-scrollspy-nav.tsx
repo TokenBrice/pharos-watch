@@ -17,6 +17,21 @@ interface LongformScrollspyNavProps {
   className?: string;
 }
 
+function getScrollOffset(railNode: HTMLDivElement | null) {
+  const railRect = railNode?.getBoundingClientRect();
+  if (!railRect) return 16;
+  return Math.ceil(railRect.height + Math.max(railRect.top, 0) + 16);
+}
+
+function scrollToSection(sectionId: string, railNode: HTMLDivElement | null) {
+  const sectionNode = document.getElementById(sectionId);
+  if (!sectionNode) return;
+
+  const nextTop = window.scrollY + sectionNode.getBoundingClientRect().top - getScrollOffset(railNode);
+  window.history.pushState(null, "", `#${sectionId}`);
+  window.scrollTo({ top: Math.max(0, nextTop), behavior: "auto" });
+}
+
 export function LongformScrollspyNav({
   sections,
   railLabel = "Jump to Section",
@@ -26,7 +41,26 @@ export function LongformScrollspyNav({
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollSyncRef = useRef<number[]>([]);
   const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
+
+  const scheduleSectionAlignment = (sectionId: string) => {
+    for (const timer of pendingScrollSyncRef.current) {
+      window.clearTimeout(timer);
+    }
+    pendingScrollSyncRef.current = [];
+
+    scrollToSection(sectionId, railRef.current);
+
+    for (const delay of [160, 480, 960]) {
+      const timer = window.setTimeout(() => {
+        if (window.location.hash.replace(/^#/, "") === sectionId) {
+          scrollToSection(sectionId, railRef.current);
+        }
+      }, delay);
+      pendingScrollSyncRef.current.push(timer);
+    }
+  };
 
   useEffect(() => {
     const railNode = railRef.current;
@@ -37,8 +71,7 @@ export function LongformScrollspyNav({
     if (!railNode || sectionNodes.length === 0) return;
 
     const applyScrollMargins = () => {
-      const railRect = railNode.getBoundingClientRect();
-      const scrollMarginTop = Math.ceil(railRect.height + Math.max(railRect.top, 0) + 16);
+      const scrollMarginTop = getScrollOffset(railNode);
       for (const node of sectionNodes) {
         node.style.scrollMarginTop = `${scrollMarginTop}px`;
       }
@@ -76,7 +109,20 @@ export function LongformScrollspyNav({
     if (activeHash.length > 0 && sectionNodes.some((node) => node.id === activeHash)) {
       requestAnimationFrame(() => {
         applyScrollMargins();
-        document.getElementById(activeHash)?.scrollIntoView({ block: "start" });
+        setActiveId(activeHash);
+        for (const timer of pendingScrollSyncRef.current) {
+          window.clearTimeout(timer);
+        }
+        pendingScrollSyncRef.current = [];
+        scrollToSection(activeHash, railNode);
+        for (const delay of [160, 480, 960]) {
+          const timer = window.setTimeout(() => {
+            if (window.location.hash.replace(/^#/, "") === activeHash) {
+              scrollToSection(activeHash, railNode);
+            }
+          }, delay);
+          pendingScrollSyncRef.current.push(timer);
+        }
       });
     }
 
@@ -84,6 +130,10 @@ export function LongformScrollspyNav({
       observer.disconnect();
       resizeObserver.disconnect();
       window.removeEventListener("resize", applyScrollMargins);
+      for (const timer of pendingScrollSyncRef.current) {
+        window.clearTimeout(timer);
+      }
+      pendingScrollSyncRef.current = [];
       for (const node of sectionNodes) {
         node.style.scrollMarginTop = "";
       }
@@ -118,7 +168,11 @@ export function LongformScrollspyNav({
             <a
               key={section.id}
               href={`#${section.id}`}
-              onClick={() => setActiveId(section.id)}
+              onClick={(event) => {
+                event.preventDefault();
+                scheduleSectionAlignment(section.id);
+                setActiveId(section.id);
+              }}
               className={cn(
                 "pharos-focus-ring inline-flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors md:min-h-9 md:px-3.5",
                 effectiveActiveId === section.id

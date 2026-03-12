@@ -91,7 +91,12 @@ export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={status === "loading"}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={status === "loading"}
+          className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md"
+        >
           {triggerIcon}
           <span>{triggerLabel}</span>
         </Button>

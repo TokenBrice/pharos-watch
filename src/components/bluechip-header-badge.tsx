@@ -21,7 +21,7 @@ export function BluechipHeaderBadge({ stablecoinId }: { stablecoinId: string }) 
       href={`${BLUECHIP_REPORT_BASE}/${rating.slug}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs hover:bg-accent transition-colors"
+      className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors hover:bg-accent lg:min-h-9 lg:px-2.5 lg:py-0.5"
     >
       <span className="text-muted-foreground font-medium">bluechip</span>
       <span className={`font-mono font-bold ${gradeColor}`}>{rating.grade}</span>

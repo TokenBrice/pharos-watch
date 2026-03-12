@@ -53,6 +53,54 @@ function formatSignedPercent(value: number | null) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function PysBreakdown({
+  score,
+  toneClass,
+  yieldEfficiency,
+  safetyGrade,
+  safetyScore,
+  sustainabilityMult,
+}: {
+  score: number | null;
+  toneClass: string;
+  yieldEfficiency: number;
+  safetyGrade: string | null;
+  safetyScore: number | null;
+  sustainabilityMult: number;
+}) {
+  if (score === null) {
+    return <span className={cn("font-mono text-2xl tabular-nums", toneClass)}>—</span>;
+  }
+
+  return (
+    <details className="group relative inline-flex min-w-0 flex-col">
+      <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md px-1 py-1 text-left [&::-webkit-details-marker]:hidden">
+        <span className={cn("font-mono text-2xl tabular-nums", toneClass)}>{score.toFixed(1)}</span>
+        <span className="text-[11px] font-medium text-muted-foreground group-open:hidden">Breakdown</span>
+        <span className="hidden text-[11px] font-medium text-muted-foreground group-open:inline">Hide</span>
+      </summary>
+      <div className="pt-2 sm:absolute sm:bottom-full sm:left-1/2 sm:z-50 sm:mb-2 sm:w-max sm:max-w-[220px] sm:-translate-x-1/2 sm:pt-0">
+        <div className="space-y-1.5 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+          <div>
+            <span className="text-muted-foreground">Yield Efficiency: </span>
+            <span className="font-mono">{yieldEfficiency.toFixed(1)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Safety: </span>
+            <span className="font-mono">
+              {safetyGrade ?? "?"} ({Math.round(safetyScore ?? 40)})
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Consistency: </span>
+            <span className="font-mono">{(sustainabilityMult * 100).toFixed(0)}%</span>
+          </div>
+        </div>
+      </div>
+    </details>
+  );
+}
+
 function DetailStatCard({
   label,
   value,
@@ -192,9 +240,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                <div className="text-sm text-amber-200">
+                <div className="text-sm text-amber-800 dark:text-amber-200">
                   <strong>Multiple risk signals active:</strong>
-                  <ul className="mt-1 space-y-0.5 text-xs text-amber-300/80">
+                  <ul className="mt-1 space-y-0.5 text-xs text-amber-700/90 dark:text-amber-300/85">
                     {ranking.warningSignals.map((signal) => (
                       <li key={signal}>{WARNING_SIGNAL_LABELS[signal] ?? formatYieldWarningSignal(signal)}</li>
                     ))}
@@ -208,29 +256,14 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             <DetailStatCard label="Current APY" value={`${ranking.currentApy.toFixed(2)}%`} />
             <DetailStatCard label="30d APY" value={`${ranking.apy30d.toFixed(2)}%`} />
             <DetailStatCard label="PYS">
-              <div className="group relative inline-flex cursor-help flex-col">
-                <span className={cn("font-mono text-2xl tabular-nums", pysColor)}>
-                  {ranking.pharosYieldScore !== null ? ranking.pharosYieldScore.toFixed(1) : "—"}
-                </span>
-                <div className="absolute bottom-full left-1/2 z-50 mb-2 hidden w-max max-w-[220px] -translate-x-1/2 group-hover:block">
-                  <div className="space-y-1.5 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
-                    <div>
-                      <span className="text-muted-foreground">Yield Efficiency: </span>
-                      <span className="font-mono">{yieldEfficiency.toFixed(1)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Safety: </span>
-                      <span className="font-mono">
-                        {ranking.safetyGrade ?? "?"} ({Math.round(ranking.safetyScore ?? 40)})
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Consistency: </span>
-                      <span className="font-mono">{(sustainabilityMult * 100).toFixed(0)}%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <PysBreakdown
+                score={ranking.pharosYieldScore}
+                toneClass={pysColor}
+                yieldEfficiency={yieldEfficiency}
+                safetyGrade={ranking.safetyGrade}
+                safetyScore={ranking.safetyScore}
+                sustainabilityMult={sustainabilityMult}
+              />
             </DetailStatCard>
             <DetailStatCard label="Stability" value={stabilityValue} />
             <DetailStatCard

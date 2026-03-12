@@ -166,6 +166,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── flows-section.tsx
 │   │   ├── liquidity-section.tsx
 │   │   ├── depeg-history-section.tsx
+│   │   ├── explore-next-section.tsx # Consolidated crawlable link hub for taxonomy, compare, and related-coin routes
 │   │   ├── safety-score-history-section.tsx
 │   │   └── notices-and-summary-section.tsx
 │   ├── header.tsx                # Top nav bar

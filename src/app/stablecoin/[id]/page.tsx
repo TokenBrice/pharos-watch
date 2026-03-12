@@ -4,13 +4,11 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
-import { PEG_SLUGS } from "@/lib/peg-landing";
 import { safeJsonLd } from "@/lib/json-ld";
-import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import StablecoinDetailClient from "./client";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
 import logos from "../../../../data/logos.json";
 import aiSummaries from "../../../../data/ai-summaries.json";
 
@@ -88,84 +86,12 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             coin={coin}
             logoSrc={typedLogos[coin.id]}
           />
-          <section className="mt-8 space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Research Paths</h2>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {PEG_SLUGS[coin.flags.pegCurrency] && (
-                <Link
-                  href={`/stablecoins/${PEG_SLUGS[coin.flags.pegCurrency]}/`}
-                  className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
-                >
-                  Browse all {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} stablecoins
-                </Link>
-              )}
-              <Link
-                href={buildGovernanceTaxonomyUrl(coin.flags.governance)}
-                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
-              >
-                Browse {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoins
-              </Link>
-              <Link
-                href={buildBackingTaxonomyUrl(coin.flags.backing)}
-                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
-              >
-                Browse {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} stablecoins
-              </Link>
-              <Link
-                href="/safety-scores/"
-                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
-              >
-                Review all stablecoin safety scores
-              </Link>
-              <Link
-                href="/liquidity/"
-                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
-              >
-                Review DEX liquidity rankings
-              </Link>
-              <Link
-                href="/depeg/"
-                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
-              >
-                Review the depeg tracker
-              </Link>
-            </div>
-          </section>
-          {staticComparisonPages.length > 0 && (
-            <section className="mt-8 space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Static Comparison Pages
-              </h2>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {staticComparisonPages.map((page) => (
-                  <Link
-                    key={page.href}
-                    href={page.href}
-                    className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
-                  >
-                    Compare {page.shortTitle}
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-          {related.length > 0 && (
-            <section className="mt-8 space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Related Stablecoins</h2>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
-                {related.map((r) => (
-                  <Link
-                    key={r.id}
-                    href={buildStablecoinUrl(r.id)}
-                    className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent transition-colors"
-                  >
-                    <StablecoinLogo src={typedLogos[r.id]} name={r.name} size={20} />
-                    <span className="font-mono text-xs font-medium">{r.symbol}</span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
+          <ExploreNextSection
+            coin={coin}
+            related={related}
+            staticComparisonPages={staticComparisonPages}
+            logos={typedLogos}
+          />
           <BreadcrumbJsonLd name={`${coin.name} (${coin.symbol})`} path={buildStablecoinUrl(id)} />
           <script
             type="application/ld+json"

@@ -94,7 +94,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
               )}
               {card.baseScore != null && card.overallScore != null && card.dimensions.pegStability.score != null && (
                 <details className="mt-2 text-xs text-muted-foreground w-full">
-                  <summary className="cursor-pointer hover:text-foreground transition-colors">
+                  <summary className="pharos-focus-ring cursor-pointer rounded-md transition-colors hover:text-foreground">
                     Show score breakdown
                   </summary>
                   <div className="mt-2 space-y-1.5 pl-1">
@@ -186,7 +186,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                   )}
                   {key === "liquidity" && liquidityComponents && dim.score !== null && (
                     <details className="mt-1.5 text-xs text-muted-foreground">
-                      <summary className="cursor-pointer hover:text-foreground transition-colors ml-3">
+                      <summary className="pharos-focus-ring ml-3 cursor-pointer rounded-md transition-colors hover:text-foreground">
                         Show components
                       </summary>
                       <div className="mt-2 ml-4 space-y-1">
@@ -242,7 +242,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                     {i > 0 && ", "}
                     <Link
                       href={buildStablecoinUrl(dep.id)}
-                      className="font-medium text-blue-700 dark:text-blue-400 underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                      className="pharos-focus-ring rounded-sm font-medium text-blue-700 underline underline-offset-2 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       {name}
                     </Link>

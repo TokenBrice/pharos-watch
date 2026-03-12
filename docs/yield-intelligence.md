@@ -500,7 +500,7 @@ It reuses the cached `/api/yield-rankings` payload to find the coin's best-sourc
 2. Warning treatment:
    - 2+ active signals: amber callout block listing every warning label
    - 1 active signal: compact inline alert row
-3. Five stat cards: Current APY, 30d APY, PYS (with hover breakdown), Stability, Excess Yield
+3. Five stat cards: Current APY, 30d APY, PYS (with click/focus disclosure for the score breakdown), Stability, Excess Yield
 4. Source info row: source name, normalized data-source badge, source TVL
 5. Alternative sources list when `altSources.length > 0`
 6. Shared `YieldHistoryChart`

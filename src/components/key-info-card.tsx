@@ -51,7 +51,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
                 >
                   {link.label === "Website" ? (
                     <Globe className="h-3.5 w-3.5" />
@@ -147,7 +147,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                     href={meta.proofOfReserves.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-blue-700 dark:text-blue-400 hover:underline shrink-0"
+                    className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md text-sm text-blue-700 hover:underline shrink-0 dark:text-blue-400"
                   >
                     View reserves <ExternalLink className="h-3 w-3" />
                   </a>
@@ -194,7 +194,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                   <button
                     key={`${c.chain}-${c.address}`}
                     onClick={() => setOpenChain(isOpen ? null : c.chain)}
-                    className={`rounded-full ring-2 transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
+                    className={`pharos-focus-ring flex size-11 items-center justify-center rounded-full ring-2 transition-colors ${
                       isOpen ? "ring-violet-500" : "ring-transparent hover:ring-muted-foreground/30"
                     }`}
                     title={chain?.name ?? c.chain}
@@ -233,7 +233,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                           navigator.clipboard.writeText(openContract.address);
                           trackEvent("contract_copied", { coin_id: meta.id, chain: openContract.chain });
                         }}
-                        className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        className="pharos-focus-ring inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
                         title="Copy address"
                         aria-label="Copy address"
                       >
@@ -245,7 +245,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                         href={explorerUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 hover:underline"
+                        className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md text-xs text-blue-700 hover:underline dark:text-blue-400"
                       >
                         View on {chain?.name ? `${chain.name} explorer` : "explorer"}
                         <ExternalLink className="h-3 w-3" />

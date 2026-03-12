@@ -110,6 +110,8 @@ Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top
 Detail pages include an `sr-only` `h1` and visually foreground the coin name with:
 
 - `h2`: `text-2xl font-extrabold tracking-tighter`
+- A sticky pill-based `LongformScrollspyNav` under the hero; mobile keeps a swipe cue and `min-h-11` tap targets, desktop tightens the pills back down for denser scanning
+- A single `Explore Next` hub at the end of the page, replacing the older stack of repeated research/compare/related link grids with one consolidated crawlable route cluster
 
 This is intentionally denser than standard feature pages.
 
