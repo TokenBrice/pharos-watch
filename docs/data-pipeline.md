@@ -54,8 +54,10 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 - **Live override** — used by `syncStablecoins()` to replace the current cached price
 - **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
 
-- **Current scope:** `cusd-cap`
-- **Source:** direct Ethereum `eth_call` against Cap's `getBurnAmount(address,uint256)` redemption path for `cUSD -> USDC`
+- **Current scope:** `cusd-cap`, `iusd-infinifi`
+- **Source:** direct Ethereum `eth_call` against protocol redemption paths:
+  - Cap `getBurnAmount(address,uint256)` for `cUSD -> USDC`
+  - infiniFi `RedeemController.receiptToAsset(uint256)` for `iUSD -> USDC`
 - **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption
 - **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when the quote validates against peg bounds
 
@@ -157,18 +159,18 @@ This prevents false positive depeg events for systemically important stablecoins
 
 The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from any critical query exceeds 2x its `staleTime`. When a hook uses `apiFetchWithMeta()`, backend freshness metadata (`X-Data-Age`, stale `Warning`) takes precedence over browser fetch time so a fresh client refetch cannot mask stale server data. Each page monitors all TanStack Query hooks that feed its content:
 
-| Page | Queries monitored | staleTime constants |
-|------|------------------|---------------------|
-| **Homepage** | Prices, Peg Data, Liquidity, Report Cards | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN` |
-| **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN` |
-| **Depeg** | Peg Data, DEWS, Depeg Events | `CRON_15MIN`, `CRON_15MIN`, `CRON_15MIN` |
-| **Compare** | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
-| **Safety scores** | Grades, Prices | `CRON_15MIN`, `CRON_15MIN` |
-| **Liquidity** | Liquidity | `CRON_30MIN` |
-| **Yield** | Yield Rankings | `CRON_30MIN` |
-| **Flows** | Mint/Burn Flows | `CRON_20MIN` |
-| **Blacklist** | Blacklist | `CRON_20MIN` |
-| **Portfolio** | Grades | `CRON_15MIN` |
+| Page                  | Queries monitored                                   | staleTime constants                                                |
+| --------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
+| **Homepage**          | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
+| **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
+| **Depeg**             | Peg Data, DEWS, Depeg Events                        | `CRON_15MIN`, `CRON_15MIN`, `CRON_15MIN`                           |
+| **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
+| **Safety scores**     | Grades, Prices                                      | `CRON_15MIN`, `CRON_15MIN`                                         |
+| **Liquidity**         | Liquidity                                           | `CRON_30MIN`                                                       |
+| **Yield**             | Yield Rankings                                      | `CRON_30MIN`                                                       |
+| **Flows**             | Mint/Burn Flows                                     | `CRON_20MIN`                                                       |
+| **Blacklist**         | Blacklist                                           | `CRON_20MIN`                                                       |
+| **Portfolio**         | Grades                                              | `CRON_15MIN`                                                       |
 
 Constants defined in `src/hooks/use-api-query.ts`: `CRON_15MIN` (15 min), `CRON_20MIN` (20 min), `CRON_30MIN` (30 min), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
 
@@ -177,6 +179,7 @@ The `staleTime` value for each query matches the cron interval of the backend jo
 ## Blacklist Sync State Semantics
 
 The `blacklist_sync_state.last_block` column has different semantics per chain type:
+
 - **EVM chains**: stores actual block numbers
 - **Tron**: stores millisecond timestamps (Tron events are ordered by timestamp, not block number)
 
