@@ -935,6 +935,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "crvusd",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Curve Savings (scrvUSD)", yieldType: "governance-set" },
+    liveReservesConfig: {
+      adapter: "crvusd",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "crvusd-curve",
+      display: { url: "https://www.curve.finance/crvusd/", label: "Markets" },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://prices.curve.finance/v1/crvusd/markets",
+        },
+      },
+    },
     dependencies: [{ id: "usdt-tether", weight: 0.10 }, { id: "usdc-circle", weight: 0.10 }, { id: "pyusd-paypal", weight: 0.10 }, { id: "frxusd-frax", weight: 0.10 }],
     deploymentModel: "canonical-bridge",
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",

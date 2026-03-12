@@ -662,6 +662,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 | `asymmetry` | `usdaf-asymmetry` | `inputs.primary.kind = "http-json"` -> `https://app.asymmetry.finance/api/stats` (`usdaf.branch`) |
 | `btcfi` | `btcusd-btcfi` | `inputs.primary.kind = "http-json"` -> `https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false` + handler metadata |
 | `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro` | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints |
+| `crvusd` | `crvusd-curve` | `inputs.primary.kind = "http-json"` -> `https://prices.curve.finance/v1/crvusd/markets` |
 | `infinifi` | `iusd-infinifi` | `inputs.primary.kind = "http-json"` -> `https://eth-api.infinifi.xyz/api/protocol/data` |
 | `m0` | `m-m0`, `musd-metamask`, `usdn-noble` | `inputs.primary.kind = "http-json"` -> `https://protocol-api.m0.org/graphql` (`CollateralCurrent`) |
 | `evm-branch-balances` | `bold-liquity`, `usnd-nerite` | `inputs.primary.kind = "onchain-evm"` -> branch `ActivePool` ERC-20 balances + DefiLlama prices |
