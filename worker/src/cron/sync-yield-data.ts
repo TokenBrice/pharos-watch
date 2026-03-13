@@ -3,6 +3,7 @@ import {
   TRACKED_STABLECOINS,
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins";
+import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { YieldRankingsResponseSchema, type AltYieldSource } from "@shared/types";
 import { setCache, batchExecute, buildInClause } from "../lib/db";
@@ -36,7 +37,6 @@ import {
 } from "./yield-sync/rankings";
 
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.5;
-const THIRTY_DAYS_SECONDS = 30 * 86400;
 const LOW_SOURCE_TVL_USD = 250_000;
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = SECONDS.TWO_DAYS;
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
