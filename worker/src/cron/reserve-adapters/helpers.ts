@@ -282,16 +282,32 @@ export function slicesFromValues(
   const total = filtered.reduce((acc, v) => acc + v.value, 0);
   if (total <= 0) return [];
 
-  return normalizeSlices(
-    filtered.map((v) => ({
-      name: v.name,
-      pct: (v.value / total) * 100,
-      risk: v.risk,
-      ...(v.coinId ? { coinId: v.coinId } : {}),
-      ...(v.depType ? { depType: v.depType } : {}),
-    })),
-    decimals,
-  );
+  const factor = 10 ** decimals;
+  const slices: ReserveSlice[] = filtered.map((v) => ({
+    name: v.name,
+    pct: Math.round(((v.value / total) * 100) * factor) / factor,
+    risk: v.risk,
+    ...(v.coinId ? { coinId: v.coinId } : {}),
+    ...(v.depType ? { depType: v.depType } : {}),
+  }));
+
+  const nonZero = slices.filter((s) => s.pct > 0);
+  if (nonZero.length === 0) return [];
+
+  const roundedTotal = nonZero.reduce((acc, s) => acc + s.pct, 0);
+  const adjustment = Math.round((100 - roundedTotal) * factor) / factor;
+  if (adjustment !== 0) {
+    const maxIdx = nonZero.reduce(
+      (mi, s, i, arr) => (s.pct > arr[mi].pct ? i : mi),
+      0,
+    );
+    const nextPct = Math.round((nonZero[maxIdx].pct + adjustment) * factor) / factor;
+    if (nextPct > 0) {
+      nonZero[maxIdx].pct = nextPct;
+    }
+  }
+
+  return nonZero;
 }
 
 export function getJsonPath(root: unknown, path: string[]): unknown {

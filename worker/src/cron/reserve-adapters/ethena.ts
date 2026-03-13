@@ -1,7 +1,6 @@
 import type { LiveReservesConfig, LiveReserveWarning, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { buildReserveSlicesFromValues, requireHttpJsonInput } from "./utils";
+import { fetchJsonWithRetry, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface EthenaCollateralRow {
   asset: string;
@@ -50,7 +49,7 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
     bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + row.usdAmount);
   }
 
-  const slices = buildReserveSlicesFromValues([
+  const slices = slicesFromValues([
     {
       name: "Liquid stables / cash equivalents",
       value: bucketTotals.get("stable") ?? 0,
@@ -95,12 +94,8 @@ export async function fetchEthenaReserves(
   signal: AbortSignal,
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireHttpJsonInput(config, "ethena");
-  const res = await fetchWithRetry(primaryInput.url, { signal }, 2, { timeoutMs: 12_000 });
-  if (!res) throw new Error("Ethena collateral API: fetchWithRetry returned null (all retries failed)");
-  if (!res.ok) throw new Error(`Ethena collateral API ${res.status}`);
-
-  const payload = await res.json() as EthenaCollateralResponse;
+  const primaryInput = requireJsonInputFromConfig(config, "ethena");
+  const payload = await fetchJsonWithRetry<EthenaCollateralResponse>(primaryInput.url, signal, 12_000);
   const adapted = adaptEthenaCollateral(payload);
   const unknownAssets = listUnexpectedEthenaAssets(payload);
   const warnings: LiveReserveWarning[] = unknownAssets.map((asset) => ({

@@ -1,8 +1,7 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchTextWithRetry, requireHtmlInput } from "./helpers";
-import { buildReserveSlicesFromValues } from "./utils";
+import { fetchTextWithRetry, requireHtmlInput, slicesFromValues } from "./helpers";
 
 interface MentoReserveEntry {
   symbol: string;
@@ -64,7 +63,7 @@ export function parseMentoReserveComposition(html: string): MentoReserveEntry[] 
 
 export function adaptMentoReserveComposition(html: string): ReserveSlice[] {
   const entries = parseMentoReserveComposition(html);
-  return buildReserveSlicesFromValues(
+  return slicesFromValues(
     entries.map((entry) => {
       const config = TOKEN_CONFIG[entry.symbol] ?? { name: entry.symbol, risk: "medium" as const };
       return {
