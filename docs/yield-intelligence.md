@@ -354,12 +354,12 @@ CREATE TABLE yield_history (
 4. Read cached risk-free rate from D1
 5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; this helper now reuses the same peg-analytics path as `/api/report-cards` so live peg deviation inputs stay aligned across Safety Score and Yield Intelligence. Treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
 6. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), then append auto-discovered lending rows for any remaining eligible tracked coins
-7. Batch preload source-aware `yield_history` datasets (previous best source, previous TVL by source, 30d APY history by source) and legacy best-history fallbacks
+7. Batch preload source-aware `yield_history` datasets (previous best source, previous TVL by source, 30d APY history by source) and legacy best-history fallbacks, chunking stablecoin ID lists so each D1 statement stays under the 100-bind limit
 8. Compute 7d/30d APY, variance, and PYS per resolved source using source-specific history instead of coin-level mixed history
 9. Run confidence-weighted arbitration to select `is_best` per coin and flag source switches vs. the prior best source
 10. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
 11. Batch upsert `yield_data` (all sources) + insert `yield_history` points for every resolved source with `is_best` markers
-12. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together
+12. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together, then scan `yield_data` for orphan coin IDs and delete those in chunked `IN (...)` batches instead of a single large `NOT IN (...)`
 13. Prune `yield_history` older than 365 days
 14. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation. Safety-degraded runs still publish fresh rankings but skip `report_card_cache`.
 
@@ -373,7 +373,7 @@ Implementation stages:
 
 **Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. That helper now shares peg analytics with `/api/report-cards`, preventing rated coins with live price/peg coverage from falling back to `NR` inside yield rankings. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 
-**Batch query policy:** No per-coin query loops are used for the three high-volume `yield_history` reads (previous exchange rate, previous TVL, 30d APY history); these are loaded in batch and indexed by stablecoin ID in-memory.
+**Batch query policy:** No per-coin query loops are used for the three high-volume `yield_history` reads (previous exchange rate, previous TVL, 30d APY history); these are loaded in chunked batches and indexed by stablecoin ID in-memory. Cleanup deletes also chunk ID lists to stay under D1's 100-bound-parameter cap.
 
 ### `fetch-tbill-rate`
 

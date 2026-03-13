@@ -240,6 +240,7 @@ import { getCache, setCache, batchExecute } from "../../lib/db";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 
@@ -247,6 +248,18 @@ import * as yieldConfigModule from "../yield-config";
 
 function makeDb() {
   return mockD1([
+    { match: "cache", rows: [] },
+    { match: "yield_data", rows: [] },
+    { match: "yield_history", rows: [] },
+    { match: "supply_history", rows: [] },
+    { match: "depeg_events", rows: [] },
+    { match: "dex_liquidity", rows: [] },
+  ]);
+}
+
+function makeYieldOrphanDb(orphanIds: string[]) {
+  return mockD1([
+    { match: "SELECT DISTINCT stablecoin_id FROM yield_data", rows: orphanIds.map((stablecoin_id) => ({ stablecoin_id })) },
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [] },
     { match: "yield_history", rows: [] },
@@ -378,7 +391,7 @@ describe("syncYieldData", () => {
   });
 
   it("purges orphan yield rows for coins outside the tracked stablecoin set", async () => {
-    const db = makeDb();
+    const db = makeYieldOrphanDb(["orphan-coin", "legacy-coin"]);
 
     mockFetch([
       {
@@ -406,14 +419,87 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
+    const orphanScanCall = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("SELECT DISTINCT stablecoin_id FROM yield_data"));
+
+    expect(orphanScanCall).toBeDefined();
+
     const orphanDeleteCall = db
       .getHistory()
-      .find((entry) => entry.sql.includes("DELETE FROM yield_data") && entry.sql.includes("stablecoin_id NOT IN"));
+      .find(
+        (entry) =>
+          entry.sql.includes("DELETE FROM yield_data")
+          && entry.sql.includes("stablecoin_id IN")
+          && !entry.sql.includes("updated_at <"),
+      );
 
     expect(orphanDeleteCall).toBeDefined();
-    expect(orphanDeleteCall?.binds).toEqual(
-      expect.arrayContaining(["100", "usdc-circle", "u-united-stables", "lusd-liquity"]),
-    );
+    expect(orphanDeleteCall?.binds).toEqual(expect.arrayContaining(["orphan-coin", "legacy-coin"]));
+  });
+
+  it("chunks stale-yield cleanup under the D1 bind limit", async () => {
+    const db = makeDb();
+    const originalLength = TRACKED_STABLECOINS.length;
+
+    for (let i = 0; i < 120; i++) {
+      TRACKED_STABLECOINS.push({
+        id: `extra-${i}`,
+        name: `Extra ${i}`,
+        symbol: `E${i}`,
+        geckoId: `extra-${i}`,
+        flags: {
+          pegCurrency: "USD",
+          backing: TRACKED_STABLECOINS[1]!.flags.backing,
+          yieldBearing: false,
+          rwa: false,
+          navToken: false,
+          governance: "centralized",
+        },
+      });
+    }
+
+    try {
+      mockFetch([
+        {
+          match: "yields.llama.fi",
+          body: {
+            data: [
+              {
+                pool: "pool-sdai-1",
+                chain: "Ethereum",
+                project: "maker",
+                symbol: "sDAI",
+                tvlUsd: 1_000_000_000,
+                apy: 5.2,
+                apyBase: 5.2,
+                apyReward: null,
+                apyMean30d: 5.1,
+                stablecoin: true,
+                exposure: "single",
+                underlyingTokens: null,
+              },
+            ],
+          },
+        },
+      ]);
+
+      await syncYieldData(db);
+    } finally {
+      TRACKED_STABLECOINS.splice(originalLength);
+    }
+
+    const staleDeleteCalls = db
+      .getHistory()
+      .filter(
+        (entry) =>
+          entry.sql.includes("DELETE FROM yield_data")
+          && entry.sql.includes("stablecoin_id IN")
+          && entry.sql.includes("updated_at <"),
+      );
+
+    expect(staleDeleteCalls.length).toBeGreaterThan(1);
+    expect(Math.max(...staleDeleteCalls.map((entry) => entry.binds.length))).toBeLessThanOrEqual(91);
   });
 
   it("uses cached DL pools from DEX sync when available", async () => {

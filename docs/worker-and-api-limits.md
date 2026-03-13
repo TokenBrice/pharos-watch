@@ -35,6 +35,7 @@ One D1 database (`stablecoin-db`). All persistent state lives here.
 | **Rows read included** | 5 M/day | 25 B/month (~833 M/day) — $0.001/M over |
 | **Rows written included** | 100 K/day | 50 M/month (~1.67 M/day) — $1.00/M over |
 | **Concurrent connections per invocation** | 6 | 6 |
+| **Max bound parameters per SQL statement** | 100 | Chunk large `IN (...)` / `NOT IN (...)` ID lists; D1 rejects bigger statements with `too many SQL variables` |
 | **Concurrency model** | Single-threaded per DB | Single-threaded per DB |
 
 > **Key constraint**: D1 is single-threaded — it processes one query at a time per database. Batch large mutations (e.g. bulk inserts) in chunks of ≤1,000 rows to stay within execution limits. The 10 GB storage cap is absolute and cannot be raised.

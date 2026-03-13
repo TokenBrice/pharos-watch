@@ -39,6 +39,7 @@ const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.5;
 const THIRTY_DAYS_SECONDS = 30 * 86400;
 const LOW_SOURCE_TVL_USD = 250_000;
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = SECONDS.TWO_DAYS;
+const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 
 type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 
@@ -92,6 +93,110 @@ interface EvaluatedYieldSource {
 
 function buildHistoryKey(stablecoinId: string, sourceKey: string): string {
   return `${stablecoinId}::${sourceKey}`;
+}
+
+function chunkArray<T>(values: readonly T[], chunkSize: number): T[][] {
+  if (values.length === 0) return [];
+  const chunks: T[][] = [];
+  for (let i = 0; i < values.length; i += chunkSize) {
+    chunks.push(values.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+async function loadYieldHistorySnapshots(
+  db: D1Database,
+  resolvedIds: string[],
+  startSec: number,
+  sevenDaysAgoSec: number,
+): Promise<{
+  historyRows: YieldHistorySnapshotRow[];
+  prevTvlRows: YieldHistorySnapshotRow[];
+  prevBestRows: YieldHistorySnapshotRow[];
+}> {
+  const historyRows: YieldHistorySnapshotRow[] = [];
+  const prevTvlRows: YieldHistorySnapshotRow[] = [];
+  const prevBestRows: YieldHistorySnapshotRow[] = [];
+
+  for (const idChunk of chunkArray(resolvedIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
+    const resolvedIdInClause = buildInClause(idChunk);
+    const [historyResult, prevTvlResult, prevBestResult] = await Promise.all([
+      db
+        .prepare(
+          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type
+           FROM yield_history
+           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at >= ?
+           ORDER BY stablecoin_id ASC, recorded_at ASC`,
+        )
+        .bind(...resolvedIdInClause.binds, startSec - THIRTY_DAYS_SECONDS)
+        .all<YieldHistorySnapshotRow>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id, source_key, source_tvl_usd, recorded_at
+           FROM yield_history
+           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at <= ? AND source_tvl_usd IS NOT NULL
+           ORDER BY stablecoin_id ASC, source_key ASC, recorded_at DESC`,
+        )
+        .bind(...resolvedIdInClause.binds, sevenDaysAgoSec)
+        .all<YieldHistorySnapshotRow>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type
+           FROM yield_history
+           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND is_best = 1 AND recorded_at < ?
+           ORDER BY stablecoin_id ASC, recorded_at DESC`,
+        )
+        .bind(...resolvedIdInClause.binds, startSec)
+        .all<YieldHistorySnapshotRow>(),
+    ]);
+
+    historyRows.push(...(historyResult.results ?? []));
+    prevTvlRows.push(...(prevTvlResult.results ?? []));
+    prevBestRows.push(...(prevBestResult.results ?? []));
+  }
+
+  return { historyRows, prevTvlRows, prevBestRows };
+}
+
+async function deleteStaleYieldRows(
+  db: D1Database,
+  managedYieldIds: string[],
+  startSec: number,
+): Promise<void> {
+  for (const idChunk of chunkArray(managedYieldIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
+    const staleRowInClause = buildInClause(idChunk);
+    await db
+      .prepare(
+        `DELETE FROM yield_data
+         WHERE stablecoin_id IN (${staleRowInClause.sql}) AND updated_at < ?`,
+      )
+      .bind(...staleRowInClause.binds, startSec)
+      .run();
+  }
+}
+
+async function deleteOrphanYieldRows(
+  db: D1Database,
+  managedYieldIds: string[],
+): Promise<void> {
+  const managedYieldIdSet = new Set(managedYieldIds);
+  const existingIds = await db
+    .prepare("SELECT DISTINCT stablecoin_id FROM yield_data")
+    .all<{ stablecoin_id: string }>();
+  const orphanIds = (existingIds.results ?? [])
+    .map((row) => row.stablecoin_id)
+    .filter((id) => !managedYieldIdSet.has(id));
+
+  for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
+    const orphanInClause = buildInClause(idChunk);
+    await db
+      .prepare(
+        `DELETE FROM yield_data
+         WHERE stablecoin_id IN (${orphanInClause.sql})`,
+      )
+      .bind(...orphanInClause.binds)
+      .run();
+  }
 }
 
 function computeMedian(values: number[]): number {
@@ -322,38 +427,13 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   const prevBestSourceKeyByCoin = new Map<string, string>();
 
   if (resolvedIds.length > 0) {
-    const resolvedIdInClause = buildInClause(resolvedIds);
-    const [historyRows, prevTvlRows, prevBestRows] = await Promise.all([
-      db
-        .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type
-           FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at >= ?
-           ORDER BY stablecoin_id ASC, recorded_at ASC`,
-        )
-        .bind(...resolvedIdInClause.binds, startSec - THIRTY_DAYS_SECONDS)
-        .all<YieldHistorySnapshotRow>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id, source_key, source_tvl_usd, recorded_at
-           FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at <= ? AND source_tvl_usd IS NOT NULL
-           ORDER BY stablecoin_id ASC, source_key ASC, recorded_at DESC`,
-        )
-        .bind(...resolvedIdInClause.binds, sevenDaysAgoSec)
-        .all<YieldHistorySnapshotRow>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type
-           FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND is_best = 1 AND recorded_at < ?
-           ORDER BY stablecoin_id ASC, recorded_at DESC`,
-        )
-        .bind(...resolvedIdInClause.binds, startSec)
-        .all<YieldHistorySnapshotRow>(),
-    ]);
+    const {
+      historyRows,
+      prevTvlRows,
+      prevBestRows,
+    } = await loadYieldHistorySnapshots(db, resolvedIds, startSec, sevenDaysAgoSec);
 
-    for (const row of historyRows.results ?? []) {
+    for (const row of historyRows) {
       const sourceKey = row.source_key ?? "legacy-best";
       if (sourceKey === "legacy-best") {
         const list = legacyHistoryById.get(row.stablecoin_id) ?? [];
@@ -367,7 +447,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       }
     }
 
-    for (const row of prevTvlRows.results ?? []) {
+    for (const row of prevTvlRows) {
       const sourceKey = row.source_key ?? "legacy-best";
       if (sourceKey === "legacy-best") {
         if (!legacyPrevTvlById.has(row.stablecoin_id)) {
@@ -381,7 +461,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       }
     }
 
-    for (const row of prevBestRows.results ?? []) {
+    for (const row of prevBestRows) {
       if (!prevBestSourceKeyByCoin.has(row.stablecoin_id)) {
         prevBestSourceKeyByCoin.set(row.stablecoin_id, row.source_key ?? "legacy-best");
       }
@@ -733,22 +813,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
   const managedYieldIds = TRACKED_STABLECOINS.map((meta) => meta.id);
   if (managedYieldIds.length > 0) {
-    const staleRowInClause = buildInClause(managedYieldIds);
-    await db
-      .prepare(
-        `DELETE FROM yield_data
-         WHERE stablecoin_id IN (${staleRowInClause.sql}) AND updated_at < ?`,
-      )
-      .bind(...staleRowInClause.binds, startSec)
-      .run();
-
-    await db
-      .prepare(
-        `DELETE FROM yield_data
-         WHERE stablecoin_id NOT IN (${staleRowInClause.sql})`,
-      )
-      .bind(...staleRowInClause.binds)
-      .run();
+    await deleteStaleYieldRows(db, managedYieldIds, startSec);
+    await deleteOrphanYieldRows(db, managedYieldIds);
   }
 
   const pruneCutoff = startSec - 365 * 86400;
