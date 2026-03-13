@@ -102,6 +102,7 @@ Read these when working on related code:
 - **`docs/methodology-page.md`** — `/methodology` page section-to-source mapping and update contract
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
 - **`docs/data-flow-map.md`** — End-to-end external source → cron → D1 → API → hook → page map
+- **`docs/stablecoin-detail-page.md`** — `/stablecoin/[id]/` route shell, section composition, and fallback/staleness rules
 - **`docs/cemetery-and-compare.md`** — Cemetery dataset + compare-page URL/data contracts
 - **`docs/dependency-map.md`** — Dependency graph data model, contagion rendering, interaction model
 - **`docs/design-context.md`** — Users, brand personality, aesthetic direction, anti-references, design principles
@@ -118,7 +119,7 @@ Read these when working on related code:
 - **`docs/redemption-backstops.md`** — Redemption-route configs, effective-exit scoring, storage, API endpoint, and detail/report-card consumers
 - **`docs/blacklist-tracker.md`** — Multi-chain blacklist/freeze tracking, contract configs, balance enrichment, sync flow
 - **`docs/mint-burn-flows.md`** — Mint/burn flow tracker: on-chain event sync, Flow Intensity Score, Bank Run Gauge, flight-to-quality detection, contract configs, scoring, API endpoints, frontend
-- **`docs/yield-intelligence.md`** — Yield pipeline: three-tier APY resolution, PYS formula, T-bill rate, warning signals, DB schema, API endpoints, frontend
+- **`docs/yield-intelligence.md`** — Yield pipeline: four-tier APY resolution, PYS formula, T-bill rate, warning signals, DB schema, API endpoints, frontend
 - **`docs/dews.md`** — DEWS formula, 8 sub-signals, threat bands, normalization, API endpoint
 - **`docs/report-cards-timeline.md`** — Report card history tracking, grade change persistence, timeline UI
 - **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (10 trigger slots, 23 scheduled jobs / 22 status-tracked jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)

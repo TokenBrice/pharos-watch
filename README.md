@@ -18,7 +18,7 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 81 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 47 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 46 configured assets
 - **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
 - **Status dashboard** — cron health, cache freshness, and system monitoring
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
@@ -150,6 +150,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 - [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
 - [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior
+- [docs/stablecoin-detail-page.md](./docs/stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, section composition, and fallback/staleness rules
 - [docs/live-reserves.md](./docs/live-reserves.md) - live reserve-sync config, adapter registry, API modes, and status/detail consumers
 - [docs/redemption-backstops.md](./docs/redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers
 - [docs/deployment-process.md](./docs/deployment-process.md) - local merge gate and CI deploy sequence

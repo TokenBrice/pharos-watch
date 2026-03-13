@@ -52,10 +52,12 @@ interface OnChainRateConfig {
 
 Currently configured for:
 
-- `usde-ethena` via the `sUSDe` vault (`0x9D39...7497`)
-- `dusd-dtrinity` via the `sdUSD` vault (`0x4aCB...F6Fe`)
+- `usde-ethena` via the `sUSDe` vault (`0x9D39...7497`) on Ethereum
+- `dusd-dtrinity` via the `sdUSD` vault (`0x4aCB...F6Fe`) on Ethereum
+- `iusd-infinifi` via the `siUSD` vault (`0xDBDC...bCB`) on Ethereum
+- `usdp-parallel` via the `sUSDp` vault (`0x472e...7e7`) on Base
 
-Both entries use selector `0x07a2d13a` (`convertToAssets(uint256)`).
+All entries use selector `0x07a2d13a` (`convertToAssets(uint256)`).
 
 **APY formula:**
 
@@ -121,6 +123,7 @@ Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers)
 | Noon USN (230)        | sUSN    | Noon savings                |
 | Main Street USD (297) | msY   | Main Street savings         |
 | GAIB AID (353)        | sAID    | GAIB AID staking            |
+| Parallel USDp         | sUSDp   | Parallel savings wrapper    |
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
@@ -161,7 +164,7 @@ Rate-derived runs after Tier 3 in the resolution loop and participates in the `i
 
 ### Automatic Lending Pool Discovery (Wave 2)
 
-For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), the sync cron can append the best lending pool from a curated protocol allowlist. This runs after the base three-tier resolution, so yield-bearing coins can also receive an additional `defillama-auto` source row when a distinct lending market passes filters. LUSD uses this to retain Aave as an alternative source alongside the deterministic B.Protocol estimate.
+For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), the sync cron can append the best lending pool from a curated protocol allowlist. This runs after the base four-tier resolution, so yield-bearing coins can also receive an additional `defillama-auto` source row when a distinct lending market passes filters. LUSD uses this to retain Aave as an alternative source alongside the deterministic B.Protocol estimate.
 
 **Allowlist** (`LENDING_PROTOCOL_ALLOWLIST` in `worker/src/cron/yield-config.ts`):
 
@@ -345,12 +348,12 @@ CREATE TABLE yield_history (
 
 **Execution flow:**
 
-1. Filter `TRACKED_STABLECOINS` where `flags.yieldBearing === true` for the base three-tier resolution, then evaluate auto-discovery across all eligible tracked non-gold/silver coins
+1. Filter `TRACKED_STABLECOINS` where `flags.yieldBearing === true` for the base four-tier resolution, then evaluate auto-discovery across all eligible tracked non-gold/silver coins
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
 3. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries
 4. Read cached risk-free rate from D1
 5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
-6. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3, potentially multiple sources per coin), then append auto-discovered lending rows for any remaining eligible tracked coins
+6. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), then append auto-discovered lending rows for any remaining eligible tracked coins
 7. Batch preload source-aware `yield_history` datasets (previous best source, previous TVL by source, 30d APY history by source) and legacy best-history fallbacks
 8. Compute 7d/30d APY, variance, and PYS per resolved source using source-specific history instead of coin-level mixed history
 9. Run confidence-weighted arbitration to select `is_best` per coin and flag source switches vs. the prior best source

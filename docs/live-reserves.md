@@ -141,8 +141,8 @@ Cache control:
 
 | Response mode | Cache-Control |
 |---------------|---------------|
-| `live`, `live-stale` | `public, s-maxage=3600, max-age=300` |
-| fallback / unavailable modes | `public, s-maxage=300, max-age=60` |
+| `live` | `public, s-maxage=3600, max-age=300` |
+| `live-stale`, fallback / unavailable modes | `public, s-maxage=300, max-age=60` |
 
 The optional `sync` object exposes the last operational state:
 

@@ -18,8 +18,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically in `shared/lib/redemption-backstops.ts`.
 
-- **Configured coins:** 47
-- **Route families:** 19 `offchain-issuer`, 11 `queue-redeem`, 9 `collateral-redeem`, 6 `psm-swap`, 1 `basket-redeem`, 1 `stablecoin-redeem`
+- **Configured coins:** 46
+- **Route families:** 19 `offchain-issuer`, 11 `queue-redeem`, 9 `collateral-redeem`, 5 `psm-swap`, 1 `basket-redeem`, 1 `stablecoin-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.

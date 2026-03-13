@@ -28,6 +28,7 @@ Verified entry point for the `/docs` corpus. Use this file to find the authorita
 
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
+- [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
 - [dependency-map.md](./dependency-map.md) - dependency-graph construction, rendering, and interaction model
 - [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules

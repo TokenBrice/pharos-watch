@@ -80,7 +80,7 @@ The CG integration extracts three signals unavailable from GeckoTerminal:
 
 1. **Balance ratio approximation**: Computed from `base_token_price_usd`/`quote_token_price_usd` for stable pairs. Feeds into `balanceHealth`, `balanceRatioWeightedSum`, and pool stress.
 2. **Fee tier classification**: `pool_fee_percentage` enables proper quality multipliers for non-Uniswap concentrated liquidity pools (PancakeSwap V3, SushiSwap V3, etc.).
-3. **Locked liquidity**: Weighted into durability scoring at 5% weight.
+3. **Locked liquidity**: Persisted for pool-quality context and API observability, but not currently included in the live durability score.
 
 ### DexScreener Fallback
 

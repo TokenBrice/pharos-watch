@@ -1,0 +1,166 @@
+# Stablecoin Detail Page
+
+Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
+
+---
+
+## Route Shape
+
+- **Route shell:** `src/app/stablecoin/[id]/page.tsx`
+- **Client composition:** `src/app/stablecoin/[id]/client.tsx`
+- **Primary hook:** `src/hooks/use-stablecoin-detail-view-model.ts`
+- **Pure view-model builder:** `src/lib/stablecoin-detail-view-model.ts`
+- **Section components:** `src/components/stablecoin-detail/*`
+
+`generateStaticParams()` prebuilds one page per tracked stablecoin ID from `TRACKED_STABLECOINS`. The server route also:
+
+- builds metadata through `buildStablecoinDetailMetadata(...)`
+- injects static logo data from `data/logos.json`
+- injects static AI summaries from `data/ai-summaries.json`
+- renders `ExploreNextSection` after the interactive client
+- emits `BreadcrumbJsonLd` plus a Dataset JSON-LD payload
+
+If the ID is not tracked, the server shell returns a not-found-style fallback instead of mounting the full client.
+
+---
+
+## View-Model Contract
+
+`useStablecoinDetailViewModel()` gathers the detail page's shared query state, then delegates all derived formatting and fallback logic to `buildStablecoinDetailViewModel(...)`.
+
+### Query inputs
+
+The hook currently wires these sources:
+
+- `useSupplyHistory(id)` for the chart series
+- `useStablecoins()` for the canonical cached stablecoin snapshot
+- `usePegSummary()` for peg score and depeg metadata
+- `useDexLiquidity()` for liquidity score and DEX context
+- `useReportCards()` for the main Safety Score card
+- `useRedemptionBackstops()` for modeled redemption routes
+- `useMintBurnFlows()` for flow-surface availability checks
+- `useStablecoinReserves(id, enabled)` for live reserve presentation when `coin.liveReservesConfig` exists
+
+`useInfiniteDepegEvents()` is intentionally separate from the main view model and is mounted in the client only when the coin is not a NAV token.
+
+### Returned states
+
+The builder returns one of four states:
+
+- `loading`
+- `list-error`
+- `not-found`
+- `ready`
+
+`ready` contains the fully derived detail payload: supply numbers, peg reference context, deviation metrics, report card, liquidity row, redemption backstop, reserve presentation, supply history, stale-query inputs, and convenience flags like `isNavToken`, `hasFlows`, and `usesFallbackPegRate`.
+
+---
+
+## Section Order
+
+`src/app/stablecoin/[id]/client.tsx` renders sections in this order:
+
+1. `QueryErrorNotice` for supply-history failures when the rest of the page can still render
+2. `StaleDataBanner` driven by the shared query freshness presets
+3. `HeroCard`
+4. `LongformScrollspyNav`
+5. `ReportCardDetail` + `SafetyScoreHistorySection`
+6. `NoticesAndSummarySection`
+7. `McapChart`
+8. `KeyInfoCard`
+9. `YieldDetailSection`
+10. `FlowsSection`
+11. `DexLiquidityCard`
+12. `DepegHistory` (suppressed for NAV tokens)
+13. `FeedbackModal`
+
+The server shell then appends `ExploreNextSection` after the client-rendered analytics stack.
+
+### Conditional rendering rules
+
+- `FlowsSection` stays in the rail only when the coin currently appears in the aggregate flows payload, or while that payload is still loading.
+- `DepegHistory` is omitted for NAV tokens.
+- `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata.
+
+---
+
+## Fallback And Staleness Rules
+
+### Reserve presentation
+
+The detail page prefers live reserve data when the coin is live-enabled:
+
+- `liveReserves` API result wins when available
+- otherwise it falls back to `getReserves(coin)` from curated/template metadata
+
+`OverviewSection` is responsible for translating reserve modes into user-visible notices:
+
+- `live`
+- `live-stale`
+- `curated-fallback`
+- `template-fallback`
+- `unavailable`
+
+Live-reserve fetch failures do not take the full page down. They surface as reserve-specific messaging inside the overview section.
+
+### Shared stale banner
+
+The page-level stale banner is built from five shared presets in the view model:
+
+- `stablecoins`
+- `pegSummary`
+- `dexLiquidity`
+- `reportCards`
+- `redemptionBackstops`
+
+Those presets intentionally track the major page-defining datasets rather than every nested query. Yield and depeg-history sections manage their own local empty/error/loading states.
+
+### Retry behavior
+
+`handleRetryAll()` fans out retries for:
+
+- supply history
+- stablecoins
+- peg summary
+- dex liquidity
+- report cards
+- redemption backstops
+
+That shared retry is used by the page-level error surfaces.
+
+---
+
+## Section Responsibilities
+
+| Section / Component | Responsibility |
+|---------------------|----------------|
+| `HeroCard` | Price, supply deltas, peg metrics, liquidity headline, and feedback entrypoint |
+| `ReportCardDetail` | Overall Safety Score plus radar/dimension detail |
+| `SafetyScoreHistorySection` | Grade-transition timeline |
+| `OverviewSection` | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card |
+| `CoinNotices` | Coin-specific warnings/info blocks from metadata |
+| `McapChart` | Historical supply / market-cap chart |
+| `KeyInfoCard` | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction |
+| `YieldDetailSection` | Yield rankings row, warnings, history chart, alt-source/provenance detail |
+| `FlowsSection` | Per-coin mint/burn summary plus event history embed |
+| `DexLiquidityCard` | Liquidity score, top pools, DEX-implied price context |
+| `DepegHistory` | Historical depeg timeline for non-NAV assets |
+| `ExploreNextSection` | Related stablecoins, compare pages, and taxonomy/deeper-navigation links |
+
+---
+
+## File Index
+
+| File | Role |
+|------|------|
+| `src/app/stablecoin/[id]/page.tsx` | Static params, metadata, JSON-LD, server shell |
+| `src/app/stablecoin/[id]/client.tsx` | Client-side section composition and dynamic imports |
+| `src/hooks/use-stablecoin-detail-view-model.ts` | Query wiring + aggregate retry handler |
+| `src/lib/stablecoin-detail-view-model.ts` | Pure derivation and fallback assembly |
+| `src/components/stablecoin-detail/hero-card.tsx` | Detail hero surface |
+| `src/components/stablecoin-detail/notices-and-summary-section.tsx` | Overview + notices wrapper |
+| `src/components/stablecoin-detail/overview-section.tsx` | Summary, reserves, redemption backstop |
+| `src/components/stablecoin-detail/flows-section.tsx` | Detail flow section |
+| `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Redemption route card |
+| `src/components/stablecoin-detail/safety-score-history-section.tsx` | Grade timeline section |
+| `src/components/stablecoin-detail/explore-next-section.tsx` | Post-detail navigation hub |
