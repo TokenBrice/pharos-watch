@@ -29,6 +29,8 @@ export interface PeggedAsset {
   symbol: string;
   address?: string;
   geckoId?: string;
+  /** Snake-case alias for geckoId as returned by the DL stablecoins API. Normalized by hydrateGeckoIdAliases. */
+  gecko_id?: string;
   cmcSlug?: string;
   navToken?: boolean;
   commodityOunces?: number;
@@ -38,8 +40,13 @@ export interface PeggedAsset {
   priceUpdatedAt?: number | null;
   supplySource?: string;
   pegType?: string;
+  pegMechanism?: string;
   circulating?: Record<string, number>;
-  [key: string]: unknown;
+  circulatingPrevDay?: Record<string, number> | null;
+  circulatingPrevWeek?: Record<string, number> | null;
+  circulatingPrevMonth?: Record<string, number> | null;
+  chains?: string[];
+  chainCirculating?: Record<string, Record<string, unknown>>;
 }
 
 export function hasMissingPrice(a: PeggedAsset): boolean {
