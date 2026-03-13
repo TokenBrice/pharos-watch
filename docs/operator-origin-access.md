@@ -18,7 +18,6 @@ After this phase:
 This phase does **not** yet:
 
 - remove `ADMIN_KEY`
-- validate Access JWTs in application code
 - proxy ops requests through Pages Functions
 - cut the `/status` UI over to an Access-only flow
 

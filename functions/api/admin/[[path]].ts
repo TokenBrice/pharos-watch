@@ -36,16 +36,6 @@ interface OpsAdminProxyContext {
   };
 }
 
-interface AccessJwtPayload {
-  aud?: string | string[];
-  email?: string;
-  exp?: number;
-  iat?: number;
-  iss?: string;
-  nbf?: number;
-  sub?: string;
-}
-
 function jsonError(status: number, message: string): Response {
   return new Response(JSON.stringify({ error: message }), {
     status,
@@ -69,126 +59,28 @@ function resolveOpsApiOrigin(env: OpsAdminProxyEnv): string {
   return normalizeOrigin(env.OPS_API_ORIGIN?.trim() || DEFAULT_OPS_API_ORIGIN);
 }
 
-function resolveAccessDomain(env: OpsAdminProxyEnv): string {
-  if (!env.CF_ACCESS_TEAM_DOMAIN?.trim()) {
-    throw new Error("CF_ACCESS_TEAM_DOMAIN is not configured");
+function hasAccessSessionSignal(request: Request): boolean {
+  const jwtAssertion = request.headers.get("Cf-Access-Jwt-Assertion")?.trim();
+  if (jwtAssertion) {
+    return true;
   }
-  return normalizeOrigin(env.CF_ACCESS_TEAM_DOMAIN);
+
+  const accessEmail = request.headers.get("Cf-Access-Authenticated-User-Email")?.trim();
+  if (accessEmail) {
+    return true;
+  }
+
+  const cookie = request.headers.get("Cookie") ?? "";
+  return cookie.includes("CF_AppSession=") || cookie.includes("CF_Authorization=");
 }
 
-function resolveOpsUiAud(env: OpsAdminProxyEnv): string {
-  if (!env.CF_ACCESS_OPS_UI_AUD?.trim()) {
-    throw new Error("CF_ACCESS_OPS_UI_AUD is not configured");
-  }
-  return env.CF_ACCESS_OPS_UI_AUD.trim();
-}
-
-function extractJwtFromRequest(request: Request): string | null {
-  return request.headers.get("Cf-Access-Jwt-Assertion");
-}
-
-function base64UrlDecode(input: string): ArrayBuffer {
-  const normalized = input.replace(/-/g, "+").replace(/_/g, "/").replace(/\s/g, "");
-  return Uint8Array.from(Array.from(atob(normalized)).map((char) => char.charCodeAt(0))).buffer;
-}
-
-function asciiToUint8Array(input: string): ArrayBuffer {
-  const chars: number[] = [];
-  for (let index = 0; index < input.length; index += 1) {
-    chars.push(input.charCodeAt(index));
-  }
-  return Uint8Array.from(chars).buffer;
-}
-
-async function validateAccessJwt(
-  request: Request,
-  env: OpsAdminProxyEnv,
-): Promise<{ payload: AccessJwtPayload } | Response> {
-  let accessDomain: string;
-  let aud: string;
-  try {
-    accessDomain = resolveAccessDomain(env);
-    aud = resolveOpsUiAud(env);
-  } catch {
-    return jsonError(500, "Ops UI Access settings are not configured");
-  }
-
-  const jwt = extractJwtFromRequest(request);
-  if (!jwt) {
-    return jsonError(401, "Unauthorized");
-  }
-
-  const parts = jwt.split(".");
-  if (parts.length !== 3) {
-    return jsonError(401, "Unauthorized");
-  }
-
-  const [header, payload, signature] = parts;
-  const textDecoder = new TextDecoder("utf-8");
-  let headerObject: { kid?: string; alg?: string };
-  let payloadObject: AccessJwtPayload;
-
-  try {
-    headerObject = JSON.parse(textDecoder.decode(base64UrlDecode(header))) as { kid?: string; alg?: string };
-    payloadObject = JSON.parse(textDecoder.decode(base64UrlDecode(payload))) as AccessJwtPayload;
-  } catch {
-    return jsonError(401, "Unauthorized");
-  }
-
-  if (headerObject.alg !== "RS256" || !headerObject.kid) {
-    return jsonError(401, "Unauthorized");
-  }
-
-  const certsUrl = new URL("/cdn-cgi/access/certs", accessDomain);
-  const certsResponse = await fetch(certsUrl.toString());
-  if (!certsResponse.ok) {
-    return jsonError(503, "Failed to validate Access session");
-  }
-
-  const certsJson = await certsResponse.json() as {
-    keys?: Array<JsonWebKey & { kid?: string; alg?: string; kty?: string }>;
+function resolveOperatorIdentity(request: Request): { email: string | null; subject: string | null } {
+  const email = request.headers.get("Cf-Access-Authenticated-User-Email")?.trim() || null;
+  const commonName = request.headers.get("Cf-Access-Authenticated-User-Identity")?.trim() || null;
+  return {
+    email,
+    subject: commonName,
   };
-  const jwk = certsJson.keys?.find((key) => key.kid === headerObject.kid);
-  if (!jwk || jwk.kty !== "RSA" || jwk.alg !== "RS256") {
-    return jsonError(401, "Unauthorized");
-  }
-
-  const key = await crypto.subtle.importKey(
-    "jwk",
-    jwk,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["verify"],
-  );
-
-  const nowSeconds = Date.now() / 1000;
-  if (payloadObject.iss && payloadObject.iss !== certsUrl.origin) {
-    return jsonError(401, "Unauthorized");
-  }
-  if (payloadObject.aud) {
-    const audiences = Array.isArray(payloadObject.aud) ? payloadObject.aud : [payloadObject.aud];
-    if (!audiences.includes(aud)) {
-      return jsonError(401, "Unauthorized");
-    }
-  }
-  if (payloadObject.exp && Math.floor(nowSeconds) >= payloadObject.exp) {
-    return jsonError(401, "Unauthorized");
-  }
-  if (payloadObject.nbf && Math.ceil(nowSeconds) < payloadObject.nbf) {
-    return jsonError(401, "Unauthorized");
-  }
-
-  const verified = await crypto.subtle.verify(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    base64UrlDecode(signature),
-    asciiToUint8Array(`${header}.${payload}`),
-  );
-  if (!verified) {
-    return jsonError(401, "Unauthorized");
-  }
-
-  return { payload: payloadObject };
 }
 
 function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
@@ -213,7 +105,7 @@ function isAllowedAdminPath(path: string): boolean {
 function buildUpstreamHeaders(
   request: Request,
   env: OpsAdminProxyEnv,
-  payload: AccessJwtPayload,
+  operatorIdentity: { email: string | null; subject: string | null },
 ): Headers | Response {
   if (!env.OPS_API_SERVICE_TOKEN_ID || !env.OPS_API_SERVICE_TOKEN_SECRET) {
     return jsonError(500, "Ops API proxy is not configured");
@@ -228,11 +120,11 @@ function buildUpstreamHeaders(
   }
   headers.set("CF-Access-Client-Id", env.OPS_API_SERVICE_TOKEN_ID);
   headers.set("CF-Access-Client-Secret", env.OPS_API_SERVICE_TOKEN_SECRET);
-  if (payload.email) {
-    headers.set("X-Pharos-Operator-Email", payload.email);
+  if (operatorIdentity.email) {
+    headers.set("X-Pharos-Operator-Email", operatorIdentity.email);
   }
-  if (payload.sub) {
-    headers.set("X-Pharos-Operator-Sub", payload.sub);
+  if (operatorIdentity.subject) {
+    headers.set("X-Pharos-Operator-Sub", operatorIdentity.subject);
   }
 
   return headers;
@@ -264,9 +156,8 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     return jsonError(404, "Not found");
   }
 
-  const accessValidation = await validateAccessJwt(request, env);
-  if (accessValidation instanceof Response) {
-    return accessValidation;
+  if (!hasAccessSessionSignal(request)) {
+    return jsonError(401, "Unauthorized");
   }
 
   const upstreamPath = resolveUpstreamPath(params);
@@ -282,7 +173,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     return response;
   }
 
-  const upstreamHeaders = buildUpstreamHeaders(request, env, accessValidation.payload);
+  const upstreamHeaders = buildUpstreamHeaders(request, env, resolveOperatorIdentity(request));
   if (upstreamHeaders instanceof Response) {
     return upstreamHeaders;
   }

@@ -61,8 +61,8 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
 - `functions/api/admin/[[path]].ts`
   - Cloudflare Pages Functions catch-all for operator-only admin routes
-  - Validates the `Cf-Access-Jwt-Assertion` for the UI Access app before forwarding
   - Host-gates to `ops.pharos.watch` so public hostnames cannot use the proxy
+  - Requires an active Cloudflare Access session signal on the ops host before forwarding
   - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
 - `src/hooks/use-status-dashboard-model.ts`
   - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
@@ -421,7 +421,7 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `src/hooks/api-hooks.ts`                             | Shared read hooks consumed by the dashboard model (`useHealth`, `usePegSummary`, `useDexLiquidity`, `useReportCards`, `useYieldRankings`)                                                                                                                                              |
 | `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`); admin probes switch to same-origin proxy mode on the ops host                                                                                                                                    |
 | `src/hooks/use-status-history.ts`                    | Shared polling policy for `/api/status-history` + dashboard time-window filters in both ops-host proxy mode and public fallback mode                                                                                                                                                 |
-| `functions/api/admin/[[path]].ts`                    | Pages Functions admin proxy: Access JWT validation, ops-host gating, upstream method/path allowlisting, and service-token forwarding to `ops-api.pharos.watch`                                                                                                                       |
+| `functions/api/admin/[[path]].ts`                    | Pages Functions admin proxy: ops-host gating, Access-session presence check, upstream method/path allowlisting, and service-token forwarding to `ops-api.pharos.watch`                                                                                                               |
 | `shared/lib/cron-jobs.ts`                            | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |
 | `shared/lib/api-endpoints.ts`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                       |
 | `worker/src/route-registry.ts`                       | Static route binding registry keyed by shared endpoint metadata                                                                                                                                                                                                                        |
