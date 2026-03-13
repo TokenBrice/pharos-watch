@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Compass, Search } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Compass, Megaphone, Search } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -72,6 +72,61 @@ const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod)
 });
 
 const PEG_PREVIEW_COUNT = 5;
+const CAMPAIGN_END_AT = Date.parse("2026-03-20T00:00:00Z");
+const CAMPAIGN_POST_URL = "https://x.com/PharosWatch/status/2032107485629202921";
+
+function CampaignCallout() {
+  return (
+    <section
+      aria-label="Pharos community campaign"
+      className="pharos-card-shell relative overflow-hidden border border-sky-500/25 bg-[linear-gradient(135deg,oklch(0.985_0.012_248_/_0.98),oklch(0.958_0.03_220_/_0.96))] px-4 py-4 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 dark:border-sky-400/20 dark:bg-[linear-gradient(135deg,oklch(0.22_0.03_248_/_0.94),oklch(0.17_0.03_220_/_0.98))] dark:shadow-[0_24px_48px_oklch(0_0_0_/0.18)]"
+    >
+      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-56 bg-[radial-gradient(circle_at_center,oklch(0.82_0.09_230_/_0.22),transparent_68%)] md:block dark:bg-[radial-gradient(circle_at_center,oklch(0.72_0.1_240_/_0.18),transparent_72%)]" />
+      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-sky-900/78 dark:text-sky-100/76">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-600/20 bg-white/80 px-2.5 py-1 shadow-sm dark:border-sky-400/15 dark:bg-white/[0.06]">
+              <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
+              Community Campaign
+            </span>
+            <span className="inline-flex rounded-full border border-sky-600/18 bg-white/65 px-2.5 py-1 font-mono tabular-nums shadow-sm dark:border-sky-400/15 dark:bg-white/[0.04]">
+              $3,000 pool
+            </span>
+            <span className="inline-flex rounded-full border border-sky-600/18 bg-white/65 px-2.5 py-1 shadow-sm dark:border-sky-400/15 dark:bg-white/[0.04]">
+              Ends March 19, 2026
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-white sm:text-xl">
+              Spot the signal. Tell the story.
+            </h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-slate-700 dark:text-slate-200/78">
+              Threads, blog posts, videos, podcasts, and useful product feedback can all earn from the Pharos push.
+              Top prize is <span className="font-mono tabular-nums text-slate-950 dark:text-white">$1,250</span> from
+              a <span className="font-mono tabular-nums text-slate-950 dark:text-white">$3,000</span> reward pool.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-start gap-2 xl:items-end">
+          <a
+            href={CAMPAIGN_POST_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-950/12 bg-slate-950 px-4 py-2 text-sm font-medium text-white shadow-[0_10px_24px_oklch(0_0_0_/0.18)] transition-[transform,background-color,box-shadow] hover:bg-slate-900 hover:shadow-[0_14px_28px_oklch(0_0_0_/0.22)] active:translate-y-[1px] dark:border-white/12 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
+            aria-label="View campaign details on X"
+          >
+            View campaign
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+          <p className="max-w-sm text-xs leading-relaxed text-slate-700/88 dark:text-slate-200/70 xl:text-right">
+            Useful bug reports and data corrections count too. The feedback button stays live across every page.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function PegBrowseSection({
   pegs,
@@ -176,6 +231,7 @@ function HomepageSectionBand({
 
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
+  const [showCampaignCallout, setShowCampaignCallout] = useState(true);
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
   const { data: logos } = useLogos();
   const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg } = usePegSummary();
@@ -214,6 +270,12 @@ export function HomepageClient() {
     void Promise.allSettled([refetchPrices(), refetchPeg(), refetchLiquidity(), refetchReportCards()]);
   }, [refetchPeg, refetchLiquidity, refetchPrices, refetchReportCards]);
 
+  useEffect(() => {
+    const remainingMs = CAMPAIGN_END_AT - Date.now();
+    const timeoutId = window.setTimeout(() => setShowCampaignCallout(false), Math.max(0, remainingMs));
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
   return (
     <div className="space-y-6">
       <QueryErrorNotice error={globalError} hasData={!!data?.peggedAssets?.length} onRetry={handleRetry} />
@@ -235,6 +297,8 @@ export function HomepageClient() {
           },
         ]}
       />
+
+      {showCampaignCallout ? <CampaignCallout /> : null}
 
       {startHereReady && shouldShowStartHereCallout ? <StartHereCallout onOpenStartHere={retireCallout} /> : null}
 
