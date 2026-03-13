@@ -163,7 +163,7 @@ function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null): strin
 
 export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D1Database): Promise<Response> => {
   const [result, histResult, priceResult, latestCron] = await Promise.all([
-    db.prepare("SELECT * FROM dex_liquidity ORDER BY liquidity_score DESC").all<DexLiquidityRow>(),
+    db.prepare("SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version FROM dex_liquidity ORDER BY liquidity_score DESC").all<DexLiquidityRow>(),
     db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence
@@ -173,7 +173,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       )
       .bind(Math.floor(Date.now() / 1000) - 8 * 86_400) // 8 days back covers 7d comparison
       .all<DexHistoryRow>(),
-    db.prepare("SELECT * FROM dex_prices").all<DexPriceRow>().catch((err) => {
+    db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, price_sources_json, updated_at FROM dex_prices").all<DexPriceRow>().catch((err) => {
       const msg = err instanceof Error ? err.message : String(err);
       if (!msg.includes("no such table")) {
         console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);
