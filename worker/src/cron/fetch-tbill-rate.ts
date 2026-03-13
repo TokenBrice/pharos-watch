@@ -57,45 +57,55 @@ async function writeStructuredBenchmark(
   await setCache(db, "risk_free_rate", serializeRiskFreeRateCache(buildRiskFreeRateCachePayload(fields)));
 }
 
-export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
-  if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
-    const previous = await loadPreviousBenchmark(db);
-    if (previous && !previous.isFallback) {
-      console.log("[fetch-tbill-rate] Circuit open, retaining last known good rate");
-      await writeStructuredBenchmark(db, {
-        rate: previous.rate,
-        recordDate: previous.recordDate,
-        fetchedAt: previous.fetchedAt,
-        source: previous.source,
-        isFallback: false,
-        fallbackMode: "circuit-open-retained",
-      });
-      return {
-        status: "degraded",
-        metadata: buildMetadata({
-          fallbackMode: "circuit-open-retained",
-          wroteRate: previous.rate,
-          recordDate: previous.recordDate,
-        }),
-      };
-    }
-
-    console.log("[fetch-tbill-rate] Circuit open, using hardcoded fallback");
+async function handleDegradedFallback(
+  db: D1Database,
+  fallbackMode: string,
+  extraMeta?: Record<string, unknown>,
+): Promise<CronResult> {
+  const previous = await loadPreviousBenchmark(db);
+  if (previous && !previous.isFallback) {
+    console.log(`[fetch-tbill-rate] ${fallbackMode}, retaining last known good rate`);
     await writeStructuredBenchmark(db, {
-      rate: RISK_FREE_RATE_FALLBACK,
-      recordDate: null,
-      fetchedAt: null,
-      source: "hardcoded-fallback",
-      isFallback: true,
-      fallbackMode: "circuit-open",
+      rate: previous.rate,
+      recordDate: previous.recordDate,
+      fetchedAt: previous.fetchedAt,
+      source: previous.source,
+      isFallback: false,
+      fallbackMode: `${fallbackMode}-retained`,
     });
     return {
       status: "degraded",
       metadata: buildMetadata({
-        fallbackMode: "circuit-open",
-        wroteRate: RISK_FREE_RATE_FALLBACK,
+        fallbackMode: `${fallbackMode}-retained`,
+        wroteRate: previous.rate,
+        recordDate: previous.recordDate,
+        ...extraMeta,
       }),
     };
+  }
+
+  console.log(`[fetch-tbill-rate] ${fallbackMode}, using hardcoded fallback`);
+  await writeStructuredBenchmark(db, {
+    rate: RISK_FREE_RATE_FALLBACK,
+    recordDate: null,
+    fetchedAt: null,
+    source: "hardcoded-fallback",
+    isFallback: true,
+    fallbackMode,
+  });
+  return {
+    status: "degraded",
+    metadata: buildMetadata({
+      fallbackMode,
+      wroteRate: RISK_FREE_RATE_FALLBACK,
+      ...extraMeta,
+    }),
+  };
+}
+
+export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+  if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
+    return handleDegradedFallback(db, "circuit-open");
   }
 
   try {
@@ -106,84 +116,14 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
 
     if (!res?.ok) {
       await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
-      const previous = await loadPreviousBenchmark(db);
-      if (previous && !previous.isFallback) {
-        await writeStructuredBenchmark(db, {
-          rate: previous.rate,
-          recordDate: previous.recordDate,
-          fetchedAt: previous.fetchedAt,
-          source: previous.source,
-          isFallback: false,
-          fallbackMode: "fred-api-error-retained",
-        });
-        return {
-          status: "degraded",
-          metadata: buildMetadata({
-            fallbackMode: "fred-api-error-retained",
-            apiStatus: res?.status ?? null,
-            wroteRate: previous.rate,
-            recordDate: previous.recordDate,
-          }),
-        };
-      }
-
-      await writeStructuredBenchmark(db, {
-        rate: RISK_FREE_RATE_FALLBACK,
-        recordDate: null,
-        fetchedAt: null,
-        source: "hardcoded-fallback",
-        isFallback: true,
-        fallbackMode: "fred-api-error",
-      });
-      return {
-        status: "degraded",
-        metadata: buildMetadata({
-          fallbackMode: "fred-api-error",
-          apiStatus: res?.status ?? null,
-          wroteRate: RISK_FREE_RATE_FALLBACK,
-        }),
-      };
+      return handleDegradedFallback(db, "fred-api-error", { apiStatus: res?.status ?? null });
     }
 
     const csv = await res.text();
     const parsed = parseFredLatest(csv);
     if (!parsed) {
       await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
-      const previous = await loadPreviousBenchmark(db);
-      if (previous && !previous.isFallback) {
-        await writeStructuredBenchmark(db, {
-          rate: previous.rate,
-          recordDate: previous.recordDate,
-          fetchedAt: previous.fetchedAt,
-          source: previous.source,
-          isFallback: false,
-          fallbackMode: "fred-invalid-data-retained",
-        });
-        return {
-          status: "degraded",
-          metadata: buildMetadata({
-            fallbackMode: "fred-invalid-data-retained",
-            wroteRate: previous.rate,
-            recordDate: previous.recordDate,
-          }),
-        };
-      }
-
-      await writeStructuredBenchmark(db, {
-        rate: RISK_FREE_RATE_FALLBACK,
-        recordDate: null,
-        fetchedAt: null,
-        source: "hardcoded-fallback",
-        isFallback: true,
-        fallbackMode: "fred-invalid-data",
-      });
-      return {
-        status: "degraded",
-        metadata: buildMetadata({
-          fallbackMode: "fred-invalid-data",
-          wroteRate: RISK_FREE_RATE_FALLBACK,
-        }),
-      };
+      return handleDegradedFallback(db, "fred-invalid-data");
     }
 
     await writeStructuredBenchmark(db, {
@@ -208,42 +148,6 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
     };
   } catch (err) {
     await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
-    const previous = await loadPreviousBenchmark(db);
-    if (previous && !previous.isFallback) {
-      await writeStructuredBenchmark(db, {
-        rate: previous.rate,
-        recordDate: previous.recordDate,
-        fetchedAt: previous.fetchedAt,
-        source: previous.source,
-        isFallback: false,
-        fallbackMode: "fred-exception-retained",
-      });
-      return {
-        status: "degraded",
-        metadata: buildMetadata({
-          fallbackMode: "fred-exception-retained",
-          error: String(err).slice(0, 240),
-          wroteRate: previous.rate,
-          recordDate: previous.recordDate,
-        }),
-      };
-    }
-
-    await writeStructuredBenchmark(db, {
-      rate: RISK_FREE_RATE_FALLBACK,
-      recordDate: null,
-      fetchedAt: null,
-      source: "hardcoded-fallback",
-      isFallback: true,
-      fallbackMode: "fred-exception",
-    });
-    return {
-      status: "degraded",
-      metadata: buildMetadata({
-        fallbackMode: "fred-exception",
-        error: String(err).slice(0, 240),
-        wroteRate: RISK_FREE_RATE_FALLBACK,
-      }),
-    };
+    return handleDegradedFallback(db, "fred-exception", { error: String(err).slice(0, 240) });
   }
 }
