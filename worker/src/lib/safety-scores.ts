@@ -8,14 +8,10 @@ import {
   scorePegStability,
   scoreResilience,
 } from "@shared/lib/report-cards";
-import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
-import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
-import type { PegSummaryCoin } from "@shared/types";
-import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
-import { getFirstSeenDates } from "./db";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 import { loadDexLiquidityMap } from "./dex-liquidity";
 import { loadRedemptionBackstopMap } from "./redemption-backstops-store";
+import { derivePegAnalyticsSnapshot } from "./peg-analytics";
 
 interface SafetyResult {
   score: number;
@@ -126,27 +122,17 @@ export async function computeSafetyScoresSnapshot(
       }
       return toMapResult("degraded", scores, trackedCount, reason);
     }
-    const peggedAssets = stablecoinsCache.payload.peggedAssets;
-    const priceById = new Map(peggedAssets.map((asset) => [asset.id, asset]));
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
-    const [eventsResult, dexLiqMap, firstSeenMap, redemptionBackstopMap] = await Promise.all([
-      db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
-        .bind(fourYearsAgoSec)
-        .all<DepegRow>(),
+    const [pegAnalytics, dexLiqMap, redemptionBackstopMap] = await Promise.all([
+      derivePegAnalyticsSnapshot(db, {
+        peggedAssets: stablecoinsCache.payload.peggedAssets,
+        fxFallbackRates: stablecoinsCache.payload.fxFallbackRates,
+        methodologyAsOf: stablecoinsCache.updatedAt,
+        includeNavTokens,
+      }),
       loadDexLiquidityMap(db),
-      getFirstSeenDates(db),
       loadRedemptionBackstopMap(db),
     ]);
-
-    const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
-    const eventsByCoin = new Map<string, typeof allEvents>();
-    for (const event of allEvents) {
-      const list = eventsByCoin.get(event.stablecoinId) ?? [];
-      list.push(event);
-      eventsByCoin.set(event.stablecoinId, list);
-    }
+    const pegDataById = pegAnalytics.pegDataById;
 
     const overallScores = new Map<string, number>();
     const blacklistableIds: ReadonlySet<string> = new Set(
@@ -154,35 +140,11 @@ export async function computeSafetyScoresSnapshot(
         .filter((meta) => isBlacklistable(meta) === true)
         .map((meta) => meta.id),
     );
-    const methodologyVersion = getDepegDewsMethodologyVersionAt(nowSec);
 
     const computeForCoin = (meta: (typeof TRACKED_STABLECOINS)[number]): void => {
       if (!includeNavTokens && meta.flags.navToken) return;
 
-      const asset = priceById.get(meta.id);
-      const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
-      const scoreResult = computePegScore(events, trackingStart, nowSec);
-
-      const pegData: PegSummaryCoin = {
-        id: meta.id,
-        symbol: meta.symbol,
-        name: meta.name,
-        pegType: asset?.pegType ?? "",
-        pegCurrency: meta.flags.pegCurrency,
-        governance: meta.flags.governance,
-        currentDeviationBps: null,
-        pegScore: scoreResult.pegScore,
-        pegPct: scoreResult.pegPct,
-        severityScore: scoreResult.severityScore,
-        spreadPenalty: scoreResult.spreadPenalty,
-        eventCount: scoreResult.eventCount,
-        worstDeviationBps: scoreResult.worstDeviationBps,
-        activeDepeg: scoreResult.activeDepeg,
-        lastEventAt: scoreResult.lastEventAt,
-        trackingSpanDays: scoreResult.trackingSpanDays,
-        methodologyVersion,
-      };
+      const pegData = pegDataById.get(meta.id);
 
       const canBlacklist = isBlacklistable(meta, blacklistableIds);
       const redemption = redemptionBackstopMap[meta.id];
@@ -205,7 +167,7 @@ export async function computeSafetyScoresSnapshot(
           symbol: meta.symbol,
           grade: overall.grade,
           score: overall.score ?? 0,
-          pegScore: scoreResult.pegScore,
+          pegScore: pegData?.pegScore ?? null,
           liqScore: dimensions.liquidity.score,
         });
       }
