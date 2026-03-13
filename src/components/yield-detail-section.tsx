@@ -9,10 +9,10 @@ import { YieldSourceLink } from "@/components/yield-source-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useYieldRankings } from "@/hooks/api-hooks";
-import { WARNING_SIGNAL_LABELS, formatYieldWarningSignal } from "@/lib/yield-constants";
+import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatApy } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
@@ -42,13 +42,6 @@ const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
     badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
   },
 };
-
-function getPysColor(pys: number | null): string {
-  if (pys === null) return "text-muted-foreground";
-  if (pys > 40) return "text-emerald-700 dark:text-emerald-400";
-  if (pys > 20) return "text-amber-700 dark:text-amber-400";
-  return "text-red-700 dark:text-red-400";
-}
 
 function formatSignedPercent(value: number | null) {
   if (value === null) return "—";
@@ -200,9 +193,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     return null;
   }
 
-  const riskPenalty = Math.max(0.5, (101 - (ranking.safetyScore ?? 40)) / 20);
-  const yieldEfficiency = ranking.apy30d / riskPenalty;
-  const sustainabilityMult = Math.max(0.3, ranking.yieldStability ?? 1.0);
+  const { riskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(ranking.apy30d, ranking.safetyScore, ranking.yieldStability);
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
@@ -235,7 +226,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           {singleWarning ? (
             <div className="flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-              <span>{WARNING_SIGNAL_LABELS[singleWarning] ?? formatYieldWarningSignal(singleWarning)}</span>
+              <span>{formatYieldWarningSignal(singleWarning)}</span>
             </div>
           ) : null}
 
@@ -247,7 +238,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                   <strong>Multiple risk signals active:</strong>
                   <ul className="mt-1 space-y-0.5 text-xs text-amber-700/90 dark:text-amber-300/85">
                     {ranking.warningSignals.map((signal) => (
-                      <li key={signal}>{WARNING_SIGNAL_LABELS[signal] ?? formatYieldWarningSignal(signal)}</li>
+                      <li key={signal}>{formatYieldWarningSignal(signal)}</li>
                     ))}
                   </ul>
                 </div>
@@ -256,8 +247,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <DetailStatCard label="Current APY" value={`${ranking.currentApy.toFixed(2)}%`} />
-            <DetailStatCard label="30d APY" value={`${ranking.apy30d.toFixed(2)}%`} />
+            <DetailStatCard label="Current APY" value={formatApy(ranking.currentApy)} />
+            <DetailStatCard label="30d APY" value={formatApy(ranking.apy30d)} />
             <DetailStatCard label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>}>
               <PysBreakdown
                 score={ranking.pharosYieldScore}

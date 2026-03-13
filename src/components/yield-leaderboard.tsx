@@ -19,7 +19,7 @@ import { formatCurrency, formatScore, formatApy } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
-import { WARNING_SIGNAL_LABELS } from "@/lib/yield-constants";
+import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/lib/yield-constants";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -52,14 +52,6 @@ const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   { id: "signals", label: <MethodologyLabel topic="yieldWarnings">Signals</MethodologyLabel>, className: "hidden md:table-cell text-center" },
   { id: "expand", label: <span className="sr-only">Expand row</span>, className: "w-[44px] text-right" },
 ] as const;
-
-/** Static PYS color classes (Tailwind purge-safe). */
-function getPysColor(pys: number | null): string {
-  if (pys === null) return "text-muted-foreground";
-  if (pys > 40) return "text-emerald-700 dark:text-emerald-400";
-  if (pys > 20) return "text-amber-700 dark:text-amber-400";
-  return "text-red-700 dark:text-red-400";
-}
 
 /** Small pill badge that opens an inline popover listing alternative yield sources. */
 function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
@@ -235,9 +227,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                 const safetyScore = row.safetyScore;
                 const warningSignalCount = row.warningSignals.length;
                 const pysColor = getPysColor(row.pharosYieldScore);
-                const riskPenalty = Math.max(0.5, (101 - (safetyScore ?? 40)) / 20);
-                const yieldEfficiency = row.apy30d / riskPenalty;
-                const sustainabilityMult = Math.max(0.3, row.yieldStability ?? 1.0);
+                const { riskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(row.apy30d, safetyScore, row.yieldStability);
                 return (
                   <Fragment key={row.id}>
                     <InteractiveTableRow
@@ -402,7 +392,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                             <TooltipContent>
                               <ul className="space-y-1 text-xs">
                                 {row.warningSignals.map((signal) => (
-                                  <li key={signal}>{WARNING_SIGNAL_LABELS[signal] ?? signal}</li>
+                                  <li key={signal}>{formatYieldWarningSignal(signal)}</li>
                                 ))}
                               </ul>
                             </TooltipContent>
