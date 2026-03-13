@@ -24,6 +24,7 @@
     "test:watch": "vitest",
     "sync:digests": "tsx scripts/sync-digests.ts",
     "test:smoke-api": "npx tsx scripts/smoke-api.mjs",
+    "test:smoke-ops": "node scripts/smoke-ops.mjs",
     "test:smoke-ui": "node scripts/smoke-ui.mjs",
     "check:worker-boundary": "node scripts/check-worker-import-boundary.mjs",
     "check:migrations": "node scripts/check-worker-migrations.mjs",

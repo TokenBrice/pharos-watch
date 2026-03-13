@@ -20,7 +20,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 
 - `ops.pharos.watch`: Cloudflare Access-protected operator host. The browser uses same-origin Pages Functions routes under `/api/admin/*`, and those functions proxy to `ops-api.pharos.watch` with a service token.
 
-`pharos.watch/status/` remains non-indexed but no longer accepts an in-browser admin key and is intentionally non-operational on the public host.
+`pharos.watch/status/` remains non-indexed and is now hard-blocked on the public host via a Pages Function `404`.
 
 ---
 
@@ -410,7 +410,8 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 
 | File                                                 | Role                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/app/status/client.tsx`                          | Host-aware auth gate + status dashboard orchestration shell; `ops.pharos.watch` is the only interactive operator host, while the public host renders a non-operational notice                                                                                                        |
+| `src/app/status/client.tsx`                          | Ops-host-only status dashboard orchestration shell; the public host no longer renders an interactive `/status/` route                                                                                                                        |
+| `functions/status/[[path]].ts`                       | Pages Functions host gate for `/status/`; returns `404` outside `ops.pharos.watch`, otherwise serves the static status route asset                                                                                                            |
 | `src/components/status/*`                            | Decomposed status UI modules (banner, facts, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards are grouped by trigger slot, surface trigger expressions + isolation mode, show last-good/error-skip context, and expose full raw metadata in collapsible panels. |
 | `src/components/status/telegram-bot-stats.tsx`       | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                          |
 | `src/components/status/discovery-candidates.tsx`     | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                             |

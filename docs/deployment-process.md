@@ -87,6 +87,9 @@ Defined in `.github/workflows/deploy-cloudflare.yml`:
 4. `deploy-pages`
    - uses explicit Wrangler CLI retries for transient Pages API failures during `pages deploy`
 5. `smoke-ui`
+6. `smoke-ops`
+   - private post-deploy ops smoke against `ops.pharos.watch/status/` and `ops-api.pharos.watch`
+   - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 
 GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
 

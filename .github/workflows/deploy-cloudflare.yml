@@ -105,3 +105,18 @@ jobs:
       - run: npm run test:smoke-ui
         env:
           SMOKE_UI_URL: ${{ vars.SMOKE_UI_URL || 'https://pharos.watch' }}
+
+  smoke-ops:
+    needs: deploy-pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+      - run: npm run test:smoke-ops
+        env:
+          SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/status/' }}
+          SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
+          OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
+          OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}

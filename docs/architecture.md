@@ -165,6 +165,7 @@ src/                              # Next.js frontend (static export)
 │   ├── sitemap.ts                # Dynamic sitemap generation
 │   └── robots.ts                 # robots.txt
 ├── functions/
+│   ├── status/[[path]].ts        # Pages Functions host gate for /status; serves asset on ops host, hard-404s elsewhere
 │   └── api/admin/[[path]].ts     # Cloudflare Pages Functions catch-all proxy for ops-only admin routes (`/api/admin/*` -> `ops-api`)
 ├── components/
 │   ├── ui/                       # shadcn/ui primitives (do not edit manually)
