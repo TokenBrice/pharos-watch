@@ -193,7 +193,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     return null;
   }
 
-  const { riskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(ranking.apy30d, ranking.safetyScore, ranking.yieldStability);
+  const { yieldEfficiency, sustainabilityMult } = computePysBreakdown(ranking.apy30d, ranking.safetyScore, ranking.yieldStability);
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
