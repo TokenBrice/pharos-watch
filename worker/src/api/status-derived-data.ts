@@ -242,10 +242,28 @@ const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"]
   discoveryCandidates: { type: "cron", jobs: ["sync-stablecoins", "discovery-scan"] },
 };
 
+const TABLE_TARGETS = Object.values(DATASET_FRESHNESS_TARGETS).filter(
+  (t): t is Extract<DatasetFreshnessTarget, { type: "table" }> => t.type === "table",
+);
+const ALLOWED_DATASET_TABLES = new Set(TABLE_TARGETS.map((t) => t.table));
+const ALLOWED_DATASET_COLUMNS = new Set(TABLE_TARGETS.map((t) => t.column));
+const ALLOWED_DATASET_WHERE_CLAUSES = new Set(
+  TABLE_TARGETS.map((t) => t.where).filter(Boolean),
+);
+
 async function getLastTableUpdate(
   db: D1Database,
   target: Extract<DatasetFreshnessTarget, { type: "table" }>,
 ): Promise<number | null> {
+  if (!ALLOWED_DATASET_TABLES.has(target.table)) {
+    throw new Error(`Invalid dataset table: ${target.table}`);
+  }
+  if (!ALLOWED_DATASET_COLUMNS.has(target.column)) {
+    throw new Error(`Invalid dataset column: ${target.column}`);
+  }
+  if (target.where && !ALLOWED_DATASET_WHERE_CLAUSES.has(target.where)) {
+    throw new Error(`Invalid dataset where clause: ${target.where}`);
+  }
   const where = target.where ? ` WHERE ${target.where}` : "";
   try {
     const row = await db
