@@ -1,32 +1,16 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
+import { createTableComparator } from "@/lib/table-comparator";
 import type { BlacklistEvent } from "@shared/types";
 
 export type BlacklistSortKey = "date" | "stablecoin" | "chain" | "event";
 
-export function compareBlacklistRows(
+export const compareBlacklistRows: (
   a: BlacklistEvent,
   b: BlacklistEvent,
   sort: TableSortState<BlacklistSortKey>,
-): number {
-  let cmp = 0;
-
-  switch (sort.key) {
-    case "date":
-      cmp = a.timestamp - b.timestamp;
-      break;
-    case "stablecoin":
-      cmp = a.stablecoin.localeCompare(b.stablecoin);
-      break;
-    case "chain":
-      cmp = a.chainName.localeCompare(b.chainName);
-      break;
-    case "event":
-      cmp = a.eventType.localeCompare(b.eventType);
-      break;
-    default:
-      cmp = a.timestamp - b.timestamp;
-      break;
-  }
-
-  return sort.direction === "asc" ? cmp : -cmp;
-}
+) => number = createTableComparator<BlacklistEvent, BlacklistSortKey>({
+  date: (r) => r.timestamp,
+  stablecoin: (r) => r.stablecoin,
+  chain: (r) => r.chainName,
+  event: (r) => r.eventType,
+});

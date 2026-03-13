@@ -1,4 +1,5 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
+import { createTableComparator } from "@/lib/table-comparator";
 import type { DexLiquidityData, StablecoinMeta } from "@shared/types";
 
 export type LiquiditySortKey =
@@ -19,66 +20,20 @@ export interface LiquidityRow {
   liq: DexLiquidityData;
 }
 
-export function compareLiquidityRows(
+export const compareLiquidityRows: (
   a: LiquidityRow,
   b: LiquidityRow,
   sort: TableSortState<LiquiditySortKey>,
-): number {
-  const aLiq = a.liq;
-  const bLiq = b.liq;
-  let aVal: number;
-  let bVal: number;
-
-  switch (sort.key) {
-    case "score":
-      aVal = aLiq.liquidityScore ?? 0;
-      bVal = bLiq.liquidityScore ?? 0;
-      break;
-    case "tvl":
-      aVal = aLiq.totalTvlUsd;
-      bVal = bLiq.totalTvlUsd;
-      break;
-    case "tvlTrend":
-      aVal = aLiq.tvlChange7d ?? 0;
-      bVal = bLiq.tvlChange7d ?? 0;
-      break;
-    case "volume":
-      aVal = aLiq.totalVolume24hUsd;
-      bVal = bLiq.totalVolume24hUsd;
-      break;
-    case "volume7d":
-      aVal = aLiq.totalVolume7dUsd;
-      bVal = bLiq.totalVolume7dUsd;
-      break;
-    case "vtRatio":
-      aVal = aLiq.totalTvlUsd > 0 ? aLiq.totalVolume24hUsd / aLiq.totalTvlUsd : 0;
-      bVal = bLiq.totalTvlUsd > 0 ? bLiq.totalVolume24hUsd / bLiq.totalTvlUsd : 0;
-      break;
-    case "pools":
-      aVal = aLiq.poolCount;
-      bVal = bLiq.poolCount;
-      break;
-    case "chains":
-      aVal = aLiq.chainCount;
-      bVal = bLiq.chainCount;
-      break;
-    case "balance":
-      aVal = aLiq.weightedBalanceRatio ?? 0;
-      bVal = bLiq.weightedBalanceRatio ?? 0;
-      break;
-    case "organic":
-      aVal = aLiq.organicFraction ?? 0;
-      bVal = bLiq.organicFraction ?? 0;
-      break;
-    case "durability":
-      aVal = aLiq.durabilityScore ?? 0;
-      bVal = bLiq.durabilityScore ?? 0;
-      break;
-    default:
-      aVal = aLiq.liquidityScore ?? 0;
-      bVal = bLiq.liquidityScore ?? 0;
-      break;
-  }
-
-  return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-}
+) => number = createTableComparator<LiquidityRow, LiquiditySortKey>({
+  score: (r) => r.liq.liquidityScore ?? 0,
+  tvl: (r) => r.liq.totalTvlUsd,
+  tvlTrend: (r) => r.liq.tvlChange7d ?? 0,
+  volume: (r) => r.liq.totalVolume24hUsd,
+  volume7d: (r) => r.liq.totalVolume7dUsd,
+  vtRatio: (r) => r.liq.totalTvlUsd > 0 ? r.liq.totalVolume24hUsd / r.liq.totalTvlUsd : 0,
+  pools: (r) => r.liq.poolCount,
+  chains: (r) => r.liq.chainCount,
+  balance: (r) => r.liq.weightedBalanceRatio ?? 0,
+  organic: (r) => r.liq.organicFraction ?? 0,
+  durability: (r) => r.liq.durabilityScore ?? 0,
+});

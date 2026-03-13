@@ -211,10 +211,10 @@ describe("compareLiquidityRows — durability", () => {
 });
 
 describe("compareLiquidityRows — default fallback", () => {
-  it("falls back to score for unknown key", () => {
+  it("returns 0 for unknown key", () => {
     const high = makeRow({ liquidityScore: 80 });
     const low = makeRow({ liquidityScore: 20 });
     const result = compareLiquidityRows(high, low, { key: "unknown" as LiquiditySortKey, direction: "desc" });
-    expect(result).toBeLessThan(0);
+    expect(result).toBe(0);
   });
 });

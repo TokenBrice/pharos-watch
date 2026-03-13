@@ -1,46 +1,18 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
+import { createTableComparator } from "@/lib/table-comparator";
 import type { YieldRanking } from "@shared/types";
 
 export type YieldTableSortKey = "pys" | "apy30d" | "safetyScore" | "tvl" | "yieldStability" | "yieldType";
 
-export function compareYieldRows(
+export const compareYieldRows: (
   a: YieldRanking,
   b: YieldRanking,
   sort: TableSortState<YieldTableSortKey>,
-): number {
-  let aVal: number;
-  let bVal: number;
-
-  switch (sort.key) {
-    case "pys":
-      aVal = a.pharosYieldScore ?? -1;
-      bVal = b.pharosYieldScore ?? -1;
-      break;
-    case "apy30d":
-      aVal = a.apy30d;
-      bVal = b.apy30d;
-      break;
-    case "safetyScore":
-      aVal = a.safetyScore ?? -1;
-      bVal = b.safetyScore ?? -1;
-      break;
-    case "tvl":
-      aVal = a.sourceTvlUsd ?? 0;
-      bVal = b.sourceTvlUsd ?? 0;
-      break;
-    case "yieldStability":
-      aVal = a.yieldStability ?? -1;
-      bVal = b.yieldStability ?? -1;
-      break;
-    case "yieldType":
-      return sort.direction === "asc"
-        ? a.yieldType.localeCompare(b.yieldType)
-        : b.yieldType.localeCompare(a.yieldType);
-    default:
-      aVal = a.pharosYieldScore ?? -1;
-      bVal = b.pharosYieldScore ?? -1;
-      break;
-  }
-
-  return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-}
+) => number = createTableComparator<YieldRanking, YieldTableSortKey>({
+  pys: (r) => r.pharosYieldScore ?? -1,
+  apy30d: (r) => r.apy30d,
+  safetyScore: (r) => r.safetyScore ?? -1,
+  tvl: (r) => r.sourceTvlUsd ?? 0,
+  yieldStability: (r) => r.yieldStability ?? -1,
+  yieldType: (r) => r.yieldType,
+});
