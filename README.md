@@ -20,7 +20,7 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 46 configured assets
 - **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
-- **Status dashboard** — cron health, cache freshness, and system monitoring
+- **Private operator status dashboard** — Access-gated cron health, cache freshness, and system monitoring on `ops.pharos.watch`
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
 - **Research-grade data pipeline** — structural validation, concurrent write protection, depeg deduplication, and price validation guardrails
@@ -65,11 +65,10 @@ DEX discovery sources write to `dex_pool_staging` every 20 minutes on the dedica
 
 ## Getting Started
 
-Requires Node 20+ (`package.json#engines.node`). Install both package trees first:
+Requires Node 20+ (`package.json#engines.node`). Install dependencies from the repo root; npm workspaces will wire both the frontend and `worker/` package:
 
 ```bash
 npm install
-cd worker && npm install
 ```
 
 ### Frontend
@@ -87,7 +86,7 @@ cd worker && npx wrangler dev
 To trigger crons manually:
 
 ```bash
-npx wrangler dev --remote --test-scheduled
+cd worker && npx wrangler dev --remote --test-scheduled
 curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
 ```
 
@@ -124,7 +123,7 @@ src/                              Frontend (Next.js static export)
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
 │   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
 │   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
-│   ├── status/                   System health and cron monitoring
+│   ├── status/                   Access-gated operator status panel
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
 │   └── about/                    About & methodology
@@ -145,10 +144,12 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migration files (72 total)
+└── migrations/                   D1 SQL migration files (73 total)
 ```
 
 ## Documentation
+
+Current source-of-truth product docs live in `/docs/` and this README. `/agents/` stores working notes, plans, audits, and research history; treat it as archival context unless a file there explicitly says otherwise.
 
 - [docs/README.md](./docs/README.md) - verified documentation index and topic map
 - [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
@@ -229,9 +230,9 @@ For the full Worker binding table, see [.env.example](./.env.example) and [docs/
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
 1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
-2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`
+2. **Worker deploy:** `npm ci` → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler deploy` → `cd worker && npx --no-install wrangler triggers deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`)
-4. **Pages deploy:** `npm ci` → `npm run sync:digests` → `npm run build` → `npm run seo:check` → `npx --no-install wrangler pages deploy out`
+4. **Pages deploy:** `npm ci` → `npm run sync:digests` → `NEXT_PUBLIC_API_BASE=$API_BASE_URL npm run build` → `npm run seo:check` → `npx --no-install wrangler pages deploy out` (with retry in CI)
 5. **Post-deploy UI smoke:** `npm run test:smoke-ui` against `SMOKE_UI_URL` (or `https://pharos.watch` fallback)
 6. **Private ops smoke:** `npm run test:smoke-ops` against `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` using Cloudflare Access service-token headers
 

@@ -82,8 +82,9 @@ Compare combines multiple query sources:
 - `/api/bluechip-ratings` (`useBluechipRatings`)
 - `/api/dex-liquidity` (`useDexLiquidity`)
 - `/api/report-cards` (`useReportCards`)
-- `/api/mint-burn-flows` (`useMintBurnFlows`)
-- per-coin detail `/api/stablecoin/:id` (via `useQueries`) for supply history charts
+- `/api/mint-burn-flows` (`useMintBurnFlows`) for the shared flow dataset
+- per-coin `/api/supply-history?stablecoin=<id>&days=1825` (via `useQueries`) for long-range supply charts
+- per-coin `/api/mint-burn-flows?stablecoin=<id>&hours=<window>` (via `useQueries`) for comparison-specific flow panels
 
 It also derives live peg references with `derivePegRates(...)` for commodity/non-USD normalization in displayed prices.
 
@@ -110,4 +111,4 @@ That pattern is used in both the stacked mobile cards and the desktop comparison
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/lib/dead-stablecoins.ts`).
 - Cemetery channel notifications depend on the 5-minute Telegram cron plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
-- Compare reliability depends on six independent API datasets plus per-coin detail fetches; partial failures are surfaced via query error/stale-data UI components.
+- Compare reliability depends on six independent API datasets plus per-coin supply-history and flow queries; partial failures are surfaced via query error/stale-data UI components.

@@ -10,7 +10,7 @@ Current repo-side state:
 
 - the Worker is attached to both `api.pharos.watch` and `ops-api.pharos.watch`
 - browser CORS allows both `pharos.watch` and `ops.pharos.watch`
-- `/status/` only serves the live operator panel on `ops.pharos.watch`; the public host renders the non-indexed fallback shell
+- `/status/` only serves the live operator panel on `ops.pharos.watch`; the public host is blocked by the Pages host-gate function and returns a non-indexed `404`
 - same-origin Pages Functions proxy `/api/admin/*` from `ops.pharos.watch` to `ops-api.pharos.watch` with Access service-token headers
 
 Still true:
@@ -105,8 +105,8 @@ From the repo root:
 
 ```bash
 cd worker
-npx wrangler deploy
-npx wrangler triggers deploy
+npx --no-install wrangler deploy
+npx --no-install wrangler triggers deploy
 ```
 
 Expected result:

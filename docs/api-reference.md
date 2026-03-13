@@ -1623,7 +1623,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 **Rate limits**
 
-- Global public API limiter: best-effort per-IP in-memory limiter (`300 requests / 60 seconds`) for non-admin requests.
+- Global public API limiter: D1-backed per-IP-hash limiter (`300 requests / 60 seconds`) for non-admin requests, with the legacy isolate-local in-memory limiter used only as fallback if the distributed limiter path fails.
 - Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
 
 **Request body**

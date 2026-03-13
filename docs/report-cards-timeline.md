@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history. Covers v1.0 through v5.6 (2026-02-25 → 2026-03-12).
+Internal changelog reconstructed from git history. Covers v1.0 through v5.7 (2026-02-25 → 2026-03-13).
 
 ---
 
@@ -261,6 +261,16 @@ Safety Score liquidity now evaluates modeled exit quality, not just raw DEX dept
 
 Weights and grade thresholds are unchanged from v5.5.
 
+### v5.7 — Canonical ETH wrapper reserve alignment (Mar 13)
+
+Reserve-derived collateral quality now treats direct ETH and canonical wrapped ETH as the same very-low-risk asset class:
+
+- Updated the shared reserve-asset risk map so canonical `WETH` no longer falls into the generic wrapped-asset bucket.
+- Aligned curated reserve metadata and live reserve-adapter overrides for coins that expose direct `ETH` or `WETH` slices.
+- Mixed strategy buckets are unchanged. Delta-neutral ETH exposure, bridged ETH, and mixed BTC/ETH reserve slices still use their explicit manually-modeled tiers.
+
+Weights and grade thresholds are unchanged from v5.6.
+
 ---
 
 ## Quick Reference: Weight Evolution
@@ -274,7 +284,7 @@ Weights and grade thresholds are unchanged from v5.5.
 | v3.3       | 25%        | 20%       | —       | 20%        | 15%              | 25%      |
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
-| **v5.0–5.6** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v5.0–5.7** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

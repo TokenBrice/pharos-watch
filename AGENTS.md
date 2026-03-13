@@ -102,7 +102,7 @@ Read these when working on related code:
 - **`docs/telegram-alerts.md`** — Telegram webhook commands, D1 subscription tables, alert dispatch snapshots, bot ops
 - **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
 - **`docs/scripts.md`** — Operational and CI helper scripts in `scripts/`
-- **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**
+- **`docs/worker-and-api-limits.md`** — Repo-enforced runtime budgets, throttle constants, and external-provider assumptions to re-check before designing any new worker feature.
 
 ## Design Context
 

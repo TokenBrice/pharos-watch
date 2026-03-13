@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.6)
+## Overall Grade (v5.7)
 
 Three-step computation:
 
@@ -11,6 +11,8 @@ Three-step computation:
 3. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `report-cards.ts`.
 
 Cemetery coins get a permanent F.
+
+Current-version note: v5.7 did not change weights or thresholds. It aligned reserve-derived collateral quality so direct `ETH` and canonical `WETH` slices share the same `very-low` risk tier.
 
 ## Dimensions
 

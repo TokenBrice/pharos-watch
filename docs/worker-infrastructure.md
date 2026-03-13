@@ -110,8 +110,9 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 ### Public API Rate Limiting
 
-- `worker/src/handlers/http.ts` applies a best-effort per-IP in-memory limiter for non-admin requests before router dispatch.
-- Default threshold: `300 requests / 60 seconds` per IP (isolate-local, not globally shared across all isolates/PoPs).
+- `worker/src/handlers/http.ts` calls `checkPublicApiRateLimit(...)` for non-admin public `/api/*` traffic before router dispatch.
+- Default threshold: `300 requests / 60 seconds` per IP hash, enforced through the D1-backed `public_api_rate_limit` table.
+- If the distributed D1 path fails, `worker/src/lib/rate-limit.ts` falls back to the legacy isolate-local in-memory limiter for the same threshold/window.
 - Requests that already carry valid `ops-api.pharos.watch` Access/service-token signals bypass this limiter.
 
 ### CORS Headers
@@ -841,7 +842,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/constants.ts` | Shared constants: API URLs, thresholds, cache profiles |
 | `worker/src/lib/cron-schedule.ts` | Worker-facing `CRON_INTERVALS` export derived from shared cron metadata |
 | `shared/lib/cron-jobs.ts` | Shared cron expressions, per-job intervals, and status-page grouping/trigger metadata |
-| `worker/src/lib/status-thresholds.ts` | Shared status threshold constants for blacklist/on-chain quality bands |
+| `shared/lib/status-thresholds.ts` | Shared status threshold constants for frontend + worker data-quality/status bands |
 | `worker/src/lib/blacklist-gaps.ts` | Shared blacklist gap query helper (Tron null-amount exclusion + recent window) |
 | `worker/src/lib/chain-registry.ts` | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains |
 | `worker/src/lib/coingecko.ts` | CoinGecko init: free/pro URL switching, auth headers |

@@ -375,7 +375,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (72 total)
+├── migrations/                   # D1 SQL migration files (73 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata
@@ -456,6 +456,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── health.ts             # GET /api/health
     │   ├── status.ts             # GET /api/status (admin)
     │   ├── status-data-quality.ts # Shared status data-quality loader reused by /api/status
+    │   ├── status-derived-data.ts # Shared status endpoint data loaders (dataset freshness, Telegram stats, mint/burn reconciliation)
     │   ├── status-history.ts     # GET /api/status-history (admin)
     │   ├── stability-index.ts    # GET /api/stability-index
     │   ├── og.tsx                # GET /api/og/* dynamic Open Graph PNG generation
@@ -485,7 +486,6 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, buildInClause, logCronRun with protected catch)
         ├── chain-registry.ts     # Worker RPC registry and provider-map re-exports; runtime-neutral provider slugs now live in shared/lib/chain-provider-registry.ts
-        ├── status-derived-data.ts # Extracted status endpoint data loaders (dataset freshness, Telegram stats, mint/burn reconciliation)
         ├── evm-rpc.ts            # Shared JSON-RPC / Etherscan proxy helpers for eth_call, storage, and uint256 reads
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)

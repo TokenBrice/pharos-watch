@@ -179,7 +179,7 @@ This band contains:
 - `TotalMcapChart`
 - `PegDiversityChart`
 
-All major subsections are wrapped in `SectionErrorBoundary` so an individual visualization failure does not blank the full route.
+`CategoryStats` and `TotalMcapChart` are wrapped in `SectionErrorBoundary`. `PegDiversityChart` currently renders directly, so a failure there is not isolated by a band-level boundary.
 
 ---
 

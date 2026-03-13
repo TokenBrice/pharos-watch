@@ -1,6 +1,7 @@
 # Documentation Index
 
 Verified entry point for the `/docs` corpus. Use this file to find the authoritative document for a system or workflow before editing.
+Application source-of-truth docs live in `/docs/` and [../README.md](../README.md). `/agents/` is a working-artifact archive unless a file there explicitly says otherwise.
 
 ## Start Here
 
@@ -17,7 +18,7 @@ Verified entry point for the `/docs` corpus. Use this file to find the authorita
 - [api-reference.md](./api-reference.md) - public and admin API contract reference
 - [worker-infrastructure.md](./worker-infrastructure.md) - runtime model, env interface, cron orchestration, and observability
 - [operator-origin-access.md](./operator-origin-access.md) - operator-only origin prep, Access setup runbook, and verification steps
-- [worker-and-api-limits.md](./worker-and-api-limits.md) - upstream and platform hard limits that constrain worker design
+- [worker-and-api-limits.md](./worker-and-api-limits.md) - repo-enforced runtime budgets, throttle constants, and external-provider assumptions to re-check before shipping worker changes
 - [data-flow-map.md](./data-flow-map.md) - external source -> cron -> D1 -> API -> hook -> page mapping
 - [live-reserves.md](./live-reserves.md) - live reserve-sync config, adapter registry, storage, API modes, and frontend/status consumers
 - [data-pipeline.md](./data-pipeline.md) - stablecoin sync, price enrichment, FX/metal rates, and integrity guardrails

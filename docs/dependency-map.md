@@ -62,16 +62,17 @@ Rendering behavior:
 
 ## Readability Controls
 
-The graph header exposes two runtime controls:
+The graph header exposes one runtime control group plus a conditional picker:
 
 - **Focus mode**:
   - `All`: full graph
   - `Hub dependencies`: only edges touching Tier 1/Tier 2 hubs
   - `Selected neighborhood`: only edges adjacent to a selected coin (picker shown inline)
-- **Min edge** (weak-edge compression):
-  - `Off`, `3%`, `5%`, `8%`
-  - Edges below threshold are hidden unless they touch the hovered node or selected neighborhood node.
-  - Nodes display a small `+N` marker for hidden minor links so compressed structure remains discoverable.
+- **Neighborhood coin picker**:
+  - Only appears in `Selected neighborhood` mode.
+  - Lets the user set the neighborhood focus explicitly; clicking a node in the graph updates the same selection.
+
+The current UI does not expose a separate weak-edge compression or `Min edge` threshold control.
 
 ## Layout Algorithm
 

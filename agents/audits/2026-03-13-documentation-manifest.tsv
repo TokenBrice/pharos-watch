@@ -1,0 +1,297 @@
+path	scope	status	note
+README.md	root	audited	Verified against package scripts, repo structure, and live code.
+AGENTS.md	root	audited	Verified against repo structure, commands, and docs surface.
+CLAUDE.md	root	audited	Verified against repo structure, commands, and docs surface.
+agents/README.md	agents-root	audited	Authoritative guide for archival agent artifacts; rewritten during this audit.
+docs/README.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/about-page.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/api-reference.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/architecture.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/blacklist-tracker-timeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/blacklist-tracker.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/bluechip-ratings.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/cemetery-and-compare.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/classification.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/coverage-page.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/data-flow-map.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/data-pipeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/depeg-detection.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/depeg-dews-timeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/dependency-map.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/deployment-process.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/design-context.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/design-language.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/design-tokens.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/dews.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/dex-liquidity.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/digest-pipeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/documentation-map-2026-03-05.tsv	docs	audited-reference	Reference artifact retained as non-canonical documentation support material.
+docs/feedback-pipeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/homepage.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/liquidity-score-timeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/live-reserves.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/methodology-page.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/mint-burn-flows-timeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/mint-burn-flows.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/operator-origin-access.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/redemption-backstops.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/report-cards-timeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/report-cards.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/scripts.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/shadow-stablecoins.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/stability-index-timeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/stability-index.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/stablecoin-detail-page.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/start-page.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/status-dashboard.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/supply-snapshot.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/telegram-alerts.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/testing.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/worker-and-api-limits.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/worker-infrastructure.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/yield-intelligence-timeline.md	docs	audited	Verified against live code, routes, or runtime config.
+docs/yield-intelligence.md	docs	audited	Verified against live code, routes, or runtime config.
+agents/audits/2026-03-06-full-codebase-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-07-codebase-quality-audit-summary.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-07-design-audit-pharos-watch.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-07-design-implementation-spec.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-08-doc-corpus-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-11-doc-corpus-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-12-doc-corpus-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-12-live-reserve-sync-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-12-methodology-page-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-12-stablecoin-detail-usdc-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-13-doc-corpus-audit-pass-2.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-13-doc-corpus-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/2026-03-13-documentation-health-report.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/cron-infrastructure-audit-2026-03-09.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/documentation-audit-2026-03-09.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/documentation-audit-2026-03-10.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/flows-end-to-end-audit-2026-03-10.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/audits/simplification-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/2026-03-13-comprehensive-codebase-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/2026-03-13-status-page-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/2026-03-13-status-page-remediation-spec.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/2026-03-13-structural-simplification-remediation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/2026-03-13-yield-remediation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-07-design-audit-fixes.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-07-market-signals-strip-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-07-market-signals-strip.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-07-mint-burn-two-signal-redesign.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-07-report-card-dimension-scorer-tests.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-07-test-suite-cleanup.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-08-digest-refinement-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-08-digest-refinement-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-08-experience-elevation-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-08-experience-elevation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-08-frontend-consistency.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-08-pipeline-hardening.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-08-score-explainability.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-08-telegram-alert-bot-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/PROGRESS.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/README.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/research/R1-code-quality-frontend.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/research/R2-code-quality-worker-shared.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/research/R3-ui-ux-quality.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/research/R4-performance.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/research/R5-data-integrity.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/research/R6-design-system-compliance.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/research/R7-security-dependencies.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/research/R8-testing-documentation.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/synthesis/implementation-ticket-template.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/synthesis/triage-guide.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-a/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-a/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-a/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-a/TICKET-004.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-a/TICKET-005.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-a/TICKET-006.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-a/TICKET-007.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-b/TICKET-008.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-b/TICKET-009.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-b/TICKET-010.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-b/TICKET-011.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-b/TICKET-012.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-codebase-quality-audit/tickets/phase-b/TICKET-013.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-cron-reliability-remediation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-cron-trigger-isolation-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/2026-03-09-dex-discovery-separation-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/PROGRESS.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/execution-handover.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase1-discovery-module/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase1-discovery-module/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase1-discovery-module/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase1-discovery-module/TICKET-004.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase1-scoring-refactor/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase1-scoring-refactor/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase2-integration/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase2-integration/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-dex-discovery-separation/tickets/phase2-integration/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-flow-data-quality-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-flow-data-quality-impl.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-flow-reliability-fixes.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-liquidity-depeg-reliability-fixes.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-maintainability-audit-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-09-telegram-page.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-coingecko-co-primary-execution-report.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-compare-enhancements-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-compare-enhancements-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-depeg-reliability-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-dex-price-obs-dedup-fix.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-flows-accuracy-reliability-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-liquidity-accuracy-reliability-execution-report.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-liquidity-score-v4-enhancement.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-liquidity-score-v4-implementation.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-rate-derived-yield-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-telegram-bot-tightening-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-telegram-dispatch-capacity.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-10-yield-data-quality-reliability-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-11-pharos-onboarding-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-11-price-sanity-hardening-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-11-price-sanity-hardening-execution-handover.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-11-price-sanity-hardening-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-11-price-sanity-hardening-progress.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-12-codebase-simplification-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-12-coingecko-pipeline-switch.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-12-dex-shadow-removal-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-12-live-reserve-sync-remediation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-12-maintainability-audit-remediation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-12-real-time-reserve-composition-updater.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-12-redemption-backstop-score-implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-13-live-reserves-consolidation.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-13-maintainability-audit-remediation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/2026-03-13-structural-simplification-remediation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/PROGRESS.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/execution-handover.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/tickets/phase1-quick-wins/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/tickets/phase1-quick-wins/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/tickets/phase2-worker-structure/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/tickets/phase2-worker-structure/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/tickets/phase3-methodology-versions/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/codebase-simplification/tickets/phase3-methodology-versions/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/2026-03-09-flow-data-quality-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/PROGRESS.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/execution-handover.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/tickets/phase1-q1-atomic-roundtrip/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/tickets/phase1-q1-atomic-roundtrip/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/tickets/phase1-q2-bridge-expansion/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/tickets/phase1-q3-auto-backfill/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/tickets/phase1-q4-activity-gate/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/flow-data-quality/tickets/phase2-methodology/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/2026-03-06-full-codebase-audit-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/PROGRESS.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/execution-handover.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-004.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-005.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-006.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-007.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-008.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-009.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase1-audit/TICKET-010.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/full-codebase-audit/tickets/phase2-consolidation/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/live-reserves-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/PROGRESS.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/execution-handover.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase1-foundation/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase1-foundation/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase1-foundation/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase2-shared-logic/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase2-shared-logic/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase3-dispatch/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase3-dispatch/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase3-dispatch/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase3-webhook/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase3-webhook/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase3-webhook/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/telegram-alert-bot/tickets/phase4-docs/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/2026-03-05-ticker-issuer-migration-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/MIGRATION-PROGRESS.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/execution-handover.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase1-foundation/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase1-foundation/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase1-foundation/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase1-foundation/TICKET-004.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase1-foundation/TICKET-005.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase2-frontend-urls/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase2-router-sync/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase2-router-sync/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase2-worker-providers/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase2-worker-providers/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-frontend-compat/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-frontend-compat/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-frontend-compat/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-master-switchover/D1-MIGRATION-RUNBOOK.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-master-switchover/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-master-switchover/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-master-switchover/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-master-switchover/TICKET-004.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase3-test-fixtures/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/ticker-issue-migration/tickets/phase4-cleanup/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/2026-03-09-yield-maturation-design.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/PROGRESS.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/execution-handover.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/implementation-plan.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/phase0-research-output.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1a-backend/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1a-backend/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1a-backend/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1a-backend/TICKET-004.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1a-backend/TICKET-005.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1a-backend/TICKET-006.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1a-backend/TICKET-007.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1b-coverage/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase1b-coverage/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase2-frontend-foundation/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase2-frontend-foundation/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase2-frontend-foundation/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase3d-leaderboard/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase3d-leaderboard/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase3d-leaderboard/TICKET-003.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase3d-leaderboard/TICKET-004.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase3d-leaderboard/TICKET-005.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase3e-detail-page/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase3e-detail-page/TICKET-002.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/historical/yield-maturation/tickets/phase4-polish/TICKET-001.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/PROGRESS-TEMPLATE.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/README.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/research/R1-code-quality-frontend.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/research/R2-code-quality-worker-shared.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/research/R3-ui-ux-quality.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/research/R4-performance.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/research/R5-data-integrity.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/research/R6-design-system-compliance.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/research/R7-security-dependencies.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/research/R8-testing-documentation.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/synthesis/implementation-ticket-template.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/plans/templates/cmcs-codebase-quality-audit/synthesis/triage-guide.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/process/adding-a-stablecoin.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/process/mint-burn-ingestion.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/research/2026-03-11-pharos-onboarding-page-research.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/research/2026-03-12-pricing-pipeline-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/research/2026-03-12-redeemable-assets-liquidity-research.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/research/2026-03-13-contextual-methodology-surfacing-research.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/research/2026-03-13-doc-audit-report.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/research/ccip-mint-burn-final-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/research/ccip-mint-burn-rollout-log.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/research/real-time-reserve-update-sources.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/retrospectives/2026-03-09-codebase-quality-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/retrospectives/2026-03-09-dex-discovery-separation.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/retrospectives/2026-03-09-yield-maturation.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/retrospectives/flow-data-quality.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/tasks/done/contract-enrichment-tracker.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/tasks/done/reliability-refinement-execution-board.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/tasks/done/reserve-composition-tracker-findings.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/tasks/done/reserve-composition-tracker.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/tasks/done/resilience-collateral-audit.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/tasks/done/stablecoin-data-fetch-initial.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
+agents/tasks/live-reserve-source-research-tracker.md	agents-archive	structural-review	Inventoried as archival working material; not treated as canonical over live code or /docs.
