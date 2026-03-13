@@ -307,6 +307,30 @@ async function runHomepageCheck(sessionId, waitTimeoutMs) {
   return parseResultJson(evalOutput);
 }
 
+async function navigateWithRetry(sessionId, targetUrl, label, retryCount, retryDelayMs) {
+  const totalAttempts = retryCount + 1;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < totalAttempts; attempt += 1) {
+    try {
+      const gotoOutput = await runPlaywrightCli(sessionId, ["goto", targetUrl]);
+      ensureNoCliError(label, gotoOutput);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= totalAttempts - 1) {
+        break;
+      }
+      console.log(
+        `[smoke-ui] WARN ${label} attempt ${attempt + 1}/${totalAttempts} failed; retrying in ${retryDelayMs}ms`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
 async function run() {
   const { url: rawUrl, skipOverflow } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
@@ -376,10 +400,13 @@ async function run() {
       ensureNoCliError("resize", resizeOutput);
 
       const routes = getOverflowRoutes();
+      let currentRoute = new URL(url).pathname || "/";
       for (const route of routes) {
         const routeUrl = new URL(route, url).toString();
-        const gotoOutput = await runPlaywrightCli(sessionId, ["goto", routeUrl]);
-        ensureNoCliError(`goto ${route}`, gotoOutput);
+        if (route !== currentRoute) {
+          await navigateWithRetry(sessionId, routeUrl, `goto ${route}`, uiRetryCount, uiRetryDelayMs);
+          currentRoute = route;
+        }
 
         let overflowSummary = await runOverflowCheck(
           sessionId,
