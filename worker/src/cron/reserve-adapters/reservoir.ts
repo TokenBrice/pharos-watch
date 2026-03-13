@@ -1,6 +1,6 @@
-import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry, isHttpJsonInput, normalizeSlices } from "./helpers";
 
 interface ReservoirBalanceItem {
   label: string;
@@ -86,25 +86,6 @@ export interface AdaptReservoirResult {
   unknownAssets: string[];
 }
 
-function isHttpJsonInput(input: LiveReserveInput): input is Extract<LiveReserveInput, { kind: "http-json" }> {
-  return input.kind === "http-json";
-}
-
-function adjustSlicesToHundred(slices: ReserveSlice[]): ReserveSlice[] {
-  const sum = slices.reduce((acc, slice) => acc + slice.pct, 0);
-  if (sum === 100 || slices.length === 0) return slices;
-
-  const maxIdx = slices.reduce(
-    (maxIndex, slice, index, arr) => (slice.pct > arr[maxIndex].pct ? index : maxIndex),
-    0,
-  );
-  const adjustment = 100 - sum;
-  if (slices[maxIdx].pct + adjustment > 0) {
-    slices[maxIdx].pct += adjustment;
-  }
-  return slices;
-}
-
 export function adaptReservoirReserves(payload: ReservoirReservesResponse): AdaptReservoirResult {
   const totalAssets = Number(payload.totalAssets);
   if (!Number.isFinite(totalAssets) || totalAssets <= 0) {
@@ -142,7 +123,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     .sort((a, b) => b.pct - a.pct);
 
   return {
-    slices: adjustSlicesToHundred(slices),
+    slices: normalizeSlices(slices),
     unknownAssets,
   };
 }
@@ -158,15 +139,7 @@ export async function fetchReservoirReserves(
     throw new Error("reservoir adapter requires an http-json primary input");
   }
 
-  const res = await fetchWithRetry(primaryInput.url, { signal }, 2, { timeoutMs: 10_000 });
-  if (!res) {
-    throw new Error("Reservoir API: fetchWithRetry returned null (all retries failed)");
-  }
-  if (!res.ok) {
-    throw new Error(`Reservoir API ${res.status}`);
-  }
-
-  const payload = await res.json() as ReservoirReservesResponse;
+  const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(primaryInput.url, signal);
   const adapted = adaptReservoirReserves(payload);
   const warnings: LiveReserveWarning[] = adapted.unknownAssets.map((label) => ({
     code: "unknown-position",
