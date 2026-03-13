@@ -1,3 +1,4 @@
+import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatAge } from "./format";
 
@@ -22,16 +23,16 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     }
 
     const ratio = ageSeconds / maxAge;
-    if (ratio > 2) {
+    if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
       return {
-        label: "stale (>2.00x)",
+        label: `stale (>${STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x)`,
         ratio,
         className: "bg-red-500/15 text-red-700 dark:text-red-400",
       };
     }
-    if (ratio > 1.5) {
+    if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.degraded) {
       return {
-        label: "degraded (>1.50x)",
+        label: `degraded (>${STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x)`,
         ratio,
         className: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
       };
@@ -50,7 +51,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
       </CardHeader>
       <CardContent>
         <div className="mb-3 text-xs text-muted-foreground">
-          Availability uses cache ratio thresholds of {">"}1.50x (degraded) and {">"}2.00x (stale).
+          Availability uses cache ratio thresholds of {">"}{STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x (degraded) and {">"}{STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x (stale).
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

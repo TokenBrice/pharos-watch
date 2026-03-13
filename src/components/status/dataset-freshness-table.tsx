@@ -41,6 +41,8 @@ function getExpectedFreshnessSec(owners: readonly string[]): number | null {
   return Math.min(...intervals) * 2;
 }
 
+// Band heuristics: "on time" = age ≤ expected (2× intervalSec),
+// "aging" = expected < age ≤ 1.5× expected, "late" = age > 1.5× expected.
 function getBand(
   ageSeconds: number | null,
   expectedFreshnessSec: number | null,

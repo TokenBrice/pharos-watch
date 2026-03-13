@@ -560,6 +560,8 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                 dataQualityStatus={data.dataQualityStatus}
                 rawStatus={data.rawOverallStatus}
                 confidence={data.confidence}
+                consecutiveRaw={data.state.consecutiveRaw}
+                thresholds={data.state.thresholds}
               />
 
               <div className="flex flex-wrap gap-2">

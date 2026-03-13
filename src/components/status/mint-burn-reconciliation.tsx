@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@shared/lib/format";
+import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { MintBurnReconciliationSummary } from "@shared/types";
 import { cn } from "@/lib/utils";
 
@@ -93,7 +94,8 @@ export function MintBurnReconciliationCard({ summary }: { summary: MintBurnRecon
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
               Compares 24h Ethereum mint/burn net flow against the stablecoins cache&apos;s Ethereum chain-supply delta.
-              Large gaps point to coverage or upstream chain-distribution mismatches.
+              Critical: {`>$${(STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.criticalRatio * 100).toFixed(0)}%`}.
+              Warn: {`>$${(STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd / 1e6).toFixed(0)}M or >${(STATUS_RECONCILIATION_THRESHOLDS.warnRatio * 100).toFixed(0)}%`}.
             </p>
             <div className="text-xs text-muted-foreground">
               Showing {visibleRows.length} of {summary.rows.length} rows, sorted by severity.

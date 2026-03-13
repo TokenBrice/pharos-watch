@@ -47,6 +47,8 @@ interface StatusBannerProps {
   dataQualityStatus: "healthy" | "degraded" | "stale";
   rawStatus: "healthy" | "degraded" | "stale";
   confidence: number;
+  consecutiveRaw?: { healthy: number; degraded: number; stale: number };
+  thresholds?: { recoverToHealthy: number; recoverToDegraded: number };
 }
 
 export function StatusBanner({
@@ -56,6 +58,8 @@ export function StatusBanner({
   dataQualityStatus,
   rawStatus,
   confidence,
+  consecutiveRaw,
+  thresholds,
 }: StatusBannerProps) {
   const config = STATUS_CONFIG[status];
   const time = new Date(evaluatedAt * 1000).toLocaleString();
@@ -145,6 +149,14 @@ export function StatusBanner({
           {recoveryHold && (
             <div className="max-w-2xl text-sm leading-relaxed text-white/78">
               Effective status is still holding {status} while the latest raw sweep is already {rawStatus}.
+              {consecutiveRaw && thresholds && (() => {
+                const target = status === "stale"
+                  ? { streak: consecutiveRaw[rawStatus], needed: rawStatus === "healthy" ? thresholds.recoverToHealthy : thresholds.recoverToDegraded }
+                  : { streak: consecutiveRaw.healthy, needed: thresholds.recoverToHealthy };
+                return target.needed > 0
+                  ? ` Recovery: ${target.streak}/${target.needed} consecutive ${rawStatus} checks.`
+                  : null;
+              })()}
             </div>
           )}
 

@@ -314,10 +314,6 @@ export async function computeReserveCompositionOverview(
     const hasSnapshot = hasConsistentSnapshotRow(sync, composition);
     const successAt = hasSnapshot ? sync!.last_success_at : null;
 
-    if (sync && (sync.last_status !== "ok" || (sync.last_success_at != null && !hasSnapshot))) {
-      degradedCoins++;
-    }
-
     if (!successAt || !composition) {
       missingCoins++;
       continue;
@@ -328,6 +324,11 @@ export async function computeReserveCompositionOverview(
 
     if (ageSec > freshnessSec) {
       staleCoins++;
+      continue;
+    }
+
+    if (sync && (sync.last_status !== "ok" || (sync.last_success_at != null && !hasSnapshot))) {
+      degradedCoins++;
       continue;
     }
 

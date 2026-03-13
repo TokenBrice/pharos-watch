@@ -3,9 +3,8 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { CronResult } from "../lib/db";
-
-const DISCOVERY_MIN_MCAP = 5_000_000;
 const DISMISSED_CLEANUP_DAYS = 90;
 
 export interface DiscoveryCandidateRow {

@@ -1,3 +1,8 @@
+import {
+  STATUS_BLACKLIST_THRESHOLDS,
+  STATUS_MISSING_PRICE_THRESHOLDS,
+  STATUS_ONCHAIN_THRESHOLDS,
+} from "@shared/lib/status-thresholds";
 import { Card, CardContent } from "@/components/ui/card";
 import { HOUR_SECONDS } from "@/lib/constants";
 
@@ -53,7 +58,7 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
       label: "Missing Prices",
       value: dq.stablecoinsCacheStatus === "error" ? "ERR" : dq.missingPrices,
       detail: dq.stablecoinsCacheStatus === "ok"
-        ? `${dq.missingPrices}/${dq.totalStablecoins} (${(missingPriceRatio * 100).toFixed(1)}%) · warn >15%, stale >40%`
+        ? `${dq.missingPrices}/${dq.totalStablecoins} (${(missingPriceRatio * 100).toFixed(1)}%) · warn >${(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded * 100).toFixed(0)}%, stale >${(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale * 100).toFixed(0)}%`
         : dq.stablecoinsCacheStatus === "degraded"
           ? `${dq.missingPrices}/${dq.totalStablecoins} (${(missingPriceRatio * 100).toFixed(1)}%) · ${cacheIssueDetail}`
           : cacheIssueDetail,
@@ -61,9 +66,9 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
         ? "red"
         : dq.stablecoinsCacheStatus === "degraded"
           ? "amber"
-          : missingPriceRatio > 0.4
+          : missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale
             ? "red"
-            : missingPriceRatio > 0.15
+            : missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded
               ? "amber"
               : "green",
     },
@@ -72,12 +77,12 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
       value: blacklistQueryFailed ? "ERR" : dq.blacklistMissingAmounts,
       detail: blacklistQueryFailed
         ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "blacklist-gaps")?.message ?? "blacklist gaps unavailable"}`
-        : `${dq.blacklistMissingAmounts}/${dq.blacklistTotal} (${(dq.blacklistMissingRatio * 100).toFixed(2)}%) · recent ${dq.blacklistRecentMissingAmounts}/${Math.round(dq.blacklistRecentWindowSec / HOUR_SECONDS)}h · warn >=0.5%, stale >=2%`,
+        : `${dq.blacklistMissingAmounts}/${dq.blacklistTotal} (${(dq.blacklistMissingRatio * 100).toFixed(2)}%) · recent ${dq.blacklistRecentMissingAmounts}/${Math.round(dq.blacklistRecentWindowSec / HOUR_SECONDS)}h · warn >=${(STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded * 100).toFixed(1)}%, stale >=${(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale * 100).toFixed(0)}%`,
       severity: blacklistQueryFailed
         ? "red"
-        : dq.blacklistMissingRatio >= 0.02
+        : dq.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
         ? "red"
-        : dq.blacklistRecentMissingAmounts > 0 || dq.blacklistMissingRatio >= 0.005
+        : dq.blacklistRecentMissingAmounts > 0 || dq.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
           ? "amber"
           : "green",
     },
@@ -88,12 +93,12 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
         ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "onchain-supply")?.message ?? "on-chain supply unavailable"}`
         : onchainUnavailable
         ? "monitor unavailable"
-        : `${dq.onchainSupplyDivergences}/${dq.onchainSupplyTrackedCoins} (${(dq.onchainDivergenceRatio * 100).toFixed(1)}%) >5% off · warn >=10%, stale >=25%`,
+        : `${dq.onchainSupplyDivergences}/${dq.onchainSupplyTrackedCoins} (${(dq.onchainDivergenceRatio * 100).toFixed(1)}%) >5% off · warn >=${(STATUS_ONCHAIN_THRESHOLDS.ratioDegraded * 100).toFixed(0)}%, stale >=${(STATUS_ONCHAIN_THRESHOLDS.ratioStale * 100).toFixed(0)}%`,
       severity: onchainQueryFailed
         ? "red"
         : onchainUnavailable
         ? "neutral"
-        : dq.onchainDivergenceRatio >= 0.25 ? "red" : dq.onchainDivergenceRatio >= 0.1 ? "amber" : "green",
+        : dq.onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ? "red" : dq.onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ? "amber" : "green",
     },
     {
       label: "Active Depegs",
@@ -110,12 +115,12 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
         ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "onchain-supply")?.message ?? "on-chain freshness unavailable"}`
         : onchainUnavailable
         ? onchainStalenessDetail
-        : `${onchainStalenessDetail} · ${(dq.onchainStaleRatio * 100).toFixed(1)}% · latest sample ${onchainLatestAge != null ? `${Math.round(onchainLatestAge / HOUR_SECONDS)}h ago` : "—"} · warn >=10%, stale >=25%`,
+        : `${onchainStalenessDetail} · ${(dq.onchainStaleRatio * 100).toFixed(1)}% · latest sample ${onchainLatestAge != null ? `${Math.round(onchainLatestAge / HOUR_SECONDS)}h ago` : "—"} · warn >=${(STATUS_ONCHAIN_THRESHOLDS.ratioDegraded * 100).toFixed(0)}%, stale >=${(STATUS_ONCHAIN_THRESHOLDS.ratioStale * 100).toFixed(0)}%`,
       severity: onchainQueryFailed
         ? "red"
         : onchainUnavailable
         ? "neutral"
-        : dq.onchainStaleRatio >= 0.25 ? "red" : dq.onchainStaleRatio >= 0.1 ? "amber" : "green",
+        : dq.onchainStaleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ? "red" : dq.onchainStaleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ? "amber" : "green",
     },
   ];
 

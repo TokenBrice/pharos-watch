@@ -48,7 +48,7 @@ export function EndpointHealthGrid({ probes, isLoading }: EndpointHealthGridProp
           divergence.
         </p>
         <p className="text-xs text-muted-foreground">
-          {probeList.length > 0 ? `${passCount}/${probeList.length} passing, ${failCount} failing or unreachable.` : "No browser probe samples yet."} Probe coverage skips routes that require volatile parameters or a known dated snapshot, such as digest snapshots.
+          {probeList.length > 0 ? `${passCount}/${probeList.length} passing, ${failCount} failing or unreachable.` : "No browser probe samples yet."} Skips endpoints without a probe group: digest-snapshot (date-specific), feedback and telegram-webhook (POST-only).
         </p>
         {GROUP_LABELS.map(({ key, label }) => {
           const paths = [...ENDPOINT_GROUPS[key]];

@@ -6,8 +6,8 @@ Analytics dashboard tracking 156 stablecoins (+2 shadow assets for PSI). Static 
 
 ## Folder Structure
 
-All agents plans (design or implementation), as well as research and processes documents are placed in the `/agents/` folder.
-**`/docs/` is to be used for application-related documentation only**
+All agent-produced plans, audits, research, and process notes live in the `/agents/` folder. Treat `/agents/` as a working-artifact archive, not as the canonical source of truth over live code or `/docs/`.
+**`/docs/` is the verified application documentation corpus**
 
 ## cmcs — Orchestration
 
@@ -52,6 +52,7 @@ src/app/         — Pages (homepage, blacklist, cemetery, compare, coverage, de
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
+functions/       — Cloudflare Pages Functions for ops-host gating and `/api/admin/*` proxying
 shared/lib/      — Runtime-neutral shared modules (stablecoin metadata, supply/classification/peg/report-card logic)
 worker/src/cron/ — Data sync crons
 worker/src/api/  — REST API handlers (router-dispatched endpoints + dynamic stablecoin detail)
@@ -100,6 +101,8 @@ Read these when working on related code:
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
 - **`docs/report-cards.md`** — Grading dimensions, weights, thresholds, dependency propagation, portfolio analyzer, stress test
 - **`docs/methodology-page.md`** — `/methodology` page section-to-source mapping and update contract
+- **`docs/homepage.md`** — `/` dashboard composition, filter/query contract, and Start Here callout behavior
+- **`docs/start-page.md`** — `/start/` onboarding route, curated route map, and homepage integration contract
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
 - **`docs/data-flow-map.md`** — End-to-end external source → cron → D1 → API → hook → page map
 - **`docs/stablecoin-detail-page.md`** — `/stablecoin/[id]/` route shell, section composition, and fallback/staleness rules
@@ -110,6 +113,8 @@ Read these when working on related code:
 - **`docs/design-language.md`** — Typography, spacing, cards, tables, charts, interactive states, loading/error patterns
 - **`docs/testing.md`** — Test & lint setup, conventions, CI pipeline, adding new tests
 - **`docs/deployment-process.md`** — Deploy workflow, worktree merge flow, merge gate behavior
+- **`docs/about-page.md`** — `/about/` section contract, data-source copy surface, and update rules
+- **`docs/coverage-page.md`** — `/coverage/` matrix contract, source mapping, and update rules
 - **`docs/feedback-pipeline.md`** — Feedback widget, POST /api/feedback, rate limiting, auto-verification, GitHub routing, env vars
 - **`docs/digest-pipeline.md`** — Daily digest generation, LLM call, D1 storage, Twitter + Telegram distribution, API endpoints, frontend, SSG pipeline
 - **`docs/depeg-detection.md`** — Two-stage depeg detection, thresholds, confirmation flow, event lifecycle, peg score formula
@@ -122,7 +127,7 @@ Read these when working on related code:
 - **`docs/yield-intelligence.md`** — Yield pipeline: four-tier APY resolution, PYS formula, T-bill rate, warning signals, DB schema, API endpoints, frontend
 - **`docs/dews.md`** — DEWS formula, 8 sub-signals, threat bands, normalization, API endpoint
 - **`docs/report-cards-timeline.md`** — Report card history tracking, grade change persistence, timeline UI
-- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (10 trigger slots, 23 scheduled jobs / 22 status-tracked jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
+- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (10 trigger slots, 24 scheduled runtime jobs / 23 status-tracked jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, cemetery announcements, USDS, bluechip)
 - **`docs/telegram-alerts.md`** — Telegram webhook commands, D1 subscription tables, alert dispatch snapshots, bot ops
 - **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
 - **`docs/scripts.md`** — Operational and CI helper scripts in `scripts/`

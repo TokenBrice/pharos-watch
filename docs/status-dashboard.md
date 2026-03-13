@@ -192,7 +192,7 @@ Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-c
 
 The public `/api/health` lane now keys mint/burn freshness to the critical-lane sync timestamp / latest run status rather than raw event timestamps, matching the `/flows` semantics and avoiding quiet-period false stale alerts.
 
-`dataQuality.onchainSupplyMonitoring === "unavailable"` still renders in the quality cards, but it is no longer promoted to an active cause/watchlist item on its own while the on-chain supply monitor has no live producer.
+`dataQuality.onchainSupplyMonitoring === "unavailable"` renders in the quality cards and emits an info-level `onchain_monitor_unavailable` cause. This cause appears in the blocker list but does not affect health status.
 
 ### Overall status
 
@@ -406,6 +406,8 @@ Each row shows:
 - absolute USD difference
 - raw flow net, raw chain delta, and ratio
 
+Severity thresholds are defined in `shared/lib/status-thresholds.ts` (`STATUS_RECONCILIATION_THRESHOLDS`): critical at >$100M absolute or >30% ratio, warn at >$25M or >12%.
+
 This is an operator integrity signal, not a public user-facing score. Large gaps typically mean one of:
 
 - flow coverage is still partial or newly bootstrapping
@@ -430,6 +432,7 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`); admin probes switch to same-origin proxy mode on the ops host                                                                                                                                     |
 | `src/hooks/use-status-history.ts`                    | Shared polling policy for `/api/status-history` + dashboard time-window filters through the ops-host same-origin proxy                                                                                                                                                                 |
 | `functions/api/admin/[[path]].ts`                    | Pages Functions admin proxy: ops-host gating, upstream method/path allowlisting, and service-token forwarding to `ops-api.pharos.watch`                                                                                                                                                |
+| `shared/lib/status-thresholds.ts`                    | Single source of truth for all status thresholds (cache ratios, missing prices, blacklist gaps, on-chain supply, price confidence bands, reconciliation, discovery mcap) — imported by both worker and frontend |
 | `shared/lib/cron-jobs.ts`                            | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |
 | `shared/lib/api-endpoints.ts`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                        |
 | `worker/src/route-registry.ts`                       | Static route binding registry keyed by shared endpoint metadata                                                                                                                                                                                                                        |

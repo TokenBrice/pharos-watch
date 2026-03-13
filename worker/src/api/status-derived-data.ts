@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type {
   MintBurnReconciliationRow,
@@ -409,9 +410,9 @@ export async function getMintBurnReconciliation(
       );
       const diffRatio = denominator > 0 ? absoluteDiffUsd / denominator : 0;
       const status: MintBurnReconciliationRow["status"] =
-        absoluteDiffUsd >= 100_000_000 || diffRatio >= 0.3
+        absoluteDiffUsd >= STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd || diffRatio >= STATUS_RECONCILIATION_THRESHOLDS.criticalRatio
           ? "critical"
-          : absoluteDiffUsd >= 25_000_000 || diffRatio >= 0.12
+          : absoluteDiffUsd >= STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd || diffRatio >= STATUS_RECONCILIATION_THRESHOLDS.warnRatio
             ? "warn"
             : "ok";
 

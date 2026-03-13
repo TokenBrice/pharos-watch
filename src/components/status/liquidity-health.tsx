@@ -91,13 +91,23 @@ export function LiquidityHealthCard({ health }: { health: LiquidityHealth | null
 
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <span className={guardTone(health.nearCoverageGuard)}>
-            Row guard: {health.nearCoverageGuard ? "near threshold" : "normal"}
+            Row guard: {health.nearCoverageGuard
+              ? `${health.currentCoverage}/${health.previousCoverage ?? "?"} (<80%)`
+              : `${health.currentCoverage}/${health.previousCoverage ?? "?"}`}
           </span>
           <span className={guardTone(health.nearValueGuard)}>
-            Value guard: {health.nearValueGuard ? "near threshold" : "normal"}
+            Value guard: {health.nearValueGuard
+              ? `${health.currentGlobalTvl != null ? formatCurrency(health.currentGlobalTvl) : "?"}/${health.previousGlobalTvl != null ? formatCurrency(health.previousGlobalTvl) : "?"} (<85%)`
+              : health.currentGlobalTvl != null && health.previousGlobalTvl != null
+                ? `${formatCurrency(health.currentGlobalTvl)}/${formatCurrency(health.previousGlobalTvl)}`
+                : "no data"}
           </span>
           <span className={guardTone(health.nearMajorCoverageGuard)}>
-            Major coverage guard: {health.nearMajorCoverageGuard ? "near threshold" : "normal"}
+            Major guard: {health.nearMajorCoverageGuard
+              ? `${health.currentTop10CoveredTvl != null ? formatCurrency(health.currentTop10CoveredTvl) : "?"}/${health.previousTop10CoveredTvl != null ? formatCurrency(health.previousTop10CoveredTvl) : "?"} (<85%)`
+              : health.currentTop10CoveredTvl != null && health.previousTop10CoveredTvl != null
+                ? `${formatCurrency(health.currentTop10CoveredTvl)}/${formatCurrency(health.previousTop10CoveredTvl)}`
+                : "no data"}
           </span>
         </div>
 

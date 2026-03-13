@@ -182,6 +182,13 @@ describe("api endpoint registry", () => {
         method: "POST",
       },
       {
+        label: "Reclassify Roundtrips",
+        path: "/api/reclassify-atomic-roundtrips",
+        confirm: "Reclassify atomic roundtrips in mint/burn data?",
+        destructive: false,
+        method: "POST",
+      },
+      {
         label: "Audit Depegs",
         path: "/api/audit-depeg-history?dry-run=true",
         confirm: "Run depeg history audit (dry-run)?",

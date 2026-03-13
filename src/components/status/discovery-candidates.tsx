@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
+import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { DiscoveryCandidate } from "@shared/types";
 import { useState } from "react";
 import { formatAge } from "./format";
@@ -47,7 +48,7 @@ export function DiscoveryCandidatesCard({
           <CardTitle className="text-base">Coverage Discovery</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No untracked stablecoins above $5M found.</p>
+          <p className="text-sm text-muted-foreground">No untracked stablecoins above ${formatMcap(DISCOVERY_MIN_MCAP)} found.</p>
         </CardContent>
       </Card>
     );

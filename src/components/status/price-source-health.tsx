@@ -1,5 +1,6 @@
 "use client";
 
+import { STATUS_PRICE_CONFIDENCE_BANDS } from "@shared/lib/status-thresholds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PriceSourceHealth } from "@shared/types";
 import { useState } from "react";
@@ -24,10 +25,10 @@ function MetricCard({ label, value, pct, severity }: { label: string; value: num
 function confidenceSeverity(label: string, value: number, total: number): string {
   if (label === "High") {
     const pct = total > 0 ? (value / total) * 100 : 0;
-    return pct > 85 ? "green" : pct > 70 ? "amber" : "red";
+    return pct > STATUS_PRICE_CONFIDENCE_BANDS.highPctGreen ? "green" : pct > STATUS_PRICE_CONFIDENCE_BANDS.highPctAmber ? "amber" : "red";
   }
-  if (label === "Missing") return value === 0 ? "green" : value <= 3 ? "amber" : "red";
-  if (label === "Low") return value <= 5 ? "neutral" : value <= 10 ? "amber" : "red";
+  if (label === "Missing") return value === 0 ? "green" : value <= STATUS_PRICE_CONFIDENCE_BANDS.missingCountAmber ? "amber" : "red";
+  if (label === "Low") return value <= STATUS_PRICE_CONFIDENCE_BANDS.lowCountAmber ? "neutral" : value <= STATUS_PRICE_CONFIDENCE_BANDS.lowCountRed ? "amber" : "red";
   return "neutral";
 }
 

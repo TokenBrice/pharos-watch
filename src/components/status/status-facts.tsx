@@ -1,5 +1,6 @@
 "use client";
 
+import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { StatusCause, StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminAccess } from "@/lib/admin-access";
@@ -118,9 +119,9 @@ export function StatusFacts({
     {
       label: "Worst Cache Ratio",
       value: `${summary.worstCacheRatio.toFixed(2)}x`,
-      tone: summary.worstCacheRatio > 2
+      tone: summary.worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale
         ? "text-red-600 dark:text-red-400"
-        : summary.worstCacheRatio > 1.5
+        : summary.worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded
           ? "text-amber-600 dark:text-amber-400"
           : "text-green-600 dark:text-green-400",
     },
@@ -140,7 +141,7 @@ export function StatusFacts({
       tone: dbHealthy ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400",
     },
   ];
-  const activeCauses = [...causes.availability, ...causes.dataQuality];
+  const activeCauses = causes.overall;
 
   return (
     <Card>

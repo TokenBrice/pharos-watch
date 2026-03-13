@@ -15,8 +15,10 @@ import {
 import { CRON_INTERVALS } from "../lib/cron-schedule";
 import {
   STATUS_BLACKLIST_THRESHOLDS,
+  STATUS_CACHE_RATIO_THRESHOLDS,
+  STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_ONCHAIN_THRESHOLDS,
-} from "../lib/status-thresholds";
+} from "@shared/lib/status-thresholds";
 import {
   emptyDatasetFreshness,
   emptyReserveComposition,
@@ -392,9 +394,9 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
 
   // 5. Raw status synthesis
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
-    worstCacheRatio > 2 || anyCronError || unhealthyCrons >= 3
+    worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale || anyCronError || unhealthyCrons >= 3
       ? "stale"
-      : worstCacheRatio > 1.5 || unhealthyCrons > 0
+      : worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded || unhealthyCrons > 0
         ? "degraded"
         : "healthy";
   const availabilityStatus: StatusResponse["availabilityStatus"] = dbHealthy
@@ -403,7 +405,7 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
 
   const dataQualityStatus: StatusResponse["dataQualityStatus"] =
     dataQuality.stablecoinsCacheStatus === "error" ||
-    missingPriceRatio > 0.4 ||
+    missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale ||
     blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
     blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale ||
     staleOnchainSupply >= STATUS_ONCHAIN_THRESHOLDS.staleAbsoluteStale ||
@@ -414,7 +416,7 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       ? "stale"
       : dataQuality.stablecoinsCacheStatus === "degraded" ||
           dataQuality.sourceFailures.length > 0 ||
-          missingPriceRatio > 0.15 ||
+          missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||
           blacklistRecentMissing > 0 ||
           blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
           staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
@@ -435,25 +437,25 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       message: "Primary database connectivity check failed; data-quality queries were skipped.",
     });
   }
-  if (worstCacheRatio > 2) {
+  if (worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
     pushCause(availabilityCauses, {
       code: "cache_ratio_stale",
       layer: "availability",
       severity: "critical",
-      message: `Cache freshness exceeded stale threshold (${worstCacheRatio.toFixed(2)}x > 2.00x).`,
+      message: `Cache freshness exceeded stale threshold (${worstCacheRatio.toFixed(2)}x > ${STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x).`,
       metric: "worstCacheRatio",
       value: worstCacheRatio,
-      threshold: 2,
+      threshold: STATUS_CACHE_RATIO_THRESHOLDS.stale,
     });
-  } else if (worstCacheRatio > 1.5) {
+  } else if (worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded) {
     pushCause(availabilityCauses, {
       code: "cache_ratio_degraded",
       layer: "availability",
       severity: "warning",
-      message: `Cache freshness exceeded degraded threshold (${worstCacheRatio.toFixed(2)}x > 1.50x).`,
+      message: `Cache freshness exceeded degraded threshold (${worstCacheRatio.toFixed(2)}x > ${STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x).`,
       metric: "worstCacheRatio",
       value: worstCacheRatio,
-      threshold: 1.5,
+      threshold: STATUS_CACHE_RATIO_THRESHOLDS.degraded,
     });
   }
   if (cacheFailures.length > 0) {
@@ -564,25 +566,25 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       message: "Live reserve composition overview query failed; reserve freshness status may be incomplete.",
     });
   }
-  if (missingPriceRatio > 0.4) {
+  if (missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale) {
     pushCause(dataQualityCauses, {
       code: "missing_prices_stale",
       layer: "data-quality",
       severity: "critical",
-      message: `Missing price ratio is stale (${formatRatio(missingPriceRatio)} > 40%).`,
+      message: `Missing price ratio is stale (${formatRatio(missingPriceRatio)} > ${formatRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale)}).`,
       metric: "missingPriceRatio",
       value: missingPriceRatio,
-      threshold: 0.4,
+      threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale,
     });
-  } else if (missingPriceRatio > 0.15) {
+  } else if (missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded) {
     pushCause(dataQualityCauses, {
       code: "missing_prices_degraded",
       layer: "data-quality",
       severity: "warning",
-      message: `Missing price ratio is degraded (${formatRatio(missingPriceRatio)} > 15%).`,
+      message: `Missing price ratio is degraded (${formatRatio(missingPriceRatio)} > ${formatRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded)}).`,
       metric: "missingPriceRatio",
       value: missingPriceRatio,
-      threshold: 0.15,
+      threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded,
     });
   }
   if (
@@ -637,6 +639,14 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
         threshold: STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,
       });
     }
+  }
+  if (!hasActiveOnchainMonitor && dataQuality.onchainSupplyMonitoring === "unavailable") {
+    pushCause(dataQualityCauses, {
+      code: "onchain_monitor_unavailable",
+      layer: "data-quality",
+      severity: "info",
+      message: "On-chain supply monitor has no active producer. On-chain integrity checks are skipped.",
+    });
   }
   if (reserveCompositionCritical) {
     pushCause(dataQualityCauses, {

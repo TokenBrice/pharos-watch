@@ -1,4 +1,4 @@
-import { BLACKLIST_RECENT_WINDOW_SEC } from "./status-thresholds";
+import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 
 export interface BlacklistGapMetrics {
   totalEvents: number;

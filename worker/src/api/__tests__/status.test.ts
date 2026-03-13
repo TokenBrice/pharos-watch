@@ -799,8 +799,9 @@ describe("handleStatus", () => {
     expect(body.dataQuality.staleOnchainSupply).toBe(0);
     expect(body.dataQuality.onchainSupplyDivergences).toBe(0);
     expect(body.dataQualityStatus).toBe("healthy");
-    expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(false);
-    expect(body.causes.overall.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(false);
+    // Info-level cause is emitted when monitor is unavailable (does not affect health status)
+    expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(true);
+    expect(body.causes.overall.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(true);
   });
 
   it("keeps data quality healthy when blacklist gaps are low-ratio and not recent", async () => {

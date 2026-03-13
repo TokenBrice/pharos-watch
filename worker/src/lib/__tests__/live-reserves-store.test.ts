@@ -109,9 +109,12 @@ describe("live-reserves-store", () => {
 
     const overview = await computeReserveCompositionOverview(db, 2_000);
 
+    // Inconsistent snapshot (sync.last_success_at !== composition.fetched_at) is treated as missing.
+    // The coin was already counted as missing in the empty overview, so counts don't change.
+    // Before the double-count fix, this coin was counted in BOTH missing AND degraded.
     expect(overview.missingCoins).toBe(emptyOverview.missingCoins);
     expect(overview.freshCoins).toBe(0);
-    expect(overview.degradedCoins).toBe(emptyOverview.degradedCoins + 1);
+    expect(overview.degradedCoins).toBe(emptyOverview.degradedCoins);
   });
 
   it("persists reserve composition and sync state together for successful snapshots", async () => {

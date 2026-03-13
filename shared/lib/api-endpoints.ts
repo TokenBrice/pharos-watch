@@ -515,6 +515,11 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: true,
     cacheBypass: true,
     probeGroup: "manual",
+    statusPageAction: {
+      label: "Reclassify Roundtrips",
+      confirm: "Reclassify atomic roundtrips in mint/burn data?",
+      method: "POST",
+    },
   },
   {
     key: "audit-depeg-history",

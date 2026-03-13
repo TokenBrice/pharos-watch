@@ -195,11 +195,14 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     triggerMode: "shared",
   },
   {
+    // Runs on the quarter-hourly trigger after a safe stablecoins cache write.
+    // The daily 08:00 UTC trigger is a safety-net fallback.
+    // intervalSec stays 86400 because the job only writes one snapshot per day.
     job: "snapshot-supply",
     label: "Supply snapshot",
-    group: "daily",
+    group: "quarter-hourly",
     intervalSec: 86400,
-    scheduleKey: "daily0800Utc",
+    scheduleKey: "quarterHourly",
     triggerMode: "shared",
   },
   {

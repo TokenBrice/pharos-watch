@@ -54,8 +54,8 @@ export function SystemDiagnostics({
   browserProbe,
   nowSeconds,
 }: SystemDiagnosticsProps) {
-  const evalAge = Math.max(0, nowSeconds - state.lastEvaluatedAt);
-  const changedAge = Math.max(0, nowSeconds - state.lastChangedAt);
+  const evalAge = state.lastEvaluatedAt > 0 ? Math.max(0, nowSeconds - state.lastEvaluatedAt) : null;
+  const changedAge = state.lastChangedAt > 0 ? Math.max(0, nowSeconds - state.lastChangedAt) : null;
   const browserProbeAgeSeconds = browserProbe?.updatedAt != null
     ? Math.max(0, nowSeconds - browserProbe.updatedAt)
     : null;
@@ -68,8 +68,8 @@ export function SystemDiagnostics({
           <div className="font-mono text-sm">
             {state.currentStatus} (raw: {state.rawStatus})
           </div>
-          <div className="text-xs text-muted-foreground">evaluated {formatAge(evalAge)} ago</div>
-          <div className="text-xs text-muted-foreground">changed {formatAge(changedAge)} ago</div>
+          <div className="text-xs text-muted-foreground">evaluated {evalAge != null ? `${formatAge(evalAge)} ago` : "never"}</div>
+          <div className="text-xs text-muted-foreground">changed {changedAge != null ? `${formatAge(changedAge)} ago` : "never"}</div>
           <div className="mt-1 text-xs text-muted-foreground">
             raw streak h/d/s {state.consecutiveRaw.healthy}/{state.consecutiveRaw.degraded}/{state.consecutiveRaw.stale}
           </div>
