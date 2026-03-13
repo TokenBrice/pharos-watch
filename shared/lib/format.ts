@@ -165,6 +165,18 @@ export function getNetPrefix(value: number): string {
   return value > 0 ? "+" : "";
 }
 
+/** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
+export function formatPercent(value: number | null | undefined, decimals = 2): string {
+  return value != null ? `${value.toFixed(decimals)}%` : "-";
+}
+
+/** Format a signed percentage with +/- prefix and % suffix. Returns "-" for nullish. */
+export function formatSignedPercent(value: number | null | undefined, decimals = 2): string {
+  if (value == null) return "-";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(decimals)}%`;
+}
+
 /** Format a 0-100 score to one decimal. Returns "-" for nullish values. */
 export function formatScore(value: number | null | undefined): string {
   return value != null ? value.toFixed(1) : "-";
