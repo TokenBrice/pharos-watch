@@ -56,10 +56,16 @@ async function run() {
   console.log(`[smoke-ops] Running checks against ${opsUiUrl} and ${opsApiBase}`);
 
   const ui = await fetchText(opsUiUrl, headers);
-  assert(ui.response.status === 200, `Expected ops UI 200, got ${ui.response.status}`);
-  assert(ui.body.includes("System Status"), "Ops UI did not render the System Status shell");
-  assert(!ui.body.includes("Operator tooling is no longer available on the public host."), "Ops UI returned the public-host fallback shell");
-  console.log("[smoke-ops] OK ops UI");
+  if (ui.response.status === 200) {
+    assert(ui.body.includes("System Status"), "Ops UI did not render the System Status shell");
+    assert(!ui.body.includes("Operator tooling is no longer available on the public host."), "Ops UI returned the public-host fallback shell");
+    console.log("[smoke-ops] OK ops UI via service token");
+  } else {
+    const location = ui.response.headers.get("Location") ?? "";
+    assert(ui.response.status === 302, `Expected ops UI 200 or 302, got ${ui.response.status}`);
+    assert(location.includes(".cloudflareaccess.com"), "Ops UI redirect did not point to Cloudflare Access");
+    console.log("[smoke-ops] OK ops UI access gate");
+  }
 
   const status = await fetchJson(new URL("/api/status", opsApiBase).toString(), headers);
   assert(status.response.status === 200, `Expected ops API /api/status 200, got ${status.response.status}`);
