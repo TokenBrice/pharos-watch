@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode, useState, useSyncExternalStore } from "react";
+import { Fragment, type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 import type { StatusResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
