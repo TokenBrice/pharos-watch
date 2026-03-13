@@ -5,6 +5,7 @@ import { ReportCardGrade, ReportCardGradeSchema } from "./report-cards";
 export interface AltYieldSource {
   sourceKey: string;
   yieldSource: string;
+  yieldSourceUrl?: string | null;
   yieldType: YieldType;
   currentApy: number;
   apy30d: number;
@@ -72,6 +73,7 @@ export interface YieldHistoryPoint {
   warningSignals: string[];
   sourceKey?: string | null;
   yieldSource?: string | null;
+  yieldSourceUrl?: string | null;
   yieldType?: YieldType | null;
   dataSource?: string | null;
   isBest?: boolean;
@@ -81,6 +83,7 @@ export interface YieldHistoryPoint {
 const AltYieldSourceSchema = z.object({
   sourceKey: z.string(),
   yieldSource: z.string(),
+  yieldSourceUrl: z.string().url().nullable().optional(),
   yieldType: YieldTypeSchema,
   currentApy: z.number(),
   apy30d: z.number(),
@@ -148,6 +151,7 @@ export interface YieldRanking {
   apyBase: number | null;
   apyReward: number | null;
   yieldSource: string;
+  yieldSourceUrl?: string | null;
   yieldType: YieldType;
   dataSource: string;
   sourceTvlUsd: number | null;
@@ -175,6 +179,7 @@ const YieldRankingSchema = z.object({
   apyBase: z.number().nullable(),
   apyReward: z.number().nullable(),
   yieldSource: z.string(),
+  yieldSourceUrl: z.string().url().nullable().optional(),
   yieldType: YieldTypeSchema,
   dataSource: z.string(),
   sourceTvlUsd: z.number().nullable(),

@@ -6,6 +6,7 @@ import {
   errorResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 
 interface YieldHistoryRow {
   recorded_at: number;
@@ -85,6 +86,11 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
       warningSignals: row.warning_signals ? JSON.parse(row.warning_signals) as string[] : [],
       sourceKey: normalizedSourceKey,
       yieldSource: row.yield_source,
+      yieldSourceUrl: resolveYieldSourceUrl({
+        stablecoinId: parsed.stablecoinId,
+        sourceKey: normalizedSourceKey,
+        yieldSource: row.yield_source,
+      }),
       yieldType: row.yield_type,
       dataSource: row.data_source,
       isBest: row.is_best === 1,

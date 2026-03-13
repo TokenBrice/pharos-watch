@@ -15,6 +15,7 @@ describe("handleYieldHistory", () => {
       apyReward: number | null; exchangeRate: number | null;
       sourceTvlUsd: number | null;
       sourceKey: string | null;
+      yieldSourceUrl: string | null;
       dataSource: string | null;
       isBest: boolean;
       sourceSwitch: boolean;
@@ -27,6 +28,7 @@ describe("handleYieldHistory", () => {
     expect(body[0]).toHaveProperty("exchangeRate");
     expect(body[0]).toHaveProperty("sourceTvlUsd");
     expect(body[0]).toHaveProperty("sourceKey");
+    expect(body[0]).toHaveProperty("yieldSourceUrl");
     expect(body[0]).toHaveProperty("dataSource");
     expect(body[0]).toHaveProperty("isBest");
     expect(body[0]).toHaveProperty("sourceSwitch");

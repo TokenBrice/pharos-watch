@@ -1271,6 +1271,7 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 | `apyBase`          | `number \| null` | Base APY component (%)                                          |
 | `apyReward`        | `number \| null` | Reward APY component (%), `null` if none                        |
 | `yieldSource`      | `string`         | Human-readable yield source description                         |
+| `yieldSourceUrl`   | `string \| null` | Official URL for the selected source when Pharos has a curated or metadata-derived link |
 | `yieldType`        | `string`         | Yield type classification (e.g. `"lending-vault"`, `"staking"`) |
 | `dataSource`       | `string`         | Data source identifier (e.g. `"defillama"`)                     |
 | `sourceTvlUsd`     | `number \| null` | TVL of the yield source pool (USD)                              |
@@ -1323,6 +1324,7 @@ Historical yield data for a single stablecoin.
     "warningSignals": [],
     "sourceKey": "rate-derived",
     "yieldSource": "T-bill proxy",
+    "yieldSourceUrl": "https://ondo.finance/usdy",
     "yieldType": "nav-appreciation",
     "dataSource": "rate-derived",
     "isBest": true,
@@ -1342,6 +1344,7 @@ Historical yield data for a single stablecoin.
 | `warningSignals` | `string[]`     | Active warning-signal flags at that snapshot                               |
 | `sourceKey`    | `string \| null` | Stable source identifier for this history row                              |
 | `yieldSource`  | `string \| null` | Human-readable source label at that snapshot                               |
+| `yieldSourceUrl` | `string \| null` | Official URL for that source when Pharos has a curated or metadata-derived link |
 | `yieldType`    | `string \| null` | Yield type classification at that snapshot                                 |
 | `dataSource`   | `string \| null` | Underlying data-source family                                              |
 | `isBest`       | `boolean`        | Whether this row was the selected best source at that timestamp            |

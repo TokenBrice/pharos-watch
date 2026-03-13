@@ -6,6 +6,7 @@ import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils"
 import { YieldRankingsResponseSchema, type AltYieldSource } from "@shared/types";
 import { setCache, batchExecute, buildInClause } from "../lib/db";
 import type { CronResult } from "../lib/db";
+import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import {
   PYS_SCALING_FACTOR,
   DEFAULT_SAFETY_SCORE,
@@ -768,6 +769,11 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     alts.push({
       sourceKey: row.source_key,
       yieldSource: row.yield_source,
+      yieldSourceUrl: resolveYieldSourceUrl({
+        stablecoinId: row.stablecoin_id,
+        sourceKey: row.source_key,
+        yieldSource: row.yield_source,
+      }),
       yieldType: row.yield_type as AltYieldSource["yieldType"],
       currentApy: row.current_apy,
       apy30d: row.apy_30d,

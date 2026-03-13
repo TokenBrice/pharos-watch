@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { YieldSourceLink } from "@/components/yield-source-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useYieldRankings } from "@/hooks/api-hooks";
@@ -283,7 +284,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           <div className="grid gap-3 rounded-xl border border-border/60 bg-background/40 p-4 sm:grid-cols-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Yield Source</p>
-              <p className="mt-2 text-sm font-medium text-foreground">{ranking.yieldSource}</p>
+              <div className="mt-2 text-sm font-medium text-foreground">
+                <YieldSourceLink href={ranking.yieldSourceUrl}>{ranking.yieldSource}</YieldSourceLink>
+              </div>
               {ranking.provenance?.selectionReason ? (
                 <p className="mt-1 text-xs text-muted-foreground">{ranking.provenance.selectionReason}</p>
               ) : null}
@@ -339,7 +342,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                     key={source.sourceKey}
                     className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2"
                   >
-                    <span className="truncate text-sm text-foreground">{source.yieldSource}</span>
+                    <YieldSourceLink href={source.yieldSourceUrl} className="max-w-full text-sm text-foreground">
+                      {source.yieldSource}
+                    </YieldSourceLink>
                     <span className="font-mono text-sm tabular-nums text-muted-foreground">
                       {source.currentApy.toFixed(2)}%
                     </span>

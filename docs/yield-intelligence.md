@@ -407,6 +407,7 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
       "apyBase": 10.2,
       "apyReward": null,
       "yieldSource": "Ethena staking (sUSDe)",
+      "yieldSourceUrl": "https://ethena.fi/",
       "yieldType": "lending-vault",
       "dataSource": "defillama",
       "sourceTvlUsd": 5200000000,
@@ -424,6 +425,7 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
         {
           "sourceKey": "ee0b7069-...",
           "yieldSource": "Concentrator (fxSAVE)",
+          "yieldSourceUrl": "https://fx.aladdin.club",
           "yieldType": "lending-vault",
           "currentApy": 9.1,
           "apy30d": 8.8,
@@ -446,6 +448,8 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
 ```
 
 Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics.
+
+Each best-source row and alt-source row can also include `yieldSourceUrl`. The worker resolves this from the curated yield-source link registry (`worker/src/lib/yield-source-links.ts`) and falls back to coin metadata links when no source-specific override exists.
 
 `medianApy` type: `number`.
 
@@ -473,6 +477,7 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 - `warningSignals`
 - `sourceKey`
 - `yieldSource`
+- `yieldSourceUrl`
 - `yieldType`
 - `dataSource`
 - `isBest`
@@ -498,7 +503,7 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 
-Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, alt sources, warning callouts, and embedded `YieldHistoryChart`. Conditional: only renders for coins with yield data.
+Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, source links, alt sources, warning callouts, and embedded `YieldHistoryChart`. Conditional: only renders for coins with yield data.
 
 It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the shared risk-free rate and peer median into `YieldHistoryChart`.
 
@@ -509,7 +514,7 @@ It reuses the cached `/api/yield-rankings` payload to find the coin's best-sourc
    - 2+ active signals: amber callout block listing every warning label
    - 1 active signal: compact inline alert row
 3. Five stat cards: Current APY, 30d APY, PYS (with click/focus disclosure for the score breakdown), Stability, Excess Yield
-4. Source info row: source name, normalized data-source badge, source TVL
+4. Source info row: clickable source name, normalized data-source badge, source TVL
 5. Alternative sources list when `altSources.length > 0`
 6. Shared `YieldHistoryChart`
 
@@ -554,9 +559,9 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 **Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `data-stale`).
 
-**Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name and its current APY.
+**Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name, clickable source link, and current APY.
 
-**Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The panel passes the page-level `riskFreeRate` and `medianApy` benchmarks into the chart's compact mode, and only one row can remain expanded at a time.
+**Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, passes the page-level `riskFreeRate` and `medianApy` benchmarks into compact mode, and only one row can remain expanded at a time.
 
 ### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
 
@@ -629,6 +634,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | Yield sync orchestration and stage modules: source loading, multi-source matching, PYS, safety scores, caching |
 | `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`, `RATE_DERIVED_CONFIGS`                                        |
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
+| `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
 | `worker/src/cron/fetch-tbill-rate.ts`                | Daily T-bill rate cron                                                                                                                       |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler (`handleYieldRankings`)                                                                       |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |

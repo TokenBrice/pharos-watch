@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { YieldSourceLink } from "@/components/yield-source-link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { formatCurrency, formatScore, formatApy } from "@shared/lib/format";
@@ -86,7 +87,9 @@ function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
           <p className="text-muted-foreground mb-1.5 font-medium">Alt sources</p>
           {altSources.map((src) => (
             <div key={src.sourceKey} className="flex items-center justify-between gap-2 py-1 border-b last:border-0">
-              <span className="truncate text-foreground">{src.yieldSource}</span>
+              <YieldSourceLink href={src.yieldSourceUrl} className="max-w-[180px] text-foreground" stopPropagation>
+                {src.yieldSource}
+              </YieldSourceLink>
               <span className="font-mono text-emerald-700 dark:text-emerald-400 shrink-0">
                 {formatApy(src.currentApy)}
               </span>
@@ -305,7 +308,14 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
                         <div className="flex items-center gap-1" title={row.provenance?.selectionReason ?? row.yieldSource}>
-                          <span className="truncate">{row.yieldSource}</span>
+                          <YieldSourceLink
+                            href={row.yieldSourceUrl}
+                            className="max-w-[160px]"
+                            iconClassName="h-3 w-3"
+                            stopPropagation
+                          >
+                            {row.yieldSource}
+                          </YieldSourceLink>
                           {row.provenance?.sourceSwitch ? (
                             <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
                               switch
@@ -399,6 +409,24 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                     {visibleExpandedId === row.id && (
                       <TableRow>
                         <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/55 px-3 py-2.5">
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                                Yield Source
+                              </p>
+                              <div className="mt-1 flex min-w-0 items-center gap-2">
+                                <YieldSourceLink href={row.yieldSourceUrl} className="text-sm font-medium text-foreground" stopPropagation>
+                                  {row.yieldSource}
+                                </YieldSourceLink>
+                                {row.provenance?.sourceSwitch ? (
+                                  <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
+                                    switch
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            {(row.altSources?.length ?? 0) > 0 ? <AltSourcesPopover altSources={row.altSources} /> : null}
+                          </div>
                           <YieldHistoryChart
                             stablecoinId={row.id}
                             riskFreeRate={riskFreeRate}

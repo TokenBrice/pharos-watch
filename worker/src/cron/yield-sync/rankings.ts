@@ -1,5 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { AltYieldSource } from "@shared/types";
+import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 
 export function rowToRanking(row: Record<string, unknown>) {
   const stablecoinId = String(row.stablecoin_id);
@@ -15,6 +16,11 @@ export function rowToRanking(row: Record<string, unknown>) {
     apyBase: row.apy_base,
     apyReward: row.apy_reward,
     yieldSource: row.yield_source,
+    yieldSourceUrl: resolveYieldSourceUrl({
+      stablecoinId,
+      sourceKey: typeof row.source_key === "string" ? row.source_key : null,
+      yieldSource: typeof row.yield_source === "string" ? row.yield_source : null,
+    }),
     yieldType: row.yield_type,
     dataSource: row.data_source,
     sourceTvlUsd: row.source_tvl_usd,

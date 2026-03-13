@@ -141,7 +141,7 @@ That shared retry is used by the page-level error surfaces.
 | `CoinNotices` | Coin-specific warnings/info blocks from metadata |
 | `McapChart` | Historical supply / market-cap chart |
 | `KeyInfoCard` | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction |
-| `YieldDetailSection` | Yield rankings row, warnings, history chart, alt-source/provenance detail |
+| `YieldDetailSection` | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail |
 | `FlowsSection` | Per-coin mint/burn summary plus event history embed |
 | `DexLiquidityCard` | Liquidity score, top pools, DEX-implied price context |
 | `DepegHistory` | Historical depeg timeline for non-NAV assets |
