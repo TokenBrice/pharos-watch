@@ -5,6 +5,7 @@ import {
   fetchJsonWithRetry,
   getJsonPath,
   isHttpJsonInput,
+  isReserveRisk,
   requireOnchainInput,
 } from "./helpers";
 
@@ -25,6 +26,9 @@ function readParams(config: LiveReservesConfig): SingleAssetParams {
   const params = (config.params ?? {}) as Partial<SingleAssetParams>;
   if (!params.label || !params.risk) {
     throw new Error("single-asset adapter requires params.label and params.risk");
+  }
+  if (!isReserveRisk(params.risk)) {
+    throw new Error(`single-asset adapter: invalid risk value "${params.risk}"`);
   }
   return params as SingleAssetParams;
 }

@@ -1,6 +1,7 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
-import { fetchDefiLlamaPrices, fetchJsonWithRetry, requireJsonInput, slicesFromUsdValues } from "./helpers";
+import { fetchDefiLlamaPrices, fetchJsonWithRetry, requireJsonInput, slicesFromValues } from "./helpers";
 
 interface FxPoolInfo {
   collateralBalance?: string;
@@ -13,8 +14,8 @@ interface FxPayload {
 }
 
 const TOKEN_META = {
-  wstETH: { chain: "ethereum", address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", decimals: 18, risk: "low" as const, name: "wstETH (Lido)" },
-  wbtc: { chain: "ethereum", address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", decimals: 8, risk: "medium" as const, name: "WBTC" },
+  wstETH: { chain: "ethereum", address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", decimals: 18, risk: getCanonicalReserveAssetRisk("WSTETH") ?? "low", name: "wstETH (Lido)" },
+  wbtc: { chain: "ethereum", address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", decimals: 8, risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium", name: "WBTC" },
 };
 
 export function adaptFx(payload: FxPayload): Array<{ key: keyof typeof TOKEN_META; amount: number }> {
@@ -49,14 +50,14 @@ export async function fetchFxReserves(
   );
 
   return {
-    slices: slicesFromUsdValues(
+    slices: slicesFromValues(
       balances.map(({ key, amount }) => {
         const price = priceMap.get(key);
         if (price == null) {
           throw new Error(`Missing DefiLlama price for ${key}`);
         }
         return {
-          usd: amount * price,
+          value: amount * price,
           name: TOKEN_META[key].name,
           risk: TOKEN_META[key].risk,
         };

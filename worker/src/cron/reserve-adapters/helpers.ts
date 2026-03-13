@@ -244,30 +244,6 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 0): ReserveSl
     .sort((a, b) => b.pct - a.pct);
 }
 
-export function slicesFromUsdValues(
-  values: Array<{
-    usd: number;
-    name: string;
-    risk: ReserveSlice["risk"];
-    coinId?: string;
-    depType?: ReserveSlice["depType"];
-  }>,
-): ReserveSlice[] {
-  const filtered = values.filter((value) => Number.isFinite(value.usd) && value.usd > 0);
-  const total = filtered.reduce((acc, value) => acc + value.usd, 0);
-  if (total <= 0) return [];
-
-  return normalizeSlices(
-    filtered.map((value) => ({
-      name: value.name,
-      pct: (value.usd / total) * 100,
-      risk: value.risk,
-      ...(value.coinId ? { coinId: value.coinId } : {}),
-      ...(value.depType ? { depType: value.depType } : {}),
-    })),
-  );
-}
-
 export function slicesFromValues(
   values: Array<{
     value: number;
