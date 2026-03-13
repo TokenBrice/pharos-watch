@@ -47,7 +47,20 @@ export function hasValidAdminCredential(
   return trustedAdmin === true || hasOpsApiAccessSignal(request);
 }
 
-/** Returns a 401 Response if the request lacks a valid admin signal, or null if authorized */
+/**
+ * Admin authentication provides two usage patterns:
+ *
+ * 1. `withAdmin(request, handler, trusted)` — callback wrapper (preferred).
+ *    Use when the entire handler body requires admin access.
+ *
+ * 2. `requireAdmin(request, trusted)` — guard pattern (returns Response | null).
+ *    Use when the handler needs pre-auth work before the main body,
+ *    or when auth is one of several early-return checks.
+ *
+ * Both patterns are project conventions. Choose based on handler structure.
+ *
+ * Returns a 401 Response if the request lacks a valid admin signal, or null if authorized.
+ */
 export async function requireAdmin(
   request: Request | undefined,
   trustedAdmin?: boolean,
