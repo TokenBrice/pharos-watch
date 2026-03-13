@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-WORKER_URL="${WORKER_URL:-https://api.pharos.watch}"
+WORKER_URL="${WORKER_URL:-https://ops-api.pharos.watch}"
 DEV_VARS="$(dirname "$0")/../worker/.dev.vars"
 
-# Read ADMIN_KEY from .dev.vars if not already set in environment
-if [[ -z "${ADMIN_KEY:-}" ]]; then
-  if [[ -f "$DEV_VARS" ]]; then
-    ADMIN_KEY=$(grep -E '^ADMIN_KEY' "$DEV_VARS" | sed 's/^ADMIN_KEY *= *//' | tr -d '"')
+AUTH_HEADERS=()
+
+if [[ -n "${OPS_API_SERVICE_TOKEN_ID:-}" && -n "${OPS_API_SERVICE_TOKEN_SECRET:-}" ]]; then
+  AUTH_HEADERS+=(
+    -H "CF-Access-Client-Id: $OPS_API_SERVICE_TOKEN_ID"
+    -H "CF-Access-Client-Secret: $OPS_API_SERVICE_TOKEN_SECRET"
+  )
+elif [[ -n "${ADMIN_KEY:-}" ]]; then
+  AUTH_HEADERS+=(-H "X-Admin-Key: $ADMIN_KEY")
+elif [[ -f "$DEV_VARS" ]]; then
+  ADMIN_KEY=$(grep -E '^ADMIN_KEY' "$DEV_VARS" | sed 's/^ADMIN_KEY *= *//' | tr -d '"' || true)
+  if [[ -n "${ADMIN_KEY:-}" ]]; then
+    AUTH_HEADERS+=(-H "X-Admin-Key: $ADMIN_KEY")
   fi
 fi
 
-if [[ -z "${ADMIN_KEY:-}" ]]; then
-  echo "Error: ADMIN_KEY not found in environment or worker/.dev.vars" >&2
+if [[ ${#AUTH_HEADERS[@]} -eq 0 ]]; then
+  echo "Error: set OPS_API_SERVICE_TOKEN_ID + OPS_API_SERVICE_TOKEN_SECRET, or provide ADMIN_KEY." >&2
   exit 1
 fi
 
@@ -34,7 +43,7 @@ for id in "${GOLD_COINS[@]}"; do
   echo -n "[$id] ... "
   response=$(curl -sf \
     -X POST \
-    -H "X-Admin-Key: $ADMIN_KEY" \
+    "${AUTH_HEADERS[@]}" \
     "$WORKER_URL/api/backfill-depegs?stablecoin=$id")
   echo "$response" | python3 -c "
 import sys, json

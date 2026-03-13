@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 import type { StatusResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
-import { AdminKeyForm } from "@/components/status/admin-key-form";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { CronCard } from "@/components/status/cron-card";
@@ -33,7 +33,6 @@ import {
   SummaryBadge,
 } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
-import { useAdminSessionKey } from "@/hooks/use-admin-session-key";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
 import { isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
 import {
@@ -59,24 +58,7 @@ export default function StatusClient() {
     () => isOpsUiHost(),
     () => null,
   );
-  const {
-    adminKey,
-    adminSessionRevision,
-    handleKeySubmit,
-    handleSignOut,
-    idleTimeoutMinutes,
-    lastExitReason,
-  } = useAdminSessionKey();
-  const adminAccess: AdminAccess = opsUi
-    ? { mode: "ops-proxy" }
-    : {
-        mode: "legacy-key",
-        adminKey,
-        adminSessionRevision,
-      };
-  const adminNotice = lastExitReason === "expired"
-    ? `Signed out after ${idleTimeoutMinutes} minutes of inactivity. Re-enter the admin key to continue.`
-    : undefined;
+  const adminAccess: AdminAccess = { mode: "ops-proxy" };
   const handleOpsSignOut = () => {
     window.location.assign("/cdn-cgi/access/logout");
   };
@@ -97,7 +79,7 @@ export default function StatusClient() {
     );
   }
 
-  if (!opsUi && !adminKey) {
+  if (!opsUi) {
     return (
       <FeaturePageShell
         breadcrumbName="System Status"
@@ -105,14 +87,30 @@ export default function StatusClient() {
         title="System Status"
         variant="auth-gated"
         leadParagraphs={[
-          "Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions.",
+          "This route exists, but the operator control plane no longer runs on the public host.",
         ]}
       >
-        <AdminKeyForm
-          onSubmit={handleKeySubmit}
-          notice={adminNotice}
-          idleTimeoutMinutes={idleTimeoutMinutes}
-        />
+        <div className="pt-4">
+          <div className="rounded-[1.6rem] border border-border/60 bg-background/35 p-6 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
+            <div className="space-y-3">
+              <p className="pharos-kicker">Private Surface</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                Operator tooling is no longer available on the public host.
+              </h2>
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Manual status operations now run behind the Access-protected ops host. Public `/status/` remains non-indexed, but it no longer accepts an in-browser admin key.
+              </p>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/"
+                className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm font-medium text-foreground hover:border-primary/45 hover:bg-primary/8"
+              >
+                Return to dashboard
+              </Link>
+            </div>
+          </div>
+        </div>
       </FeaturePageShell>
     );
   }
@@ -131,7 +129,7 @@ export default function StatusClient() {
     >
       <StatusDashboard
         adminAccess={adminAccess}
-        onSignOut={opsUi ? handleOpsSignOut : handleSignOut}
+        onSignOut={handleOpsSignOut}
       />
     </FeaturePageShell>
   );
@@ -201,7 +199,7 @@ function StatusDashboard({
       <div className="py-20 text-center">
         <div className="text-red-600 dark:text-red-400">{error.message}</div>
         <Button variant="outline" className="mt-4" onClick={onSignOut}>
-          Try a different key
+          Sign out
         </Button>
       </div>
     );

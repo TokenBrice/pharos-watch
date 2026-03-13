@@ -1697,13 +1697,23 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 
 ## Admin Endpoints
 
-These endpoints require an admin credential matching the `ADMIN_KEY` Worker secret. Browser/admin-page flows use `X-Admin-Key`; non-browser callers may also use `Authorization: Bearer <secret>`. Unauthorized requests receive a `401` response. They are not intended for public consumption.
+Preferred operator access now splits by surface:
+
+- Browser / human operators: use `https://ops.pharos.watch/status/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
+- CLI / automation: call `https://ops-api.pharos.watch/api/...` with `CF-Access-Client-Id` and `CF-Access-Client-Secret`.
+
+The underlying Worker still accepts `X-Admin-Key` or `Authorization: Bearer <secret>` for raw worker-origin admin calls, but that is now the fallback/internal path rather than the recommended operator flow.
 
 ### `GET /api/status`
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
 
-**Headers:** `X-Admin-Key: <secret>` or `Authorization: Bearer <secret>` (required)
+**Preferred access:**
+
+- Browser: `https://ops.pharos.watch/status/` -> same-origin `/api/admin/status`
+- CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
+
+**Raw worker fallback headers:** `X-Admin-Key: <secret>` or `Authorization: Bearer <secret>`
 
 **Response shape:** `StatusResponse` (defined in `shared/types/index.ts`)
 

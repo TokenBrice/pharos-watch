@@ -19,7 +19,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/test-merge-gate.mjs` | Delta-aware local gate for merged worktree changes | Local git diff + npm scripts | Runs targeted lint/test/coverage/type-check commands |
 | `scripts/update-critical-coverage-baseline.mjs` | Refresh `.ci/critical-coverage-baseline.json` from current report | `coverage/lcov.info` | Updates baseline coverage ratchet file |
 | `scripts/fetch-logos.ts` | Refresh logo map from DefiLlama + CoinGecko | Public APIs | Writes `data/logos.json` |
-| `scripts/backfill-gold-depegs.sh` | Batch-run depeg backfill for gold coins | `WORKER_URL`, `ADMIN_KEY` (or `worker/.dev.vars`) | Calls `/api/backfill-depegs?stablecoin=...` per gold coin |
+| `scripts/backfill-gold-depegs.sh` | Batch-run depeg backfill for gold coins | `WORKER_URL`, preferred `OPS_API_SERVICE_TOKEN_ID` + `OPS_API_SERVICE_TOKEN_SECRET`, fallback `ADMIN_KEY` (or `worker/.dev.vars`) | Calls `/api/backfill-depegs?stablecoin=...` per gold coin |
 | `scripts/register-telegram-webhook.sh` | One-time Telegram webhook registration | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | Calls Telegram `setWebhook` for `https://api.pharos.watch/api/telegram-webhook?secret=...` |
 | `scripts/screenshot-og.mjs` | Capture OG images for public pages | Playwright + live `pharos.watch` | Writes `public/og-*.png` |
 
@@ -40,8 +40,9 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 
 ### `backfill-gold-depegs.sh`
 
-- Reads `ADMIN_KEY` from environment first; falls back to `worker/.dev.vars`.
-- Defaults `WORKER_URL` to `https://api.pharos.watch`.
+- Prefers Access service-token auth via `OPS_API_SERVICE_TOKEN_ID` + `OPS_API_SERVICE_TOKEN_SECRET`.
+- Falls back to `ADMIN_KEY` from environment or `worker/.dev.vars` only when service-token env vars are absent.
+- Defaults `WORKER_URL` to `https://ops-api.pharos.watch`.
 - Uses `POST` requests (admin mutating endpoint contract).
 - Backfills the tracked gold stablecoins configured in the script (`xaut-tether`, `paxg-paxos`, `kau-kinesis`, `xaum-matrixdock`, `cgo-comtech`, `dgld-gold-token-sa`, `pgold-pleasing`, `ggbr-goldfish-gold`).
 

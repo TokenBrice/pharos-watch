@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, isAdminAccessEnabled, type AdminAccess } from "@/lib/admin-access";
+import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, type AdminAccess } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import type { EndpointProbeResult } from "@shared/types";
@@ -36,7 +36,7 @@ async function probeEndpoint(
       ? buildAdminApiPath(path, adminAccess)
       : path;
     const requestInit = ADMIN_PATHS.has(path)
-      ? buildAdminFetchInit(adminAccess)
+      ? buildAdminFetchInit()
       : undefined;
     const res = await fetch(buildRequestUrl(requestPath), {
       signal: controller.signal,
@@ -65,9 +65,9 @@ export function useEndpointProbes(
   adminAccess: AdminAccess,
 ): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
-    ["endpoint-probes", getAdminQueryScope(adminAccess)],
+    ["endpoint-probes", getAdminQueryScope()],
     () => Promise.all(ALL_ENDPOINTS.map((path) => probeEndpoint(path, adminAccess))),
     CRON_1MIN,
-    { enabled: isAdminAccessEnabled(adminAccess), retry: 0 },
+    { enabled: true, retry: 0 },
   );
 }

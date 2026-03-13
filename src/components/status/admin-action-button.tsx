@@ -50,7 +50,7 @@ export function AdminActionButton({
     try {
       const res = await fetch(buildRequestUrl(buildAdminApiPath(action.path, adminAccess)), {
         method: action.method,
-        ...buildAdminFetchInit(adminAccess),
+        ...buildAdminFetchInit(),
       });
       const text = await res.text();
 

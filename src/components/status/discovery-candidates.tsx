@@ -58,7 +58,7 @@ export function DiscoveryCandidatesCard({
     try {
       const res = await fetch(buildRequestUrl(buildAdminApiPath(`/api/discovery-candidates/${id}/dismiss`, adminAccess)), {
         method: "POST",
-        ...buildAdminFetchInit(adminAccess),
+        ...buildAdminFetchInit(),
       });
       if (res.ok) {
         setDismissed((prev) => new Set([...prev, id]));

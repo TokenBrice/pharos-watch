@@ -154,7 +154,7 @@ src/                              # Next.js frontend (static export)
 │   ├── about/                    # About & methodology
 │   │   ├── page.tsx
 │   │   └── error.tsx
-│   ├── status/                   # Admin status dashboard (not in nav)
+│   ├── status/                   # Operator status shell; interactive only on the Access-protected ops host
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
@@ -287,8 +287,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-blacklist-events.ts   # GET /api/blacklist
 │   ├── use-depeg-events.ts       # GET /api/depeg-events
 │   ├── use-endpoint-probes.ts    # Parallel endpoint probes (status page); public probes hit api.pharos.watch, admin probes switch to same-origin `/api/admin/*` on ops host
-│   ├── use-status.ts             # GET /api/status using either legacy admin-key auth or ops-host same-origin proxy mode
-│   ├── use-admin-session-key.ts  # In-memory-only admin key hook with idle expiry for auth-gated operator views
+│   ├── use-status.ts             # GET /api/status through the ops-host same-origin proxy
 │   ├── use-status-dashboard-model.ts # Status dashboard polling orchestration + derived operator model
 │   ├── use-coverage-matrix-model.ts # Coverage page query orchestration + derived row/snapshot model
 │   ├── use-compare-selection.ts  # Compare page URL state, slot selection, and preset application
@@ -309,7 +308,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-preferences.ts        # User preference state (persistent settings)
 │   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
-│   └── use-status-history.ts     # GET /api/status-history using either legacy admin-key auth or ops-host same-origin proxy mode
+│   └── use-status-history.ts     # GET /api/status-history through the ops-host same-origin proxy
 └── lib/
     ├── admin-access.ts           # Ops-host detection + admin proxy/header path helpers
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper (`/api/admin/*` stays same-origin)

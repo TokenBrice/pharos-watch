@@ -64,79 +64,7 @@ describe("query polling policy", () => {
     expect(options.retry).toBe(1);
   });
 
-  it("useStatus keeps admin-key enablement and no-retry policy without caching the raw key", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ ok: true }),
-    } as Response);
-    const adminAccess: AdminAccess = {
-      mode: "legacy-key",
-      adminKey: "admin-secret",
-      adminSessionRevision: 7,
-    };
-
-    useStatus(adminAccess);
-    const options = useQueryMock.mock.calls[0][0] as {
-      enabled: boolean;
-      retry: number;
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
-      queryFn: () => Promise<unknown>;
-    };
-
-    expect(options.enabled).toBe(true);
-    expect(options.retry).toBe(0);
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
-    expect(options.queryKey).toEqual(["status", 7]);
-
-    await options.queryFn();
-    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toContain("/api/status");
-    expect(init.headers).toBeInstanceOf(Headers);
-    expect((init.headers as Headers).get("X-Admin-Key")).toBe("admin-secret");
-  });
-
-  it("useEndpointProbes uses shared polling and passes admin key only to admin paths in legacy mode", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ ok: true }),
-    } as Response);
-    const adminAccess: AdminAccess = {
-      mode: "legacy-key",
-      adminKey: "ops-key",
-      adminSessionRevision: 11,
-    };
-
-    useEndpointProbes(adminAccess);
-    const options = useQueryMock.mock.calls[0][0] as {
-      enabled: boolean;
-      retry: number;
-      staleTime: number;
-      refetchInterval: number;
-      queryKey: unknown[];
-      queryFn: () => Promise<unknown[]>;
-    };
-
-    expect(options.enabled).toBe(true);
-    expect(options.retry).toBe(0);
-    expect(options.staleTime).toBe(CRON_1MIN);
-    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
-    expect(options.queryKey).toEqual(["endpoint-probes", 11]);
-
-    await options.queryFn();
-    const [publicCall, adminCall] = fetchMock.mock.calls;
-    expect(publicCall[0]).toEqual(expect.stringContaining("/api/health"));
-    expect((publicCall[1] as RequestInit).headers).toBeUndefined();
-    expect(adminCall[0]).toEqual(expect.stringContaining("/api/status"));
-    expect((adminCall[1] as RequestInit).headers).toBeInstanceOf(Headers);
-    expect(((adminCall[1] as RequestInit).headers as Headers).get("X-Admin-Key")).toBe("ops-key");
-  });
-
-  it("useStatus and useEndpointProbes switch admin routes to same-origin proxy mode on ops host", async () => {
+  it("useStatus uses the ops proxy with no browser admin key", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
@@ -145,30 +73,58 @@ describe("query polling policy", () => {
     const adminAccess: AdminAccess = { mode: "ops-proxy" };
 
     useStatus(adminAccess);
-    const statusOptions = useQueryMock.mock.calls[0][0] as {
+    const options = useQueryMock.mock.calls[0][0] as {
+      enabled: boolean;
+      retry: number;
+      staleTime: number;
+      refetchInterval: number;
       queryKey: unknown[];
       queryFn: () => Promise<unknown>;
     };
-    expect(statusOptions.queryKey).toEqual(["status", "ops-proxy"]);
-    await statusOptions.queryFn();
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/status");
-    expect((((fetchMock.mock.calls[0]?.[1] as RequestInit).headers) as Headers).has("X-Admin-Key")).toBe(false);
 
-    useQueryMock.mockClear();
-    fetchMock.mockClear();
-    mockQueryReturn();
+    expect(options.enabled).toBe(true);
+    expect(options.retry).toBe(0);
+    expect(options.staleTime).toBe(CRON_1MIN);
+    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
+    expect(options.queryKey).toEqual(["status", "ops-proxy"]);
+
+    await options.queryFn();
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe("/api/admin/status");
+    expect(init.headers).toBeInstanceOf(Headers);
+    expect((init.headers as Headers).has("X-Admin-Key")).toBe(false);
+  });
+
+  it("useEndpointProbes uses shared polling and switches admin paths to same-origin proxy mode", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as Response);
+    const adminAccess: AdminAccess = { mode: "ops-proxy" };
 
     useEndpointProbes(adminAccess);
-    const probeOptions = useQueryMock.mock.calls[0][0] as {
+    const options = useQueryMock.mock.calls[0][0] as {
+      enabled: boolean;
+      retry: number;
+      staleTime: number;
+      refetchInterval: number;
       queryKey: unknown[];
       queryFn: () => Promise<unknown[]>;
     };
-    expect(probeOptions.queryKey).toEqual(["endpoint-probes", "ops-proxy"]);
-    await probeOptions.queryFn();
 
+    expect(options.enabled).toBe(true);
+    expect(options.retry).toBe(0);
+    expect(options.staleTime).toBe(CRON_1MIN);
+    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
+    expect(options.queryKey).toEqual(["endpoint-probes", "ops-proxy"]);
+
+    await options.queryFn();
     const [publicCall, adminCall] = fetchMock.mock.calls;
     expect(publicCall[0]).toEqual(expect.stringContaining("/api/health"));
     expect((publicCall[1] as RequestInit).headers).toBeUndefined();
     expect(adminCall[0]).toBe("/api/admin/status");
+    expect((adminCall[1] as RequestInit).headers).toBeInstanceOf(Headers);
+    expect(((adminCall[1] as RequestInit).headers as Headers).has("X-Admin-Key")).toBe(false);
   });
 });

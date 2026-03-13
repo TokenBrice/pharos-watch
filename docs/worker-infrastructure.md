@@ -172,9 +172,9 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **File:** `worker/src/lib/auth.ts`
 
-- Reads `X-Admin-Key` header from request
-- Also accepts `Authorization: Bearer <key>` for non-browser callers, and the public-rate-limit bypass now uses the same credential parser as endpoint auth
-- Compares against `ADMIN_KEY` env var using timing-safe comparison: both values are SHA-256 hashed via `crypto.subtle.digest()`, then compared with `crypto.subtle.timingSafeEqual()`
+- Accepts `X-Admin-Key` and `Authorization: Bearer <key>` for raw worker-origin admin calls
+- Also treats `ops-api.pharos.watch` requests that already carry Cloudflare Access user or service-token signals as authorized
+- Compares `ADMIN_KEY` values using timing-safe comparison: both values are SHA-256 hashed via `crypto.subtle.digest()`, then compared with `crypto.subtle.timingSafeEqual()`
 - Returns `null` if authorized, 401 Response if not
 
 ### Router-Dispatched Status Actions
@@ -183,9 +183,9 @@ Status page manual/admin actions are dispatched through `worker/src/router.ts` u
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `POST /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
-| `POST /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
-| `GET /api/debug-sync-state` | `X-Admin-Key` | Returns all `blacklist_sync_state` rows |
+| `POST /api/trigger-digest` | `ops-api` + Access service token (preferred) or raw worker `X-Admin-Key` fallback | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
+| `POST /api/reset-blacklist-sync` | `ops-api` + Access service token (preferred) or raw worker `X-Admin-Key` fallback | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
+| `GET /api/debug-sync-state` | `ops-api` + Access service token (preferred) or raw worker `X-Admin-Key` fallback | Returns all `blacklist_sync_state` rows |
 
 Additional backfill/audit actions are defined in the same registry and surfaced dynamically on `/status`. `POST /api/feedback` is router-dispatched too, but it is not part of the status action registry.
 
