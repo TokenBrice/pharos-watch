@@ -1,6 +1,6 @@
-import type { LiveReserveInput, LiveReservesConfig, LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReservesConfig, LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry, isHttpJsonInput, normalizeSlices } from "./helpers";
 
 interface InfiniFiFarm {
   name: string;
@@ -61,10 +61,6 @@ export interface AdaptInfiniFiResult {
   unknownFarms: string[];
 }
 
-function isHttpJsonInput(input: LiveReserveInput): input is Extract<LiveReserveInput, { kind: "http-json" }> {
-  return input.kind === "http-json";
-}
-
 /** Convert raw InfiniFi protocol data to ReserveSlice[]. Pure function — no I/O. */
 export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResult {
   const tvl = payload.data.stats.asset.totalTVLAssetNormalized;
@@ -94,20 +90,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     } satisfies ReserveSlice);
   }
 
-  // Adjust largest slice so total sums to exactly 100
-  const sum = rawSlices.reduce((acc, s) => acc + s.pct, 0);
-  if (sum !== 100 && rawSlices.length > 0) {
-    const maxIdx = rawSlices.reduce(
-      (maxI, s, i, arr) => (s.pct > arr[maxI].pct ? i : maxI),
-      0,
-    );
-    const adjustment = 100 - sum;
-    if (rawSlices[maxIdx].pct + adjustment > 0) {
-      rawSlices[maxIdx].pct += adjustment;
-    }
-  }
-
-  return { slices: rawSlices, unknownFarms };
+  return { slices: normalizeSlices(rawSlices), unknownFarms };
 }
 
 /** Fetch + adapt infiniFi protocol data. Uses fetchWithRetry for resilience. */
@@ -123,10 +106,7 @@ export async function fetchInfiniFiReserves(
   }
 
   const url = primaryInput.url;
-  const res = await fetchWithRetry(url, { signal }, 2, { timeoutMs: 10_000 });
-  if (!res) throw new Error("infiniFi API: fetchWithRetry returned null (all retries failed)");
-  if (!res.ok) throw new Error(`infiniFi API ${res.status}`);
-  const payload = await res.json() as InfiniFiProtocolData;
+  const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal);
   if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
   const adapted = adaptInfiniFi(payload);
   const warnings: LiveReserveWarning[] = adapted.unknownFarms.map((farmName) => ({

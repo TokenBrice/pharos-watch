@@ -1,5 +1,4 @@
 import type {
-  LiveReserveInput,
   LiveReserveWarning,
   LiveReservesConfig,
   ReserveRisk,
@@ -12,6 +11,7 @@ import {
   parseEvmAddressResult,
   resolveCoinContractAddress,
 } from "./evm";
+import { isOnchainEvmInput, isReserveRisk } from "./helpers";
 
 const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
@@ -22,18 +22,6 @@ interface SingleAssetSliceConfig {
   coinId?: string;
   depType?: ReserveSlice["depType"];
   expectedAssetAddress?: string;
-}
-
-function isOnChainInput(input: LiveReserveInput): input is Extract<LiveReserveInput, { kind: "onchain-evm" }> {
-  return input.kind === "onchain-evm";
-}
-
-function isReserveRisk(value: unknown): value is ReserveRisk {
-  return value === "very-low"
-    || value === "low"
-    || value === "medium"
-    || value === "high"
-    || value === "very-high";
 }
 
 function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
@@ -69,7 +57,7 @@ export async function fetchErc4626SingleAssetReserves(
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = config.inputs.primary;
-  if (!isOnChainInput(primaryInput)) {
+  if (!isOnchainEvmInput(primaryInput)) {
     throw new Error("erc4626-single-asset adapter requires an onchain-evm primary input");
   }
 

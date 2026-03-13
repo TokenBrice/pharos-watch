@@ -1,7 +1,7 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { buildReserveSlicesFromValues, requireHttpJsonInput } from "./utils";
+import { requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface M0GraphQlResponse {
   data?: {
@@ -46,7 +46,7 @@ function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   // while `totalCash` is surfaced in milli-USD. Upscale cash so the mix matches
   // the dashboard's reserve totals before converting to percentages.
   const cashValue = current.totalCash * 1_000;
-  const slices = buildReserveSlicesFromValues([
+  const slices = slicesFromValues([
     {
       name: "Eligible U.S. Treasuries",
       value: current.eligibleTreasuries,
@@ -93,7 +93,7 @@ export async function fetchM0Reserves(
   signal: AbortSignal,
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireHttpJsonInput(config, "m0");
+  const primaryInput = requireJsonInputFromConfig(config, "m0");
   const res = await fetchWithRetry(
     primaryInput.url,
     {

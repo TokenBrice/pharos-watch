@@ -4,7 +4,7 @@ import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
   requireOnchainInput,
-  slicesFromUsdValues,
+  slicesFromValues,
 } from "./helpers";
 
 interface BranchConfig {
@@ -75,14 +75,14 @@ export async function fetchEvmBranchBalancesReserves(
     signal,
   );
 
-  const slices = slicesFromUsdValues(
+  const slices = slicesFromValues(
     pricedBranches.map(({ branch, balance }) => {
       const price = priceMap.get(branch.name);
       if (price == null) {
         throw new Error(`Missing DefiLlama price for ${branch.name}`);
       }
       return {
-        usd: (balance ?? 0) * price,
+        value: (balance ?? 0) * price,
         name: branch.name,
         risk: branch.risk,
         ...(branch.coinId ? { coinId: branch.coinId } : {}),

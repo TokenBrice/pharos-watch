@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterResult } from "./index";
-import { fetchJsonWithRetry, requireJsonInput, normalizeSlices } from "./helpers";
+import { fetchJsonWithRetry, requireJsonInput } from "./helpers";
 
 interface BtcfiMarketRow {
   token_handler_id: number;
@@ -36,20 +36,7 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
 
   if (total <= 0) return [];
 
-  const btcBucket = market.reduce((acc, row) => {
-    const handler = handlerMap.get(row.token_handler_id);
-    if (!handler || handler.isStable) return acc;
-    const value = Number(row.deposit_value ?? "0");
-    return Number.isFinite(value) && value > 0 ? acc + value : acc;
-  }, 0);
-
-  return normalizeSlices([
-    {
-      name: "BTC / WBTC / BTCB / cbBTC",
-      pct: (btcBucket / total) * 100,
-      risk: "medium",
-    },
-  ]);
+  return [{ name: "BTC / WBTC / BTCB / cbBTC", pct: 100, risk: "medium" }];
 }
 
 export async function fetchBtcfiReserves(

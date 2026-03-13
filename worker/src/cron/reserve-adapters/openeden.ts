@@ -1,7 +1,6 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { buildReserveSlicesFromValues, requireHttpJsonInput } from "./utils";
+import { fetchJsonWithRetry, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface OpenEdenReserveCompositionResponse {
   usdoAmount: number;
@@ -16,7 +15,7 @@ interface OpenEdenReserveCompositionResponse {
 }
 
 function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResponse): AdapterResult {
-  const slices = buildReserveSlicesFromValues([
+  const slices = slicesFromValues([
     {
       name: "OpenEden TBILL",
       value: payload.totalTbillAmountInUsd,
@@ -79,11 +78,7 @@ export async function fetchOpenEdenUsdoReserves(
   signal: AbortSignal,
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireHttpJsonInput(config, "openeden-usdo");
-  const res = await fetchWithRetry(primaryInput.url, { signal }, 2, { timeoutMs: 12_000 });
-  if (!res) throw new Error("OpenEden reserve API: fetchWithRetry returned null (all retries failed)");
-  if (!res.ok) throw new Error(`OpenEden reserve API ${res.status}`);
-
-  const payload = await res.json() as OpenEdenReserveCompositionResponse;
+  const primaryInput = requireJsonInputFromConfig(config, "openeden-usdo");
+  const payload = await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(primaryInput.url, signal, 12_000);
   return adaptOpenEdenReserveComposition(payload);
 }

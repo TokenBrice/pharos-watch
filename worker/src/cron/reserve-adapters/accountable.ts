@@ -1,7 +1,6 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { buildReserveSlicesFromValues, requireHttpJsonInput } from "./utils";
+import { fetchJsonWithRetry, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface AccountableDashboardResponse {
   res: string;
@@ -141,7 +140,7 @@ function adaptAccountableDashboard(
 
   const riskMap = params.riskMap ?? {};
   const renameMap = params.renameMap ?? {};
-  const slices = buildReserveSlicesFromValues(
+  const slices = slicesFromValues(
     breakdown.map(({ name, value }) => ({
       name: renameMap[name] ?? name,
       value,
@@ -179,12 +178,8 @@ export async function fetchAccountableReserves(
   signal: AbortSignal,
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireHttpJsonInput(config, "accountable");
+  const primaryInput = requireJsonInputFromConfig(config, "accountable");
   const params = parseAccountableParams(config);
-  const res = await fetchWithRetry(primaryInput.url, { signal }, 2, { timeoutMs: 12_000 });
-  if (!res) throw new Error("Accountable dashboard: fetchWithRetry returned null (all retries failed)");
-  if (!res.ok) throw new Error(`Accountable dashboard ${res.status}`);
-
-  const payload = await res.json() as AccountableDashboardResponse;
+  const payload = await fetchJsonWithRetry<AccountableDashboardResponse>(primaryInput.url, signal, 12_000);
   return adaptAccountableDashboard(payload, params);
 }

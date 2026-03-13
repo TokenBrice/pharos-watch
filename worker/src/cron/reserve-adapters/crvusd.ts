@@ -18,6 +18,18 @@ interface CurveMarketsPayload {
   };
 }
 
+const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
+  "very-low": 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+  "very-high": 4,
+};
+
+function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): ReserveSlice["risk"] {
+  return RISK_SEVERITY[a] >= RISK_SEVERITY[b] ? a : b;
+}
+
 function classifySymbol(symbol: string): { name: string; risk: ReserveSlice["risk"] } | null {
   const upper = symbol.toUpperCase();
   if (["WBTC", "CBBTC", "LBTC", "ZKBTC"].includes(upper)) {
@@ -58,6 +70,7 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): { slices: ReserveSlic
     const existing = buckets.get(bucket.name);
     if (existing) {
       existing.usd += usd;
+      existing.risk = worseRisk(existing.risk, bucket.risk);
     } else {
       buckets.set(bucket.name, { usd, risk: bucket.risk });
     }

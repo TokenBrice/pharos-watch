@@ -1,7 +1,6 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { buildReserveSlicesFromValues, requireHttpJsonInput } from "./utils";
+import { fetchJsonWithRetry, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface FalconBreakdownAsset {
   label: string;
@@ -84,7 +83,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
       ? Number(payload.usdf.insurance_fund)
       : NaN;
 
-  const slices = buildReserveSlicesFromValues([
+  const slices = slicesFromValues([
     {
       name: "Stablecoins / cash equivalents",
       value: bucketTotals.get("stable") ?? 0,
@@ -134,11 +133,7 @@ export async function fetchFalconReserves(
   signal: AbortSignal,
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireHttpJsonInput(config, "falcon");
-  const res = await fetchWithRetry(primaryInput.url, { signal }, 2, { timeoutMs: 12_000 });
-  if (!res) throw new Error("Falcon transparency API: fetchWithRetry returned null (all retries failed)");
-  if (!res.ok) throw new Error(`Falcon transparency API ${res.status}`);
-
-  const payload = await res.json() as FalconTransparencyResponse;
+  const primaryInput = requireJsonInputFromConfig(config, "falcon");
+  const payload = await fetchJsonWithRetry<FalconTransparencyResponse>(primaryInput.url, signal, 12_000);
   return adaptFalconTransparency(payload);
 }

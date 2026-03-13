@@ -183,10 +183,14 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 
 Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`:
 
-- HTTP JSON / HTML fetch wrappers
-- DefiLlama spot-price loading for valuation/mapping
-- EVM balance and total-supply reads
-- slice normalization / grouping helpers
+- HTTP JSON / HTML fetch wrappers (`fetchJsonWithRetry`, `fetchTextWithRetry`)
+- DefiLlama spot-price loading for valuation (`fetchDefiLlamaPrices`)
+- EVM balance, total-supply, and hex-call reads (`fetchErc20Balance`, `fetchErc20TotalSupply`)
+- Input-kind type guards and validators (`requireJsonInput`, `requireJsonInputFromConfig`, etc.)
+- Slice normalization with configurable precision (`normalizeSlices`, `slicesFromValues`)
+- Risk validation (`isReserveRisk`)
+
+`worker/src/cron/reserve-adapters/evm.ts` provides hex-level EVM call helpers for ERC-4626 vault introspection.
 
 ---
 

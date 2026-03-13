@@ -64,7 +64,7 @@ export function adaptCollateralPositions(
 
   for (const entry of Object.values(details)) {
     const priceInfo = prices[entry.address.toLowerCase()];
-    const usdPrice = priceInfo?.price?.usd ?? priceInfo?.price?.eur;
+    const usdPrice = priceInfo?.price?.usd;
     if (typeof usdPrice !== "number" || usdPrice <= 0) continue;
 
     const totalBalance = entry.positions.reduce((acc, position) => {
