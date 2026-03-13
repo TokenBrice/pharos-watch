@@ -34,6 +34,18 @@ describe("computeApyFromRate", () => {
     expect(computeApyFromRate(1, 1, 0)).toBe(0);
   });
 
+  it("returns negative APY for decreasing rate", () => {
+    const apy = computeApyFromRate(0.99, 1.0, 7);
+    expect(apy).toBeLessThan(0);
+  });
+
+  it("computes expected APY for a 7-day vault rate change", () => {
+    // Rate went from 1.0 to 1.001 over 7 days
+    // (1.001)^(365.25/7) - 1 ≈ 0.05343 → 5.34%
+    const apy = computeApyFromRate(1.001, 1.0, 7);
+    expect(apy).toBeCloseTo(5.34, 0);
+  });
+
   it("aliases computeApyFromPrice", () => {
     const rateApy = computeApyFromRate(1.05, 1.0, 30);
     const priceApy = computeApyFromPrice(1.05, 1.0, 30);
@@ -167,6 +179,108 @@ describe("detectWarningSignals", () => {
 });
 
 describe("matchAllDlPools", () => {
+  it("matches Layer 1 native pool by UUID from poolMap", () => {
+    const poolMap = { "usde-ethena": "uuid-123" };
+    const dlPools = [
+      {
+        pool: "uuid-123",
+        symbol: "USDe",
+        stablecoin: true,
+        exposure: "single",
+        tvlUsd: 5_000_000_000,
+        apy: 12.4,
+        apyBase: 10.2,
+        apyReward: 2.2,
+      },
+      {
+        pool: "uuid-other",
+        symbol: "USDe",
+        stablecoin: true,
+        exposure: "single",
+        tvlUsd: 100_000,
+        apy: 3.0,
+        apyBase: 3.0,
+        apyReward: null,
+      },
+    ];
+
+    const result = matchAllDlPools("usde-ethena", "USDe", dlPools, poolMap, {});
+    expect(result).toHaveLength(1);
+    expect(result[0].pool).toBe("uuid-123");
+    expect(result[0].apy).toBe(12.4);
+  });
+
+  it("excludes Layer 1 pool with exposure !== single", () => {
+    const poolMap = { "test-coin": "uuid-multi" };
+    const dlPools = [
+      {
+        pool: "uuid-multi",
+        symbol: "TEST",
+        stablecoin: true,
+        exposure: "multi",
+        tvlUsd: 1_000_000,
+        apy: 5.0,
+        apyBase: 5.0,
+        apyReward: null,
+      },
+    ];
+
+    const result = matchAllDlPools("test-coin", "TEST", dlPools, poolMap, {});
+    expect(result).toHaveLength(0);
+  });
+
+  it("matches Layer 2 variant wrapper pool alongside Layer 1", () => {
+    const poolMap = { "usde-ethena": "uuid-native" };
+    const variantMap = { "usde-ethena": { variantSymbol: "sUSDe" } };
+    const dlPools = [
+      {
+        pool: "uuid-native",
+        symbol: "USDe",
+        stablecoin: true,
+        exposure: "single",
+        tvlUsd: 5_000_000_000,
+        apy: 0,
+        apyBase: 0,
+        apyReward: null,
+      },
+      {
+        pool: "uuid-wrapper",
+        symbol: "sUSDe",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 3_000_000_000,
+        apy: 12.4,
+        apyBase: 12.4,
+        apyReward: null,
+      },
+    ];
+
+    const result = matchAllDlPools("usde-ethena", "USDe", dlPools, poolMap, variantMap);
+    expect(result).toHaveLength(2);
+    expect(result.map((r) => r.pool)).toContain("uuid-native");
+    expect(result.map((r) => r.pool)).toContain("uuid-wrapper");
+  });
+
+  it("deduplicates when Layer 1 and Layer 2 resolve to the same pool UUID", () => {
+    const poolMap = { "test-coin": "uuid-same" };
+    const variantMap = { "test-coin": { variantSymbol: "sTEST" } };
+    const dlPools = [
+      {
+        pool: "uuid-same",
+        symbol: "sTEST",
+        stablecoin: true,
+        exposure: "single",
+        tvlUsd: 1_000_000,
+        apy: 5.0,
+        apyBase: 5.0,
+        apyReward: null,
+      },
+    ];
+
+    const result = matchAllDlPools("test-coin", "TEST", dlPools, poolMap, variantMap);
+    expect(result).toHaveLength(1);
+  });
+
   it("falls through to symbol match when static map UUID is missing from DL pools", () => {
     const poolMap = { "test-coin": "missing-uuid-123" };
     const dlPools = [
