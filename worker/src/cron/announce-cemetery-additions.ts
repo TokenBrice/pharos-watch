@@ -46,7 +46,8 @@ function parseSnapshotKeys(raw: string): Set<string> | null {
       return null;
     }
     return new Set(parsed);
-  } catch {
+  } catch (err) {
+    console.warn("[cemetery-announce] ignored:", err);
     return null;
   }
 }

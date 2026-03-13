@@ -295,7 +295,7 @@ export interface EnrichmentStats {
   pass1: number;
   pass1b: number;
   passCmc: number;
-  pass4: number; // DexScreener (legacy field name)
+  passDex: number;
   finalMissing: number;
 }
 
@@ -360,7 +360,7 @@ export async function enrichMissingPrices(
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
-  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, pass4: 0, finalMissing: 0 };
+  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0 };
 
   // Load FX rates for dynamic price bounds
   let fxRates: Record<string, number> | undefined;
@@ -376,7 +376,7 @@ export async function enrichMissingPrices(
   let pass1Count = 0;
   let pass1bCount = 0;
   let passCmcCount = 0;
-  let pass4Count = 0;
+  let passDexCount = 0;
 
   try {
     // ── Pass 1: Contract addresses via DefiLlama coins API ──
@@ -627,7 +627,7 @@ export async function enrichMissingPrices(
             buildPriceReasonablenessOptions(m.asset),
           )) {
             applyResolvedPrice(assets[m.index], price, "dexscreener", "fallback");
-            pass4Count++;
+            passDexCount++;
           }
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -643,22 +643,22 @@ export async function enrichMissingPrices(
 
     // ── Summary log ──
     const finalMissing = assets.filter(hasMissingPrice).length;
-    const totalEnriched = pass1Count + pass1bCount + passCmcCount + pass4Count;
+    const totalEnriched = pass1Count + pass1bCount + passCmcCount + passDexCount;
     if (totalMissing > 0) {
       console.log(
         `[enrich] ${totalMissing} assets missing prices → ` +
         `Pass 1: +${pass1Count}, Pass 1b (multi-chain): +${pass1bCount}, ` +
         `Pass 2 (CMC): +${passCmcCount}, ` +
-        `Pass 3 (DexScreener): +${pass4Count}, still missing: ${finalMissing}`
+        `Pass 3 (DexScreener): +${passDexCount}, still missing: ${finalMissing}`
       );
     }
     if (totalEnriched > 0) {
       console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
     }
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, pass4: pass4Count, finalMissing };
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, passDex: passDexCount, finalMissing };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[sync-stablecoins] Price enrichment failed:", err);
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, pass4: pass4Count, finalMissing: totalMissing };
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, passDex: passDexCount, finalMissing: totalMissing };
   }
 }

@@ -78,7 +78,8 @@ function decodeUint256Word(result: `0x${string}`, wordIndex = 0): bigint | null 
 
   try {
     return BigInt(`0x${result.slice(start, end)}`);
-  } catch {
+  } catch (err) {
+    console.warn("[price-sources] hex parse ignored:", err);
     return null;
   }
 }

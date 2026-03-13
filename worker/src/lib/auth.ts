@@ -11,6 +11,17 @@ function isOpsApiRequest(request: Request | undefined): boolean {
   }
 }
 
+/**
+ * Checks for Cloudflare Access proxy signals on ops-api requests.
+ *
+ * IMPORTANT: This function checks header *presence*, not *validity*.
+ * Security relies on Cloudflare Access sitting in front of ops-api.pharos.watch
+ * to validate JWTs and strip spoofed headers before they reach the Worker.
+ * The Worker itself does NOT verify JWT signatures or service token values.
+ *
+ * If the Worker is ever reachable without Cloudflare Access in the path
+ * (misconfigured DNS, direct Worker URL), all admin endpoints are unprotected.
+ */
 function hasOpsApiAccessSignal(request: Request | undefined): boolean {
   if (!isOpsApiRequest(request)) return false;
 

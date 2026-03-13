@@ -298,7 +298,7 @@ describe("enrichMissingPrices", () => {
 
     expect(stats.totalMissing).toBe(0);
     expect(stats.pass1).toBe(0);
-    expect(stats.pass4).toBe(0);
+    expect(stats.passDex).toBe(0);
     expect(stats.finalMissing).toBe(0);
   });
 
@@ -374,7 +374,7 @@ describe("enrichMissingPrices", () => {
     expect(stats.totalMissing).toBe(1);
     expect(stats.finalMissing).toBe(1);
     expect(stats.pass1).toBe(0);
-    expect(stats.pass4).toBe(0);
+    expect(stats.passDex).toBe(0);
   });
 
   it("still uses stale FX cache for DexScreener fallback in enrichment (characterization)", async () => {
@@ -422,7 +422,7 @@ describe("enrichMissingPrices", () => {
 
     const stats = await enrichMissingPrices(assets, undefined, db);
 
-    expect(stats.pass4).toBe(1);
+    expect(stats.passDex).toBe(1);
     expect(assets[0].price).toBe(0.0005);
   });
 
@@ -448,7 +448,7 @@ describe("enrichMissingPrices", () => {
 
     const stats = await enrichMissingPrices(assets);
 
-    expect(stats.pass4).toBe(0);
+    expect(stats.passDex).toBe(0);
     expect(stats.finalMissing).toBe(1);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("dexscreener.com");
