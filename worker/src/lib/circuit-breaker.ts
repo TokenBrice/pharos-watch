@@ -89,6 +89,13 @@ export async function shouldAttemptFetch(db: D1Database, source: string): Promis
 /**
  * Records the outcome of a fetch attempt and handles state transitions.
  * Fires alerts on open/close transitions.
+ *
+ * NOTE: There is a known TOCTOU window between shouldAttemptFetch() and
+ * recordOutcome() — concurrent cron jobs could both read "half-open" and
+ * both probe. This is accepted as best-effort behavior; the circuit breaker
+ * provides probabilistic protection, not strict mutual exclusion.
+ * D1 lacks the CAS primitives needed for strict single-probe semantics
+ * without adding a separate coordination mechanism.
  */
 export async function recordOutcome(db: D1Database, source: string, success: boolean): Promise<void> {
   const record = await getCircuitRecord(db, source);
