@@ -1,7 +1,4 @@
-import {
-  createMethodologyVersion,
-  toMethodologyVersionLabel,
-} from "./methodology-version";
+import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
   currentVersion: "4.6",
@@ -249,5 +246,3 @@ export const DEPEG_DEWS_METHODOLOGY_CHANGELOG = depegDews.changelog;
 
 /** Resolve Depeg Tracker + DEWS methodology version active at a given Unix timestamp (seconds). */
 export const getDepegDewsMethodologyVersionAt = depegDews.getVersionAt;
-
-export const toDepegDewsMethodologyVersionLabel = toMethodologyVersionLabel;

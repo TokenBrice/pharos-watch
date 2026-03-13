@@ -15,8 +15,8 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
   getBlacklistTrackerMethodologyVersionAt,
-  toBlacklistTrackerMethodologyVersionLabel,
 } from "@shared/lib/blacklist-tracker-version";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
@@ -129,7 +129,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     events.length > 0 ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity) : Math.floor(Date.now() / 1000);
   const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs);
   const methodologyVersion = events[0]?.methodologyVersion ?? getBlacklistTrackerMethodologyVersionAt(latestTs);
-  const methodologyVersionLabel = toBlacklistTrackerMethodologyVersionLabel(methodologyVersion);
+  const methodologyVersionLabel = toMethodologyVersionLabel(methodologyVersion);
 
   return jsonResponse(
     {

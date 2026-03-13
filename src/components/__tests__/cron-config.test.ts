@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getStatusCronDisplay, STATUS_CRON_GROUPS } from "@/components/status/cron-config";
-import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
+import { getStatusCronDisplay } from "@/components/status/cron-config";
+import { CRON_GROUPS, CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 
 describe("status cron config", () => {
   it("maps the split DEX pipeline onto separate cron groups", () => {
@@ -55,7 +55,7 @@ describe("status cron config", () => {
   });
 
   it("keeps the 20-minute slot description aligned with isolated on-chain triggers", () => {
-    expect(STATUS_CRON_GROUPS.find((group) => group.key === "twenty-minute")?.description).toContain(
+    expect(CRON_GROUPS.find((group) => group.key === "twenty-minute")?.description).toContain(
       "isolated trigger",
     );
   });

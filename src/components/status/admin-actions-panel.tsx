@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminAccess } from "@/lib/admin-access";
 import { deriveStatusActionRecommendations } from "./action-recommendations";
 import { AdminActionButton, type AdminActionExecution } from "./admin-action-button";
-import { formatAge } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 const ADMIN_ACTIONS = getStatusPageActions();
 
@@ -128,7 +128,7 @@ export function AdminActionsPanel({
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {formatAge(Math.max(0, nowSeconds - execution.executedAt))} ago
+                    {formatElapsedSeconds(Math.max(0, nowSeconds - execution.executedAt))} ago
                   </div>
                   <pre className="mt-2 max-h-32 overflow-auto rounded bg-muted p-2 text-xs">
                     {execution.output}

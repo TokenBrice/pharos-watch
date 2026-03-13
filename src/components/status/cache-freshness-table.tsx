@@ -1,6 +1,6 @@
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatAge } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, { ageSeconds: number | null; maxAge: number; healthy: boolean }>;
@@ -70,8 +70,8 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
                 return (
                   <tr key={key} className="border-b last:border-0">
                     <td className="py-2 font-mono text-xs">{key}</td>
-                    <td className="py-2">{cache.ageSeconds != null ? formatAge(cache.ageSeconds) : "—"}</td>
-                    <td className="py-2">{formatAge(cache.maxAge)}</td>
+                    <td className="py-2">{cache.ageSeconds != null ? formatElapsedSeconds(cache.ageSeconds) : "—"}</td>
+                    <td className="py-2">{formatElapsedSeconds(cache.maxAge)}</td>
                     <td className="py-2 font-mono text-xs">
                       {band.ratio != null ? `${band.ratio.toFixed(2)}x` : "—"}
                     </td>

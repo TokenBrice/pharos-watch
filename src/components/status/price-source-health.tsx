@@ -4,7 +4,7 @@ import { STATUS_PRICE_CONFIDENCE_BANDS } from "@shared/lib/status-thresholds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PriceSourceHealth } from "@shared/types";
 import { useState } from "react";
-import { formatAge } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 function MetricCard({ label, value, pct, severity }: { label: string; value: number; pct: string; severity: string }) {
   const colors: Record<string, string> = {
@@ -71,7 +71,7 @@ export function PriceSourceHealthCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Price Source Health</CardTitle>
           <span className="text-xs text-muted-foreground">
-            {totalAssets} assets · synced {formatAge(lastSyncAgeSeconds)} ago
+            {totalAssets} assets · synced {formatElapsedSeconds(lastSyncAgeSeconds)} ago
           </span>
         </div>
       </CardHeader>

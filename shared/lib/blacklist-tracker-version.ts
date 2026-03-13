@@ -1,7 +1,4 @@
-import {
-  createMethodologyVersion,
-  toMethodologyVersionLabel,
-} from "./methodology-version";
+import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
   currentVersion: "3.1",
@@ -144,5 +141,3 @@ export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG = blacklistTracker.changelo
 
 /** Resolve Blacklist Tracker methodology version active at a given Unix timestamp (seconds). */
 export const getBlacklistTrackerMethodologyVersionAt = blacklistTracker.getVersionAt;
-
-export const toBlacklistTrackerMethodologyVersionLabel = toMethodologyVersionLabel;

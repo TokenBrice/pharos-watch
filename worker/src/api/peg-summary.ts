@@ -18,8 +18,8 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
-  toDepegDewsMethodologyVersionLabel,
 } from "@shared/lib/depeg-dews-version";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 
 function pegTypeFromCurrency(pegCurrency: string): string | null {
   switch (pegCurrency) {
@@ -274,7 +274,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     },
     methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
-      versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
+      versionLabel: toMethodologyVersionLabel(methodologyVersion),
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
       currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,

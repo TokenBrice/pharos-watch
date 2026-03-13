@@ -1,7 +1,8 @@
 import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/types";
 import { deriveStatusActionRecommendations } from "@/components/status/action-recommendations";
-import { getStatusCronDisplay, STATUS_CRON_GROUPS } from "@/components/status/cron-config";
-import { formatAge } from "@/components/status/format";
+import { getStatusCronDisplay } from "@/components/status/cron-config";
+import { CRON_GROUPS } from "@shared/lib/cron-jobs";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 export type DashboardSectionId = "overview" | "pipeline" | "reliability" | "crons" | "control" | "history";
 
@@ -167,7 +168,7 @@ export function buildStatusDashboardData({
   const clientDataAgeSec = Math.max(0, Math.floor((nowMs - lastUpdated) / 1000));
   const browserProbeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt);
   const cronEntries = Object.entries(data.crons);
-  const cronGroups = STATUS_CRON_GROUPS.map((group) => ({
+  const cronGroups = CRON_GROUPS.map((group) => ({
     ...group,
     entries: cronEntries.filter(([job]) => getStatusCronDisplay(job).group === group.key),
   })).filter((group) => group.entries.length > 0);
@@ -222,7 +223,7 @@ export function buildStatusDashboardData({
     const mintBurnWarning = healthData.mintBurn.sync.warning != null ? `${healthData.mintBurn.sync.warning} ` : "";
     const mintBurnSyncAge =
       healthData.mintBurn.sync.lastSuccessfulSyncAt != null
-        ? `Last successful mint/burn sync ${formatAge(Math.max(0, data.timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))} ago. `
+        ? `Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, data.timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))} ago. `
         : "";
     const impactedMajors =
       healthData.mintBurn.majorStaleCount > 0
@@ -264,7 +265,7 @@ export function buildStatusDashboardData({
       accentClassName: "border-l-frost-blue",
       value: overallTone.label,
       valueClassName: overallTone.valueClassName,
-      summary: `${overallCauseCount} active causes, confidence ${(data.confidence * 100).toFixed(1)}%, last change ${formatAge(statusHoldingAge)} ago`,
+      summary: `${overallCauseCount} active causes, confidence ${(data.confidence * 100).toFixed(1)}%, last change ${formatElapsedSeconds(statusHoldingAge)} ago`,
     },
     {
       id: "pipeline",
@@ -323,7 +324,7 @@ export function buildStatusDashboardData({
       description: "Persisted transitions for drills, regressions, and dwell-state validation.",
       accentClassName: "border-l-rose-500",
       value: latestTransition ? formatTransitionLabel(latestTransition) : "No transitions",
-      summary: `${allTransitions.length} transitions in view, latest ${latestTransition ? formatAge(Math.max(0, data.timestamp - latestTransition.at)) : "—"} ago`,
+      summary: `${allTransitions.length} transitions in view, latest ${latestTransition ? formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at)) : "—"} ago`,
     },
   ];
   const sections = [...baseSections].sort((a, b) => {

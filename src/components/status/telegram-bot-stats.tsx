@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { StatusResponse } from "@shared/types";
-import { formatAge } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 interface TelegramBotStatsProps {
   telegramBot: StatusResponse["telegramBot"];
@@ -136,7 +136,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, nowSeconds }: Tele
       value: telegramBot.pendingDeliveries,
       detail:
         telegramBot.lastSubscriberActivityAt != null
-          ? `${telegramBot.pendingDisambiguations} pending replies, last activity ${formatAge(Math.max(0, nowSeconds - telegramBot.lastSubscriberActivityAt))} ago`
+          ? `${telegramBot.pendingDisambiguations} pending replies, last activity ${formatElapsedSeconds(Math.max(0, nowSeconds - telegramBot.lastSubscriberActivityAt))} ago`
           : `${telegramBot.pendingDisambiguations} pending replies`,
     },
   ];
@@ -184,7 +184,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, nowSeconds }: Tele
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <Badge className={dispatchStatusClass}>{lastDispatch.status}</Badge>
                   <span className="text-muted-foreground">
-                    {formatAge(Math.max(0, nowSeconds - lastDispatch.startedAt))} ago
+                    {formatElapsedSeconds(Math.max(0, nowSeconds - lastDispatch.startedAt))} ago
                   </span>
                   <span className="text-muted-foreground">{lastDispatch.itemCount ?? 0} messages counted</span>
                 </div>

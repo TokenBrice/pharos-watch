@@ -12,8 +12,8 @@ import {
   PSI_METHODOLOGY_VERSION,
   PSI_METHODOLOGY_VERSION_LABEL,
   getPsiMethodologyVersionAt,
-  toPsiMethodologyVersionLabel,
 } from "@shared/lib/stability-index-version";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 
 export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
   const detail = url.searchParams.get("detail") === "true";
@@ -131,7 +131,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     history,
     methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
-      versionLabel: toPsiMethodologyVersionLabel(methodologyVersion),
+      versionLabel: toMethodologyVersionLabel(methodologyVersion),
       currentVersion: PSI_METHODOLOGY_VERSION,
       currentVersionLabel: PSI_METHODOLOGY_VERSION_LABEL,
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
