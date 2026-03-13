@@ -16,9 +16,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            worker/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run lint
       - run: npm run check:worker-boundary
@@ -28,7 +26,6 @@ jobs:
         env:
           CRITICAL_COVERAGE_THRESHOLD: "40"
           CRITICAL_COVERAGE_COMPARE_REF: ${{ github.event.before }}
-      - run: cd worker && npm ci
       - run: cd worker && npx tsc --noEmit
 
   deploy-worker:
@@ -43,11 +40,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            worker/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: cd worker && npm ci
       - name: Apply D1 migrations
         run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
       - name: Deploy worker
@@ -76,9 +70,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            worker/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npx tsx scripts/sync-digests.ts
       - run: npm run build
