@@ -107,7 +107,7 @@ vi.mock("../../lib/chain-registry", () => ({
 
 // Stub bigint helper
 vi.mock("../../lib/bigint", () => ({
-  bigIntToDecimal: vi.fn(() => 1000000),
+  bigIntToDecimal: vi.fn((value: bigint, decimals: number) => Number(value) / Math.pow(10, decimals)),
 }));
 
 // Stub db helpers
@@ -407,6 +407,91 @@ describe("syncBlacklist", () => {
     const meta = JSON.parse(result.metadata);
     expect(meta.apiErrors).toBe(0);
     expect(meta.rpcLogConfigs).toBeGreaterThanOrEqual(1);
+  });
+
+  it("tries chain RPC after a dRPC miss for non-mainnet balance enrichment", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
+      logs: [
+        {
+          address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          topics: [
+            "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
+            "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
+          ],
+          data: "0x",
+          blockNumber: "0x1312d00",
+          transactionHash: "0xbase123",
+          transactionIndex: "0x0",
+          blockHash: "0xblockhash",
+          logIndex: "0x0",
+          removed: false,
+        },
+      ],
+      complete: true,
+      scannedToBlock: 20000000,
+      calls: 1,
+      maxDepth: 0,
+    });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[20000000, 1718650752]]));
+    const fetchMock = vi.fn(async (url: string | Request) => {
+      const urlStr = typeof url === "string" ? url : url.url;
+      if (urlStr.includes("lb.drpc.org")) {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (urlStr.includes("base-rpc.example")) {
+        return new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            result: "0x0000000000000000000000000000000000000000000000000000000000000000",
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      return new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncBlacklist(db, "etherscan-key", "tron-key", "drpc-key");
+
+    expect(result.itemCount).toBe(1);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("lb.drpc.org"))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("base-rpc.example"))).toBe(true);
+  });
+
+  it("orders backfill work newest-first so recent gaps are not starved by old backlog", async () => {
+    const db = makeDb();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    await syncBlacklist(db, "etherscan-key", "tron-key", null);
+
+    const backfillQuery = db.getHistory().find((entry) =>
+      entry.sql.includes("FROM blacklist_events")
+      && entry.sql.includes("amount IS NULL")
+      && entry.sql.includes("LIMIT ?"),
+    );
+    expect(backfillQuery?.sql).toContain("ORDER BY timestamp DESC");
   });
 
   it("advances the cursor after partial RPC coverage instead of restarting from zero", async () => {

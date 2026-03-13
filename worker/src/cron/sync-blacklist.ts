@@ -192,6 +192,48 @@ async function fetchBalanceViaDrpc(
   }
 }
 
+async function fetchBalanceViaChainRpc(
+  chainId: string,
+  contractAddress: string,
+  address: string,
+  blockNumber: number,
+  decimals: number,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<number | null> {
+  if (budgetExhausted(budget)) return null;
+
+  const rpc = getChainRpc(chainId);
+  if (!rpc) return null;
+
+  const addr = (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
+  const data = "0x70a08231" + addr.padStart(64, "0");
+  const blockTag = "0x" + blockNumber.toString(16);
+  const urls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter((value): value is string => typeof value === "string" && value.length > 0);
+
+  for (const rpcUrl of urls) {
+    if (budgetExhausted(budget)) return null;
+    try {
+      budget.count++;
+      const result = await fetchJsonRpcHexAtUrl(
+        rpcUrl,
+        "eth_call",
+        [{ to: contractAddress, data }, blockTag],
+        {
+          signal,
+          timeoutMs: 10_000,
+        },
+      );
+      if (!result) continue;
+      return bigIntToDecimal(BigInt(result), decimals);
+    } catch (e) {
+      console.warn("[sync-blacklist] fetchBalanceViaChainRpc failed:", e);
+    }
+  }
+
+  return null;
+}
+
 async function fetchEvmTokenBalance(
   config: ContractEventConfig,
   address: string,
@@ -202,22 +244,38 @@ async function fetchEvmTokenBalance(
   budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<number | null> {
-  // L2 chains: use dRPC archive for historical balanceOf.
-  // Etherscan v2 free plan doesn't support eth_call on L2s.
-  if (config.chain.evmChainId !== 1 && drpcApiKey) {
-    return fetchBalanceViaDrpc(
+  // Non-mainnet EVM chains prefer dRPC archive reads, but keep falling back through the
+  // shared chain registry (Alchemy/public RPC) and Etherscan best-effort paths so one
+  // provider outage does not strand amount backfills indefinitely.
+  if (config.chain.evmChainId !== 1) {
+    if (drpcApiKey) {
+      const drpcAmount = await fetchBalanceViaDrpc(
+        config.chain.chainId,
+        config.contractAddress,
+        address,
+        blockNumber,
+        drpcApiKey,
+        config.decimals,
+        budget,
+        signal,
+      );
+      if (drpcAmount != null) return drpcAmount;
+    }
+
+    const rpcAmount = await fetchBalanceViaChainRpc(
       config.chain.chainId,
       config.contractAddress,
       address,
       blockNumber,
-      drpcApiKey,
       config.decimals,
       budget,
       signal,
     );
+    if (rpcAmount != null) return rpcAmount;
   }
 
-  // Ethereum mainnet: use Etherscan eth_call with historical block tag
+  // Ethereum mainnet uses Etherscan directly; non-mainnet chains only reach this point
+  // after dRPC and chain-RPC fallbacks have both missed.
   const blockTag = "0x" + blockNumber.toString(16);
   return fetchEvmBalanceAtTag(
     config.chain.evmChainId!,
@@ -740,6 +798,7 @@ async function backfillAmounts(
        FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
          AND amount IS NULL
+       ORDER BY timestamp DESC
        LIMIT ?`,
     )
     .bind(BACKFILL_BATCH_SIZE)

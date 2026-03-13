@@ -44,7 +44,8 @@ Implementation note: `worker/src/lib/blacklist-contracts.ts` currently defines n
 
 - For historical balance lookups on L2 chains (Arbitrum, Base, Optimism, Polygon, Avalanche, BSC)
 - **Endpoint:** `https://lb.drpc.org/ogrpc?network={network}&dkey={drpcApiKey}`
-- Only used when dRPC API key is configured; otherwise falls back to "latest" balance
+- Preferred historical balance source when `DRPC_API_KEY` is configured
+- If dRPC misses, blacklist balance enrichment now falls through to the shared chain registry RPC path (`getChainRpc()`), which means Alchemy primaries are used automatically when `ALCHEMY_API_KEY` is configured, then public RPC fallbacks. Etherscan remains the last best-effort fallback for chains where it can answer historical `eth_call`.
 
 ### TronGrid API
 
@@ -256,6 +257,7 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
 
 1. **Backfill** (runs FIRST to prioritize budget)
    - Targets rows with NULL amount only
+   - Orders newest rows first so fresh gaps clear before archival backlog
    - Batch size: 50 rows per cycle
    - Confirmed zero balances are treated as complete and are not retried
    - Fetches historical balances via RPC or API
@@ -271,8 +273,7 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
 3. **Balance enrichment** (in-memory, before DB insertion)
    - Enrich parsed rows with balances BEFORE inserting into D1
    - EVM Ethereum: Etherscan `eth_call` at historical block (`blockNumber - 1`)
-   - EVM L2 (with dRPC): archive node `eth_call` at historical block
-   - EVM L2 (no dRPC): Etherscan `eth_call` with historical block tag (Etherscan free plan may silently return latest balance on L2s)
+   - EVM L2/sidechain: dRPC archive node first when configured, then `getChainRpc()` (Alchemy/public RPC), then Etherscan best-effort
    - Tron: TronGrid `/accounts/{addr}` (convert `0x` to `41` prefix)
    - RPC-log chains reuse persistent block-timestamp cache rows to avoid re-resolving the same blocks every run
    - `INSERT OR IGNORE` enriched rows into `blacklist_events`
@@ -309,7 +310,8 @@ Per-chain block margins (`INDEXING_SAFETY_SEC / blockTime`):
 
 1. **Ethereum mainnet:** Etherscan `eth_call` with historical block tag (`blockNumber - 1`)
 2. **L2 with dRPC key:** dRPC archive node `eth_call` at historical block
-3. **L2 without dRPC:** Etherscan `eth_call` with historical block tag (same code path as Ethereum, but Etherscan free plan may silently ignore the block tag on L2s and return latest balance)
+3. **L2 RPC fallback:** if dRPC misses, `getChainRpc()` retries the same historical `eth_call` against the configured chain RPCs (Alchemy primary when available, then public fallback)
+4. **Best-effort explorer fallback:** Etherscan `eth_call` with historical block tag (same code path as Ethereum, but Etherscan free plan may silently ignore the block tag on some non-mainnet chains or reject them entirely)
 
 ### Tron Strategy
 
@@ -444,7 +446,7 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 4. **USDT has TWO event patterns:** legacy (`AddedBlackList`, address NOT indexed) and USDT0 (`BlockPlaced`, address indexed). Some chains (Arbitrum, Polygon) emit both.
 5. **PAXG FrozenAddressWiped** has no amount in the event -- must fetch via `balanceOf` at `blockNumber - 1`.
 6. **XAUT uses USDT0 event pattern** (was mistakenly using legacy pattern until 2026-02-11 fix).
-7. **L2 Etherscan free plan** cannot do historical `eth_call` -- use dRPC or accept "latest" fallback.
+7. **L2 Etherscan free plan** cannot do historical `eth_call` on every chain -- rely on dRPC first, then chain-RPC/Alchemy fallback; explorer fallback is best-effort only.
 8. **Etherscan free-tier `getLogs`** is not available on Base, Optimism, Avalanche, or BSC -- those chains use chain RPC log scans instead.
 9. **EVM sentinel bug (fixed):** storing `99999999` as `last_block` could cause permanent scan stall.
 10. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
