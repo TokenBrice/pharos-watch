@@ -3,6 +3,17 @@
 
 export const STALE_THRESHOLD_MS = 90 * 60 * 1000; // 3 sync cycles
 
+// --- PYS formula constants ---
+const PYS_RISK_PENALTY_FLOOR = 0.5;
+const PYS_SUSTAINABILITY_FLOOR = 0.3;
+
+// --- Warning signal thresholds ---
+const YIELD_SPIKE_THRESHOLD = 2.0;
+const YIELD_DIVERGENCE_THRESHOLD = 3.0;
+const NEGATIVE_TREND_THRESHOLD = 0.7;
+const REWARD_HEAVY_THRESHOLD = 0.8;
+const TVL_OUTFLOW_THRESHOLD = -0.2;
+
 export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
   if (ratePrev <= 0 || rateNow <= 0 || days <= 0) return 0;
   const ratio = rateNow / ratePrev;
@@ -23,9 +34,9 @@ interface PYSInput {
 
 export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor }: PYSInput): number {
   if (apy30d <= 0) return 0;
-  const riskPenalty = Math.max(0.5, (101 - safetyScore) / 20);
+  const riskPenalty = Math.max(PYS_RISK_PENALTY_FLOOR, (101 - safetyScore) / 20);
   const yieldEfficiency = apy30d / riskPenalty;
-  const sustainabilityMultiplier = Math.max(0.3, 1.0 - apyVarianceScore);
+  const sustainabilityMultiplier = Math.max(PYS_SUSTAINABILITY_FLOOR, 1.0 - apyVarianceScore);
   return Math.min(100, Math.round(yieldEfficiency * sustainabilityMultiplier * scalingFactor));
 }
 
@@ -57,13 +68,13 @@ interface WarningInput {
 
 export function detectWarningSignals(input: WarningInput): string[] {
   const signals: string[] = [];
-  if (input.apy30d > 0 && input.currentApy / input.apy30d > 2.0) signals.push("yield-spike");
-  if (input.medianApy > 0 && input.currentApy > input.medianApy * 3) signals.push("yield-divergence");
-  if (input.apy30d > 0 && input.currentApy < input.apy30d * 0.7) signals.push("negative-trend");
-  if (input.apyReward != null && input.currentApy > 0 && input.apyReward / input.currentApy > 0.8) signals.push("reward-heavy");
+  if (input.apy30d > 0 && input.currentApy / input.apy30d > YIELD_SPIKE_THRESHOLD) signals.push("yield-spike");
+  if (input.medianApy > 0 && input.currentApy > input.medianApy * YIELD_DIVERGENCE_THRESHOLD) signals.push("yield-divergence");
+  if (input.apy30d > 0 && input.currentApy < input.apy30d * NEGATIVE_TREND_THRESHOLD) signals.push("negative-trend");
+  if (input.apyReward != null && input.currentApy > 0 && input.apyReward / input.currentApy > REWARD_HEAVY_THRESHOLD) signals.push("reward-heavy");
   if (input.sourceTvlUsd != null && input.prevTvlUsd != null && input.prevTvlUsd > 0) {
     const change = (input.sourceTvlUsd - input.prevTvlUsd) / input.prevTvlUsd;
-    if (change < -0.2) signals.push("tvl-outflow");
+    if (change < TVL_OUTFLOW_THRESHOLD) signals.push("tvl-outflow");
   }
   return signals;
 }
