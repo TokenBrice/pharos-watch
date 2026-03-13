@@ -284,6 +284,11 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS
   schedule: CRON_SCHEDULES[definition.scheduleKey],
 }));
 
+/** Job name → expected interval in seconds, derived from definitions. */
+export const CRON_INTERVALS = Object.freeze(
+  Object.fromEntries(CRON_JOB_DEFINITIONS.map((item) => [item.job, item.intervalSec])) as Record<string, number>,
+);
+
 const CRON_JOB_META_BY_ID = new Map(
   CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]),
 );

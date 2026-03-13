@@ -52,7 +52,7 @@ describe("handleBackfillCgPrices", () => {
     const res = await handleBackfillCgPrices(
       makeDb(),
       makeApiUrl("/api/backfill-cg-prices"),
-      "secret",
+      undefined,
       makeApiRequest("/api/backfill-cg-prices"),
     );
     expect(res.status).toBe(401);
@@ -62,7 +62,7 @@ describe("handleBackfillCgPrices", () => {
     const res = await handleBackfillCgPrices(
       makeDb(),
       makeApiUrl("/api/backfill-cg-prices?stablecoin=missing"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-cg-prices?stablecoin=missing", { adminKey: "secret" }),
     );
     expect(res.status).toBe(404);
@@ -73,7 +73,7 @@ describe("handleBackfillCgPrices", () => {
     const res = await handleBackfillCgPrices(
       makeDb(),
       makeApiUrl("/api/backfill-cg-prices?batch=999999&batchSize=100"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-cg-prices?batch=999999&batchSize=100", { adminKey: "secret" }),
     );
     expect(res.status).toBe(200);
@@ -85,7 +85,7 @@ describe("handleBackfillCgPrices", () => {
     const res = await handleBackfillCgPrices(
       makeDb([{ snapshot_date: snapshotDate, price: null, circulating_usd: 100_000_000 }]),
       makeApiUrl("/api/backfill-cg-prices?stablecoin=usdt-tether"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-cg-prices?stablecoin=usdt-tether", { adminKey: "secret" }),
     );
 

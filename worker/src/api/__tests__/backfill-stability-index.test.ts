@@ -91,7 +91,7 @@ describe("handleBackfillStabilityIndex", () => {
   it("requires admin auth", async () => {
     const res = await handleBackfillStabilityIndex(
       makeDb(),
-      "secret",
+      undefined,
       makeApiRequest("/api/backfill-stability-index"),
     );
     expect(res.status).toBe(401);
@@ -100,7 +100,7 @@ describe("handleBackfillStabilityIndex", () => {
   it("returns 404 when there are no depeg events", async () => {
     const res = await handleBackfillStabilityIndex(
       makeDb({ earliest: null }),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-stability-index", { adminKey: "secret" }),
     );
 
@@ -133,7 +133,7 @@ describe("handleBackfillStabilityIndex", () => {
           { stablecoin_id: "usdt-tether", snapshot_date: day2, circulating_usd: 101_000_000 },
         ],
       }),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
     );
 
@@ -166,7 +166,7 @@ describe("handleBackfillStabilityIndex", () => {
         ],
         onExec: (sql) => execCalls.push(sql),
       }),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
     );
 

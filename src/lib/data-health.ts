@@ -1,5 +1,6 @@
 import type { ApiMeta } from "@/lib/api";
 import { ApiFetchError } from "@/lib/api";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 type DataHealthState = "fresh" | "degraded" | "stale" | "unavailable" | "error";
 
@@ -154,11 +155,7 @@ export function mergeHealthStates(entries: DataHealthInfo[]): MergedDataHealth {
 
 export function formatHealthAge(ms: number | null): string {
   if (ms == null) return "unknown";
-  const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m`;
-  return `${Math.floor(hours / 24)}d`;
+  return formatElapsedSeconds(ms / 1000);
 }
 
 export function formatDataHealthTimestamp(

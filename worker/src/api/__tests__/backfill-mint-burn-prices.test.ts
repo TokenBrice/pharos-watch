@@ -81,7 +81,7 @@ describe("handleBackfillMintBurnPrices", () => {
     const response = await handleBackfillMintBurnPrices(
       db,
       makeApiUrl("/api/backfill-mint-burn-prices"),
-      "secret",
+      true,
       request,
     );
 
@@ -120,7 +120,7 @@ describe("handleBackfillMintBurnPrices", () => {
     const response = await handleBackfillMintBurnPrices(
       db,
       makeApiUrl("/api/backfill-mint-burn-prices"),
-      "secret",
+      undefined,
       makeApiRequest("/api/backfill-mint-burn-prices"),
     );
 

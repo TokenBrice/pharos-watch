@@ -9,7 +9,7 @@ const { handleStatusHistory } = await import("../status-history");
 describe("handleStatusHistory", () => {
   it("returns 401 when request is unauthorized", async () => {
     const db = mockD1([]);
-    const res = await handleStatusHistory(db, "secret-key", undefined);
+    const res = await handleStatusHistory(db, undefined, undefined);
     expect(res.status).toBe(401);
   });
 
@@ -67,7 +67,7 @@ describe("handleStatusHistory", () => {
     ]);
 
     const request = makeApiRequest("/api/status-history?limit=5", { adminKey: "secret-key" });
-    const res = await handleStatusHistory(db, "secret-key", request);
+    const res = await handleStatusHistory(db, true, request);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       state: { currentStatus: string } | null;
@@ -114,7 +114,7 @@ describe("handleStatusHistory", () => {
     }) as typeof db.prepare;
 
     const request = makeApiRequest("/api/status-history?from=2025-01-01T00:00:00Z&to=1735776000", { adminKey: "secret-key" });
-    const res = await handleStatusHistory(db, "secret-key", request);
+    const res = await handleStatusHistory(db, true, request);
     expect(res.status).toBe(200);
 
     const transitionsSql = seenSql.find((sql) => sql.includes("FROM status_transitions")) ?? "";

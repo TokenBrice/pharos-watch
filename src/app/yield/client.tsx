@@ -11,7 +11,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { formatApy } from "@shared/lib/format";
+import { formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 
 export function YieldClient() {
@@ -159,7 +159,7 @@ export function YieldClient() {
               <span className="text-xs text-muted-foreground">Average Yield (TVL-weighted)</span>
             </CardHeader>
             <CardContent>
-              <span className="text-2xl font-bold font-mono tabular-nums">{formatApy(stats.avgApy)}</span>
+              <span className="text-2xl font-bold font-mono tabular-nums">{formatPercent(stats.avgApy)}</span>
             </CardContent>
           </Card>
           <Card className="rounded-xl">
@@ -167,7 +167,7 @@ export function YieldClient() {
               <span className="text-xs text-muted-foreground">Risk-Free Rate (T-Bill)</span>
             </CardHeader>
             <CardContent>
-              <span className="text-2xl font-bold font-mono tabular-nums">{formatApy(stats.riskFreeRate)}</span>
+              <span className="text-2xl font-bold font-mono tabular-nums">{formatPercent(stats.riskFreeRate)}</span>
             </CardContent>
           </Card>
           <Card className="rounded-xl">
@@ -208,7 +208,7 @@ export function YieldClient() {
                 <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
                   <p className="pharos-kicker">Below T-Bill</p>
                   <p className="mt-1 text-sm text-foreground">
-                    Yields under {formatApy(data.riskFreeRate)} are failing the basic hurdle rate.
+                    Yields under {formatPercent(data.riskFreeRate)} are failing the basic hurdle rate.
                   </p>
                 </div>
                 <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3">

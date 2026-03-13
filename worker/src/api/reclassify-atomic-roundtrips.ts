@@ -16,10 +16,10 @@ export const handleReclassifyAtomicRoundtrips = withErrorHandler(
   async (
     db: D1Database,
     _url: URL,
-    adminKey: string | undefined,
+    trustedAdmin: boolean | undefined,
     request?: Request,
   ): Promise<Response> => {
-    const authErr = await requireAdmin(request, adminKey);
+    const authErr = await requireAdmin(request, trustedAdmin);
     if (authErr) return authErr;
 
     const { results: roundtripTxs } = await db.prepare(

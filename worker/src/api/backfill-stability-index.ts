@@ -12,8 +12,8 @@ import {
 
 export const handleBackfillStabilityIndex = withErrorHandler(
   "backfill-stability-index",
-  async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
-    return withAdmin(request, adminKey, async () => {
+  async (db: D1Database, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
+    return withAdmin(request, async () => {
       const rebuildTableSql = [
         "CREATE TABLE stability_index_rebuild (",
         "computed_at INTEGER PRIMARY KEY,",
@@ -113,6 +113,6 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       }
 
       return jsonResponse({ ok: true, daysBackfilled: count, skippedInsufficientData });
-    });
+    }, trustedAdmin);
   }
 );

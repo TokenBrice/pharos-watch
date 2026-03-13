@@ -204,13 +204,7 @@ function ComponentChart({
                 />
                 <Tooltip
                   formatter={(value, name) => [formatScore(Number(value)), String(name)]}
-                  labelFormatter={(label) =>
-                    new Date(Number(label)).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  }
+                  labelFormatter={(label) => formatChartDate(Number(label), "long")}
                   {...RECHARTS_TOOLTIP_STYLES}
                 />
                 <Area

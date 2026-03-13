@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
-import { formatCurrency, formatScore, formatApy } from "@shared/lib/format";
+import { formatCurrency, formatScore, formatPercent } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
@@ -96,7 +96,7 @@ function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
                 {src.yieldSource}
               </YieldSourceLink>
               <span className="font-mono text-emerald-700 dark:text-emerald-400 shrink-0">
-                {formatApy(src.currentApy)}
+                {formatPercent(src.currentApy)}
               </span>
             </div>
           ))}
@@ -247,7 +247,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular-nums">{formatApy(row.apy30d)}</TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">{formatPercent(row.apy30d)}</TableCell>
                       <TableCell className="hidden md:table-cell text-center">
                         {grade && grade !== "NR" ? (
                           <Badge

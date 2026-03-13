@@ -2,8 +2,7 @@ import type { DigestInputData, StablecoinData } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
 import { formatCurrency } from "@shared/lib/format";
-import { scoreToGrade } from "@shared/lib/report-cards";
-import { buildInClause, type CronResult } from "../lib/db";
+import { type CronResult } from "../lib/db";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -12,9 +11,18 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { computeSafetyScoresSnapshot, type SafetyGradeRow } from "../lib/safety-scores";
-import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../lib/mint-burn-scoring";
-import { SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
+import {
+  collectActiveDepegs,
+  collectBlacklistActivity,
+  collectSupplyVelocity,
+  collectSafetyScores,
+  collectResolvedDepegs,
+  collectMintBurnFlows,
+  collectDewsStress,
+  collectHistoricalContext,
+  collectGradeTransitions,
+  type CollectorContext,
+} from "./daily-digest/collectors";
 
 const SYSTEM_PROMPT =
   // 1. Voice directives
@@ -395,31 +403,15 @@ export async function generateDailyDigest(
   }
 
   // 2. Active depeg count + top depegs ranked by market impact (bps × mcap)
-  let activeDepegCount = 0;
-  const topDepegs: DigestInputData["topDepegs"] = [];
-
-  try {
-    const activeDepegs = await db
-      .prepare("SELECT stablecoin_id, symbol, peak_deviation_bps FROM depeg_events WHERE ended_at IS NULL")
-      .all<{ stablecoin_id: string; symbol: string; peak_deviation_bps: number }>();
-    const rows = activeDepegs.results ?? [];
-    activeDepegCount = rows.length;
-
-    const withImpact = rows.map((r) => {
-      const mcapUsd = mcapById.get(r.stablecoin_id) ?? 0;
-      return { symbol: r.symbol, bps: r.peak_deviation_bps, mcapUsd, impact: r.peak_deviation_bps * mcapUsd };
-    });
-    withImpact.sort((a, b) => b.impact - a.impact);
-    topDepegs.push(...withImpact.slice(0, 3).map(({ symbol, bps, mcapUsd }) => ({ symbol, bps, mcapUsd })));
-  } catch (e) {
-    console.error("[daily-digest] Failed to query active depegs:", e);
-  }
-
-  // 3. Stability index — match homepage/stability page display logic
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
   const yesterdayTs = todayTs - SECONDS.ONE_DAY;
 
+  const ctx: CollectorContext = { db, trackedStablecoinAssets, mcapById, nowSec, todayTs, yesterdayTs };
+
+  const { activeDepegCount, topDepegs } = await collectActiveDepegs(ctx);
+
+  // 3. Stability index — match homepage/stability page display logic
   // Current source: latest 15-min sample, fallback to latest daily snapshot if needed
   const latestSample = await db
     .prepare("SELECT score, band, components FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
@@ -458,516 +450,23 @@ export async function generateDailyDigest(
     ? { score: yesterdayRow.score, band: yesterdayRow.band }
     : null;
 
-  // --- Enrichment data collection ---
+  // --- Enrichment data collection via collectors ---
 
-  // 4a. Blacklist events (last 24h)
-  let blacklistActivity: DigestInputData["blacklistActivity"];
-  try {
-    const blRows = await db
-      .prepare(
-        "SELECT stablecoin AS symbol, chain_name, event_type, amount FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? ORDER BY amount DESC",
-      )
-      .bind(todayTs - SECONDS.ONE_DAY, todayTs)
-      .all<{ symbol: string; chain_name: string; event_type: string; amount: number | null }>();
-    const blEvents = blRows.results ?? [];
-    if (blEvents.length > 0) {
-      const eventCount = blEvents.length;
-      const totalAmountUsd = blEvents.reduce((s, e) => s + (e.amount ?? 0), 0);
-      const hasLargeEvent = blEvents.some((e) => (e.amount ?? 0) > 10_000_000);
-      if (eventCount >= 2 || hasLargeEvent) {
-        blacklistActivity = {
-          eventCount,
-          totalAmountUsd,
-          topEvents: blEvents
-            .filter((e) => e.event_type === "blacklist" || e.event_type === "destroy")
-            .slice(0, 5)
-            .map((e) => ({
-              symbol: e.symbol,
-              chain: e.chain_name,
-              type: e.event_type as "blacklist" | "destroy",
-              amountUsd: e.amount ?? 0,
-            })),
-        };
-      }
-    }
-  } catch (e) {
-    console.error("[daily-digest] Failed to query blacklist events:", e);
-  }
+  const blacklistActivity = await collectBlacklistActivity(ctx);
+  const supplyVelocity = await collectSupplyVelocity(ctx);
 
-  // 4b. Supply velocity (1d vs 7d for top 10 coins by mcap)
-  let supplyVelocity: DigestInputData["supplyVelocity"];
-  try {
-    // Get top 10 coins by mcap
-    const top10: { id: string; symbol: string; mcap: number }[] = [];
-    const tracked = trackedStablecoinAssets
-      .map((coin) => ({ id: coin.id, symbol: coin.symbol, mcap: getCirculatingRaw(coin) }))
-      .sort((a, b) => b.mcap - a.mcap)
-      .slice(0, 10);
-    top10.push(...tracked);
+  // Safety scores need "mentioned symbols" from earlier phases
+  const mentionedSymbols = new Set<string>();
+  for (const d of topDepegs) mentionedSymbols.add(d.symbol);
+  if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
+  if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
+  const { safetyScores, safetyGrades } = await collectSafetyScores(ctx, mentionedSymbols, degradedReasons);
 
-    if (top10.length > 0) {
-      const yesterday = todayTs - SECONDS.ONE_DAY;
-      const weekAgo = todayTs - 7 * SECONDS.ONE_DAY;
-      const top10IdInClause = buildInClause(top10.map((coin) => coin.id));
-      // Query supply snapshots for today, yesterday, and 7 days ago
-      const supplyRows = await db
-        .prepare(
-          `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id IN (${top10IdInClause.sql}) AND snapshot_date IN (?, ?, ?)`,
-        )
-        .bind(...top10IdInClause.binds, todayTs, yesterday, weekAgo)
-        .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
-
-      const snapMap = new Map<string, Map<number, number>>();
-      for (const row of supplyRows.results ?? []) {
-        let byDate = snapMap.get(row.stablecoin_id);
-        if (!byDate) { byDate = new Map(); snapMap.set(row.stablecoin_id, byDate); }
-        byDate.set(row.snapshot_date, row.circulating_usd);
-      }
-
-      const velocitySignals: NonNullable<DigestInputData["supplyVelocity"]> = [];
-      for (const coin of top10) {
-        const byDate = snapMap.get(coin.id);
-        if (!byDate) continue;
-        const todayVal = byDate.get(todayTs);
-        const yesterdayVal = byDate.get(yesterday);
-        const weekAgoVal = byDate.get(weekAgo);
-        if (todayVal == null || yesterdayVal == null || weekAgoVal == null) continue;
-
-        const change1d = todayVal - yesterdayVal;
-        const change7d = todayVal - weekAgoVal;
-        const dailyAvg7d = change7d / 7;
-
-        // Threshold: day is 2.5x weekly average OR direction reversed
-        const directionReversed = (change1d > 0 && change7d < 0) || (change1d < 0 && change7d > 0);
-        const velocityRatio = dailyAvg7d !== 0 ? Math.abs(change1d / dailyAvg7d) : 0;
-
-        if (directionReversed || velocityRatio > 2.5) {
-          let signal: string;
-          if (directionReversed) signal = "reversed";
-          else if (velocityRatio > 2.5 && Math.abs(change1d) > Math.abs(dailyAvg7d)) signal = "accelerating";
-          else signal = "decelerating";
-
-          velocitySignals.push({ coin: coin.symbol, change1d, change7d, signal });
-        }
-      }
-
-      if (velocitySignals.length > 0) {
-        supplyVelocity = velocitySignals;
-      }
-    }
-  } catch (e) {
-    console.error("[daily-digest] Failed to compute supply velocity:", e);
-  }
-
-  // 4c. Safety scores (for mentioned coins + distribution)
-  let safetyScores: DigestInputData["safetyScores"];
-  let safetyGrades: SafetyGradeRow[] | undefined;
-  try {
-    // Collect IDs of coins already mentioned in other data sections
-    const mentionedSymbols = new Set<string>();
-    for (const d of topDepegs) mentionedSymbols.add(d.symbol);
-    if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
-    if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
-    const safetySnapshot = await computeSafetyScoresSnapshot(db, {
-      includeNavTokens: false,
-      outputMode: "full-grades",
-    });
-    if (safetySnapshot.kind !== "ok") {
-      degradedReasons.push(`safety-snapshot:${safetySnapshot.reason ?? "degraded"}`);
-      console.warn(
-        `[daily-digest] Safety snapshot degraded: ${safetySnapshot.coveredCount}/${safetySnapshot.trackedCount} ` +
-        `(${(safetySnapshot.coverageRatio * 100).toFixed(1)}%)`,
-      );
-    } else {
-      const allGrades = safetySnapshot.grades;
-      safetyGrades = allGrades;
-
-      // Distribution stats
-      const scores = allGrades.map((g) => g.score).sort((a, b) => a - b);
-      const medianScore = scores.length > 0 ? scores[Math.floor(scores.length / 2)] : 0;
-      const medianGrade = scoreToGrade(medianScore);
-      const aboveBCount = allGrades.filter((g) => g.score >= 75).length;
-      const fCount = allGrades.filter((g) => g.grade === "F").length;
-
-      // Per-coin grades for mentioned coins + up to 2 "notable tension" coins
-      const mentionedCoinGrades = allGrades.filter((g) => mentionedSymbols.has(g.symbol));
-      const tensionCoins = allGrades
-        .filter((g) => !mentionedSymbols.has(g.symbol) && g.pegScore !== null && g.pegScore > 90 && g.score < 50)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 2);
-      const reportCoins = [...mentionedCoinGrades, ...tensionCoins];
-
-      safetyScores = {
-        mentionedCoins: reportCoins.map((g) => ({
-          symbol: g.symbol, grade: g.grade, score: g.score,
-          peg: g.pegScore, liq: g.liqScore,
-        })),
-        medianGrade,
-        aboveBCount,
-        fCount,
-      };
-    }
-  } catch (e) {
-    console.error("[daily-digest] Failed to compute safety scores:", e);
-  }
-
-  // 4d. Recently resolved depegs (last 48h)
-  let resolvedDepegs: DigestInputData["resolvedDepegs"];
-  try {
-    const cutoff48h = nowSec - SECONDS.TWO_DAYS;
-    const resolvedRows = await db
-      .prepare(
-        `SELECT symbol, peak_deviation_bps, started_at, ended_at, stablecoin_id
-         FROM depeg_events
-         WHERE ended_at IS NOT NULL AND ended_at >= ?
-         ORDER BY peak_deviation_bps DESC
-         LIMIT 5`,
-      )
-      .bind(cutoff48h)
-      .all<{ symbol: string; peak_deviation_bps: number; started_at: number; ended_at: number; stablecoin_id: string }>();
-
-    const candidates = (resolvedRows.results ?? [])
-      .map((r) => ({
-        symbol: r.symbol,
-        peakBps: Math.abs(r.peak_deviation_bps),
-        durationHours: Math.round((r.ended_at - r.started_at) / SECONDS.ONE_HOUR),
-        mcapUsd: mcapById.get(r.stablecoin_id) ?? 0,
-      }))
-      .filter((r) => r.peakBps > 200 && r.mcapUsd > 50_000_000)
-      .slice(0, 3);
-
-    if (candidates.length > 0) {
-      resolvedDepegs = candidates;
-    }
-  } catch (e) {
-    console.error("[daily-digest] Failed to query resolved depegs:", e);
-  }
-
-  // 4e. Mint-burn flows (24h + 30d baseline)
-  let mintBurnFlows: DigestInputData["mintBurnFlows"];
-  try {
-    const cutoff24h = nowSec - SECONDS.ONE_DAY;
-    const cutoff30d = nowSec - 30 * SECONDS.ONE_DAY;
-
-    // 24h aggregate per coin (across all chains)
-    const flow24hRows = await db
-      .prepare(
-        `SELECT stablecoin_id,
-                SUM(mint_volume_usd) as mint_24h,
-                SUM(burn_volume_usd) as burn_24h,
-                SUM(net_flow_usd) as net_24h
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id`,
-      )
-      .bind(cutoff24h)
-      .all<{ stablecoin_id: string; mint_24h: number; burn_24h: number; net_24h: number }>();
-
-    // 30d baseline per coin
-    const flow30dRows = await db
-      .prepare(
-        `SELECT stablecoin_id,
-                SUM(net_flow_usd) / 30.0 as avg_daily_net,
-                SUM(mint_volume_usd + burn_volume_usd) / 30.0 as avg_daily_abs,
-                COUNT(DISTINCT CAST(hour_ts / 86400 AS INTEGER)) as data_days
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id`,
-      )
-      .bind(cutoff30d)
-      .all<{ stablecoin_id: string; avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
-
-    const flow24h = new Map((flow24hRows.results ?? []).map((r) => [r.stablecoin_id, r]));
-    const flow30d = new Map((flow30dRows.results ?? []).map((r) => [r.stablecoin_id, r]));
-
-    // Compute FIS per coin
-    const coinIntensities: { id: string; symbol: string; intensity: number | null; net24h: number; mcap: number }[] = [];
-    for (const [id, f24] of flow24h) {
-      const f30 = flow30d.get(id);
-      if (!f30) continue;
-      const coin = trackedStablecoinAssets.find((c) => c.id === id);
-      if (!coin) continue;
-      const intensity = computeFlowIntensity({
-        currentDailyNet: f24.net_24h,
-        baselineDailyNet: f30.avg_daily_net,
-        baselineDailyAbs: f30.avg_daily_abs,
-        dataAgeDays: f30.data_days,
-        currentDailyAbs: f24.mint_24h + f24.burn_24h,
-      });
-      coinIntensities.push({ id, symbol: coin.symbol, intensity, net24h: f24.net_24h, mcap: getCirculatingRaw(coin) });
-    }
-
-    const gaugeScore = computeGaugeScore(coinIntensities.map((c) => ({ intensity: c.intensity, mcap: c.mcap })));
-    if (gaugeScore !== null) {
-      // FTQ: sum net flows for safe vs risky
-      let safeNet24h = 0;
-      let riskyNet24h = 0;
-      for (const c of coinIntensities) {
-        if (SAFE_HAVEN_IDS.has(c.id)) safeNet24h += c.net24h;
-        else riskyNet24h += c.net24h;
-      }
-      const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
-
-      // Top pressure: coins with |intensity| > 20, sorted by |intensity|
-      const topPressure = coinIntensities
-        .filter((c) => c.intensity !== null && Math.abs(c.intensity) > 20)
-        .sort((a, b) => Math.abs(b.intensity!) - Math.abs(a.intensity!))
-        .slice(0, 3)
-        .map((c) => ({ symbol: c.symbol, intensity: c.intensity!, net24hUsd: c.net24h }));
-
-      mintBurnFlows = {
-        gaugeScore,
-        gaugeBand: getGaugeBand(gaugeScore).label,
-        flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
-        topPressure,
-      };
-    }
-  } catch (e) {
-    console.error("[daily-digest] Failed to collect mint-burn flows:", e);
-  }
-
-  // 4f. DEWS stress signals
-  let dewsStress: DigestInputData["dewsStress"];
-  try {
-    // Latest DEWS per coin (most recent sample)
-    const latestDews = await db
-      .prepare(
-        `SELECT s.stablecoin_id, s.score, s.band, s.signals_json
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) as max_at
-           FROM stress_signals GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      )
-      .all<{ stablecoin_id: string; score: number; band: string; signals_json: string }>();
-
-    const todayRows = latestDews.results ?? [];
-    if (todayRows.length > 0) {
-      // Yesterday's snapshot for band-change detection
-      const yesterdayDews = await db
-        .prepare("SELECT stablecoin_id, score, band FROM stress_signal_history WHERE snapshot_date = ?")
-        .bind(yesterdayTs)
-        .all<{ stablecoin_id: string; score: number; band: string }>();
-
-      const yesterdayMap = new Map((yesterdayDews.results ?? []).map((r) => [r.stablecoin_id, r]));
-
-      // Band counts
-      const initCounts = () => ({ calm: 0, watch: 0, alert: 0, warning: 0, danger: 0 });
-      const bandCounts = initCounts();
-      const yesterdayBandCounts = initCounts();
-
-      for (const r of todayRows) {
-        const key = r.band.toLowerCase() as keyof typeof bandCounts;
-        if (key in bandCounts) bandCounts[key]++;
-      }
-      for (const r of yesterdayDews.results ?? []) {
-        const key = r.band.toLowerCase() as keyof typeof yesterdayBandCounts;
-        if (key in yesterdayBandCounts) yesterdayBandCounts[key]++;
-      }
-
-      // Band changes crossing WATCH/ALERT boundary
-      const SIGNAL_LABELS: Record<string, string> = {
-        supply: "supply velocity", pool: "pool balance drift", liq: "liquidity erosion",
-        price: "price confidence", diverg: "cross-source divergence", black: "blacklist activity",
-        flow: "mint/burn flow", yield: "yield anomaly",
-      };
-      const ALERT_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
-      const bandChanges: NonNullable<DigestInputData["dewsStress"]>["bandChanges"] = [];
-
-      for (const today of todayRows) {
-        const yesterday = yesterdayMap.get(today.stablecoin_id);
-        if (!yesterday || yesterday.band === today.band) continue;
-        // Only include if crossing the WATCH/ALERT boundary
-        const wasElevated = ALERT_BANDS.has(yesterday.band);
-        const isElevated = ALERT_BANDS.has(today.band);
-        if (wasElevated === isElevated) continue; // Both above or both below — not crossing
-
-        // Extract top driver from signals_json
-        let topDriver = "unknown";
-        try {
-          const signals = JSON.parse(today.signals_json) as Record<string, { value: number; available: boolean }>;
-          let maxVal = -1;
-          for (const [key, sig] of Object.entries(signals)) {
-            if (sig.available && sig.value > maxVal) { maxVal = sig.value; topDriver = SIGNAL_LABELS[key] ?? key; }
-          }
-        } catch { /* use "unknown" */ }
-
-        const coin = trackedStablecoinAssets.find((c) => c.id === today.stablecoin_id);
-        if (!coin) continue;
-        bandChanges.push({ symbol: coin.symbol, from: yesterday.band, to: today.band, score: today.score, topDriver });
-      }
-
-      // Elevated coins: ALERT+ with mcap > $10M
-      const elevatedCoins = todayRows
-        .filter((r) => ALERT_BANDS.has(r.band))
-        .map((r) => {
-          const coin = trackedStablecoinAssets.find((c) => c.id === r.stablecoin_id);
-          return coin ? { symbol: coin.symbol, band: r.band, score: r.score, mcapUsd: getCirculatingRaw(coin) } : null;
-        })
-        .filter((r): r is NonNullable<typeof r> => r !== null && r.mcapUsd > 10_000_000)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5);
-
-      dewsStress = { bandCounts, yesterdayBandCounts, bandChanges: bandChanges.slice(0, 5), elevatedCoins };
-    }
-  } catch (e) {
-    console.error("[daily-digest] Failed to collect DEWS stress signals:", e);
-  }
-
-  // 4g. Historical context (PSI precedent, band streak, supply mover)
-  let historicalContext: DigestInputData["historicalContext"];
-  try {
-    // Check we have enough history (>30 days)
-    const histDepth = await db
-      .prepare("SELECT COUNT(*) as cnt FROM stability_index")
-      .first<{ cnt: number }>();
-
-    if (displayScore != null && displayBand && (histDepth?.cnt ?? 0) > 30) {
-      // PSI precedent: last time score was at or below current
-      const precedent = await db
-        .prepare(
-          "SELECT computed_at, score, band FROM stability_index WHERE score <= ? AND computed_at < ? ORDER BY computed_at DESC LIMIT 1",
-        )
-        .bind(displayScore, todayTs)
-        .first<{ computed_at: number; score: number; band: string }>();
-
-      const psiPrecedent = precedent
-        ? {
-            lastSeenDate: precedent.computed_at,
-            lastSeenDaysAgo: Math.round((todayTs - precedent.computed_at) / SECONDS.ONE_DAY),
-            lastSeenScore: precedent.score,
-            lastSeenBand: precedent.band,
-          }
-        : null; // null = all-time low
-
-      // PSI band streak: count consecutive days in current band
-      const bandHistory = await db
-        .prepare(
-          "SELECT computed_at, band FROM stability_index WHERE computed_at <= ? ORDER BY computed_at DESC LIMIT 90",
-        )
-        .bind(todayTs)
-        .all<{ computed_at: number; band: string }>();
-
-      let psiBandStreak = 0;
-      for (const row of bandHistory.results ?? []) {
-        if (row.band === displayBand) psiBandStreak++;
-        else break;
-      }
-      if (psiBandStreak === 0) psiBandStreak = 1; // Minimum 1 (today)
-
-      // Supply mover context
-      let supplyMoverContext: NonNullable<DigestInputData["historicalContext"]>["supplyMoverContext"] = null;
-      if (biggestSupplyChange) {
-        const athRow = await db
-          .prepare("SELECT MAX(circulating_usd) as ath_mcap FROM supply_history WHERE stablecoin_id = ?")
-          .bind(biggestSupplyChange.id)
-          .first<{ ath_mcap: number | null }>();
-
-        // ATH date (separate query since D1 doesn't support argmax)
-        let athDate = 0;
-        if (athRow?.ath_mcap) {
-          const athDateRow = await db
-            .prepare(
-              "SELECT snapshot_date FROM supply_history WHERE stablecoin_id = ? AND circulating_usd = ? ORDER BY snapshot_date DESC LIMIT 1",
-            )
-            .bind(biggestSupplyChange.id, athRow.ath_mcap)
-            .first<{ snapshot_date: number }>();
-          athDate = athDateRow?.snapshot_date ?? 0;
-        }
-
-        // Largest historical 7d change
-        const largestChangeRow = await db
-          .prepare(
-            `SELECT s1.snapshot_date, ABS(s1.circulating_usd - s2.circulating_usd) as abs_change
-             FROM supply_history s1
-             JOIN supply_history s2
-               ON s1.stablecoin_id = s2.stablecoin_id
-               AND s2.snapshot_date = s1.snapshot_date - ?
-             WHERE s1.stablecoin_id = ?
-             ORDER BY abs_change DESC LIMIT 1`,
-          )
-          .bind(7 * SECONDS.ONE_DAY, biggestSupplyChange.id)
-          .first<{ snapshot_date: number; abs_change: number }>();
-
-        if (athRow?.ath_mcap && largestChangeRow) {
-          supplyMoverContext = {
-            allTimeHighMcap: athRow.ath_mcap,
-            allTimeHighDate: athDate,
-            largestWeeklyChange: largestChangeRow.abs_change,
-            largestWeeklyChangeDate: largestChangeRow.snapshot_date,
-            largestWeeklyChangeDaysAgo: Math.round(
-              (todayTs - largestChangeRow.snapshot_date) / SECONDS.ONE_DAY,
-            ),
-          };
-        }
-      }
-
-      historicalContext = { psiPrecedent, psiBandStreak, supplyMoverContext };
-    }
-  } catch (e) {
-    console.error("[daily-digest] Failed to collect historical context:", e);
-  }
-
-  // 4h. Grade transitions (last 48h)
-  let gradeTransitions: DigestInputData["gradeTransitions"];
-  try {
-    const cutoff48h = nowSec - SECONDS.TWO_DAYS;
-
-    // Check for methodology bumps (>10 simultaneous transitions = version change)
-    const bumpRows = await db
-      .prepare(
-        `SELECT recorded_at FROM safety_grade_history
-         WHERE recorded_at >= ? AND prev_grade IS NOT NULL
-         GROUP BY recorded_at HAVING COUNT(*) > 10`,
-      )
-      .bind(cutoff48h)
-      .all<{ recorded_at: number }>();
-    const bumpTimestamps = new Set((bumpRows.results ?? []).map((r) => r.recorded_at));
-
-    // Get transitions sorted by largest score change
-    const transitionRows = await db
-      .prepare(
-        `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score
-         FROM safety_grade_history WHERE recorded_at >= ? AND prev_grade IS NOT NULL
-         ORDER BY ABS(score - prev_score) DESC
-         LIMIT 10`,
-      )
-      .bind(cutoff48h)
-      .all<{ stablecoin_id: string; recorded_at: number; grade: string; score: number; prev_grade: string; prev_score: number }>();
-
-    const candidates = (transitionRows.results ?? [])
-      .filter((r) => !bumpTimestamps.has(r.recorded_at)) // Exclude methodology bumps
-      .filter((r) => {
-        const coin = trackedStablecoinAssets.find((c) => c.id === r.stablecoin_id);
-        return coin && getCirculatingRaw(coin) > 10_000_000; // mcap > $10M
-      })
-      .slice(0, 5);
-
-    if (candidates.length > 0 && safetyGrades) {
-      const gradeMap = new Map(safetyGrades.map((g) => [g.id, g]));
-
-      gradeTransitions = candidates.map((r) => {
-        const coin = trackedStablecoinAssets.find((c) => c.id === r.stablecoin_id)!;
-        const currentGrade = gradeMap.get(r.stablecoin_id);
-        return {
-          symbol: coin.symbol,
-          fromGrade: r.prev_grade,
-          toGrade: r.grade,
-          fromScore: r.prev_score,
-          toScore: r.score,
-          currentDimensions: {
-            peg: currentGrade?.pegScore ?? null,
-            liq: currentGrade?.liqScore ?? null,
-            resilience: null,
-            decentralization: null,
-          },
-          mcapUsd: getCirculatingRaw(coin),
-        };
-      });
-    }
-  } catch (e) {
-    console.error("[daily-digest] Failed to collect grade transitions:", e);
-  }
+  const resolvedDepegs = await collectResolvedDepegs(ctx);
+  const mintBurnFlows = await collectMintBurnFlows(ctx);
+  const dewsStress = await collectDewsStress(ctx);
+  const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
+  const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades);
 
   // --- Build input data ---
   const inputData: DigestInputData = {

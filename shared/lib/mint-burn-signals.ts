@@ -1,3 +1,5 @@
+import { clamp } from "./math";
+
 export const NET_FLOW_DIRECTION_24H_VALUES = [
   "minting",
   "burning",
@@ -36,10 +38,6 @@ export type CoinFlowCompositeState =
   (typeof COIN_FLOW_COMPOSITE_STATE_VALUES)[number];
 
 export const PRESSURE_SHIFT_STABLE_BAND_MAX = 10;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 export function getNetFlowDirection24h(input: {
   netFlow24hUsd: number;

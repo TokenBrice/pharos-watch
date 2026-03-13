@@ -176,10 +176,10 @@ export const handleBackfillSupplyHistory = withErrorHandler(
   async (
     db: D1Database,
     url: URL,
-    adminSecret?: string,
+    trustedAdmin?: boolean,
     request?: Request,
   ): Promise<Response> => {
-    return withAdmin(request, adminSecret, async () => {
+    return withAdmin(request, async () => {
 
       const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
 
@@ -367,6 +367,6 @@ export const handleBackfillSupplyHistory = withErrorHandler(
         skipped: skipped.length > 0 ? skipped : undefined,
         errors: errors.length > 0 ? errors : undefined,
       });
-    });
+    }, trustedAdmin);
   }
 );

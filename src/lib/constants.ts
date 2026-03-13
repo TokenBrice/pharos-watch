@@ -1,26 +1,24 @@
-export const SECONDS_PER_MINUTE = 60;
-const MINUTES_PER_HOUR = 60;
-const HOURS_PER_DAY = 24;
-const MS_PER_SECOND = 1000;
+export {
+  SECONDS_PER_MINUTE,
+  HOUR_SECONDS,
+  DAY_SECONDS,
+  HOUR_MS,
+  DAY_MS,
+  WEEK_MS,
+  THIRTY_DAYS_SECONDS,
+} from "@shared/lib/time-constants";
 
-export const HOUR_SECONDS = MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
-export const DAY_SECONDS = HOURS_PER_DAY * HOUR_SECONDS;
+// Derived constants unique to frontend (not worth sharing — no worker consumers)
+import { DAY_MS as _DM, HOURS_PER_DAY } from "@shared/lib/time-constants";
+
 export const DAY_HOURS = HOURS_PER_DAY;
-export const HOUR_MS = HOUR_SECONDS * MS_PER_SECOND;
-export const DAY_MS = DAY_SECONDS * MS_PER_SECOND;
-
-const WEEK_DAYS = 7;
-export const WEEK_HOURS = WEEK_DAYS * DAY_HOURS;
-export const WEEK_MS = WEEK_DAYS * DAY_MS;
-const YEAR_DAYS = 365.25;
-export const YEAR_MS = YEAR_DAYS * DAY_MS;
-export const TABLE_PAGE_SIZE = 25;
-
-export const THIRTY_DAYS_SECONDS = 30 * DAY_SECONDS;
+export const WEEK_HOURS = 7 * DAY_HOURS;
 export const THIRTY_DAYS_HOURS = 30 * DAY_HOURS;
 export const NINETY_DAYS_HOURS = 90 * DAY_HOURS;
-export const NINETY_DAYS_MS = 90 * DAY_MS;
-export const THREE_DAYS_MS = 3 * DAY_MS;
+export const NINETY_DAYS_MS = 90 * _DM;
+export const THREE_DAYS_MS = 3 * _DM;
+export const YEAR_MS = 365.25 * _DM;
+export const TABLE_PAGE_SIZE = 25;
 
 export const CATEGORY_LINKS = [
   { href: "/stablecoins/usd/", param: "type", value: "usd", label: "USD Stablecoins" },

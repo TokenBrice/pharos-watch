@@ -35,7 +35,7 @@ describe("handleBackfillSupplyHistory", () => {
     const res = await handleBackfillSupplyHistory(
       makeDb(),
       makeApiUrl("/api/backfill-supply-history"),
-      "secret",
+      undefined,
       makeApiRequest("/api/backfill-supply-history"),
     );
 
@@ -46,7 +46,7 @@ describe("handleBackfillSupplyHistory", () => {
     const res = await handleBackfillSupplyHistory(
       makeDb(),
       makeApiUrl("/api/backfill-supply-history?stablecoin=not-a-real-id"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-supply-history?stablecoin=not-a-real-id", { adminKey: "secret" }),
     );
 
@@ -58,7 +58,7 @@ describe("handleBackfillSupplyHistory", () => {
     const res = await handleBackfillSupplyHistory(
       makeDb(),
       makeApiUrl("/api/backfill-supply-history?batch=999999&batchSize=100"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-supply-history?batch=999999&batchSize=100", { adminKey: "secret" }),
     );
 
@@ -85,7 +85,7 @@ describe("handleBackfillSupplyHistory", () => {
     const res = await handleBackfillSupplyHistory(
       makeDb(),
       makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-supply-history?stablecoin=usdt-tether", { adminKey: "secret" }),
     );
 

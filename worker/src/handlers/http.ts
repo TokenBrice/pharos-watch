@@ -1,4 +1,5 @@
 import { route } from "../router";
+import type { RouteContext } from "../route-registry";
 import { initAlerts } from "../lib/alerts";
 import { initChainRpcs } from "../lib/chain-registry";
 import { initCoinGecko } from "../lib/coingecko";
@@ -125,21 +126,22 @@ export async function handleHttpRequest(
     }
   }
 
-  const response = await route(
+  const routeCtx: RouteContext = {
     url,
-    env.DB,
-    ctx,
+    db: env.DB,
+    execCtx: ctx,
     request,
-    undefined,
-    env.ALCHEMY_API_KEY ?? null,
+    trustedAdmin: isAdmin,
+    alchemyApiKey: env.ALCHEMY_API_KEY ?? null,
     mintBurnFreshnessConfig,
     feedbackEnv,
-    env.ANTHROPIC_API_KEY ?? null,
+    anthropicApiKey: env.ANTHROPIC_API_KEY ?? null,
     twitterCreds,
     telegramCreds,
-    env.TELEGRAM_WEBHOOK_SECRET,
-    env.TELEGRAM_BOT_TOKEN,
-  );
+    telegramWebhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
+    telegramBotToken: env.TELEGRAM_BOT_TOKEN,
+  };
+  const response = await route(routeCtx);
 
   if (!response) {
     return addCorsHeaders(

@@ -1,14 +1,10 @@
 import { handleStablecoinDetail } from "./api/stablecoin-detail";
 import { handleStablecoinSummary } from "./api/stablecoin-summary";
 import { handleStablecoinReserves } from "./api/stablecoin-reserves";
-import type { FeedbackEnv } from "./api/feedback";
 import {
   getEndpointDefinition,
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
-import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
-import type { TwitterCreds } from "./lib/twitter";
-import type { TelegramCreds } from "./lib/telegram";
 
 import { resolveOrReject, errorResponse } from "./lib/api-utils";
 import { handleOg } from "./api/og";
@@ -16,6 +12,7 @@ import { handleDismissCandidate } from "./api/discovery";
 import { withAdmin } from "./lib/auth";
 import {
   STATIC_ROUTE_HANDLERS,
+  type RouteContext,
 } from "./route-registry";
 
 function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
@@ -30,9 +27,9 @@ function addAdminGetNoStoreHeader(path: string, request: Request | undefined, re
 function matchDynamicRoute(
   path: string,
   pattern: RegExp,
-  handler: (db: D1Database, canonicalId: string, ctx: ExecutionContext) => Promise<Response>,
+  handler: (db: D1Database, canonicalId: string, execCtx: ExecutionContext) => Promise<Response>,
   db: D1Database,
-  ctx: ExecutionContext,
+  execCtx: ExecutionContext,
 ): Promise<Response> | null {
   const match = path.match(pattern);
   if (!match) return null;
@@ -46,27 +43,12 @@ function matchDynamicRoute(
   if (resolved instanceof Response) {
     return Promise.resolve(resolved);
   }
-  return handler(db, resolved.canonicalId, ctx);
+  return handler(db, resolved.canonicalId, execCtx);
 }
 
-export function route(
-  url: URL,
-  db: D1Database,
-  ctx: ExecutionContext,
-  request?: Request,
-  adminKey?: string,
-  alchemyApiKey?: string | null,
-  mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
-  feedbackEnv?: FeedbackEnv,
-  anthropicApiKey?: string | null,
-  twitterCreds?: TwitterCreds | null,
-  telegramCreds?: TelegramCreds | null,
-  telegramWebhookSecret?: string,
-  telegramBotToken?: string,
-  trustedAdmin = false,
-): Promise<Response> | null {
-  const path = url.pathname;
-  const methodValidation = validateEndpointMethod(url, request?.method ?? "GET");
+export function route(routeCtx: RouteContext): Promise<Response> | null {
+  const path = routeCtx.url.pathname;
+  const methodValidation = validateEndpointMethod(routeCtx.url, routeCtx.request?.method ?? "GET");
   if (methodValidation) {
     const resp = errorResponse(405, methodValidation.message);
     resp.headers.set("Allow", methodValidation.allowedMethods.join(", "));
@@ -75,61 +57,47 @@ export function route(
 
   const staticHandler = STATIC_ROUTE_HANDLERS.get(path);
   if (staticHandler) {
-    return staticHandler({
-      url,
-      db,
-      ctx,
-      request,
-      adminKey,
-      alchemyApiKey,
-      mintBurnFreshnessConfig,
-      feedbackEnv,
-      anthropicApiKey,
-      twitterCreds,
-      telegramCreds,
-      telegramWebhookSecret,
-      telegramBotToken,
-      trustedAdmin,
-    }).then((response) => addAdminGetNoStoreHeader(path, request, response));
+    return staticHandler(routeCtx)
+      .then((response) => addAdminGetNoStoreHeader(path, routeCtx.request, response));
   }
 
   const summaryResult = matchDynamicRoute(
     path,
     /^\/api\/stablecoin-summary\/(.+)$/,
     (db, id) => handleStablecoinSummary(db, id),
-    db,
-    ctx,
+    routeCtx.db,
+    routeCtx.execCtx,
   );
   if (summaryResult) return summaryResult;
 
   const reservesResult = matchDynamicRoute(
     path,
     /^\/api\/stablecoin-reserves\/(.+)$/,
-    (db, id, _ctx) => handleStablecoinReserves(db, id),
-    db,
-    ctx,
+    (db, id, _execCtx) => handleStablecoinReserves(db, id),
+    routeCtx.db,
+    routeCtx.execCtx,
   );
   if (reservesResult) return reservesResult;
 
   const detailResult = matchDynamicRoute(
     path,
     /^\/api\/stablecoin\/(.+)$/,
-    (db, id, ctx) => handleStablecoinDetail(db, id, ctx),
-    db,
-    ctx,
+    (db, id, execCtx) => handleStablecoinDetail(db, id, execCtx),
+    routeCtx.db,
+    routeCtx.execCtx,
   );
   if (detailResult) return detailResult;
 
   // Discovery candidate dismiss (dynamic :id route with admin auth)
   const dismissMatch = path.match(/^\/api\/discovery-candidates\/(\d+)\/dismiss$/);
-  if (dismissMatch && request?.method === "POST") {
+  if (dismissMatch && routeCtx.request?.method === "POST") {
     const candidateId = parseInt(dismissMatch[1], 10);
-    return withAdmin(request, () => handleDismissCandidate(db, candidateId), trustedAdmin);
+    return withAdmin(routeCtx.request, () => handleDismissCandidate(routeCtx.db, candidateId), routeCtx.trustedAdmin);
   }
 
   // OG image generation (dynamic paths under /api/og/)
   if (path.startsWith("/api/og/")) {
-    return handleOg(db, path).then((r) => r ?? errorResponse(404, "Unknown OG route"));
+    return handleOg(routeCtx.db, path).then((r) => r ?? errorResponse(404, "Unknown OG route"));
   }
 
   return null;

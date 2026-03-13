@@ -689,7 +689,8 @@ async function enrichRowBalances(
   budget: SubrequestBudget,
   deadlineMs: number,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<{ attempted: number; succeeded: number; failed: number }> {
+  const counters = { attempted: 0, succeeded: 0, failed: 0 };
   for (const row of rows) {
     throwIfAborted(signal);
     if (runtimeBudgetReached(deadlineMs)) break;
@@ -708,18 +709,30 @@ async function enrichRowBalances(
       // the amount is emitted natively in the event payload (e.g. destroy).
       continue;
     } else if (config.chain.evmChainId != null) {
-      row.amount = await fetchEvmTokenBalance(
-        config,
-        row.address,
-        blockForBalance,
-        etherscanApiKey,
-        drpcApiKey,
-        etherscanLimiter,
-        budget,
-        signal,
-      );
+      counters.attempted++;
+      try {
+        const amount = await fetchEvmTokenBalance(
+          config,
+          row.address,
+          blockForBalance,
+          etherscanApiKey,
+          drpcApiKey,
+          etherscanLimiter,
+          budget,
+          signal,
+        );
+        row.amount = amount;
+        if (amount != null) {
+          counters.succeeded++;
+        } else {
+          counters.failed++;
+        }
+      } catch {
+        counters.failed++;
+      }
     }
   }
+  return counters;
 }
 
 // --- Backfill: update existing events that have null amounts ---
@@ -936,6 +949,7 @@ export async function syncBlacklist(
   let apiErrors = 0;
   let rpcLogConfigs = 0;
   let runtimeBudgetHit = false;
+  const enrichCounters = { attempted: 0, succeeded: 0, failed: 0 };
   const apiErrorClasses: Record<string, number> = {};
   const apiErrorConfigs: Array<{
     configKey: string;
@@ -1046,7 +1060,7 @@ export async function syncBlacklist(
           signal,
         );
 
-        await enrichRowBalances(
+        const tronEnrichCounters = await enrichRowBalances(
           result.rows,
           config,
           etherscanApiKey,
@@ -1055,6 +1069,12 @@ export async function syncBlacklist(
           budget,
           deadlineMs,
           signal,
+        );
+        enrichCounters.attempted += tronEnrichCounters.attempted;
+        enrichCounters.succeeded += tronEnrichCounters.succeeded;
+        enrichCounters.failed += tronEnrichCounters.failed;
+        console.log(
+          `[sync-blacklist] enrichRowBalances (tron): attempted=${tronEnrichCounters.attempted} succeeded=${tronEnrichCounters.succeeded} failed=${tronEnrichCounters.failed}`,
         );
         totalInsertedRows += await insertRows(db, result.rows);
 
@@ -1099,7 +1119,7 @@ export async function syncBlacklist(
           rpcLogConfigs++;
         }
 
-        await enrichRowBalances(
+        const evmEnrichCounters = await enrichRowBalances(
           result.rows,
           config,
           etherscanApiKey,
@@ -1108,6 +1128,12 @@ export async function syncBlacklist(
           budget,
           deadlineMs,
           signal,
+        );
+        enrichCounters.attempted += evmEnrichCounters.attempted;
+        enrichCounters.succeeded += evmEnrichCounters.succeeded;
+        enrichCounters.failed += evmEnrichCounters.failed;
+        console.log(
+          `[sync-blacklist] enrichRowBalances (evm): attempted=${evmEnrichCounters.attempted} succeeded=${evmEnrichCounters.succeeded} failed=${evmEnrichCounters.failed}`,
         );
         totalInsertedRows += await insertRows(db, result.rows);
 
@@ -1223,6 +1249,9 @@ export async function syncBlacklist(
       apiErrorClasses,
       runtimeBudgetReached: runtimeBudgetHit,
       runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
+      enrichAttempted: enrichCounters.attempted,
+      enrichSucceeded: enrichCounters.succeeded,
+      enrichFailed: enrichCounters.failed,
     })),
   };
 }

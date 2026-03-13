@@ -16,6 +16,7 @@ import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import { type DepegTrackerRow } from "@/lib/depeg-sort";
 import type { ThreatBand } from "@shared/lib/classification";
+import { formatPercent } from "@shared/lib/format";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import {
   compareDepegTrackerRows,
@@ -165,7 +166,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                   )}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm hidden md:table-cell">
-                  {coin.pegPct.toFixed(1)}%
+                  {formatPercent(coin.pegPct, 1)}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm hidden md:table-cell">
                   {coin.eventCount}

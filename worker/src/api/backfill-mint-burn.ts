@@ -119,11 +119,11 @@ export const handleBackfillMintBurn = withErrorHandler(
   async (
     db: D1Database,
     url: URL,
-    adminKey: string | undefined,
+    trustedAdmin: boolean | undefined,
     request: Request | undefined,
     alchemyApiKey: string | null,
   ): Promise<Response> => {
-    const authErr = await requireAdmin(request, adminKey);
+    const authErr = await requireAdmin(request, trustedAdmin);
     if (authErr) return authErr;
 
     if (!alchemyApiKey) {

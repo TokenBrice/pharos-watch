@@ -62,7 +62,7 @@ describe("handleBackfillDEWS", () => {
     const response = await handleBackfillDEWS(
       db,
       makeApiUrl("/api/backfill-dews"),
-      "secret",
+      true,
       request,
     );
 

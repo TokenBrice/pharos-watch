@@ -6,14 +6,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { useSafetyScoreHistory } from "@/hooks/api-hooks";
 import type { SafetyScoreHistoryPoint } from "@shared/types";
-
-function formatSafetyScoreHistoryDate(date: number): string {
-  return new Date(date * 1000).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+import { formatChartDate } from "@shared/lib/format";
 
 export function describeSafetyScoreTransition(point: SafetyScoreHistoryPoint): string {
   if (point.prevGrade == null) {
@@ -57,7 +50,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
               className="rounded-lg border px-3 py-3"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">{formatSafetyScoreHistoryDate(point.date)}</span>
+                <span className="text-sm font-medium">{formatChartDate(point.date * 1000, "long")}</span>
                 <GradeBadge grade={point.grade} score={point.score} />
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{describeSafetyScoreTransition(point)}</p>

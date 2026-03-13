@@ -1,4 +1,5 @@
 import { downloadCsv } from "@/lib/csv-export";
+import { compareNullable } from "@/lib/sort-utils";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -129,31 +130,28 @@ export function sortStablecoins({
       case "stability": {
         const aScore = pegScores?.get(a.id)?.pegScore ?? null;
         const bScore = pegScores?.get(b.id)?.pegScore ?? null;
-        if (aScore === null && bScore === null) return 0;
-        if (aScore === null) return 1;
-        if (bScore === null) return -1;
-        aVal = aScore;
-        bVal = bScore;
+        const nc = compareNullable(aScore, bScore);
+        if (nc !== null) return nc;
+        aVal = aScore!;
+        bVal = bScore!;
         break;
       }
       case "liquidity": {
         const aScore = dexLiquidity?.[a.id]?.liquidityScore ?? null;
         const bScore = dexLiquidity?.[b.id]?.liquidityScore ?? null;
-        if (aScore === null && bScore === null) return 0;
-        if (aScore === null) return 1;
-        if (bScore === null) return -1;
-        aVal = aScore;
-        bVal = bScore;
+        const nc = compareNullable(aScore, bScore);
+        if (nc !== null) return nc;
+        aVal = aScore!;
+        bVal = bScore!;
         break;
       }
       case "grade": {
         const aScore = reportCards?.[a.id]?.overallScore ?? null;
         const bScore = reportCards?.[b.id]?.overallScore ?? null;
-        if (aScore === null && bScore === null) return 0;
-        if (aScore === null) return 1;
-        if (bScore === null) return -1;
-        aVal = aScore;
-        bVal = bScore;
+        const nc = compareNullable(aScore, bScore);
+        if (nc !== null) return nc;
+        aVal = aScore!;
+        bVal = bScore!;
         break;
       }
       case "peg": {
@@ -166,11 +164,10 @@ export function sortStablecoins({
         };
         const aDev = getAbsBps(a);
         const bDev = getAbsBps(b);
-        if (aDev === null && bDev === null) return 0;
-        if (aDev === null) return 1;
-        if (bDev === null) return -1;
-        aVal = aDev;
-        bVal = bDev;
+        const nc = compareNullable(aDev, bDev);
+        if (nc !== null) return nc;
+        aVal = aDev!;
+        bVal = bDev!;
         break;
       }
       default:

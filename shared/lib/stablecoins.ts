@@ -34,7 +34,44 @@ interface StablecoinOpts {
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, llamaId: opts?.llamaId, detailProvider: opts?.detailProvider ?? "defillama", geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, tradedContracts: opts?.tradedContracts, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, liveReservesConfig: opts?.liveReservesConfig, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
+  return {
+    id,
+    name,
+    symbol,
+    flags: {
+      backing,
+      pegCurrency,
+      governance,
+      yieldBearing: opts?.yieldBearing ?? false,
+      rwa: opts?.rwa ?? false,
+      navToken: opts?.navToken ?? false,
+    },
+    collateral: opts?.collateral,
+    pegMechanism: opts?.pegMechanism,
+    commodityOunces: opts?.commodityOunces,
+    llamaId: opts?.llamaId,
+    detailProvider: opts?.detailProvider ?? "defillama",
+    geckoId: opts?.geckoId,
+    cmcSlug: opts?.cmcSlug,
+    protocolSlug: opts?.protocolSlug,
+    proofOfReserves: opts?.proofOfReserves,
+    links: opts?.links,
+    jurisdiction: opts?.jurisdiction,
+    contracts: opts?.contracts,
+    tradedContracts: opts?.tradedContracts,
+    dependencies: opts?.dependencies,
+    canBeBlacklisted: opts?.canBeBlacklisted,
+    chainTier: opts?.chainTier,
+    deploymentModel: opts?.deploymentModel,
+    collateralQuality: opts?.collateralQuality,
+    custodyModel: opts?.custodyModel,
+    governanceQuality: opts?.governanceQuality,
+    reserves: opts?.reserves,
+    liveReservesConfig: opts?.liveReservesConfig,
+    notices: opts?.notices,
+    tags: opts?.tags,
+    yieldConfig: opts?.yieldConfig,
+  };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);

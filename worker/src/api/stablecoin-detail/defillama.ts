@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 interface PegMeta {
   flags: {
     pegCurrency: string;
@@ -5,6 +7,26 @@ interface PegMeta {
 }
 
 type PegBuckets = Record<string, number>;
+
+/**
+ * Zod schema for the DefiLlama stablecoin detail response.
+ * Validates essential fields used by normalizeDefiLlamaDetailBody.
+ * Extra fields are allowed via passthrough so new DL fields don't cause failures.
+ */
+const DlTokenEntrySchema = z
+  .object({
+    totalCirculatingUSD: z.record(z.string(), z.number()).optional(),
+    totalCirculating: z.record(z.string(), z.number()).optional(),
+    circulating: z.record(z.string(), z.number()).optional(),
+  })
+  .passthrough();
+
+const DlDetailResponseSchema = z
+  .object({
+    price: z.number().optional(),
+    tokens: z.array(DlTokenEntrySchema).optional(),
+  })
+  .passthrough();
 
 function isNonUsdPeg(meta: PegMeta | undefined): boolean {
   return (
@@ -55,6 +77,14 @@ export function normalizeDefiLlamaDetailBody(
       [key: string]: unknown;
     }>;
   };
+
+  const schemaResult = DlDetailResponseSchema.safeParse(parsed);
+  if (!schemaResult.success) {
+    const issues = schemaResult.error.issues
+      .map((i) => `${i.path.map(String).join(".")}: ${i.message}`)
+      .join(", ");
+    console.warn(`[defillama-detail] Response schema mismatch: ${issues}`);
+  }
 
   if (!Array.isArray(parsed.tokens)) {
     return body;

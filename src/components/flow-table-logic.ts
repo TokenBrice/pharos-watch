@@ -1,6 +1,8 @@
-import { getPressureShiftState, type PressureShiftState } from "@shared/lib/mint-burn-signals";
+import { getPressureShiftState, PRESSURE_SHIFT_STATE_VALUES, type PressureShiftState } from "@shared/lib/mint-burn-signals";
+import { compareNullable } from "@/lib/sort-utils";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import type { MintBurnCoinFlow } from "@shared/types";
+import { getFlowPressureUi } from "@/lib/flow-signal-ui";
 
 export type FlowTableSortKey =
   | "net24h"
@@ -20,12 +22,9 @@ export function getPressureState(coin: MintBurnCoinFlow): PressureShiftState {
   return coin.pressureShiftState ?? getPressureShiftState(getPressureScore(coin));
 }
 
-export const PRESSURE_VALUE_CLASS: Record<PressureShiftState, string> = {
-  improving: "text-emerald-700 dark:text-emerald-400",
-  stable: "text-foreground",
-  worsening: "text-red-700 dark:text-red-400",
-  nr: "text-muted-foreground",
-};
+export const PRESSURE_VALUE_CLASS: Record<PressureShiftState, string> = Object.fromEntries(
+  PRESSURE_SHIFT_STATE_VALUES.map((s) => [s, getFlowPressureUi(s, "summary").valueClass]),
+) as Record<PressureShiftState, string>;
 
 export function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; className: string } | null {
   const status = coin.coverage?.status;
@@ -97,11 +96,10 @@ export function compareFlowRows(
     case "pressure": {
       const aPressure = getPressureScore(a);
       const bPressure = getPressureScore(b);
-      if (aPressure === null && bPressure === null) return 0;
-      if (aPressure === null) return 1;
-      if (bPressure === null) return -1;
-      aVal = aPressure;
-      bVal = bPressure;
+      const nc = compareNullable(aPressure, bPressure);
+      if (nc !== null) return nc;
+      aVal = aPressure!;
+      bVal = bPressure!;
       break;
     }
     default:

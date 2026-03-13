@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
-import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { route, ROUTER_STATIC_PATHS } from "../../router";
+import type { RouteContext } from "../../route-registry";
 import { mockD1 } from "./helpers/mock-d1";
 
 vi.stubGlobal("fetch", vi.fn(async () => (
@@ -17,19 +18,19 @@ vi.stubGlobal("fetch", vi.fn(async () => (
 )));
 
 const db = mockD1();
-const ctx = {
+const execCtx = {
   waitUntil: (_promise: Promise<unknown>) => {},
   passThroughOnException: () => {},
 } as unknown as ExecutionContext;
-const _env = {
-  DB: db,
-  CORS_ORIGIN: "https://pharos.watch",
-} as const;
+
+function makeRouteCtx(overrides: Partial<RouteContext> & { url: URL }): RouteContext {
+  return { db, execCtx, ...overrides };
+}
 
 describe("router contract: strict frontend paths are routable", () => {
   it("routes all strict contract paths", async () => {
     for (const path of STRICT_CONTRACT_PATHS_LIST) {
-      const result = route(new URL(`https://api.pharos.watch${path}`), db, ctx);
+      const result = route(makeRouteCtx({ url: new URL(`https://api.pharos.watch${path}`) }));
       expect(result, `expected route for ${path}`).not.toBeNull();
 
       const response = await result!;
@@ -39,7 +40,7 @@ describe("router contract: strict frontend paths are routable", () => {
   });
 
   it("returns null for unknown paths", () => {
-    const result = route(new URL("https://api.pharos.watch/api/definitely-not-real"), db, ctx);
+    const result = route(makeRouteCtx({ url: new URL("https://api.pharos.watch/api/definitely-not-real") }));
     expect(result).toBeNull();
   });
 
@@ -70,14 +71,10 @@ describe("router contract: strict frontend paths are routable", () => {
               ? [200, 400, 502, 503]
               : [200, 400, 502, 503];
 
-        const response = await route(
-          new URL(`https://api.pharos.watch${path}`),
-          db,
-          ctx,
+        const response = await route(makeRouteCtx({
+          url: new URL(`https://api.pharos.watch${path}`),
           request,
-          undefined,
-          null,
-        );
+        }));
         expect(response, `expected route for ${method} ${path}`).not.toBeNull();
 
         if (method === "GET" && endpoint.mutatingAdmin && !allowAuditDryRunGet) {
@@ -94,22 +91,18 @@ describe("router contract: strict frontend paths are routable", () => {
   it("enforces mutating admin GET restrictions with audit dry-run exception", async () => {
     for (const endpoint of ENDPOINT_DEFINITIONS.filter((item) => item.mutatingAdmin)) {
       const path = endpoint.path;
-      const getResult = await route(
-        new URL(`https://api.pharos.watch${path}`),
-        db,
-        ctx,
-        new Request(`https://api.pharos.watch${path}`, { method: "GET" }),
-      );
+      const getResult = await route(makeRouteCtx({
+        url: new URL(`https://api.pharos.watch${path}`),
+        request: new Request(`https://api.pharos.watch${path}`, { method: "GET" }),
+      }));
       expect(getResult, `expected GET route resolution for ${path}`).not.toBeNull();
 
       if (path === "/api/audit-depeg-history") {
         expect(getResult!.status).toBe(405);
-        const dryRun = await route(
-          new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"),
-          db,
-          ctx,
-          new Request("https://api.pharos.watch/api/audit-depeg-history?dry-run=true", { method: "GET" }),
-        );
+        const dryRun = await route(makeRouteCtx({
+          url: new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"),
+          request: new Request("https://api.pharos.watch/api/audit-depeg-history?dry-run=true", { method: "GET" }),
+        }));
         expect(dryRun).not.toBeNull();
         expect(dryRun!.status).not.toBe(405);
       } else {
@@ -117,12 +110,10 @@ describe("router contract: strict frontend paths are routable", () => {
       }
 
       if (endpoint.methods.includes("POST")) {
-        const postResult = await route(
-          new URL(`https://api.pharos.watch${path}`),
-          db,
-          ctx,
-          new Request(`https://api.pharos.watch${path}`, { method: "POST" }),
-        );
+        const postResult = await route(makeRouteCtx({
+          url: new URL(`https://api.pharos.watch${path}`),
+          request: new Request(`https://api.pharos.watch${path}`, { method: "POST" }),
+        }));
         expect(postResult).not.toBeNull();
         expect(postResult!.status).not.toBe(405);
       }

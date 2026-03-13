@@ -134,6 +134,18 @@ export function formatDeathDate(d: string): string {
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
+/** Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d". */
+export function formatElapsedSeconds(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${Math.floor(seconds / 86400)}d`;
+}
+
 /** Format an epoch-seconds timestamp as a relative time string ("just now", "5m ago", "2h ago"). */
 export function timeAgo(epochSec: number): string {
   if (!Number.isFinite(epochSec)) return "N/A";
@@ -165,17 +177,24 @@ export function getNetPrefix(value: number): string {
   return value > 0 ? "+" : "";
 }
 
+/** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
+export function formatPercent(value: number | null | undefined, decimals = 2): string {
+  return value != null ? `${value.toFixed(decimals)}%` : "-";
+}
+
+/** Format a signed percentage with +/- prefix and % suffix. Returns "-" for nullish. */
+export function formatSignedPercent(value: number | null | undefined, decimals = 2): string {
+  if (value == null) return "-";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(decimals)}%`;
+}
+
 /** Format a 0-100 score to one decimal. Returns "-" for nullish values. */
 export function formatScore(value: number | null | undefined): string {
   return value != null ? value.toFixed(1) : "-";
 }
 
-/** Format an APY percentage to two decimals with % suffix. Returns "-" for nullish. */
-export function formatApy(value: number | null | undefined): string {
-  return value != null ? `${value.toFixed(2)}%` : "-";
-}
-
-type ChartDateFormat = "short" | "month-year" | "compact" | "with-time";
+type ChartDateFormat = "short" | "month-year" | "compact" | "with-time" | "long" | "full";
 
 /** Centralized date formatter for chart axes and tooltips. */
 export function formatChartDate(
@@ -200,5 +219,9 @@ export function formatChartDate(
         hour: "numeric",
         hour12: true,
       });
+    case "long":
+      return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    case "full":
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
   }
 }

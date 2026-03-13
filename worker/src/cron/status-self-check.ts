@@ -209,22 +209,14 @@ async function probePathInternally(
       method: "GET",
       headers,
     });
-    const response = await route(
+    const response = await route({
       url,
       db,
-      ctx,
+      execCtx: ctx,
       request,
-      undefined,
-      undefined,
+      trustedAdmin: ADMIN_PROBE_PATHS.includes(path),
       mintBurnFreshnessConfig,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      true,
-    );
+    });
     if (!response) {
       return {
         path,

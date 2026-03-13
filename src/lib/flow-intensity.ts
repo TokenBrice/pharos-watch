@@ -1,6 +1,4 @@
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
+import { clamp } from "@shared/lib/math";
 
 const FLOW_INTENSITY_LEGACY_NEUTRAL = 50;
 

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { CHART_HEIGHT, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
@@ -64,11 +64,7 @@ function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
         className="font-bold text-card-foreground mb-1.5"
         style={{ fontFamily: RECHARTS_TOOLTIP_STYLES.labelStyle.fontFamily }}
       >
-        {new Date(label).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}
+        {formatChartDate(label, "long")}
       </p>
       {items.map((item) => (
         <div key={item.key} className="flex items-center justify-between gap-4 py-0.5">

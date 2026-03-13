@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStatCard } from "@/components/metric-stat-card";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { PEG_CHART_COLORS as PEG_META } from "@shared/lib/classification";
 import { getCirculatingRaw, computeGovernanceBreakdown } from "@shared/lib/supply";
 import { TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
@@ -198,13 +198,13 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                 <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Top 2 dominance</p>
                 <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
                   <p className="font-mono text-4xl font-black leading-none tracking-tight text-foreground">
-                    {stats.topTwoPct.toFixed(1)}%
+                    {formatPercent(stats.topTwoPct, 1)}
                   </p>
                   <p className="pb-1 text-sm text-muted-foreground">{stats.dominantLabel}</p>
                 </div>
                 <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  The top 10 stablecoins control {stats.topTenPct.toFixed(1)}% of tracked market cap. The remaining{" "}
-                  {stats.tailCount} coins make up {stats.tailPct.toFixed(1)}% of the market.
+                  The top 10 stablecoins control {formatPercent(stats.topTenPct, 1)} of tracked market cap. The remaining{" "}
+                  {stats.tailCount} coins make up {formatPercent(stats.tailPct, 1)} of the market.
                 </p>
               </div>
 
@@ -219,7 +219,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                     <div key={segment.label} className="flex items-center gap-2 text-xs">
                       <div className={`h-2 w-2 rounded-full ${segment.bg}`} />
                       <span className={`font-medium ${segment.text}`}>{segment.shortLabel}</span>
-                      <span className="font-mono text-muted-foreground">{segment.pct.toFixed(1)}%</span>
+                      <span className="font-mono text-muted-foreground">{formatPercent(segment.pct, 1)}</span>
                       <span className="font-mono text-muted-foreground/75">{segment.countLabel}</span>
                     </div>
                   ))}
@@ -237,7 +237,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                       <p className="truncate text-xs text-muted-foreground">{leader.name}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-mono text-sm font-semibold text-foreground">{leader.sharePct.toFixed(1)}%</p>
+                      <p className="font-mono text-sm font-semibold text-foreground">{formatPercent(leader.sharePct, 1)}</p>
                       <p className="font-mono text-xs text-muted-foreground">{formatCurrency(leader.mcap, 0)}</p>
                     </div>
                   </div>
@@ -266,7 +266,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
               <LegendRow
                 key={tier.label}
                 label={tier.label}
-                value={`${tier.pct.toFixed(1)}%`}
+                value={formatPercent(tier.pct, 1)}
                 meta={formatCurrency(tier.mcap, 0)}
                 dotClassName={tier.bg}
                 labelClassName={tier.text}
@@ -299,7 +299,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                     <LegendRow
                       key={peg}
                       label={PEG_META[peg]?.label ?? peg}
-                      value={`${pct.toFixed(1)}%`}
+                      value={formatPercent(pct, 1)}
                       meta={formatCurrency(mcap, 0)}
                       dotClassName={bgColor}
                       labelClassName={textColor}
@@ -340,7 +340,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                     <LegendRow
                       key={tier.key}
                       label={tier.label}
-                      value={`${pct.toFixed(1)}%`}
+                      value={formatPercent(pct, 1)}
                       meta={formatCurrency(mcap, 0)}
                       dotClassName={tier.bg}
                       labelClassName={tier.text}

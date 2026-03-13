@@ -363,8 +363,8 @@ interface PreparedBackfillCoin {
   supplyByDate: SupplySnapshot[];
 }
 
-export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> => {
-  return withAdmin(request, adminSecret, async () => {
+export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
+  return withAdmin(request, async () => {
 
     const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
       defaultBatchSize: BATCH_SIZE,
@@ -614,7 +614,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
         silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
       } : undefined,
     });
-  });
+  }, trustedAdmin);
 });
 
 interface BackfillEvent {
