@@ -132,6 +132,10 @@ src/                              Frontend (Next.js static export)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
 
+functions/                        Cloudflare Pages Functions for ops-host gating and `/api/admin/*` proxying
+├── status/[[path]].ts            Host gate for `/status/` on `ops.pharos.watch`
+└── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
+
 shared/                           Runtime-neutral shared boundary (`@shared/*`)
 ├── lib/                          Stablecoin metadata, supply/peg/classification/report-card logic, endpoint contract registry
 └── types/                        Shared TypeScript types and schema helpers
@@ -228,11 +232,14 @@ For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`)
 4. **Pages deploy:** `npm ci` → `npx tsx scripts/sync-digests.ts` → `npm run build` → `npm run seo:check` → `wrangler pages deploy out`
 5. **Post-deploy UI smoke:** `npm run test:smoke-ui` against `SMOKE_UI_URL` (or `https://pharos.watch` fallback)
+6. **Private ops smoke:** `npm run test:smoke-ops` against `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` using Cloudflare Access service-token headers
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variable: `SMOKE_UI_URL` (for non-default frontend smoke target)
+Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`
+Required ops smoke secrets: `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 
 Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `GITHUB_REPO_NODE_ID`, `GITHUB_DISCUSSION_CATEGORY_ID`
 

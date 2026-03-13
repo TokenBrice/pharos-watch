@@ -71,7 +71,7 @@ The subscription/disambiguation tables are created in `worker/migrations/0054_te
 
 ## File Tree Guide
 
-Representative tree of architecture-significant files and directories. For an exhaustive inventory, use `rg --files src shared worker scripts data`.
+Representative tree of architecture-significant files and directories. For an exhaustive inventory, use `rg --files src shared worker scripts data functions`.
 
 ```
 src/                              # Next.js frontend (static export)
@@ -164,9 +164,6 @@ src/                              # Next.js frontend (static export)
 │   ├── globals.css               # Global styles (Tailwind v4)
 │   ├── sitemap.ts                # Dynamic sitemap generation
 │   └── robots.ts                 # robots.txt
-├── functions/
-│   ├── status/[[path]].ts        # Pages Functions host gate for /status; serves asset on ops host, hard-404s elsewhere
-│   └── api/admin/[[path]].ts     # Cloudflare Pages Functions catch-all proxy for ops-only admin routes (`/api/admin/*` -> `ops-api`)
 ├── components/
 │   ├── ui/                       # shadcn/ui primitives (do not edit manually)
 │   ├── stablecoin-detail/        # Stablecoin detail section components (extracted from page client)
@@ -346,6 +343,10 @@ src/                              # Next.js frontend (static export)
     ├── stablecoin-taxonomy.ts    # Governance/backing taxonomy registry + route helpers
     ├── stablecoin-detail-derive.ts # Pure stablecoin detail derivations (supply/deviation/90d reference/border classes)
     └── utils.ts                  # cn() helper for Tailwind class merging
+
+functions/                        # Cloudflare Pages Functions for operator-host gating and admin proxying
+├── status/[[path]].ts            # Host gate for /status; serves asset on ops host, hard-404s elsewhere
+└── api/admin/[[path]].ts         # Catch-all proxy for ops-only admin routes (`/api/admin/*` -> `ops-api`)
 
 shared/                           # Runtime-neutral boundary (import via `@shared/*`)
 ├── types/

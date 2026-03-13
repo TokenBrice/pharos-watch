@@ -12,8 +12,9 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/generate-redirects.ts` | Regenerate Cloudflare Pages redirects for legacy stablecoin IDs before frontend build | Existing `public/_redirects` + embedded ID mapping tables | Idempotently updates `public/_redirects` |
 | `scripts/check-seo-static.mjs` | Validate static-export SEO/meta/link integrity | `out/` build output | Fails non-zero on SEO/crawlability issues |
 | `scripts/smoke-api.mjs` | HTTP smoke checks for strict API contract paths | `--base-url`, `--timeout-ms`, `--retry-count`, `--retry-delay-ms`, or `SMOKE_API_BASE` / `API_BASE_URL`, optional `SMOKE_API_TIMEOUT_MS`, `SMOKE_API_RETRY_COUNT`, `SMOKE_API_RETRY_DELAY_MS` | Exits non-zero on shape/range/status failures |
+| `scripts/smoke-ops.mjs` | Private post-deploy smoke for the Access-protected ops UI and ops API | `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET` | Exits non-zero on ops-host shell or admin API failures |
 | `scripts/smoke-ui.mjs` | Browser smoke check for live homepage data state + mobile overflow regression routes | `--url`, `--skip-overflow`, `SMOKE_UI_URL`, optional `SMOKE_UI_WAIT_TIMEOUT_MS`, `SMOKE_UI_RETRY_COUNT`, `SMOKE_UI_RETRY_DELAY_MS`, `SMOKE_UI_OVERFLOW_ROUTES`, `SMOKE_UI_OVERFLOW_WAIT_MS`, `SMOKE_UI_OVERFLOW_SETTLE_SAMPLES`, `SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS`, `SMOKE_UI_STYLE_READY_TIMEOUT_MS` | Exits non-zero on homepage outage/empty state or sustained horizontal overflow on tracked mobile routes |
-| `scripts/check-worker-import-boundary.mjs` | Enforce worker import boundary (`worker/src/**` must not import `src/lib/*`) | Worker source tree (`worker/src/**`) | Exits non-zero with offending import locations |
+| `scripts/check-worker-import-boundary.mjs` | Enforce the shared boundary: `worker/src/**` may not import `src/**`, and `src` / `shared` / `scripts` may not import `worker/src/**` | `worker/src/**`, `src/**`, `shared/**`, `scripts/**` | Exits non-zero with offending import locations |
 | `scripts/check-worker-migrations.mjs` | Replay every worker SQL migration against a throwaway SQLite database | `worker/migrations/*.sql`, Node 22+ `node:sqlite` or local `sqlite3` fallback | Exits non-zero on invalid migration SQL / ordering issues |
 | `scripts/check-critical-coverage.mjs` | Enforce line coverage floor for critical files | `coverage/lcov.info`, `CRITICAL_COVERAGE_THRESHOLD` | Exits non-zero if critical files are below threshold |
 | `scripts/test-merge-gate.mjs` | Delta-aware local gate for merged worktree changes | Local git diff + npm scripts | Runs targeted lint/test/coverage/type-check commands |
@@ -31,6 +32,7 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 - `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `check-seo-static.mjs` via `npm run seo:check`
 - `smoke-api.mjs` via `npm run test:smoke-api`
+- `smoke-ops.mjs` via `npm run test:smoke-ops`
 - `smoke-ui.mjs` via `npm run test:smoke-ui`
 - `check-worker-import-boundary.mjs` via `npm run check:worker-boundary`
 - `check-worker-migrations.mjs` via `npm run check:migrations`
@@ -72,6 +74,12 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 - Executes strict endpoint checks sequentially to avoid post-deploy request fan-out against a freshly deployed worker.
 - Retries transient request failures once by default (timeouts/network errors/5xx/429/408); tune with `SMOKE_API_RETRY_COUNT` and `SMOKE_API_RETRY_DELAY_MS`.
 - Per-request timeout defaults to `12000ms`; tune with `SMOKE_API_TIMEOUT_MS`.
+
+### `smoke-ops.mjs`
+
+- Uses Cloudflare Access service-token headers (`OPS_SMOKE_CF_ACCESS_CLIENT_ID` / `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`) rather than raw `ADMIN_KEY`.
+- Defaults to `https://ops.pharos.watch/status/` and `https://ops-api.pharos.watch`, with overrides via `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE`.
+- Verifies the operator UI shell plus `/api/status`, `/api/status-history?limit=5`, and the safe dry-run `audit-depeg-history` admin path.
 
 ## Safe Usage Guidelines
 

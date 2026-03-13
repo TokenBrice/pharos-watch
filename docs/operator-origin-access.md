@@ -1,29 +1,22 @@
 # Operator Origin Access Setup
 
-Runbook for Phase 1 of the `/status` admin hardening rollout: introducing an operator-only web origin plus a dedicated worker route for future admin API traffic.
+Runbook for the operator-origin split that now fronts `/status/` and browser admin calls with Access-protected ops hosts.
 
 ---
 
 ## Purpose
 
-Phase 1 prepares the infrastructure boundary for the later Access-backed admin migration without changing the user-facing auth model yet.
+Current repo-side state:
 
-After this phase:
+- the Worker is attached to both `api.pharos.watch` and `ops-api.pharos.watch`
+- browser CORS allows both `pharos.watch` and `ops.pharos.watch`
+- `/status/` only serves the live operator panel on `ops.pharos.watch`; the public host renders the non-indexed fallback shell
+- same-origin Pages Functions proxy `/api/admin/*` from `ops.pharos.watch` to `ops-api.pharos.watch` with Access service-token headers
 
-- the Worker config is prepared for `ops-api.pharos.watch`
-- browser CORS can allow both `pharos.watch` and `ops.pharos.watch`
-- the Pages project can add `ops.pharos.watch`
-- Cloudflare Access applications and policies can be created against both origins
+Still true:
 
-This phase does **not** yet:
-
-- remove `ADMIN_KEY`
-- proxy ops requests through Pages Functions
-- cut the `/status` UI over to an Access-only flow
-
-Those arrive in later phases.
-
-Phase 2 adds the Pages Functions proxy and host-aware status UI cutover on `ops.pharos.watch`.
+- the underlying Worker continues to accept `ADMIN_KEY` / `Authorization: Bearer` as a fallback for raw admin calls
+- Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
 
 ---
 
@@ -54,25 +47,24 @@ The production repo default is now:
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 ```
 
-This is required so an Access-protected `ops.pharos.watch` can still call the Worker during the transition period.
+This is required so an Access-protected `ops.pharos.watch` can call the Worker during the current split-host setup.
 
-### Future-facing env placeholders
+### Runtime origin bindings
 
-`worker/src/lib/env.ts` now includes optional bindings reserved for later Access-aware phases:
+Actively used by the current Pages Functions host gate / admin proxy:
 
 - `OPS_UI_ORIGIN`
 - `OPS_API_ORIGIN`
+
+Reserved in the Worker env interface for later Access-aware enforcement work, but not consumed by the current Worker code paths:
+
 - `CF_ACCESS_TEAM_DOMAIN`
 - `CF_ACCESS_OPS_UI_AUD`
 - `CF_ACCESS_OPS_API_AUD`
 
-They are not consumed yet in Phase 1.
-
 ---
 
-## Phase 2 Notes
-
-Phase 2 introduces:
+## Pages Functions Proxy
 
 - `functions/api/admin/[[path]].ts`
 - same-origin admin requests from `ops.pharos.watch` to `/api/admin/*`
@@ -81,7 +73,7 @@ Phase 2 introduces:
 
 The current proxy trusts the Cloudflare Access-protected `ops.pharos.watch` host as the human-entry gate and does not try to re-validate the UI JWT inside the function itself.
 
-### Pages project bindings needed for Phase 2
+### Pages project bindings needed now
 
 Required:
 
@@ -92,19 +84,14 @@ Optional overrides (the proxy has production defaults for these already):
 
 - `OPS_UI_ORIGIN`
 - `OPS_API_ORIGIN`
+
+Reserved but currently unused by the proxy/runtime:
+
 - `CF_ACCESS_TEAM_DOMAIN`
 - `CF_ACCESS_OPS_UI_AUD`
+- `CF_ACCESS_OPS_API_AUD`
 
-Required runtime config for Phase 2:
-
-- `OPS_UI_ORIGIN`
-- `OPS_API_ORIGIN`
-- `CF_ACCESS_TEAM_DOMAIN`
-- `CF_ACCESS_OPS_UI_AUD`
-- `OPS_API_SERVICE_TOKEN_ID`
-- `OPS_API_SERVICE_TOKEN_SECRET`
-
-Set those bindings on the Pages project before deploying the Phase 2 frontend, otherwise `/api/admin/*` will return a configuration error.
+Set the required service-token bindings on the Pages project before deploying the ops-host frontend, otherwise `/api/admin/*` will return a configuration error.
 
 ---
 
@@ -154,7 +141,7 @@ Recommended target:
 Reason:
 
 - lowest migration cost for this static-export repo
-- Phase 2 can branch behavior by hostname before any separate-project split is needed
+- the current split can branch behavior by hostname before any separate-project split is needed
 
 ### 3. Create the Access application for the operator UI
 
@@ -174,9 +161,9 @@ Create a second Access self-hosted application for:
 
 - `https://ops-api.pharos.watch/*`
 
-This app will later protect the admin API host used by the Pages Functions proxy.
+This app protects the admin API host used by the Pages Functions proxy.
 
-### 5. Create service tokens for later phases
+### 5. Create service tokens
 
 Create at least one Access service token for:
 
@@ -184,9 +171,9 @@ Create at least one Access service token for:
 - CI smoke checks
 - admin scripts
 
-These tokens are not wired in Phase 1 yet, but creating them now avoids blocking Phase 2.
+The Pages Functions proxy already uses the service token pair; create separate tokens only when you need distinct scopes for CI or operator tooling.
 
-### 6. Record the Access values for later phases
+### 6. Record the Access values
 
 Capture and store:
 
@@ -196,7 +183,7 @@ Capture and store:
 - service-token client id
 - service-token client secret
 
-These are the values later phases will bind into runtime env.
+These are the values the current service-token flow and any later Access-aware enforcement work may need in runtime env.
 
 ---
 
@@ -279,7 +266,7 @@ Expected:
 
 ## Rollback
 
-If the operator-origin prep causes issues before later phases land:
+If the operator-origin setup causes issues:
 
 1. remove `ops-api.pharos.watch` from `worker/wrangler.toml`
 2. revert `CORS_ORIGIN` to `https://pharos.watch`
@@ -287,4 +274,4 @@ If the operator-origin prep causes issues before later phases land:
 4. remove or disable the `ops.pharos.watch` Pages custom domain if needed
 5. disable the Access apps
 
-Because the public hostnames remain unchanged in Phase 1, rollback risk is low as long as Access is only attached to the new operator origins.
+Because the public hostnames remain unchanged, rollback risk is low as long as Access is only attached to the operator origins.
