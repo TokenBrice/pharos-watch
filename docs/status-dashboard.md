@@ -35,8 +35,9 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - Pure derived-data helpers: `src/lib/status-dashboard-model.ts`
 - Decomposed UI components: `src/components/status/*`
 - The page shell now adds a command-center top fold above the widget stack:
-  - a compact triage utility bar for refresh/auth state (`RefreshCountdown`, sign-out, worker/client timestamp chips)
+  - a compact triage utility bar for refresh/auth state (`RefreshCountdown`, sign-out, state-evaluation/API/client timestamp chips)
   - consolidated overall-status hero (`StatusBanner`) + a short blocker watchlist
+  - when hysteresis is still holding `overallStatus` above `rawOverallStatus`, the hero switches into recovery-hold copy instead of reusing the active-incident stale headline
   - a promoted `Recommended now` action strip derived from active causes / unhealthy cron lanes
   - a `Follow this order` lane list that mirrors the priority-ranked section order
   - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
@@ -84,7 +85,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - The client now groups widgets into six operational lanes instead of one flat vertical list:
   - `Overview`: incident detail first, with the state-machine / probe diagnostics moved behind a secondary disclosure block
   - `Actions`: manual response tools promoted upward when recommendations exist; Telegram delivery telemetry is now secondary and collapsible
-  - `Pipeline`: data-quality threshold board, price-source health, liquidity health, dataset freshness, live reserve sync health, a full-width mint/burn reconciliation grid, and discovery backlog
+  - `Pipeline`: data-quality threshold board, price-source health, liquidity health, pipeline freshness, live reserve sync health, a full-width mint/burn reconciliation grid, and discovery backlog
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
   - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, and cache freshness
   - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers; unhealthy/degraded groups sort first and fully healthy groups collapse by default
@@ -216,9 +217,16 @@ Additional response fields:
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
-- `datasetFreshness`: last-write timestamps for key operational datasets (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
+- `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
 - `summary`: compact availability rollup (`unhealthyCrons`, `degradedCrons`, `cronErrors`, `worstCacheRatio`)
 - `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `lastSuccessAt`, `oldestFreshAgeSec`)
+
+For event-backed domains, `datasetFreshness` follows the writer rather than the latest emitted event so quiet periods do not look falsely late:
+
+- `blacklist`: last successful `sync-blacklist` run, not `MAX(blacklist_events.timestamp)`
+- `mintBurn`: last successful critical/extended mint-burn writer run, not `MAX(mint_burn_events.timestamp)`
+- `depegs`: last successful `sync-stablecoins` run, not `MAX(depeg_events.started_at)`
+- `discoveryCandidates`: last successful coverage writer run, not `MAX(discovery_candidates.last_seen)`
 
 `dataQuality` now also exposes:
 
@@ -410,22 +418,22 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 
 | File                                                 | Role                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/app/status/client.tsx`                          | Ops-host-only status dashboard orchestration shell; the public host no longer renders an interactive `/status/` route                                                                                                                        |
-| `functions/status/[[path]].ts`                       | Pages Functions host gate for `/status/`; returns `404` outside `ops.pharos.watch`, otherwise serves the static status route asset                                                                                                            |
+| `src/app/status/client.tsx`                          | Ops-host-only status dashboard orchestration shell; the public host no longer renders an interactive `/status/` route                                                                                                                                                                  |
+| `functions/status/[[path]].ts`                       | Pages Functions host gate for `/status/`; returns `404` outside `ops.pharos.watch`, otherwise serves the static status route asset                                                                                                                                                     |
 | `src/components/status/*`                            | Decomposed status UI modules (banner, facts, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards are grouped by trigger slot, surface trigger expressions + isolation mode, show last-good/error-skip context, and expose full raw metadata in collapsible panels. |
 | `src/components/status/telegram-bot-stats.tsx`       | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                          |
 | `src/components/status/discovery-candidates.tsx`     | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                             |
 | `src/components/status/price-source-health.tsx`      | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                      |
 | `src/components/status/mint-burn-reconciliation.tsx` | Mint/burn reconciliation card — 24h Ethereum flow vs chain-supply delta diagnostics                                                                                                                                                                                                    |
-| `src/hooks/use-status.ts`                            | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) through the ops-host same-origin proxy                                                                                                                    |
+| `src/hooks/use-status.ts`                            | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) through the ops-host same-origin proxy                                                                                                                                                               |
 | `src/hooks/api-hooks.ts`                             | Shared read hooks consumed by the dashboard model (`useHealth`, `usePegSummary`, `useDexLiquidity`, `useReportCards`, `useYieldRankings`)                                                                                                                                              |
-| `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`); admin probes switch to same-origin proxy mode on the ops host                                                                                                                                    |
-| `src/hooks/use-status-history.ts`                    | Shared polling policy for `/api/status-history` + dashboard time-window filters through the ops-host same-origin proxy                                                                                                                                                                |
+| `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`); admin probes switch to same-origin proxy mode on the ops host                                                                                                                                     |
+| `src/hooks/use-status-history.ts`                    | Shared polling policy for `/api/status-history` + dashboard time-window filters through the ops-host same-origin proxy                                                                                                                                                                 |
 | `functions/api/admin/[[path]].ts`                    | Pages Functions admin proxy: ops-host gating, upstream method/path allowlisting, and service-token forwarding to `ops-api.pharos.watch`                                                                                                                                                |
 | `shared/lib/cron-jobs.ts`                            | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |
-| `shared/lib/api-endpoints.ts`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                       |
+| `shared/lib/api-endpoints.ts`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                        |
 | `worker/src/route-registry.ts`                       | Static route binding registry keyed by shared endpoint metadata                                                                                                                                                                                                                        |
-| `worker/src/router.ts`                               | Route dispatcher: static registry lookup plus dynamic stablecoin/discovery/OG matching                                                                                                                                                                                                |
+| `worker/src/router.ts`                               | Route dispatcher: static registry lookup plus dynamic stablecoin/discovery/OG matching                                                                                                                                                                                                 |
 | `worker/src/api/status.ts`                           | Raw status synthesis + effective state response                                                                                                                                                                                                                                        |
 | `worker/src/api/status-history.ts`                   | Machine-readable status timeline/history endpoint                                                                                                                                                                                                                                      |
 | `worker/src/api/health.ts`                           | Public health endpoint for cache/circuit observability                                                                                                                                                                                                                                 |

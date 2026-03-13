@@ -216,6 +216,87 @@ describe("handleStatus", () => {
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
+  it("uses writer timestamps for event-backed freshness rows", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const blacklistWriterAt = now - 15 * 60;
+    const mintBurnWriterAt = now - 8 * 60;
+    const depegWriterAt = now - 12 * 60;
+    const discoveryWriterAt = now - 20 * 60;
+
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      {
+        match: "FROM cron_runs\n         WHERE job IN",
+        rows: [
+          makeCronRow("sync-stablecoins", "ok", 12 * 60),
+          makeCronRow("sync-blacklist", "ok", 15 * 60),
+          makeCronRow("sync-mint-burn", "ok", 8 * 60),
+          makeCronRow("sync-mint-burn-extended", "ok", 18 * 60),
+          makeCronRow("discovery-scan", "ok", 20 * 60),
+        ],
+      },
+      {
+        match: "SELECT MAX(started_at) as latest",
+        matchBinds: ["sync-blacklist", "ok", "degraded"],
+        rows: [],
+        first: { latest: blacklistWriterAt },
+      },
+      {
+        match: "SELECT MAX(started_at) as latest",
+        matchBinds: ["sync-mint-burn", "sync-mint-burn-extended", "ok", "degraded"],
+        rows: [],
+        first: { latest: mintBurnWriterAt },
+      },
+      {
+        match: "SELECT MAX(started_at) as latest",
+        matchBinds: ["sync-stablecoins", "ok", "degraded"],
+        rows: [],
+        first: { latest: depegWriterAt },
+      },
+      {
+        match: "SELECT MAX(started_at) as latest",
+        matchBinds: ["sync-stablecoins", "discovery-scan", "ok", "degraded"],
+        rows: [],
+        first: { latest: discoveryWriterAt },
+      },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 10_000, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      {
+        match: "SELECT * FROM discovery_candidates WHERE dismissed = 0",
+        rows: [],
+      },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      datasetFreshness: {
+        blacklist: number | null;
+        mintBurn: number | null;
+        depegs: number | null;
+        discoveryCandidates: number | null;
+      };
+    };
+
+    expect(body.datasetFreshness.blacklist).toBe(blacklistWriterAt);
+    expect(body.datasetFreshness.mintBurn).toBe(mintBurnWriterAt);
+    expect(body.datasetFreshness.depegs).toBe(depegWriterAt);
+    expect(body.datasetFreshness.discoveryCandidates).toBe(discoveryWriterAt);
+  });
+
   it("marks data quality stale when the stablecoins cache is malformed", async () => {
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
@@ -349,17 +430,19 @@ describe("handleStatus", () => {
       { match: "cron_runs", rows: [makeCronRow("sync-blacklist", "ok", 30)] },
       {
         match: "cron_run_progress",
-        rows: [{
-          job: "sync-blacklist",
-          started_at: now - 120,
-          updated_at: now - 10,
-          stage: "scan-config",
-          items_done: 2,
-          items_total: 7,
-          message: "Scanning USDC on Ethereum",
-          lease_owner: "lease-123",
-          metadata: JSON.stringify({ budgetUsed: 18, budgetLimit: 900 }),
-        }],
+        rows: [
+          {
+            job: "sync-blacklist",
+            started_at: now - 120,
+            updated_at: now - 10,
+            stage: "scan-config",
+            items_done: 2,
+            items_total: 7,
+            message: "Scanning USDC on Ethereum",
+            lease_owner: "lease-123",
+            metadata: JSON.stringify({ budgetUsed: 18, budgetLimit: 900 }),
+          },
+        ],
       },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
@@ -371,7 +454,10 @@ describe("handleStatus", () => {
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
     const body = (await res.json()) as {
-      crons: Record<string, { inFlight?: { stage?: string; stale: boolean; itemsDone?: number; itemsTotal?: number } | null }>;
+      crons: Record<
+        string,
+        { inFlight?: { stage?: string; stale: boolean; itemsDone?: number; itemsTotal?: number } | null }
+      >;
     };
 
     expect(body.crons["sync-blacklist"]?.inFlight).toMatchObject({
@@ -409,17 +495,19 @@ describe("handleStatus", () => {
       { match: "cron_runs", rows: cronRows },
       {
         match: "cron_run_progress",
-        rows: [{
-          job: "sync-blacklist",
-          started_at: now - 120,
-          updated_at: now - 10,
-          stage: "scan-config",
-          items_done: 4,
-          items_total: 7,
-          message: "Scanning USDT on Ethereum",
-          lease_owner: "lease-456",
-          metadata: JSON.stringify({ budgetUsed: 31, budgetLimit: 900 }),
-        }],
+        rows: [
+          {
+            job: "sync-blacklist",
+            started_at: now - 120,
+            updated_at: now - 10,
+            stage: "scan-config",
+            items_done: 4,
+            items_total: 7,
+            message: "Scanning USDT on Ethereum",
+            lease_owner: "lease-456",
+            metadata: JSON.stringify({ budgetUsed: 31, budgetLimit: 900 }),
+          },
+        ],
       },
       {
         match: "cache",
@@ -794,9 +882,7 @@ describe("handleStatus", () => {
   });
 
   it("returns a degraded fallback payload when the DB health sentinel fails", async () => {
-    const db = mockD1([
-      { match: "SELECT 1", rows: [], throwError: new Error("db down") },
-    ]);
+    const db = mockD1([{ match: "SELECT 1", rows: [], throwError: new Error("db down") }]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);

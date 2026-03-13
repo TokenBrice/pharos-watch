@@ -6,6 +6,7 @@ import type {
   StatusResponse,
   TelegramBotStats,
 } from "@shared/types";
+import { buildInClause } from "../lib/db";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
@@ -170,9 +171,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
         .prepare("SELECT COUNT(*) AS pending_count FROM telegram_pending_disambiguation WHERE expires_at > ?")
         .bind(now)
         .first<TelegramBotPendingRow>(),
-      db
-        .prepare("SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts")
-        .first<TelegramBotPendingRow>(),
+      db.prepare("SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts").first<TelegramBotPendingRow>(),
       db
         .prepare(
           `SELECT stablecoin_id, COUNT(*) AS subscribers
@@ -217,26 +216,35 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
   }
 }
 
-interface DatasetFreshnessTarget {
-  table: string;
-  column: string;
-  where?: string;
-}
+type DatasetFreshnessTarget =
+  | {
+      type: "table";
+      table: string;
+      column: string;
+      where?: string;
+    }
+  | {
+      type: "cron";
+      jobs: readonly string[];
+    };
 
 const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"], DatasetFreshnessTarget> = {
-  stablecoins: { table: "cache", column: "updated_at", where: "key = 'stablecoins'" },
-  blacklist: { table: "blacklist_events", column: "timestamp" },
-  mintBurn: { table: "mint_burn_events", column: "timestamp" },
-  supply: { table: "supply_history", column: "snapshot_date" },
-  safetyGrades: { table: "safety_grade_history", column: "recorded_at" },
-  yield: { table: "yield_data", column: "updated_at" },
-  depegs: { table: "depeg_events", column: "started_at" },
-  dews: { table: "stress_signals", column: "computed_at" },
-  digest: { table: "daily_digest", column: "generated_at" },
-  discoveryCandidates: { table: "discovery_candidates", column: "last_seen" },
+  stablecoins: { type: "table", table: "cache", column: "updated_at", where: "key = 'stablecoins'" },
+  blacklist: { type: "cron", jobs: ["sync-blacklist"] },
+  mintBurn: { type: "cron", jobs: ["sync-mint-burn", "sync-mint-burn-extended"] },
+  supply: { type: "table", table: "supply_history", column: "snapshot_date" },
+  safetyGrades: { type: "table", table: "safety_grade_history", column: "recorded_at" },
+  yield: { type: "table", table: "yield_data", column: "updated_at" },
+  depegs: { type: "cron", jobs: ["sync-stablecoins"] },
+  dews: { type: "table", table: "stress_signals", column: "computed_at" },
+  digest: { type: "table", table: "daily_digest", column: "generated_at" },
+  discoveryCandidates: { type: "cron", jobs: ["sync-stablecoins", "discovery-scan"] },
 };
 
-async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget): Promise<number | null> {
+async function getLastTableUpdate(
+  db: D1Database,
+  target: Extract<DatasetFreshnessTarget, { type: "table" }>,
+): Promise<number | null> {
   const where = target.where ? ` WHERE ${target.where}` : "";
   try {
     const row = await db
@@ -249,30 +257,47 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget): Pr
   }
 }
 
+async function getLastSuccessfulCronRun(db: D1Database, jobs: readonly string[]): Promise<number | null> {
+  try {
+    const jobInClause = buildInClause(jobs);
+    const successStatuses = buildInClause(["ok", "degraded"]);
+    const row = await db
+      .prepare(
+        `SELECT MAX(started_at) as latest
+         FROM cron_runs
+         WHERE job IN (${jobInClause.sql})
+           AND status IN (${successStatuses.sql})`,
+      )
+      .bind(...jobInClause.binds, ...successStatuses.binds)
+      .first<{ latest: number | null }>();
+    return row?.latest ?? null;
+  } catch (err) {
+    console.error(`[status] Failed dataset freshness query for cron jobs ${jobs.join(", ")}:`, err);
+    return null;
+  }
+}
+
+async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget): Promise<number | null> {
+  if (target.type === "cron") {
+    return getLastSuccessfulCronRun(db, target.jobs);
+  }
+  return getLastTableUpdate(db, target);
+}
+
 export async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["datasetFreshness"]> {
-  const [
-    stablecoins,
-    blacklist,
-    mintBurn,
-    supply,
-    safetyGrades,
-    yieldTs,
-    depegs,
-    dews,
-    digest,
-    discoveryCandidates,
-  ] = await Promise.all([
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.mintBurn),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.supply),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.safetyGrades),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.yield),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.depegs),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.dews),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.digest),
-    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.discoveryCandidates),
-  ]);
+  const [stablecoins, blacklist, mintBurn, supply, safetyGrades, yieldTs, depegs, dews, digest, discoveryCandidates] =
+    await Promise.all([
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.mintBurn),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.supply),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.safetyGrades),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.yield),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.depegs),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.dews),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.digest),
+      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.discoveryCandidates),
+    ]);
 
   return {
     stablecoins,
@@ -298,19 +323,22 @@ export async function getMintBurnReconciliation(
   }
 
   const trackedIds = new Set(
-    MINT_BURN_CONFIGS
-      .filter((config) => config.chain.chainId === "ethereum")
-      .map((config) => config.stablecoinId),
+    MINT_BURN_CONFIGS.filter((config) => config.chain.chainId === "ethereum").map((config) => config.stablecoinId),
   );
-  const assets = (stablecoinsCacheResult.payload.peggedAssets as Array<{
-    id: string;
-    symbol: string;
-    circulating?: Record<string, number>;
-    chainCirculating?: Record<string, {
-      current?: number;
-      circulatingPrevDay?: number;
-    }>;
-  }>).filter((asset) => trackedIds.has(asset.id));
+  const assets = (
+    stablecoinsCacheResult.payload.peggedAssets as Array<{
+      id: string;
+      symbol: string;
+      circulating?: Record<string, number>;
+      chainCirculating?: Record<
+        string,
+        {
+          current?: number;
+          circulatingPrevDay?: number;
+        }
+      >;
+    }>
+  ).filter((asset) => trackedIds.has(asset.id));
 
   const [flowRows, firstSeenRows] = await Promise.all([
     db
@@ -334,65 +362,79 @@ export async function getMintBurnReconciliation(
   ]);
 
   const flowMap = new Map((flowRows.results ?? []).map((row) => [row.stablecoin_id, row.net_flow_usd]));
-  const firstSeenMap = new Map((firstSeenRows.results ?? []).map((row) => [row.stablecoin_id, row.first_hour_ts ?? null]));
+  const firstSeenMap = new Map(
+    (firstSeenRows.results ?? []).map((row) => [row.stablecoin_id, row.first_hour_ts ?? null]),
+  );
 
-  const rows = assets.map<MintBurnReconciliationRow>((asset) => {
-    const ethereumSupply = asset.chainCirculating?.ethereum;
-    const flowNet24hUsd = flowMap.get(asset.id) ?? 0;
-    const historyStartAt = firstSeenMap.get(asset.id) ?? null;
-    const coverageStatus: MintBurnReconciliationRow["coverageStatus"] =
-      historyStartAt == null ? "unknown" :
-      historyStartAt > now - 24 * 3600 ? "bootstrapping" :
-      historyStartAt > now - 30 * 24 * 3600 ? "partial-history" :
-      "full";
+  const rows = assets
+    .map<MintBurnReconciliationRow>((asset) => {
+      const ethereumSupply = asset.chainCirculating?.ethereum;
+      const flowNet24hUsd = flowMap.get(asset.id) ?? 0;
+      const historyStartAt = firstSeenMap.get(asset.id) ?? null;
+      const coverageStatus: MintBurnReconciliationRow["coverageStatus"] =
+        historyStartAt == null
+          ? "unknown"
+          : historyStartAt > now - 24 * 3600
+            ? "bootstrapping"
+            : historyStartAt > now - 30 * 24 * 3600
+              ? "partial-history"
+              : "full";
 
-    const current = ethereumSupply?.current;
-    const prevDay = ethereumSupply?.circulatingPrevDay;
-    if (typeof current !== "number" || !Number.isFinite(current) || typeof prevDay !== "number" || !Number.isFinite(prevDay)) {
+      const current = ethereumSupply?.current;
+      const prevDay = ethereumSupply?.circulatingPrevDay;
+      if (
+        typeof current !== "number" ||
+        !Number.isFinite(current) ||
+        typeof prevDay !== "number" ||
+        !Number.isFinite(prevDay)
+      ) {
+        return {
+          stablecoinId: asset.id,
+          symbol: TRACKED_META_BY_ID.get(asset.id)?.symbol ?? asset.symbol,
+          flowNet24hUsd,
+          chainSupplyDelta24hUsd: null,
+          absoluteDiffUsd: null,
+          diffRatio: null,
+          status: "insufficient-source",
+          coverageStatus,
+        };
+      }
+
+      const chainSupplyDelta24hUsd = current - prevDay;
+      const absoluteDiffUsd = Math.abs(flowNet24hUsd - chainSupplyDelta24hUsd);
+      const denominator = Math.max(
+        Math.abs(chainSupplyDelta24hUsd),
+        Math.abs(flowNet24hUsd),
+        Math.max(sumPegBuckets(asset.circulating), 1) * 0.005,
+      );
+      const diffRatio = denominator > 0 ? absoluteDiffUsd / denominator : 0;
+      const status: MintBurnReconciliationRow["status"] =
+        absoluteDiffUsd >= 100_000_000 || diffRatio >= 0.3
+          ? "critical"
+          : absoluteDiffUsd >= 25_000_000 || diffRatio >= 0.12
+            ? "warn"
+            : "ok";
+
       return {
         stablecoinId: asset.id,
         symbol: TRACKED_META_BY_ID.get(asset.id)?.symbol ?? asset.symbol,
         flowNet24hUsd,
-        chainSupplyDelta24hUsd: null,
-        absoluteDiffUsd: null,
-        diffRatio: null,
-        status: "insufficient-source",
+        chainSupplyDelta24hUsd,
+        absoluteDiffUsd,
+        diffRatio,
+        status,
         coverageStatus,
       };
-    }
-
-    const chainSupplyDelta24hUsd = current - prevDay;
-    const absoluteDiffUsd = Math.abs(flowNet24hUsd - chainSupplyDelta24hUsd);
-    const denominator = Math.max(
-      Math.abs(chainSupplyDelta24hUsd),
-      Math.abs(flowNet24hUsd),
-      Math.max(sumPegBuckets(asset.circulating), 1) * 0.005,
-    );
-    const diffRatio = denominator > 0 ? absoluteDiffUsd / denominator : 0;
-    const status: MintBurnReconciliationRow["status"] =
-      absoluteDiffUsd >= 100_000_000 || diffRatio >= 0.3 ? "critical" :
-      absoluteDiffUsd >= 25_000_000 || diffRatio >= 0.12 ? "warn" :
-      "ok";
-
-    return {
-      stablecoinId: asset.id,
-      symbol: TRACKED_META_BY_ID.get(asset.id)?.symbol ?? asset.symbol,
-      flowNet24hUsd,
-      chainSupplyDelta24hUsd,
-      absoluteDiffUsd,
-      diffRatio,
-      status,
-      coverageStatus,
-    };
-  }).sort((a, b) => {
-    const severityOrder: Record<MintBurnReconciliationRow["status"], number> = {
-      critical: 0,
-      warn: 1,
-      "insufficient-source": 2,
-      ok: 3,
-    };
-    return severityOrder[a.status] - severityOrder[b.status];
-  });
+    })
+    .sort((a, b) => {
+      const severityOrder: Record<MintBurnReconciliationRow["status"], number> = {
+        critical: 0,
+        warn: 1,
+        "insufficient-source": 2,
+        ok: 3,
+      };
+      return severityOrder[a.status] - severityOrder[b.status];
+    });
 
   return {
     checkedAt: now,

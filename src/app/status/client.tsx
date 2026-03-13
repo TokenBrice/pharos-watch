@@ -24,14 +24,9 @@ import { StatusBanner } from "@/components/status/status-banner";
 import { StatusFacts } from "@/components/status/status-facts";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
-import { TOP_FOLD_COPY } from "@/components/status/top-fold-copy";
+import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
-import {
-  NoticeRail,
-  PriorityLaneLink,
-  StatusSection,
-  SummaryBadge,
-} from "@/components/status/page-primitives";
+import { NoticeRail, PriorityLaneLink, StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
 import { isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
@@ -50,7 +45,6 @@ function getCronSeverity(cron: StatusResponse["crons"][string]): number {
   if (cron.lastRun?.status === "degraded") return 1;
   return 0;
 }
-
 
 export default function StatusClient() {
   const opsUi = useSyncExternalStore(
@@ -86,9 +80,7 @@ export default function StatusClient() {
         path="/status/"
         title="System Status"
         variant="auth-gated"
-        leadParagraphs={[
-          "This route exists, but the operator control plane no longer runs on the public host.",
-        ]}
+        leadParagraphs={["This route exists, but the operator control plane no longer runs on the public host."]}
       >
         <div className="pt-4">
           <div className="rounded-[1.6rem] border border-border/60 bg-background/35 p-6 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
@@ -98,7 +90,8 @@ export default function StatusClient() {
                 Operator tooling is no longer available on the public host.
               </h2>
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Manual status operations now run behind the Access-protected ops host. Public `/status/` remains non-indexed, but it no longer accepts an in-browser admin key.
+                Manual status operations now run behind the Access-protected ops host. Public `/status/` remains
+                non-indexed, but it no longer accepts an in-browser admin key.
               </p>
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
@@ -127,21 +120,12 @@ export default function StatusClient() {
           : "Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions.",
       ]}
     >
-      <StatusDashboard
-        adminAccess={adminAccess}
-        onSignOut={handleOpsSignOut}
-      />
+      <StatusDashboard adminAccess={adminAccess} onSignOut={handleOpsSignOut} />
     </FeaturePageShell>
   );
 }
 
-function StatusDashboard({
-  adminAccess,
-  onSignOut,
-}: {
-  adminAccess: AdminAccess;
-  onSignOut: () => void;
-}) {
+function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess; onSignOut: () => void }) {
   const {
     data,
     error,
@@ -224,7 +208,9 @@ function StatusDashboard({
     statusHoldingAge,
     topCauses,
   } = model;
-  const topFoldCopy = TOP_FOLD_COPY[data.overallStatus];
+  const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
+  const statusEvaluatedAt = data.state.lastEvaluatedAt;
+  const isRecoveryHold = isRecoveryHoldState(data.overallStatus, data.rawOverallStatus);
   const operationalSections = sections.filter((section) => section.id !== "overview" && section.id !== "history");
   const sortedCronGroups = cronGroups
     .map((group) => ({
@@ -537,7 +523,8 @@ function StatusDashboard({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
             <div className="flex flex-wrap items-center gap-2">
               <p className={cn("pharos-kicker", topFoldCopy.kicker)}>Operator Triage</p>
-              <SummaryBadge label="Worker Check" value={formatTimestampSeconds(data.timestamp)} />
+              <SummaryBadge label="State Eval" value={formatTimestampSeconds(statusEvaluatedAt)} />
+              <SummaryBadge label="Status API" value={formatTimestampSeconds(data.timestamp)} />
               <SummaryBadge label="Client Sync" value={formatTimestampMs(lastUpdated)} />
               <SummaryBadge
                 label="Client Age"
@@ -568,7 +555,7 @@ function StatusDashboard({
 
               <StatusBanner
                 status={data.overallStatus}
-                timestamp={data.timestamp}
+                evaluatedAt={statusEvaluatedAt}
                 availabilityStatus={data.availabilityStatus}
                 dataQualityStatus={data.dataQualityStatus}
                 rawStatus={data.rawOverallStatus}
@@ -577,8 +564,17 @@ function StatusDashboard({
 
               <div className="flex flex-wrap gap-2">
                 <SummaryBadge
-                  label="Holding"
-                  value={`${formatAge(statusHoldingAge)} in ${overallTone.label.toLowerCase()}`}
+                  label={isRecoveryHold ? "Recovery Hold" : "Holding"}
+                  value={
+                    isRecoveryHold
+                      ? `${formatAge(statusHoldingAge)} at ${overallTone.label.toLowerCase()} / raw ${data.rawOverallStatus}`
+                      : `${formatAge(statusHoldingAge)} in ${overallTone.label.toLowerCase()}`
+                  }
+                  className={
+                    isRecoveryHold
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      : undefined
+                  }
                 />
                 <SummaryBadge
                   label="Active Causes"
@@ -695,7 +691,7 @@ function StatusDashboard({
         railLabel="Jump to Lane"
         rightSlot={
           <span className="text-xs text-muted-foreground">
-            Latest worker check {formatTimestampSeconds(data.timestamp)}
+            Latest state eval {formatTimestampSeconds(statusEvaluatedAt)}
           </span>
         }
       />

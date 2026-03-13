@@ -1,3 +1,4 @@
+import { isRecoveryHold } from "@/components/status/top-fold-copy";
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG = {
@@ -41,7 +42,7 @@ const STATUS_CONFIG = {
 
 interface StatusBannerProps {
   status: "healthy" | "degraded" | "stale";
-  timestamp: number;
+  evaluatedAt: number;
   availabilityStatus: "healthy" | "degraded" | "stale";
   dataQualityStatus: "healthy" | "degraded" | "stale";
   rawStatus: "healthy" | "degraded" | "stale";
@@ -50,15 +51,17 @@ interface StatusBannerProps {
 
 export function StatusBanner({
   status,
-  timestamp,
+  evaluatedAt,
   availabilityStatus,
   dataQualityStatus,
   rawStatus,
   confidence,
 }: StatusBannerProps) {
   const config = STATUS_CONFIG[status];
-  const time = new Date(timestamp * 1000).toLocaleString();
+  const time = new Date(evaluatedAt * 1000).toLocaleString();
+  const recoveryHold = isRecoveryHold(status, rawStatus);
   const statusDetails = [
+    { label: "Effective", value: status },
     { label: "Raw", value: rawStatus },
     { label: "Availability", value: availabilityStatus },
     { label: "Data quality", value: dataQualityStatus },
@@ -74,17 +77,37 @@ export function StatusBanner({
     >
       <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(148,163,184,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:3.6rem_3.6rem]" />
       <div className={cn("pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r", config.line)} />
-      <div className={cn("pointer-events-none absolute -left-10 top-2 h-40 w-40 rounded-full blur-[95px]", config.glowStrong)} />
-      <div className={cn("pointer-events-none absolute right-12 top-10 h-32 w-32 rounded-full blur-[110px]", config.glowSoft)} />
+      <div
+        className={cn(
+          "pointer-events-none absolute -left-10 top-2 h-40 w-40 rounded-full blur-[95px]",
+          config.glowStrong,
+        )}
+      />
+      <div
+        className={cn(
+          "pointer-events-none absolute right-12 top-10 h-32 w-32 rounded-full blur-[110px]",
+          config.glowSoft,
+        )}
+      />
       <div className="pointer-events-none absolute inset-y-5 right-[13rem] hidden w-px bg-white/10 lg:block" />
-      <div className={cn("pointer-events-none absolute -bottom-6 right-4 hidden font-mono text-[6.8rem] font-semibold uppercase tracking-[-0.08em] lg:block", config.ghost)}>
+      <div
+        className={cn(
+          "pointer-events-none absolute -bottom-6 right-4 hidden font-mono text-[6.8rem] font-semibold uppercase tracking-[-0.08em] lg:block",
+          config.ghost,
+        )}
+      >
         {config.label}
       </div>
 
       <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_13rem] lg:items-end">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em]", config.chip)}>
+            <span
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.28em]",
+                config.chip,
+              )}
+            >
               <span className={cn("h-2.5 w-2.5 rounded-full", config.dot)} />
               System posture
             </span>
@@ -96,14 +119,34 @@ export function StatusBanner({
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
               <div className="text-[11px] uppercase tracking-[0.32em] text-white/45">Overall status</div>
-              <div className={cn("text-[clamp(2.6rem,7vw,5.2rem)] font-semibold leading-none tracking-[-0.08em]", config.text)}>
+              <div
+                className={cn(
+                  "text-[clamp(2.6rem,7vw,5.2rem)] font-semibold leading-none tracking-[-0.08em]",
+                  config.text,
+                )}
+              >
                 {config.label}
               </div>
             </div>
-            <div className="pb-1 text-sm text-white/70">
-              <div className="font-mono">raw {rawStatus}</div>
-            </div>
+            {recoveryHold ? (
+              <div className="space-y-1 pb-1 text-sm text-white/78">
+                <div className="font-mono">raw {rawStatus}</div>
+                <div className="rounded-full border border-amber-300/20 bg-amber-500/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.22em] text-amber-100">
+                  recovery hold
+                </div>
+              </div>
+            ) : (
+              <div className="pb-1 text-sm text-white/70">
+                <div className="font-mono">raw {rawStatus}</div>
+              </div>
+            )}
           </div>
+
+          {recoveryHold && (
+            <div className="max-w-2xl text-sm leading-relaxed text-white/78">
+              Effective status is still holding {status} while the latest raw sweep is already {rawStatus}.
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             {statusDetails.map((detail) => (
@@ -119,10 +162,10 @@ export function StatusBanner({
         </div>
 
         <div className="rounded-[1.25rem] border border-white/12 bg-black/18 px-4 py-4 backdrop-blur-[2px]">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-white/45">Last sweep</div>
+          <div className="text-[11px] uppercase tracking-[0.3em] text-white/45">Last status eval</div>
           <div className="mt-3 text-base font-medium leading-snug text-white/92">{time}</div>
           <div className="mt-3 border-t border-white/10 pt-3 text-xs leading-relaxed text-white/62">
-            Latest worker evaluation stamped into this operator view.
+            Latest persisted status evaluation stamped into this operator view.
           </div>
         </div>
       </div>

@@ -5,17 +5,32 @@ import { formatAge } from "./format";
 
 type DatasetKey = keyof StatusResponse["datasetFreshness"];
 
-const DATASET_META: Record<DatasetKey, { label: string; owners: readonly string[] }> = {
+const DATASET_META: Record<
+  DatasetKey,
+  {
+    label: string;
+    owners: readonly string[];
+    expectedOwners?: readonly string[];
+  }
+> = {
   stablecoins: { label: "Stablecoins cache", owners: ["sync-stablecoins"] },
-  blacklist: { label: "Blacklist events", owners: ["sync-blacklist"] },
-  mintBurn: { label: "Mint/burn events", owners: ["sync-mint-burn", "sync-mint-burn-extended"] },
+  blacklist: { label: "Blacklist sync", owners: ["sync-blacklist"] },
+  mintBurn: {
+    label: "Mint/burn sync",
+    owners: ["sync-mint-burn", "sync-mint-burn-extended"],
+    expectedOwners: ["sync-mint-burn"],
+  },
   supply: { label: "Supply history", owners: ["snapshot-supply"] },
   safetyGrades: { label: "Safety grade history", owners: ["snapshot-safety-grade-history"] },
   yield: { label: "Yield data", owners: ["sync-yield-data"] },
-  depegs: { label: "Depeg events", owners: ["sync-stablecoins"] },
+  depegs: { label: "Depeg pipeline", owners: ["sync-stablecoins"] },
   dews: { label: "DEWS signals", owners: ["compute-dews"] },
   digest: { label: "Daily digest", owners: ["daily-digest"] },
-  discoveryCandidates: { label: "Discovery candidates", owners: ["sync-stablecoins", "discovery-scan"] },
+  discoveryCandidates: {
+    label: "Coverage discovery",
+    owners: ["sync-stablecoins", "discovery-scan"],
+    expectedOwners: ["discovery-scan"],
+  },
 };
 
 function getExpectedFreshnessSec(owners: readonly string[]): number | null {
@@ -26,7 +41,10 @@ function getExpectedFreshnessSec(owners: readonly string[]): number | null {
   return Math.min(...intervals) * 2;
 }
 
-function getBand(ageSeconds: number | null, expectedFreshnessSec: number | null): {
+function getBand(
+  ageSeconds: number | null,
+  expectedFreshnessSec: number | null,
+): {
   label: string;
   className: string;
 } {
@@ -71,10 +89,8 @@ export function DatasetFreshnessTable({
     const meta = DATASET_META[key];
     const updatedAt = datasetFreshness[key];
     const ageSeconds = updatedAt != null ? Math.max(0, nowSeconds - updatedAt) : null;
-    const expectedFreshnessSec = getExpectedFreshnessSec(meta.owners);
-    const owners = meta.owners
-      .map((owner) => getCronJobMeta(owner)?.label ?? owner)
-      .join(", ");
+    const expectedFreshnessSec = getExpectedFreshnessSec(meta.expectedOwners ?? meta.owners);
+    const owners = meta.owners.map((owner) => getCronJobMeta(owner)?.label ?? owner).join(", ");
 
     return {
       key,
@@ -90,22 +106,35 @@ export function DatasetFreshnessTable({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Dataset Freshness</CardTitle>
+        <CardTitle className="text-base">Pipeline Freshness</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="mb-3 text-xs text-muted-foreground">
-          Informational view of the last dataset write per domain. Expected uses 2x the shortest owning cron cadence.
+          Informational view of the last successful writer evaluation per domain. Event-backed domains stay fresh during
+          quiet periods because this table follows the writer, not the most recent emitted event.
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
-                <th scope="col" className="pb-2 font-medium">Dataset</th>
-                <th scope="col" className="pb-2 font-medium">Updated</th>
-                <th scope="col" className="pb-2 font-medium">Age</th>
-                <th scope="col" className="pb-2 font-medium">Expected</th>
-                <th scope="col" className="pb-2 font-medium">Writer</th>
-                <th scope="col" className="pb-2 font-medium">Band</th>
+                <th scope="col" className="pb-2 font-medium">
+                  Domain
+                </th>
+                <th scope="col" className="pb-2 font-medium">
+                  Updated
+                </th>
+                <th scope="col" className="pb-2 font-medium">
+                  Age
+                </th>
+                <th scope="col" className="pb-2 font-medium">
+                  Expected
+                </th>
+                <th scope="col" className="pb-2 font-medium">
+                  Writers
+                </th>
+                <th scope="col" className="pb-2 font-medium">
+                  Band
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -116,7 +145,9 @@ export function DatasetFreshnessTable({
                     {row.updatedAt ? new Date(row.updatedAt * 1000).toLocaleString() : "—"}
                   </td>
                   <td className="py-2">{row.ageSeconds != null ? formatAge(row.ageSeconds) : "—"}</td>
-                  <td className="py-2">{row.expectedFreshnessSec != null ? formatAge(row.expectedFreshnessSec) : "—"}</td>
+                  <td className="py-2">
+                    {row.expectedFreshnessSec != null ? formatAge(row.expectedFreshnessSec) : "—"}
+                  </td>
                   <td className="py-2 text-xs text-muted-foreground">{row.owners}</td>
                   <td className="py-2">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${row.band.className}`}>
