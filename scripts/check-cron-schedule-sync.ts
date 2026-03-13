@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { CRON_SCHEDULES } from "../shared/lib/cron-jobs.ts";
+import { CRON_SCHEDULES } from "../shared/lib/cron-jobs";
 
 // Parse wrangler.toml cron triggers
 const wranglerToml = readFileSync("worker/wrangler.toml", "utf-8");
@@ -12,7 +12,7 @@ const wranglerCrons = new Set(
   cronMatches[1].match(/"([^"]+)"/g)?.map((s) => s.replace(/"/g, "")) ?? [],
 );
 
-const sharedCrons = new Set(Object.values(CRON_SCHEDULES));
+const sharedCrons = new Set<string>(Object.values(CRON_SCHEDULES));
 
 // Compare
 const onlyInWrangler = [...wranglerCrons].filter((c) => !sharedCrons.has(c));

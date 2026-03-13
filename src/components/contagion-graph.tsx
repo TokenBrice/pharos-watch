@@ -14,7 +14,6 @@ import {
   RING_WIDTH,
   HUB_LABEL_FONT_SIZE,
   type GraphNode,
-  type GraphLink,
   type HubTier,
   type SupernodeState,
 } from "@/lib/contagion-layout";
@@ -79,6 +78,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   const { nodes, links } = useMemo(() => buildGraphData(cards, mcapMap), [cards, mcapMap]);
 
   const supernodeState = useMemo<SupernodeState>(
+    // eslint-disable-next-line react-hooks/refs -- read-only hysteresis snapshot from previous render
     () => buildSupernodeState(nodes, links, prevTierByIdRef.current),
     [nodes, links],
   );

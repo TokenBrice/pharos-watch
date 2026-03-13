@@ -7,7 +7,6 @@ import {
   buildSupernodeState,
   WIDTH,
   HEIGHT,
-  PAD,
   MAX_NODES,
   SUPERNODE_CONFIG,
   type GraphNode,
@@ -311,7 +310,6 @@ describe("buildSupernodeState", () => {
     expect(state2.tierById).toBeInstanceOf(Map);
 
     const tier2Ids1 = [...state1.tierById.entries()].filter(([, t]) => t === 2).map(([id]) => id);
-    const tier2Ids2 = [...state2.tierById.entries()].filter(([, t]) => t === 2).map(([id]) => id);
     for (const id of tier2Ids1) {
       const stillTiered = (state2.tierById.get(id) ?? 0) > 0;
       expect(stillTiered).toBe(true);
