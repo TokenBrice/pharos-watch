@@ -375,7 +375,7 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 
 ### POST /api/reset-blacklist-sync
 
-Requires `X-Admin-Key` header. Rolls back sync state:
+Requires Access service-token headers on `ops-api.pharos.watch`.  Rolls back sync state:
 
 - EVM: subtract 50,000 blocks (~7 days on Ethereum)
 - Tron: subtract 604,800,000 ms (7 days)
@@ -383,7 +383,7 @@ Requires `X-Admin-Key` header. Rolls back sync state:
 
 ### GET /api/debug-sync-state
 
-Requires `X-Admin-Key` header. Returns all sync state rows.
+Requires Access service-token headers on `ops-api.pharos.watch`.  Returns all sync state rows.
 
 Both admin endpoints are routed in `worker/src/router.ts` and executed via `worker/src/handlers/http.ts`.
 

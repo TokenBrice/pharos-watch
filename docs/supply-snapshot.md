@@ -164,7 +164,7 @@ For CoinGecko-only coins, commodity tokens (gold/silver), or any coin where exte
 
 ### POST /api/backfill-supply-history (admin)
 
-Admin endpoint (requires `X-Admin-Key`). Backfills `supply_history` from:
+Admin endpoint (requires Access service-token headers). Backfills `supply_history` from:
 
 - **Commodity tokens:** CoinGecko `market_chart`
 - **Regular coins:** DefiLlama detail API

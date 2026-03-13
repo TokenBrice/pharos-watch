@@ -111,7 +111,7 @@ Read endpoints are public with standard/slow cache headers (5-min or 60-min edge
 | `GET /api/daily-digest` | Latest digest only |
 | `GET /api/digest-archive` | All digests, newest first (up to 365) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a specific date — used by SSG detail pages |
-| `POST /api/trigger-digest` *(admin)* | Force-regenerate digest and post to all distribution channels; requires `X-Admin-Key` header |
+| `POST /api/trigger-digest` *(admin)* | Force-regenerate digest and post to all distribution channels; requires Access service-token headers on `ops-api.pharos.watch` |
 
 ---
 

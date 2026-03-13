@@ -454,7 +454,7 @@ Product note: stablecoin detail-page "Mint & Burn Flow History" uses the counted
 
 ### POST /api/backfill-mint-burn-prices (admin)
 
-Backfills `amount_usd` for events that were synced without price data. Requires `X-Admin-Key` header.
+Backfills `amount_usd` for events that were synced without price data. Requires Access service-token headers on `ops-api.pharos.watch`. 
 
 Note: cron now auto-heals recent NULL-price events (48h lookback). This endpoint remains the operator tool for broader historical backfills.
 
@@ -468,7 +468,7 @@ Returns: `{ totalUpdated, coins: [{ id, updated }] }`
 
 Controlled ingestion backfill by explicit config/range/chunk, or by automatic config selection when `configKey` is omitted.
 
-- Auth: `X-Admin-Key`
+- Auth: Access service-token headers
 - Idempotency: `Idempotency-Key` supported via admin idempotency middleware
 - Parameters: `configKey`, `fromBlock`, `toBlock`, `chunkSize`, `maxChunks`
 - Behavior:
@@ -481,7 +481,7 @@ Controlled ingestion backfill by explicit config/range/chunk, or by automatic co
 
 Retroactive cleanup endpoint for historical rows that predate shared roundtrip detection or were ingested before both sides of a transaction were visible to the detector.
 
-- Auth: `X-Admin-Key`
+- Auth: Access service-token headers
 - Idempotency: `Idempotency-Key` supported via admin idempotency middleware
 - Behavior:
   - Scans up to `1000` `(tx_hash, stablecoin_id)` groups per call where `flow_type='standard'` but both mint and burn directions exist.
