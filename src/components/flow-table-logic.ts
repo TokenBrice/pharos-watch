@@ -1,4 +1,5 @@
 import { getPressureShiftState, PRESSURE_SHIFT_STATE_VALUES, type PressureShiftState } from "@shared/lib/mint-burn-signals";
+import { compareNullable } from "@/lib/sort-utils";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import type { MintBurnCoinFlow } from "@shared/types";
 import { getFlowPressureUi } from "@/lib/flow-signal-ui";
@@ -95,11 +96,10 @@ export function compareFlowRows(
     case "pressure": {
       const aPressure = getPressureScore(a);
       const bPressure = getPressureScore(b);
-      if (aPressure === null && bPressure === null) return 0;
-      if (aPressure === null) return 1;
-      if (bPressure === null) return -1;
-      aVal = aPressure;
-      bVal = bPressure;
+      const nc = compareNullable(aPressure, bPressure);
+      if (nc !== null) return nc;
+      aVal = aPressure!;
+      bVal = bPressure!;
       break;
     }
     default:
