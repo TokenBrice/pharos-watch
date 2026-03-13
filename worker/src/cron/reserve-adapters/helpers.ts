@@ -1,4 +1,4 @@
-import type { LiveReserveInput, ReserveSlice } from "@shared/types";
+import type { LiveReserveInput, LiveReservesConfig, ReserveSlice } from "@shared/types";
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchEtherscanUint256AtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
@@ -55,6 +55,13 @@ export function requireOnchainInput(input: LiveReserveInput, adapterName: string
     throw new Error(`${adapterName} adapter requires an onchain-evm primary input`);
   }
   return input;
+}
+
+export function requireJsonInputFromConfig(
+  config: LiveReservesConfig,
+  adapterName: string,
+): JsonInput {
+  return requireJsonInput(config.inputs.primary, adapterName);
 }
 
 export async function fetchJsonWithRetry<T>(
@@ -203,7 +210,8 @@ export async function fetchErc20TotalSupply(
   });
 }
 
-export function normalizeSlices(slices: ReserveSlice[]): ReserveSlice[] {
+export function normalizeSlices(slices: ReserveSlice[], decimals = 0): ReserveSlice[] {
+  const factor = 10 ** decimals;
   const grouped = new Map<string, ReserveSlice>();
 
   for (const slice of slices) {
@@ -218,7 +226,7 @@ export function normalizeSlices(slices: ReserveSlice[]): ReserveSlice[] {
   }
 
   const normalized = Array.from(grouped.values())
-    .map((slice) => ({ ...slice, pct: Math.round(slice.pct) }))
+    .map((slice) => ({ ...slice, pct: Math.round(slice.pct * factor) / factor }))
     .filter((slice) => slice.pct > 0);
 
   if (normalized.length === 0) return normalized;
@@ -228,7 +236,8 @@ export function normalizeSlices(slices: ReserveSlice[]): ReserveSlice[] {
     (maxIndex, slice, index, arr) => (slice.pct > arr[maxIndex].pct ? index : maxIndex),
     0,
   );
-  normalized[maxIdx].pct += 100 - sum;
+  const adjustment = Math.round((100 - sum) * factor) / factor;
+  normalized[maxIdx].pct = Math.round((normalized[maxIdx].pct + adjustment) * factor) / factor;
 
   return normalized
     .filter((slice) => slice.pct > 0)
@@ -259,6 +268,32 @@ export function slicesFromUsdValues(
   );
 }
 
+export function slicesFromValues(
+  values: Array<{
+    value: number;
+    name: string;
+    risk: ReserveSlice["risk"];
+    coinId?: string;
+    depType?: ReserveSlice["depType"];
+  }>,
+  decimals = 1,
+): ReserveSlice[] {
+  const filtered = values.filter((v) => Number.isFinite(v.value) && v.value > 0);
+  const total = filtered.reduce((acc, v) => acc + v.value, 0);
+  if (total <= 0) return [];
+
+  return normalizeSlices(
+    filtered.map((v) => ({
+      name: v.name,
+      pct: (v.value / total) * 100,
+      risk: v.risk,
+      ...(v.coinId ? { coinId: v.coinId } : {}),
+      ...(v.depType ? { depType: v.depType } : {}),
+    })),
+    decimals,
+  );
+}
+
 export function getJsonPath(root: unknown, path: string[]): unknown {
   let current: unknown = root;
   for (const part of path) {
@@ -266,4 +301,12 @@ export function getJsonPath(root: unknown, path: string[]): unknown {
     current = (current as JsonObject)[part];
   }
   return current;
+}
+
+export function isReserveRisk(value: unknown): value is ReserveSlice["risk"] {
+  return value === "very-low"
+    || value === "low"
+    || value === "medium"
+    || value === "high"
+    || value === "very-high";
 }
