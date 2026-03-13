@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { computeDEWS, piecewiseLinear, getThreatBand, clamp } from "../dews";
+import { computeDEWS, piecewiseLinear, getThreatBand } from "../dews";
+import { clamp } from "@shared/lib/math";
 import type { DEWSInput } from "../dews";
 
 // --- piecewiseLinear tests ---
@@ -50,21 +51,21 @@ describe("piecewiseLinear", () => {
 
 describe("clamp", () => {
   it("returns min when value is NaN", () => {
-    expect(clamp(0, 100, NaN)).toBe(0);
+    expect(clamp(NaN, 0, 100)).toBe(0);
   });
 
   it("returns max when value is Infinity", () => {
-    expect(clamp(0, 100, Infinity)).toBe(100);
+    expect(clamp(Infinity, 0, 100)).toBe(100);
   });
 
   it("returns min when value is -Infinity", () => {
-    expect(clamp(0, 100, -Infinity)).toBe(0);
+    expect(clamp(-Infinity, 0, 100)).toBe(0);
   });
 
   it("clamps normally for finite values", () => {
-    expect(clamp(0, 100, 50)).toBe(50);
-    expect(clamp(0, 100, -10)).toBe(0);
-    expect(clamp(0, 100, 200)).toBe(100);
+    expect(clamp(50, 0, 100)).toBe(50);
+    expect(clamp(-10, 0, 100)).toBe(0);
+    expect(clamp(200, 0, 100)).toBe(100);
   });
 });
 

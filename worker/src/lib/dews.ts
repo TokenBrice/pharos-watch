@@ -8,6 +8,7 @@
  */
 
 import type { ThreatBand } from "@shared/lib/classification";
+import { clamp } from "@shared/lib/math";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,12 +123,6 @@ const CONFIDENCE_SCORES: Record<string, number> = {
 // Utilities
 // ---------------------------------------------------------------------------
 
-export function clamp(min: number, max: number, val: number): number {
-  if (!Number.isFinite(val))
-    return val !== val ? min : val > 0 ? max : min; // NaN→min, Inf→max, -Inf→min
-  return Math.max(min, Math.min(max, val));
-}
-
 /**
  * Generic piecewise linear interpolation.
  * Anchors must be sorted by x ascending. Values below first anchor return
@@ -229,7 +224,7 @@ function computeSupplySignal(input: DEWSInput): SignalResult {
     Math.log10(Math.max(mcapUsd, 1e6) / 1e6) / 3,
   );
 
-  const value = clamp(0, 100, rawVelocity * sizeFactor);
+  const value = clamp(rawVelocity * sizeFactor, 0, 100);
 
   return {
     value,
@@ -267,13 +262,13 @@ function computePoolSignal(input: DEWSInput): SignalResult {
   }
 
   let value = clamp(
-    0,
-    100,
     // Pool signal blend: 40% balance stress, 35% avg pool stress, 25% worst single pool.
     // Balance ratio weighted highest because it directly measures exit liquidity.
     // Worst pool at 25% ensures a single severely imbalanced pool can't be masked
     // by many healthy pools.
     0.4 * balanceStress + 0.35 * poolStressScore + 0.25 * worstPoolSignal,
+    0,
+    100,
   );
 
   // Smooth with previous reading if available
@@ -337,7 +332,7 @@ function computeLiquiditySignal(input: DEWSInput): SignalResult {
     }
   }
 
-  const value = clamp(0, 100, 0.5 * scoreErosion + 0.5 * tvlErosion);
+  const value = clamp(0.5 * scoreErosion + 0.5 * tvlErosion, 0, 100);
 
   return {
     value,
@@ -480,7 +475,7 @@ function computeBlacklistSignal(input: DEWSInput): SignalResult {
     [10, 1.5],
   ]);
 
-  const value = clamp(0, 100, rawCount * spikeMult);
+  const value = clamp(rawCount * spikeMult, 0, 100);
 
   return {
     value,
@@ -545,7 +540,7 @@ function computeFlowSignal(input: DEWSInput): SignalResult {
   ]);
 
   const net24h = input.mintVolume24hUsd - input.burnVolume24hUsd;
-  const value = clamp(0, 100, 0.6 * surgeScore + 0.4 * ratioScore);
+  const value = clamp(0.6 * surgeScore + 0.4 * ratioScore, 0, 100);
 
   return {
     value,
@@ -573,7 +568,7 @@ function computeYieldSignal(input: DEWSInput): SignalResult {
     (acc, w) => acc + (YIELD_WARNING_SCORES[w] ?? 0),
     0,
   );
-  const value = clamp(0, 100, sum);
+  const value = clamp(sum, 0, 100);
 
   return { value, available: true, warnings: input.yieldWarnings };
 }
@@ -618,7 +613,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     const amplifier = 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3;
     amplifiedScore *= amplifier;
   }
-  const score = Math.round(clamp(0, 100, amplifiedScore));
+  const score = Math.round(clamp(amplifiedScore, 0, 100));
   const band = getThreatBand(score);
 
   return { score, band, signals };
