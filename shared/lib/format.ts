@@ -134,6 +134,18 @@ export function formatDeathDate(d: string): string {
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
+/** Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d". */
+export function formatElapsedSeconds(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${Math.floor(seconds / 86400)}d`;
+}
+
 /** Format an epoch-seconds timestamp as a relative time string ("just now", "5m ago", "2h ago"). */
 export function timeAgo(epochSec: number): string {
   if (!Number.isFinite(epochSec)) return "N/A";

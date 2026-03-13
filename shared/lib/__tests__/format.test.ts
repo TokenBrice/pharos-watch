@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatScore, formatApy, formatChartDate, formatPercent, formatSignedPercent } from "../format";
+import { formatScore, formatApy, formatChartDate, formatPercent, formatSignedPercent, formatElapsedSeconds } from "../format";
 
 describe("formatScore", () => {
   it("formats to one decimal", () => expect(formatScore(72.456)).toBe("72.5"));
@@ -48,6 +48,27 @@ describe("formatSignedPercent", () => {
   });
   it("returns dash for nullish", () => {
     expect(formatSignedPercent(null)).toBe("-");
+  });
+});
+
+describe("formatElapsedSeconds", () => {
+  it("formats seconds", () => {
+    expect(formatElapsedSeconds(45)).toBe("45s");
+  });
+  it("formats minutes", () => {
+    expect(formatElapsedSeconds(300)).toBe("5m");
+  });
+  it("formats hours and minutes", () => {
+    expect(formatElapsedSeconds(5400)).toBe("1h 30m");
+  });
+  it("formats hours without extra minutes", () => {
+    expect(formatElapsedSeconds(7200)).toBe("2h");
+  });
+  it("formats days", () => {
+    expect(formatElapsedSeconds(172800)).toBe("2d");
+  });
+  it("returns 0s for zero", () => {
+    expect(formatElapsedSeconds(0)).toBe("0s");
   });
 });
 
