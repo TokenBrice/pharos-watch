@@ -40,6 +40,7 @@ const THIRTY_DAYS_SECONDS = 30 * 86400;
 const LOW_SOURCE_TVL_USD = 250_000;
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = SECONDS.TWO_DAYS;
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
+const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.5;
 
 type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 
@@ -200,8 +201,9 @@ async function deleteOrphanYieldRows(
 }
 
 function computeMedian(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
+  const finite = values.filter(Number.isFinite);
+  if (finite.length === 0) return 0;
+  const sorted = [...finite].sort((a, b) => a - b);
   return sorted.length % 2 === 1
     ? sorted[Math.floor(sorted.length / 2)]
     : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
@@ -601,7 +603,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
         getConfidencePriority(candidate.confidenceTier) < getConfidencePriority(canonicalReference.confidenceTier)
       ) {
         const divergence = relativeDivergence(candidate.currentApy, canonicalReference.currentApy);
-        if (canonicalReference.currentApy > 0 && candidate.currentApy > 0 && divergence > 0.5) {
+        if (canonicalReference.currentApy > 0 && candidate.currentApy > 0 && divergence > CROSS_SOURCE_DIVERGENCE_THRESHOLD) {
           anomalies.push("diverges-from-canonical");
           divergenceFlags++;
           if (candidate.dataSource === "defillama-auto" || candidate.dataSource === "price-derived") {
@@ -799,7 +801,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       const lendingApy = lendingApyByCoin.get(coinId);
       if (lendingApy != null && nativeApy > 0 && lendingApy > 0) {
         const divergence = relativeDivergence(nativeApy, lendingApy);
-        if (divergence > 0.5) {
+        if (divergence > CROSS_SOURCE_DIVERGENCE_THRESHOLD) {
           console.warn(
             `[yield-sync] APY divergence for ${coinId}: native=${nativeApy.toFixed(1)}% vs lending=${lendingApy.toFixed(1)}%`,
           );
