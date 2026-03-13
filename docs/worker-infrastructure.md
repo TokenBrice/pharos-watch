@@ -50,7 +50,6 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `TRONGRID_API_KEY` | string | No | Blacklist sync (Tron chain) |
 | `DRPC_API_KEY` | string | No | L2 archive node balance lookups |
 | `ALCHEMY_API_KEY` | string | No | Chain RPC primary endpoints |
-| `ADMIN_KEY` | string | No | Admin endpoint auth |
 | `GRAPH_API_KEY` | string | No | DEX liquidity (The Graph subgraphs) |
 | `ALERT_WEBHOOK_URL` | string | No | Discord/Slack error alerts |
 | `ANTHROPIC_API_KEY` | string | No | Daily digest LLM generation |
@@ -108,7 +107,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 - `worker/src/handlers/http.ts` applies a best-effort per-IP in-memory limiter for non-admin requests before router dispatch.
 - Default threshold: `300 requests / 60 seconds` per IP (isolate-local, not globally shared across all isolates/PoPs).
-- Admin requests authenticated with either `X-Admin-Key` or `Authorization: Bearer <ADMIN_KEY>` bypass this limiter.
+- Requests that already carry valid `ops-api.pharos.watch` Access/service-token signals bypass this limiter.
 
 ### CORS Headers
 
@@ -119,7 +118,7 @@ Applied to every response via `addCorsHeaders()`:
 | `Access-Control-Allow-Origin` | matching request origin from the `CORS_ORIGIN` allowlist, otherwise the first configured origin |
 | `Vary` | `Origin` |
 | `Access-Control-Allow-Methods` | `GET, POST, OPTIONS` |
-| `Access-Control-Allow-Headers` | `Authorization, Content-Type, X-Admin-Key, Idempotency-Key` |
+| `Access-Control-Allow-Headers` | `Content-Type, Idempotency-Key` |
 | `Access-Control-Expose-Headers` | `X-Data-Age, Warning` |
 | `Access-Control-Max-Age` | `86400` |
 | `X-Content-Type-Options` | `nosniff` |
@@ -172,9 +171,8 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **File:** `worker/src/lib/auth.ts`
 
-- Accepts `X-Admin-Key` and `Authorization: Bearer <key>` for raw worker-origin admin calls
-- Also treats `ops-api.pharos.watch` requests that already carry Cloudflare Access user or service-token signals as authorized
-- Compares `ADMIN_KEY` values using timing-safe comparison: both values are SHA-256 hashed via `crypto.subtle.digest()`, then compared with `crypto.subtle.timingSafeEqual()`
+- Accepts only the `ops-api.pharos.watch` lane carrying Cloudflare Access user or service-token signals
+- Internal worker-origin admin calls (for example `status-self-check`) simulate that same lane instead of using a shared secret
 - Returns `null` if authorized, 401 Response if not
 
 ### Router-Dispatched Status Actions
@@ -183,9 +181,9 @@ Status page manual/admin actions are dispatched through `worker/src/router.ts` u
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `POST /api/trigger-digest` | `ops-api` + Access service token (preferred) or raw worker `X-Admin-Key` fallback | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
-| `POST /api/reset-blacklist-sync` | `ops-api` + Access service token (preferred) or raw worker `X-Admin-Key` fallback | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
-| `GET /api/debug-sync-state` | `ops-api` + Access service token (preferred) or raw worker `X-Admin-Key` fallback | Returns all `blacklist_sync_state` rows |
+| `POST /api/trigger-digest` | `ops-api` + Access service token | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
+| `POST /api/reset-blacklist-sync` | `ops-api` + Access service token | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
+| `GET /api/debug-sync-state` | `ops-api` + Access service token | Returns all `blacklist_sync_state` rows |
 
 Additional backfill/audit actions are defined in the same registry and surfaced dynamically on `/status`. `POST /api/feedback` is router-dispatched too, but it is not part of the status action registry.
 
@@ -833,7 +831,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/env.ts` | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides |
 | `worker/wrangler.toml` | Deployment config: custom domain, cron triggers, D1 binding, vars |
 | `worker/src/lib/db.ts` | Database helpers: `logCronRun`, `batchExecute`, cache CRUD, block tracking, price cache, cron lease primitives |
-| `worker/src/lib/auth.ts` | Admin auth: timing-safe `X-Admin-Key` comparison |
+| `worker/src/lib/auth.ts` | Admin auth: `ops-api` Access/service-token signal validation |
 | `worker/src/lib/alerts.ts` | Webhook alerts: auto-detects Discord/Slack format |
 | `worker/src/lib/constants.ts` | Shared constants: API URLs, thresholds, cache profiles |
 | `worker/src/lib/cron-schedule.ts` | Worker-facing `CRON_INTERVALS` export derived from shared cron metadata |

@@ -327,7 +327,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 
 - Probe timeout: 5s per endpoint
 - Parallel probing with `Promise.all`
-- Admin probe paths include `X-Admin-Key`
+- Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
 - Parameterized routes probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses.
 - The stablecoin-detail probe also uses a curated canary `probePath` rather than the heaviest history payload, so route-health checks are less sensitive to oversized per-coin datasets.

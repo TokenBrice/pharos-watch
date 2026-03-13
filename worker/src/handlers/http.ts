@@ -30,7 +30,7 @@ function corsHeaders(origin: string): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Admin-Key, Idempotency-Key",
+    "Access-Control-Allow-Headers": "Content-Type, Idempotency-Key",
     "Access-Control-Expose-Headers": "X-Data-Age, Warning",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
@@ -111,7 +111,7 @@ export async function handleHttpRequest(
   }
 
   const url = new URL(request.url);
-  const isAdmin = await hasValidAdminCredential(request, env.ADMIN_KEY);
+  const isAdmin = hasValidAdminCredential(request);
   if (url.pathname.startsWith("/api/") && url.pathname !== "/api/telegram-webhook" && !isAdmin) {
     const rateLimitResponse = checkRateLimit(getClientIp(request), 300);
     if (rateLimitResponse) {
@@ -138,7 +138,7 @@ export async function handleHttpRequest(
     env.DB,
     ctx,
     request,
-    env.ADMIN_KEY,
+    undefined,
     env.ALCHEMY_API_KEY ?? null,
     mintBurnFreshnessConfig,
     feedbackEnv,

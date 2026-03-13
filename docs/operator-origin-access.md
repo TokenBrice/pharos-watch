@@ -15,8 +15,8 @@ Current repo-side state:
 
 Still true:
 
-- the underlying Worker continues to accept `ADMIN_KEY` / `Authorization: Bearer` as a fallback for raw admin calls
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
+- scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
 
 ---
 

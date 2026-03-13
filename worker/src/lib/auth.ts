@@ -2,35 +2,6 @@ import { errorResponse } from "./api-utils";
 
 const DEFAULT_OPS_API_HOST = "ops-api.pharos.watch";
 
-/** Timing-safe string comparison for admin key validation.
- *  Hashes both inputs first so the comparison never leaks length. */
-export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const [aBuf, bBuf] = await Promise.all([
-    crypto.subtle.digest("SHA-256", encoder.encode(a)),
-    crypto.subtle.digest("SHA-256", encoder.encode(b)),
-  ]);
-  return crypto.subtle.timingSafeEqual(aBuf, bBuf);
-}
-
-export function getAdminCredential(request: Request | undefined): string | null {
-  const adminHeader = request?.headers.get("X-Admin-Key")?.trim();
-  if (adminHeader) {
-    return adminHeader;
-  }
-
-  const authHeader = request?.headers.get("Authorization");
-  if (!authHeader) {
-    return null;
-  }
-  if (!authHeader.startsWith("Bearer ")) {
-    return null;
-  }
-
-  const bearer = authHeader.slice("Bearer ".length).trim();
-  return bearer.length > 0 ? bearer : null;
-}
-
 function isOpsApiRequest(request: Request | undefined): boolean {
   if (!request) return false;
   try {
@@ -58,24 +29,23 @@ function hasOpsApiAccessSignal(request: Request | undefined): boolean {
   return Boolean(serviceTokenId && serviceTokenSecret);
 }
 
-export async function hasValidAdminCredential(
-  request: Request | undefined,
-  adminKey: string | undefined,
-): Promise<boolean> {
-  if (hasOpsApiAccessSignal(request)) {
-    return true;
-  }
-  const provided = getAdminCredential(request);
-  return !!adminKey && !!provided && (await timingSafeEqual(provided, adminKey));
+function isTrustedAdminInput(value: string | boolean | undefined): boolean {
+  return value === true;
 }
 
-/** Returns a 401 Response if the request lacks a valid admin key, or null if authorized */
-export async function requireAdmin(request: Request | undefined, adminKey: string | undefined): Promise<Response | null> {
-  const authHeader = request?.headers.get("Authorization");
-  if (authHeader && getAdminCredential(request) == null) {
-    return errorResponse(401, "Unauthorized");
-  }
-  if (!(await hasValidAdminCredential(request, adminKey))) {
+export function hasValidAdminCredential(
+  request: Request | undefined,
+  legacyAdminKeyOrTrustedAdmin?: string | boolean,
+): boolean {
+  return isTrustedAdminInput(legacyAdminKeyOrTrustedAdmin) || hasOpsApiAccessSignal(request);
+}
+
+/** Returns a 401 Response if the request lacks a valid admin signal, or null if authorized */
+export async function requireAdmin(
+  request: Request | undefined,
+  legacyAdminKeyOrTrustedAdmin?: string | boolean,
+): Promise<Response | null> {
+  if (!hasValidAdminCredential(request, legacyAdminKeyOrTrustedAdmin)) {
     return errorResponse(401, "Unauthorized");
   }
   return null;
@@ -84,10 +54,30 @@ export async function requireAdmin(request: Request | undefined, adminKey: strin
 /** Executes the handler only when admin auth passes, otherwise returns 401 response. */
 export async function withAdmin(
   request: Request | undefined,
-  adminKey: string | undefined,
-  handler: () => Promise<Response>,
+  legacyAdminKeyOrHandler: string | (() => Promise<Response>) | boolean | undefined,
+  maybeHandler?: (() => Promise<Response>) | boolean,
+  trustedAdmin = false,
 ): Promise<Response> {
-  const authError = await requireAdmin(request, adminKey);
+  const handler = typeof legacyAdminKeyOrHandler === "function"
+    ? legacyAdminKeyOrHandler
+    : typeof maybeHandler === "function"
+      ? maybeHandler
+      : null;
+
+  if (!handler) {
+    throw new Error("withAdmin requires a handler");
+  }
+
+  const authError = await requireAdmin(
+    request,
+    trustedAdmin ||
+      isTrustedAdminInput(
+        typeof legacyAdminKeyOrHandler === "boolean" ? legacyAdminKeyOrHandler : undefined,
+      ) ||
+      isTrustedAdminInput(
+        typeof maybeHandler === "boolean" ? maybeHandler : undefined,
+      ),
+  );
   if (authError) return authError;
   return handler();
 }

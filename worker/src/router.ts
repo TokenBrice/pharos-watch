@@ -63,6 +63,7 @@ export function route(
   telegramCreds?: TelegramCreds | null,
   telegramWebhookSecret?: string,
   telegramBotToken?: string,
+  trustedAdmin = false,
 ): Promise<Response> | null {
   const path = url.pathname;
   const methodValidation = validateEndpointMethod(url, request?.method ?? "GET");
@@ -88,6 +89,7 @@ export function route(
       telegramCreds,
       telegramWebhookSecret,
       telegramBotToken,
+      trustedAdmin,
     }).then((response) => addAdminGetNoStoreHeader(path, request, response));
   }
 
@@ -122,7 +124,7 @@ export function route(
   const dismissMatch = path.match(/^\/api\/discovery-candidates\/(\d+)\/dismiss$/);
   if (dismissMatch && request?.method === "POST") {
     const candidateId = parseInt(dismissMatch[1], 10);
-    return withAdmin(request, adminKey, () => handleDismissCandidate(db, candidateId));
+    return withAdmin(request, () => handleDismissCandidate(db, candidateId), trustedAdmin);
   }
 
   // OG image generation (dynamic paths under /api/og/)

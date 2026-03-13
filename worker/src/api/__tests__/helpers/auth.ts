@@ -20,10 +20,13 @@ export function makeApiUrl(path: string): URL {
 export function makeApiRequest(path: string, options: ApiRequestOptions = {}): Request {
   const { method = "GET", adminKey, headers, body } = options;
   const resolvedHeaders = new Headers(headers);
+  const requestUrl = adminKey
+    ? normalizeApiPath(path).replace("https://x", "https://ops-api.pharos.watch")
+    : normalizeApiPath(path);
   if (adminKey) {
-    resolvedHeaders.set("X-Admin-Key", adminKey);
+    resolvedHeaders.set("Cf-Access-Authenticated-User-Email", "test-operator@pharos.watch");
   }
-  return new Request(normalizeApiPath(path), {
+  return new Request(requestUrl, {
     method,
     headers: resolvedHeaders,
     body,
@@ -34,15 +37,5 @@ export function makeApiRequest(path: string, options: ApiRequestOptions = {}): R
  * Shared auth-test crypto stub used by handlers that call requireAdmin().
  */
 export function stubCryptoForAuth(): void {
-  vi.stubGlobal("crypto", {
-    subtle: {
-      digest: async (_algo: string, data: ArrayBuffer) => data,
-      timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-        const av = new Uint8Array(a);
-        const bv = new Uint8Array(b);
-        if (av.length !== bv.length) return false;
-        return av.every((byte, i) => byte === bv[i]);
-      },
-    },
-  });
+  vi.stubGlobal("crypto", crypto);
 }

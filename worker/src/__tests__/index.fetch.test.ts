@@ -35,7 +35,6 @@ describe("worker.fetch", () => {
     const env = {
       DB: mockD1(),
       CORS_ORIGIN: "https://pharos.watch",
-      ADMIN_KEY: "secret",
     } as const;
     const { ctx } = makeCtx();
 
@@ -55,7 +54,6 @@ describe("worker.fetch", () => {
     const env = {
       DB: mockD1(),
       CORS_ORIGIN: "https://pharos.watch,https://ops.pharos.watch",
-      ADMIN_KEY: "secret",
     } as const;
     const { ctx } = makeCtx();
 
@@ -77,7 +75,6 @@ describe("worker.fetch", () => {
     const env = {
       DB: mockD1(),
       CORS_ORIGIN: "https://pharos.watch",
-      ADMIN_KEY: "secret",
     } as const;
     const { ctx } = makeCtx();
 
@@ -96,7 +93,6 @@ describe("worker.fetch", () => {
     const env = {
       DB: mockD1(),
       CORS_ORIGIN: "https://pharos.watch",
-      ADMIN_KEY: "secret",
     } as const;
     const { ctx } = makeCtx();
 
@@ -119,7 +115,6 @@ describe("worker.fetch", () => {
     const env = {
       DB: mockD1(),
       CORS_ORIGIN: "https://pharos.watch",
-      ADMIN_KEY: "secret",
     } as const;
     const { ctx } = makeCtx();
 
@@ -139,7 +134,6 @@ describe("worker.fetch", () => {
     const env = {
       DB: mockD1(),
       CORS_ORIGIN: "https://pharos.watch",
-      ADMIN_KEY: "secret",
     } as const;
     const { ctx, waits } = makeCtx();
 
@@ -166,7 +160,6 @@ describe("worker.fetch", () => {
         },
       ]),
       CORS_ORIGIN: "https://pharos.watch",
-      ADMIN_KEY: "secret",
     } as const;
     const { ctx, waits } = makeCtx();
 

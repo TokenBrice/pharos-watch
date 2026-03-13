@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { ApiFetchError, apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
+import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
 export {
   CRON_1MIN,
   CRON_15MIN,
@@ -38,42 +38,6 @@ export function createApiQueryFn<T>(
       return apiFetch<T>(path, schema, fetchInit, contractMode);
     }
     return apiFetch<T>(path, schema, undefined, contractMode);
-  };
-}
-
-export interface AdminApiQueryOptions<T> extends ApiQueryOptions<T> {
-  adminKey: string;
-  unauthorizedMessage?: string;
-}
-
-export function createAdminApiQueryFn<T>(
-  path: string,
-  adminKey: string,
-  schema?: ZodType<T>,
-  fetchInit?: RequestInit,
-  unauthorizedMessage = "Invalid admin key",
-  contractMode?: ApiContractMode,
-): () => Promise<T> {
-  return async () => {
-    try {
-      const headers = new Headers(fetchInit?.headers);
-      headers.set("X-Admin-Key", adminKey);
-
-      return await apiFetch<T>(
-        path,
-        schema,
-        {
-          ...fetchInit,
-          headers,
-        },
-        contractMode,
-      );
-    } catch (err) {
-      if (err instanceof ApiFetchError && err.status === 401) {
-        throw new Error(unauthorizedMessage);
-      }
-      throw err;
-    }
   };
 }
 
@@ -162,31 +126,6 @@ export function useApiQuery<T>(
       enabled: opts?.enabled,
       retry: opts?.retry,
       retryDelay: opts?.retryDelay,
-    },
-  );
-}
-
-export function useAdminApiQuery<T>(
-  key: readonly unknown[],
-  path: string,
-  cronInterval: number,
-  opts: AdminApiQueryOptions<T>,
-): UseQueryResult<T, Error> {
-  return usePollingQuery(
-    key,
-    createAdminApiQueryFn(
-      path,
-      opts.adminKey,
-      opts.schema,
-      opts.fetchInit,
-      opts.unauthorizedMessage,
-      opts.contractMode,
-    ),
-    cronInterval,
-    {
-      enabled: opts.enabled ?? !!opts.adminKey,
-      retry: opts.retry,
-      retryDelay: opts.retryDelay,
     },
   );
 }

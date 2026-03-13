@@ -55,7 +55,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
       "status-self-check",
       (signal) => runStatusSelfCheck(
         runtime.db,
-        runtime.env.ADMIN_KEY,
         runtime.env.SELF_URL,
         signal,
         runtime.ctx,

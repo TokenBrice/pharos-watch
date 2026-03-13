@@ -196,7 +196,7 @@ Untracked `stablecoin` IDs return `404` (`Stablecoin not tracked`).
 
 Validates DEWS against historical depeg events. Reports TP rate and lead time.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 ---
 

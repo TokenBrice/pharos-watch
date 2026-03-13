@@ -145,7 +145,6 @@ async function cancelResponseBody(response: Response): Promise<void> {
 async function probePathExternally(
   path: string,
   probeBaseUrl: URL,
-  adminKey: string | undefined,
   signal?: AbortSignal,
 ): Promise<ProbeResult> {
   const startedAt = Date.now();
@@ -165,13 +164,8 @@ async function probePathExternally(
     }
 
     const url = new URL(path, probeBaseUrl);
-    const headers = new Headers();
-    if (ADMIN_PROBE_PATHS.includes(path) && adminKey) {
-      headers.set("X-Admin-Key", adminKey);
-    }
     const res = await fetch(url.toString(), {
       method: "GET",
-      headers,
       signal: timeoutController.signal,
     });
     const status = res.status;
@@ -200,16 +194,15 @@ async function probePathInternally(
   db: D1Database,
   path: string,
   probeBaseUrl: URL,
-  adminKey: string | undefined,
   ctx: ExecutionContext,
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
 ): Promise<ProbeResult> {
   const startedAt = Date.now();
   try {
-    const url = new URL(path, probeBaseUrl);
+    const url = new URL(path, ADMIN_PROBE_PATHS.includes(path) ? DEFAULT_SELF_URL : probeBaseUrl);
     const headers = new Headers();
-    if (ADMIN_PROBE_PATHS.includes(path) && adminKey) {
-      headers.set("X-Admin-Key", adminKey);
+    if (ADMIN_PROBE_PATHS.includes(path)) {
+      headers.set("Cf-Access-Authenticated-User-Email", "internal-status-self-check@pharos.watch");
     }
 
     const request = new Request(url.toString(), {
@@ -221,9 +214,16 @@ async function probePathInternally(
       db,
       ctx,
       request,
-      adminKey,
+      undefined,
       undefined,
       mintBurnFreshnessConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true,
     );
     if (!response) {
       return {
@@ -257,7 +257,6 @@ async function probePathInternally(
 
 export async function runStatusSelfCheck(
   db: D1Database,
-  adminKey?: string,
   selfUrl?: string,
   signal?: AbortSignal,
   ctx?: ExecutionContext,
@@ -269,9 +268,9 @@ export async function runStatusSelfCheck(
   for (const path of CRITICAL_PROBE_PATHS) {
     if (signal?.aborted) break;
     probes.push(
-      probeMode === "internal-router" && ctx
-        ? await probePathInternally(db, path, probeBaseUrl, adminKey, ctx, mintBurnFreshnessConfig)
-        : await probePathExternally(path, probeBaseUrl, adminKey, signal)
+      (ctx && ADMIN_PROBE_PATHS.includes(path)) || (probeMode === "internal-router" && ctx)
+        ? await probePathInternally(db, path, probeBaseUrl, ctx!, mintBurnFreshnessConfig)
+        : await probePathExternally(path, probeBaseUrl, signal)
     );
   }
   const now = Math.floor(Date.now() / 1000);

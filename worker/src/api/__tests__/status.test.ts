@@ -30,21 +30,13 @@ function makeCronRow(job: string, status = "ok", ageSec = 300) {
 }
 
 describe("handleStatus", () => {
-  it("returns 401 when no admin key is provided", async () => {
+  it("returns 401 when no ops-api access signal is provided", async () => {
     const db = mockD1([]);
     const res = await handleStatus(db, "secret-key", undefined);
 
     expect(res.status).toBe(401);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("Unauthorized");
-  });
-
-  it("returns 401 when wrong admin key is provided", async () => {
-    const db = mockD1([]);
-    const request = makeApiRequest("/api/status", { adminKey: "wrong-key" });
-    const res = await handleStatus(db, "secret-key", request);
-
-    expect(res.status).toBe(401);
   });
 
   it("returns 200 with status body when authorized", async () => {

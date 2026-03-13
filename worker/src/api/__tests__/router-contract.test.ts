@@ -21,10 +21,9 @@ const ctx = {
   waitUntil: (_promise: Promise<unknown>) => {},
   passThroughOnException: () => {},
 } as unknown as ExecutionContext;
-const env = {
+const _env = {
   DB: db,
   CORS_ORIGIN: "https://pharos.watch",
-  ADMIN_KEY: "test-admin",
 } as const;
 
 describe("router contract: strict frontend paths are routable", () => {
@@ -76,7 +75,7 @@ describe("router contract: strict frontend paths are routable", () => {
           db,
           ctx,
           request,
-          env.ADMIN_KEY,
+          undefined,
           null,
         );
         expect(response, `expected route for ${method} ${path}`).not.toBeNull();

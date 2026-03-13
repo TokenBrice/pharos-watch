@@ -152,7 +152,7 @@ describe("runStatusSelfCheck", () => {
       lastProbeAlertAt: null,
     });
 
-    const result = await runStatusSelfCheck({} as D1Database, "secret", "https://staging.api.pharos.watch");
+    const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(sendAlertMock).toHaveBeenCalledTimes(1);
@@ -177,7 +177,6 @@ describe("runStatusSelfCheck", () => {
 
     const result = await runStatusSelfCheck(
       {} as D1Database,
-      "secret",
       "https://api.pharos.watch",
       undefined,
       ctx,

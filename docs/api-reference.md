@@ -76,7 +76,7 @@ All error responses use `{ "error": "message" }` JSON format.
 | Status | Meaning               | When                                                                                                     |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------- |
 | 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input) |
-| 401    | Unauthorized          | Admin endpoint called without a valid admin credential (`X-Admin-Key` or `Authorization: Bearer`)       |
+| 401    | Unauthorized          | Admin endpoint called without a valid operator credential (`ops-api` Access service token, or an allowed `ops-api` Access user path) |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                |
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                             |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                       |
@@ -1702,8 +1702,6 @@ Preferred operator access now splits by surface:
 - Browser / human operators: use `https://ops.pharos.watch/status/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
 - CLI / automation: call `https://ops-api.pharos.watch/api/...` with `CF-Access-Client-Id` and `CF-Access-Client-Secret`.
 
-The underlying Worker still accepts `X-Admin-Key` or `Authorization: Bearer <secret>` for raw worker-origin admin calls, but that is now the fallback/internal path rather than the recommended operator flow.
-
 ### `GET /api/status`
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
@@ -1712,8 +1710,6 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 - Browser: `https://ops.pharos.watch/status/` -> same-origin `/api/admin/status`
 - CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
-
-**Raw worker fallback headers:** `X-Admin-Key: <secret>` or `Authorization: Bearer <secret>`
 
 **Response shape:** `StatusResponse` (defined in `shared/types/index.ts`)
 
@@ -1944,7 +1940,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 Machine-readable status timeline endpoint for tooling and incident analysis.
 
-**Headers:** `X-Admin-Key: <secret>` or `Authorization: Bearer <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Query parameters**
 
@@ -1962,7 +1958,7 @@ Backfills historical depeg events from stored price data.
 
 For coins with a registered authoritative historical price provider, the backfill uses that same provider family first (for example, replayed protocol redemption quotes) before falling back to CoinGecko/DefiLlama market history. If the authoritative provider is configured but unavailable, existing `source='backfill'` rows for that coin are preserved instead of being rebuilt from a weaker source.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Query parameters**
 
@@ -1975,7 +1971,7 @@ For coins with a registered authoritative historical price provider, the backfil
 
 Backfills per-coin supply history snapshots.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Query parameters**
 
@@ -1990,13 +1986,13 @@ Backfills per-coin supply history snapshots.
 
 Backfills historical stability index scores from stored depeg events and supply data.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 ### `POST /api/backfill-cg-prices`
 
 Backfills CoinGecko historical prices into the price_cache table for more accurate depeg detection.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Query parameters**
 
@@ -2012,7 +2008,7 @@ Backfills `amount_usd` for all mint-burn events with NULL values using current p
 
 Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-hour window and reports the healed count in cron metadata as `nullPricesHealed`; this endpoint is primarily for historical backfills beyond that window.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Response**
 
@@ -2030,14 +2026,14 @@ Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-h
 
 Validates DEWS against historical depeg events. Reports true-positive rate and average lead time.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 ### `POST /api/backfill-mint-burn`
 
 Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
 If `configKey` is omitted, the worker auto-selects one Ethereum config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Request body or query parameters**
 
@@ -2053,7 +2049,7 @@ If `configKey` is omitted, the worker auto-selects one Ethereum config using a c
 
 Retroactively tags same-transaction mint+burn pairs for the same stablecoin as `flow_type='atomic_roundtrip'` and recalculates the affected hourly buckets.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Response**
 
@@ -2072,7 +2068,7 @@ The endpoint processes up to 1000 `(tx_hash, stablecoin_id)` groups per request.
 
 Dry-run preview for the depeg audit endpoint. This is the only supported `GET` mode for `/api/audit-depeg-history`; all mutating executions require `POST`.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Query parameters**
 
@@ -2088,7 +2084,7 @@ Dry-run preview for the depeg audit endpoint. This is the only supported `GET` m
 
 Audits existing depeg events against CoinGecko historical price data to detect false positives.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 `GET` is accepted only with `dry-run=true`; mutating audits require `POST`.
 
@@ -2107,7 +2103,7 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 
 Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Routed through `worker/src/router.ts`.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Response**
 
@@ -2124,7 +2120,7 @@ Returns `500` with `{ "ok": false, "error": "..." }` on failure.
 
 Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Routed through `worker/src/router.ts`.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Response**
 
@@ -2140,7 +2136,7 @@ Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled 
 
 Returns current blacklist sync state for all configured chains. Useful for diagnosing sync issues. Routed through `worker/src/router.ts`.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Response**
 
@@ -2155,7 +2151,7 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
 
 Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor, surfaced by the daily discovery scan.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Query parameters**
 
@@ -2196,7 +2192,7 @@ Malformed `limit` / `offset` values return `400` instead of silently defaulting.
 
 Dismisses a discovery candidate so it no longer appears in the active list. Dismissed candidates will not resurface unless their market cap crosses 10× the value at dismissal time.
 
-**Headers:** `X-Admin-Key: <secret>` or `Authorization: Bearer <secret>` (required)
+**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
 
 **Path parameter:** `:id` — candidate ID from `GET /api/discovery-candidates`
 

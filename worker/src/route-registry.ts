@@ -63,6 +63,7 @@ export interface RouteContext {
   ctx: ExecutionContext;
   request?: Request;
   adminKey?: string;
+  trustedAdmin?: boolean;
   alchemyApiKey?: string | null;
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
   feedbackEnv?: FeedbackEnv;

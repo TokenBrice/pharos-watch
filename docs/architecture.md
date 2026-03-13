@@ -24,8 +24,8 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/digest-archive` | All daily digests, newest-first |
 | `GET /api/digest-snapshot` | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD`) for SSG builds |
 | `GET /api/health` | Worker health check (includes circuit breaker states) |
-| `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Requires a valid admin credential (`X-Admin-Key` or `Authorization: Bearer`) |
-| `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Requires a valid admin credential (`X-Admin-Key` or `Authorization: Bearer`) |
+| `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/status/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers |
+| `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Preferred access is `ops-api.pharos.watch/api/status-history` with Access service-token headers |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
 | `GET /api/og/*` | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards |
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
@@ -35,18 +35,18 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
 | `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all|counted`, `?minAmount=`, `?limit=N&offset=M`) |
 | `GET /api/stress-signals` | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`) |
-| `POST /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
-| `POST /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
-| `POST /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
-| `POST /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
-| `POST /api/backfill-mint-burn` | Admin: controlled mint/burn ingestion backfill by `configKey` (requires `X-Admin-Key`) |
-| `POST /api/reclassify-atomic-roundtrips` | Admin: retroactively tag same-tx mint/burn noise as `flow_type='atomic_roundtrip'` (requires `X-Admin-Key`) |
-| `POST /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; requires `X-Admin-Key`) |
-| `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`) |
-| `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`) |
-| `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; requires `X-Admin-Key`) |
-| `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
-| `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`) |
+| `POST /api/backfill-depegs` | Admin: backfill depeg events (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/backfill-supply-history` | Admin: backfill per-coin supply history (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/backfill-stability-index` | Admin: backfill historical stability index scores (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/backfill-mint-burn` | Admin: controlled mint/burn ingestion backfill by `configKey` (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/reclassify-atomic-roundtrips` | Admin: retroactively tag same-tx mint/burn noise as `flow_type='atomic_roundtrip'` (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
 | `GET /api/discovery-candidates` | Admin: list stablecoin coverage candidates surfaced by the daily discovery scan |
 | `POST /api/discovery-candidates/:id/dismiss` | Admin: dismiss a discovery candidate from the status dashboard |
 | `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
