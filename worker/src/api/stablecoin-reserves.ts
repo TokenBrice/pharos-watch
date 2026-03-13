@@ -1,4 +1,4 @@
-import { jsonFreshResponse, errorResponse } from "../lib/api-utils";
+import { jsonFreshResponse, errorResponse, withErrorHandler } from "../lib/api-utils";
 import { TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinReservesResponse } from "@shared/types";
 import { resolveReserveResult } from "../lib/live-reserves-store";
@@ -6,10 +6,10 @@ import { resolveReserveResult } from "../lib/live-reserves-store";
 const LIVE_CACHE_CONTROL = "public, s-maxage=3600, max-age=300";
 const FALLBACK_CACHE_CONTROL = "public, s-maxage=300, max-age=60";
 
-export async function handleStablecoinReserves(
+export const handleStablecoinReserves = withErrorHandler("stablecoin-reserves", async (
   db: D1Database,
   stablecoinId: string,
-): Promise<Response> {
+): Promise<Response> => {
   if (!TRACKED_IDS.has(stablecoinId)) {
     return errorResponse(404, "Not found");
   }
@@ -38,4 +38,4 @@ export async function handleStablecoinReserves(
   return jsonFreshResponse(body, {
     cacheControl: resolved.mode === "live" ? LIVE_CACHE_CONTROL : FALLBACK_CACHE_CONTROL,
   });
-}
+});
