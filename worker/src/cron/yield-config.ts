@@ -166,6 +166,14 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "dTRINITY dStake (sdUSD)",
     yieldType: "lending-vault",
   },
+  // USDp -> sUSDp (Parallel Savings ERC-4626 vault — captures 70% of Parallelizer/bridge/flashloan fees)
+  "usdp-parallel": {
+    variantSymbol: "sUSDp",
+    variantAddress: "0x472ed57b376fe400259fb28e5c46eb53f0e3e7e7",
+    variantChain: "base",
+    yieldSource: "Parallel Savings (sUSDp)",
+    yieldType: "governance-set",
+  },
 };
 
 /**
@@ -333,6 +341,15 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     stablecoinId: "iusd-infinifi", // iUSD — reads siUSD vault exchange rate to derive APY
     chain: "ethereum",
     contract: "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
+    selector: "0x07a2d13a", // convertToAssets(uint256)
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "usdp-parallel", // USDp — reads sUSDp vault exchange rate on Base to derive APY
+    chain: "base",
+    contract: "0x472ed57b376fe400259fb28e5c46eb53f0e3e7e7",
     selector: "0x07a2d13a", // convertToAssets(uint256)
     decimals: 18,
     inputAmount:

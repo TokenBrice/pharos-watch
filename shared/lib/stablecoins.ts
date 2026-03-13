@@ -3733,6 +3733,28 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     custodyModel: "institutional",
     governanceQuality: "multisig",
   }),
+  usd("usdp-parallel", "Parallel USDp", "USDp", "crypto-backed", "decentralized", {
+    detailProvider: "coingecko",
+    geckoId: "parallel-usdp",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Parallel Savings (sUSDp)", yieldType: "governance-set" },
+    deploymentModel: "native-multichain",
+    governanceQuality: "dao-governance",
+    collateral: "Overcollateralized basket of cryptocurrencies and yield-bearing stablecoins (including sfrxUSD and sUSDe); collateral composition and exposure limits set by Parallel DAO",
+    pegMechanism: "Fee-based stability via the Parallelizer module: minting and burning fees automatically adjust to correct peg deviations; direct redemption for underlying collateral at oracle value with depeg penalty applied proportionally",
+    links: [
+      { label: "Website", url: "https://app.parallel.best/" },
+      { label: "Twitter", url: "https://x.com/ParallelMoney" },
+      { label: "Docs",    url: "https://docs.parallel.best/" },
+    ],
+    contracts: [
+      { chain: "base",      address: "0x76a9a0062ec6712b99b4f63bd2b4270185759dd5", decimals: 18 },
+      { chain: "ethereum",  address: "0x9b3a8f7cec208e247d97dee13313690977e24459", decimals: 18 },
+      { chain: "sonic",     address: "0x08417cdb7f52a5021bb4eb6e0deaf3f295c3f182", decimals: 18 },
+      { chain: "hyperevm",  address: "0xbe65f0f410a72bec163dc65d46c83699e957d588", decimals: 18 },
+      { chain: "avalanche", address: "0x9ee1963f05553ef838604dd39403be21cef26aa4", decimals: 18 },
+    ],
+  }),
 
   // ── Additional non-USD pegs ────────────────────────────────────────
   other("xsgd-straitsx", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {

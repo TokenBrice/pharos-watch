@@ -758,5 +758,10 @@
     "title": "The Borrower's Stablecoin",
     "text": "dUSD inverts the usual stablecoin economic model: instead of rewarding passive holders, it redirects float revenue from its USDC/USDT/sUSDS reserve to subsidize borrowers who take dUSD loans through dLEND, its Aave V3 fork. The mechanism is coherent \u2014 higher subsidized demand means higher utilization, which means higher yields for lenders, which attracts more reserves, which funds more subsidies \u2014 a flywheel that looks elegant at $2M circulating supply and unproven at any larger scale. Being backed entirely by other stablecoins creates a dependency stack: the peg inherits the counterparty risk of Circle, Tether, Sky, and Frax simultaneously, while the AMO and SMO add operational complexity that most comparably sized protocols don't carry. Deployed across Ethereum, Fraxtal, Katana, and Sonic with chain-isolated reserves, dTRINITY has built a sophisticated protocol for a market that has not yet shown up.",
     "updatedAt": "2026-03-10"
+  },
+  "usdp-parallel": {
+    "title": "Fee Yield, No Tricks",
+    "text": "Parallel's USDp is a relatively small but architecturally interesting CDP: an overcollateralized basket of yield-bearing stablecoins (sfrxUSD, sUSDe) whose Parallelizer module adjusts minting and redemption fees dynamically to correct peg drift without oracles or liquidation cascades. The yield story is unusually honest — sUSDp distributes 70% of actual protocol fees from the Parallelizer, bridging, and flash loan modules, meaning yield tracks real usage rather than governance votes on a made-up rate. With a supply of roughly $3.5M since launching in September 2025, it's still early, but the Bailsec audit and Certora formal verification suggest Mimo Labs built this for durability rather than speed. The central tension is whether a fee-revenue yield model can remain attractive at $3.5M when it competes against synthetic dollar protocols running leveraged basis trades at hundred-fold the scale.",
+    "updatedAt": "2026-03-13"
   }
 }
