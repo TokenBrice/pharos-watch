@@ -44,6 +44,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Deploy worker with the local worker-pinned Wrangler CLI
    - Sync routes/domains/cron triggers with `wrangler triggers deploy`
 3. `smoke-api` (needs `deploy-worker`):
+   - `npm ci`
    - Run `npm run test:smoke-api`
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Runs strict API checks sequentially with bounded transient retry behavior (`SMOKE_API_RETRY_COUNT` default `1`, `SMOKE_API_TIMEOUT_MS` default `12000`)

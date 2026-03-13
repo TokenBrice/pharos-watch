@@ -24,7 +24,7 @@
     "test:merge-gate": "node scripts/test-merge-gate.mjs",
     "test:watch": "vitest",
     "sync:digests": "tsx scripts/sync-digests.ts",
-    "test:smoke-api": "node scripts/smoke-api.mjs",
+    "test:smoke-api": "tsx scripts/smoke-api.mjs",
     "test:smoke-ops": "node scripts/smoke-ops.mjs",
     "test:smoke-ui": "node scripts/smoke-ui.mjs",
     "check:worker-boundary": "node scripts/check-worker-import-boundary.mjs",
