@@ -57,3 +57,21 @@ export async function withAdmin(
   if (authError) return authError;
   return handler();
 }
+
+/** Timing-safe string comparison using Web Crypto API. */
+export async function timingSafeCompare(a: string, b: string): Promise<boolean> {
+  if (a.length === 0 || b.length === 0) return false;
+  const encoder = new TextEncoder();
+  const aBuf = encoder.encode(a);
+  const bBuf = encoder.encode(b);
+  if (aBuf.byteLength !== bBuf.byteLength) return false;
+  const aKey = await crypto.subtle.importKey("raw", aBuf, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", aKey, bBuf);
+  const expected = await crypto.subtle.sign("HMAC", aKey, aBuf);
+  const sigArr = new Uint8Array(sig);
+  const expArr = new Uint8Array(expected);
+  if (sigArr.byteLength !== expArr.byteLength) return false;
+  let result = 0;
+  for (let i = 0; i < sigArr.byteLength; i++) result |= sigArr[i] ^ expArr[i];
+  return result === 0;
+}

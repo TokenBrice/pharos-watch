@@ -1,3 +1,4 @@
+import { timingSafeCompare } from "../lib/auth";
 import { escapeHtml, sendToChat } from "../lib/telegram";
 import {
   resolveTicker,
@@ -54,7 +55,10 @@ export async function handleTelegramWebhook(
   const ok = () => new Response("ok", { status: 200 });
 
   const url = new URL(request.url);
-  if (!webhookSecret || url.searchParams.get("secret") !== webhookSecret) {
+  const providedSecret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+    ?? url.searchParams.get("secret") // backward compat during migration
+    ?? "";
+  if (!webhookSecret || !(await timingSafeCompare(providedSecret, webhookSecret))) {
     return ok();
   }
   if (!botToken) return ok();
