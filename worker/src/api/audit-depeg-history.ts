@@ -41,8 +41,8 @@ interface AuditResult {
 
 export const handleAuditDepegHistory = withErrorHandler(
   "audit-depeg-history",
-  async (db: D1Database, url: URL, adminKey?: string, request?: Request): Promise<Response> => {
-    return withAdmin(request, adminKey, async () => {
+  async (db: D1Database, url: URL, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
+    return withAdmin(request, async () => {
 
       // Pagination: ?limit=N&offset=M — Analyst plan (500 req/min) supports large batches
       const limit = parseIntParam(url.searchParams.get("limit"), 200, 1, 100_000, "limit");
@@ -305,7 +305,7 @@ export const handleAuditDepegHistory = withErrorHandler(
       return new Response(JSON.stringify(result, null, 2), {
         headers: { "Content-Type": "application/json" },
       });
-    });
+    }, trustedAdmin);
   }
 );
 

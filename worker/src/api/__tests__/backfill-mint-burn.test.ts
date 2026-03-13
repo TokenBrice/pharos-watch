@@ -46,7 +46,7 @@ describe("handleBackfillMintBurn", () => {
     const response = await handleBackfillMintBurn(
       makeDb(),
       makeApiUrl("/api/backfill-mint-burn?configKey=ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
-      "secret",
+      undefined,
       makeApiRequest("/api/backfill-mint-burn"),
       "alchemy-key",
     );
@@ -58,7 +58,7 @@ describe("handleBackfillMintBurn", () => {
     const response = await handleBackfillMintBurn(
       makeDb(),
       makeApiUrl("/api/backfill-mint-burn"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
@@ -85,7 +85,7 @@ describe("handleBackfillMintBurn", () => {
     const response = await handleBackfillMintBurn(
       makeDb(),
       makeApiUrl("/api/backfill-mint-burn"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
@@ -115,7 +115,7 @@ describe("handleBackfillMintBurn", () => {
     const response = await handleBackfillMintBurn(
       makeDb(),
       makeApiUrl("/api/backfill-mint-burn"),
-      "secret",
+      true,
       request,
       "alchemy-key",
     );
@@ -152,7 +152,7 @@ describe("handleBackfillMintBurn", () => {
     const response = await handleBackfillMintBurn(
       makeDb(),
       makeApiUrl("/api/backfill-mint-burn"),
-      "secret",
+      true,
       request,
       "alchemy-key",
     );

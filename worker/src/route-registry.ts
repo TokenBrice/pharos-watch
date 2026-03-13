@@ -60,9 +60,8 @@ import type { TelegramCreds } from "./lib/telegram";
 export interface RouteContext {
   url: URL;
   db: D1Database;
-  ctx: ExecutionContext;
+  execCtx: ExecutionContext;
   request?: Request;
-  adminKey?: string;
   trustedAdmin?: boolean;
   alchemyApiKey?: string | null;
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
@@ -80,25 +79,25 @@ type StaticRouteHandlerMap = Partial<Record<EndpointKey, StaticRouteHandler>>;
 
 const STATIC_ROUTE_HANDLERS_BY_KEY = {
   stablecoins: ({ db }) => handleStablecoins(db),
-  "stablecoin-detail-canary": ({ db, ctx }) => handleStablecoinDetail(db, "usdt-tether", ctx),
+  "stablecoin-detail-canary": ({ db, execCtx }) => handleStablecoinDetail(db, "usdt-tether", execCtx),
   "stablecoin-summary-canary": ({ db }) => handleStablecoinSummary(db, "usdt-tether"),
   "stablecoin-reserves-canary": ({ db }) => handleStablecoinReserves(db, "iusd-infinifi"),
   "stablecoin-charts": ({ db }) => handleStablecoinCharts(db),
   blacklist: ({ db, url }) => handleBlacklist(db, url),
   "depeg-events": ({ db, url }) => handleDepegEvents(db, url),
-  "backfill-depegs": ({ db, url, adminKey, request }) =>
+  "backfill-depegs": ({ db, url, trustedAdmin, request }) =>
     runIdempotentAdminAction(
       db,
       "backfill-depegs",
       request,
-      () => handleBackfillDepegs(db, url, adminKey, request),
+      () => handleBackfillDepegs(db, url, trustedAdmin, request),
     ),
-  "backfill-supply-history": ({ db, url, adminKey, request }) =>
+  "backfill-supply-history": ({ db, url, trustedAdmin, request }) =>
     runIdempotentAdminAction(
       db,
       "backfill-supply-history",
       request,
-      () => handleBackfillSupplyHistory(db, url, adminKey, request),
+      () => handleBackfillSupplyHistory(db, url, trustedAdmin, request),
     ),
   "peg-summary": ({ db }) => handlePegSummary(db),
   health: ({ db, mintBurnFreshnessConfig }) =>
@@ -108,29 +107,29 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   "dex-liquidity": ({ db }) => handleDexLiquidity(db),
   "dex-liquidity-history": ({ db, url }) => handleDexLiquidityHistory(db, url),
   "supply-history": ({ db, url }) => handleSupplyHistory(db, url),
-  status: ({ db, adminKey, request }) => handleStatus(db, adminKey, request),
-  "status-history": ({ db, adminKey, request }) => handleStatusHistory(db, adminKey, request),
+  status: ({ db, trustedAdmin, request }) => handleStatus(db, trustedAdmin, request),
+  "status-history": ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request),
   "daily-digest": ({ db }) => handleDailyDigest(db),
   "digest-archive": ({ db }) => handleDigestArchive(db),
   "digest-snapshot": ({ db, url }) => handleDigestSnapshot(db, url),
   "stability-index": ({ db, url }) => handleStabilityIndex(db, url),
-  "backfill-stability-index": ({ db, adminKey, request }) =>
+  "backfill-stability-index": ({ db, trustedAdmin, request }) =>
     runIdempotentAdminAction(
       db,
       "backfill-stability-index",
       request,
-      () => handleBackfillStabilityIndex(db, adminKey, request),
+      () => handleBackfillStabilityIndex(db, trustedAdmin, request),
     ),
-  "audit-depeg-history": ({ db, url, adminKey, request }) => {
+  "audit-depeg-history": ({ db, url, trustedAdmin, request }) => {
     if (request?.method === "POST") {
       return runIdempotentAdminAction(
         db,
         "audit-depeg-history",
         request,
-        () => handleAuditDepegHistory(db, url, adminKey, request),
+        () => handleAuditDepegHistory(db, url, trustedAdmin, request),
       );
     }
-    return handleAuditDepegHistory(db, url, adminKey, request);
+    return handleAuditDepegHistory(db, url, trustedAdmin, request);
   },
   "report-cards": ({ db }) => handleReportCards(db),
   "redemption-backstops": ({ db }) => handleRedemptionBackstops(db),
@@ -139,36 +138,36 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   "safety-score-history": ({ db, url }) => handleSafetyScoreHistory(db, url),
   "mint-burn-flows": ({ db, url }) => handleMintBurnFlows(db, url),
   "mint-burn-events": ({ db, url }) => handleMintBurnEvents(db, url),
-  "backfill-cg-prices": ({ db, url, adminKey, request }) =>
+  "backfill-cg-prices": ({ db, url, trustedAdmin, request }) =>
     runIdempotentAdminAction(
       db,
       "backfill-cg-prices",
       request,
-      () => handleBackfillCgPrices(db, url, adminKey, request),
+      () => handleBackfillCgPrices(db, url, trustedAdmin, request),
     ),
-  "backfill-mint-burn-prices": ({ db, url, adminKey, request }) =>
+  "backfill-mint-burn-prices": ({ db, url, trustedAdmin, request }) =>
     runIdempotentAdminAction(
       db,
       "backfill-mint-burn-prices",
       request,
-      () => handleBackfillMintBurnPrices(db, url, adminKey, request),
+      () => handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
     ),
-  "backfill-mint-burn": ({ db, url, adminKey, request, alchemyApiKey }) =>
+  "backfill-mint-burn": ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
     runIdempotentAdminAction(
       db,
       "backfill-mint-burn",
       request,
-      () => handleBackfillMintBurn(db, url, adminKey, request, alchemyApiKey ?? null),
+      () => handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
     ),
-  "reclassify-atomic-roundtrips": ({ db, url, adminKey, request }) =>
+  "reclassify-atomic-roundtrips": ({ db, url, trustedAdmin, request }) =>
     runIdempotentAdminAction(
       db,
       "reclassify-atomic-roundtrips",
       request,
-      () => handleReclassifyAtomicRoundtrips(db, url, adminKey, request),
+      () => handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
     ),
   "stress-signals": ({ db, url }) => handleStressSignals(db, url),
-  "backfill-dews": ({ db, url, adminKey, request }) => handleBackfillDEWS(db, url, adminKey, request),
+  "backfill-dews": ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request),
   feedback: withErrorHandler("feedback", ({ db, request, feedbackEnv }) => {
     if (!request) {
       return Promise.resolve(errorResponse(400, "Bad request"));
@@ -182,8 +181,8 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   ),
   "trigger-digest": withErrorHandler(
     "route-trigger-digest",
-    async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
-      const authError = await requireAdmin(request, adminKey);
+    async ({ db, request, trustedAdmin, anthropicApiKey, twitterCreds, telegramCreds }) => {
+      const authError = await requireAdmin(request, trustedAdmin);
       if (authError) return authError;
       if (!request) {
         return errorResponse(400, "Bad request");
@@ -208,8 +207,8 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   ),
   "reset-blacklist-sync": withErrorHandler(
     "route-reset-blacklist-sync",
-    async ({ db, request, adminKey }) => {
-      const authError = await requireAdmin(request, adminKey);
+    async ({ db, request, trustedAdmin }) => {
+      const authError = await requireAdmin(request, trustedAdmin);
       if (authError) return authError;
       if (!request) {
         return errorResponse(400, "Bad request");
@@ -233,8 +232,8 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   ),
   "debug-sync-state": withErrorHandler(
     "route-debug-sync-state",
-    async ({ db, request, adminKey }) => {
-      const authError = await requireAdmin(request, adminKey);
+    async ({ db, request, trustedAdmin }) => {
+      const authError = await requireAdmin(request, trustedAdmin);
       if (authError) return authError;
       const rows = await db
         .prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key")
@@ -242,8 +241,8 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
       return jsonResponse(rows.results);
     },
   ),
-  "discovery-candidates": ({ db, url, adminKey, request }) =>
-    withAdmin(request, adminKey, () => handleDiscoveryCandidates(db, url)),
+  "discovery-candidates": ({ db, url, trustedAdmin, request }) =>
+    withAdmin(request, () => handleDiscoveryCandidates(db, url), trustedAdmin),
 } satisfies StaticRouteHandlerMap;
 
 export const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>(

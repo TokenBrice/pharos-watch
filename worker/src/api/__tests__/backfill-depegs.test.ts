@@ -10,7 +10,7 @@ describe("handleBackfillDepegs", () => {
     const res = await handleBackfillDepegs(
       mockD1(),
       makeApiUrl("/api/backfill-depegs"),
-      "secret",
+      undefined,
       makeApiRequest("/api/backfill-depegs"),
     );
 
@@ -21,7 +21,7 @@ describe("handleBackfillDepegs", () => {
     const res = await handleBackfillDepegs(
       mockD1(),
       makeApiUrl("/api/backfill-depegs?stablecoin=not-a-real-id"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-depegs?stablecoin=not-a-real-id", { adminKey: "secret" }),
     );
 
@@ -33,7 +33,7 @@ describe("handleBackfillDepegs", () => {
     const res = await handleBackfillDepegs(
       mockD1(),
       makeApiUrl("/api/backfill-depegs?batch=999999"),
-      "secret",
+      true,
       makeApiRequest("/api/backfill-depegs?batch=999999", { adminKey: "secret" }),
     );
 

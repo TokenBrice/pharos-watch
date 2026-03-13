@@ -21,8 +21,8 @@ interface EventResult {
 
 export const handleBackfillDEWS = withErrorHandler(
   "backfill-dews",
-  async (db: D1Database, _url: URL, adminKey?: string, request?: Request): Promise<Response> => {
-    return withAdmin(request, adminKey, async () => {
+  async (db: D1Database, _url: URL, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
+    return withAdmin(request, async () => {
       // Load completed depeg events
       const events = await db
         .prepare(
@@ -182,6 +182,6 @@ export const handleBackfillDEWS = withErrorHandler(
         },
         events: results,
       });
-    });
+    }, trustedAdmin);
   }
 );

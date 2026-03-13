@@ -30,8 +30,8 @@ function parseTimeParam(value: string | null): number | null {
 
 export const handleStatusHistory = withErrorHandler(
   "status-history",
-  async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
-    return withAdmin(request, adminKey, async () => {
+  async (db: D1Database, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
+    return withAdmin(request, async () => {
       const now = Math.floor(Date.now() / 1000);
       const url = new URL(request?.url ?? "https://pharos.watch/api/status-history");
       const limitParam = url.searchParams.get("limit");
@@ -62,6 +62,6 @@ export const handleStatusHistory = withErrorHandler(
       };
 
       return jsonResponse(body, { "Cache-Control": "no-store" });
-    });
+    }, trustedAdmin);
   }
 );

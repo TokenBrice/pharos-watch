@@ -29,23 +29,19 @@ function hasOpsApiAccessSignal(request: Request | undefined): boolean {
   return Boolean(serviceTokenId && serviceTokenSecret);
 }
 
-function isTrustedAdminInput(value: string | boolean | undefined): boolean {
-  return value === true;
-}
-
 export function hasValidAdminCredential(
   request: Request | undefined,
-  legacyAdminKeyOrTrustedAdmin?: string | boolean,
+  trustedAdmin?: boolean,
 ): boolean {
-  return isTrustedAdminInput(legacyAdminKeyOrTrustedAdmin) || hasOpsApiAccessSignal(request);
+  return trustedAdmin === true || hasOpsApiAccessSignal(request);
 }
 
 /** Returns a 401 Response if the request lacks a valid admin signal, or null if authorized */
 export async function requireAdmin(
   request: Request | undefined,
-  legacyAdminKeyOrTrustedAdmin?: string | boolean,
+  trustedAdmin?: boolean,
 ): Promise<Response | null> {
-  if (!hasValidAdminCredential(request, legacyAdminKeyOrTrustedAdmin)) {
+  if (!hasValidAdminCredential(request, trustedAdmin)) {
     return errorResponse(401, "Unauthorized");
   }
   return null;
@@ -54,30 +50,10 @@ export async function requireAdmin(
 /** Executes the handler only when admin auth passes, otherwise returns 401 response. */
 export async function withAdmin(
   request: Request | undefined,
-  legacyAdminKeyOrHandler: string | (() => Promise<Response>) | boolean | undefined,
-  maybeHandler?: (() => Promise<Response>) | boolean,
+  handler: () => Promise<Response>,
   trustedAdmin = false,
 ): Promise<Response> {
-  const handler = typeof legacyAdminKeyOrHandler === "function"
-    ? legacyAdminKeyOrHandler
-    : typeof maybeHandler === "function"
-      ? maybeHandler
-      : null;
-
-  if (!handler) {
-    throw new Error("withAdmin requires a handler");
-  }
-
-  const authError = await requireAdmin(
-    request,
-    trustedAdmin ||
-      isTrustedAdminInput(
-        typeof legacyAdminKeyOrHandler === "boolean" ? legacyAdminKeyOrHandler : undefined,
-      ) ||
-      isTrustedAdminInput(
-        typeof maybeHandler === "boolean" ? maybeHandler : undefined,
-      ),
-  );
+  const authError = await requireAdmin(request, trustedAdmin);
   if (authError) return authError;
   return handler();
 }

@@ -703,8 +703,8 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
 
 export const handleStatus = withErrorHandler(
   "status",
-  async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
-    return withAdmin(request, adminKey, async () => {
+  async (db: D1Database, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
+    return withAdmin(request, async () => {
       const now = Math.floor(Date.now() / 1000);
       const raw = await computeRawStatus(db, now);
 
@@ -842,6 +842,6 @@ export const handleStatus = withErrorHandler(
       };
 
       return jsonResponse(body, { "Cache-Control": "no-store" });
-    });
+    }, trustedAdmin);
   },
 );

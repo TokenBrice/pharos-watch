@@ -32,7 +32,7 @@ function makeCronRow(job: string, status = "ok", ageSec = 300) {
 describe("handleStatus", () => {
   it("returns 401 when no ops-api access signal is provided", async () => {
     const db = mockD1([]);
-    const res = await handleStatus(db, "secret-key", undefined);
+    const res = await handleStatus(db, undefined, undefined);
 
     expect(res.status).toBe(401);
     const body = (await res.json()) as { error: string };
@@ -160,7 +160,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -273,7 +273,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       datasetFreshness: {
         blacklist: number | null;
@@ -304,7 +304,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -343,7 +343,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -377,7 +377,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
@@ -400,7 +400,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       crons: Record<string, { lastRun: unknown; healthy: boolean; expectedIntervalSec: number }>;
     };
@@ -444,7 +444,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       crons: Record<
         string,
@@ -512,7 +512,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       availabilityStatus: string;
       summary: { unhealthyCrons: number; cronErrors: number };
@@ -576,7 +576,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       telegramBot: {
         totalChats: number;
@@ -631,7 +631,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as { telegramBot: unknown };
 
     expect(res.status).toBe(200);
@@ -668,7 +668,7 @@ describe("handleStatus", () => {
     }) as typeof db.prepare;
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       dbHealthy: boolean;
       rawOverallStatus: string;
@@ -701,7 +701,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       crons: Record<string, { healthy: boolean }>;
     };
@@ -745,7 +745,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       availabilityStatus: string;
       summary: { unhealthyCrons: number; degradedCrons: number };
@@ -781,7 +781,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -826,7 +826,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: { blacklistMissingRatio: number; blacklistRecentMissingAmounts: number };
@@ -866,7 +866,7 @@ describe("handleStatus", () => {
     }) as typeof db.prepare;
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     expect(res.status).toBe(200);
 
     const blacklistSql = seenSql.find((sql) => sql.includes("FROM blacklist_events")) ?? "";
@@ -878,7 +878,7 @@ describe("handleStatus", () => {
     const db = mockD1([{ match: "SELECT 1", rows: [], throwError: new Error("db down") }]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as {
@@ -916,7 +916,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, "secret-key", request);
+    const res = await handleStatus(db, true, request);
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as {

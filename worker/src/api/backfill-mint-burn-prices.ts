@@ -4,8 +4,8 @@ import { getPriceCache } from "../lib/db";
 
 export const handleBackfillMintBurnPrices = withErrorHandler(
   "backfill-mint-burn-prices",
-  async (db: D1Database, _url: URL, adminKey: string | undefined, request?: Request): Promise<Response> => {
-    const authErr = await requireAdmin(request, adminKey);
+  async (db: D1Database, _url: URL, trustedAdmin: boolean | undefined, request?: Request): Promise<Response> => {
+    const authErr = await requireAdmin(request, trustedAdmin);
     if (authErr) return authErr;
 
     // 1. Load current prices
