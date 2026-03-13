@@ -15,6 +15,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
+import { computeChartYDomain } from "@/lib/chart-utils";
 
 /* Brand colors */
 const USDT_GREEN = "#26a17b";
@@ -67,14 +68,13 @@ export function TotalMcapChart() {
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 
-  const yDomain = useMemo((): [number, number | string] => {
-    if (range === "all" || filteredData.length === 0) return [0, "auto"];
-    const values = filteredData.map((d) => d.total).filter((v): v is number => v != null);
-    const min = values.reduce((m, v) => Math.min(m, v), Infinity);
-    const max = values.reduce((m, v) => Math.max(m, v), -Infinity);
-    const padding = (max - min) * 0.15 || max * 0.05;
-    return [Math.max(0, min - padding), max + padding];
-  }, [range, filteredData]);
+  const yDomain = useMemo(
+    () => computeChartYDomain(
+      filteredData.map((d) => d.total).filter((v): v is number => v != null),
+      range === "all",
+    ),
+    [range, filteredData],
+  );
 
   if (isLoading) {
     return (
