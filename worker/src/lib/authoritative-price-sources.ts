@@ -1,6 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { PriceConfidence, StablecoinMeta } from "@shared/types";
 import type { PeggedAsset } from "../cron/enrich-prices";
+import { binarySearchNearest } from "./binary-search";
 import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "./evm-rpc";
 
 const ETHEREUM_CHAIN = "ethereum";
@@ -112,25 +113,8 @@ function clampSampleNotionalUsd(supplyUsd: number | null): number {
 
 function findNearestSupply(snapshots: HistoricalSupplySnapshot[] | undefined, timestamp: number): number | null {
   if (!snapshots || snapshots.length === 0) return null;
-
-  let lo = 0;
-  let hi = snapshots.length - 1;
-  while (lo <= hi) {
-    const mid = Math.floor((lo + hi) / 2);
-    if (snapshots[mid].ts < timestamp) {
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
-  }
-
-  const candidates = [lo > 0 ? snapshots[lo - 1] : null, lo < snapshots.length ? snapshots[lo] : null].filter(
-    (value): value is HistoricalSupplySnapshot => value !== null,
-  );
-
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => Math.abs(a.ts - timestamp) - Math.abs(b.ts - timestamp));
-  return candidates[0].supply;
+  const nearest = binarySearchNearest(snapshots, timestamp, (s) => s.ts);
+  return nearest?.supply ?? null;
 }
 
 function getContractConfig(stablecoinId: string): {

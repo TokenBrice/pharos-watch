@@ -1,3 +1,5 @@
+import { binarySearchNearest } from "./binary-search";
+
 const DAY = 86400;
 const MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC = 14 * DAY;
 
@@ -49,20 +51,9 @@ export function findNearestSupplySnapshot(
   targetDay: number,
 ): SupplySnapshot | null {
   if (!snapshots || snapshots.length === 0) return null;
-
-  let best = snapshots[0];
-  for (const snapshot of snapshots) {
-    if (Math.abs(snapshot.date - targetDay) < Math.abs(best.date - targetDay)) {
-      best = snapshot;
-    }
-    if (snapshot.date > targetDay) break;
-  }
-
-  if (Math.abs(best.date - targetDay) > MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC) {
-    return null;
-  }
-
-  return best;
+  const nearest = binarySearchNearest(snapshots, targetDay, (s) => s.date);
+  if (!nearest) return null;
+  return Math.abs(nearest.date - targetDay) <= MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC ? nearest : null;
 }
 
 function getTotalMcapForDay(supplyByCoin: SupplySnapshotMap, day: number): number {
