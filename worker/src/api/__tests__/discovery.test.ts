@@ -25,6 +25,32 @@ describe("handleDiscoveryCandidates", () => {
     expect(body.candidates[0].geckoId).toBe("big");
     expect(body.total).toBe(2);
   });
+
+  it("returns 400 for malformed limit", async () => {
+    const db = mockD1([]);
+    const url = new URL("https://api.pharos.watch/api/discovery-candidates?limit=oops");
+    const res = await handleDiscoveryCandidates(db, url);
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be a number" });
+  });
+
+  it("returns 400 for malformed offset", async () => {
+    const db = mockD1([]);
+    const url = new URL("https://api.pharos.watch/api/discovery-candidates?offset=oops");
+    const res = await handleDiscoveryCandidates(db, url);
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid offset: must be a number" });
+  });
+
+  it("returns 500 through the shared error wrapper when the query throws", async () => {
+    const db = mockD1([
+      { match: "discovery_candidates", rows: [], throwError: new Error("query failed") },
+    ]);
+    const url = new URL("https://api.pharos.watch/api/discovery-candidates");
+    const res = await handleDiscoveryCandidates(db, url);
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: "Internal Server Error" });
+  });
 });
 
 describe("handleDismissCandidate", () => {

@@ -17,7 +17,7 @@ npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report
 npm run test:critical-contracts # Critical endpoint contract suite
 npm run test:invariants # Critical numerical/schema invariant suite
-npm run coverage:critical # Full coverage + critical-path line-coverage gate
+npm run coverage:critical # Critical-suite coverage run + critical-path line-coverage gate
 npm run test:merge-gate # Delta-aware local gate before pushing merged worktree changes
 npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints
 npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke check + mobile overflow route checks
@@ -98,7 +98,7 @@ export default defineConfig({
 
 ### Mock D1 (`worker/src/api/__tests__/helpers/mock-d1.ts`)
 
-Lightweight substring-based D1 mock. Returns canned data based on SQL query substring matching.
+Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests can opt into stricter behavior.
 
 ```ts
 import { mockD1 } from "./helpers/mock-d1";
@@ -113,6 +113,9 @@ const db = mockD1([
 - `rows` — array of row objects for `.all()` results
 - `first` — optional single object for `.first()` results
 - `batch()` — executes each statement's `.all()` and returns array of results
+- `mockD1(tables, { requireMatch: true })` — throws if executed SQL does not match a configured entry
+- `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
+- `db.assertAllMatchesUsed()` — optional assertion that every configured match was exercised during the test
 
 ### Mock Fetch (`worker/src/api/__tests__/helpers/mock-fetch.ts`)
 
@@ -374,10 +377,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `dex-liquidity-persistence.test.ts`                             | `dex-liquidity/persistence.ts`     | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior              |
 | `sync-mint-burn.test.ts`                                        | `sync-mint-burn.ts`                | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior                                                             |
 | `announce-cemetery-additions.test.ts`                           | `announce-cemetery-additions.ts`   | Cemetery dataset diffing, first-run seeding, and Telegram announcement behavior                                                                                |
-| `discovery-scan.test.ts`                                         | `discovery-scan.ts`                | Daily CoinGecko residual scan, candidate upserts, and dismiss-state preservation                                                                                |
-| `dex-liquidity-fallbacks.test.ts`                                | `dex-liquidity/fetch-fallbacks.ts` | DexScreener and CoinGecko ticker fallback ingestion behavior                                                                                                    |
-| `dex-liquidity-persistence.test.ts`                              | `dex-liquidity/persistence.ts`     | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior           |
-| `dex-liquidity-scoring.test.ts`                                  | `dex-liquidity/scoring.ts`         | Pool filtering/scaling, per-coin/global aggregate recomputation, confidence-gated depth stability, and DEX price median persistence                          |
+| `discovery-scan.test.ts`                                        | `discovery-scan.ts`                | Daily CoinGecko residual scan, candidate upserts, and dismiss-state preservation                                                                                |
 
 ## Conventions
 
@@ -436,14 +436,22 @@ Current critical file set:
 
 - `src/lib/api.ts`
 - `worker/src/lib/api-utils.ts`
+- `worker/src/lib/auth.ts`
+- `worker/src/lib/evm-rpc.ts`
 - `worker/src/cron/sync-stablecoins.ts`
 - `worker/src/cron/sync-yield-data.ts`
+- `worker/src/api/discovery.ts`
+- `worker/src/api/health.ts`
 - `worker/src/api/peg-summary.ts`
 - `worker/src/api/report-cards.ts`
 - `worker/src/api/dex-liquidity.ts`
 - `worker/src/api/stress-signals.ts`
 - `worker/src/api/mint-burn-flows.ts`
 - `worker/src/lib/alerts.ts` _(explicit threshold: 80% lines)_
+- `worker/src/lib/auth.ts` _(explicit threshold: 70% lines)_
+- `worker/src/lib/evm-rpc.ts` _(explicit threshold: 70% lines)_
+- `worker/src/api/discovery.ts` _(explicit threshold: 70% lines)_
+- `worker/src/api/health.ts` _(explicit threshold: 60% lines)_
 - `worker/src/api/stablecoin-detail.ts` _(explicit threshold: 30% lines)_
 - `worker/src/cron/dex-liquidity/orchestrator.ts` _(explicit threshold: 55% lines)_
 

@@ -66,4 +66,25 @@ describe("mockD1 helper", () => {
 
     expect(result).toEqual({ success: true, meta: { changes: 2 } });
   });
+
+  it("supports strict SQL matching and matched-entry assertions", async () => {
+    const db = mockD1(
+      [
+        { match: "SELECT value FROM sample WHERE id = ?", rows: [{ value: "one" }] },
+      ],
+      { strictSql: true, requireMatch: true },
+    );
+
+    const result = await db.prepare("SELECT   value   FROM   sample WHERE id = ?").bind(1).all<{ value: string }>();
+    expect(result.results[0]?.value).toBe("one");
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("throws when requireMatch is enabled and no configured SQL matches", async () => {
+    const db = mockD1([], { requireMatch: true });
+
+    await expect(
+      db.prepare("SELECT * FROM missing").all(),
+    ).rejects.toThrow("mockD1: no match for SQL: SELECT * FROM missing");
+  });
 });

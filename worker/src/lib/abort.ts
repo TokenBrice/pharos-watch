@@ -11,6 +11,18 @@ export function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
+export function rethrowIfAborted(error: unknown, signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw abortError(signal);
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    throw error;
+  }
+  if (typeof error === "object" && error !== null && "name" in error && (error as { name?: string }).name === "AbortError") {
+    throw error instanceof Error ? error : new Error(String(error));
+  }
+}
+
 export async function sleepWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
   if (ms <= 0) return;
   throwIfAborted(signal);

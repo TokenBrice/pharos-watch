@@ -24,8 +24,8 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/digest-archive` | All daily digests, newest-first |
 | `GET /api/digest-snapshot` | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD`) for SSG builds |
 | `GET /api/health` | Worker health check (includes circuit breaker states) |
-| `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Requires `X-Admin-Key` header |
-| `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Requires `X-Admin-Key` header |
+| `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Requires a valid admin credential (`X-Admin-Key` or `Authorization: Bearer`) |
+| `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Requires a valid admin credential (`X-Admin-Key` or `Authorization: Bearer`) |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
 | `GET /api/og/*` | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards |
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
@@ -383,6 +383,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)
     │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
+    │   ├── sync-live-reserves.ts # Live reserve composition sync → D1 (hourly, reserve lane)
     │   ├── sync-redemption-backstops.ts # Redemption backstop + effective-exit snapshot sync → D1 (hourly, reserve lane)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
@@ -413,6 +414,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── discovery-scan.ts     # Daily stablecoin coverage discovery → D1 (daily, 08:05 UTC)
     │   ├── compute-dews.ts       # DEWS computation cron (every 15min, after sync-stablecoins)
     │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety transitions (dedicated every-5-minute trigger)
+    │   ├── announce-cemetery-additions.ts # Telegram channel announcement when a deploy adds new cemetery entries
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
@@ -442,6 +444,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health
     │   ├── status.ts             # GET /api/status (admin)
+    │   ├── status-data-quality.ts # Shared status data-quality loader reused by /api/status
     │   ├── status-history.ts     # GET /api/status-history (admin)
     │   ├── stability-index.ts    # GET /api/stability-index
     │   ├── og.tsx                # GET /api/og/* dynamic Open Graph PNG generation
@@ -459,14 +462,20 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)
     │   ├── discovery.ts         # GET /api/discovery-candidates + POST /api/discovery-candidates/:id/dismiss
     │   ├── yield-history.ts     # GET /api/yield-history
-    │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
+    │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (route-level aggregate/per-coin orchestration)
+    │   ├── mint-burn-flows-shared.ts # Shared mint/burn cache, baseline, and coverage helpers
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)
     │   ├── feedback.ts          # POST /api/feedback (public)
-    │   └── telegram-webhook.ts  # POST /api/telegram-webhook (Telegram bot command ingress)
+    │   ├── telegram-webhook.ts  # POST /api/telegram-webhook (Telegram bot command ingress coordinator)
+    │   ├── telegram-webhook-shared.ts # Telegram webhook shared constants/types/catalog
+    │   ├── telegram-webhook-parsing.ts # Telegram webhook command / pending-state parsing helpers
+    │   ├── telegram-webhook-messages.ts # Telegram webhook response formatting helpers
+    │   └── telegram-webhook-store.ts # Telegram webhook D1 persistence helpers
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, buildInClause, logCronRun with protected catch)
         ├── chain-registry.ts     # Worker RPC registry and provider-map re-exports; runtime-neutral provider slugs now live in shared/lib/chain-provider-registry.ts
         ├── status-derived-data.ts # Extracted status endpoint data loaders (dataset freshness, Telegram stats, mint/burn reconciliation)
+        ├── evm-rpc.ts            # Shared JSON-RPC / Etherscan proxy helpers for eth_call, storage, and uint256 reads
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)

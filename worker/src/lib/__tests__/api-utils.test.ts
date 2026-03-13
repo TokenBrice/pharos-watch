@@ -235,4 +235,44 @@ describe("buildCacheStatuses", () => {
     expect(caches["yield-data"]?.ageSeconds).toBe(0);
     expect(caches.dews?.ageSeconds).toBe(0);
   });
+
+  it("reports cache freshness query failures instead of throwing", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = {
+      prepare: (sql: string) => {
+        const first = async <T>() => {
+          if (sql.includes("stress_signals")) {
+            throw new Error("stress query failed");
+          }
+          if (sql.includes("MAX(updated_at)")) {
+            return { age: 60 } as T;
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches, failures } = await buildCacheStatuses(db, nowSec);
+    expect(caches.dews?.ageSeconds).toBeNull();
+    expect(failures).toEqual([
+      {
+        key: "dews",
+        source: "table-freshness",
+        message: "stress query failed",
+      },
+    ]);
+  });
 });

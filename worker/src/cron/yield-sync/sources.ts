@@ -7,6 +7,7 @@ import {
 } from "../../lib/constants";
 import { getCache } from "../../lib/db";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
@@ -15,7 +16,7 @@ import {
   parseDlStablecoinPoolsCache,
   parseRiskFreeRateCache,
 } from "./cache";
-import type { DlPool, JsonRpcCallResponse, ResolvedYield } from "./types";
+import type { DlPool, ResolvedYield } from "./types";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
 const BPROTOCOL_LQTY_ONLY_SOURCE_KEY = "bprotocol-lqty-only";
@@ -108,23 +109,14 @@ export async function fetchOnChainRates(
       }
 
       const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
-      const res = await fetchWithRetry(rpc.rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const raw = await fetchEvmUint256AtBlock(config.chain, config.contract, callData, "latest", {
+        extraRpcUrls: [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+          (url): url is string => typeof url === "string" && url.length > 0,
+        ),
         signal,
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          method: "eth_call",
-          params: [{ to: config.contract, data: callData }, "latest"],
-          id: 1,
-        }),
+        timeoutMs: 10_000,
       });
-
-      if (!res?.ok) continue;
-      const body = (await res.json()) as { result?: string };
-      if (!body.result || body.result === "0x") continue;
-
-      const raw = BigInt(body.result);
+      if (raw == null) continue;
       const rate = Number(raw) / 10 ** config.decimals;
       results.set(config.stablecoinId, { rate });
     } catch (error) {
@@ -137,28 +129,17 @@ export async function fetchOnChainRates(
 
 async function fetchEthCallUint256(
   rpcUrl: string,
+  chain: string,
   to: string,
   data: string,
   signal?: AbortSignal,
 ): Promise<bigint | null> {
   try {
-    const res = await fetchWithRetry(rpcUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    return await fetchEvmUint256AtBlock(chain, to, data, "latest", {
+      extraRpcUrls: [rpcUrl],
       signal,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_call",
-        params: [{ to, data }, "latest"],
-        id: 1,
-      }),
+      timeoutMs: 10_000,
     });
-
-    if (!res?.ok) return null;
-
-    const body = (await res.json()) as JsonRpcCallResponse;
-    if (!body.result || body.error || body.result === "0x") return null;
-    return BigInt(body.result);
   } catch (error) {
     console.warn(`[yield] eth_call failed for ${to} ${data}:`, error);
     return null;
@@ -210,8 +191,8 @@ export async function fetchBprotocolLqtyOnlySource(
 
     for (const rpcUrl of rpcUrls) {
       const [lusdDeposits, lqtyIssued] = await Promise.all([
-        fetchEthCallUint256(rpcUrl, LIQUITY_STABILITY_POOL, LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR, signal),
-        fetchEthCallUint256(rpcUrl, LIQUITY_COMMUNITY_ISSUANCE, LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR, signal),
+        fetchEthCallUint256(rpcUrl, "ethereum", LIQUITY_STABILITY_POOL, LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR, signal),
+        fetchEthCallUint256(rpcUrl, "ethereum", LIQUITY_COMMUNITY_ISSUANCE, LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR, signal),
       ]);
       if (lusdDeposits != null && lqtyIssued != null) {
         totalLusdDepositsRaw = lusdDeposits;

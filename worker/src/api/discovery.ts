@@ -1,16 +1,33 @@
-import { jsonResponse, errorResponse } from "../lib/api-utils";
+import { jsonResponse, errorResponse, parseIntParam, withErrorHandler } from "../lib/api-utils";
 import type { DiscoveryCandidate } from "@shared/types";
 
-export async function handleDiscoveryCandidates(
+function parseDiscoveryStatus(value: string | null): "active" | "dismissed" | "all" {
+  switch (value) {
+    case "dismissed":
+    case "all":
+      return value;
+    default:
+      return "active";
+  }
+}
+
+export const handleDiscoveryCandidates = withErrorHandler("discovery-candidates", async (
   db: D1Database,
   url: URL,
-): Promise<Response> {
+): Promise<Response> => {
   const status = url.searchParams.get("status") ?? "active";
-  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 200);
-  const offset = parseInt(url.searchParams.get("offset") ?? "0", 10) || 0;
+  const parsedStatus = parseDiscoveryStatus(status);
+  const limit = parseIntParam(url.searchParams.get("limit"), 50, 1, 200, "limit");
+  if (limit instanceof Response) {
+    return limit;
+  }
+  const offset = parseIntParam(url.searchParams.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER, "offset");
+  if (offset instanceof Response) {
+    return offset;
+  }
 
   let whereClause: string;
-  switch (status) {
+  switch (parsedStatus) {
     case "dismissed":
       whereClause = "WHERE dismissed = 1";
       break;
@@ -49,12 +66,12 @@ export async function handleDiscoveryCandidates(
   const total = ((countResult.results?.[0] as Record<string, unknown>)?.total as number) ?? 0;
 
   return jsonResponse({ candidates, total });
-}
+});
 
-export async function handleDismissCandidate(
+export const handleDismissCandidate = withErrorHandler("dismiss-discovery-candidate", async (
   db: D1Database,
   candidateId: number,
-): Promise<Response> {
+): Promise<Response> => {
   const nowSec = Math.floor(Date.now() / 1000);
 
   const result = await db.prepare(`
@@ -68,4 +85,4 @@ export async function handleDismissCandidate(
   }
 
   return jsonResponse({ ok: true });
-}
+});

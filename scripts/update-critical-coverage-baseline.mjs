@@ -7,6 +7,10 @@ const BASELINE_PATH = process.env.CRITICAL_COVERAGE_BASELINE_FILE ?? ".ci/critic
 const CRITICAL_FILES = [
   "src/lib/api.ts",
   "worker/src/lib/api-utils.ts",
+  "worker/src/lib/auth.ts",
+  "worker/src/lib/evm-rpc.ts",
+  "worker/src/api/discovery.ts",
+  "worker/src/api/health.ts",
   "worker/src/cron/sync-stablecoins.ts",
   "worker/src/cron/sync-yield-data.ts",
   "worker/src/api/peg-summary.ts",

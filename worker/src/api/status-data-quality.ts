@@ -1,6 +1,11 @@
 import { queryBlacklistGapMetrics } from "../lib/blacklist-gaps";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { BLACKLIST_RECENT_WINDOW_SEC } from "../lib/status-thresholds";
+import {
+  BLACKLIST_RECENT_WINDOW_SEC,
+  STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD,
+  STATUS_ONCHAIN_FRESH_WINDOW_SEC,
+  STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC,
+} from "../lib/status-thresholds";
 import type { DataQuality, StatusResponse } from "@shared/types";
 
 type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];
@@ -107,7 +112,7 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
     onchainSupplyLatestAt = monitor?.latest ?? null;
     onchainSupplyTrackedCoins = monitor?.tracked ?? 0;
 
-    if (onchainSupplyLatestAt != null && now - onchainSupplyLatestAt <= 3 * 86400) {
+    if (onchainSupplyLatestAt != null && now - onchainSupplyLatestAt <= STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC) {
       onchainSupplyMonitoring = "active";
       onchainSupplyQueryStatus = "ok";
     }
@@ -129,7 +134,7 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
              HAVING latest_update < ?
            )`,
         )
-        .bind(now - 7200)
+        .bind(now - STATUS_ONCHAIN_FRESH_WINDOW_SEC)
         .first<{ cnt: number }>();
       if (stale) staleOnchainSupply = stale.cnt;
     } catch (e) {
@@ -143,7 +148,7 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
         .prepare(
           "SELECT stablecoin_id, SUM(supply) as total_supply FROM onchain_supply WHERE updated_at > ? GROUP BY stablecoin_id",
         )
-        .bind(now - 7200)
+        .bind(now - STATUS_ONCHAIN_FRESH_WINDOW_SEC)
         .all<{ stablecoin_id: string; total_supply: number }>();
 
       if (onchainRows.results && onchainRows.results.length > 0) {
@@ -155,7 +160,7 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
           const llamaSupply = llamaTotal / asset.price;
           if (llamaSupply > 0) {
             const divergence = Math.abs(row.total_supply - llamaSupply) / llamaSupply;
-            if (divergence > 0.05) onchainSupplyDivergences++;
+            if (divergence > STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD) onchainSupplyDivergences++;
           }
         }
       }

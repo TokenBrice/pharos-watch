@@ -1,5 +1,5 @@
 import type { CronProgressReporter, CronResult } from "../../lib/db";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
@@ -33,10 +33,6 @@ interface DiscoveryCandidate {
   tier: Exclude<EffectiveTier, "skip">;
   targets: ContractDeployment[];
   meta: DiscoveryMeta | undefined;
-}
-
-function rethrowIfAborted(err: unknown, signal?: AbortSignal): void {
-  if (signal?.aborted) throw err;
 }
 
 function summarizeDiscoveryError(err: unknown): string {

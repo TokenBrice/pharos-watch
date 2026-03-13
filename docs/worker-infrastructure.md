@@ -103,7 +103,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 - `worker/src/handlers/http.ts` applies a best-effort per-IP in-memory limiter for non-admin requests before router dispatch.
 - Default threshold: `300 requests / 60 seconds` per IP (isolate-local, not globally shared across all isolates/PoPs).
-- Admin requests authenticated with `X-Admin-Key` bypass this limiter.
+- Admin requests authenticated with either `X-Admin-Key` or `Authorization: Bearer <ADMIN_KEY>` bypass this limiter.
 
 ### CORS Headers
 
@@ -113,7 +113,7 @@ Applied to every response via `addCorsHeaders()`:
 |--------|-------|
 | `Access-Control-Allow-Origin` | `CORS_ORIGIN` env var (static: `https://pharos.watch`) |
 | `Access-Control-Allow-Methods` | `GET, POST, OPTIONS` |
-| `Access-Control-Allow-Headers` | `Content-Type, X-Admin-Key, Idempotency-Key` |
+| `Access-Control-Allow-Headers` | `Authorization, Content-Type, X-Admin-Key, Idempotency-Key` |
 | `Access-Control-Expose-Headers` | `X-Data-Age, Warning` |
 | `Access-Control-Max-Age` | `86400` |
 | `X-Content-Type-Options` | `nosniff` |
@@ -139,7 +139,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 |---------|----------------------|---------|
 | Realtime | `public, s-maxage=60, max-age=10` | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events |
 | Per-coin | `public, s-maxage=300, max-age=10` | stablecoin detail (`/api/stablecoin/:id`) |
-| Standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
+| Standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | Slow | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, digest-snapshot |
 
 Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetNoStoreHeader()` in `worker/src/router.ts`.
@@ -165,7 +165,7 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 **File:** `worker/src/lib/auth.ts`
 
 - Reads `X-Admin-Key` header from request
-- Also accepts `Authorization: Bearer <key>` for non-browser callers
+- Also accepts `Authorization: Bearer <key>` for non-browser callers, and the public-rate-limit bypass now uses the same credential parser as endpoint auth
 - Compares against `ADMIN_KEY` env var using timing-safe comparison: both values are SHA-256 hashed via `crypto.subtle.digest()`, then compared with `crypto.subtle.timingSafeEqual()`
 - Returns `null` if authorized, 401 Response if not
 
@@ -755,6 +755,8 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 | `dews` | 1,800s (30 min) |
 
 Health freshness checks for mint/burn major symbols and scheduler stale alerts use the same shared resolver in `worker/src/lib/mint-burn-health-config.ts`, including env overrides (`MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`). The public `/api/health` status itself now follows critical-lane sync freshness (`lastSuccessfulSyncAt` + latest run status) rather than raw event recency, so quiet majors do not produce false stale health.
+
+`/api/health` also returns a `warnings: string[]` field. Subquery failures (for example blacklist or circuit-state lookups) no longer silently degrade to zero-like values; instead the endpoint downgrades `status` and emits machine-readable warning strings while still returning `200`.
 
 ### GET /api/status
 

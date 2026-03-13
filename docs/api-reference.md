@@ -76,7 +76,7 @@ All error responses use `{ "error": "message" }` JSON format.
 | Status | Meaning               | When                                                                                                     |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------- |
 | 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input) |
-| 401    | Unauthorized          | Admin endpoint called without valid `X-Admin-Key` header                                                 |
+| 401    | Unauthorized          | Admin endpoint called without a valid admin credential (`X-Admin-Key` or `Authorization: Bearer`)       |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                |
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                             |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                       |
@@ -863,6 +863,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 {
   "status": "healthy",
   "timestamp": 1771856453,
+  "warnings": [],
   "caches": {
     "stablecoins": { "ageSeconds": 323, "maxAge": 600, "healthy": true },
     "stablecoin-charts": { "ageSeconds": 323, "maxAge": 600, "healthy": true },
@@ -902,6 +903,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | ---------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `status`                     | `string`                        | `"healthy"` / `"degraded"` / `"stale"`                                                                                                                                                                                                                                                                                                                          |
 | `timestamp`                  | `number`                        | Unix seconds at time of response                                                                                                                                                                                                                                                                                                                                |
+| `warnings`                   | `string[]`                      | Best-effort diagnostics when health subqueries fail but the endpoint can still return a non-500 payload                                                                                                                                                                                                                                                        |
 | `caches`                     | `Record<string, CacheStatus>`   | Per-cache freshness status                                                                                                                                                                                                                                                                                                                                      |
 | `blacklist.totalEvents`      | `number`                        | Total events in blacklist table                                                                                                                                                                                                                                                                                                                                 |
 | `blacklist.missingAmounts`   | `number`                        | Events where `amount` is null (should be 0)                                                                                                                                                                                                                                                                                                                     |
@@ -1692,13 +1694,13 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 
 ## Admin Endpoints
 
-These endpoints require an `X-Admin-Key` header matching the `ADMIN_KEY` Worker secret. Unauthorized requests receive a `401` response. They are not intended for public consumption.
+These endpoints require an admin credential matching the `ADMIN_KEY` Worker secret. Browser/admin-page flows use `X-Admin-Key`; non-browser callers may also use `Authorization: Bearer <secret>`. Unauthorized requests receive a `401` response. They are not intended for public consumption.
 
 ### `GET /api/status`
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `X-Admin-Key: <secret>` or `Authorization: Bearer <secret>` (required)
 
 **Response shape:** `StatusResponse` (defined in `shared/types/index.ts`)
 
@@ -1929,7 +1931,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 Machine-readable status timeline endpoint for tooling and incident analysis.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `X-Admin-Key: <secret>` or `Authorization: Bearer <secret>` (required)
 
 **Query parameters**
 
@@ -2150,6 +2152,8 @@ Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet m
 | `limit`  | `integer`                          | `50`       | Max results (max 200)      |
 | `offset` | `integer`                          | `0`        | Pagination offset          |
 
+Malformed `limit` / `offset` values return `400` instead of silently defaulting.
+
 **Response**
 
 ```json
@@ -2163,12 +2167,12 @@ Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet m
 
 | Field       | Type                                   | Description                                    |
 | ----------- | -------------------------------------- | ---------------------------------------------- |
-| `id`        | `string`                               | Internal candidate ID                          |
+| `id`        | `number`                               | Internal candidate ID                          |
 | `geckoId`   | `string \| null`                       | CoinGecko coin ID                              |
-| `llamaId`   | `string \| null`                       | DefiLlama stablecoin ID                        |
+| `llamaId`   | `number \| null`                       | DefiLlama stablecoin ID                        |
 | `name`      | `string`                               | Asset name                                     |
 | `symbol`    | `string`                               | Ticker symbol                                  |
-| `marketCap` | `number`                               | Latest known market cap (USD)                  |
+| `marketCap` | `number \| null`                       | Latest known market cap (USD)                  |
 | `source`    | `"coingecko" \| "defillama" \| "both"` | Which discovery source detected this asset     |
 | `firstSeen` | `number`                               | Unix seconds when first discovered             |
 | `lastSeen`  | `number`                               | Unix seconds of most recent detection          |
@@ -2179,7 +2183,7 @@ Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet m
 
 Dismisses a discovery candidate so it no longer appears in the active list. Dismissed candidates will not resurface unless their market cap crosses 10× the value at dismissal time.
 
-**Headers:** `X-Admin-Key: <secret>` (required)
+**Headers:** `X-Admin-Key: <secret>` or `Authorization: Bearer <secret>` (required)
 
 **Path parameter:** `:id` — candidate ID from `GET /api/discovery-candidates`
 

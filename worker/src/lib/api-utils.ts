@@ -6,6 +6,12 @@ import type { ZodType } from "zod";
 
 export type { CacheStatus };
 
+export interface CacheStatusFailure {
+  key: string;
+  source: "cache-table" | "table-freshness";
+  message: string;
+}
+
 // --- Data freshness metadata ---
 
 export interface FreshnessMeta {
@@ -66,18 +72,29 @@ const PAGINATED_ORDER_DIRECTIONS = new Set([
 export async function buildCacheStatuses(
   db: D1Database,
   now: number,
-): Promise<{ caches: Record<string, CacheStatus>; worstRatio: number }> {
+): Promise<{ caches: Record<string, CacheStatus>; worstRatio: number; failures: CacheStatusFailure[] }> {
   // Fetch rows from the generic cache table (excludes table-backed keys)
   const cacheOnlyKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS).filter(
     (k) => !(k in TABLE_FRESHNESS_QUERIES),
   );
   let cacheRows: { results?: Array<{ key: string; updated_at: number }> } = { results: [] };
+  const failures: CacheStatusFailure[] = [];
   if (cacheOnlyKeys.length > 0) {
-    const inClause = buildInClause(cacheOnlyKeys);
-    cacheRows = await db
-      .prepare(`SELECT key, updated_at FROM cache WHERE key IN (${inClause.sql})`)
-      .bind(...inClause.binds)
-      .all<{ key: string; updated_at: number }>();
+    try {
+      const inClause = buildInClause(cacheOnlyKeys);
+      cacheRows = await db
+        .prepare(`SELECT key, updated_at FROM cache WHERE key IN (${inClause.sql})`)
+        .bind(...inClause.binds)
+        .all<{ key: string; updated_at: number }>();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      failures.push({
+        key: "__cache__",
+        source: "cache-table",
+        message,
+      });
+      cacheRows = { results: [] };
+    }
   }
   const cacheMap = new Map((cacheRows.results ?? []).map(r => [r.key, r.updated_at]));
 
@@ -94,7 +111,12 @@ export async function buildCacheStatuses(
           .bind(now)
           .first<{ age: number | null }>();
         ageSeconds = row?.age != null ? Math.max(0, row.age) : null;
-      } catch {
+      } catch (err) {
+        failures.push({
+          key,
+          source: "table-freshness",
+          message: err instanceof Error ? err.message : String(err),
+        });
         ageSeconds = null;
       }
     } else {
@@ -107,7 +129,7 @@ export async function buildCacheStatuses(
     caches[key] = { ageSeconds, maxAge, healthy: ratio <= 1.5 };
   }
 
-  return { caches, worstRatio };
+  return { caches, worstRatio, failures };
 }
 
 /**

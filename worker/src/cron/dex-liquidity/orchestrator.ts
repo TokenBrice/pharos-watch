@@ -1,7 +1,7 @@
 import type { CronResult } from "../../lib/db";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { CRAWL_BUDGETS } from "../../lib/rate-limit";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs } from "./types";
 import { buildSymbolLookups } from "./pool-helpers";
@@ -15,16 +15,6 @@ import { mergeGtPools } from "./fetch-crawlers";
 import { fetchDsFallbackPools, fetchCgTickersFallback } from "./fetch-fallbacks";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
-
-function rethrowIfAborted(err: unknown, signal?: AbortSignal): void {
-  if (signal?.aborted) {
-    if (signal.reason instanceof Error) throw signal.reason;
-    throw err instanceof Error ? err : new Error(String(err));
-  }
-  if (typeof err === "object" && err !== null && "name" in err && (err as { name?: string }).name === "AbortError") {
-    throw err instanceof Error ? err : new Error(String(err));
-  }
-}
 
 export async function syncDexLiquidity(
   db: D1Database,

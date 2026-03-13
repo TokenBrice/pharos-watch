@@ -338,6 +338,7 @@ const CircuitRecordSchema = z.object({
 export interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
   timestamp: number;
+  warnings: string[];
   caches: Record<string, CacheStatus>;
   blacklist: { totalEvents: number; missingAmounts: number };
   mintBurn: {
@@ -360,6 +361,7 @@ export interface HealthResponse {
 export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
   status: z.enum(["healthy", "degraded", "stale"]),
   timestamp: z.number(),
+  warnings: z.array(z.string()),
   caches: z.record(z.string(), CacheStatusSchema),
   blacklist: z.object({
     totalEvents: z.number(),

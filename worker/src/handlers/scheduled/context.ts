@@ -1,4 +1,5 @@
 import {
+  createLeaseOwner,
   logCronRun,
   runCronWithLease,
   type CronProgressReporter,
@@ -75,12 +76,6 @@ function normalizeCronMetadata(result: CronResult): string | undefined {
     validationFailures: parsed.validationFailures ?? 0,
     ...parsed,
   });
-}
-
-function createLeaseOwner(job: string): string {
-  const cryptoObj = globalThis as typeof globalThis & { crypto?: { randomUUID?: () => string } };
-  if (typeof cryptoObj.crypto?.randomUUID === "function") return cryptoObj.crypto.randomUUID();
-  return `${job}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function createScheduledRuntimeContext(

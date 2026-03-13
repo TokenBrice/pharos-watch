@@ -1,7 +1,9 @@
 import { getCache, setCacheIfNewer } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { validatePayloadWithSchema } from "../lib/api-utils";
 import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
+import { z } from "zod";
 
 /**
  * Fetches live FX rates from the European Central Bank (via frankfurter.app)
@@ -87,11 +89,19 @@ function isValidRate(pegKey: string, rate: number, prevRate: number | undefined)
 }
 
 
-interface FrankfurterResponse {
-  base: string;
-  date: string;
-  rates: Record<string, number>;
-}
+const FrankfurterResponseSchema = z.object({
+  base: z.string(),
+  date: z.string(),
+  rates: z.record(z.string(), z.number()),
+});
+
+const SecondaryCurrencyResponseSchema = z.object({
+  usd: z.record(z.string(), z.number()),
+});
+
+const MetalPriceSchema = z.object({
+  price: z.number(),
+});
 
 export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
@@ -130,7 +140,33 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
       throw new Error(`frankfurter.app returned ${res?.status ?? "no response"}`);
     }
 
-    const data: FrankfurterResponse = await res.json();
+    const frankfurterPayload = await res.json();
+    const frankfurterValidation = validatePayloadWithSchema(
+      FrankfurterResponseSchema,
+      frankfurterPayload,
+      "sync-fx-rates:frankfurter",
+    );
+    if (!frankfurterValidation.ok) {
+      const cachedRateCount = Object.keys(prevRates).length;
+      if (cachedRateCount > 0) {
+        console.warn(`[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
+        return {
+          itemCount: cachedRateCount,
+          status: "degraded",
+          metadata: JSON.stringify({
+            rateCount: cachedRateCount,
+            fallbackMode: "cached-fx-rates",
+            validationIssues: frankfurterValidation.issues,
+            sources: {
+              frankfurter: "invalid-payload",
+              cache: "ok",
+            },
+          }),
+        };
+      }
+      throw new Error(`frankfurter.app payload validation failed: ${frankfurterValidation.issues}`);
+    }
+    const data = frankfurterValidation.data;
 
     // frankfurter returns units-per-USD (e.g. EUR: 0.93 means 1 USD = 0.93 EUR)
     // We need USD-per-unit (e.g. 1 EUR = $1.08 USD), so take the reciprocal
@@ -164,15 +200,25 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
         });
       }
       if (erRes && erRes.ok) {
-        const erData = (await erRes.json()) as { usd?: Record<string, number> };
-        for (const [currency, pegKey] of Object.entries(SECONDARY_CURRENCY_TO_PEG)) {
-          const perUsd = erData?.usd?.[currency];
-          if (typeof perUsd === "number" && perUsd > 0) {
-            const rate = Number((1 / perUsd).toFixed(6));
-            if (isValidRate(pegKey, rate, prevRates[pegKey])) {
-              rates[pegKey] = rate;
-            } else if (prevRates[pegKey]) {
-              rates[pegKey] = prevRates[pegKey];
+        const secondaryPayload = await erRes.json();
+        const secondaryValidation = validatePayloadWithSchema(
+          SecondaryCurrencyResponseSchema,
+          secondaryPayload,
+          "sync-fx-rates:secondary",
+        );
+        if (!secondaryValidation.ok) {
+          console.warn(`[sync-fx-rates] Secondary FX payload invalid: ${secondaryValidation.issues}`);
+        } else {
+          const erData = secondaryValidation.data;
+          for (const [currency, pegKey] of Object.entries(SECONDARY_CURRENCY_TO_PEG)) {
+            const perUsd = erData.usd?.[currency];
+            if (typeof perUsd === "number" && perUsd > 0) {
+              const rate = Number((1 / perUsd).toFixed(6));
+              if (isValidRate(pegKey, rate, prevRates[pegKey])) {
+                rates[pegKey] = rate;
+              } else if (prevRates[pegKey]) {
+                rates[pegKey] = prevRates[pegKey];
+              }
             }
           }
         }
@@ -207,10 +253,16 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
         fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT }, signal }),
         fetchWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT }, signal }),
       ]);
-      const goldData = goldRes?.ok ? (await goldRes.json()) as { price?: number } : null;
-      const silverData = silverRes?.ok ? (await silverRes.json()) as { price?: number } : null;
-      const goldPrice = goldData?.price;
-      const silverPrice = silverData?.price;
+      const goldPayload = goldRes?.ok ? await goldRes.json() : null;
+      const silverPayload = silverRes?.ok ? await silverRes.json() : null;
+      const goldValidation = goldPayload == null
+        ? { ok: false as const, issues: "missing gold payload" }
+        : validatePayloadWithSchema(MetalPriceSchema, goldPayload, "sync-fx-rates:gold");
+      const silverValidation = silverPayload == null
+        ? { ok: false as const, issues: "missing silver payload" }
+        : validatePayloadWithSchema(MetalPriceSchema, silverPayload, "sync-fx-rates:silver");
+      const goldPrice = goldValidation.ok ? goldValidation.data.price : undefined;
+      const silverPrice = silverValidation.ok ? silverValidation.data.price : undefined;
 
       if (typeof goldPrice === "number" && goldPrice > 0) {
         if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {

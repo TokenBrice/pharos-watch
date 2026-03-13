@@ -5,6 +5,7 @@ import { initCoinGecko } from "../lib/coingecko";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { checkRateLimit } from "../lib/rate-limit";
 import { errorResponse } from "../lib/api-utils";
+import { hasValidAdminCredential } from "../lib/auth";
 import { isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
 
@@ -12,7 +13,7 @@ function corsHeaders(origin: string): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key, Idempotency-Key",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Admin-Key, Idempotency-Key",
     "Access-Control-Expose-Headers": "X-Data-Age, Warning",
     "Access-Control-Max-Age": "86400",
     "X-Content-Type-Options": "nosniff",
@@ -40,12 +41,6 @@ function getClientIp(request: Request): string {
   const forwarded = request.headers.get("X-Forwarded-For");
   const forwardedIp = forwarded?.split(",")[0]?.trim();
   return forwardedIp || "unknown";
-}
-
-function isAdminRequest(request: Request, adminKey?: string): boolean {
-  if (!adminKey) return false;
-  const requestAdminKey = request.headers.get("X-Admin-Key");
-  return requestAdminKey === adminKey;
 }
 
 export async function handleHttpRequest(
@@ -98,7 +93,8 @@ export async function handleHttpRequest(
   }
 
   const url = new URL(request.url);
-  if (url.pathname.startsWith("/api/") && url.pathname !== "/api/telegram-webhook" && !isAdminRequest(request, env.ADMIN_KEY)) {
+  const isAdmin = await hasValidAdminCredential(request, env.ADMIN_KEY);
+  if (url.pathname.startsWith("/api/") && url.pathname !== "/api/telegram-webhook" && !isAdmin) {
     const rateLimitResponse = checkRateLimit(getClientIp(request), 300);
     if (rateLimitResponse) {
       return addCorsHeaders(rateLimitResponse, origin);

@@ -792,4 +792,60 @@ describe("handleStatus", () => {
     expect(blacklistSql).toContain("chain_id = 'tron'");
     expect(blacklistSql).toContain("event_type IN ('blacklist', 'unblacklist')");
   });
+
+  it("returns a degraded fallback payload when the DB health sentinel fails", async () => {
+    const db = mockD1([
+      { match: "SELECT 1", rows: [], throwError: new Error("db down") },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      dbHealthy: boolean;
+      availabilityStatus: "healthy" | "degraded" | "stale";
+      dataQualityStatus: "healthy" | "degraded" | "stale";
+      overallStatus: "healthy" | "degraded" | "stale";
+      causes: { availability: Array<{ code: string }> };
+      caches: Record<string, unknown>;
+    };
+
+    expect(body.dbHealthy).toBe(false);
+    expect(body.availabilityStatus).toBe("stale");
+    expect(body.dataQualityStatus).toBe("stale");
+    expect(body.overallStatus).toBe("stale");
+    expect(body.caches).toEqual({});
+    expect(body.causes.availability.some((cause) => cause.code === "db_unhealthy")).toBe(true);
+  });
+
+  it("surfaces cache freshness query failures as availability causes", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], throwError: new Error("dex freshness failed") },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      availabilityStatus: "healthy" | "degraded" | "stale";
+      causes: { availability: Array<{ code: string }> };
+    };
+
+    expect(body.availabilityStatus).toBe("stale");
+    expect(body.causes.availability.some((cause) => cause.code === "cache_freshness_query_failed")).toBe(true);
+  });
 });

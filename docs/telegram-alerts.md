@@ -16,6 +16,10 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 ## Files
 
 - `worker/src/api/telegram-webhook.ts`
+- `worker/src/api/telegram-webhook-shared.ts`
+- `worker/src/api/telegram-webhook-parsing.ts`
+- `worker/src/api/telegram-webhook-messages.ts`
+- `worker/src/api/telegram-webhook-store.ts`
 - `worker/src/cron/dispatch-telegram-alerts.ts`
 - `worker/src/cron/announce-cemetery-additions.ts`
 - `worker/src/lib/telegram.ts`
@@ -62,7 +66,9 @@ Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which
 
 ## Webhook Command Flow
 
-`worker/src/api/telegram-webhook.ts` accepts only Telegram-origin webhook posts that include the configured `secret` query param. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
+`worker/src/api/telegram-webhook.ts` now acts as a thin ingress coordinator. Command parsing, message formatting, and D1 persistence live in the adjacent `telegram-webhook-*` helper modules so command behavior can be tested without editing the transport entrypoint.
+
+The webhook accepts only Telegram-origin posts that include the configured `secret` query param. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
 
 ### Supported Commands
 

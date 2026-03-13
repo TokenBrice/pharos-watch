@@ -2,7 +2,9 @@ import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
 import type { BluechipGrade, BluechipRating, BluechipSmidge } from "@shared/types";
 import { shouldSkipFreshCache, setCacheIfNewer, type CronResult } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { validatePayloadWithSchema } from "../lib/api-utils";
 import { USER_AGENT } from "../lib/constants";
+import { z } from "zod";
 
 const CACHE_KEY = "bluechip-ratings";
 const STALE_HOURS = 6;
@@ -16,6 +18,28 @@ const SMIDGE_CATEGORIES = [
   "governance",
   "externals",
 ] as const;
+
+const BluechipCategorySchema = z.object({
+  translations: z.array(z.object({ summary: z.string().optional() })).optional(),
+});
+
+const BluechipCoinSchema = z.object({
+  grade: z.string(),
+  collateralization: z.number().optional(),
+  smart_contract_audit: z.boolean().optional(),
+  date_of_rating: z.string().optional(),
+  date_last_change: z.string().nullable().optional(),
+  stability: BluechipCategorySchema.optional(),
+  management: BluechipCategorySchema.optional(),
+  implementation: BluechipCategorySchema.optional(),
+  decentralization: BluechipCategorySchema.optional(),
+  governance: BluechipCategorySchema.optional(),
+  externals: BluechipCategorySchema.optional(),
+});
+
+const BluechipResponseSchema = z.object({
+  data: z.array(BluechipCoinSchema),
+});
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").trim();
@@ -51,6 +75,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
   // Process in batches of 3 with 500ms delay to avoid flooding backend.bluechip.org
   const BATCH_SIZE = 3;
   const results: PromiseSettledResult<{ pharosId: string; rating: BluechipRating } | null>[] = [];
+  let invalidPayloads = 0;
 
   for (let i = 0; i < entries.length; i += BATCH_SIZE) {
     if (i > 0) await new Promise((r) => setTimeout(r, 500));
@@ -64,10 +89,20 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
           { passthrough404: true }
         );
         if (!res || !res.ok) return null;
-        const json = (await res.json()) as { data?: Record<string, unknown>[] };
-        if (!json.data || json.data.length === 0) return null;
+        const payload = await res.json();
+        const validation = validatePayloadWithSchema(
+          BluechipResponseSchema,
+          payload,
+          `sync-bluechip:${slug}`,
+        );
+        if (!validation.ok) {
+          invalidPayloads++;
+          console.warn(`[bluechip] Invalid payload for ${slug}: ${validation.issues}`);
+          return null;
+        }
+        if (validation.data.data.length === 0) return null;
 
-        const coin = json.data[0];
+        const coin = validation.data.data[0];
         const grade = coin.grade as BluechipGrade | undefined;
         if (!grade) return null;
 
@@ -106,5 +141,11 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
 
   await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec);
   console.log(`[bluechip] Cache updated with ${count} ratings`);
-  return { itemCount: count, metadata: JSON.stringify({ ratingsFetched: count }) };
+  return {
+    itemCount: count,
+    metadata: JSON.stringify({
+      ratingsFetched: count,
+      invalidPayloads,
+    }),
+  };
 }

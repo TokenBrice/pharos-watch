@@ -1,4 +1,5 @@
 import { getChainRpc } from "./chain-registry";
+import { ETHERSCAN_V2_BASE } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 
 interface JsonRpcEnvelope<T> {
@@ -6,8 +7,21 @@ interface JsonRpcEnvelope<T> {
   error?: { message?: string };
 }
 
-interface EvmRpcOptions {
+export interface EvmRpcOptions {
   extraRpcUrls?: string[];
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
+export interface EtherscanProxyRequest {
+  evmChainId: number;
+  action: "eth_call" | "eth_getStorageAt";
+  apiKey?: string | null;
+  blockNumberOrTag?: number | "latest";
+  to?: string;
+  data?: string;
+  address?: string;
+  position?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
 }
@@ -22,12 +36,14 @@ interface EvmBlockResult {
   timestamp: string;
 }
 
-function buildRpcUrls(chainId: string, extraRpcUrls?: string[]): string[] {
+function buildRpcUrls(chainId?: string, extraRpcUrls?: string[]): string[] {
   const urls: string[] = [];
-  const chainRpc = getChainRpc(chainId);
-  if (chainRpc) {
-    urls.push(chainRpc.rpcUrl);
-    if (chainRpc.fallbackRpcUrl) urls.push(chainRpc.fallbackRpcUrl);
+  if (chainId) {
+    const chainRpc = getChainRpc(chainId);
+    if (chainRpc) {
+      urls.push(chainRpc.rpcUrl);
+      if (chainRpc.fallbackRpcUrl) urls.push(chainRpc.fallbackRpcUrl);
+    }
   }
   if (extraRpcUrls) {
     urls.push(...extraRpcUrls);
@@ -78,7 +94,7 @@ async function fetchJsonRpcResult<T>(
   return null;
 }
 
-function toBlockTag(blockNumberOrTag: number | "latest"): string {
+export function toBlockTag(blockNumberOrTag: number | "latest"): string {
   return blockNumberOrTag === "latest" ? "latest" : `0x${blockNumberOrTag.toString(16)}`;
 }
 
@@ -88,12 +104,33 @@ function parseHexInteger(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function isHexResult(value: string | null | undefined): value is `0x${string}` {
+export function isHexResult(value: string | null | undefined): value is `0x${string}` {
   return typeof value === "string" && value.startsWith("0x") && value.length > 2;
 }
 
+export function parseUint256Hex(value: unknown): bigint | null {
+  if (!isHexResult(typeof value === "string" ? value : null)) return null;
+  try {
+    return BigInt(value as `0x${string}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchJsonRpcHexAtUrl(
+  rpcUrl: string,
+  method: string,
+  params: unknown[],
+  options?: Pick<EvmRpcOptions, "signal" | "timeoutMs">,
+): Promise<`0x${string}` | null> {
+  const result = await fetchJsonRpcResult<string>([rpcUrl], method, params, options);
+  return isHexResult(result ?? undefined) && result !== "0x"
+    ? result as `0x${string}`
+    : null;
+}
+
 export async function fetchEvmCallHexAtBlock(
-  chainId: string,
+  chainId: string | undefined,
   to: string,
   data: string,
   blockNumberOrTag: number | "latest" = "latest",
@@ -111,6 +148,76 @@ export async function fetchEvmCallHexAtBlock(
 
   if (!isHexResult(result ?? undefined) || result === "0x") return null;
   return result as `0x${string}`;
+}
+
+export async function fetchEvmUint256AtBlock(
+  chainId: string | undefined,
+  to: string,
+  data: string,
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: EvmRpcOptions,
+): Promise<bigint | null> {
+  const result = await fetchEvmCallHexAtBlock(chainId, to, data, blockNumberOrTag, options);
+  return parseUint256Hex(result);
+}
+
+export async function fetchEtherscanProxyHex(
+  request: EtherscanProxyRequest,
+): Promise<`0x${string}` | null> {
+  if (!request.apiKey) return null;
+
+  const params = new URLSearchParams({
+    chainid: request.evmChainId.toString(),
+    module: "proxy",
+    action: request.action,
+    apikey: request.apiKey,
+  });
+  const blockTag = toBlockTag(request.blockNumberOrTag ?? "latest");
+
+  if (request.action === "eth_call") {
+    if (!request.to || !request.data) return null;
+    params.set("to", request.to);
+    params.set("data", request.data);
+    params.set("tag", blockTag);
+  } else {
+    if (!request.address || !request.position) return null;
+    params.set("address", request.address);
+    params.set("position", request.position);
+    params.set("tag", blockTag);
+  }
+
+  const res = await fetchWithRetry(
+    `${ETHERSCAN_V2_BASE}?${params.toString()}`,
+    request.signal ? { signal: request.signal } : undefined,
+    1,
+    { timeoutMs: request.timeoutMs ?? 10_000 },
+  );
+  if (!res?.ok) return null;
+
+  const body = await res.json() as JsonRpcEnvelope<string>;
+  if (body.error) return null;
+  if (!isHexResult(body.result ?? undefined) || body.result === "0x") return null;
+  return body.result as `0x${string}`;
+}
+
+export async function fetchEtherscanUint256AtBlock(
+  evmChainId: number,
+  to: string,
+  data: string,
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: Pick<EtherscanProxyRequest, "apiKey" | "signal" | "timeoutMs">,
+): Promise<bigint | null> {
+  const result = await fetchEtherscanProxyHex({
+    evmChainId,
+    action: "eth_call",
+    to,
+    data,
+    blockNumberOrTag,
+    apiKey: options?.apiKey,
+    signal: options?.signal,
+    timeoutMs: options?.timeoutMs,
+  });
+  return parseUint256Hex(result);
 }
 
 export async function fetchEvmBlockNumber(

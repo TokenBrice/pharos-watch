@@ -1,6 +1,5 @@
-import { ETHERSCAN_V2_BASE } from "../lib/constants";
 import { shouldSkipFreshCache, setCacheIfNewer, type CronResult } from "../lib/db";
-import { fetchWithRetry } from "../lib/fetch-retry";
+import { fetchEtherscanProxyHex } from "../lib/evm-rpc";
 
 const CACHE_KEY = "usds-status";
 const STALE_HOURS = 20;
@@ -23,23 +22,19 @@ interface UsdsStatus {
 }
 
 async function readImplementationSlot(apiKey: string | null, signal?: AbortSignal): Promise<string | null> {
-  const params = new URLSearchParams({
-    chainid: ETH_CHAIN_ID.toString(),
-    module: "proxy",
-    action: "eth_getStorageAt",
-    address: USDS_PROXY,
-    position: IMPL_SLOT,
-    tag: "latest",
-  });
-  if (apiKey) params.set("apikey", apiKey);
-
   try {
-    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
-    if (!res || !res.ok) return null;
-    const json = (await res.json()) as { result?: string };
-    if (!json.result || json.result === "0x") return null;
+    const result = await fetchEtherscanProxyHex({
+      evmChainId: ETH_CHAIN_ID,
+      action: "eth_getStorageAt",
+      address: USDS_PROXY,
+      position: IMPL_SLOT,
+      blockNumberOrTag: "latest",
+      apiKey,
+      signal,
+    });
+    if (!result) return null;
     // Result is a 32-byte hex — extract the address from the last 20 bytes
-    return "0x" + json.result.slice(-40).toLowerCase();
+    return "0x" + result.slice(-40).toLowerCase();
   } catch (e) {
     console.warn("[sync-usds] getImplementationAddress failed:", e);
     return null;
@@ -50,22 +45,19 @@ async function probeFreeze(apiKey: string | null, signal?: AbortSignal): Promise
   // Call isBlocked(address(0)) on the proxy — if the implementation has the function
   // it will return data; otherwise it will revert (empty result or error)
   const data = IS_BLOCKED_SELECTOR + "0".repeat(64);
-  const params = new URLSearchParams({
-    chainid: ETH_CHAIN_ID.toString(),
-    module: "proxy",
-    action: "eth_call",
-    to: USDS_PROXY,
-    data,
-    tag: "latest",
-  });
-  if (apiKey) params.set("apikey", apiKey);
-
   try {
-    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
-    if (!res || !res.ok) return null;
-    const json = (await res.json()) as { result?: string };
+    const result = await fetchEtherscanProxyHex({
+      evmChainId: ETH_CHAIN_ID,
+      action: "eth_call",
+      to: USDS_PROXY,
+      data,
+      blockNumberOrTag: "latest",
+      apiKey,
+      signal,
+    });
+    if (!result) return null;
     // A successful call returns at least 66 chars (0x + 32 bytes)
-    return !!json.result && json.result.length >= 66;
+    return result.length >= 66;
   } catch (e) {
     console.warn("[sync-usds] probeFreeze failed:", e);
     return null;

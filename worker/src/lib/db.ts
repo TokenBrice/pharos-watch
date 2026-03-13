@@ -203,7 +203,7 @@ class CronTimeoutError extends Error {
   }
 }
 
-function createLeaseOwner(job: string): string {
+export function createLeaseOwner(job: string): string {
   const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
   return `${job}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;

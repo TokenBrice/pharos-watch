@@ -1,7 +1,7 @@
 import type { LiveReserveInput, ReserveSlice } from "@shared/types";
-import { DEFILLAMA_COINS, ETHERSCAN_V2_BASE } from "../../lib/constants";
+import { DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { getChainRpc } from "../../lib/chain-registry";
+import { fetchEtherscanUint256AtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./index";
 
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
@@ -123,85 +123,38 @@ export async function fetchDefiLlamaPrices(
   return priceMap;
 }
 
-function parseUint256Hex(value: unknown): bigint | null {
-  if (typeof value !== "string" || !value.startsWith("0x") || value.length < 3) return null;
-  try {
-    return BigInt(value);
-  } catch {
-    return null;
-  }
-}
-
-async function fetchJsonRpcUint256(url: string, contract: string, data: string, signal: AbortSignal): Promise<bigint | null> {
-  const res = await fetchWithRetry(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "eth_call",
-      params: [{ to: contract, data }, "latest"],
-    }),
-    signal,
-  }, 1, { timeoutMs: 10_000 });
-
-  if (!res || !res.ok) return null;
-  const body = (await res.json()) as { result?: string; error?: unknown };
-  if (body.error) return null;
-  return parseUint256Hex(body.result);
-}
-
-async function fetchEtherscanUint256(
-  chain: string | undefined,
-  contract: string,
-  data: string,
-  apiKey: string | undefined,
-  signal: AbortSignal,
-): Promise<bigint | null> {
-  if (!apiKey || chain !== "ethereum") return null;
-
-  const params = new URLSearchParams({
-    chainid: "1",
-    module: "proxy",
-    action: "eth_call",
-    to: contract,
-    data,
-    tag: "latest",
-    apikey: apiKey,
-  });
-
-  const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params.toString()}`, { signal }, 1, { timeoutMs: 10_000 });
-  if (!res || !res.ok) return null;
-  const body = (await res.json()) as { result?: string; error?: unknown };
-  if (body.error) return null;
-  return parseUint256Hex(body.result);
-}
-
 export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigint | null> {
-  const urls: string[] = [];
-  if (options.rpcUrl) urls.push(options.rpcUrl);
-  if (options.fallbackRpcUrl) urls.push(options.fallbackRpcUrl);
+  const extraRpcUrls = [options.rpcUrl, options.fallbackRpcUrl].filter(
+    (url): url is string => typeof url === "string" && url.length > 0,
+  );
 
-  if (options.chain) {
-    const chainRpc = getChainRpc(options.chain);
-    if (chainRpc) {
-      urls.push(chainRpc.rpcUrl);
-      if (chainRpc.fallbackRpcUrl) urls.push(chainRpc.fallbackRpcUrl);
-    }
-  }
-
-  for (const url of Array.from(new Set(urls.filter(Boolean)))) {
-    const value = await fetchJsonRpcUint256(url, options.contract, options.data, options.signal);
-    if (value != null) return value;
+  const rpcValue = await fetchEvmUint256AtBlock(
+    options.chain,
+    options.contract,
+    options.data,
+    "latest",
+    {
+      extraRpcUrls,
+      signal: options.signal,
+      timeoutMs: 10_000,
+    },
+  );
+  if (rpcValue != null) {
+    return rpcValue;
   }
 
   if (options.rpcMode === "etherscan-proxy") {
-    return fetchEtherscanUint256(
-      options.chain,
+    if (options.chain !== "ethereum") return null;
+    return fetchEtherscanUint256AtBlock(
+      1,
       options.contract,
       options.data,
-      options.ctx?.etherscanApiKey,
-      options.signal,
+      "latest",
+      {
+        apiKey: options.ctx?.etherscanApiKey,
+        signal: options.signal,
+        timeoutMs: 10_000,
+      },
     );
   }
 

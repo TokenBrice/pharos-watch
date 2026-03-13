@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { sumPegBuckets } from "@shared/lib/supply";
 import { getCache } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import type { PeggedAsset } from "../enrich-prices";
@@ -12,14 +13,6 @@ const ADDRESS_OVERRIDES: Record<string, string> = {
 export interface StructuralValidationResult {
   validAssets: PeggedAsset[];
   droppedMalformedAssets: number;
-}
-
-function sumPegBuckets(buckets: Record<string, number> | undefined): number {
-  if (!buckets) return 0;
-  return Object.values(buckets).reduce(
-    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
-    0,
-  );
 }
 
 function countFiniteBuckets(buckets: Record<string, number> | undefined): number {

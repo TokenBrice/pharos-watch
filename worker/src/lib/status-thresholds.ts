@@ -12,3 +12,7 @@ export const STATUS_ONCHAIN_THRESHOLDS = {
   staleAbsoluteStale: 10,
   divergenceAbsoluteStale: 25,
 } as const;
+
+export const STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC = 3 * 24 * 3600;
+export const STATUS_ONCHAIN_FRESH_WINDOW_SEC = 2 * 3600;
+export const STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD = 0.05;

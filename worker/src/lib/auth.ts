@@ -11,20 +11,39 @@ export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   return crypto.subtle.timingSafeEqual(aBuf, bBuf);
 }
 
-/** Returns a 401 Response if the request lacks a valid admin key, or null if authorized */
-export async function requireAdmin(request: Request | undefined, adminKey: string | undefined): Promise<Response | null> {
-  const adminHeader = request?.headers.get("X-Admin-Key");
-  const authHeader = request?.headers.get("Authorization");
-
-  let provided = adminHeader;
-  if (!provided && authHeader) {
-    if (!authHeader.startsWith("Bearer ")) {
-      return errorResponse(401, "Unauthorized");
-    }
-    provided = authHeader.slice("Bearer ".length).trim();
+export function getAdminCredential(request: Request | undefined): string | null {
+  const adminHeader = request?.headers.get("X-Admin-Key")?.trim();
+  if (adminHeader) {
+    return adminHeader;
   }
 
-  if (!adminKey || !provided || !(await timingSafeEqual(provided, adminKey))) {
+  const authHeader = request?.headers.get("Authorization");
+  if (!authHeader) {
+    return null;
+  }
+  if (!authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const bearer = authHeader.slice("Bearer ".length).trim();
+  return bearer.length > 0 ? bearer : null;
+}
+
+export async function hasValidAdminCredential(
+  request: Request | undefined,
+  adminKey: string | undefined,
+): Promise<boolean> {
+  const provided = getAdminCredential(request);
+  return !!adminKey && !!provided && (await timingSafeEqual(provided, adminKey));
+}
+
+/** Returns a 401 Response if the request lacks a valid admin key, or null if authorized */
+export async function requireAdmin(request: Request | undefined, adminKey: string | undefined): Promise<Response | null> {
+  const authHeader = request?.headers.get("Authorization");
+  if (authHeader && getAdminCredential(request) == null) {
+    return errorResponse(401, "Unauthorized");
+  }
+  if (!(await hasValidAdminCredential(request, adminKey))) {
     return errorResponse(401, "Unauthorized");
   }
   return null;

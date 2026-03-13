@@ -608,7 +608,8 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
 | `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit override addresses for special vault events |
 | `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: pressure shift (FIS), gauge, flight-to-quality |
-| `worker/src/api/mint-burn-flows.ts` | API handler: aggregate + per-coin flow data |
+| `worker/src/api/mint-burn-flows.ts` | API handler: route-level aggregate + per-coin orchestration |
+| `worker/src/api/mint-burn-flows-shared.ts` | Shared mint/burn cache fallback, cron snapshot, baseline, and coverage helpers |
 | `worker/src/api/mint-burn-events.ts` | API handler: paginated event feed |
 | `worker/src/api/backfill-mint-burn.ts` | Admin endpoint: controlled event ingestion backfill |
 | `worker/src/api/backfill-mint-burn-prices.ts` | Admin endpoint: backfill NULL amount_usd values |

@@ -21,6 +21,7 @@ import {
   resolveBlockTimestamps,
   type AlchemyLogEntry,
 } from "../lib/alchemy-logs";
+import { fetchEtherscanProxyHex, fetchJsonRpcHexAtUrl } from "../lib/evm-rpc";
 import { getChainRpc } from "../lib/chain-registry";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -115,31 +116,26 @@ async function fetchEvmBalanceAtTag(
   // balanceOf(address) selector = 0x70a08231
   const addr = (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
   const data = "0x70a08231" + addr.padStart(64, "0");
-
-  const params = new URLSearchParams({
-    chainid: evmChainId.toString(),
-    module: "proxy",
-    action: "eth_call",
-    to: contractAddress,
-    data,
-    tag,
-  });
-  if (apiKey) params.set("apikey", apiKey);
+  const blockNumberOrTag = tag === "latest" ? "latest" : Number.parseInt(tag, 16);
 
   try {
     budget.count++;
-    const json = await rateLimit(async () => {
-      const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, signal ? { signal } : undefined);
-      if (!res) return null;
-      return res.json() as Promise<{ result?: string; error?: unknown }>;
-    });
+    const result = await rateLimit(async () => fetchEtherscanProxyHex({
+      evmChainId,
+      action: "eth_call",
+      to: contractAddress,
+      data,
+      blockNumberOrTag: Number.isFinite(blockNumberOrTag) ? blockNumberOrTag : "latest",
+      apiKey,
+      signal,
+      timeoutMs: 10_000,
+    }));
 
-    // API failure, error response, or empty/invalid eth_call result → unknown
-    if (!json?.result || json.error || !json.result.startsWith("0x") || json.result.length < 4) {
+    if (!result) {
       return null;
     }
 
-    return bigIntToDecimal(BigInt(json.result), decimals);
+    return bigIntToDecimal(BigInt(result), decimals);
   } catch (e) {
     console.warn("[sync-blacklist] fetchEvmBalanceAtTag failed:", e);
     return null;
@@ -179,25 +175,17 @@ async function fetchBalanceViaDrpc(
 
   try {
     budget.count++;
-    const res = await fetchWithRetry(`https://lb.drpc.org/ogrpc?network=${network}&dkey=${drpcApiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "eth_call",
-        params: [{ to: contractAddress, data }, blockTag],
-      }),
-      signal,
-    });
-    if (!res) return null;
-    const json = (await res.json()) as { result?: string; error?: unknown };
-
-    if (!json?.result || json.error || !json.result.startsWith("0x") || json.result.length < 4) {
-      return null;
-    }
-
-    return bigIntToDecimal(BigInt(json.result), decimals);
+    const result = await fetchJsonRpcHexAtUrl(
+      `https://lb.drpc.org/ogrpc?network=${network}&dkey=${drpcApiKey}`,
+      "eth_call",
+      [{ to: contractAddress, data }, blockTag],
+      {
+        signal,
+        timeoutMs: 10_000,
+      },
+    );
+    if (!result) return null;
+    return bigIntToDecimal(BigInt(result), decimals);
   } catch (e) {
     console.warn("[sync-blacklist] fetchBalanceViaDrpc failed:", e);
     return null;

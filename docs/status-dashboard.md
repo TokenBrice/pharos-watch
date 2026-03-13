@@ -16,7 +16,7 @@ The status dashboard combines seven signals:
 6. Live reserve sync health (`/api/status` -> `reserveComposition`)
 7. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
 
-This page is **auth-gated in practice** because `/api/status` plus the admin probe/action paths require `X-Admin-Key`.
+This page is **auth-gated in practice** because `/api/status` plus the admin probe/action paths require a valid admin credential (`X-Admin-Key` in the browser session flow; `Authorization: Bearer <key>` is also accepted by the worker for non-browser callers).
 
 ---
 
@@ -102,11 +102,15 @@ Related extracted loaders:
   - `getTelegramBotStats()`
   - `getMintBurnReconciliation()`
   - empty fallback builders for dataset freshness / reserve composition
+- `worker/src/api/status-data-quality.ts`
+  - canonical stablecoins-cache / blacklist-gap / active-depeg / on-chain-supply quality aggregation
 
 ### Auth and caching
 
-- Requires `X-Admin-Key` (`requireAdmin`)
+- Requires a valid admin credential (`requireAdmin`)
 - Response cache policy: `Cache-Control: no-store`
+
+`computeRawStatus()` now performs the DB sentinel first and returns an explicit stale fallback snapshot when that sentinel fails, instead of throwing before the dashboard can show operator-visible degraded state.
 
 ### Cron health model
 
@@ -217,6 +221,10 @@ Additional response fields:
 This prevents `/status` from silently treating a broken stablecoins cache as `0 / 0` healthy price coverage.
 
 When one of those critical subqueries fails, `/api/status` now degrades `dataQualityStatus` and the status cards render `ERR` for the affected metric instead of showing a misleading `0`.
+
+Cache freshness subqueries are now also explicit. If a dedicated-table freshness lookup fails, `/api/status` adds a `cache_freshness_query_failed` availability cause instead of only surfacing a stale ratio.
+
+The public `/api/health` companion endpoint now returns a `warnings` array for these best-effort failures, and the status page model treats that as additional public-health context instead of assuming zero-like data is real.
 
 ### Live reserve sync health
 
