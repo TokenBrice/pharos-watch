@@ -148,6 +148,11 @@ describe("detectWarningSignals", () => {
     expect(signals).toContain("tvl-outflow");
   });
 
+  it("does not flag tvl-outflow when prevTvlUsd is zero", () => {
+    const signals = detectWarningSignals({ ...base, sourceTvlUsd: 0, prevTvlUsd: 0 });
+    expect(signals).not.toContain("tvl-outflow");
+  });
+
   it("can return multiple signals simultaneously", () => {
     const signals = detectWarningSignals({
       currentApy: 50,
