@@ -22,6 +22,7 @@ import {
   rowAccentClass,
   type DepegTableSortKey,
 } from "@/components/depeg-table-logic";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 export type { DepegTrackerRow } from "@/lib/depeg-sort";
 
@@ -34,8 +35,8 @@ interface DepegTrackerTableProps {
 const DEPEG_TRACKER_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
   { id: "rank", label: "#", className: "w-[50px] text-right" },
   { id: "name", label: "Name", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
-  { id: "pegScore", label: "Peg Score", sortKey: "pegScore", className: "text-right" },
-  { id: "dewsScore", label: "DEWS", sortKey: "dewsScore", className: "text-right" },
+  { id: "pegScore", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, sortKey: "pegScore", className: "text-right" },
+  { id: "dewsScore", label: <MethodologyLabel topic="dews">DEWS</MethodologyLabel>, sortKey: "dewsScore", className: "text-right" },
   { id: "currentDeviationBps", label: "Deviation", sortKey: "currentDeviationBps", className: "text-right" },
   { id: "pegPct", label: "Peg %", sortKey: "pegPct", className: "text-right hidden md:table-cell" },
   { id: "eventCount", label: "Events", sortKey: "eventCount", className: "text-right hidden md:table-cell" },

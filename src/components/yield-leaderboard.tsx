@@ -22,6 +22,7 @@ import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
 import { WARNING_SIGNAL_LABELS } from "@/lib/yield-constants";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 const COLUMN_COUNT = 12;
 
@@ -30,13 +31,25 @@ const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   { id: "coin", label: "Coin", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
   { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "text-right", title: "30-day average annual percentage yield" },
   { id: "safety", label: "Safety", className: "hidden md:table-cell text-center", title: "Pharos Safety Grade / Score" },
-  { id: "pys", label: "PYS", sortKey: "pys", className: "text-right", title: "Pharos Yield Score: risk-adjusted yield ranking" },
+  {
+    id: "pys",
+    label: <MethodologyLabel topic="pys">PYS</MethodologyLabel>,
+    sortKey: "pys",
+    className: "text-right",
+    title: "Pharos Yield Score: risk-adjusted yield ranking",
+  },
   { id: "source", label: "Source", className: "hidden sm:table-cell text-left" },
   { id: "yieldType", label: "Type", sortKey: "yieldType", className: "hidden sm:table-cell text-center", title: "Yield mechanism type" },
   { id: "tvl", label: "TVL", sortKey: "tvl", className: "hidden lg:table-cell text-right", title: "Total value locked in yield source" },
-  { id: "yieldStability", label: "Stability", sortKey: "yieldStability", className: "hidden lg:table-cell text-right", title: "Yield stability over 30 days (0-100%)" },
+  {
+    id: "yieldStability",
+    label: <MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>,
+    sortKey: "yieldStability",
+    className: "hidden lg:table-cell text-right",
+    title: "Yield stability over 30 days (0-100%)",
+  },
   { id: "range30d", label: "30d Range", className: "hidden xl:table-cell text-right" },
-  { id: "signals", label: "Signals", className: "hidden md:table-cell text-center" },
+  { id: "signals", label: <MethodologyLabel topic="yieldWarnings">Signals</MethodologyLabel>, className: "hidden md:table-cell text-center" },
   { id: "expand", label: <span className="sr-only">Expand row</span>, className: "w-[44px] text-right" },
 ] as const;
 

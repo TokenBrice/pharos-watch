@@ -503,7 +503,7 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 
-Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, source links, alt sources, warning callouts, and embedded `YieldHistoryChart`. Conditional: only renders for coins with yield data.
+Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, source links, alt sources, warning callouts, embedded `YieldHistoryChart`, and contextual methodology hints / footer links for PYS and yield stability. Conditional: only renders for coins with yield data.
 
 It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the shared risk-free rate and peer median into `YieldHistoryChart`.
 
@@ -537,7 +537,7 @@ Dashed reference line at the T-bill rate. Click a dot to navigate to that coin's
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
-Tabbed, sortable, paginated table (25 rows/page). Default sort: PYS descending.
+Tabbed, sortable, paginated table (25 rows/page). Default sort: PYS descending. Table headers for `PYS`, `Stability`, and `Signals` now use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
 
 The leaderboard is split into two source-aware tabs:
 

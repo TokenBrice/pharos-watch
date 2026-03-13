@@ -222,6 +222,27 @@ Current high-use areas:
 
 ---
 
+## Contextual Explainability
+
+Computed metrics now use a shared contextual-methodology pattern instead of relying only on page-level intros or `/methodology` as a separate destination.
+
+Current pattern:
+
+- compact help trigger attached directly to the metric label
+- desktop behavior: rich tooltip with short definition + methodology links
+- mobile behavior: bottom sheet with the same content
+- score-card footers may add `View methodology` and `Version history` actions when the surface is interpretation-heavy
+
+Use this on:
+
+- composite scores (`Safety Score`, `Liquidity Score`, `PYS`, `DEWS`)
+- baseline-relative or Pharos-native signals (`Pressure Shift vs 30D`, `Bank Run Gauge`)
+- opaque sub-dimensions where the label alone is insufficient (`Resilience`, `Dependency Risk`)
+
+Do not use this on every metric indiscriminately. The trigger is reserved for values where local interpretation meaningfully improves user decision-making.
+
+---
+
 ## Cards
 
 ### Base Card Primitive

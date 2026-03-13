@@ -6,7 +6,6 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
-import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useDexLiquidity, useDexLiquidityHistory } from "@/hooks/api-hooks";
@@ -26,6 +25,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
+import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
@@ -401,7 +401,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
-              DEX Liquidity
+              <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
             </CardTitle>
             <Badge
               variant="outline"
@@ -449,21 +449,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             )}
             {liq.effectiveTvlUsd > 0 && liq.effectiveTvlUsd !== liq.totalTvlUsd && (
               <div className="text-xs text-muted-foreground mt-0.5">
-                <TooltipProvider>
-                  <UiTooltip>
-                    <TooltipTrigger asChild>
-                      <span className="cursor-help underline decoration-dotted underline-offset-2">
-                        Effective: {formatCurrency(liq.effectiveTvlUsd)}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-[260px]">
-                      <p className="text-xs">
-                        TVL adjusted for pool balance, pair quality, and AMM mechanism. Reflects
-                        liquidity that would hold up under real pressure.
-                      </p>
-                    </TooltipContent>
-                  </UiTooltip>
-                </TooltipProvider>
+                <span className="inline-flex items-center gap-1">
+                  <MethodologyLabel topic="effectiveTvl">Effective</MethodologyLabel>: {formatCurrency(liq.effectiveTvlUsd)}
+                </span>
               </div>
             )}
           </div>
@@ -582,6 +570,8 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         {isRated && <TvlTrendChart stablecoinId={stablecoinId} />}
 
         {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} />}
+
+        <MethodologyCardActions topic="liquidityScore" />
       </CardContent>
     </Card>
   );

@@ -520,13 +520,13 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 
 | Component | File | Description |
 |-----------|------|-------------|
-| `FlowBrrrOverview` | `src/components/flow-brrr-overview.tsx` | Shared overview shell used by `/flows` and the homepage snapshot; renders the Bank Run Gauge band returned by the API plus the literal 24h minting-pressure gauge |
+| `FlowBrrrOverview` | `src/components/flow-brrr-overview.tsx` | Shared overview shell used by `/flows` and the homepage snapshot; renders the Bank Run Gauge band returned by the API plus the literal 24h minting-pressure gauge, with inline methodology help on the Bank Run Gauge label |
 | `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: mint (green area), burn (red area), net flow (blue line), hourly tooltip |
-| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest, pressure. Responsive column hiding |
+| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest, pressure. Responsive column hiding; `Pressure vs 30D` header uses the shared methodology-hint trigger |
 | `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
 | `MintingPressureGauge` | `src/components/minting-pressure-gauge.tsx` | Shared literal 24h mint-vs-burn gauge used by both the aggregate overview and stablecoin detail summary cards |
 | `HomepageFlowOverview` | `src/components/homepage-flow-overview.tsx` | Homepage snapshot wrapper: pulls 24h/7d aggregate flow data and renders the same net-direction hero used on `/flows`, including a headline keyed from aggregate net direction plus Bank Run Gauge pressure state, the Bank Run Gauge (pressure vs 30D), and the literal 24h Minting Pressure gauge |
-| `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: explicit `Net 24h`, `Pressure Shift vs 30D`, and a literal `Minting Pressure (24h)` gauge |
+| `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: explicit `Net 24h`, `Pressure Shift vs 30D`, and a literal `Minting Pressure (24h)` gauge, plus contextual methodology hints / footer links for the flow model |
 
 ### Dashboard Integration
 

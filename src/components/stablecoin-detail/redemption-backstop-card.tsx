@@ -10,6 +10,7 @@ import {
   REDEMPTION_SETTLEMENT_LABELS,
 } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionBackstopEntry } from "@shared/types";
+import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 function formatCapacityUsd(value: number | null): string | null {
   if (value == null || !Number.isFinite(value) || value <= 0) return null;
@@ -43,7 +44,7 @@ export function RedemptionBackstopCard({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
-          Redemption Backstop
+          <MethodologyLabel topic="redemptionBackstop">Redemption Backstop</MethodologyLabel>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -53,7 +54,9 @@ export function RedemptionBackstopCard({
           </Badge>
           {entry.effectiveExitScore != null ? (
             <Badge variant="outline" className="font-mono border-border/60 bg-muted/30">
-              Exit {entry.effectiveExitScore}/100
+              <span className="inline-flex items-center gap-1">
+                <MethodologyLabel topic="effectiveExit">Exit</MethodologyLabel> {entry.effectiveExitScore}/100
+              </span>
             </Badge>
           ) : null}
           <Badge variant="outline" className="border-border/60 bg-muted/30">
@@ -138,6 +141,8 @@ export function RedemptionBackstopCard({
             {entry.docs.label ?? "Source"}
           </a>
         ) : null}
+
+        <MethodologyCardActions topic="redemptionBackstop" />
       </CardContent>
     </Card>
   );

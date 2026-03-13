@@ -205,8 +205,8 @@ Validates DEWS against historical depeg events. Reports TP rate and lead time.
 | Component | File | Location |
 |-----------|------|----------|
 | `DEWSBadge` | `src/components/dews-badge.tsx` | Table rows (hidden when CALM) |
-| `DEWSDetail` | `src/components/dews-detail.tsx` | Stablecoin detail page |
-| `DEWSSummary` | `src/components/dews-summary.tsx` | Homepage widget |
+| `DEWSDetail` | `src/components/dews-detail.tsx` | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
+| `DEWSSummary` | `src/components/dews-summary.tsx` | Homepage widget / depeg-page hero radar; title-level contextual methodology hint |
 
 **Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/use-stress-signals.ts`
 

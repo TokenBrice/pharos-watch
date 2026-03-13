@@ -21,6 +21,7 @@ import {
   sweepDuration,
   pulseDuration,
 } from "@/lib/dews-radar-utils";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -597,7 +598,9 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
       <Card className={className}>
         {showHeader && (
           <CardHeader>
-            <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
+            <CardTitle as="h2">
+              <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
+            </CardTitle>
           </CardHeader>
         )}
         <CardContent className={showHeader ? undefined : "p-4"}>
@@ -631,7 +634,9 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
       {showHeader && (
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
+            <CardTitle as="h2">
+              <MethodologyLabel topic="dews">DEWS: Depeg Early Warning System</MethodologyLabel>
+            </CardTitle>
             <span className="text-xs text-muted-foreground tabular-nums">
               {elevated.length > 0
                 ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`

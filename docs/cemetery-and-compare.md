@@ -95,6 +95,16 @@ Compare includes client-side share/export rendering:
 - Supports clipboard image copy + Twitter intent flow
 - Supports PNG download from the generated canvas
 
+### Compare table context
+
+`src/components/comparison-table.tsx` now applies the shared contextual methodology pattern to the comparison metrics that most often need interpretation help in a side-by-side view:
+
+- `Peg Score`
+- `Liquidity Score`
+- `Safety Rating`
+
+That pattern is used in both the stacked mobile cards and the desktop comparison table so cross-asset comparison no longer assumes the user already remembers every Pharos-specific metric definition.
+
 ## Operational notes
 
 - Both pages are part of static export and rely on client-side fetches where applicable.

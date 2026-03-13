@@ -304,6 +304,10 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers based o
 - Shows: logo, symbol, peak deviation (red >= 500bps, amber < 500bps), direction badge, LIVE pulsing indicator if ongoing, date, duration
 - Click navigates to `/stablecoin/{id}`
 
+### Depeg dashboard stat context
+
+`DepegTrackerStats` (`src/components/depeg-tracker-stats.tsx`) now uses the shared contextual methodology pattern on key cards (`Active Depegs`, `Coins at Peg`, `Median Deviation`, `Worst Current`) so users can read the live-event semantics in place instead of jumping straight to the long-form methodology.
+
 ### Component: DepegHistory (`depeg-history.tsx`)
 
 - Stablecoin-detail depeg history table backed by the filtered infinite hook

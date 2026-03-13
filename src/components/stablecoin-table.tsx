@@ -30,6 +30,7 @@ import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { usePreference, DEFAULT_VISIBLE_COLUMNS, MOBILE_DEFAULT_COLUMNS, type ColumnId } from "@/hooks/use-preferences";
 import { ColumnVisibilityDropdown } from "@/components/stablecoin-table-column-visibility";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import {
   buildTrackedIdSet,
   exportStablecoinsCsv,
@@ -67,21 +68,21 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
   { id: "change7d", label: "7d", sortKey: "change7d", className: "text-right", title: "7-day market cap change" },
   {
     id: "grade",
-    label: "Grade",
+    label: <MethodologyLabel topic="safetyScore">Grade</MethodologyLabel>,
     sortKey: "grade",
     className: "text-center",
     title: "Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk",
   },
   {
     id: "stability",
-    label: "Peg Score",
+    label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>,
     sortKey: "stability",
     className: "text-right",
     title: "Peg Stability Score (0-100): measures peg-holding consistency over 30 days",
   },
   {
     id: "liquidity",
-    label: "Liq",
+    label: <MethodologyLabel topic="liquidityScore">Liq</MethodologyLabel>,
     sortKey: "liquidity",
     className: "text-right",
     title: "DEX Liquidity Score: measures pool depth, volume, and diversity across decentralized exchanges",

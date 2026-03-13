@@ -18,6 +18,7 @@ import {
 } from "@shared/lib/format";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData, PegSummaryCoin, StablecoinData, StablecoinMeta } from "@shared/types";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface HeroCardProps {
   coin: StablecoinMeta;
@@ -47,7 +48,7 @@ function HeroMetricCard({
   className = "",
   children,
 }: {
-  label: string;
+  label: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -300,7 +301,7 @@ export function HeroCard({
             </HeroMetricCard>
 
             <HeroMetricCard
-              label={!isNavToken ? "Peg Score" : "Type"}
+              label={!isNavToken ? <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel> : "Type"}
               className={!isNavToken ? pegScoreBorderClass : ""}
             >
               {pegScoreContent}
@@ -332,7 +333,7 @@ export function HeroCard({
                 </p>
               </HeroMetricCard>
 
-              <HeroMetricCard label="Liquidity" className={liqBorderClass}>
+              <HeroMetricCard label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>} className={liqBorderClass}>
                 {liquidityContent}
               </HeroMetricCard>
             </div>
@@ -459,13 +460,13 @@ export function HeroCard({
               </HeroMetricCard>
 
               <HeroMetricCard
-                label={!isNavToken ? "Peg Score" : "Type"}
+                label={!isNavToken ? <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel> : "Type"}
                 className={!isNavToken ? pegScoreBorderClass : ""}
               >
                 {pegScoreContent}
               </HeroMetricCard>
 
-              <HeroMetricCard label="Liquidity" className={liqBorderClass}>
+              <HeroMetricCard label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>} className={liqBorderClass}>
                 {liquidityContent}
               </HeroMetricCard>
             </div>

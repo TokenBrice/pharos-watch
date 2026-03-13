@@ -134,18 +134,24 @@ That shared retry is used by the page-level error surfaces.
 
 | Section / Component | Responsibility |
 |---------------------|----------------|
-| `HeroCard` | Price, supply deltas, peg metrics, liquidity headline, and feedback entrypoint |
-| `ReportCardDetail` | Overall Safety Score plus radar/dimension detail |
+| `HeroCard` | Price, supply deltas, peg metrics, liquidity headline, feedback entrypoint, and first-touch methodology hints for Peg Score / Liquidity |
+| `ReportCardDetail` | Overall Safety Score plus radar/dimension detail, contextual methodology hints, and a methodology footer line |
 | `SafetyScoreHistorySection` | Grade-transition timeline |
-| `OverviewSection` | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card |
+| `OverviewSection` | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card, and redemption/effective-exit methodology context |
 | `CoinNotices` | Coin-specific warnings/info blocks from metadata |
 | `McapChart` | Historical supply / market-cap chart |
 | `KeyInfoCard` | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction |
-| `YieldDetailSection` | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail |
-| `FlowsSection` | Per-coin mint/burn summary plus event history embed |
-| `DexLiquidityCard` | Liquidity score, top pools, DEX-implied price context |
+| `YieldDetailSection` | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help |
+| `FlowsSection` | Per-coin mint/burn summary plus event history embed, with contextual Pressure Shift help on the summary card |
+| `DexLiquidityCard` | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links |
 | `DepegHistory` | Historical depeg timeline for non-NAV assets |
 | `ExploreNextSection` | Related stablecoins, compare pages, and taxonomy/deeper-navigation links |
+
+Composite-score surfaces on the detail page now share a lightweight explainability pattern:
+
+- compact methodology hint trigger attached to the metric label
+- mobile sheet / desktop tooltip behavior from the same component
+- footer-level `View methodology` + `Version history` actions on the main score cards
 
 ---
 

@@ -39,6 +39,7 @@ import {
   type NetFlowDirection24h,
   type PressureShiftState,
 } from "@shared/lib/mint-burn-signals";
+import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -208,7 +209,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
     <Card>
       <CardHeader>
         <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
-          Mint &amp; Burn Flows
+          <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flows</MethodologyLabel>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -272,7 +273,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground">
-                      Pressure Shift vs 30D
+                      <MethodologyLabel topic="pressureShift">Pressure Shift vs 30D</MethodologyLabel>
                     </p>
                     <p
                       className={cn(
@@ -371,6 +372,8 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
             </div>
           </div>
         </div>
+
+        <MethodologyCardActions topic="mintBurnFlows" />
       </CardContent>
     </Card>
   );

@@ -14,6 +14,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -67,12 +68,12 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
         <CardHeader>
           <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
             <div className="flex items-center justify-between">
-              <span>Safety Score</span>
-            <span className="text-xs font-normal text-muted-foreground">
-              v{METHODOLOGY_VERSION}
-            </span>
-          </div>
-        </CardTitle>
+              <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
+              <span className="text-xs font-normal text-muted-foreground">
+                v{METHODOLOGY_VERSION}
+              </span>
+            </div>
+          </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Two-column layout: grade + radar | dimension breakdown */}
@@ -135,7 +136,13 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                     className="flex items-center justify-between rounded-lg border px-3 py-2"
                   >
                     <span className="text-sm font-medium">
-                      {DIMENSION_LABELS[key]}
+                      {key === "resilience" ? (
+                        <MethodologyLabel topic="resilience">{DIMENSION_LABELS[key]}</MethodologyLabel>
+                      ) : key === "dependencyRisk" ? (
+                        <MethodologyLabel topic="dependencyRisk">{DIMENSION_LABELS[key]}</MethodologyLabel>
+                      ) : (
+                        DIMENSION_LABELS[key]
+                      )}
                     </span>
                     <div className="flex items-center gap-2">
                       <Badge
@@ -202,7 +209,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                       )}
                       {card.rawInputs.redemptionBackstopScore != null ? (
                         <div className="flex items-center justify-between">
-                          <span>Redemption backstop</span>
+                          <MethodologyLabel topic="redemptionBackstop">Redemption backstop</MethodologyLabel>
                           <span className="tabular-nums text-foreground/80">
                             {card.rawInputs.redemptionBackstopScore}/100
                           </span>
@@ -210,7 +217,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                       ) : null}
                       {card.rawInputs.effectiveExitScore != null ? (
                         <div className="flex items-center justify-between">
-                          <span>Effective exit</span>
+                          <MethodologyLabel topic="effectiveExit">Effective exit</MethodologyLabel>
                           <span className="tabular-nums text-foreground/80">
                             {card.rawInputs.effectiveExitScore}/100
                           </span>
@@ -291,6 +298,8 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
             </p>
           </div>
         )}
+
+        <MethodologyCardActions topic="safetyScore" showVersion={false} />
       </CardContent>
     </Card>
   );

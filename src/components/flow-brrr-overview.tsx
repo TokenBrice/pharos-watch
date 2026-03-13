@@ -30,6 +30,7 @@ import {
   type PressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface FlowBrrrOverviewProps {
   gauge: MintBurnGauge | null;
@@ -304,7 +305,7 @@ function IterationOne({
 
             <div className={cn("mt-auto space-y-2 rounded-xl border p-3", snapshot.pressureUi.panelClass)}>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Bank Run Gauge (pressure vs 30D)</span>
+                <MethodologyLabel topic="bankRunGauge">Bank Run Gauge (pressure vs 30D)</MethodologyLabel>
                 <span className="font-mono">
                   {gaugeDisplay == null
                     ? "NR"

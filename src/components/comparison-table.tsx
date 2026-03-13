@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface ComparisonCoin {
   id: string;
@@ -187,7 +188,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Price</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}>{rowData.prices[i]}</dd>
-              <dt className="text-muted-foreground">Peg Score</dt>
+              <dt className="text-muted-foreground"><MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel></dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}>
                 {rowData.pegScores[i] != null ? formatScore(rowData.pegScores[i]) : "—"}
               </dd>
@@ -199,7 +200,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                   ? `${rowData.weeklyChanges[i]! >= 0 ? "+" : ""}${rowData.weeklyChanges[i]!.toFixed(2)}%`
                   : "—"}
               </dd>
-              <dt className="text-muted-foreground">Liquidity</dt>
+              <dt className="text-muted-foreground"><MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel></dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}>
                 {rowData.liquidityScores[i] != null ? formatScore(rowData.liquidityScores[i]) : "—"}
               </dd>
@@ -209,7 +210,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dd className="text-right">{rowData.backingLabels[i]}</dd>
               <dt className="text-muted-foreground">Peg</dt>
               <dd className="text-right">{rowData.pegCurrencies[i]}</dd>
-              <dt className="text-muted-foreground">Safety Rating</dt>
+              <dt className="text-muted-foreground"><MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel></dt>
               <dd className={`text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`}>
                 {rowData.safetyGrades[i] ?? "—"}
               </dd>
@@ -265,7 +266,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
               {/* Peg Score */}
               <TableRow>
-                <TableCell className="font-medium">Peg Score</TableCell>
+                <TableCell className="font-medium"><MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel></TableCell>
                 {coins.map((coin, i) => (
                   <TableCell
                     key={coin.id}
@@ -310,7 +311,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Liquidity Score */}
             <TableRow>
-              <TableCell className="font-medium">Liquidity Score</TableCell>
+              <TableCell className="font-medium"><MethodologyLabel topic="liquidityScore">Liquidity Score</MethodologyLabel></TableCell>
               {coins.map((coin, i) => (
                 <TableCell
                   key={coin.id}
@@ -355,7 +356,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Safety Rating */}
             <TableRow>
-              <TableCell className="font-medium">Safety Rating</TableCell>
+              <TableCell className="font-medium"><MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel></TableCell>
               {coins.map((coin, i) => (
                 <TableCell
                   key={coin.id}

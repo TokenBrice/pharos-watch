@@ -17,6 +17,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 export interface LiquidityStatsData {
   totalTvl: number;
@@ -213,7 +214,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <MetricStatCard
           borderColorClass="border-l-amber-500"
-          title="Avg Liq Score"
+          title={<MethodologyLabel topic="liquidityScore">Avg Liq Score</MethodologyLabel>}
           value={
             <>
               {stats.avgScore}
@@ -227,7 +228,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <MetricStatCard
           borderColorClass="border-l-violet-500"
-          title="Covered on DEX"
+          title={<MethodologyLabel topic="liquidityScore">Covered on DEX</MethodologyLabel>}
           value={stats.withLiquidity}
           valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
           subtext={`${stats.highConfidenceCoverage} primary/mixed · ${stats.fallbackCoverage} fallback · of ${stats.totalTracked}`}

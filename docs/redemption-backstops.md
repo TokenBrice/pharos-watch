@@ -7,7 +7,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 ## Methodology Versioning
 
 - **Current methodology version:** `v1.0`
-- **Public methodology anchor:** `/methodology/#safety-scores`
+- **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
@@ -204,11 +204,11 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()` with `CRON_1H`
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, component subscores, capacity, docs link)
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, component subscores, capacity, docs link, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `worker/src/lib/report-cards-snapshot.ts` injects `redemptionBackstopScore`, `redemptionRouteFamily`, and immediate-capacity fields into `rawInputs`, and `shared/lib/report-cards.ts` consumes the score in `scoreLiquidity()`
 
-There is currently no dedicated list page for redemption backstops; the primary user-facing surface is the stablecoin detail page plus the report-card liquidity dimension.
+There is currently no dedicated list page or standalone public methodology section for redemption backstops; the primary user-facing surface is the stablecoin detail page plus the report-card liquidity dimension. Contextual hints on those surfaces currently deep-link into the Safety Scores methodology section where effective-exit logic is documented.
 
 ---
 

@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 interface YieldDetailSectionProps {
   stablecoinId: string;
@@ -109,7 +110,7 @@ function DetailStatCard({
   toneClass,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   value?: string;
   toneClass?: string;
   children?: ReactNode;
@@ -257,7 +258,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <DetailStatCard label="Current APY" value={`${ranking.currentApy.toFixed(2)}%`} />
             <DetailStatCard label="30d APY" value={`${ranking.apy30d.toFixed(2)}%`} />
-            <DetailStatCard label="PYS">
+            <DetailStatCard label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>}>
               <PysBreakdown
                 score={ranking.pharosYieldScore}
                 toneClass={pysColor}
@@ -267,7 +268,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                 sustainabilityMult={sustainabilityMult}
               />
             </DetailStatCard>
-            <DetailStatCard label="Stability" value={stabilityValue} />
+            <DetailStatCard label={<MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>} value={stabilityValue} />
             <DetailStatCard
               label="Excess Yield"
               value={formatSignedPercent(ranking.excessYield)}
@@ -367,6 +368,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               medianApy={medianApy}
             />
           </div>
+
+          <MethodologyCardActions topic="pys" />
         </CardContent>
       </Card>
     </section>

@@ -30,6 +30,8 @@ import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { THREE_DAYS_MS } from "@/lib/constants";
+import { MethodologyLabel } from "@/components/methodology-hint";
+import type { MethodologyContextKey } from "@/lib/methodology-context";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -40,19 +42,25 @@ const COMPONENT_COLORS = {
   trend: CHART_GREEN,
 };
 
-const COMPONENT_LEGEND = [
-  { label: "Severity", color: COMPONENT_COLORS.severity },
-  { label: "Breadth", color: COMPONENT_COLORS.breadth },
-  { label: "Stress Breadth", color: COMPONENT_COLORS.stressBreadth },
-  { label: "Trend", color: COMPONENT_COLORS.trend },
+const COMPONENT_LEGEND: Array<{ label: string; topic: MethodologyContextKey; color: string }> = [
+  { label: "Severity", topic: "psiSeverity", color: COMPONENT_COLORS.severity },
+  { label: "Breadth", topic: "psiBreadth", color: COMPONENT_COLORS.breadth },
+  { label: "Stress Breadth", topic: "psiStressBreadth", color: COMPONENT_COLORS.stressBreadth },
+  { label: "Trend", topic: "psiTrend", color: COMPONENT_COLORS.trend },
 ];
 
-const COMPONENT_DETAIL = [
-  { key: "severity", label: "Severity", sign: "−", color: COMPONENT_COLORS.severity },
-  { key: "breadth", label: "Breadth", sign: "−", color: COMPONENT_COLORS.breadth },
-  { key: "stressBreadth", label: "Stress Breadth", sign: "−", color: COMPONENT_COLORS.stressBreadth },
-  { key: "trend", label: "Trend", sign: "+", color: COMPONENT_COLORS.trend },
-] as const;
+const COMPONENT_DETAIL: Array<{
+  key: "severity" | "breadth" | "stressBreadth" | "trend";
+  label: string;
+  topic: MethodologyContextKey;
+  sign: string;
+  color: string;
+}> = [
+  { key: "severity", label: "Severity", topic: "psiSeverity", sign: "−", color: COMPONENT_COLORS.severity },
+  { key: "breadth", label: "Breadth", topic: "psiBreadth", sign: "−", color: COMPONENT_COLORS.breadth },
+  { key: "stressBreadth", label: "Stress Breadth", topic: "psiStressBreadth", sign: "−", color: COMPONENT_COLORS.stressBreadth },
+  { key: "trend", label: "Trend", topic: "psiTrend", sign: "+", color: COMPONENT_COLORS.trend },
+];
 
 const CONDITION_BANDS: Array<{ range: string; band: ConditionBand; meaning: string }> = [
   { range: "90 – 100", band: "BEDROCK", meaning: "Exceptional stability across all tracked stablecoins" },
@@ -147,7 +155,7 @@ function ComponentChart({
           {COMPONENT_LEGEND.map((item) => (
             <div key={item.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-              {item.label}
+              <MethodologyLabel topic={item.topic}>{item.label}</MethodologyLabel>
             </div>
           ))}
         </div>
@@ -681,6 +689,9 @@ export function StabilityIndexClient() {
           <div className="flex flex-row items-center justify-center gap-3 sm:gap-4 lg:justify-start">
             <PsiLighthouse band={displayBand} color={hexColor} size={60} />
             <div className="flex min-w-0 flex-col items-center gap-1 lg:items-start">
+              <div className="text-xs text-muted-foreground">
+                <MethodologyLabel topic="psi">PSI</MethodologyLabel>
+              </div>
               <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 lg:justify-start">
                 <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
                   {formatScore(displayScore)}
@@ -703,7 +714,9 @@ export function StabilityIndexClient() {
           <div className="hidden lg:grid lg:min-w-0 lg:grid-cols-4 lg:gap-x-5 lg:border-l lg:border-border/60 lg:pl-5">
             {COMPONENT_DETAIL.map((c) => (
               <div key={c.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-                <span className="text-xs text-muted-foreground">{c.label}</span>
+                <span className="text-xs text-muted-foreground">
+                  <MethodologyLabel topic={c.topic}>{c.label}</MethodologyLabel>
+                </span>
                 <span className="text-lg font-extrabold tabular-nums leading-none" style={{ color: c.color }}>
                   {c.sign}{formatScore(components[c.key] ?? 0)}
                 </span>

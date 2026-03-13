@@ -21,6 +21,7 @@ import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liqui
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareLiquidityRows, type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 export { compareLiquidityRows, type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table-logic";
 
@@ -34,7 +35,7 @@ interface LiquidityTableProps {
 const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
   { id: "rank", label: "#", className: "w-[50px] text-right" },
   { id: "name", label: "Name", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
-  { id: "score", label: "Score", sortKey: "score", className: "text-right" },
+  { id: "score", label: <MethodologyLabel topic="liquidityScore">Score</MethodologyLabel>, sortKey: "score", className: "text-right" },
   { id: "tvl", label: "DEX TVL", sortKey: "tvl", className: "text-right" },
   { id: "tvlTrend", label: "7d Trend", sortKey: "tvlTrend", className: "hidden lg:table-cell text-right" },
   { id: "volume", label: "24h Vol", sortKey: "volume", className: "text-right" },

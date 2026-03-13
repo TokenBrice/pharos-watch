@@ -257,4 +257,5 @@ Every source family now uses the same minimum liquidity rule for DEX prices: a p
 
 - `dex-liquidity-card.tsx`: shows DEX-implied price section when available plus coverage badges (`Primary`, `Mixed`, `Fallback`, `NR`)
 - `/liquidity`: shows coverage badges and a separate unrated/unobserved section instead of silently dropping NR assets
+- Detail and overview liquidity surfaces now attach contextual methodology hints to the score label, `Effective TVL`, and key summary stats, with score-card footer links back to `/methodology/#liquidity-methodology`
 - `peg-heatmap.tsx`: amber "!" badge on tiles where DEX disagrees with primary

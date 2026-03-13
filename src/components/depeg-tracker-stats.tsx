@@ -2,6 +2,7 @@
 
 import { MetricStatCard } from "@/components/metric-stat-card";
 import type { PegSummaryStats } from "@shared/types";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface DepegTrackerStatsProps {
   stats: PegSummaryStats;
@@ -18,7 +19,7 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <MetricStatCard
         borderColorClass="border-l-red-500"
-        title="Active Depegs"
+        title={<MethodologyLabel topic="activeDepegs">Active Depegs</MethodologyLabel>}
         value={stats.activeDepegCount}
         valueClassName="text-2xl font-bold font-mono tabular-nums"
         subtext="ongoing events"
@@ -26,7 +27,7 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
 
       <MetricStatCard
         borderColorClass="border-l-green-500"
-        title="Coins at Peg"
+        title={<MethodologyLabel topic="coinsAtPeg">Coins at Peg</MethodologyLabel>}
         value={stats.coinsAtPeg}
         valueClassName="text-2xl font-bold font-mono tabular-nums"
         subtext={`of ${stats.totalTracked} tracked`}
@@ -34,7 +35,7 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
 
       <MetricStatCard
         borderColorClass="border-l-blue-500"
-        title="Median Deviation"
+        title={<MethodologyLabel topic="medianDeviation">Median Deviation</MethodologyLabel>}
         value={`${stats.medianDeviationBps} bps`}
         valueClassName="text-2xl font-bold font-mono tabular-nums"
         subtext="across all coins"
@@ -58,7 +59,7 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
 
       <MetricStatCard
         borderColorClass="border-l-orange-500"
-        title="Worst Current"
+        title={<MethodologyLabel topic="worstCurrentDeviation">Worst Current</MethodologyLabel>}
         value={stats.worstCurrent ? `${Math.abs(stats.worstCurrent.bps)} bps` : "0 bps"}
         valueClassName="text-2xl font-bold font-mono tabular-nums"
         subtext={stats.worstCurrent?.symbol ?? "all healthy"}

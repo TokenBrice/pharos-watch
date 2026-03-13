@@ -37,6 +37,7 @@ import {
   PRESSURE_VALUE_CLASS,
   type FlowTableSortKey,
 } from "@/components/flow-table-logic";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface FlowTableProps {
   coins: MintBurnCoinFlow[];
@@ -45,7 +46,12 @@ interface FlowTableProps {
 
 const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
   { id: "coin", label: "Coin" },
-  { id: "pressure", label: "Pressure vs 30D", sortKey: "pressure", className: "text-right" },
+  {
+    id: "pressure",
+    label: <MethodologyLabel topic="pressureShift">Pressure vs 30D</MethodologyLabel>,
+    sortKey: "pressure",
+    className: "text-right",
+  },
   { id: "net24h", label: "Net 24h", sortKey: "net24h", className: "text-right" },
   { id: "mint24h", label: "Minted 24h", sortKey: "mint24h", className: "hidden text-right sm:table-cell" },
   { id: "burn24h", label: "Burned 24h", sortKey: "burn24h", className: "hidden text-right sm:table-cell" },
