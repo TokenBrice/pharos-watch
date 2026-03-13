@@ -59,30 +59,6 @@ function resolveOpsApiOrigin(env: OpsAdminProxyEnv): string {
   return normalizeOrigin(env.OPS_API_ORIGIN?.trim() || DEFAULT_OPS_API_ORIGIN);
 }
 
-function hasAccessSessionSignal(request: Request): boolean {
-  const jwtAssertion = request.headers.get("Cf-Access-Jwt-Assertion")?.trim();
-  if (jwtAssertion) {
-    return true;
-  }
-
-  const accessEmail = request.headers.get("Cf-Access-Authenticated-User-Email")?.trim();
-  if (accessEmail) {
-    return true;
-  }
-
-  const cookie = request.headers.get("Cookie") ?? "";
-  return cookie.includes("CF_AppSession=") || cookie.includes("CF_Authorization=");
-}
-
-function resolveOperatorIdentity(request: Request): { email: string | null; subject: string | null } {
-  const email = request.headers.get("Cf-Access-Authenticated-User-Email")?.trim() || null;
-  const commonName = request.headers.get("Cf-Access-Authenticated-User-Identity")?.trim() || null;
-  return {
-    email,
-    subject: commonName,
-  };
-}
-
 function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
   const path = params.path;
   if (Array.isArray(path)) {
@@ -105,7 +81,6 @@ function isAllowedAdminPath(path: string): boolean {
 function buildUpstreamHeaders(
   request: Request,
   env: OpsAdminProxyEnv,
-  operatorIdentity: { email: string | null; subject: string | null },
 ): Headers | Response {
   if (!env.OPS_API_SERVICE_TOKEN_ID || !env.OPS_API_SERVICE_TOKEN_SECRET) {
     return jsonError(500, "Ops API proxy is not configured");
@@ -120,12 +95,6 @@ function buildUpstreamHeaders(
   }
   headers.set("CF-Access-Client-Id", env.OPS_API_SERVICE_TOKEN_ID);
   headers.set("CF-Access-Client-Secret", env.OPS_API_SERVICE_TOKEN_SECRET);
-  if (operatorIdentity.email) {
-    headers.set("X-Pharos-Operator-Email", operatorIdentity.email);
-  }
-  if (operatorIdentity.subject) {
-    headers.set("X-Pharos-Operator-Sub", operatorIdentity.subject);
-  }
 
   return headers;
 }
@@ -156,10 +125,6 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     return jsonError(404, "Not found");
   }
 
-  if (!hasAccessSessionSignal(request)) {
-    return jsonError(401, "Unauthorized");
-  }
-
   const upstreamPath = resolveUpstreamPath(params);
   if (!upstreamPath || !isAllowedAdminPath(upstreamPath)) {
     return jsonError(404, "Not found");
@@ -173,7 +138,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     return response;
   }
 
-  const upstreamHeaders = buildUpstreamHeaders(request, env, resolveOperatorIdentity(request));
+  const upstreamHeaders = buildUpstreamHeaders(request, env);
   if (upstreamHeaders instanceof Response) {
     return upstreamHeaders;
   }

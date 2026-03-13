@@ -79,6 +79,8 @@ Phase 2 introduces:
 - Pages Functions forwarding to `ops-api.pharos.watch`
 - service-token auth from Pages Functions to the operator API host
 
+The current proxy trusts the Cloudflare Access-protected `ops.pharos.watch` host as the human-entry gate and does not try to re-validate the UI JWT inside the function itself.
+
 ### Pages project bindings needed for Phase 2
 
 Required:
