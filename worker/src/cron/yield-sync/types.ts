@@ -32,8 +32,3 @@ export interface ResolvedYieldEntry {
   symbol: string;
   yield: ResolvedYield | null;
 }
-
-export interface JsonRpcCallResponse {
-  result?: string;
-  error?: unknown;
-}
