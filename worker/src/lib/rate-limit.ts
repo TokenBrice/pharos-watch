@@ -139,6 +139,9 @@ export async function checkPublicApiRateLimit(
 
     return null;
   } catch (err) {
+    // Known limitation: in-memory fallback resets on isolate eviction.
+    // Under sustained D1 failure, rate limiting provides best-effort
+    // protection within a single isolate's lifetime only.
     console.warn("[public-api] distributed rate limit failed, falling back to isolate-local limiter:", err);
     return checkRateLimit(ip, limit, windowMs);
   }
