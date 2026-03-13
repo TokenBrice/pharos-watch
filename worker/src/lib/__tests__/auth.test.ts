@@ -78,6 +78,27 @@ describe("auth helpers", () => {
     await expect(hasValidAdminCredential(request, "wrong-key")).resolves.toBe(false);
   });
 
+  it("accepts ops-api requests carrying Access-generated user identity", async () => {
+    const request = new Request("https://ops-api.pharos.watch/api/status", {
+      headers: { "Cf-Access-Authenticated-User-Email": "operator@example.com" },
+    });
+
+    const result = await requireAdmin(request, undefined);
+    expect(result).toBeNull();
+  });
+
+  it("accepts ops-api requests carrying service-token headers", async () => {
+    const request = new Request("https://ops-api.pharos.watch/api/status", {
+      headers: {
+        "CF-Access-Client-Id": "svc-id",
+        "CF-Access-Client-Secret": "svc-secret",
+      },
+    });
+
+    const result = await requireAdmin(request, undefined);
+    expect(result).toBeNull();
+  });
+
   it("timingSafeEqual handles equal, different, and different-length strings", async () => {
     await expect(timingSafeEqual("same", "same")).resolves.toBe(true);
     await expect(timingSafeEqual("same", "diff")).resolves.toBe(false);

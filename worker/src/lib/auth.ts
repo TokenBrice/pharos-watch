@@ -1,5 +1,7 @@
 import { errorResponse } from "./api-utils";
 
+const DEFAULT_OPS_API_HOST = "ops-api.pharos.watch";
+
 /** Timing-safe string comparison for admin key validation.
  *  Hashes both inputs first so the comparison never leaks length. */
 export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
@@ -29,10 +31,40 @@ export function getAdminCredential(request: Request | undefined): string | null 
   return bearer.length > 0 ? bearer : null;
 }
 
+function isOpsApiRequest(request: Request | undefined): boolean {
+  if (!request) return false;
+  try {
+    return new URL(request.url).hostname === DEFAULT_OPS_API_HOST;
+  } catch {
+    return false;
+  }
+}
+
+function hasOpsApiAccessSignal(request: Request | undefined): boolean {
+  if (!isOpsApiRequest(request)) return false;
+
+  const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
+  if (accessJwt) {
+    return true;
+  }
+
+  const accessEmail = request?.headers.get("Cf-Access-Authenticated-User-Email")?.trim();
+  if (accessEmail) {
+    return true;
+  }
+
+  const serviceTokenId = request?.headers.get("CF-Access-Client-Id")?.trim();
+  const serviceTokenSecret = request?.headers.get("CF-Access-Client-Secret")?.trim();
+  return Boolean(serviceTokenId && serviceTokenSecret);
+}
+
 export async function hasValidAdminCredential(
   request: Request | undefined,
   adminKey: string | undefined,
 ): Promise<boolean> {
+  if (hasOpsApiAccessSignal(request)) {
+    return true;
+  }
   const provided = getAdminCredential(request);
   return !!adminKey && !!provided && (await timingSafeEqual(provided, adminKey));
 }
