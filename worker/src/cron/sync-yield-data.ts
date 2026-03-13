@@ -1,5 +1,6 @@
 // worker/src/cron/sync-yield-data.ts
 import {
+  TRACKED_STABLECOINS,
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
@@ -730,14 +731,23 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   const writeStmts = [...yieldDataStmts, ...historyStmts];
   if (writeStmts.length > 0) await batchExecute(db, writeStmts);
 
-  if (resolvedIds.length > 0) {
-    const staleRowInClause = buildInClause(resolvedIds);
+  const managedYieldIds = TRACKED_STABLECOINS.map((meta) => meta.id);
+  if (managedYieldIds.length > 0) {
+    const staleRowInClause = buildInClause(managedYieldIds);
     await db
       .prepare(
         `DELETE FROM yield_data
          WHERE stablecoin_id IN (${staleRowInClause.sql}) AND updated_at < ?`,
       )
       .bind(...staleRowInClause.binds, startSec)
+      .run();
+
+    await db
+      .prepare(
+        `DELETE FROM yield_data
+         WHERE stablecoin_id NOT IN (${staleRowInClause.sql})`,
+      )
+      .bind(...staleRowInClause.binds)
       .run();
   }
 

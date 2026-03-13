@@ -371,7 +371,49 @@ describe("syncYieldData", () => {
       .find((entry) => entry.sql.includes("DELETE FROM yield_data") && entry.sql.includes("stablecoin_id IN"));
 
     expect(deleteCall).toBeDefined();
-    expect(deleteCall?.binds[0]).toBe("100");
+    expect(deleteCall?.binds).toEqual(
+      expect.arrayContaining(["100", "usdc-circle", "u-united-stables", "lusd-liquity"]),
+    );
+    expect(deleteCall?.binds[deleteCall.binds.length - 1]).toBe(Math.floor(Date.now() / 1000));
+  });
+
+  it("purges orphan yield rows for coins outside the tracked stablecoin set", async () => {
+    const db = makeDb();
+
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    await syncYieldData(db);
+
+    const orphanDeleteCall = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("DELETE FROM yield_data") && entry.sql.includes("stablecoin_id NOT IN"));
+
+    expect(orphanDeleteCall).toBeDefined();
+    expect(orphanDeleteCall?.binds).toEqual(
+      expect.arrayContaining(["100", "usdc-circle", "u-united-stables", "lusd-liquity"]),
+    );
   });
 
   it("uses cached DL pools from DEX sync when available", async () => {

@@ -9,7 +9,6 @@ import {
   handleStablecoinCharts,
   handleUsdsStatus,
   handleBluechipRatings,
-  handleYieldRankings,
 } from "../cache-handlers";
 
 function makeCacheDb(key: string, value: unknown, updatedAt: number) {
@@ -125,23 +124,5 @@ describe("cache-passthrough: handleBluechipRatings", () => {
     const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
     expect(body._meta.status).toBe("fresh");
     expect(body._meta.ageSeconds).toBe(120);
-  });
-});
-
-describe("cache-passthrough: handleYieldRankings", () => {
-  it("returns 503 when cache is empty", async () => {
-    const emptyDb = mockD1();
-    const res = await handleYieldRankings(emptyDb);
-    expect(res.status).toBe(503);
-  });
-
-  it("returns 200 with concrete _meta on cache hit", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeCacheDb("yield-rankings", { rankings: [] }, nowSec - 17);
-    const res = await handleYieldRankings(db);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
-    expect(body._meta.status).toBe("fresh");
-    expect(body._meta.ageSeconds).toBe(17);
   });
 });

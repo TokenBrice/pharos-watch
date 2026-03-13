@@ -1,17 +1,8 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
-  computeOverallGrade,
-  isBlacklistable,
-  scoreDecentralization,
-  scoreDependencyRisk,
-  scoreLiquidity,
-  scorePegStability,
-  scoreResilience,
-} from "@shared/lib/report-cards";
-import { loadStablecoinsCache } from "./stablecoins-cache";
-import { loadDexLiquidityMap } from "./dex-liquidity";
-import { loadRedemptionBackstopMap } from "./redemption-backstops-store";
-import { derivePegAnalyticsSnapshot } from "./peg-analytics";
+  buildReportCardsSnapshot,
+  ReportCardsSnapshotUnavailableError,
+} from "./report-cards-snapshot";
 
 interface SafetyResult {
   score: number;
@@ -113,79 +104,32 @@ export async function computeSafetyScoresSnapshot(
   const allGrades: SafetyGradeRow[] = [];
 
   try {
-    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
-    if (stablecoinsCache.kind !== "ok") {
-      const reason = `stablecoins-cache:${stablecoinsCache.reason}`;
-      console.warn(`[safety-scores] computation skipped (${reason})`);
-      if (outputMode === "full-grades") {
-        return toFullResult("degraded", scores, allGrades, trackedCount, reason);
-      }
-      return toMapResult("degraded", scores, trackedCount, reason);
-    }
-    const [pegAnalytics, dexLiqMap, redemptionBackstopMap] = await Promise.all([
-      derivePegAnalyticsSnapshot(db, {
-        peggedAssets: stablecoinsCache.payload.peggedAssets,
-        fxFallbackRates: stablecoinsCache.payload.fxFallbackRates,
-        methodologyAsOf: stablecoinsCache.updatedAt,
-        includeNavTokens,
-      }),
-      loadDexLiquidityMap(db),
-      loadRedemptionBackstopMap(db),
-    ]);
-    const pegDataById = pegAnalytics.pegDataById;
+    const snapshot = await buildReportCardsSnapshot(db);
+    for (const card of snapshot.cards) {
+      if (card.isDefunct) continue;
+      if (!includeNavTokens && card.rawInputs.navToken) continue;
 
-    const overallScores = new Map<string, number>();
-    const blacklistableIds: ReadonlySet<string> = new Set(
-      TRACKED_STABLECOINS
-        .filter((meta) => isBlacklistable(meta) === true)
-        .map((meta) => meta.id),
-    );
-
-    const computeForCoin = (meta: (typeof TRACKED_STABLECOINS)[number]): void => {
-      if (!includeNavTokens && meta.flags.navToken) return;
-
-      const pegData = pegDataById.get(meta.id);
-
-      const canBlacklist = isBlacklistable(meta, blacklistableIds);
-      const redemption = redemptionBackstopMap[meta.id];
-      const dimensions = {
-        pegStability: scorePegStability(pegData, meta),
-        liquidity: scoreLiquidity(dexLiqMap[meta.id], redemption),
-        resilience: scoreResilience(meta, canBlacklist),
-        decentralization: scoreDecentralization(meta.flags.governance, meta),
-        dependencyRisk: scoreDependencyRisk(meta, overallScores),
-      };
-      const overall = computeOverallGrade(dimensions, { navToken: !!meta.flags.navToken });
-      if (overall.score !== null) {
-        overallScores.set(meta.id, overall.score);
-        scores.set(meta.id, { score: overall.score, grade: overall.grade });
+      if (card.overallScore !== null) {
+        scores.set(card.id, { score: card.overallScore, grade: card.overallGrade });
       }
 
       if (outputMode === "full-grades") {
         allGrades.push({
-          id: meta.id,
-          symbol: meta.symbol,
-          grade: overall.grade,
-          score: overall.score ?? 0,
-          pegScore: pegData?.pegScore ?? null,
-          liqScore: dimensions.liquidity.score,
+          id: card.id,
+          symbol: card.symbol,
+          grade: card.overallGrade,
+          score: card.overallScore ?? 0,
+          pegScore: card.rawInputs.pegScore,
+          liqScore: card.dimensions.liquidity.score,
         });
       }
-    };
-
-    // Phase 1: non-dependent
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.flags.governance === "centralized-dependent") continue;
-      computeForCoin(meta);
-    }
-
-    // Phase 2: dependent
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.flags.governance !== "centralized-dependent") continue;
-      computeForCoin(meta);
     }
   } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
+    const reason = err instanceof ReportCardsSnapshotUnavailableError
+      ? err.message
+      : err instanceof Error
+        ? err.message
+        : String(err);
     console.warn("[safety-scores] computation failed, returning degraded snapshot:", err);
     if (outputMode === "full-grades") {
       return toFullResult("degraded", scores, allGrades, trackedCount, reason);

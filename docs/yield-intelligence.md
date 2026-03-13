@@ -388,7 +388,7 @@ Fetches the latest T-bill proxy rate from FRED (`DGS3MO`). Validates the rate (m
 
 ### `GET /api/yield-rankings`
 
-Pre-computed rankings served from cache. Written by `sync-yield-data`.
+Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from the current report-card snapshot at API read time. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs.
 
 **Cache profile:** Standard (`s-maxage=300, max-age=60`)
 
@@ -636,7 +636,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
 | `worker/src/cron/fetch-tbill-rate.ts`                | Daily T-bill rate cron                                                                                                                       |
-| `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler (`handleYieldRankings`)                                                                       |
+| `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `shared/lib/classification.ts`                       | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`                                                                                                     |

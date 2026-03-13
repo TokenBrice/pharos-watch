@@ -1227,7 +1227,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. Includes Pharos Yield Score, risk-adjusted metrics, source-selection provenance, and the current risk-free rate.
+Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. Includes source-selection provenance and the current risk-free rate.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 1800 s (30 minutes).
 
@@ -1275,10 +1275,10 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 | `yieldType`        | `string`         | Yield type classification (e.g. `"lending-vault"`, `"staking"`) |
 | `dataSource`       | `string`         | Data source identifier (e.g. `"defillama"`)                     |
 | `sourceTvlUsd`     | `number \| null` | TVL of the yield source pool (USD)                              |
-| `pharosYieldScore` | `number \| null` | Composite Pharos Yield Score (0–100)                            |
-| `safetyScore`      | `number \| null` | Safety score from report cards (0–100)                          |
-| `safetyGrade`      | `string \| null` | Letter grade (`"A+"` through `"F"`, or `"NR"`)                  |
-| `yieldToRisk`      | `number \| null` | Yield-to-risk ratio (excess yield / safety penalty)             |
+| `pharosYieldScore` | `number \| null` | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY inputs plus the current Safety Score |
+| `safetyScore`      | `number \| null` | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; unrated coins use the default NR penalty input (`40`) |
+| `safetyGrade`      | `string \| null` | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`) from `/api/report-cards` |
+| `yieldToRisk`      | `number \| null` | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score |
 | `excessYield`      | `number \| null` | APY above risk-free rate (percentage points)                    |
 | `yieldStability`   | `number \| null` | Yield stability metric (0–1; higher = more stable)              |
 | `apyVariance30d`   | `number \| null` | 30-day APY variance                                             |

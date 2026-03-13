@@ -30,7 +30,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/og/*` | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards |
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
 | `GET /api/safety-score-history` | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`) |
-| `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
+| `GET /api/yield-rankings` | Cache-backed yield rankings with live-hydrated Safety Scores and risk-adjusted metrics |
 | `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
 | `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
 | `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all|counted`, `?minAmount=`, `?limit=N&offset=M`) |

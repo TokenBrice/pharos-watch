@@ -1,5 +1,15 @@
-import { createCacheHandler } from "../lib/api-utils";
-import { CACHE_PROFILES } from "../lib/constants";
+import { YieldRankingsResponseSchema, type ReportCard, type YieldRanking, type YieldRankingsResponse } from "@shared/types";
+import {
+  addFreshnessHeaders,
+  createCacheHandler,
+  errorResponse,
+  jsonResponse,
+  validatePayloadWithSchema,
+  withErrorHandler,
+} from "../lib/api-utils";
+import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
+import { getCache } from "../lib/db";
+import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 
 export const handleStablecoins = createCacheHandler("stablecoins", "stablecoins", CACHE_PROFILES.realtime, 600);
 
@@ -9,13 +19,137 @@ export const handleBluechipRatings = createCacheHandler("bluechip-ratings", "blu
 
 export const handleUsdsStatus = createCacheHandler("usds-status", "usds-status", CACHE_PROFILES.standard, 86400);
 
+const YIELD_RANKINGS_MAX_AGE_SEC = 1800;
+
+function buildFreshnessMeta(updatedAt: number, maxAgeSec: number) {
+  const ageSeconds = Math.floor(Date.now() / 1000) - updatedAt;
+  const ratio = ageSeconds / maxAgeSec;
+  return {
+    updatedAt,
+    ageSeconds,
+    status: ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale",
+  };
+}
+
+function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalingFactor: number): number {
+  if (row.apy30d <= 0) return 0;
+  const riskPenalty = Math.max(0.5, (101 - safetyInputScore) / 20);
+  const yieldEfficiency = row.apy30d / riskPenalty;
+  const sustainabilityMult = Math.max(0.3, row.yieldStability ?? 1);
+  return Math.min(100, Math.round(yieldEfficiency * sustainabilityMult * scalingFactor));
+}
+
+function hydrateYieldRankingsWithLiveSafety(
+  payload: YieldRankingsResponse,
+  cards: ReportCard[],
+): YieldRankingsResponse {
+  const reportCardById = new Map(
+    cards
+      .filter((card) => !card.isDefunct)
+      .map((card) => [card.id, card]),
+  );
+
+  const rankings = payload.rankings
+    .flatMap((row) => {
+      const card = reportCardById.get(row.id);
+      if (!card) return [];
+
+      const safetyInputScore = card.overallScore ?? DEFAULT_SAFETY_SCORE;
+      const pharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
+
+      return [{
+        ...row,
+        safetyScore: safetyInputScore,
+        safetyGrade: card.overallGrade,
+        pharosYieldScore,
+        yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
+        provenance: row.provenance
+          ? {
+            ...row.provenance,
+            usedDefaultSafety: card.overallScore === null,
+          }
+          : null,
+      }];
+    })
+    .sort((a, b) => {
+      const scoreDiff = (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) - (a.pharosYieldScore ?? Number.NEGATIVE_INFINITY);
+      if (scoreDiff !== 0) return scoreDiff;
+      const apyDiff = b.currentApy - a.currentApy;
+      if (apyDiff !== 0) return apyDiff;
+      return a.name.localeCompare(b.name);
+    });
+
+  return {
+    ...payload,
+    rankings,
+    provenance: payload.provenance
+      ? {
+        ...payload.provenance,
+        safetySnapshot: {
+          ...payload.provenance.safetySnapshot,
+          coveredCount: cards.filter((card) => !card.isDefunct && card.overallScore !== null).length,
+          trackedCount: cards.filter((card) => !card.isDefunct).length,
+          coverageRatio: cards.length > 0
+            ? Number((
+              cards.filter((card) => !card.isDefunct && card.overallScore !== null).length
+              / Math.max(1, cards.filter((card) => !card.isDefunct).length)
+            ).toFixed(4))
+            : 1,
+          reason: null,
+        },
+      }
+      : payload.provenance,
+  };
+}
+
 /**
  * GET /api/yield-rankings
- * Returns pre-computed yield rankings from cache (written by sync-yield-data cron).
+ * Returns cached yield rankings, with live Safety Score fields hydrated from the
+ * current report-card snapshot so the endpoint cannot drift from /api/report-cards.
  */
-export const handleYieldRankings = createCacheHandler(
+export const handleYieldRankings = withErrorHandler(
   "yield-rankings",
-  "yield-rankings",
-  CACHE_PROFILES.standard,
-  1800,
+  async (db: D1Database): Promise<Response> => {
+    const cached = await getCache(db, "yield-rankings");
+    if (!cached) {
+      return errorResponse(503, "Data not yet available");
+    }
+
+    const headers = addFreshnessHeaders({
+      "Content-Type": "application/json",
+      "Cache-Control": CACHE_PROFILES.standard,
+    }, cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC);
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(cached.value);
+    } catch (err) {
+      console.warn("[yield-rankings] Failed to parse cached payload:", err instanceof Error ? err.message : err);
+      return new Response(cached.value, { headers });
+    }
+
+    let body = parsed;
+    const validation = validatePayloadWithSchema(
+      YieldRankingsResponseSchema,
+      parsed,
+      "yield-rankings:cache-read",
+    );
+
+    if (validation.ok) {
+      try {
+        const snapshot = await buildReportCardsSnapshot(db);
+        body = hydrateYieldRankingsWithLiveSafety(validation.data, snapshot.cards);
+      } catch (err) {
+        console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
+        body = validation.data;
+      }
+    }
+
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      (body as Record<string, unknown>)._meta = buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC);
+      return jsonResponse(body, headers);
+    }
+
+    return new Response(cached.value, { headers });
+  },
 );
