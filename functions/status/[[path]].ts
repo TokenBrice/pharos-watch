@@ -1,19 +1,10 @@
-const DEFAULT_OPS_UI_ORIGIN = "https://ops.pharos.watch";
+import { resolveOpsUiOrigin } from "../lib/ops-origin";
 
 interface StatusHostGateEnv {
   ASSETS: {
     fetch: typeof fetch;
   };
   OPS_UI_ORIGIN?: string;
-}
-
-function normalizeOrigin(input: string): string {
-  const normalized = input.includes("://") ? input : `https://${input}`;
-  return new URL(normalized).origin;
-}
-
-function resolveOpsUiOrigin(env: StatusHostGateEnv): string {
-  return normalizeOrigin(env.OPS_UI_ORIGIN?.trim() || DEFAULT_OPS_UI_ORIGIN);
 }
 
 export const onRequest = async ({ request, env }: { request: Request; env: StatusHostGateEnv }) => {
