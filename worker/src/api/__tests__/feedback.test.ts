@@ -253,6 +253,7 @@ describe("handleFeedback", () => {
             peggedAssets: [
               {
                 id: "eurc-circle",
+                symbol: "EURC",
                 price: 1.08,
                 pegType: "peggedEUR",
                 circulating: { peggedEUR: 5_000_000 },
@@ -299,6 +300,7 @@ describe("handleFeedback", () => {
             peggedAssets: [
               {
                 id: "xaut-tether",
+                symbol: "XAUT",
                 price: 2990,
                 pegType: "peggedGOLD",
                 circulating: { peggedGOLD: 8_000_000 },

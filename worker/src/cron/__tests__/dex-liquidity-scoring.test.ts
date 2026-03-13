@@ -413,8 +413,8 @@ describe("dex-liquidity scoring", () => {
     vi.mocked(getCache).mockResolvedValueOnce({
       value: JSON.stringify({
         peggedAssets: [
-          { id: "usdt-tether", price: 1.01 },
-          { id: "usdc-circle", price: null },
+          { id: "usdt-tether", symbol: "USDT", price: 1.01 },
+          { id: "usdc-circle", symbol: "USDC", price: null },
         ],
       }),
       updatedAt: 1_700_000_000,
@@ -498,7 +498,7 @@ describe("dex-liquidity scoring", () => {
     vi.mocked(getCache).mockResolvedValueOnce({
       value: JSON.stringify({
         peggedAssets: [
-          { id: "usdt-tether", price: 1 },
+          { id: "usdt-tether", symbol: "USDT", price: 1 },
         ],
       }),
       updatedAt: 1_700_000_000,
