@@ -216,9 +216,23 @@ export const handleBackfillSupplyHistory = withErrorHandler(
         continue;
       }
 
-      // Skip other non-DefiLlama coins (no historical data available)
+      // CoinGecko-only and non-gold/silver commodity coins: backfill via CoinGecko market_chart
+      // (same path as commodity tokens — market_cap from CG is accurate for USD stablecoins too)
       if (meta.detailProvider === "coingecko" || meta.detailProvider === "commodity") {
-        skipped.push(meta.symbol);
+        if (meta.geckoId) {
+          try {
+            const result = await backfillCommodity(db, meta.id, { geckoId: meta.geckoId, protocolSlug: meta.protocolSlug ?? undefined });
+            if (result.error) {
+              errors.push(`${meta.symbol}: ${result.error}`);
+            } else {
+              totalRows += result.rows;
+            }
+          } catch (err) {
+            errors.push(`${meta.symbol}: CoinGecko backfill failed — ${err}`);
+          }
+        } else {
+          skipped.push(meta.symbol);
+        }
         continue;
       }
 
