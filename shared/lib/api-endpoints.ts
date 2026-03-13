@@ -613,6 +613,9 @@ export function getStrictContractPaths(): readonly string[] {
   return STRICT_CONTRACT_PATHS;
 }
 
+/** Pre-computed strict contract paths (module-load-time). */
+export const STRICT_CONTRACT_PATHS_LIST = getStrictContractPaths();
+
 function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
   const definition = getEndpointDefinition(url.pathname);
   if (definition) {

@@ -6,7 +6,7 @@ import {
   isMutatingAdminPath,
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
-import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/smoke-api.mjs";
 
 describe("api endpoint registry", () => {

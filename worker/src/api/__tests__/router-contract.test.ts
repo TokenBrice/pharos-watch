@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
-import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { route, ROUTER_STATIC_PATHS } from "../../router";
 import { mockD1 } from "./helpers/mock-d1";
 

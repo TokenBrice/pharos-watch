@@ -361,9 +361,8 @@ shared/                           # Runtime-neutral boundary (import via `@share
 │   ├── yield.ts                  # Yield rankings/history contracts
 │   └── mint-burn.ts              # Mint/burn flow, event, and sync contracts
 └── lib/
-    ├── api-endpoints.ts          # Authoritative endpoint metadata + status/smoke/strict-contract helpers
+    ├── api-endpoints.ts          # Authoritative endpoint metadata + status/smoke/strict-contract helpers (incl. STRICT_CONTRACT_PATHS_LIST)
     ├── chain-provider-registry.ts # Runtime-neutral CoinGecko/DexScreener/GeckoTerminal chain slug registry
-    ├── strict-contract-paths.ts  # Strict API contract path exports derived from api-endpoints.ts
     ├── stablecoins.ts            # Tracked stablecoin metadata list
     ├── stablecoin-id-registry.ts # Canonical/external ID lookup maps + resolution helpers
     ├── supply.ts                 # Supply helper utilities

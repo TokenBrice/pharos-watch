@@ -1,6 +1,6 @@
 import type { ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 
 export type ApiContractMode = "strict" | "warn";
 

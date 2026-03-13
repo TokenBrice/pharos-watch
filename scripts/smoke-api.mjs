@@ -3,7 +3,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 
-const strictContractModule = await import("../shared/lib/strict-contract-paths.ts");
+const strictContractModule = await import("../shared/lib/api-endpoints.ts");
 const STRICT_CONTRACT_PATHS_LIST =
   strictContractModule.STRICT_CONTRACT_PATHS_LIST
   ?? strictContractModule.default?.STRICT_CONTRACT_PATHS_LIST
