@@ -15,7 +15,7 @@ import { BalanceBar } from "@/components/balance-bar";
 import { Badge } from "@/components/ui/badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-constants";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
@@ -155,7 +155,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 <TableCell className="text-right font-mono tabular-nums">{formatCurrency(liq.totalVolume24hUsd)}</TableCell>
                 <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums">{formatCurrency(liq.totalVolume7dUsd)}</TableCell>
                 <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">
-                  {(vtRatio * 100).toFixed(1)}%
+                  {formatPercent(vtRatio * 100, 1)}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">{liq.poolCount}</TableCell>
                 <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">{liq.chainCount}</TableCell>

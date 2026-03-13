@@ -12,7 +12,7 @@ import { useYieldRankings } from "@/hooks/api-hooks";
 import { WARNING_SIGNAL_LABELS, formatYieldWarningSignal } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
@@ -256,8 +256,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <DetailStatCard label="Current APY" value={`${ranking.currentApy.toFixed(2)}%`} />
-            <DetailStatCard label="30d APY" value={`${ranking.apy30d.toFixed(2)}%`} />
+            <DetailStatCard label="Current APY" value={formatPercent(ranking.currentApy)} />
+            <DetailStatCard label="30d APY" value={formatPercent(ranking.apy30d)} />
             <DetailStatCard label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>}>
               <PysBreakdown
                 score={ranking.pharosYieldScore}
@@ -347,7 +347,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                       {source.yieldSource}
                     </YieldSourceLink>
                     <span className="font-mono text-sm tabular-nums text-muted-foreground">
-                      {source.currentApy.toFixed(2)}%
+                      {formatPercent(source.currentApy)}
                     </span>
                   </div>
                 ))}
