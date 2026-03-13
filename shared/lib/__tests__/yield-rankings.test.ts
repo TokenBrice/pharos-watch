@@ -44,6 +44,22 @@ describe("dedupeYieldRankings", () => {
     expect(rankings.find((row) => row.id === "usdc-circle")?.yieldSource).toBe("Higher");
   });
 
+  it("handles rows with all null scores gracefully", () => {
+    const rankings = dedupeYieldRankings([
+      makeRanking({ id: "a", currentApy: 0, pharosYieldScore: null, apy30d: 0, sourceTvlUsd: null }),
+      makeRanking({ id: "a", currentApy: 0, pharosYieldScore: null, apy30d: 0, sourceTvlUsd: null }),
+    ]);
+    expect(rankings).toHaveLength(1);
+  });
+
+  it("returns a single row unchanged", () => {
+    const rankings = dedupeYieldRankings([
+      makeRanking({ id: "solo", currentApy: 5.0 }),
+    ]);
+    expect(rankings).toHaveLength(1);
+    expect(rankings[0].id).toBe("solo");
+  });
+
   it("uses PYS and TVL as tie-breakers when APY matches", () => {
     const rankings = dedupeYieldRankings([
       makeRanking({
