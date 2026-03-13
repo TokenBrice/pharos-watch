@@ -4,7 +4,7 @@ Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CO
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
-**Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
+**Deployed at:** `api.pharos.watch` (public API route) and `ops-api.pharos.watch` (operator-prep route declared in `wrangler.toml`; pair with Cloudflare Access before use)
 
 ---
 
@@ -39,8 +39,13 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | Binding | Type | Required | Used by |
 |---------|------|----------|---------|
 | `DB` | D1Database | Yes | All crons and API handlers |
-| `CORS_ORIGIN` | string | Yes | CORS headers (`https://pharos.watch`) |
+| `CORS_ORIGIN` | string | Yes | Comma-separated CORS allowlist. Repo default: `https://pharos.watch,https://ops.pharos.watch` |
 | `SELF_URL` | string | No | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
+| `OPS_UI_ORIGIN` | string | No | Reserved for later operator-origin phases (`https://ops.pharos.watch`) |
+| `OPS_API_ORIGIN` | string | No | Reserved for later operator-origin phases (`https://ops-api.pharos.watch`) |
+| `CF_ACCESS_TEAM_DOMAIN` | string | No | Reserved for later Cloudflare Access validation / proxy phases |
+| `CF_ACCESS_OPS_UI_AUD` | string | No | Reserved for later Cloudflare Access UI JWT validation |
+| `CF_ACCESS_OPS_API_AUD` | string | No | Reserved for later Cloudflare Access API JWT validation |
 | `ETHERSCAN_API_KEY` | string | No | Blacklist sync, USDS status |
 | `TRONGRID_API_KEY` | string | No | Blacklist sync (Tron chain) |
 | `DRPC_API_KEY` | string | No | L2 archive node balance lookups |
@@ -111,7 +116,8 @@ Applied to every response via `addCorsHeaders()`:
 
 | Header | Value |
 |--------|-------|
-| `Access-Control-Allow-Origin` | `CORS_ORIGIN` env var (static: `https://pharos.watch`) |
+| `Access-Control-Allow-Origin` | matching request origin from the `CORS_ORIGIN` allowlist, otherwise the first configured origin |
+| `Vary` | `Origin` |
 | `Access-Control-Allow-Methods` | `GET, POST, OPTIONS` |
 | `Access-Control-Allow-Headers` | `Authorization, Content-Type, X-Admin-Key, Idempotency-Key` |
 | `Access-Control-Expose-Headers` | `X-Data-Age, Warning` |
@@ -120,6 +126,8 @@ Applied to every response via `addCorsHeaders()`:
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
 | `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` |
+
+`CORS_ORIGIN` is now treated as a comma-separated allowlist. If the incoming request includes an `Origin` header that matches one of the configured entries, the Worker echoes that specific origin. Otherwise it falls back to the first configured origin.
 
 ### Edge Cache Strategy
 

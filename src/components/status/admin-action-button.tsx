@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { StatusPageAction } from "@shared/lib/api-endpoints";
-import { buildApiUrl } from "@/lib/api";
+import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
+import { buildRequestUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,7 +24,7 @@ export interface AdminActionExecution {
 
 interface AdminActionButtonProps {
   action: StatusPageAction;
-  adminKey: string;
+  adminAccess: AdminAccess;
   buttonClassName?: string;
   fullWidth?: boolean;
   onFinished?: (execution: AdminActionExecution) => void;
@@ -31,7 +32,7 @@ interface AdminActionButtonProps {
 
 export function AdminActionButton({
   action,
-  adminKey,
+  adminAccess,
   buttonClassName,
   fullWidth = true,
   onFinished,
@@ -47,9 +48,9 @@ export function AdminActionButton({
     setError(null);
 
     try {
-      const res = await fetch(buildApiUrl(action.path), {
+      const res = await fetch(buildRequestUrl(buildAdminApiPath(action.path, adminAccess)), {
         method: action.method,
-        headers: { "X-Admin-Key": adminKey },
+        ...buildAdminFetchInit(adminAccess),
       });
       const text = await res.text();
 

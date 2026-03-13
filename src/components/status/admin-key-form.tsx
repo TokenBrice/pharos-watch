@@ -11,9 +11,11 @@ import { EmptyStateSurface } from "@/components/empty-state-surface";
 
 interface AdminKeyFormProps {
   onSubmit: (key: string) => void;
+  notice?: string;
+  idleTimeoutMinutes: number;
 }
 
-export function AdminKeyForm({ onSubmit }: AdminKeyFormProps) {
+export function AdminKeyForm({ onSubmit, notice, idleTimeoutMinutes }: AdminKeyFormProps) {
   const [value, setValue] = useState("");
 
   function handleSubmit(e: FormEvent) {
@@ -27,7 +29,7 @@ export function AdminKeyForm({ onSubmit }: AdminKeyFormProps) {
       <EmptyStateSurface
         eyebrow="Operator Access"
         title="Public status route, private control plane."
-        description="This page exposes the existence of the status surface, but the telemetry, cron controls, and incident tooling stay behind an admin key."
+        description="This page exposes the existence of the status surface, but the telemetry, cron controls, and incident tooling stay behind an admin key kept in memory for the current tab only."
         steps={[
           {
             title: "Monitor pipeline health",
@@ -41,6 +43,10 @@ export function AdminKeyForm({ onSubmit }: AdminKeyFormProps) {
           {
             title: "Leave without guessing",
             description: "If you do not have a key, use the return path below instead of poking at a dead end.",
+          },
+          {
+            title: "Short-lived fallback",
+            description: `The in-browser key expires after ${idleTimeoutMinutes} minutes of inactivity and is not persisted across reloads.`,
           },
         ]}
         actions={
@@ -81,6 +87,11 @@ export function AdminKeyForm({ onSubmit }: AdminKeyFormProps) {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {notice ? (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                    {notice}
+                  </div>
+                ) : null}
                 <Input
                   type="password"
                   aria-label="Admin key"

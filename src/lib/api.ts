@@ -33,11 +33,18 @@ export function buildApiUrl(path: string): string {
   return `${API_BASE}${path}`;
 }
 
+export function buildRequestUrl(path: string): string {
+  if (path.startsWith("/api/admin/")) {
+    return path;
+  }
+  return buildApiUrl(path);
+}
+
 function apiRequest(
   path: string,
   init?: RequestInit,
 ): Promise<Response> {
-  return fetch(buildApiUrl(path), init);
+  return fetch(buildRequestUrl(path), init);
 }
 
 export class SchemaValidationError extends Error {
@@ -204,7 +211,7 @@ export async function apiFetchWithMeta<T>(
 
 export async function fetchStablecoinReserves(stablecoinId: string): Promise<import("@shared/types").StablecoinReservesResponse | null> {
   const path = API_PATHS.stablecoinReserves(stablecoinId);
-  const res = await fetch(buildApiUrl(path));
+  const res = await fetch(buildRequestUrl(path));
   if (res.status === 404) return null;
   if (!res.ok) {
     let bodyText: string | null = null;

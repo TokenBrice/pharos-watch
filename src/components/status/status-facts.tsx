@@ -2,11 +2,12 @@
 
 import type { StatusCause, StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { AdminAccess } from "@/lib/admin-access";
 import { getRecommendedActionsForCause } from "./action-recommendations";
 import { AdminActionButton } from "./admin-action-button";
 
 interface StatusFactsProps {
-  adminKey: string;
+  adminAccess: AdminAccess;
   dbHealthy: boolean;
   summary: StatusResponse["summary"];
   causes: StatusResponse["causes"];
@@ -28,11 +29,11 @@ function formatCauseMetric(cause: StatusCause): string | null {
 
 function BlockerList({
   causes,
-  adminKey,
+  adminAccess,
   onActionFinished,
 }: {
   causes: StatusCause[];
-  adminKey: string;
+  adminAccess: AdminAccess;
   onActionFinished?: () => void;
 }) {
   const orderedCauses = [...causes].sort((a, b) => {
@@ -88,7 +89,7 @@ function BlockerList({
                         <AdminActionButton
                           key={`${cause.code}-${action.path}`}
                           action={action}
-                          adminKey={adminKey}
+                          adminAccess={adminAccess}
                           fullWidth={false}
                           buttonClassName="min-w-[9rem]"
                           onFinished={() => onActionFinished?.()}
@@ -107,7 +108,7 @@ function BlockerList({
 }
 
 export function StatusFacts({
-  adminKey,
+  adminAccess,
   dbHealthy,
   summary,
   causes,
@@ -155,7 +156,7 @@ export function StatusFacts({
             </div>
           ))}
         </div>
-        <BlockerList causes={activeCauses} adminKey={adminKey} onActionFinished={onActionFinished} />
+        <BlockerList causes={activeCauses} adminAccess={adminAccess} onActionFinished={onActionFinished} />
       </CardContent>
     </Card>
   );

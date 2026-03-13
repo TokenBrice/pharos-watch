@@ -164,6 +164,8 @@ src/                              # Next.js frontend (static export)
 │   ├── globals.css               # Global styles (Tailwind v4)
 │   ├── sitemap.ts                # Dynamic sitemap generation
 │   └── robots.ts                 # robots.txt
+├── functions/
+│   └── api/admin/[[path]].ts     # Cloudflare Pages Functions catch-all proxy for ops-only admin routes (`/api/admin/*` -> `ops-api`)
 ├── components/
 │   ├── ui/                       # shadcn/ui primitives (do not edit manually)
 │   ├── stablecoin-detail/        # Stablecoin detail section components (extracted from page client)
@@ -284,9 +286,9 @@ src/                              # Next.js frontend (static export)
 │   ├── use-logos.ts              # Static logos from data/logos.json
 │   ├── use-blacklist-events.ts   # GET /api/blacklist
 │   ├── use-depeg-events.ts       # GET /api/depeg-events
-│   ├── use-endpoint-probes.ts    # Parallel endpoint probes (status page), shared polling helper + admin-header handling
-│   ├── use-status.ts             # GET /api/status (admin key auth) using shared polling policy helper
-│   ├── use-admin-session-key.ts  # Session-storage-backed admin key hook for auth-gated operator views
+│   ├── use-endpoint-probes.ts    # Parallel endpoint probes (status page); public probes hit api.pharos.watch, admin probes switch to same-origin `/api/admin/*` on ops host
+│   ├── use-status.ts             # GET /api/status using either legacy admin-key auth or ops-host same-origin proxy mode
+│   ├── use-admin-session-key.ts  # In-memory-only admin key hook with idle expiry for auth-gated operator views
 │   ├── use-status-dashboard-model.ts # Status dashboard polling orchestration + derived operator model
 │   ├── use-coverage-matrix-model.ts # Coverage page query orchestration + derived row/snapshot model
 │   ├── use-compare-selection.ts  # Compare page URL state, slot selection, and preset application
@@ -307,9 +309,10 @@ src/                              # Next.js frontend (static export)
 │   ├── use-preferences.ts        # User preference state (persistent settings)
 │   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
-│   └── use-status-history.ts     # GET /api/status-history (admin key auth) using shared polling policy helper
+│   └── use-status-history.ts     # GET /api/status-history using either legacy admin-key auth or ops-host same-origin proxy mode
 └── lib/
-    ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
+    ├── admin-access.ts           # Ops-host detection + admin proxy/header path helpers
+    ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper (`/api/admin/*` stays same-origin)
     ├── analytics.ts              # Analytics tracking (page views, events)
     ├── client-feature-page.tsx   # Narrow helper for repeated dynamic-client feature routes wrapped by FeaturePageShell
     ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin() type guard, extractGoldPrices(), computeBlacklistStats()

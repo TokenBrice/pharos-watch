@@ -6,8 +6,25 @@ import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { checkRateLimit } from "../lib/rate-limit";
 import { errorResponse } from "../lib/api-utils";
 import { hasValidAdminCredential } from "../lib/auth";
+import { parseCsvEnv } from "../lib/env";
 import { isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
+
+const DEFAULT_CORS_ORIGIN = "https://pharos.watch";
+
+function resolveAllowedCorsOrigins(configured: string): string[] {
+  const parsed = parseCsvEnv(configured);
+  return parsed.length > 0 ? parsed : [DEFAULT_CORS_ORIGIN];
+}
+
+function resolveCorsOrigin(request: Request, configured: string): string {
+  const allowedOrigins = resolveAllowedCorsOrigins(configured);
+  const requestOrigin = request.headers.get("Origin")?.trim();
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+  return allowedOrigins[0];
+}
 
 function corsHeaders(origin: string): Record<string, string> {
   return {
@@ -16,6 +33,7 @@ function corsHeaders(origin: string): Record<string, string> {
     "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Admin-Key, Idempotency-Key",
     "Access-Control-Expose-Headers": "X-Data-Age, Warning",
     "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
     "X-Content-Type-Options": "nosniff",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -51,7 +69,7 @@ export async function handleHttpRequest(
   initCoinGecko(env.COINGECKO_API_KEY);
   initAlerts(env.ALERT_WEBHOOK_URL);
   initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
-  const origin = env.CORS_ORIGIN;
+  const origin = resolveCorsOrigin(request, env.CORS_ORIGIN);
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
   const feedbackEnv = {
     GITHUB_PAT: env.GITHUB_PAT,

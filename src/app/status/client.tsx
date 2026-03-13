@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode, useEffect, useState } from "react";
+import { Fragment, type ReactNode, useState, useSyncExternalStore } from "react";
 import type { StatusResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
@@ -35,6 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAdminSessionKey } from "@/hooks/use-admin-session-key";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
+import { isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
 import {
   type DashboardSectionId,
   formatTimestampMs,
@@ -53,9 +54,34 @@ function getCronSeverity(cron: StatusResponse["crons"][string]): number {
 
 
 export default function StatusClient() {
-  const { adminKey, handleKeySubmit, handleSignOut } = useAdminSessionKey();
+  const opsUi = useSyncExternalStore(
+    () => () => undefined,
+    () => isOpsUiHost(),
+    () => null,
+  );
+  const {
+    adminKey,
+    adminSessionRevision,
+    handleKeySubmit,
+    handleSignOut,
+    idleTimeoutMinutes,
+    lastExitReason,
+  } = useAdminSessionKey();
+  const adminAccess: AdminAccess = opsUi
+    ? { mode: "ops-proxy" }
+    : {
+        mode: "legacy-key",
+        adminKey,
+        adminSessionRevision,
+      };
+  const adminNotice = lastExitReason === "expired"
+    ? `Signed out after ${idleTimeoutMinutes} minutes of inactivity. Re-enter the admin key to continue.`
+    : undefined;
+  const handleOpsSignOut = () => {
+    window.location.assign("/cdn-cgi/access/logout");
+  };
 
-  if (!adminKey) {
+  if (opsUi == null) {
     return (
       <FeaturePageShell
         breadcrumbName="System Status"
@@ -66,7 +92,27 @@ export default function StatusClient() {
           "Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions.",
         ]}
       >
-        <AdminKeyForm onSubmit={handleKeySubmit} />
+        <div className="py-20 text-center text-muted-foreground">Loading status access...</div>
+      </FeaturePageShell>
+    );
+  }
+
+  if (!opsUi && !adminKey) {
+    return (
+      <FeaturePageShell
+        breadcrumbName="System Status"
+        path="/status/"
+        title="System Status"
+        variant="auth-gated"
+        leadParagraphs={[
+          "Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions.",
+        ]}
+      >
+        <AdminKeyForm
+          onSubmit={handleKeySubmit}
+          notice={adminNotice}
+          idleTimeoutMinutes={idleTimeoutMinutes}
+        />
       </FeaturePageShell>
     );
   }
@@ -78,15 +124,26 @@ export default function StatusClient() {
       title="System Status"
       variant="auth-gated"
       leadParagraphs={[
-        "Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions.",
+        opsUi
+          ? "Access-protected operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions."
+          : "Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions.",
       ]}
     >
-      <StatusDashboard adminKey={adminKey} onSignOut={handleSignOut} />
+      <StatusDashboard
+        adminAccess={adminAccess}
+        onSignOut={opsUi ? handleOpsSignOut : handleSignOut}
+      />
     </FeaturePageShell>
   );
 }
 
-function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut: () => void }) {
+function StatusDashboard({
+  adminAccess,
+  onSignOut,
+}: {
+  adminAccess: AdminAccess;
+  onSignOut: () => void;
+}) {
   const {
     data,
     error,
@@ -100,7 +157,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
     probes,
     probesLoading,
     setHistoryWindow,
-  } = useStatusDashboardModel(adminKey);
+  } = useStatusDashboardModel(adminAccess);
   const diagnosticsSignal =
     data?.overallStatus !== "healthy" || (model?.notices.length ?? 0) > 0 || (model?.healthDiffersFromStatus ?? false);
   const reliabilitySignal =
@@ -223,7 +280,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
         }
       >
         <StatusFacts
-          adminKey={adminKey}
+          adminAccess={adminAccess}
           dbHealthy={data.dbHealthy}
           summary={data.summary}
           causes={data.causes}
@@ -304,7 +361,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
 
         <DiscoveryCandidatesCard
           candidates={data.discoveryCandidates}
-          adminKey={adminKey}
+          adminAccess={adminAccess}
           nowSeconds={data.timestamp}
         />
       </StatusSection>
@@ -403,7 +460,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
         }
       >
         <AdminActionsPanel
-          adminKey={adminKey}
+          adminAccess={adminAccess}
           status={{ causes: data.causes, crons: data.crons }}
           nowSeconds={data.timestamp}
           onActionFinished={handleRefresh}
@@ -607,7 +664,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
             <div className="space-y-4">
               <RecommendedActionStrip
                 recommendations={recommendedActions}
-                adminKey={adminKey}
+                adminAccess={adminAccess}
                 onActionFinished={handleRefresh}
               />
 

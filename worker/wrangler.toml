@@ -12,7 +12,8 @@ type = "CompiledWasm"
 globs = ["**/*.wasm"]
 
 routes = [
-  { pattern = "api.pharos.watch", custom_domain = true }
+  { pattern = "api.pharos.watch", custom_domain = true },
+  { pattern = "ops-api.pharos.watch", custom_domain = true }
 ]
 
 [limits]
@@ -48,5 +49,5 @@ database_name = "stablecoin-db"
 database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 
 [vars]
-CORS_ORIGIN = "https://pharos.watch"
+CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"

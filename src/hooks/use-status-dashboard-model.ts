@@ -5,10 +5,11 @@ import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { useHealth } from "@/hooks/api-hooks";
 import { useStatusHistory, type StatusHistoryWindow } from "@/hooks/use-status-history";
 import { useStatus } from "@/hooks/use-status";
+import type { AdminAccess } from "@/lib/admin-access";
 import { buildStatusDashboardData } from "@/lib/status-dashboard-model";
 
-export function useStatusDashboardModel(adminKey: string) {
-  const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus(adminKey);
+export function useStatusDashboardModel(adminAccess: AdminAccess) {
+  const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus(adminAccess);
   const { data: healthData, error: healthError, refetch: refetchHealth, dataUpdatedAt: healthUpdatedAt } = useHealth();
   const {
     data: probes,
@@ -16,14 +17,14 @@ export function useStatusDashboardModel(adminKey: string) {
     error: probesError,
     refetch: refetchProbes,
     dataUpdatedAt: probesUpdatedAt,
-  } = useEndpointProbes(adminKey);
+  } = useEndpointProbes(adminAccess);
   const [historyWindow, setHistoryWindow] = useState<StatusHistoryWindow>("24h");
   const {
     data: historyData,
     isLoading: historyLoading,
     error: historyError,
     refetch: refetchHistory,
-  } = useStatusHistory(adminKey, historyWindow);
+  } = useStatusHistory(adminAccess, historyWindow);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {

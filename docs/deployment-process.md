@@ -94,6 +94,17 @@ Cloudflare deployment intentionally uses the local Wrangler CLI instead of `clou
 
 Deployment stops on the first failed job.
 
+## Operator Origins
+
+The operator-origin split is a staged rollout:
+
+- public UI: `pharos.watch`
+- operator UI: `ops.pharos.watch`
+- public API: `api.pharos.watch`
+- operator API: `ops-api.pharos.watch`
+
+Worker route declarations for `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domain plus Cloudflare Access applications are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
+
 ## Failure Policy
 
 If `test:merge-gate` fails:

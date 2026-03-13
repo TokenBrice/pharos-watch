@@ -16,7 +16,10 @@ The status dashboard combines seven signals:
 6. Live reserve sync health (`/api/status` -> `reserveComposition`)
 7. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
 
-This page is **auth-gated in practice** because `/api/status` plus the admin probe/action paths require a valid admin credential (`X-Admin-Key` in the browser session flow; `Authorization: Bearer <key>` is also accepted by the worker for non-browser callers).
+This page is **auth-gated in practice** because `/api/status` plus the admin probe/action paths require a valid admin credential. There are now two active frontend modes:
+
+- `ops.pharos.watch`: Cloudflare Access-protected operator host. The browser uses same-origin Pages Functions routes under `/api/admin/*`, and those functions proxy to `ops-api.pharos.watch` with a service token.
+- `pharos.watch`: temporary fallback host. The old browser-entered `X-Admin-Key` flow still exists here until the public `/status` route is retired. The fallback key stays in memory only for the current tab and expires after 15 minutes of inactivity.
 
 ---
 
@@ -28,6 +31,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 - Client implementation: `src/app/status/client.tsx`
 - Session/auth hook: `src/hooks/use-admin-session-key.ts`
 - Dashboard model hook: `src/hooks/use-status-dashboard-model.ts`
+- Ops proxy route: `functions/api/admin/[[path]].ts`
 - Pure derived-data helpers: `src/lib/status-dashboard-model.ts`
 - Decomposed UI components: `src/components/status/*`
 - The page shell now adds a command-center top fold above the widget stack:
@@ -41,17 +45,25 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 ### Data hooks
 
 - `src/hooks/use-status.ts`
-  - Calls `GET /api/status` with `X-Admin-Key`
+  - Calls `GET /api/status` either through same-origin `/api/admin/status` on `ops.pharos.watch` or with `X-Admin-Key` on the public fallback host
+  - Query key uses either the ops-proxy scope or the legacy secret-free session revision, never the raw key
   - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards`, `GET /api/yield-rankings`, and related read endpoints
   - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
+  - Public probes still hit the public API origin; admin probes switch to same-origin `/api/admin/*` on the ops host
   - Manual/admin mutation actions are listed but intentionally not auto-probed
 - `src/hooks/use-status-history.ts`
-  - Calls `GET /api/status-history` with `X-Admin-Key`
+  - Calls `GET /api/status-history` either through same-origin `/api/admin/status-history` on `ops.pharos.watch` or with `X-Admin-Key` on the public fallback host
+  - Query key uses either the ops-proxy scope or the legacy secret-free session revision, never the raw key
   - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
+- `functions/api/admin/[[path]].ts`
+  - Cloudflare Pages Functions catch-all for operator-only admin routes
+  - Validates the `Cf-Access-Jwt-Assertion` for the UI Access app before forwarding
+  - Host-gates to `ops.pharos.watch` so public hostnames cannot use the proxy
+  - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
 - `src/hooks/use-status-dashboard-model.ts`
   - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
   - Derives the operational lane summaries, severity-ranked section order, notice rail entries, and cross-surface status deltas used by the page shell
@@ -399,16 +411,17 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 
 | File                                                 | Role                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/app/status/client.tsx`                          | Auth gate + status dashboard orchestration shell; page-only hero copy and shell pieces now live under `src/components/status/*`                                                                                                                                                      |
+| `src/app/status/client.tsx`                          | Host-aware auth gate + status dashboard orchestration shell; `ops.pharos.watch` skips the legacy key prompt and uses Access-backed proxy mode                                                                                                                                        |
 | `src/components/status/*`                            | Decomposed status UI modules (banner, facts, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards are grouped by trigger slot, surface trigger expressions + isolation mode, show last-good/error-skip context, and expose full raw metadata in collapsible panels. |
 | `src/components/status/telegram-bot-stats.tsx`       | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                          |
 | `src/components/status/discovery-candidates.tsx`     | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                             |
 | `src/components/status/price-source-health.tsx`      | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                      |
 | `src/components/status/mint-burn-reconciliation.tsx` | Mint/burn reconciliation card — 24h Ethereum flow vs chain-supply delta diagnostics                                                                                                                                                                                                    |
-| `src/hooks/use-status.ts`                            | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                                                                                  |
+| `src/hooks/use-status.ts`                            | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with either ops-host same-origin proxy mode or legacy admin-key auth                                                                                                                              |
 | `src/hooks/api-hooks.ts`                             | Shared read hooks consumed by the dashboard model (`useHealth`, `usePegSummary`, `useDexLiquidity`, `useReportCards`, `useYieldRankings`)                                                                                                                                              |
-| `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                                                                                                |
-| `src/hooks/use-status-history.ts`                    | Shared polling policy for `/api/status-history` + dashboard time-window filters                                                                                                                                                                                                        |
+| `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`); admin probes switch to same-origin proxy mode on the ops host                                                                                                                                    |
+| `src/hooks/use-status-history.ts`                    | Shared polling policy for `/api/status-history` + dashboard time-window filters in both ops-host proxy mode and public fallback mode                                                                                                                                                 |
+| `functions/api/admin/[[path]].ts`                    | Pages Functions admin proxy: Access JWT validation, ops-host gating, upstream method/path allowlisting, and service-token forwarding to `ops-api.pharos.watch`                                                                                                                       |
 | `shared/lib/cron-jobs.ts`                            | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |
 | `shared/lib/api-endpoints.ts`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                       |
 | `worker/src/route-registry.ts`                       | Static route binding registry keyed by shared endpoint metadata                                                                                                                                                                                                                        |

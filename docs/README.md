@@ -16,6 +16,7 @@ Verified entry point for the `/docs` corpus. Use this file to find the authorita
 - [architecture.md](./architecture.md) - architecture-significant routes, file tree, and key tables
 - [api-reference.md](./api-reference.md) - public and admin API contract reference
 - [worker-infrastructure.md](./worker-infrastructure.md) - runtime model, env interface, cron orchestration, and observability
+- [operator-origin-access.md](./operator-origin-access.md) - operator-only origin prep, Access setup runbook, and verification steps
 - [worker-and-api-limits.md](./worker-and-api-limits.md) - upstream and platform hard limits that constrain worker design
 - [data-flow-map.md](./data-flow-map.md) - external source -> cron -> D1 -> API -> hook -> page mapping
 - [live-reserves.md](./live-reserves.md) - live reserve-sync config, adapter registry, storage, API modes, and frontend/status consumers

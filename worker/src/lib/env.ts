@@ -2,6 +2,11 @@ export interface Env {
   DB: D1Database;
   CORS_ORIGIN: string;
   SELF_URL?: string;
+  OPS_UI_ORIGIN?: string;
+  OPS_API_ORIGIN?: string;
+  CF_ACCESS_TEAM_DOMAIN?: string;
+  CF_ACCESS_OPS_UI_AUD?: string;
+  CF_ACCESS_OPS_API_AUD?: string;
   ETHERSCAN_API_KEY?: string;
   TRONGRID_API_KEY?: string;
   DRPC_API_KEY?: string;

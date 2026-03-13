@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { buildApiUrl } from "@/lib/api";
+import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
+import { buildRequestUrl } from "@/lib/api";
 import type { DiscoveryCandidate } from "@shared/types";
 import { useState } from "react";
 import { formatAge } from "./format";
@@ -29,11 +30,11 @@ function SourceBadge({ source }: { source: string }) {
 
 export function DiscoveryCandidatesCard({
   candidates,
-  adminKey,
+  adminAccess,
   nowSeconds,
 }: {
   candidates: DiscoveryCandidate[] | null;
-  adminKey: string;
+  adminAccess: AdminAccess;
   nowSeconds: number;
 }) {
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
@@ -55,9 +56,9 @@ export function DiscoveryCandidatesCard({
   const handleDismiss = async (id: number) => {
     setDismissError(null);
     try {
-      const res = await fetch(buildApiUrl(`/api/discovery-candidates/${id}/dismiss`), {
+      const res = await fetch(buildRequestUrl(buildAdminApiPath(`/api/discovery-candidates/${id}/dismiss`, adminAccess)), {
         method: "POST",
-        headers: { "X-Admin-Key": adminKey },
+        ...buildAdminFetchInit(adminAccess),
       });
       if (res.ok) {
         setDismissed((prev) => new Set([...prev, id]));

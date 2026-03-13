@@ -1,7 +1,8 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { API_BASE } from "@/lib/api";
+import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, isAdminAccessEnabled, type AdminAccess } from "@/lib/admin-access";
+import { buildRequestUrl } from "@/lib/api";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import type { EndpointProbeResult } from "@shared/types";
 import { CRON_1MIN, usePollingQuery } from "./use-api-query";
@@ -24,20 +25,22 @@ const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 
 async function probeEndpoint(
   path: string,
-  adminKey: string,
+  adminAccess: AdminAccess,
 ): Promise<EndpointProbeResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   const start = performance.now();
 
   try {
-    const headers: Record<string, string> = {};
-    if (ADMIN_PATHS.has(path)) {
-      headers["X-Admin-Key"] = adminKey;
-    }
-    const res = await fetch(`${API_BASE}${path}`, {
+    const requestPath = ADMIN_PATHS.has(path)
+      ? buildAdminApiPath(path, adminAccess)
+      : path;
+    const requestInit = ADMIN_PATHS.has(path)
+      ? buildAdminFetchInit(adminAccess)
+      : undefined;
+    const res = await fetch(buildRequestUrl(requestPath), {
       signal: controller.signal,
-      headers,
+      headers: requestInit?.headers,
     });
     const latencyMs = Math.round(performance.now() - start);
     return { path, status: res.status, latencyMs };
@@ -59,12 +62,12 @@ async function probeEndpoint(
  * Auto-refreshes every 60s.
  */
 export function useEndpointProbes(
-  adminKey: string,
+  adminAccess: AdminAccess,
 ): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
-    ["endpoint-probes", adminKey],
-    () => Promise.all(ALL_ENDPOINTS.map((path) => probeEndpoint(path, adminKey))),
+    ["endpoint-probes", getAdminQueryScope(adminAccess)],
+    () => Promise.all(ALL_ENDPOINTS.map((path) => probeEndpoint(path, adminAccess))),
     CRON_1MIN,
-    { enabled: !!adminKey, retry: 0 },
+    { enabled: isAdminAccessEnabled(adminAccess), retry: 0 },
   );
 }

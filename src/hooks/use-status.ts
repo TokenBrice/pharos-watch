@@ -2,17 +2,23 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { StatusResponse } from "@shared/types";
-import { CRON_1MIN, useAdminApiQuery } from "./use-api-query";
+import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, isAdminAccessEnabled, type AdminAccess } from "@/lib/admin-access";
+import { apiFetch } from "@/lib/api";
+import { CRON_1MIN, usePollingQuery } from "./use-api-query";
 
 /**
  * Fetches /api/status with admin key auth.
  * Auto-refreshes every 60s for live ops monitoring.
  */
-export function useStatus(adminKey: string): UseQueryResult<StatusResponse, Error> {
-  return useAdminApiQuery<StatusResponse>(
-    ["status", adminKey],
-    "/api/status",
+export function useStatus(adminAccess: AdminAccess): UseQueryResult<StatusResponse, Error> {
+  return usePollingQuery<StatusResponse>(
+    ["status", getAdminQueryScope(adminAccess)],
+    () => apiFetch<StatusResponse>(
+      buildAdminApiPath("/api/status", adminAccess),
+      undefined,
+      buildAdminFetchInit(adminAccess),
+    ),
     CRON_1MIN,
-    { adminKey, retry: 0 },
+    { enabled: isAdminAccessEnabled(adminAccess), retry: 0 },
   );
 }

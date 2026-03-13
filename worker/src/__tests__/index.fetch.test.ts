@@ -51,6 +51,28 @@ describe("worker.fetch", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it("echoes an allowed operator origin from the CORS allowlist", async () => {
+    const env = {
+      DB: mockD1(),
+      CORS_ORIGIN: "https://pharos.watch,https://ops.pharos.watch",
+      ADMIN_KEY: "secret",
+    } as const;
+    const { ctx } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        method: "OPTIONS",
+        headers: { Origin: "https://ops.pharos.watch" },
+      }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://ops.pharos.watch");
+    expect(res.headers.get("Vary")).toBe("Origin");
+  });
+
   it("rejects GET on mutating admin endpoints", async () => {
     const env = {
       DB: mockD1(),
