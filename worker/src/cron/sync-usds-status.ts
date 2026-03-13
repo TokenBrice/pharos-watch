@@ -1,4 +1,5 @@
-import { shouldSkipFreshCache, setCacheIfNewer, type CronResult } from "../lib/db";
+import { shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
+import type { CronResult } from "../lib/cron-logger";
 import { fetchEtherscanProxyHex } from "../lib/evm-rpc";
 
 const CACHE_KEY = "usds-status";

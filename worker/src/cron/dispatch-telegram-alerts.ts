@@ -1,7 +1,7 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { throwIfAborted } from "../lib/abort";
-import { getCache, setCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db-cache";
 import { sendToChat, sendBatch } from "../lib/telegram";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";

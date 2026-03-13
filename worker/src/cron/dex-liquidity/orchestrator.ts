@@ -1,4 +1,4 @@
-import type { CronResult } from "../../lib/db";
+import type { CronResult } from "../../lib/cron-logger";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";

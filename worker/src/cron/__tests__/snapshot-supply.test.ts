@@ -38,7 +38,7 @@ describe("snapshotSupply", () => {
   it("returns itemCount 0 when cache is stale (>1200s)", async () => {
     const staleUpdatedAt = Math.floor(Date.now() / 1000) - 1500;
     const cacheValue = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = mockD1([{
       match: "cache",
@@ -53,9 +53,9 @@ describe("snapshotSupply", () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const cacheValue = JSON.stringify({
       peggedAssets: [
-        { id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
-        { id: "usdc-circle", price: 0.999, circulating: { peggedUSD: 50_000_000 } },
-        { id: "cash-stabl-fi", price: 1.0, circulating: { peggedUSD: 10_000 } }, // not tracked
+        { id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50_000_000 } },
+        { id: "cash-stabl-fi", symbol: "CASH", price: 1.0, circulating: { peggedUSD: 10_000 } }, // not tracked
       ],
     });
     const db = mockD1([{
@@ -72,7 +72,7 @@ describe("snapshotSupply", () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
     const cacheValue = JSON.stringify({
       peggedAssets: [
-        { id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 0 } },
+        { id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 0 } },
       ],
     });
     const db = mockD1([{

@@ -238,13 +238,11 @@ export async function detectDepegEvents(
         }
       } else {
         // Open new event — check supply threshold for multi-source confirmation
-        const coinSupply = sumPegBuckets(asset.circulating);
-
-        if (coinSupply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) {
+        if (supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) {
           // >=$1B coin: insert into pending table for confirmation next cycle
           stmts.push(buildInsertPendingStmt(asset, direction, bps, price, pegRef, pendingReason));
           console.log(
-            `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (supply $${(coinSupply / 1e9).toFixed(1)}B)`
+            `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (supply $${(supply / 1e9).toFixed(1)}B)`
           );
         } else if (requiresConfirmation) {
           if (pendingReason === "extreme-move" && dexConfirmsDirection) {

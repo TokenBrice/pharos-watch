@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { formatAge } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 interface SystemDiagnosticsProps {
   state: {
@@ -68,8 +68,8 @@ export function SystemDiagnostics({
           <div className="font-mono text-sm">
             {state.currentStatus} (raw: {state.rawStatus})
           </div>
-          <div className="text-xs text-muted-foreground">evaluated {evalAge != null ? `${formatAge(evalAge)} ago` : "never"}</div>
-          <div className="text-xs text-muted-foreground">changed {changedAge != null ? `${formatAge(changedAge)} ago` : "never"}</div>
+          <div className="text-xs text-muted-foreground">evaluated {evalAge != null ? `${formatElapsedSeconds(evalAge)} ago` : "never"}</div>
+          <div className="text-xs text-muted-foreground">changed {changedAge != null ? `${formatElapsedSeconds(changedAge)} ago` : "never"}</div>
           <div className="mt-1 text-xs text-muted-foreground">
             raw streak h/d/s {state.consecutiveRaw.healthy}/{state.consecutiveRaw.degraded}/{state.consecutiveRaw.stale}
           </div>
@@ -82,7 +82,7 @@ export function SystemDiagnostics({
             {staleness.isStale ? "stale" : "fresh"}
           </div>
           <div className="text-xs text-muted-foreground">
-            age {formatAge(staleness.ageSeconds)} / max {formatAge(staleness.maxAgeSec)}
+            age {formatElapsedSeconds(staleness.ageSeconds)} / max {formatElapsedSeconds(staleness.maxAgeSec)}
           </div>
         </CardContent>
       </Card>
@@ -94,7 +94,7 @@ export function SystemDiagnostics({
           </div>
           <div className="text-xs text-muted-foreground">p95 {probe.p95LatencyMs != null ? `${probe.p95LatencyMs}ms` : "—"}</div>
           <div className="text-xs text-muted-foreground">
-            {probe.timestamp ? `${formatAge(Math.max(0, nowSeconds - probe.timestamp))} ago` : "no probe yet"}
+            {probe.timestamp ? `${formatElapsedSeconds(Math.max(0, nowSeconds - probe.timestamp))} ago` : "no probe yet"}
           </div>
           {probe.bootstrapMissCount != null && probe.bootstrapMissCount > 0 && (
             <div className="text-xs text-muted-foreground">bootstrap misses {probe.bootstrapMissCount}</div>
@@ -111,7 +111,7 @@ export function SystemDiagnostics({
             p95 {browserProbe?.p95LatencyMs != null ? `${browserProbe.p95LatencyMs}ms` : "—"}
           </div>
           <div className="text-xs text-muted-foreground">
-            {browserProbeAgeSeconds != null ? `${formatAge(browserProbeAgeSeconds)} ago` : "not sampled yet"}
+            {browserProbeAgeSeconds != null ? `${formatElapsedSeconds(browserProbeAgeSeconds)} ago` : "not sampled yet"}
           </div>
           {browserProbe && browserProbe.failCount > 0 && (
             <div className="text-xs text-muted-foreground">failures {browserProbe.failCount}</div>
@@ -130,7 +130,7 @@ export function SystemDiagnostics({
           </div>
           <div className="text-xs text-muted-foreground">streak: {discrepancy.consecutiveDivergent}</div>
           <div className="text-xs text-muted-foreground">
-            delta {discrepancy.severityDelta} • probe age {discrepancy.probeAgeSeconds != null ? formatAge(discrepancy.probeAgeSeconds) : "—"}
+            delta {discrepancy.severityDelta} • probe age {discrepancy.probeAgeSeconds != null ? formatElapsedSeconds(discrepancy.probeAgeSeconds) : "—"}
           </div>
           {discrepancy.details && <div className="text-xs text-muted-foreground">{discrepancy.details}</div>}
         </CardContent>

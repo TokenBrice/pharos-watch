@@ -11,6 +11,7 @@ import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { DAY_MS } from "@/lib/constants";
 
@@ -134,14 +135,10 @@ export function McapChart({ data }: McapChartProps) {
     return ticks;
   }, [range, filteredData]);
 
-  const yDomain = useMemo((): [number, number | string] => {
-    if (range === "all" || filteredData.length === 0) return [0, "auto"];
-    const values = filteredData.map((d) => d.mcap);
-    const min = values.reduce((m, v) => Math.min(m, v), Infinity);
-    const max = values.reduce((m, v) => Math.max(m, v), -Infinity);
-    const padding = (max - min) * 0.15 || max * 0.05;
-    return [Math.max(0, min - padding), max + padding];
-  }, [range, filteredData]);
+  const yDomain = useMemo(
+    () => computeChartYDomain(filteredData.map((d) => d.mcap), range === "all"),
+    [range, filteredData],
+  );
 
   return (
     <Card className="rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300">

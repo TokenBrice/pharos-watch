@@ -11,6 +11,17 @@ function isOpsApiRequest(request: Request | undefined): boolean {
   }
 }
 
+/**
+ * Checks for Cloudflare Access proxy signals on ops-api requests.
+ *
+ * IMPORTANT: This function checks header *presence*, not *validity*.
+ * Security relies on Cloudflare Access sitting in front of ops-api.pharos.watch
+ * to validate JWTs and strip spoofed headers before they reach the Worker.
+ * The Worker itself does NOT verify JWT signatures or service token values.
+ *
+ * If the Worker is ever reachable without Cloudflare Access in the path
+ * (misconfigured DNS, direct Worker URL), all admin endpoints are unprotected.
+ */
 function hasOpsApiAccessSignal(request: Request | undefined): boolean {
   if (!isOpsApiRequest(request)) return false;
 
@@ -36,7 +47,20 @@ export function hasValidAdminCredential(
   return trustedAdmin === true || hasOpsApiAccessSignal(request);
 }
 
-/** Returns a 401 Response if the request lacks a valid admin signal, or null if authorized */
+/**
+ * Admin authentication provides two usage patterns:
+ *
+ * 1. `withAdmin(request, handler, trusted)` — callback wrapper (preferred).
+ *    Use when the entire handler body requires admin access.
+ *
+ * 2. `requireAdmin(request, trusted)` — guard pattern (returns Response | null).
+ *    Use when the handler needs pre-auth work before the main body,
+ *    or when auth is one of several early-return checks.
+ *
+ * Both patterns are project conventions. Choose based on handler structure.
+ *
+ * Returns a 401 Response if the request lacks a valid admin signal, or null if authorized.
+ */
 export async function requireAdmin(
   request: Request | undefined,
   trustedAdmin?: boolean,
@@ -56,4 +80,22 @@ export async function withAdmin(
   const authError = await requireAdmin(request, trustedAdmin);
   if (authError) return authError;
   return handler();
+}
+
+/** Timing-safe string comparison using Web Crypto API. */
+export async function timingSafeCompare(a: string, b: string): Promise<boolean> {
+  if (a.length === 0 || b.length === 0) return false;
+  const encoder = new TextEncoder();
+  const aBuf = encoder.encode(a);
+  const bBuf = encoder.encode(b);
+  if (aBuf.byteLength !== bBuf.byteLength) return false;
+  const aKey = await crypto.subtle.importKey("raw", aBuf, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", aKey, bBuf);
+  const expected = await crypto.subtle.sign("HMAC", aKey, aBuf);
+  const sigArr = new Uint8Array(sig);
+  const expArr = new Uint8Array(expected);
+  if (sigArr.byteLength !== expArr.byteLength) return false;
+  let result = 0;
+  for (let i = 0; i < sigArr.byteLength; i++) result |= sigArr[i] ^ expArr[i];
+  return result === 0;
 }

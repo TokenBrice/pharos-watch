@@ -45,23 +45,24 @@ function configKey(config: MintBurnContractConfig): string {
   return mintBurnConfigKey(config);
 }
 
+type BackfillConfigResult =
+  | { ok: true; config: MintBurnContractConfig; selectionMode: "explicit" | "auto"; autoSelectedReason: string | null }
+  | { ok: false; response: Response };
+
 async function resolveBackfillConfig(
   db: D1Database,
   chainHead: number,
   requestedConfigKey: string | null,
-): Promise<{
-  config: MintBurnContractConfig;
-  selectionMode: "explicit" | "auto";
-  autoSelectedReason: string | null;
-}> {
+): Promise<BackfillConfigResult> {
   if (requestedConfigKey) {
     const config = MINT_BURN_CONFIGS.find(
       (entry) => configKey(entry).toLowerCase() === requestedConfigKey,
     );
     if (!config) {
-      throw errorResponse(404, "Unknown mint/burn configKey");
+      return { ok: false, response: errorResponse(404, "Unknown mint/burn configKey") };
     }
     return {
+      ok: true,
       config,
       selectionMode: "explicit",
       autoSelectedReason: null,
@@ -72,7 +73,7 @@ async function resolveBackfillConfig(
     (entry) => entry.enabled !== false && entry.chain.chainId === ETHEREUM_CHAIN_ID,
   );
   if (eligibleConfigs.length === 0) {
-    throw errorResponse(400, "No eligible Ethereum mint/burn configs are enabled");
+    return { ok: false, response: errorResponse(400, "No eligible Ethereum mint/burn configs are enabled") };
   }
 
   await ensureMintBurnSyncStateRows(db, eligibleConfigs);
@@ -95,10 +96,11 @@ async function resolveBackfillConfig(
     return bLag - aLag;
   })[0];
   if (!config) {
-    throw errorResponse(400, "No eligible Ethereum mint/burn configs are enabled");
+    return { ok: false, response: errorResponse(400, "No eligible Ethereum mint/burn configs are enabled") };
   }
 
   return {
+    ok: true,
     config,
     selectionMode: "auto",
     autoSelectedReason: "critical-first-most-behind",
@@ -203,15 +205,8 @@ export const handleBackfillMintBurn = withErrorHandler(
       return errorResponse(502, "Failed to fetch chain head for backfill range");
     }
 
-    let selectedConfig: Awaited<ReturnType<typeof resolveBackfillConfig>>;
-    try {
-      selectedConfig = await resolveBackfillConfig(db, chainHead, configKeyParam);
-    } catch (response) {
-      if (response instanceof Response) {
-        return response;
-      }
-      throw response;
-    }
+    const selectedConfig = await resolveBackfillConfig(db, chainHead, configKeyParam);
+    if (!selectedConfig.ok) return selectedConfig.response;
 
     const { config, selectionMode, autoSelectedReason } = selectedConfig;
 

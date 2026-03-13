@@ -1,5 +1,5 @@
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { getCache, setCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
   RISK_FREE_RATE_FALLBACK,
@@ -9,7 +9,7 @@ import {
   FRED_FETCH_TIMEOUT_MS,
   FRED_FETCH_MAX_RETRIES,
 } from "../lib/constants";
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 import {
   buildRiskFreeRateCachePayload,
   parseRiskFreeRateCache,

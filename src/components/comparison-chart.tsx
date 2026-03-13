@@ -12,6 +12,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { DateTooltip, MonoYAxis, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate } from "@shared/lib/format";
+import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 
 interface SeriesData {
   id: string;
@@ -39,22 +40,10 @@ export function ComparisonChart({
 }: ComparisonChartProps) {
   const [normalized, setNormalized] = useState(false);
   // Merge all series into a single array keyed by timestamp
-  const mergedData = useMemo(() => {
-    const tsMap = new Map<number, Record<string, number>>();
-
-    for (const s of series) {
-      for (const d of s.data) {
-        let entry = tsMap.get(d.ts);
-        if (!entry) {
-          entry = { ts: d.ts };
-          tsMap.set(d.ts, entry);
-        }
-        entry[s.id] = d.value;
-      }
-    }
-
-    return Array.from(tsMap.values()).sort((a, b) => a.ts - b.ts);
-  }, [series]);
+  const mergedData = useMemo(
+    () => mergeSeriesByTimestamp(series, (d) => d.value),
+    [series],
+  );
 
   const { range: localRange, setRange: setLocalRange, filteredData, options } = useTimeRangeFilter(
     mergedData,

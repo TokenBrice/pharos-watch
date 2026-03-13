@@ -46,14 +46,10 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
   ],
 }));
 
-vi.mock("../../lib/db", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/db")>();
-  return {
-    ...actual,
-    getCache: mockGetCache,
-    setCache: mockSetCache,
-  };
-});
+vi.mock("../../lib/db-cache", () => ({
+  getCache: mockGetCache,
+  setCache: mockSetCache,
+}));
 
 vi.mock("../../lib/telegram", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/telegram")>();

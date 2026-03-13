@@ -1,5 +1,6 @@
 // worker/src/api/feedback.ts
 
+import { z } from "zod";
 import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { checkFeedbackRateLimit } from "../lib/rate-limit";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
@@ -10,17 +11,24 @@ import { sumPegBuckets } from "@shared/lib/supply";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-interface FeedbackBody {
-  type: "bug" | "data-correction" | "feature-request";
-  title?: string;
-  description: string;
-  expectedValue?: string;
-  stablecoinId?: string;
-  stablecoinName?: string;
-  pageUrl: string;
-  pegValue?: string;
-  website?: string; // honeypot
-}
+const FeedbackBodySchema = z.object({
+  type: z.enum(["bug", "data-correction", "feature-request"], {
+    message: "Invalid feedback type",
+  }),
+  title: z.string().max(100).optional(),
+  description: z
+    .string()
+    .min(10, "Description must be 10–2000 characters")
+    .max(2000, "Description must be 10–2000 characters"),
+  expectedValue: z.string().max(500).optional(),
+  stablecoinId: z.string().max(100).optional(),
+  stablecoinName: z.string().max(100).optional(),
+  pageUrl: z.string().startsWith("/", "Invalid pageUrl").max(300),
+  pegValue: z.string().max(100).optional(),
+  website: z.string().optional(), // honeypot
+});
+
+type FeedbackBody = z.infer<typeof FeedbackBodySchema>;
 
 export interface FeedbackEnv {
   GITHUB_PAT?: string;
@@ -222,43 +230,28 @@ export async function handleFeedback(
   request: Request,
   env: FeedbackEnv
 ): Promise<Response> {
-  // Parse JSON body
+  // Parse + validate JSON body via Zod
   let fb: FeedbackBody;
   try {
-    fb = (await request.json()) as FeedbackBody;
+    const raw = await request.json();
+    const result = FeedbackBodySchema.safeParse(raw);
+    if (!result.success) {
+      return errorResponse(400, result.error.issues[0]?.message ?? "Invalid feedback data");
+    }
+    fb = result.data;
   } catch {
-    return errorResponse(400, "Invalid JSON body");
-  }
-
-  if (typeof fb !== "object" || fb === null) {
     return errorResponse(400, "Invalid JSON body");
   }
 
   // Honeypot: silently accept but do nothing
   if (fb.website) return jsonResponse({ ok: true });
 
-  // Validate type
-  if (!["bug", "data-correction", "feature-request"].includes(fb.type)) {
-    return errorResponse(400, "Invalid feedback type");
-  }
-
-  // Validate description
-  const desc = fb.description?.trim() ?? "";
-  if (desc.length < 10 || desc.length > 2000) {
-    return errorResponse(400, "Description must be 10–2000 characters");
-  }
-
-  // Validate title (required for bug + feature-request)
+  // Validate title (required for bug + feature-request — cross-field business rule)
   if (fb.type === "bug" || fb.type === "feature-request") {
     const title = fb.title?.trim() ?? "";
     if (title.length < 3 || title.length > 100) {
       return errorResponse(400, "Title must be 3–100 characters");
     }
-  }
-
-  // Validate pageUrl
-  if (!fb.pageUrl?.startsWith("/")) {
-    return errorResponse(400, "Invalid pageUrl");
   }
 
   let canonicalStablecoinId: string | undefined;

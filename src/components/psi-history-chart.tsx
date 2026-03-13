@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import { CHART_DRAW_IN } from "@/lib/chart-animation";
 import { AreaChart, Area, ReferenceArea, ReferenceLine } from "recharts";
 import { Camera } from "lucide-react";
@@ -16,6 +16,7 @@ import { useStabilityIndexDetail } from "@/hooks/api-hooks";
 import { trackEvent } from "@/lib/analytics";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -130,22 +131,6 @@ export const PSI_EVENTS = [
     ],
   },
 ];
-
-/* ─── Helpers ──────────────────────────────────────────────────── */
-
-function useIsMobile(breakpoint = 640) {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia(`(max-width: ${breakpoint - 1}px)`).matches;
-  });
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, [breakpoint]);
-  return isMobile;
-}
 
 /* ─── ScoreChart (reusable, data passed in) ────────────────────── */
 

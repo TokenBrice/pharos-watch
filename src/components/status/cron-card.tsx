@@ -2,7 +2,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStatusCronDisplay } from "./cron-config";
 import { summarizeCronMetadata } from "./cron-metadata-summary";
-import { formatAge, formatDuration, formatInterval } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
+import { formatDuration, formatInterval } from "./format";
 
 interface CronCardProps {
   job: string;
@@ -100,8 +101,8 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
                   <Badge className={`text-xs ${cron.inFlight.stale ? "bg-red-500/15 text-red-700 dark:text-red-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300"}`}>
                     {cron.inFlight.stale ? "running-stale" : "running"}
                   </Badge>
-                  <span>started {formatAge(nowSeconds - cron.inFlight.startedAt)} ago</span>
-                  <span>heartbeat {formatAge(nowSeconds - cron.inFlight.updatedAt)} ago</span>
+                  <span>started {formatElapsedSeconds(nowSeconds - cron.inFlight.startedAt)} ago</span>
+                  <span>heartbeat {formatElapsedSeconds(nowSeconds - cron.inFlight.updatedAt)} ago</span>
                   {cron.inFlight.stage && <span>stage {cron.inFlight.stage}</span>}
                   {cron.inFlight.itemsDone != null && (
                     <span>
@@ -127,7 +128,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
               >
                 {cron.lastRun.status}
               </Badge>
-              <span className="text-muted-foreground">{formatAge(nowSeconds - cron.lastRun.startedAt)} ago</span>
+              <span className="text-muted-foreground">{formatElapsedSeconds(nowSeconds - cron.lastRun.startedAt)} ago</span>
               <span className="text-muted-foreground">({formatDuration(cron.lastRun.durationMs)})</span>
               {cron.lastRun.itemCount != null && (
                 <span className="text-muted-foreground">{cron.lastRun.itemCount} items</span>
@@ -135,7 +136,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
               {lastSuccessfulRun && (
-                <span>last good {formatAge(nowSeconds - lastSuccessfulRun.startedAt)} ago</span>
+                <span>last good {formatElapsedSeconds(nowSeconds - lastSuccessfulRun.startedAt)} ago</span>
               )}
               {errorStreak > 0 && <span>error streak {errorStreak}</span>}
               {skippedStreak > 0 && <span>lease skips {skippedStreak}</span>}
@@ -169,8 +170,8 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
                 <Badge className={`text-xs ${cron.inFlight.stale ? "bg-red-500/15 text-red-700 dark:text-red-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300"}`}>
                   {cron.inFlight.stale ? "running-stale" : "running"}
                 </Badge>
-                <span>started {formatAge(nowSeconds - cron.inFlight.startedAt)} ago</span>
-                <span>heartbeat {formatAge(nowSeconds - cron.inFlight.updatedAt)} ago</span>
+                <span>started {formatElapsedSeconds(nowSeconds - cron.inFlight.startedAt)} ago</span>
+                <span>heartbeat {formatElapsedSeconds(nowSeconds - cron.inFlight.updatedAt)} ago</span>
               </div>
               {cron.inFlight.stage && <div>stage {cron.inFlight.stage}</div>}
               {cron.inFlight.message && <div>{cron.inFlight.message}</div>}

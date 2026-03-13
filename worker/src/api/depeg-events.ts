@@ -14,8 +14,8 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
-  toDepegDewsMethodologyVersionLabel,
 } from "@shared/lib/depeg-dews-version";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 
 export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
@@ -64,7 +64,7 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
     total,
     methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
-      versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
+      versionLabel: toMethodologyVersionLabel(methodologyVersion),
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
       currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,

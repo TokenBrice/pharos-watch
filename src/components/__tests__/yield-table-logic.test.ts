@@ -151,10 +151,10 @@ describe("compareYieldRows — yieldType", () => {
 });
 
 describe("compareYieldRows — default fallback", () => {
-  it("falls back to PYS for unknown sort key", () => {
+  it("returns 0 for unknown key", () => {
     const high = makeYield({ pharosYieldScore: 80 });
     const low = makeYield({ pharosYieldScore: 20 });
     const result = compareYieldRows(high, low, { key: "unknown" as YieldTableSortKey, direction: "desc" });
-    expect(result).toBeLessThan(0); // high ranks first
+    expect(result).toBe(0);
   });
 });

@@ -4,7 +4,7 @@ vi.mock("../alerts", () => ({
   sendAlert: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { logCronRun } from "../db";
+import { logCronRun } from "../cron-logger";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
 describe("logCronRun", () => {

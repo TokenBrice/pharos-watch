@@ -1,4 +1,4 @@
-import { getCache } from "../lib/db";
+import { getCache } from "../lib/db-cache";
 import { addFreshnessHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../lib/mint-burn-health-config";

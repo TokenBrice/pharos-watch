@@ -18,6 +18,7 @@ interface RateLimitDb {
 }
 
 const ipCounts = new Map<string, RateLimitEntry>();
+const MAX_IP_ENTRIES = 10_000;
 const PRUNE_EVERY_REQUESTS = 1000;
 const PUBLIC_API_RATE_LIMIT_SALT_FALLBACK = "pharos-public-api-rate-limit";
 const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
@@ -38,6 +39,16 @@ export function checkRateLimit(
   windowMs = 60_000,
 ): Response | null {
   const now = Date.now();
+
+  // Hard cap to prevent unbounded map growth under heavy traffic
+  if (ipCounts.size >= MAX_IP_ENTRIES) {
+    pruneExpired(now);
+    if (ipCounts.size >= MAX_IP_ENTRIES) {
+      const entries = [...ipCounts.entries()].sort((a, b) => a[1].resetAt - b[1].resetAt);
+      for (let i = 0; i < entries.length / 2; i++) ipCounts.delete(entries[i][0]);
+    }
+  }
+
   requestCount++;
   if (requestCount % PRUNE_EVERY_REQUESTS === 0) {
     pruneExpired(now);
@@ -139,6 +150,9 @@ export async function checkPublicApiRateLimit(
 
     return null;
   } catch (err) {
+    // Known limitation: in-memory fallback resets on isolate eviction.
+    // Under sustained D1 failure, rate limiting provides best-effort
+    // protection within a single isolate's lifetime only.
     console.warn("[public-api] distributed rate limit failed, falling back to isolate-local limiter:", err);
     return checkRateLimit(ip, limit, windowMs);
   }

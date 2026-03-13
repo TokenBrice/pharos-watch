@@ -2,16 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   batchExecute,
   buildPaginatedQuery,
-  getCache,
   getFirstSeenDates,
   getLastBlock,
   normalizeBlacklistSyncStateKey,
+  setLastBlock,
+} from "../db";
+import {
+  getCache,
   getPriceCache,
   savePriceCache,
   setCache,
   setCacheIfNewer,
-  setLastBlock,
-} from "../db";
+} from "../db-cache";
 
 type CacheRow = { value: string; updated_at: number };
 

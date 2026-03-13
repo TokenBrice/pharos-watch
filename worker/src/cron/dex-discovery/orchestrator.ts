@@ -1,4 +1,4 @@
-import type { CronProgressReporter, CronResult } from "../../lib/db";
+import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types";

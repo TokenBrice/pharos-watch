@@ -1,5 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { getCache } from "./db";
+import { getCache } from "./db-cache";
 
 export type PriceValidationMode =
   | "primary_authoritative"

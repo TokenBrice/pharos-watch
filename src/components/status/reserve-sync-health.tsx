@@ -1,6 +1,6 @@
 import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatAge } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 interface ReserveSyncHealthCardProps {
   health: StatusResponse["reserveComposition"];
@@ -9,7 +9,7 @@ interface ReserveSyncHealthCardProps {
 
 function formatLastSuccess(lastSuccessAt: number | null, nowSeconds: number): string {
   if (!lastSuccessAt) return "No successful live sync yet";
-  return `${new Date(lastSuccessAt * 1000).toLocaleString()} (${formatAge(Math.max(0, nowSeconds - lastSuccessAt))} ago)`;
+  return `${new Date(lastSuccessAt * 1000).toLocaleString()} (${formatElapsedSeconds(Math.max(0, nowSeconds - lastSuccessAt))} ago)`;
 }
 
 export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthCardProps) {
@@ -45,7 +45,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
         <div className="space-y-1 text-xs text-muted-foreground">
           <div>Last success: {formatLastSuccess(health.lastSuccessAt, nowSeconds)}</div>
           <div>
-            Oldest fresh snapshot age: {health.oldestFreshAgeSec != null ? formatAge(health.oldestFreshAgeSec) : "—"}
+            Oldest fresh snapshot age: {health.oldestFreshAgeSec != null ? formatElapsedSeconds(health.oldestFreshAgeSec) : "—"}
           </div>
         </div>
       </CardContent>

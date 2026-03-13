@@ -5,7 +5,7 @@ import {
   renewCronLease,
   releaseCronLease,
   runCronWithLease,
-} from "../db";
+} from "../cron-lease";
 
 type LeaseRow = {
   job: string;

@@ -1,4 +1,4 @@
-import { getCache, setCacheIfNewer } from "../lib/db";
+import { getCache, setCacheIfNewer } from "../lib/db-cache";
 import {
   withErrorHandler,
   addFreshnessHeaders,

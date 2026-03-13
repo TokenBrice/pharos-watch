@@ -1,7 +1,7 @@
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 

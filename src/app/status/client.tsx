@@ -13,7 +13,7 @@ import { DataQualityCards } from "@/components/status/data-quality-cards";
 import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
 import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
-import { formatAge } from "@/components/status/format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 import { LiquidityHealthCard } from "@/components/status/liquidity-health";
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
@@ -569,8 +569,8 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                   label={isRecoveryHold ? "Recovery Hold" : "Holding"}
                   value={
                     isRecoveryHold
-                      ? `${formatAge(statusHoldingAge)} at ${overallTone.label.toLowerCase()} / raw ${data.rawOverallStatus}`
-                      : `${formatAge(statusHoldingAge)} in ${overallTone.label.toLowerCase()}`
+                      ? `${formatElapsedSeconds(statusHoldingAge)} at ${overallTone.label.toLowerCase()} / raw ${data.rawOverallStatus}`
+                      : `${formatElapsedSeconds(statusHoldingAge)} in ${overallTone.label.toLowerCase()}`
                   }
                   className={
                     isRecoveryHold
@@ -640,7 +640,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                     ))
                   ) : (
                     <div className="rounded-xl border border-border/60 bg-background/45 p-3 text-sm leading-relaxed text-muted-foreground">
-                      No active causes. Current state has held for {formatAge(statusHoldingAge)}.
+                      No active causes. Current state has held for {formatElapsedSeconds(statusHoldingAge)}.
                     </div>
                   )}
                 </div>
@@ -650,7 +650,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                   <SummaryBadge
                     label="Changed"
                     value={
-                      latestTransition ? `${formatAge(Math.max(0, data.timestamp - latestTransition.at))} ago` : "—"
+                      latestTransition ? `${formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at))} ago` : "—"
                     }
                   />
                 </div>

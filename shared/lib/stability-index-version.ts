@@ -1,7 +1,4 @@
-import {
-  createMethodologyVersion,
-  toMethodologyVersionLabel,
-} from "./methodology-version";
+import { createMethodologyVersion } from "./methodology-version";
 
 const psi = createMethodologyVersion({
   currentVersion: "3.0",
@@ -129,5 +126,3 @@ export const PSI_METHODOLOGY_CHANGELOG = psi.changelog;
 
 /** Resolve PSI methodology version active at a given Unix timestamp (seconds). */
 export const getPsiMethodologyVersionAt = psi.getVersionAt;
-
-export const toPsiMethodologyVersionLabel = toMethodologyVersionLabel;

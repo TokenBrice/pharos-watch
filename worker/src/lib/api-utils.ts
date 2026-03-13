@@ -1,4 +1,5 @@
-import { buildInClause, buildPaginatedQuery, getCache } from "./db";
+import { buildInClause, buildPaginatedQuery } from "./db";
+import { getCache } from "./db-cache";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import type { CacheStatus } from "@shared/types";
@@ -183,7 +184,20 @@ export function errorResponse(status: number, message: string): Response {
   });
 }
 
-/** Parse an integer query parameter with default, min, and max bounds. */
+/**
+ * Parse an integer query parameter with default, min, and max bounds.
+ *
+ * Returns the parsed number on success, or a 400 Response on validation failure.
+ * Callers MUST check `instanceof Response` before using the return value:
+ *
+ * ```typescript
+ * const limit = parseIntParam(url.searchParams.get("limit"), 50, 1, 200, "limit");
+ * if (limit instanceof Response) return limit;
+ * // limit is now narrowed to number
+ * ```
+ *
+ * This is a project convention used consistently across all API handlers.
+ */
 export function parseIntParam(
   value: string | null | undefined,
   defaultVal: number,

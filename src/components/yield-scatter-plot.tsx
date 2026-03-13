@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useState } from "react";
+import { useMemo, useCallback } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
@@ -8,6 +8,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { computeApyAxis, computeSafetyDomain, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { YieldRanking, YieldType } from "@shared/types";
 
 interface ScatterDataPoint {
@@ -103,20 +104,6 @@ function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false
       ) : null}
     </g>
   );
-}
-
-function useIsMobile(breakpoint = 640) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
-    const onChange = () => setIsMobile(mql.matches);
-    onChange();
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, [breakpoint]);
-
-  return isMobile;
 }
 
 function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ScatterDataPoint }> }) {

@@ -1,4 +1,4 @@
-import { setCacheIfNewer, getPriceCache, savePriceCache } from "../lib/db";
+import { setCacheIfNewer, getPriceCache, savePriceCache } from "../lib/db-cache";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";

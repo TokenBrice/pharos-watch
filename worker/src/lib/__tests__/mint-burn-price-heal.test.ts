@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../db", () => ({
   batchExecute: vi.fn().mockResolvedValue(0),
+}));
+
+vi.mock("../db-cache", () => ({
   getPriceCache: vi.fn().mockResolvedValue(new Map()),
 }));
 
-import { batchExecute, getPriceCache } from "../db";
+import { batchExecute } from "../db";
+import { getPriceCache } from "../db-cache";
 import { healNullPrices } from "../mint-burn-pipeline/price-heal";
 
 const NOW = 1_700_000_000;

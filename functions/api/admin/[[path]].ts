@@ -1,6 +1,6 @@
 import { getEndpointDefinition, validateEndpointMethod } from "@shared/lib/api-endpoints";
+import { normalizeOrigin, resolveOpsUiOrigin } from "../../lib/ops-origin";
 
-const DEFAULT_OPS_UI_ORIGIN = "https://ops.pharos.watch";
 const DEFAULT_OPS_API_ORIGIN = "https://ops-api.pharos.watch";
 
 const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/\d+\/dismiss$/;
@@ -44,15 +44,6 @@ function jsonError(status: number, message: string): Response {
       "Content-Type": "application/json",
     },
   });
-}
-
-function normalizeOrigin(input: string): string {
-  const normalized = input.includes("://") ? input : `https://${input}`;
-  return new URL(normalized).origin;
-}
-
-function resolveOpsUiOrigin(env: OpsAdminProxyEnv): string {
-  return normalizeOrigin(env.OPS_UI_ORIGIN?.trim() || DEFAULT_OPS_UI_ORIGIN);
 }
 
 function resolveOpsApiOrigin(env: OpsAdminProxyEnv): string {

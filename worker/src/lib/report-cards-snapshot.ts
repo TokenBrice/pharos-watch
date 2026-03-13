@@ -1,4 +1,4 @@
-import { getCache } from "./db";
+import { getCache } from "./db-cache";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";

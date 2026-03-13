@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import security from "eslint-plugin-security";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -19,6 +20,15 @@ const eslintConfig = defineConfig([
     // Wrangler auto-generated build artifacts
     "worker/.wrangler/**",
   ]),
+  {
+    plugins: { security },
+    rules: {
+      ...security.configs.recommended.rules,
+      // detect-object-injection flags every obj[variable] access — overwhelmingly
+      // false positives in application code (548 hits, none genuine).
+      "security/detect-object-injection": "off",
+    },
+  },
   {
     // Downgrade React Compiler rules to warnings — these flag valid patterns
     // that aren't optimal for the compiler but work correctly at runtime.

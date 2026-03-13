@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/db", () => ({
-  getCache: vi.fn(),
   batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
 }));
 
-import { batchExecute, getCache } from "../../lib/db";
+vi.mock("../../lib/db-cache", () => ({
+  getCache: vi.fn(),
+}));
+
+import { batchExecute } from "../../lib/db";
+import { getCache } from "../../lib/db-cache";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
 import type { DexPriceObs } from "../dex-liquidity/types";
@@ -409,8 +413,8 @@ describe("dex-liquidity scoring", () => {
     vi.mocked(getCache).mockResolvedValueOnce({
       value: JSON.stringify({
         peggedAssets: [
-          { id: "usdt-tether", price: 1.01 },
-          { id: "usdc-circle", price: null },
+          { id: "usdt-tether", symbol: "USDT", price: 1.01 },
+          { id: "usdc-circle", symbol: "USDC", price: null },
         ],
       }),
       updatedAt: 1_700_000_000,
@@ -494,7 +498,7 @@ describe("dex-liquidity scoring", () => {
     vi.mocked(getCache).mockResolvedValueOnce({
       value: JSON.stringify({
         peggedAssets: [
-          { id: "usdt-tether", price: 1 },
+          { id: "usdt-tether", symbol: "USDT", price: 1 },
         ],
       }),
       updatedAt: 1_700_000_000,

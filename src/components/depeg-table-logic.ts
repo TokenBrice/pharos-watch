@@ -1,4 +1,5 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
+import { createTableComparator } from "@/lib/table-comparator";
 import { attentionScore, type DepegTrackerRow } from "@/lib/depeg-sort";
 
 export type DepegTableSortKey =
@@ -20,58 +21,30 @@ export function rowAccentClass(row: DepegTrackerRow): string {
   return "";
 }
 
+type DepegFieldKey = Exclude<DepegTableSortKey, "__attention">;
+
+const fieldExtractors: Record<DepegFieldKey, (r: DepegTrackerRow) => number> = {
+  pegScore: (r) => r.coin.pegScore ?? -1,
+  dewsScore: (r) => r.dews?.score ?? -1,
+  currentDeviationBps: (r) => Math.abs(r.coin.currentDeviationBps ?? 0),
+  pegPct: (r) => r.coin.pegPct,
+  eventCount: (r) => r.coin.eventCount,
+  worstDeviationBps: (r) => Math.abs(r.coin.worstDeviationBps ?? 0),
+  activeDepeg: (r) => (r.coin.activeDepeg ? 1 : 0),
+  dexAgrees: (r) => (r.coin.dexPriceCheck?.agrees ? 1 : 0),
+  trackingSpanDays: (r) => r.coin.trackingSpanDays,
+};
+
+const compareByField = createTableComparator<DepegTrackerRow, DepegFieldKey>(fieldExtractors);
+
 export function compareDepegTrackerRows(
   a: DepegTrackerRow,
   b: DepegTrackerRow,
   sort: TableSortState<DepegTableSortKey>,
 ): number {
-  if (sort.key === "__attention") {
+  // __attention and unknown keys always sort descending by composite attention score.
+  if (sort.key === "__attention" || !(sort.key in fieldExtractors)) {
     return attentionScore(b) - attentionScore(a);
   }
-
-  let aVal: number;
-  let bVal: number;
-
-  switch (sort.key) {
-    case "pegScore":
-      aVal = a.coin.pegScore ?? -1;
-      bVal = b.coin.pegScore ?? -1;
-      break;
-    case "dewsScore":
-      aVal = a.dews?.score ?? -1;
-      bVal = b.dews?.score ?? -1;
-      break;
-    case "currentDeviationBps":
-      aVal = Math.abs(a.coin.currentDeviationBps ?? 0);
-      bVal = Math.abs(b.coin.currentDeviationBps ?? 0);
-      break;
-    case "pegPct":
-      aVal = a.coin.pegPct;
-      bVal = b.coin.pegPct;
-      break;
-    case "eventCount":
-      aVal = a.coin.eventCount;
-      bVal = b.coin.eventCount;
-      break;
-    case "worstDeviationBps":
-      aVal = Math.abs(a.coin.worstDeviationBps ?? 0);
-      bVal = Math.abs(b.coin.worstDeviationBps ?? 0);
-      break;
-    case "activeDepeg":
-      aVal = a.coin.activeDepeg ? 1 : 0;
-      bVal = b.coin.activeDepeg ? 1 : 0;
-      break;
-    case "dexAgrees":
-      aVal = a.coin.dexPriceCheck?.agrees ? 1 : 0;
-      bVal = b.coin.dexPriceCheck?.agrees ? 1 : 0;
-      break;
-    case "trackingSpanDays":
-      aVal = a.coin.trackingSpanDays;
-      bVal = b.coin.trackingSpanDays;
-      break;
-    default:
-      return attentionScore(b) - attentionScore(a);
-  }
-
-  return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
+  return compareByField(a, b, sort as TableSortState<DepegFieldKey>);
 }

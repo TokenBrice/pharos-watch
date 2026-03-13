@@ -9,8 +9,9 @@ import {
   Tooltip,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatChartDate } from "@shared/lib/format";
+import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { MonoYAxis, TimeXAxis } from "@/components/chart-primitives";
+import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 
 export interface FlowSeries {
   id: string;
@@ -31,31 +32,16 @@ const HOUR_OPTIONS = [
   { label: "30d", value: 720 },
 ] as const;
 
-function formatFlowValue(v: number): string {
-  const abs = Math.abs(v);
-  const sign = v < 0 ? "-" : "";
-  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(1)}M`;
-  return `${sign}$${(abs / 1e3).toFixed(0)}K`;
-}
-
 export function FlowComparisonChart({
   series,
   hours,
   onHoursChange,
 }: FlowComparisonChartProps) {
   // Merge all series into flat array keyed by timestamp
-  const mergedData = useMemo(() => {
-    const tsMap = new Map<number, Record<string, number>>();
-    for (const s of series) {
-      for (const d of s.data) {
-        let entry = tsMap.get(d.ts);
-        if (!entry) { entry = { ts: d.ts }; tsMap.set(d.ts, entry); }
-        entry[s.id] = d.netFlowUsd;
-      }
-    }
-    return Array.from(tsMap.values()).sort((a, b) => a.ts - b.ts);
-  }, [series]);
+  const mergedData = useMemo(
+    () => mergeSeriesByTimestamp(series, (d) => d.netFlowUsd),
+    [series],
+  );
 
   if (mergedData.length === 0) return null;
 
@@ -99,7 +85,7 @@ export function FlowComparisonChart({
                   : new Date(ts).toLocaleDateString([], { month: "short", day: "numeric" })
               }
             />
-            <MonoYAxis tickFormatter={formatFlowValue} />
+            <MonoYAxis tickFormatter={(v: number) => formatCurrency(v, 1)} />
             <ReferenceLine
               y={0}
               stroke="var(--color-border)"
@@ -117,7 +103,7 @@ export function FlowComparisonChart({
                       const val = p.value as number | null | undefined;
                       const formatted =
                         val != null
-                          ? `${val >= 0 ? "+" : ""}${formatFlowValue(val)}`
+                          ? `${val >= 0 ? "+" : ""}${formatCurrency(val, 1)}`
                           : "—";
                       return (
                         <div

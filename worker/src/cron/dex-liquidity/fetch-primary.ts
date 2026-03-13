@@ -1,6 +1,6 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { setCache } from "../../lib/db";
+import { setCache } from "../../lib/db-cache";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";

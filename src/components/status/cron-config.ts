@@ -1,23 +1,15 @@
 import {
-  CRON_GROUPS,
   getCronJobMeta,
-  type CronGroupDefinition,
   type CronGroupKey,
   type CronTriggerMode,
 } from "@shared/lib/cron-jobs";
 
-export type StatusCronGroupKey = CronGroupKey;
-
-export type StatusCronGroupDefinition = CronGroupDefinition;
-
 export interface StatusCronDisplayMeta {
-  group: StatusCronGroupKey;
+  group: CronGroupKey;
   label: string;
   schedule: string | null;
   triggerMode: CronTriggerMode | null;
 }
-
-export const STATUS_CRON_GROUPS: readonly StatusCronGroupDefinition[] = CRON_GROUPS;
 
 export function getStatusCronDisplay(job: string): StatusCronDisplayMeta {
   const definition = getCronJobMeta(job);

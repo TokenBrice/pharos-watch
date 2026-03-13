@@ -1,6 +1,6 @@
 import { requireAdmin } from "../lib/auth";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
-import { getPriceCache } from "../lib/db";
+import { getPriceCache } from "../lib/db-cache";
 
 export const handleBackfillMintBurnPrices = withErrorHandler(
   "backfill-mint-burn-prices",

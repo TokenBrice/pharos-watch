@@ -67,14 +67,28 @@ vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: c
 vi.mock("../cron/dex-liquidity", () => ({ syncDexLiquidity: cronMocks.syncDexLiquidity }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
 
-vi.mock("../lib/db", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/db")>();
+vi.mock("../lib/db-cache", () => ({
+  getCache: cronMocks.getCache,
+  setCache: cronMocks.setCache,
+  setCacheIfNewer: vi.fn(async () => undefined),
+  shouldSkipFreshCache: vi.fn(async () => false),
+  getPriceCache: vi.fn(async () => new Map()),
+  savePriceCache: vi.fn(async () => undefined),
+}));
+
+vi.mock("../lib/cron-logger", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/cron-logger")>();
   return {
     ...original,
     logCronRun: cronMocks.logCronRun,
+  };
+});
+
+vi.mock("../lib/cron-lease", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/cron-lease")>();
+  return {
+    ...original,
     runCronWithLease: cronMocks.runCronWithLease,
-    getCache: cronMocks.getCache,
-    setCache: cronMocks.setCache,
   };
 });
 

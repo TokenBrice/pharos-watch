@@ -87,7 +87,7 @@ describe("handleMintBurnFlows contract tests", () => {
   };
 
   const stablecoinsCache = JSON.stringify({
-    peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100000000000 } }],
+    peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100000000000 } }],
   });
 
   const db = mockD1([
@@ -151,7 +151,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const sparseCache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100000000000 } }],
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100000000000 } }],
     });
 
     const sparseDb = mockD1([
@@ -200,8 +200,8 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const mixedCache = JSON.stringify({
       peggedAssets: [
-        { id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } },
-        { id: "usdc-circle", circulating: { peggedUSD: 50_000_000_000 } },
+        { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 50_000_000_000 } },
       ],
     });
 
@@ -281,7 +281,7 @@ describe("handleMintBurnFlows contract tests", () => {
       daily_abs: 40_000_000,
     }));
     const cache = JSON.stringify({
-      peggedAssets: [{ id: "usdf-falcon", circulating: { peggedUSD: 600_000_000 } }],
+      peggedAssets: [{ id: "usdf-falcon", symbol: "USDF", circulating: { peggedUSD: 600_000_000 } }],
     });
 
     const regressionDb = mockD1([
@@ -360,7 +360,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
     ];
     const cache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
     const db = mockD1([
@@ -415,7 +415,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const cache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
     const db = mockD1([
@@ -506,7 +506,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const cache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
     const db = mockD1([
@@ -650,7 +650,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
     const db = mockD1([
@@ -713,7 +713,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const cache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
     const db = mockD1([
@@ -784,7 +784,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const cache = JSON.stringify({
-      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
     const db = mockD1([

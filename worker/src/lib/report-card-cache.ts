@@ -1,4 +1,4 @@
-import { getCache } from "./db";
+import { getCache } from "./db-cache";
 
 export interface ReportCardScoreEntry {
   score: number;

@@ -1,4 +1,4 @@
-import { getCache, setCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db-cache";
 import { withErrorHandler } from "../lib/api-utils";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";

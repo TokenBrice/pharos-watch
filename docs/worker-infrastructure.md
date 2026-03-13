@@ -206,6 +206,26 @@ Current consumers:
 - `worker/src/api/backfill-supply-history.ts`
 - `worker/src/api/backfill-depegs.ts`
 
+### Module-Level State (Init Pattern)
+
+Several worker modules use module-scoped `let` variables initialized via `init*()` functions:
+
+- `alerts.ts` → `initAlerts(webhookUrl)`
+- `coingecko.ts` → `initCoinGecko(apiKey)`
+- `coingecko-onchain.ts` → `initCoinGeckoOnchain(apiKey)`
+- `chain-registry.ts` → `initChainRpcs(env)`
+- `rate-limit.ts` → module-level `ipCounts` Map
+
+This pattern exists because `Env` bindings are unavailable at module initialization time
+in Workers. The `init*()` functions are called at the top of both `handleHttpRequest`
+and `handleScheduledEvent`.
+
+**Constraints:**
+- State persists within an isolate but resets on cold starts
+- State is NOT shared across isolates
+- The `ipCounts` rate limiter provides best-effort protection within a single isolate only
+- Always re-initialize in both HTTP and scheduled handlers
+
 ---
 
 ## Cron Scheduling

@@ -13,6 +13,7 @@ import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { CHART_HEIGHT, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { computeChartYDomain } from "@/lib/chart-utils";
 
 function pegKeyToCode(key: string): string {
   return key.replace(/^pegged/, "");
@@ -132,14 +133,13 @@ export function PegDiversityChart() {
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 
-  const yDomain = useMemo((): [number, number | string] => {
-    if (range === "all" || filteredData.length === 0) return [0, "auto"];
-    const totals = filteredData.map((d) => pegKeys.reduce((sum, key) => sum + ((d[key] as number) ?? 0), 0));
-    const min = totals.reduce((m, v) => Math.min(m, v), Infinity);
-    const max = totals.reduce((m, v) => Math.max(m, v), -Infinity);
-    const padding = (max - min) * 0.15 || max * 0.05;
-    return [Math.max(0, min - padding), max + padding];
-  }, [range, filteredData, pegKeys]);
+  const yDomain = useMemo(
+    () => computeChartYDomain(
+      filteredData.map((d) => pegKeys.reduce((sum, key) => sum + ((d[key] as number) ?? 0), 0)),
+      range === "all",
+    ),
+    [range, filteredData, pegKeys],
+  );
 
   if (isLoading) {
     return (

@@ -35,7 +35,7 @@ import {
   upsertMintBurnSyncState,
 } from "../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipeline/types";
-import type { CronProgressReporter } from "../lib/db";
+import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 
 const ETHEREUM_CHAIN_ID = "ethereum";

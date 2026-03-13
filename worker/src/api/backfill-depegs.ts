@@ -14,7 +14,7 @@ import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limit";
-import { getCache, setCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db-cache";
 import type { StablecoinMeta } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
@@ -868,26 +868,8 @@ export function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
 
 export function findNearestSupply(supplyByDate: SupplySnapshot[], timestamp: number): number | null {
   if (supplyByDate.length === 0) return null;
-
-  let lo = 0;
-  let hi = supplyByDate.length - 1;
-  while (lo <= hi) {
-    const mid = Math.floor((lo + hi) / 2);
-    if (supplyByDate[mid].ts < timestamp) {
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
-  }
-
-  const candidates = [
-    lo > 0 ? supplyByDate[lo - 1] : null,
-    lo < supplyByDate.length ? supplyByDate[lo] : null,
-  ].filter((x): x is SupplySnapshot => x !== null);
-
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => Math.abs(a.ts - timestamp) - Math.abs(b.ts - timestamp));
-  return candidates[0].supply;
+  const nearest = binarySearchNearest(supplyByDate, timestamp, (s) => s.ts);
+  return nearest?.supply ?? null;
 }
 
 export function extractDepegEvents(

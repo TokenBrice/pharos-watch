@@ -8,7 +8,7 @@ import {
   withErrorHandler,
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
-import { getCache } from "../lib/db";
+import { getCache } from "../lib/db-cache";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 
 export const handleStablecoins = createCacheHandler("stablecoins", "stablecoins", CACHE_PROFILES.realtime, 600);

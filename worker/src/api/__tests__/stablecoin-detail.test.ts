@@ -130,6 +130,38 @@ describe("handleStablecoinDetail", () => {
     expect(ctx.waitUntil).toHaveBeenCalled();
   });
 
+  it("refreshes from upstream when cache is stale and upstream succeeds", async () => {
+    const staleCachedValue = makeDLDetailBody({ tokens: [
+      { date: 1690000000, totalCirculatingUSD: { peggedUSD: 80_000_000 }, totalCirculating: { peggedUSD: 80_000_000 } },
+    ] });
+    const freshUpstreamBody = makeDLDetailBody({ tokens: [
+      { date: 1700000000, totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
+    ] });
+    const now = Math.floor(Date.now() / 1000);
+
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { value: staleCachedValue, updated_at: now - 600 }, // stale cache (10 min old)
+      },
+    ]);
+
+    fetchSpy.mockResolvedValueOnce(new Response(freshUpstreamBody, { status: 200 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
+
+    expect(res.status).toBe(200);
+    // Should use fresh upstream data, not the stale cache
+    expect(fetchSpy).toHaveBeenCalled();
+    const body = (await res.json()) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
+    expect(body.tokens).toHaveLength(1);
+    expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(120_000_000);
+    // Should queue a cache write with the fresh data
+    expect(ctx.waitUntil).toHaveBeenCalled();
+  });
+
   it("returns stale cache when upstream fails but cache exists", async () => {
     const cachedValue = makeDLDetailBody();
     const now = Math.floor(Date.now() / 1000);

@@ -4,7 +4,7 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 const DISMISSED_CLEANUP_DAYS = 90;
 
 export interface DiscoveryCandidateRow {

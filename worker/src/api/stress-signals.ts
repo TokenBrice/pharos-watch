@@ -14,8 +14,8 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
-  toDepegDewsMethodologyVersionLabel,
 } from "@shared/lib/depeg-dews-version";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
 
 export const handleStressSignals = withErrorHandler(
@@ -108,7 +108,7 @@ export const handleStressSignals = withErrorHandler(
         malformedRows,
         methodology: buildMethodologyEnvelope({
           version: methodologyVersion,
-          versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
+          versionLabel: toMethodologyVersionLabel(methodologyVersion),
           currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
           currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
           changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -165,7 +165,7 @@ export const handleStressSignals = withErrorHandler(
 
     return jsonResponse({ signals, updatedAt, malformedRows, methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
-      versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
+      versionLabel: toMethodologyVersionLabel(methodologyVersion),
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
       currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,

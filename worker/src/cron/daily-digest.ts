@@ -2,7 +2,7 @@ import type { DigestInputData, StablecoinData } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
 import { formatCurrency } from "@shared/lib/format";
-import { type CronResult } from "../lib/db";
+import { type CronResult } from "../lib/cron-logger";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";

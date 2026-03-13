@@ -29,26 +29,29 @@ vi.mock("../../lib/db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/db")>();
   return {
     ...actual,
-    getCache: vi.fn(async () => ({
-      value: JSON.stringify({
-        peggedAssets: [
-          {
-            id: "usdt-tether",
-            symbol: "USDT",
-            pegType: "peggedUSD",
-            price: 1,
-            priceConfidence: "high",
-            circulating: { peggedUSD: 100_000_000 },
-            circulatingPrevDay: { peggedUSD: 99_000_000 },
-            circulatingPrevWeek: { peggedUSD: 98_000_000 },
-          },
-        ],
-      }),
-      updatedAt: Math.floor(Date.now() / 1000),
-    })),
     batchExecute: vi.fn(async () => {}),
   };
 });
+
+vi.mock("../../lib/db-cache", () => ({
+  getCache: vi.fn(async () => ({
+    value: JSON.stringify({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          pegType: "peggedUSD",
+          price: 1,
+          priceConfidence: "high",
+          circulating: { peggedUSD: 100_000_000 },
+          circulatingPrevDay: { peggedUSD: 99_000_000 },
+          circulatingPrevWeek: { peggedUSD: 98_000_000 },
+        },
+      ],
+    }),
+    updatedAt: Math.floor(Date.now() / 1000),
+  })),
+}));
 
 vi.mock("../../lib/dews", () => ({
   computeDEWS: vi.fn(() => ({
@@ -58,7 +61,7 @@ vi.mock("../../lib/dews", () => ({
   })),
 }));
 
-import { getCache } from "../../lib/db";
+import { getCache } from "../../lib/db-cache";
 import { computeDEWS } from "../../lib/dews";
 import { computeAndStoreDEWS } from "../compute-dews";
 

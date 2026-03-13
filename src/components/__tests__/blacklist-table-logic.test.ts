@@ -116,11 +116,10 @@ describe("compareBlacklistRows — event type", () => {
 });
 
 describe("compareBlacklistRows — default fallback", () => {
-  it("falls back to timestamp sort for unknown key", () => {
+  it("returns 0 for unknown key", () => {
     const newer = makeEvent({ timestamp: 1700000100 });
     const older = makeEvent({ timestamp: 1700000000 });
     const result = compareBlacklistRows(newer, older, { key: "unknown" as BlacklistSortKey, direction: "asc" });
-    // asc: cmp = newer - older > 0 → older ranks first
-    expect(result).toBeGreaterThan(0);
+    expect(result).toBe(0);
   });
 });

@@ -1,4 +1,4 @@
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 import { getConditionBand } from "../lib/stability-index";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 

@@ -7,7 +7,7 @@ import { buildRequestUrl } from "@/lib/api";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { DiscoveryCandidate } from "@shared/types";
 import { useState } from "react";
-import { formatAge } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 function formatMcap(mcap: number | null): string {
   if (mcap == null) return "—";
@@ -99,7 +99,7 @@ export function DiscoveryCandidatesCard({
               <span className="font-mono text-xs">{formatMcap(c.marketCap)}</span>
               <span className="text-[10px] text-muted-foreground">{c.daysSeen}d seen</span>
               <span className="text-[10px] text-muted-foreground">
-                seen {formatAge(Math.max(0, nowSeconds - c.lastSeen))} ago
+                seen {formatElapsedSeconds(Math.max(0, nowSeconds - c.lastSeen))} ago
               </span>
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => handleDismiss(c.id)}>
                 Dismiss

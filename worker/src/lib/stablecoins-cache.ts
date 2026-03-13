@@ -1,5 +1,22 @@
-import { getCache } from "./db";
+import { z } from "zod";
+import { getCache } from "./db-cache";
 import type { StablecoinData } from "@shared/types";
+
+// Validate critical fields only -- passthrough preserves all upstream data
+const StablecoinEntrySchema = z.object({
+  id: z.string().min(1),
+  symbol: z.string().min(1),
+  name: z.string().optional(),
+  price: z.number().nullable().optional(),
+  pegType: z.string().optional(),
+  circulating: z.record(z.string(), z.unknown()).optional(),
+}).passthrough();
+
+/** Validate a single stablecoin entry. Returns the entry if valid, null if malformed. */
+export function validateStablecoinEntry(entry: unknown): StablecoinData | null {
+  const result = StablecoinEntrySchema.safeParse(entry);
+  return result.success ? (result.data as StablecoinData) : null;
+}
 
 export interface StablecoinsCachePayload {
   peggedAssets: StablecoinData[];
@@ -54,6 +71,22 @@ function toFxFallbackRates(value: unknown): Record<string, number> | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+function validateAndFilterArray(rawArray: unknown[]): StablecoinData[] | null {
+  const validated = rawArray
+    .map((entry: unknown) => validateStablecoinEntry(entry))
+    .filter((e): e is StablecoinData => e !== null);
+
+  if (validated.length === 0) {
+    return null;
+  }
+
+  if (validated.length < rawArray.length) {
+    console.warn(`[stablecoins-cache] Filtered ${rawArray.length - validated.length} malformed entries`);
+  }
+
+  return validated;
+}
+
 function normalizePayload(
   parsed: unknown,
   allowLegacyArray: boolean,
@@ -65,10 +98,14 @@ function normalizePayload(
     if (!allowLegacyArray) {
       return { kind: "error", reason: "legacy-array-not-allowed" };
     }
+    const validated = validateAndFilterArray(parsed);
+    if (validated === null) {
+      return { kind: "error", reason: "missing-pegged-assets" };
+    }
     return {
       kind: "degraded",
       reason: "legacy-array-payload",
-      payload: { peggedAssets: parsed as StablecoinData[] },
+      payload: { peggedAssets: validated },
     };
   }
 
@@ -81,10 +118,15 @@ function normalizePayload(
     return { kind: "error", reason: "missing-pegged-assets" };
   }
 
+  const validated = validateAndFilterArray(obj.peggedAssets);
+  if (validated === null) {
+    return { kind: "error", reason: "missing-pegged-assets" };
+  }
+
   return {
     kind: "ok",
     payload: {
-      peggedAssets: obj.peggedAssets as StablecoinData[],
+      peggedAssets: validated,
       fxFallbackRates: toFxFallbackRates(obj.fxFallbackRates),
     },
   };

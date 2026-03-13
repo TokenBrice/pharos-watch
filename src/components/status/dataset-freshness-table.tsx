@@ -1,7 +1,7 @@
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatAge } from "./format";
+import { formatElapsedSeconds } from "@shared/lib/format";
 
 type DatasetKey = keyof StatusResponse["datasetFreshness"];
 
@@ -146,9 +146,9 @@ export function DatasetFreshnessTable({
                   <td className="py-2 text-xs text-muted-foreground">
                     {row.updatedAt ? new Date(row.updatedAt * 1000).toLocaleString() : "—"}
                   </td>
-                  <td className="py-2">{row.ageSeconds != null ? formatAge(row.ageSeconds) : "—"}</td>
+                  <td className="py-2">{row.ageSeconds != null ? formatElapsedSeconds(row.ageSeconds) : "—"}</td>
                   <td className="py-2">
-                    {row.expectedFreshnessSec != null ? formatAge(row.expectedFreshnessSec) : "—"}
+                    {row.expectedFreshnessSec != null ? formatElapsedSeconds(row.expectedFreshnessSec) : "—"}
                   </td>
                   <td className="py-2 text-xs text-muted-foreground">{row.owners}</td>
                   <td className="py-2">
