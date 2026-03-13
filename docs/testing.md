@@ -10,6 +10,7 @@ The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-ne
 npm test              # Run all tests once (CI mode)
 npm run test:watch    # Watch mode — re-runs on file changes
 npm run lint          # ESLint across frontend + worker code
+npm run audit:deps    # Fails on high-severity npm advisories
 npm run seo:check     # Static SEO audit against built `out/` HTML
 npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts` -> `worker/src` imports)
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
@@ -31,6 +32,7 @@ Defined in `.github/workflows/deploy-cloudflare.yml`. Deploys now run in six job
 For deployment/worktree operating procedure (including the local merge gate before pushing `main`), see [Deployment Process](./deployment-process.md).
 
 1. `validate` (runs before any deployment):
+   - `npm run audit:deps`
    - `npm run lint`
    - `npm run check:worker-boundary`
    - `npm run check:migrations`
@@ -46,7 +48,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Runs strict API checks sequentially with bounded transient retry behavior (`SMOKE_API_RETRY_COUNT` default `1`, `SMOKE_API_TIMEOUT_MS` default `12000`)
 4. `deploy-pages` (needs `smoke-api`):
-   - `npx tsx scripts/sync-digests.ts`
+   - `npm run sync:digests`
    - `npm run build`
    - `npm run seo:check`
    - Deploy to Cloudflare Pages
@@ -62,7 +64,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 
 This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, then runs a fast post-deploy browser sanity check on the live site.
 
-The workflow uses `actions/checkout@v5` and `actions/setup-node@v6` pinned by commit SHA so the GitHub-hosted JS actions run on Node 24. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler from the `worker` workspace with `npx --no-install`.
+The workflow uses `actions/checkout@v5` and `actions/setup-node@v6` pinned by commit SHA so the GitHub-hosted JS actions run on Node 24. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the pipeline before deploy.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production.
 

@@ -59,6 +59,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `GITHUB_REPO_NODE_ID` | string | No | Feature request → GitHub Discussions |
 | `GITHUB_DISCUSSION_CATEGORY_ID` | string | No | Discussion category routing |
 | `FEEDBACK_IP_SALT` | string | Yes (for feedback) | Rate limit IP hashing for `POST /api/feedback` |
+| `PUBLIC_API_RATE_LIMIT_SALT` | string | No | Optional salt for hashed public API rate limiting; falls back to `FEEDBACK_IP_SALT`, then a built-in constant |
 | `TWITTER_API_KEY` | string | No | Digest → Twitter (OAuth consumer key) |
 | `TWITTER_API_SECRET` | string | No | Digest → Twitter (OAuth consumer secret) |
 | `TWITTER_ACCESS_TOKEN` | string | No | Digest → Twitter (access token) |
@@ -87,6 +88,10 @@ Three modules use a lazy-init pattern to receive API keys from the `Env` at runt
 | `initAlerts(env.ALERT_WEBHOOK_URL)` | `fetch` + `scheduled` | Configures webhook URL for error alerts |
 
 This pattern exists because `Env` bindings are only available inside handler functions (not at module initialization time). Worker isolates may be reused, but env-aware setup must still happen inside request/scheduled handlers.
+
+## Public API Rate Limiting
+
+Non-admin public `/api/*` requests are rate-limited through the D1-backed `public_api_rate_limit` table with per-minute hashed IP buckets. The worker prefers `PUBLIC_API_RATE_LIMIT_SALT`, then `FEEDBACK_IP_SALT`, then a built-in fallback constant to avoid storing raw IPs in D1. If the distributed limiter path fails, the worker falls back to the legacy isolate-local in-memory limiter so the request path still has bounded abuse protection.
 
 ---
 

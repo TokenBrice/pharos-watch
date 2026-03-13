@@ -149,6 +149,32 @@ describe("worker.fetch", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it("applies the distributed public API rate limit before routing", async () => {
+    const env = {
+      DB: mockD1([
+        {
+          match: "public_api_rate_limit",
+          rows: [],
+          first: { count: 301 },
+        },
+      ]),
+      CORS_ORIGIN: "https://pharos.watch",
+      PUBLIC_API_RATE_LIMIT_SALT: "test-salt",
+    } as const;
+    const { ctx } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
   it("writes cache on cacheable GET misses", async () => {
     const now = Math.floor(Date.now() / 1000);
     const env = {

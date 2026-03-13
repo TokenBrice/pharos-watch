@@ -7,9 +7,14 @@ import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { PriceConfidence } from "@shared/types";
 import {
   buildPriceValidationContext,
+  buildPriceReasonablenessOptions,
   getReferencePriceForContext,
+  isReasonablePrice,
+  PRICE_BOUNDS,
   type PriceValidationReferences,
 } from "../lib/price-validation";
+
+export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
 
 export interface DefiLlamaCoinPrice {
   price: number;
@@ -52,111 +57,6 @@ function applyResolvedPrice(
   asset.priceSource = source;
   asset.priceConfidence = confidence;
   asset.priceUpdatedAt = updatedAtSec;
-}
-
-/** Hardcoded price bounds per peg type — used as fallback when FX rates are unavailable */
-export const PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
-  USD: [0.01, 1.19],   // USD stablecoins never legitimately trade above $1.19
-  EUR: [0.01, 2],
-  GBP: [0.01, 2],
-  CHF: [0.01, 2],
-  BRL: [0.01, 2],
-  REAL: [0.01, 2],
-  JPY: [0.001, 0.05],
-  IDR: [0.00001, 0.001],
-  SGD: [0.2, 5],
-  TRY: [0.005, 0.5],
-  AUD: [0.2, 5],
-  RUB: [0.005, 50],
-  ZAR: [0.01, 0.5],
-  CAD: [0.30, 2],
-  CNY: [0.01, 0.50],
-  CNH: [0.01, 0.50],
-  PHP: [0.002, 0.10],
-  MXN: [0.005, 0.20],
-  UAH: [0.002, 0.15],
-  ARS: [0.000001, 0.05],
-  GOLD: [100, 100_000],
-  SILVER: [5, 500],
-};
-
-export interface PriceReasonablenessOptions {
-  navToken?: boolean;
-  commodityOunces?: number;
-}
-
-function getCommodityPriceScale(
-  pegType: string | undefined,
-  commodityOunces: number | undefined,
-): number {
-  if (
-    (pegType === "peggedGOLD" || pegType === "peggedSILVER") &&
-    typeof commodityOunces === "number" &&
-    Number.isFinite(commodityOunces) &&
-    commodityOunces > 0
-  ) {
-    return commodityOunces;
-  }
-  return 1;
-}
-
-export function buildPriceReasonablenessOptions(
-  input?: { navToken?: unknown; commodityOunces?: unknown },
-): PriceReasonablenessOptions {
-  const commodityOunces =
-    typeof input?.commodityOunces === "number" &&
-    Number.isFinite(input.commodityOunces) &&
-    input.commodityOunces > 0
-      ? input.commodityOunces
-      : undefined;
-
-  return {
-    navToken: !!input?.navToken,
-    commodityOunces,
-  };
-}
-
-/** Guard against corrupted API prices that would break peg deviation calculations */
-export function isReasonablePrice(
-  price: number,
-  pegType: string | undefined,
-  fxRates?: Record<string, number>,
-  opts?: PriceReasonablenessOptions,
-): boolean {
-  if (!Number.isFinite(price) || price <= 0 || price >= 100_000) return false;
-
-  // NAV tokens (e.g. OUSG, USTB) are USD-denominated but not $1-pegged.
-  // They should bypass tight peg bounds while still rejecting absurd values.
-  if (opts?.navToken) return true;
-
-  if (!pegType) return true;
-
-  const commodityScale = getCommodityPriceScale(pegType, opts?.commodityOunces);
-
-  // USD is the base currency — no FX rate, keep tight hardcoded bounds
-  if (pegType.includes("USD")) {
-    const [min, max] = PRICE_BOUNDS.USD;
-    return price > min && price < max;
-  }
-
-  // Dynamic bounds from live FX rates: 0.01x to 2x
-  if (fxRates) {
-    const fxRate = fxRates[pegType];
-    if (fxRate && fxRate > 0) {
-      const scaledFxRate = fxRate * commodityScale;
-      return price > 0.01 * scaledFxRate && price < 2 * scaledFxRate;
-    }
-  }
-
-  // Hardcoded fallback when FX rates unavailable (first boot, cache miss)
-  for (const [key, [min, max]] of Object.entries(PRICE_BOUNDS)) {
-    if (key === "USD") continue; // Already handled above
-    if (pegType.includes(key)) {
-      const scale = key === "GOLD" || key === "SILVER" ? commodityScale : 1;
-      return price > min * scale && price < max * scale;
-    }
-  }
-  return price > 0 && price < 100_000;
 }
 
 /** Map DL stablecoins API chain names → DL coins API prefixes */

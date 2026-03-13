@@ -2,7 +2,7 @@ import type { DeadStablecoin } from "@shared/types";
 
 export type CemeterySortMode = "newest" | "oldest";
 
-export const MAJOR_CEMETERY_COLLAPSE_MCAP = 1_000_000_000;
+const MAJOR_CEMETERY_COLLAPSE_MCAP = 1_000_000_000;
 
 export interface CemeteryYearSection {
   year: string;
@@ -29,7 +29,7 @@ function compareSymbolAsc(a: DeadStablecoin, b: DeadStablecoin): number {
   return a.symbol.localeCompare(b.symbol);
 }
 
-export function isMajorCemeteryCollapse(coin: DeadStablecoin): boolean {
+function isMajorCemeteryCollapse(coin: DeadStablecoin): boolean {
   return (coin.peakMcap ?? 0) >= MAJOR_CEMETERY_COLLAPSE_MCAP;
 }
 

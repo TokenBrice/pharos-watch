@@ -4,7 +4,7 @@ import {
   type BlacklistStablecoin,
   type BlacklistEventType,
 } from "@shared/types";
-import { findTrackedContract, getTrackedStablecoin } from "@shared/lib/tracked-stablecoin-utils";
+import { getTrackedStablecoin, resolveTrackedContractConfig } from "@shared/lib/tracked-stablecoin-utils";
 
 export interface ChainConfig {
   chainId: string;          // Internal identifier (e.g. "ethereum")
@@ -200,18 +200,11 @@ function resolveBlacklistContractConfig(
     throw new Error(`Unknown tracked stablecoin: ${spec.stablecoinId}`);
   }
 
-  const resolvedContract = spec.contractAddressOverride
-    ? {
-        address: spec.contractAddressOverride,
-        decimals:
-          spec.decimalsOverride
-          ?? findTrackedContract(stablecoin, spec.chain.chainId, { source: spec.contractSource ?? "primary" })?.decimals
-          ?? stablecoin.contracts?.[0]?.decimals
-          ?? 18,
-      }
-    : findTrackedContract(stablecoin, spec.chain.chainId, {
-        source: spec.contractSource ?? "primary",
-      });
+  const resolvedContract = resolveTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
+    source: spec.contractSource,
+    addressOverride: spec.contractAddressOverride,
+    decimalsOverride: spec.decimalsOverride,
+  });
   if (!resolvedContract) {
     throw new Error(`Missing tracked contract for ${spec.stablecoinId} on ${spec.chain.chainId}`);
   }
@@ -220,8 +213,8 @@ function resolveBlacklistContractConfig(
     chain: spec.chain,
     stablecoinId: spec.stablecoinId,
     stablecoin: resolveBlacklistStablecoinSymbol(spec.stablecoinId, spec.stablecoin),
-    contractAddress: resolvedContract.address,
-    decimals: spec.decimalsOverride ?? resolvedContract.decimals,
+    contractAddress: resolvedContract.contractAddress,
+    decimals: resolvedContract.decimals,
     startBlock: spec.startBlock,
     events: spec.events,
   };

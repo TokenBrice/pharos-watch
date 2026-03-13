@@ -79,13 +79,15 @@ Docs-only changes are skipped.
 Defined in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `validate`
+   - includes `npm run audit:deps`
 2. `deploy-worker`
    - applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`
    - runs `cd worker && npx --no-install wrangler deploy`
    - runs `cd worker && npx --no-install wrangler triggers deploy` to explicitly sync cron/routes/domain triggers after the worker deploy
 3. `smoke-api`
 4. `deploy-pages`
-   - uses explicit Wrangler CLI retries for transient Pages API failures during `pages deploy`
+   - runs `npm run sync:digests`
+   - uses the workspace-installed Wrangler CLI (`npx --no-install wrangler`) with explicit retries for transient Pages API failures during `pages deploy`
 5. `smoke-ui`
 6. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/status/` and `ops-api.pharos.watch`

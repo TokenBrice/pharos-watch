@@ -1,18 +1,12 @@
 import { REGISTRY_BY_ID, REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import {
+  decodeStablecoinUrlToken,
+  encodeStablecoinUrlToken,
+} from "@/lib/stablecoin-url-codec";
 
 export interface PortfolioHolding {
   coinId: string;
   amount: number;
-}
-
-const SYMBOL_TO_ID = new Map<string, string>();
-const ID_TO_SYMBOL = new Map<string, string>();
-
-for (const stablecoin of TRACKED_STABLECOINS) {
-  const lowerSymbol = stablecoin.symbol.toLowerCase();
-  SYMBOL_TO_ID.set(lowerSymbol, stablecoin.id);
-  ID_TO_SYMBOL.set(stablecoin.id, lowerSymbol);
 }
 
 export function parsePortfolioUrlParam(param: string): PortfolioHolding[] {
@@ -20,17 +14,17 @@ export function parsePortfolioUrlParam(param: string): PortfolioHolding[] {
 
   const holdings: PortfolioHolding[] = [];
   for (const part of param.split(",")) {
-    const [symbol, amountRaw] = part.split(":");
-    if (!symbol || !amountRaw) continue;
+    const [token, amountRaw] = part.split(":");
+    if (!token || !amountRaw) continue;
 
-    const coinId = SYMBOL_TO_ID.get(symbol.toLowerCase());
+    const coinId = decodeStablecoinUrlToken(token);
     const amount = Number(amountRaw);
     if (coinId && Number.isFinite(amount) && amount > 0) {
       holdings.push({ coinId, amount });
     }
   }
 
-  return holdings;
+  return migratePortfolioIds(holdings);
 }
 
 export function encodePortfolioHoldings(
@@ -38,8 +32,8 @@ export function encodePortfolioHoldings(
 ): string {
   return holdings
     .map((holding) => {
-      const symbol = ID_TO_SYMBOL.get(holding.coinId);
-      return symbol ? `${symbol}:${holding.amount}` : null;
+      const token = encodeStablecoinUrlToken(holding.coinId);
+      return token ? `${token}:${holding.amount}` : null;
     })
     .filter(Boolean)
     .join(",");

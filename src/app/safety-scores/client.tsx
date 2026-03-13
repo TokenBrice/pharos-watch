@@ -11,10 +11,10 @@ import { useStressTest } from "@/hooks/use-stress-test";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { StressTestPanel } from "@/components/stress-test-panel";
 import { gradeRange, REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { ReportCard, DimensionKey } from "@shared/types";
 import { trackEvent } from "@/lib/analytics";
+import { encodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 
@@ -139,8 +139,7 @@ export function ReportCardsClient() {
     const params = new URLSearchParams();
 
     if (stressTest.targetCoinId) {
-      const meta = TRACKED_STABLECOINS.find((s) => s.id === stressTest.targetCoinId);
-      if (meta) params.set("stress", meta.symbol.toLowerCase());
+      params.set("stress", encodeStablecoinUrlToken(stressTest.targetCoinId));
     }
     if (stressTest.targetGrade) {
       params.set("grade", stressTest.targetGrade);

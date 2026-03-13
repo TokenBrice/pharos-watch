@@ -10,11 +10,10 @@ export interface StablecoinCardData {
   psiScore: number;
   psiBand: string;
   mcap: number;
-  vol24h: number;
+  vol24h: number | null;
   flow7d: number;
   sparklineData: number[];
   hasActiveDepeg: boolean;
-  deviationPct: number;
 }
 
 /**
@@ -95,6 +94,17 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
   const dewsColor = DEWS_BAND_COLORS[data.dewsBand] ?? TEXT_SECONDARY;
   const psiColor = PSI_BAND_COLORS[data.psiBand] ?? TEXT_SECONDARY;
   const sign = data.flow7d >= 0 ? "+" : "";
+  const secondaryMetrics = [
+    { label: "MARKET CAP", value: formatUsd(data.mcap) },
+    ...(data.vol24h != null
+      ? [{ label: "24H VOLUME", value: formatUsd(data.vol24h) }]
+      : []),
+    {
+      label: "7D FLOW",
+      value: `${sign}${formatUsd(data.flow7d)}`,
+      color: data.flow7d >= 0 ? "#22c55e" : "#ef4444",
+    },
+  ];
 
   return (
     <CardFrame
@@ -194,50 +204,30 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
             fontFamily: "Geist Mono",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span
-              style={{
-                fontSize: 14,
-                color: TEXT_SECONDARY,
-                letterSpacing: "0.06em",
-              }}
+          {secondaryMetrics.map((metric) => (
+            <div
+              key={metric.label}
+              style={{ display: "flex", flexDirection: "column", gap: 6 }}
             >
-              MARKET CAP
-            </span>
-            <span style={{ fontSize: 24 }}>{formatUsd(data.mcap)}</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span
-              style={{
-                fontSize: 14,
-                color: TEXT_SECONDARY,
-                letterSpacing: "0.06em",
-              }}
-            >
-              24H VOLUME
-            </span>
-            <span style={{ fontSize: 24 }}>{formatUsd(data.vol24h)}</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span
-              style={{
-                fontSize: 14,
-                color: TEXT_SECONDARY,
-                letterSpacing: "0.06em",
-              }}
-            >
-              7D FLOW
-            </span>
-            <span
-              style={{
-                fontSize: 24,
-                color: data.flow7d >= 0 ? "#22c55e" : "#ef4444",
-              }}
-            >
-              {sign}
-              {formatUsd(data.flow7d)}
-            </span>
-          </div>
+              <span
+                style={{
+                  fontSize: 14,
+                  color: TEXT_SECONDARY,
+                  letterSpacing: "0.06em",
+                }}
+              >
+                {metric.label}
+              </span>
+              <span
+                style={{
+                  fontSize: 24,
+                  ...(metric.color ? { color: metric.color } : {}),
+                }}
+              >
+                {metric.value}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 

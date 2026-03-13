@@ -21,6 +21,7 @@ import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { encodePortfolioHoldings } from "@/lib/portfolio-codec";
 import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
 import type { PortfolioPreset } from "@/components/portfolio-empty-state";
 
@@ -259,14 +260,7 @@ export function PortfolioClient() {
   useEffect(() => {
     if (!portfolio.initialized) return;
 
-    // Encode portfolio holdings as ?p=symbol:amount,...
-    const encoded = portfolio.holdings
-      .map((h) => {
-        const meta = TRACKED_META_BY_ID.get(h.coinId);
-        return meta ? `${meta.symbol.toLowerCase()}:${h.amount}` : null;
-      })
-      .filter(Boolean)
-      .join(",");
+    const encoded = encodePortfolioHoldings(portfolio.holdings);
     setParam("p", encoded);
   }, [portfolio.holdings, portfolio.initialized, setParam]);
 

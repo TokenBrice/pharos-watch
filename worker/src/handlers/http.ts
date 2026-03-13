@@ -3,10 +3,11 @@ import { initAlerts } from "../lib/alerts";
 import { initChainRpcs } from "../lib/chain-registry";
 import { initCoinGecko } from "../lib/coingecko";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
-import { checkRateLimit } from "../lib/rate-limit";
+import { checkPublicApiRateLimit } from "../lib/rate-limit";
 import { errorResponse } from "../lib/api-utils";
 import { hasValidAdminCredential } from "../lib/auth";
 import { parseCsvEnv } from "../lib/env";
+import { buildTelegramCreds, buildTwitterCreds } from "../lib/runtime-credentials";
 import { isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
 
@@ -77,22 +78,8 @@ export async function handleHttpRequest(
     GITHUB_DISCUSSION_CATEGORY_ID: env.GITHUB_DISCUSSION_CATEGORY_ID,
     FEEDBACK_IP_SALT: env.FEEDBACK_IP_SALT,
   };
-  const twitterCreds =
-    env.TWITTER_API_KEY &&
-    env.TWITTER_API_SECRET &&
-    env.TWITTER_ACCESS_TOKEN &&
-    env.TWITTER_ACCESS_TOKEN_SECRET
-      ? {
-          apiKey: env.TWITTER_API_KEY,
-          apiSecret: env.TWITTER_API_SECRET,
-          accessToken: env.TWITTER_ACCESS_TOKEN,
-          accessTokenSecret: env.TWITTER_ACCESS_TOKEN_SECRET,
-        }
-      : null;
-  const telegramCreds =
-    env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID
-      ? { botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID }
-      : null;
+  const twitterCreds = buildTwitterCreds(env);
+  const telegramCreds = buildTelegramCreds(env);
 
   // Handle CORS preflight
   if (request.method === "OPTIONS") {
@@ -113,7 +100,12 @@ export async function handleHttpRequest(
   const url = new URL(request.url);
   const isAdmin = hasValidAdminCredential(request);
   if (url.pathname.startsWith("/api/") && url.pathname !== "/api/telegram-webhook" && !isAdmin) {
-    const rateLimitResponse = checkRateLimit(getClientIp(request), 300);
+    const rateLimitResponse = await checkPublicApiRateLimit(
+      env.DB,
+      getClientIp(request),
+      env.PUBLIC_API_RATE_LIMIT_SALT ?? env.FEEDBACK_IP_SALT,
+      300,
+    );
     if (rateLimitResponse) {
       return addCorsHeaders(rateLimitResponse, origin);
     }

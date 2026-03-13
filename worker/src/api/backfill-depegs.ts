@@ -4,9 +4,10 @@ import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "@sha
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import {
   buildPriceReasonablenessOptions,
+  buildPriceValidationContext,
   type PriceReasonablenessOptions,
-} from "../cron/enrich-prices";
-import { buildPriceValidationContext, validatePriceCandidateAgainstReference } from "../lib/price-validation";
+  validatePriceCandidateAgainstReference,
+} from "../lib/price-validation";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";

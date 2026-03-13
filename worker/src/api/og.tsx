@@ -82,6 +82,59 @@ async function renderPng(element: React.ReactNode): Promise<Uint8Array> {
   return rendered.asPng();
 }
 
+interface StablecoinOgCoinInput {
+  name: string;
+  symbol: string;
+  price?: number | null;
+  circulating: Record<string, number>;
+  circulatingPrevWeek?: Record<string, number> | null;
+}
+
+interface StablecoinOgSignalsInput {
+  coin: StablecoinOgCoinInput;
+  dexLiquidityScore: number | null;
+  dewsBand: string | null | undefined;
+  psiScore: number | null | undefined;
+  psiBand: string | null | undefined;
+  grade: string | null | undefined;
+  sparklineRows: Array<{ price: number }>;
+  hasActiveDepeg: boolean;
+  flow7d: number | null | undefined;
+}
+
+export function deriveStablecoinOgCardData({
+  coin,
+  dexLiquidityScore,
+  dewsBand,
+  psiScore,
+  psiBand,
+  grade,
+  sparklineRows,
+  hasActiveDepeg,
+  flow7d,
+}: StablecoinOgSignalsInput): StablecoinCardData {
+  const pegPrice = coin.price ?? 1;
+  const mcap = sumPegBuckets(coin.circulating);
+  const prevWeekMcap = sumPegBuckets(coin.circulatingPrevWeek ?? undefined);
+  const sparklineData = sparklineRows.map((row) => row.price).reverse();
+
+  return {
+    name: coin.name,
+    symbol: coin.symbol,
+    grade: grade ?? "NR",
+    pegPrice,
+    dewsBand: dewsBand ?? "CALM",
+    liquidityScore: dexLiquidityScore ?? 0,
+    psiScore: psiScore ?? 0,
+    psiBand: psiBand ?? "BEDROCK",
+    mcap,
+    vol24h: null,
+    flow7d: flow7d ?? (mcap - prevWeekMcap),
+    sparklineData: sparklineData.length >= 2 ? sparklineData : [pegPrice, pegPrice],
+    hasActiveDepeg,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // /api/og/stablecoin/:id
 // ---------------------------------------------------------------------------
@@ -145,32 +198,18 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     return new Response("Stablecoin not found in cache", { status: 404, headers: { "Content-Type": "text/plain" } });
   }
 
-  const mcap = sumPegBuckets(coin.circulating);
-  const prevWeekMcap = sumPegBuckets(coin.circulatingPrevWeek);
   const liq = dexLiqMap[id];
-  const pegPrice = coin.price ?? 1;
-  const pegTarget = coin.pegType === "peggedUSD" ? 1 : pegPrice; // approximate
-  const deviationPct = pegTarget !== 0 ? ((pegPrice - pegTarget) / pegTarget) * 100 : 0;
-
-  // Sparkline: reverse to chronological order (query returns newest first)
-  const sparklineData = (sparklineRows.results ?? []).map((r) => r.price).reverse();
-
-  const data: StablecoinCardData = {
-    name: coin.name,
-    symbol: coin.symbol,
-    grade: reportCardRow?.grade ?? "NR",
-    pegPrice,
-    dewsBand: dewsRow?.band ?? "CALM",
-    liquidityScore: liq?.liquidityScore ?? 0,
-    psiScore: psiRow?.score ?? 0,
-    psiBand: psiRow?.band ?? "BEDROCK",
-    mcap,
-    vol24h: 0, // Volume not stored in D1 — omit gracefully
-    flow7d: flowRow?.net_flow ?? (mcap - prevWeekMcap),
-    sparklineData: sparklineData.length >= 2 ? sparklineData : [pegPrice, pegPrice],
+  const data = deriveStablecoinOgCardData({
+    coin,
+    dexLiquidityScore: liq?.liquidityScore ?? null,
+    dewsBand: dewsRow?.band,
+    psiScore: psiRow?.score,
+    psiBand: psiRow?.band,
+    grade: reportCardRow?.grade,
+    sparklineRows: sparklineRows.results ?? [],
     hasActiveDepeg: activeDepegRow !== null,
-    deviationPct: Math.round(deviationPct * 100) / 100,
-  };
+    flow7d: flowRow?.net_flow,
+  });
 
   const png = await renderPng(<StablecoinCard data={data} />);
   return new Response(png, { headers: CACHE_HEADERS });

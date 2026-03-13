@@ -1,6 +1,6 @@
 /**
  * Fetches stablecoin logos from CoinGecko and writes logos.json.
- * Run locally: npx tsx scripts/fetch-logos.ts
+ * Run locally: tsx scripts/fetch-logos.ts
  * CoinGecko blocks Cloudflare Workers, so this must run from a local machine.
  */
 

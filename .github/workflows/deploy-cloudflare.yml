@@ -18,6 +18,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - run: npm run audit:deps
       - run: npm run lint
       - run: npm run check:worker-boundary
       - run: npm run check:migrations
@@ -72,7 +73,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npx tsx scripts/sync-digests.ts
+      - run: npm run sync:digests
       - run: npm run build
         env:
           NEXT_PUBLIC_API_BASE: ${{ vars.API_BASE_URL }}
@@ -84,7 +85,7 @@ jobs:
         run: |
           for attempt in 1 2 3; do
             echo "[deploy-pages] Attempt ${attempt}/3"
-            if npx --yes wrangler@4.71.0 pages deploy out --project-name=stablecoin-dashboard --commit-dirty=true --commit-message="${{ github.sha }}"; then
+            if npx --no-install wrangler pages deploy out --project-name=stablecoin-dashboard --commit-dirty=true --commit-message="${{ github.sha }}"; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then

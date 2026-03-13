@@ -25,7 +25,7 @@ const PAGES = [
   { path: '/dependency-map',  file: 'og-dependency-map.png' },
   { path: '/digest',          file: 'og-digest.png',         scrollY: 200 },
   // Portfolio pre-loaded with typical holdings so it shows data, not empty state
-  { path: '/portfolio?p=USDT:10000,USDC:5000,DAI:2000,USDE:1000', file: 'og-portfolio.png' },
+  { path: '/portfolio?p=usdt-tether:10000,usdc-circle:5000,dai-makerdao:2000,usde-ethena:1000', file: 'og-portfolio.png' },
   { path: '/methodology',     file: 'og-methodology.png'    },
 ];
 

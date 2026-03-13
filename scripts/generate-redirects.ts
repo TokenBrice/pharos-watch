@@ -5,7 +5,7 @@ import path from "node:path";
  * Generates Cloudflare Pages _redirects entries for the stablecoin ID migration.
  * Reads existing _redirects, appends migration redirects (idempotent).
  *
- * Usage: npx tsx scripts/generate-redirects.ts
+ * Usage: tsx scripts/generate-redirects.ts
  */
 
 type MappingEntry = {

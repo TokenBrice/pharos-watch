@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import { execSync } from "node:child_process";
+import {
+  CRITICAL_FILES,
+  findCoverageFor,
+  normalizePath,
+  parseLcov,
+} from "./lib/critical-coverage.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
 const THRESHOLD = Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD ?? "40");
@@ -8,30 +14,6 @@ const RATCHET_TOLERANCE = Number.parseFloat(process.env.CRITICAL_COVERAGE_RATCHE
 const BASELINE_PATH = process.env.CRITICAL_COVERAGE_BASELINE_FILE ?? ".ci/critical-coverage-baseline.json";
 const COMPARE_REF = (process.env.CRITICAL_COVERAGE_COMPARE_REF ?? "").trim();
 const RATCHET_ALL = process.env.CRITICAL_COVERAGE_RATCHET_ALL === "1";
-
-const CRITICAL_FILES = [
-  "src/lib/api.ts",
-  "worker/src/lib/api-utils.ts",
-  "worker/src/lib/auth.ts",
-  "worker/src/lib/evm-rpc.ts",
-  "worker/src/lib/stablecoins-cache.ts",
-  "worker/src/lib/safety-scores.ts",
-  "worker/src/handlers/scheduled.ts",
-  "worker/src/api/health.ts",
-  "worker/src/cron/sync-stablecoins.ts",
-  "worker/src/cron/daily-digest.ts",
-  "worker/src/cron/sync-yield-data.ts",
-  "worker/src/api/discovery.ts",
-  "worker/src/api/peg-summary.ts",
-  "worker/src/api/report-cards.ts",
-  "worker/src/api/dex-liquidity.ts",
-  "worker/src/api/stress-signals.ts",
-  "worker/src/api/mint-burn-flows.ts",
-  "worker/src/api/status.ts",
-  "worker/src/lib/alerts.ts",
-  "worker/src/api/stablecoin-detail.ts",
-  "worker/src/cron/dex-liquidity/orchestrator.ts",
-];
 
 // Explicit per-file minimums for critical reliability paths.
 const CRITICAL_THRESHOLDS = {
@@ -48,44 +30,6 @@ const CRITICAL_THRESHOLDS = {
   "worker/src/api/status.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_STATUS ?? "40"),
   "worker/src/cron/dex-liquidity/orchestrator.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR ?? "55"),
 };
-
-function normalizePath(p) {
-  return p.replaceAll("\\", "/");
-}
-
-function parseLcov(content) {
-  const blocks = content.split("end_of_record\n");
-  const map = new Map();
-
-  for (const block of blocks) {
-    const lines = block.trim().split("\n").filter(Boolean);
-    if (lines.length === 0) continue;
-
-    const sf = lines.find((l) => l.startsWith("SF:"));
-    if (!sf) continue;
-    const file = sf.slice(3);
-
-    let lf = 0;
-    let lh = 0;
-    for (const line of lines) {
-      if (line.startsWith("LF:")) lf = Number.parseInt(line.slice(3), 10);
-      if (line.startsWith("LH:")) lh = Number.parseInt(line.slice(3), 10);
-    }
-
-    if (Number.isFinite(lf) && lf > 0) {
-      map.set(file, { lf, lh, pct: (lh / lf) * 100 });
-    }
-  }
-
-  return map;
-}
-
-function findCoverageFor(file, map) {
-  for (const [key, value] of map.entries()) {
-    if (key.endsWith(file)) return { key, ...value };
-  }
-  return null;
-}
 
 function parseChangedFilesFromEnv() {
   const raw = process.env.CRITICAL_COVERAGE_CHANGED_FILES;

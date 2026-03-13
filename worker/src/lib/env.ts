@@ -20,6 +20,7 @@ export interface Env {
   GITHUB_REPO_NODE_ID?: string;
   GITHUB_DISCUSSION_CATEGORY_ID?: string;
   FEEDBACK_IP_SALT?: string;
+  PUBLIC_API_RATE_LIMIT_SALT?: string;
   TWITTER_API_KEY?: string;
   TWITTER_API_SECRET?: string;
   TWITTER_ACCESS_TOKEN?: string;

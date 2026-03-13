@@ -1,6 +1,6 @@
 import type { ChainConfig } from "./blacklist-contracts";
 import { chainConfig } from "./blacklist-contracts";
-import { findTrackedContract, getTrackedStablecoin } from "@shared/lib/tracked-stablecoin-utils";
+import { getTrackedStablecoin, resolveTrackedContractConfig } from "@shared/lib/tracked-stablecoin-utils";
 
 // --- Types ---
 
@@ -116,17 +116,11 @@ function resolveMintBurnContractConfig(
     throw new Error(`Unknown tracked stablecoin: ${spec.stablecoinId}`);
   }
 
-  const resolvedContract = spec.contractAddressOverride
-    ? {
-        address: spec.contractAddressOverride,
-        decimals:
-          spec.decimalsOverride
-          ?? stablecoin.contracts?.[0]?.decimals
-          ?? 18,
-      }
-    : findTrackedContract(stablecoin, spec.chain.chainId, {
-        source: spec.contractSource ?? "primary",
-      });
+  const resolvedContract = resolveTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
+    source: spec.contractSource,
+    addressOverride: spec.contractAddressOverride,
+    decimalsOverride: spec.decimalsOverride,
+  });
   if (!resolvedContract) {
     throw new Error(`Missing tracked contract for ${spec.stablecoinId} on ${spec.chain.chainId}`);
   }
@@ -134,9 +128,9 @@ function resolveMintBurnContractConfig(
   return {
     chain: spec.chain,
     stablecoinId: spec.stablecoinId,
-    symbol: stablecoin.symbol,
-    contractAddress: resolvedContract.address,
-    decimals: spec.decimalsOverride ?? resolvedContract.decimals,
+    symbol: resolvedContract.stablecoin.symbol,
+    contractAddress: resolvedContract.contractAddress,
+    decimals: resolvedContract.decimals,
     dustThreshold: spec.dustThreshold,
     startBlock: spec.startBlock,
     events: spec.events,

@@ -18,6 +18,17 @@ interface FindTrackedContractOptions {
   source?: "primary" | "traded" | "any";
 }
 
+export interface ResolveTrackedContractConfigOptions extends FindTrackedContractOptions {
+  addressOverride?: string;
+  decimalsOverride?: number;
+}
+
+export interface ResolvedTrackedContractConfig {
+  stablecoin: StablecoinMeta;
+  contractAddress: string;
+  decimals: number;
+}
+
 export function findTrackedContract(
   stablecoinOrId: StablecoinMeta | string,
   chainId: string,
@@ -41,4 +52,34 @@ export function findTrackedContract(
   return stablecoin.tradedContracts?.find(
     (deployment) => deployment.chain === chainId,
   );
+}
+
+export function resolveTrackedContractConfig(
+  stablecoinId: string,
+  chainId: string,
+  options?: ResolveTrackedContractConfigOptions,
+): ResolvedTrackedContractConfig | null {
+  const stablecoin = TRACKED_META_BY_ID.get(stablecoinId);
+  if (!stablecoin) return null;
+
+  const resolvedContract = options?.addressOverride
+    ? {
+        address: options.addressOverride,
+        decimals:
+          options.decimalsOverride
+          ?? findTrackedContract(stablecoin, chainId, { source: options.source ?? "primary" })?.decimals
+          ?? stablecoin.contracts?.[0]?.decimals
+          ?? 18,
+      }
+    : findTrackedContract(stablecoin, chainId, {
+        source: options?.source ?? "primary",
+      });
+
+  if (!resolvedContract) return null;
+
+  return {
+    stablecoin,
+    contractAddress: resolvedContract.address,
+    decimals: options?.decimalsOverride ?? resolvedContract.decimals,
+  };
 }

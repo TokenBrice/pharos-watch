@@ -1,7 +1,7 @@
 /**
  * Fetches all digests from the API and writes them to data/digests.json.
  * Run before builds to ensure static digest pages have fresh data:
- *   npx tsx scripts/sync-digests.ts
+ *   tsx scripts/sync-digests.ts
  */
 
 const API_URL = "https://api.pharos.watch/api/digest-archive";

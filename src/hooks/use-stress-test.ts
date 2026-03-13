@@ -8,6 +8,7 @@ import type {
   ReportCardGrade,
   ReportCardsResponse,
 } from "@shared/types";
+import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,11 +57,9 @@ export interface StressTestState {
 // Lookup maps (built once at module level)
 // ---------------------------------------------------------------------------
 
-const symbolToId = new Map<string, string>();
 const idToMeta = new Map<string, { name: string; symbol: string }>();
 
 for (const coin of TRACKED_STABLECOINS) {
-  symbolToId.set(coin.symbol.toLowerCase(), coin.id);
   idToMeta.set(coin.id, { name: coin.name, symbol: coin.symbol });
 }
 
@@ -103,18 +102,16 @@ function getDowngradeOptions(currentGrade: ReportCardGrade): ReportCardGrade[] {
   return gradeList.slice(idx + 1);
 }
 
-function parseInitialStressSelection(): { coinId: string | null; grade: ReportCardGrade | null } {
-  if (typeof window === "undefined") {
-    return { coinId: null, grade: null };
-  }
-
-  const searchParams = new URLSearchParams(window.location.search);
+export function parseStressSelectionFromSearch(
+  search: string,
+): { coinId: string | null; grade: ReportCardGrade | null } {
+  const searchParams = new URLSearchParams(search);
   const stressParam = searchParams.get("stress");
   if (!stressParam) {
     return { coinId: null, grade: null };
   }
 
-  const coinId = symbolToId.get(stressParam.toLowerCase());
+  const coinId = decodeStablecoinUrlToken(stressParam);
   if (!coinId) {
     return { coinId: null, grade: null };
   }
@@ -127,6 +124,14 @@ function parseInitialStressSelection(): { coinId: string | null; grade: ReportCa
   const normalizedGrade = gradeParam.toUpperCase();
   const validGrade = GRADE_THRESHOLDS.find((t) => t.grade === normalizedGrade);
   return { coinId, grade: validGrade?.grade ?? null };
+}
+
+function parseInitialStressSelection(): { coinId: string | null; grade: ReportCardGrade | null } {
+  if (typeof window === "undefined") {
+    return { coinId: null, grade: null };
+  }
+
+  return parseStressSelectionFromSearch(window.location.search);
 }
 
 // ---------------------------------------------------------------------------

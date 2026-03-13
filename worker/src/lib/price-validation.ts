@@ -49,6 +49,11 @@ export interface BuildPriceValidationContextInput {
   commodityOunces?: number;
 }
 
+export interface PriceReasonablenessOptions {
+  navToken?: boolean;
+  commodityOunces?: number;
+}
+
 const MAX_PRICE = 100_000;
 const DEFAULT_REFERENCE_STALE_SEC = 6 * 3600;
 
@@ -76,6 +81,8 @@ const HARDCODED_PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
   GOLD: [100, 100_000],
   SILVER: [5, 500],
 };
+
+export const PRICE_BOUNDS = HARDCODED_PRICE_BOUNDS;
 
 function sanitizeRates(input: unknown): Record<string, number> {
   if (!input || typeof input !== "object") return {};
@@ -166,6 +173,22 @@ export function buildPriceValidationContext(
     navToken,
     commodityOunces,
     tracked: trackedMeta != null,
+  };
+}
+
+export function buildPriceReasonablenessOptions(
+  input?: { navToken?: unknown; commodityOunces?: unknown },
+): PriceReasonablenessOptions {
+  const commodityOunces =
+    typeof input?.commodityOunces === "number" &&
+    Number.isFinite(input.commodityOunces) &&
+    input.commodityOunces > 0
+      ? input.commodityOunces
+      : undefined;
+
+  return {
+    navToken: !!input?.navToken,
+    commodityOunces,
   };
 }
 
@@ -474,4 +497,48 @@ export function validatePriceCandidateAgainstReference(
   }
 
   return validatePriceCandidate(price, context, mode);
+}
+
+export function isReasonablePrice(
+  price: number,
+  pegType: string | undefined,
+  fxRates?: Record<string, number>,
+  opts?: PriceReasonablenessOptions,
+): boolean {
+  if (!Number.isFinite(price) || price <= 0 || price >= MAX_PRICE) return false;
+
+  const context = buildPriceValidationContext({
+    pegType,
+    navToken: opts?.navToken,
+    commodityOunces: opts?.commodityOunces,
+  });
+
+  if (context.pegClass === "nav") return true;
+  if (!context.pegType) return true;
+
+  if (context.pegType.includes("USD")) {
+    const [min, max] = PRICE_BOUNDS.USD;
+    return price > min && price < max;
+  }
+
+  const referencePrice = getReferencePriceForContext(
+    context,
+    fxRates
+      ? {
+          rates: fxRates,
+          type: "fresh",
+          updatedAt: null,
+        }
+      : undefined,
+  );
+  if (referencePrice != null && referencePrice > 0) {
+    return price > 0.01 * referencePrice && price < 2 * referencePrice;
+  }
+
+  const hardcodedBounds = getHardcodedBounds(context);
+  if (hardcodedBounds) {
+    return price > hardcodedBounds.min && price < hardcodedBounds.max;
+  }
+
+  return price > 0 && price < MAX_PRICE;
 }

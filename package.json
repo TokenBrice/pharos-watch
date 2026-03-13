@@ -10,10 +10,11 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npx tsx scripts/generate-redirects.ts",
+    "prebuild": "tsx scripts/generate-redirects.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "audit:deps": "npm audit --audit-level=high",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:critical-contracts": "vitest run src/lib/__tests__/api-fetch-contracts.test.ts src/lib/__tests__/api-endpoints.test.ts worker/src/api/__tests__/router-contract.test.ts worker/src/api/__tests__/cache-passthrough.test.ts worker/src/api/__tests__/peg-summary.test.ts worker/src/api/__tests__/report-cards.test.ts worker/src/api/__tests__/stability-index.test.ts worker/src/api/__tests__/dex-liquidity.test.ts worker/src/api/__tests__/stress-signals.test.ts worker/src/api/__tests__/mint-burn-flows.test.ts",
@@ -23,7 +24,7 @@
     "test:merge-gate": "node scripts/test-merge-gate.mjs",
     "test:watch": "vitest",
     "sync:digests": "tsx scripts/sync-digests.ts",
-    "test:smoke-api": "npx tsx scripts/smoke-api.mjs",
+    "test:smoke-api": "tsx scripts/smoke-api.mjs",
     "test:smoke-ops": "node scripts/smoke-ops.mjs",
     "test:smoke-ui": "node scripts/smoke-ui.mjs",
     "check:worker-boundary": "node scripts/check-worker-import-boundary.mjs",
@@ -32,7 +33,6 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@cloudflare/pages-plugin-cloudflare-access": "^1.0.5",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-label": "^2.1.7",
@@ -68,6 +68,7 @@
     "jsdom": "^26.1.0",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.2.1",
+    "tsx": "^4.20.6",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5",
     "vitest": "^4.1.0"
