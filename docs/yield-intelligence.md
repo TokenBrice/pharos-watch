@@ -208,6 +208,8 @@ PYS                 = min(100, round(yieldEfficiency * sustainabilityMult * scal
 
 Returns 0 when `apy30d <= 0`.
 
+Frontend components display PYS breakdown via `computePysBreakdown()` in `src/lib/yield-constants.ts`, which mirrors the intermediate values (`riskPenalty`, `yieldEfficiency`, `sustainabilityMult`) from the worker's `computePYS()`. The final PYS value is always served by the API.
+
 ### Supporting Metrics
 
 | Metric           | Formula                               | Description                                                                   |
@@ -251,6 +253,8 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 | `reward-heavy`     | `apyReward / apy > 0.8`          | 80%+ from incentives, not base yield |
 | `tvl-outflow`      | TVL dropped > 20% from prev week | Capital leaving the protocol         |
 | `data-stale`       | `updated_at` > 90 min old        | Yield data hasn't refreshed in 90+ min |
+
+All frontend surfaces (leaderboard, detail section, history chart) format warning signals via the shared `formatYieldWarningSignal()` function in `src/lib/yield-constants.ts`, which maps known signal keys to human-readable labels and falls back to hyphen-to-space conversion for unknown signals.
 
 At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when `updated_at` is older than 90 minutes (`STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
 
@@ -641,7 +645,8 @@ Covers all pure functions in `yield-helpers.ts`:
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `shared/lib/classification.ts`                       | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`                                                                                                     |
 | `src/hooks/api-hooks.ts`                             | TanStack Query hook exports for `useYieldRankings()` and `useYieldHistory()`                                                                |
-| `src/lib/yield-constants.ts`                         | Shared warning-signal labels and formatter used by yield detail/history surfaces                                                             |
+| `src/lib/yield-constants.ts`                         | Warning-signal labels, `formatYieldWarningSignal`, `getPysColor`, `computePysBreakdown` — shared frontend yield utilities                    |
+| `src/lib/__tests__/yield-constants.test.ts`          | Unit tests for shared frontend yield utilities                                                                                               |
 | `src/app/yield/page.tsx`                             | SSG page wrapper with metadata                                                                                                               |
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
 | `src/components/yield-detail-section.tsx`            | Stablecoin detail-page yield section with warnings, source metadata, metric cards, and shared history chart                                 |
