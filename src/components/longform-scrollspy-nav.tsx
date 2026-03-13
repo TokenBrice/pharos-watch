@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { MutableRefObject, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -23,13 +23,45 @@ function getScrollOffset(railNode: HTMLDivElement | null) {
   return Math.ceil(railRect.height + Math.max(railRect.top, 0) + 16);
 }
 
+function getHashSectionId() {
+  return decodeURIComponent(window.location.hash.replace(/^#/, ""));
+}
+
 function scrollToSection(sectionId: string, railNode: HTMLDivElement | null) {
   const sectionNode = document.getElementById(sectionId);
   if (!sectionNode) return;
 
   const nextTop = window.scrollY + sectionNode.getBoundingClientRect().top - getScrollOffset(railNode);
-  window.history.pushState(null, "", `#${sectionId}`);
   window.scrollTo({ top: Math.max(0, nextTop), behavior: "auto" });
+}
+
+function clearPendingScrollSync(pendingScrollSyncRef: MutableRefObject<number[]>) {
+  for (const timer of pendingScrollSyncRef.current) {
+    window.clearTimeout(timer);
+  }
+  pendingScrollSyncRef.current = [];
+}
+
+function scheduleSectionAlignment(
+  sectionId: string,
+  railNode: HTMLDivElement | null,
+  pendingScrollSyncRef: MutableRefObject<number[]>,
+  updateHash: boolean,
+) {
+  clearPendingScrollSync(pendingScrollSyncRef);
+  if (updateHash) {
+    window.history.pushState(null, "", `#${sectionId}`);
+  }
+  scrollToSection(sectionId, railNode);
+
+  for (const delay of [160, 480, 960]) {
+    const timer = window.setTimeout(() => {
+      if (getHashSectionId() === sectionId) {
+        scrollToSection(sectionId, railNode);
+      }
+    }, delay);
+    pendingScrollSyncRef.current.push(timer);
+  }
 }
 
 export function LongformScrollspyNav({
@@ -42,30 +74,15 @@ export function LongformScrollspyNav({
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollSyncRef = useRef<number[]>([]);
+  const initialHashHandledRef = useRef(false);
   const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
-
-  const scheduleSectionAlignment = (sectionId: string) => {
-    for (const timer of pendingScrollSyncRef.current) {
-      window.clearTimeout(timer);
-    }
-    pendingScrollSyncRef.current = [];
-
-    scrollToSection(sectionId, railRef.current);
-
-    for (const delay of [160, 480, 960]) {
-      const timer = window.setTimeout(() => {
-        if (window.location.hash.replace(/^#/, "") === sectionId) {
-          scrollToSection(sectionId, railRef.current);
-        }
-      }, delay);
-      pendingScrollSyncRef.current.push(timer);
-    }
-  };
+  const sectionSignature = sections.map((section) => section.id).join("|");
 
   useEffect(() => {
     const railNode = railRef.current;
-    const sectionNodes = sections
-      .map((section) => document.getElementById(section.id))
+    const sectionIds = sectionSignature.length > 0 ? sectionSignature.split("|") : [];
+    const sectionNodes = sectionIds
+      .map((sectionId) => document.getElementById(sectionId))
       .filter((node): node is HTMLElement => node !== null);
 
     if (!railNode || sectionNodes.length === 0) return;
@@ -105,40 +122,28 @@ export function LongformScrollspyNav({
       observer.observe(node);
     }
 
-    const activeHash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
-    if (activeHash.length > 0 && sectionNodes.some((node) => node.id === activeHash)) {
-      requestAnimationFrame(() => {
-        applyScrollMargins();
-        setActiveId(activeHash);
-        for (const timer of pendingScrollSyncRef.current) {
-          window.clearTimeout(timer);
-        }
-        pendingScrollSyncRef.current = [];
-        scrollToSection(activeHash, railNode);
-        for (const delay of [160, 480, 960]) {
-          const timer = window.setTimeout(() => {
-            if (window.location.hash.replace(/^#/, "") === activeHash) {
-              scrollToSection(activeHash, railNode);
-            }
-          }, delay);
-          pendingScrollSyncRef.current.push(timer);
-        }
-      });
+    const activeHash = getHashSectionId();
+    if (!initialHashHandledRef.current) {
+      initialHashHandledRef.current = true;
+      if (activeHash.length > 0 && sectionNodes.some((node) => node.id === activeHash)) {
+        requestAnimationFrame(() => {
+          applyScrollMargins();
+          setActiveId(activeHash);
+          scheduleSectionAlignment(activeHash, railNode, pendingScrollSyncRef, false);
+        });
+      }
     }
 
     return () => {
       observer.disconnect();
       resizeObserver.disconnect();
       window.removeEventListener("resize", applyScrollMargins);
-      for (const timer of pendingScrollSyncRef.current) {
-        window.clearTimeout(timer);
-      }
-      pendingScrollSyncRef.current = [];
+      clearPendingScrollSync(pendingScrollSyncRef);
       for (const node of sectionNodes) {
         node.style.scrollMarginTop = "";
       }
     };
-  }, [sections]);
+  }, [sectionSignature]);
 
   if (sections.length === 0) return null;
 
@@ -170,7 +175,7 @@ export function LongformScrollspyNav({
               href={`#${section.id}`}
               onClick={(event) => {
                 event.preventDefault();
-                scheduleSectionAlignment(section.id);
+                scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
                 setActiveId(section.id);
               }}
               className={cn(

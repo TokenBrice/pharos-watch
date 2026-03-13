@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@shared/lib/format";
 import type { MintBurnReconciliationSummary } from "@shared/types";
 import { cn } from "@/lib/utils";
+
+const COLLAPSED_ROW_COUNT = 6;
 
 function statusTone(status: "ok" | "warn" | "critical" | "insufficient-source"): string {
   switch (status) {
@@ -18,11 +22,27 @@ function statusTone(status: "ok" | "warn" | "critical" | "insufficient-source"):
   }
 }
 
-export function MintBurnReconciliationCard({
-  summary,
-}: {
-  summary: MintBurnReconciliationSummary | null;
-}) {
+function statusTileTone(status: "ok" | "warn" | "critical" | "insufficient-source"): string {
+  switch (status) {
+    case "critical":
+      return "border-red-500/25 bg-red-500/[0.045]";
+    case "warn":
+      return "border-amber-500/25 bg-amber-500/[0.045]";
+    case "ok":
+      return "border-emerald-500/20 bg-emerald-500/[0.04]";
+    default:
+      return "border-border/60 bg-background/35";
+  }
+}
+
+function formatStatusLabel(status: "ok" | "warn" | "critical" | "insufficient-source"): string {
+  if (status === "insufficient-source") return "Insufficient source";
+  return status;
+}
+
+export function MintBurnReconciliationCard({ summary }: { summary: MintBurnReconciliationSummary | null }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   if (!summary) {
     return (
       <Card>
@@ -36,24 +56,32 @@ export function MintBurnReconciliationCard({
     );
   }
 
+  const canCollapse = summary.rows.length > COLLAPSED_ROW_COUNT;
+  const visibleRows = canCollapse && !isExpanded ? summary.rows.slice(0, COLLAPSED_ROW_COUNT) : summary.rows;
+  const hiddenCount = summary.rows.length - visibleRows.length;
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Mint/Burn Reconciliation</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-4">
+      <CardContent className="space-y-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border border-border/50 p-3">
             <div className="text-xs text-muted-foreground">Compared</div>
             <div className="font-mono text-xl font-semibold">{summary.comparedCoins}</div>
           </div>
           <div className="rounded-lg border border-red-500/20 p-3">
             <div className="text-xs text-muted-foreground">Critical</div>
-            <div className="font-mono text-xl font-semibold text-red-700 dark:text-red-300">{summary.criticalCount}</div>
+            <div className="font-mono text-xl font-semibold text-red-700 dark:text-red-300">
+              {summary.criticalCount}
+            </div>
           </div>
           <div className="rounded-lg border border-amber-500/20 p-3">
             <div className="text-xs text-muted-foreground">Warn</div>
-            <div className="font-mono text-xl font-semibold text-amber-700 dark:text-amber-300">{summary.warnCount}</div>
+            <div className="font-mono text-xl font-semibold text-amber-700 dark:text-amber-300">
+              {summary.warnCount}
+            </div>
           </div>
           <div className="rounded-lg border border-border/50 p-3">
             <div className="text-xs text-muted-foreground">Insufficient source</div>
@@ -61,46 +89,84 @@ export function MintBurnReconciliationCard({
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          Compares 24h Ethereum mint/burn net flow against the stablecoins cache&apos;s Ethereum chain-supply delta.
-          Large gaps point to coverage or upstream chain-distribution mismatches.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-[1rem] border border-border/60 bg-background/35 px-4 py-3">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              Compares 24h Ethereum mint/burn net flow against the stablecoins cache&apos;s Ethereum chain-supply delta.
+              Large gaps point to coverage or upstream chain-distribution mismatches.
+            </p>
+            <div className="text-xs text-muted-foreground">
+              Showing {visibleRows.length} of {summary.rows.length} rows, sorted by severity.
+            </div>
+          </div>
+          {canCollapse ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-w-[9rem]"
+              onClick={() => setIsExpanded((current) => !current)}
+            >
+              {isExpanded ? "Show fewer" : `See all ${summary.rows.length} assets`}
+            </Button>
+          ) : null}
+        </div>
 
-        <div className="space-y-2">
-          {summary.rows.map((row) => (
-            <div key={row.stablecoinId} className="rounded-lg border border-border/50 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{row.symbol}</span>
-                  <span className={cn("text-xs font-medium uppercase", statusTone(row.status))}>
-                    {row.status.replace("-", " ")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    coverage: {row.coverageStatus}
-                  </span>
+        <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          {visibleRows.map((row) => (
+            <div key={row.stablecoinId} className={cn("rounded-[1rem] border p-4", statusTileTone(row.status))}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-foreground">{row.symbol}</span>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
+                        statusTone(row.status),
+                      )}
+                    >
+                      {formatStatusLabel(row.status)}
+                    </span>
+                  </div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Coverage {row.coverageStatus}
+                  </div>
                 </div>
-                <div className={cn("font-mono text-sm", statusTone(row.status))}>
-                  {row.absoluteDiffUsd == null ? "No chain delta" : formatCurrency(row.absoluteDiffUsd)}
+                <div className="min-w-0 text-right">
+                  <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Gap</div>
+                  <div className={cn("font-mono text-sm font-semibold", statusTone(row.status))}>
+                    {row.absoluteDiffUsd == null ? "—" : formatCurrency(row.absoluteDiffUsd)}
+                  </div>
                 </div>
               </div>
-              <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-                <div>Flow net 24h: <span className="font-mono">{formatCurrency(row.flowNet24hUsd)}</span></div>
+
+              <div className="mt-3 grid gap-3 border-t border-border/50 pt-3 text-xs text-muted-foreground sm:grid-cols-3">
                 <div>
-                  Chain delta 24h:{" "}
-                  <span className="font-mono">
-                    {row.chainSupplyDelta24hUsd == null ? "—" : formatCurrency(row.chainSupplyDelta24hUsd)}
-                  </span>
+                  <div className="text-[10px] uppercase tracking-[0.18em]">Flow net 24h</div>
+                  <div className="mt-1 font-mono text-foreground">{formatCurrency(row.flowNet24hUsd)}</div>
                 </div>
                 <div>
-                  Diff ratio:{" "}
-                  <span className="font-mono">
+                  <div className="text-[10px] uppercase tracking-[0.18em]">Chain delta 24h</div>
+                  <div className="mt-1 font-mono text-foreground">
+                    {row.chainSupplyDelta24hUsd == null ? "—" : formatCurrency(row.chainSupplyDelta24hUsd)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.18em]">Diff ratio</div>
+                  <div className="mt-1 font-mono text-foreground">
                     {row.diffRatio == null ? "—" : `${(row.diffRatio * 100).toFixed(1)}%`}
-                  </span>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {!isExpanded && hiddenCount > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {hiddenCount} lower-priority rows are collapsed behind the disclosure button.
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

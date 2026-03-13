@@ -42,15 +42,7 @@ import {
 } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
 
-function SummaryBadge({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
+function SummaryBadge({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
     <div className={cn("rounded-full border border-border/60 bg-background/45 px-3 py-1.5 text-xs", className)}>
       <span className="text-muted-foreground">{label}</span>
@@ -151,7 +143,9 @@ function RecommendedActionStrip({
                   >
                     {recommendation.severity}
                   </span>
-                  <span className="text-xs text-muted-foreground">{recommendation.source === "cause" ? "cause" : "cron lane"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {recommendation.source === "cause" ? "cause" : "cron lane"}
+                  </span>
                 </div>
                 <div className="text-sm font-medium text-foreground">{recommendation.action.label}</div>
                 <div className="text-xs leading-relaxed text-muted-foreground">{recommendation.reason}</div>
@@ -171,13 +165,7 @@ function RecommendedActionStrip({
   );
 }
 
-function PriorityLaneLink({
-  section,
-  index,
-}: {
-  section: DashboardSection;
-  index: number;
-}) {
+function PriorityLaneLink({ section, index }: { section: DashboardSection; index: number }) {
   return (
     <a
       href={`#${section.id}`}
@@ -309,11 +297,12 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
     probesLoading,
     setHistoryWindow,
   } = useStatusDashboardModel(adminKey);
-  const diagnosticsSignal = (data?.overallStatus !== "healthy") || (model?.notices.length ?? 0) > 0 || (model?.healthDiffersFromStatus ?? false);
+  const diagnosticsSignal =
+    data?.overallStatus !== "healthy" || (model?.notices.length ?? 0) > 0 || (model?.healthDiffersFromStatus ?? false);
   const reliabilitySignal =
-    ((healthData?.status ?? data?.availabilityStatus ?? "healthy") !== "healthy") ||
-    ((model?.browserProbeSummary?.failCount ?? 0) > 0) ||
-    ((data?.summary.worstCacheRatio ?? 0) > 1);
+    (healthData?.status ?? data?.availabilityStatus ?? "healthy") !== "healthy" ||
+    (model?.browserProbeSummary?.failCount ?? 0) > 0 ||
+    (data?.summary.worstCacheRatio ?? 0) > 1;
   const telegramSignal = (data?.telegramBot?.pendingDeliveries ?? 0) > 0;
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
   const [isReliabilityOpen, setIsReliabilityOpen] = useState(false);
@@ -499,20 +488,21 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
         </div>
 
         <div className="grid gap-5 xl:grid-cols-2">
-          <PriceSourceHealthCard
-            health={data.priceSourceHealth}
-            nowSeconds={data.timestamp}
-          />
+          <PriceSourceHealthCard health={data.priceSourceHealth} nowSeconds={data.timestamp} />
           <LiquidityHealthCard health={data.liquidityHealth} />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-3">
+        <div className="grid gap-5 xl:grid-cols-2">
           <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
           <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
-          <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
         </div>
+        <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
 
-        <DiscoveryCandidatesCard candidates={data.discoveryCandidates} adminKey={adminKey} nowSeconds={data.timestamp} />
+        <DiscoveryCandidatesCard
+          candidates={data.discoveryCandidates}
+          adminKey={adminKey}
+          nowSeconds={data.timestamp}
+        />
       </StatusSection>
     ),
     reliability: (
@@ -587,9 +577,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
               <summary className="cursor-pointer text-sm font-medium text-foreground">
                 Healthy lanes ({healthyCronGroups.length})
               </summary>
-              <div className="mt-4 space-y-4">
-                {healthyCronGroups.map((group) => renderCronGroup(group))}
-              </div>
+              <div className="mt-4 space-y-4">{healthyCronGroups.map((group) => renderCronGroup(group))}</div>
             </details>
           ) : null}
         </div>
@@ -622,9 +610,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
           onToggle={(event) => setIsTelegramOpen(event.currentTarget.open)}
           className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
         >
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
-            Telegram delivery telemetry
-          </summary>
+          <summary className="cursor-pointer text-sm font-medium text-foreground">Telegram delivery telemetry</summary>
           <div className="mt-4">
             <TelegramBotStats
               telegramBot={data.telegramBot}
@@ -669,9 +655,24 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
         )}
       >
         <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(148,163,184,0.28)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:4rem_4rem]" />
-        <div className={cn("pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent to-transparent", topFoldCopy.ruler)} />
-        <div className={cn("pointer-events-none absolute -left-20 top-8 h-64 w-64 rounded-full blur-[125px]", topFoldCopy.flareA)} />
-        <div className={cn("pointer-events-none absolute right-[14%] top-[5.5rem] h-52 w-52 rounded-full blur-[130px]", topFoldCopy.flareB)} />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent to-transparent",
+            topFoldCopy.ruler,
+          )}
+        />
+        <div
+          className={cn(
+            "pointer-events-none absolute -left-20 top-8 h-64 w-64 rounded-full blur-[125px]",
+            topFoldCopy.flareA,
+          )}
+        />
+        <div
+          className={cn(
+            "pointer-events-none absolute right-[14%] top-[5.5rem] h-52 w-52 rounded-full blur-[130px]",
+            topFoldCopy.flareB,
+          )}
+        />
         <div className="pointer-events-none absolute right-0 top-20 h-px w-[28%] bg-gradient-to-l from-white/18 to-transparent" />
         <div className="relative space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
@@ -703,9 +704,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
                 <h2 className="max-w-4xl text-[clamp(2.9rem,7vw,5.65rem)] font-semibold leading-[0.92] tracking-[-0.085em] text-foreground">
                   {topFoldCopy.title}
                 </h2>
-                <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                  {topFoldCopy.body}
-                </p>
+                <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{topFoldCopy.body}</p>
               </div>
 
               <StatusBanner
@@ -718,12 +717,17 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
               />
 
               <div className="flex flex-wrap gap-2">
-                <SummaryBadge label="Holding" value={`${formatAge(statusHoldingAge)} in ${overallTone.label.toLowerCase()}`} />
+                <SummaryBadge
+                  label="Holding"
+                  value={`${formatAge(statusHoldingAge)} in ${overallTone.label.toLowerCase()}`}
+                />
                 <SummaryBadge
                   label="Active Causes"
                   value={String(overallCauseCount)}
                   className={
-                    overallCauseCount > 0 ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300" : undefined
+                    overallCauseCount > 0
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      : undefined
                   }
                 />
                 <SummaryBadge
@@ -734,7 +738,11 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
                 <SummaryBadge
                   label="Cron Errors"
                   value={String(data.summary.cronErrors)}
-                  className={data.summary.cronErrors > 0 ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300" : undefined}
+                  className={
+                    data.summary.cronErrors > 0
+                      ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+                      : undefined
+                  }
                 />
               </div>
 
@@ -742,7 +750,9 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
                     <p className="pharos-kicker">Current Blockers</p>
-                    <h3 className="text-[1.3rem] font-semibold tracking-tight text-foreground">What needs attention now</h3>
+                    <h3 className="text-[1.3rem] font-semibold tracking-tight text-foreground">
+                      What needs attention now
+                    </h3>
                   </div>
                   <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground">
                     {topCauses.length > 0 ? `${Math.min(topCauses.length, 3)} immediate` : "clear"}
@@ -752,9 +762,17 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
                 <div className="mt-4 space-y-2.5">
                   {topCauses.length > 0 ? (
                     topCauses.slice(0, 3).map((cause) => (
-                      <div key={`${cause.layer}-${cause.code}-${cause.message}`} className="rounded-[1.1rem] border border-white/10 bg-black/18 p-3.5">
+                      <div
+                        key={`${cause.layer}-${cause.code}-${cause.message}`}
+                        className="rounded-[1.1rem] border border-white/10 bg-black/18 p-3.5"
+                      >
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", getSeverityBadgeClass(cause.severity))}>
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                              getSeverityBadgeClass(cause.severity),
+                            )}
+                          >
                             {cause.severity}
                           </span>
                           <span className="text-[11px] text-muted-foreground">{cause.layer}</span>
@@ -774,7 +792,9 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
                   <SummaryBadge label="Last Transition" value={formatTransitionLabel(latestTransition)} />
                   <SummaryBadge
                     label="Changed"
-                    value={latestTransition ? `${formatAge(Math.max(0, data.timestamp - latestTransition.at))} ago` : "—"}
+                    value={
+                      latestTransition ? `${formatAge(Math.max(0, data.timestamp - latestTransition.at))} ago` : "—"
+                    }
                   />
                 </div>
               </div>
@@ -790,7 +810,9 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
               <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] p-5 shadow-[0_18px_48px_oklch(0_0_0_/0.18)]">
                 <div className="space-y-1">
                   <p className="pharos-kicker">Follow This Order</p>
-                  <h3 className="text-[1.3rem] font-semibold tracking-tight text-foreground">The page now tapers by urgency</h3>
+                  <h3 className="text-[1.3rem] font-semibold tracking-tight text-foreground">
+                    The page now tapers by urgency
+                  </h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     Each step down the page should feel broader, calmer, and less immediately actionable.
                   </p>
