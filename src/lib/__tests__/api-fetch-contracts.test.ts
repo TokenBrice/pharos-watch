@@ -149,6 +149,17 @@ describe("api contract validation policy", () => {
     await expect(apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(ApiFetchError);
   });
 
+  it("returns null for 404 when nullOn404 is true", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
+    const result = await apiFetch("/api/stablecoin-reserves/test", undefined, undefined, undefined, { nullOn404: true });
+    expect(result).toBeNull();
+  });
+
+  it("still throws on 404 when nullOn404 is not set", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
+    await expect(apiFetch("/api/stablecoin-reserves/test")).rejects.toThrow(ApiFetchError);
+  });
+
   it("captures Warning header in apiFetchWithMeta", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), {

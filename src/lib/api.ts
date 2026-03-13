@@ -108,6 +108,10 @@ function resolveContractMode(
 
 // --- Standard fetch (no meta) ---
 
+export interface ApiFetchOptions {
+  nullOn404?: boolean;
+}
+
 /** Fetch JSON from the API. Throws on non-OK responses.
  *  When a Zod schema is provided, validates the response and warns on mismatch
  *  (graceful degradation — returns data as-is on failure). */
@@ -116,9 +120,27 @@ export async function apiFetch<T>(
   schema?: ZodType<T>,
   init?: RequestInit,
   contractMode?: ApiContractMode,
-): Promise<T> {
+): Promise<T>;
+/** Overload: passing `{ nullOn404: true }` makes the return type `T | null`. */
+export async function apiFetch<T>(
+  path: string,
+  schema: ZodType<T> | undefined,
+  init: RequestInit | undefined,
+  contractMode: ApiContractMode | undefined,
+  options: ApiFetchOptions & { nullOn404: true },
+): Promise<T | null>;
+export async function apiFetch<T>(
+  path: string,
+  schema?: ZodType<T>,
+  init?: RequestInit,
+  contractMode?: ApiContractMode,
+  options?: ApiFetchOptions,
+): Promise<T | null> {
   const res = await apiRequest(path, init);
-  if (!res.ok) throw await buildFetchError(path, res);
+  if (!res.ok) {
+    if (options?.nullOn404 && res.status === 404) return null;
+    throw await buildFetchError(path, res);
+  }
 
   const data: unknown = await res.json();
 
@@ -210,18 +232,11 @@ export async function apiFetchWithMeta<T>(
 }
 
 export async function fetchStablecoinReserves(stablecoinId: string): Promise<import("@shared/types").StablecoinReservesResponse | null> {
-  const path = API_PATHS.stablecoinReserves(stablecoinId);
-  const res = await fetch(buildRequestUrl(path));
-  if (res.status === 404) return null;
-  if (!res.ok) {
-    let bodyText: string | null = null;
-    try {
-      bodyText = await res.text();
-    } catch {
-      bodyText = null;
-    }
-    throw new ApiFetchError(path, res.status, bodyText);
-  }
-  const data = await res.json() as import("@shared/types").StablecoinReservesResponse;
-  return data;
+  return apiFetch<import("@shared/types").StablecoinReservesResponse>(
+    API_PATHS.stablecoinReserves(stablecoinId),
+    undefined,
+    undefined,
+    undefined,
+    { nullOn404: true },
+  );
 }
