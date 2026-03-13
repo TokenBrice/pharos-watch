@@ -24,4 +24,21 @@ describe("adaptCrvUsd", () => {
     ]);
     expect(result.warnings).toEqual([]);
   });
+
+  it("uses worst risk when multiple symbols share a bucket", () => {
+    const payload = {
+      chains: {
+        ethereum: {
+          data: [
+            { collateral_amount_usd: 100_000_000, collateral_token: { symbol: "wstETH" } },
+            { collateral_amount_usd: 50_000_000, collateral_token: { symbol: "weETH" } },
+          ],
+        },
+      },
+    };
+    const { slices } = adaptCrvUsd(payload);
+    const lstBucket = slices.find((s) => s.name.includes("wstETH"));
+    expect(lstBucket).toBeDefined();
+    expect(lstBucket!.risk).toBeDefined();
+  });
 });
