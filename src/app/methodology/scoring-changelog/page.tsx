@@ -124,9 +124,37 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
-      {/* ──────────── v5.6 ──────────── */}
+      {/* ──────────── v5.7 ──────────── */}
       <VersionCard
         version={SAFETY_SCORE_VERSION_LABEL}
+        title="Canonical ETH wrapper reserve alignment"
+        date="Mar 13, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Direct <span className="text-foreground font-medium">ETH</span> and canonical
+          <span className="text-foreground font-medium"> WETH</span> reserve slices now share the same
+          <span className="text-foreground font-medium"> very-low</span> risk tier.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Updated the shared direct-asset reserve map used by live reserve adapters so `WETH` no longer falls into
+            the generic wrapped-asset bucket.
+          </li>
+          <li>
+            Aligned curated reserve metadata and live config overrides for coins that expose plain `WETH` or `ETH`
+            slices.
+          </li>
+          <li>
+            Left mixed strategy buckets unchanged. Delta-neutral ETH exposures, bridged ETH buckets, and mixed
+            BTC/ETH slices still use their existing manually-modeled risk tiers.
+          </li>
+        </ul>
+      </VersionCard>
+
+      {/* ──────────── v5.6 ──────────── */}
+      <VersionCard
+        version="v5.6"
         title="Exit-liquidity integration"
         date="Mar 12, 2026"
         accent="border-l-amber-500"

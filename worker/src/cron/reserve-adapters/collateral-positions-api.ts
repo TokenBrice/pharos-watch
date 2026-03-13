@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
 import { fetchJsonWithRetry, normalizeSlices, requireJsonInput } from "./helpers";
 
@@ -32,9 +33,8 @@ function readParams(config: LiveReservesConfig): PositionsApiParams {
 
 function inferRisk(symbol: string): ReserveSlice["risk"] {
   const upper = symbol.toUpperCase();
-  if (["USDC", "DAI", "LUSD", "ZCHF", "DEURO", "DEPS"].includes(upper)) return upper === "DEPS" ? "very-high" : "low";
-  if (["WBTC", "CBBTC", "KBTC", "TBTC", "BTC", "XAUT", "PAXG"].includes(upper)) return "medium";
-  if (["WETH", "ETH", "WSTETH", "LSETH", "STETH", "RETH"].includes(upper)) return upper.includes("WST") || upper.includes("STETH") || upper === "RETH" ? "low" : "medium";
+  const canonicalRisk = getCanonicalReserveAssetRisk(upper);
+  if (canonicalRisk) return canonicalRisk;
   if (["CRV", "GNO", "UNI"].includes(upper)) return "very-high";
   return "high";
 }

@@ -43,7 +43,7 @@ describe("adaptCollateralPositions", () => {
 
     expect(slices).toEqual([
       { name: "WBTC (Wrapped BTC)", pct: 56, risk: "medium" },
-      { name: "WETH (Wrapped Ether)", pct: 44, risk: "medium" },
+      { name: "WETH (Wrapped Ether)", pct: 44, risk: "very-low" },
     ]);
   });
 });

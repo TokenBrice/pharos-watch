@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./index";
 import { fetchTextWithRetry, requireHtmlInput } from "./helpers";
 import { buildReserveSlicesFromValues } from "./utils";
@@ -22,10 +23,10 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
   EURC: { name: "EURC (Circle euro stablecoin)", risk: "low" },
   CELO: { name: "CELO", risk: "high" },
   USDGLO: { name: "USDGLO (Glo Dollar)", risk: "low" },
-  stETH: { name: "stETH (Lido staked ETH)", risk: "low" },
+  stETH: { name: "stETH (Lido staked ETH)", risk: getCanonicalReserveAssetRisk("stETH") ?? "low" },
   USDT: { name: "USDT", risk: "low", coinId: "usdt-tether" },
   USDC: { name: "USDC", risk: "low", coinId: "usdc-circle" },
-  ETH: { name: "ETH", risk: "very-low" },
+  ETH: { name: "ETH", risk: CANONICAL_ETH_RESERVE_RISK },
 };
 
 function extractEscapedArray(html: string, startNeedle: string, endNeedle: string): string {

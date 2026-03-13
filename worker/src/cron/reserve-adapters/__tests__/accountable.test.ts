@@ -128,7 +128,7 @@ describe("adaptAccountableTypeBreakdown", () => {
         bucket: "type_split",
         riskMap: {
           Stablecoin: "low",
-          ETH: "medium",
+          ETH: "very-low",
           "OTC Aggregate": "high",
           Other: "high",
         },
@@ -140,7 +140,7 @@ describe("adaptAccountableTypeBreakdown", () => {
 
     expect(slices).toEqual([
       { name: "Stablecoin reserves", pct: 88, risk: "low" },
-      { name: "ETH", pct: 4, risk: "medium" },
+      { name: "ETH", pct: 4, risk: "very-low" },
       { name: "OTC Aggregate", pct: 6, risk: "high" },
       { name: "Other", pct: 2, risk: "high" },
     ]);

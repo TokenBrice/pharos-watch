@@ -79,9 +79,9 @@ For coins with curated reserve compositions, collateral quality is computed as a
 
 | Reserve Risk Tier | Score | Description | Examples |
 |---|---|---|---|
-| `very-low` | 100 | No/minimal counterparty risk | Government securities, cash, repos, physical gold/silver |
-| `low` | 75 | Stablecoin/tokenized layer | USDC, BUIDL, USYC, other stablecoins |
-| `medium` | 50 | Wrapped/bridged/structured | wBTC, LSTs, delta-neutral strategies, tokenized ETFs |
+| `very-low` | 100 | No/minimal counterparty risk | Government securities, cash, repos, physical gold/silver, ETH, canonical WETH |
+| `low` | 75 | Stablecoin/tokenized layer | USDC, BUIDL, USYC, ETH LSTs, other stablecoins |
+| `medium` | 50 | Wrapped/structured market exposure | wBTC, tokenized gold, delta-neutral strategies, tokenized ETFs |
 | `high` | 25 | Volatile native assets | SOL, BNB, TRX, alt-chain tokens |
 | `very-high` | 5 | Governance/exotic/opaque | Governance tokens, algorithmic mechanisms, sanctioned assets |
 
@@ -90,6 +90,8 @@ For coins with curated reserve compositions, collateral quality is computed as a
 **Display thresholds:** ≥88 → "Very low risk", ≥62 → "Low risk", ≥37 → "Medium risk", ≥15 → "High risk", <15 → "Very high risk"
 
 Reserve compositions are maintained in `StablecoinMeta.reserves` as arrays of `{ name, pct, risk }` slices.
+
+Direct ETH reserve slices and canonical wrapped ETH (`WETH`) use the same `very-low` tier. ETH liquid staking tokens (`stETH`, `wstETH`, `rETH`, etc.) remain `low`, while strategy buckets or bridged ETH exposures can still be modeled separately when the reserve slice represents more than spot ETH custody.
 
 #### Collateral Quality: Enum Fallback
 

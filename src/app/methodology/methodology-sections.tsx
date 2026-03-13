@@ -569,9 +569,10 @@ export function MethodologySections() {
               </div>
               <p>
                 Collateral quality is derived from curated reserve compositions when available &mdash; each reserve
-                slice is classified into one of five risk tiers and the score is their weighted average. For coins
-                without curated reserves, a coarser enum-based fallback is used. Explicit overrides exist for coins
-                where defaults are incorrect (e.g., protocols on Solana, coins with CEX custody).
+                slice is classified into one of five risk tiers and the score is their weighted average. Direct ETH
+                and canonical WETH slices share the same Very Low tier, while ETH liquid staking tokens remain Low.
+                For coins without curated reserves, a coarser enum-based fallback is used. Explicit overrides exist
+                for coins where defaults are incorrect (e.g., protocols on Solana, coins with CEX custody).
               </p>
             </div>
 

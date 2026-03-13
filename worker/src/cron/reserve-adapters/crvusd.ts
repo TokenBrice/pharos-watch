@@ -1,4 +1,5 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
 import { fetchJsonWithRetry, normalizeSlices, requireJsonInput } from "./helpers";
 
@@ -26,10 +27,10 @@ function classifySymbol(symbol: string): { name: string; risk: ReserveSlice["ris
     return { name: "tBTC", risk: "medium" };
   }
   if (["WSTETH", "SFRXETH", "WEETH"].includes(upper)) {
-    return { name: "wstETH / sfrxETH / weETH", risk: "low" };
+    return { name: "wstETH / sfrxETH / weETH", risk: getCanonicalReserveAssetRisk(upper) ?? "low" };
   }
-  if (upper === "WETH") {
-    return { name: "ETH", risk: "very-low" };
+  if (upper === "ETH" || upper === "WETH") {
+    return { name: "ETH", risk: CANONICAL_ETH_RESERVE_RISK };
   }
   return null;
 }

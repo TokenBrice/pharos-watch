@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 describe("tracked stablecoin metadata", () => {
@@ -67,5 +68,44 @@ describe("tracked stablecoin metadata", () => {
       .map(([scope]) => scope);
 
     expect(overlappingScopes).toEqual([]);
+  });
+
+  it("keeps direct ETH and WETH reserve mappings aligned with the canonical ETH risk tier", () => {
+    const mismatches: string[] = [];
+
+    for (const coin of TRACKED_STABLECOINS) {
+      for (const slice of coin.reserves ?? []) {
+        if (slice.name !== "ETH" && slice.name !== "WETH" && slice.name !== "WETH (wrapped Ether)") continue;
+        if (slice.risk !== CANONICAL_ETH_RESERVE_RISK) {
+          mismatches.push(`${coin.id}:reserve:${slice.name}:${slice.risk}`);
+        }
+      }
+
+      const config = coin.liveReservesConfig;
+      const params = config?.params;
+      if (!params || typeof params !== "object" || Array.isArray(params)) continue;
+
+      const maybeBranches = (params as { branches?: Array<{ name?: string; risk?: string }> }).branches;
+      if (Array.isArray(maybeBranches)) {
+        for (const branch of maybeBranches) {
+          if (branch?.name !== "WETH") continue;
+          if (branch.risk !== CANONICAL_ETH_RESERVE_RISK) {
+            mismatches.push(`${coin.id}:branch:${branch.name}:${branch.risk ?? "missing"}`);
+          }
+        }
+      }
+
+      const maybeLabel = (params as { label?: string; risk?: string }).label;
+      if (maybeLabel === "ETH" && (params as { risk?: string }).risk !== CANONICAL_ETH_RESERVE_RISK) {
+        mismatches.push(`${coin.id}:single-asset:ETH:${(params as { risk?: string }).risk ?? "missing"}`);
+      }
+
+      const riskMap = (params as { riskMap?: Record<string, string> }).riskMap;
+      if (riskMap?.ETH && riskMap.ETH !== CANONICAL_ETH_RESERVE_RISK) {
+        mismatches.push(`${coin.id}:risk-map:ETH:${riskMap.ETH}`);
+      }
+    }
+
+    expect(mismatches).toEqual([]);
   });
 });

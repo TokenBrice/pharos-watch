@@ -1,4 +1,5 @@
 import type { StablecoinMeta } from "../types";
+import { CANONICAL_ETH_RESERVE_RISK, CANONICAL_WETH_RESERVE_RISK } from "./reserve-asset-risk";
 
 // Helper to reduce boilerplate
 interface StablecoinOpts {
@@ -769,7 +770,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       // Source: Aave V3 Ethereum market data, Eco.com GHO guide, Chaos Labs risk dashboard
       { name: "wstETH", pct: 34, risk: "low" },
       { name: "sDAI", pct: 18, risk: "low", coinId: "dai-makerdao" },
-      { name: "WETH", pct: 16, risk: "medium" },
+      { name: "WETH", pct: 16, risk: CANONICAL_WETH_RESERVE_RISK },
       { name: "WBTC", pct: 14, risk: "medium" },
       { name: "USDC / USDT (GSM)", pct: 13, risk: "low", coinId: "usdc-circle" },
       { name: "Other Aave V3 Collateral", pct: 5, risk: "high" },
@@ -1008,7 +1009,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "WBTC / cbBTC", pct: 69, risk: "medium" },
       { name: "tBTC", pct: 11, risk: "medium" },
       { name: "wstETH / sfrxETH / weETH", pct: 12, risk: "low" },
-      { name: "ETH", pct: 8, risk: "very-low" },
+      { name: "ETH", pct: 8, risk: CANONICAL_ETH_RESERVE_RISK },
     ],
   }),
   usd("usx-solstice", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
@@ -1132,7 +1133,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "wstETH (Lido)", pct: 35, risk: "low" },
       { name: "sUSDe / PT-sUSDe (Ethena)", pct: 15, risk: "medium", coinId: "usde-ethena" },
       { name: "cbBTC (Coinbase wrapped Bitcoin)", pct: 12, risk: "medium" },
-      { name: "WETH", pct: 10, risk: "medium" },
+      { name: "WETH", pct: 10, risk: CANONICAL_WETH_RESERVE_RISK },
       { name: "USDS in PSM (peg backstop)", pct: 8, risk: "low", coinId: "usds-sky", depType: "mechanism" },
       { name: "LP tokens (Curve, cvxCRV, st-yCRV)", pct: 8, risk: "high" },
       { name: "Other (sFRAX, INV, st-yETH)", pct: 12, risk: "very-high", coinId: "frax-frax" },
@@ -2113,7 +2114,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
             name: "WETH",
             holder: "0xeb5a8c825582965f1d84606e078620a84ab16afe",
             token: { chain: "ethereum", address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", decimals: 18 },
-            risk: "medium",
+            risk: CANONICAL_WETH_RESERVE_RISK,
           },
           {
             name: "rETH (Rocket Pool)",
@@ -2143,7 +2144,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "wstETH (Lido)", pct: 50, risk: "low" },
-      { name: "WETH", pct: 30, risk: "medium" },
+      { name: "WETH", pct: 30, risk: CANONICAL_WETH_RESERVE_RISK },
       { name: "rETH (Rocket Pool)", pct: 20, risk: "low" },
     ],
   }),
@@ -2182,7 +2183,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       },
       params: {
         label: "ETH",
-        risk: "very-low",
+        risk: CANONICAL_ETH_RESERVE_RISK,
       },
     },
     deploymentModel: "canonical-bridge",
@@ -2202,7 +2203,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon", address: "0x23001f892c0c82b79303edc9b9033cd190bb21c7", decimals: 18 },
     ],
     reserves: [
-      { name: "ETH", pct: 100, risk: "very-low" },
+      { name: "ETH", pct: 100, risk: CANONICAL_ETH_RESERVE_RISK },
     ],
   }),
   usd("fxusd-f-x-protocol", "fxUSD", "fxUSD", "crypto-backed", "decentralized", {
@@ -2786,7 +2787,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
             name: "WETH",
             holder: "0x9981abdbc8af32f8e660314b3497e4033e15f054",
             token: { chain: "arbitrum", address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1", decimals: 18 },
-            risk: "medium",
+            risk: CANONICAL_WETH_RESERVE_RISK,
           },
           {
             name: "wstETH (Lido)",
@@ -2843,7 +2844,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       { name: "tBTC", pct: 86.5, risk: "medium" },
       { name: "rETH (Rocket Pool)", pct: 10.2, risk: "low" },
-      { name: "WETH", pct: 2.1, risk: "medium" },
+      { name: "WETH", pct: 2.1, risk: CANONICAL_WETH_RESERVE_RISK },
       { name: "wstETH (Lido)", pct: 1, risk: "low" },
       { name: "Other collateral (ARB, rsETH, weETH, COMP)", pct: 0.2, risk: "high" },
     ],
@@ -2900,7 +2901,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
         bucket: "type_split",
         riskMap: {
           Stablecoin: "low",
-          ETH: "medium",
+          ETH: CANONICAL_ETH_RESERVE_RISK,
           "OTC Aggregate": "high",
           Other: "high",
         },
@@ -3099,7 +3100,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "stETH (Lido staked ETH)", pct: 2, risk: "low" },
       { name: "USDC", pct: 1, risk: "low", coinId: "usdc-circle" },
       { name: "USDT", pct: 1, risk: "low", coinId: "usdt-tether" },
-      { name: "ETH", pct: 1, risk: "very-low" },
+      { name: "ETH", pct: 1, risk: CANONICAL_ETH_RESERVE_RISK },
     ],
   }),
   usd("alusd-alchemix", "Alchemix USD", "ALUSD", "crypto-backed", "decentralized", {
@@ -3266,7 +3267,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "DOT", pct: 40, risk: "high" },
-      { name: "ETH", pct: 15, risk: "very-low" },
+      { name: "ETH", pct: 15, risk: CANONICAL_ETH_RESERVE_RISK },
       { name: "vDOT (liquid staked DOT)", pct: 15, risk: "high" },
       { name: "WBTC / tBTC", pct: 10, risk: "medium" },
       { name: "USDT / USDC (stablecoins)", pct: 15, risk: "low", coinId: "usdt-tether" },
@@ -4105,7 +4106,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "stETH (Lido staked ETH)", pct: 2, risk: "low" },
       { name: "USDC", pct: 2, risk: "low", coinId: "usdc-circle" },
       { name: "USDT", pct: 1, risk: "low", coinId: "usdt-tether" },
-      { name: "ETH", pct: 1, risk: "very-low" },
+      { name: "ETH", pct: 1, risk: CANONICAL_ETH_RESERVE_RISK },
     ],
   }),
   // PAR (id 56) removed — abandoned by Mimo Protocol, pivoted to KUMA (see cemetery)
@@ -4264,7 +4265,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "WBTC / cbBTC / kBTC (wrapped Bitcoin variants)", pct: 40, risk: "medium" },
-      { name: "WETH (wrapped Ether)", pct: 25, risk: "medium" },
+      { name: "WETH (wrapped Ether)", pct: 25, risk: CANONICAL_WETH_RESERVE_RISK },
       { name: "USDC (stablecoins)", pct: 7.5, risk: "low", coinId: "usdc-circle" },
       { name: "DAI (stablecoins)", pct: 7.5, risk: "low", coinId: "dai-makerdao" },
       { name: "XAUT (tokenized gold)", pct: 10, risk: "medium" },
