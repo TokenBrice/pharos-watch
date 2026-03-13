@@ -1,855 +1,1388 @@
-# Structural Simplification Remediation Plan
+# Structural Simplification & Remediation Plan
 
-Date: 2026-03-13
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> Self-sufficient implementation plan for the structural simplification audit completed on 2026-03-13.
-> This file is written for autonomous execution after a context reset. It restates the problems, the target end state, the sequencing, the file scopes, the validation gates, and the stop conditions so implementation does not depend on the original chat.
+**Goal:** Remediate all 35 actionable findings from the 2026-03-13 comprehensive codebase audit across redundancy, code quality, and sustainability pillars.
 
-## Objective
+**Architecture:** Changes are organized into three phases of increasing effort. Phase 1 (quick wins) creates shared utilities and removes duplication in isolated, independent tasks. Phase 2 (targeted refactoring) consolidates time constants, formatters, and the router/auth API. Phase 3 (structural improvements) decomposes large orchestrator files and adds type safety at external boundaries.
 
-Reduce maintenance cost in the Pharos codebase by removing duplicated orchestration, converging repeated UI and worker patterns, and shrinking the number of places where the same operational knowledge is maintained twice.
+**Tech Stack:** TypeScript, Vitest, shared/lib runtime-neutral modules, Cloudflare Worker
 
-The target outcome is:
+**Source audit:** `agents/plans/2026-03-13-comprehensive-codebase-audit.md`
 
-- one authoritative route/endpoint registry per runtime concern
-- one stable pattern for sortable leaderboard tables
-- one canonical tracked-stablecoin registry usage pattern
-- one standard shell for client-heavy feature pages
-- smaller, easier-to-scan status and coverage page modules
-- one dependency management path for shared tooling, or an explicit documented fallback if workspace convergence is not viable
+---
 
-This plan covers every issue identified in the 2026-03-13 audit:
+## Chunk 1: Phase 1 — Quick Wins
 
-1. Endpoint path, method, probe, cache, and routing data are duplicated across `shared/lib/api-endpoints.ts` and `worker/src/router.ts`.
-2. Sortable leaderboard tables repeat the same shell, sort wiring, header plumbing, and pagination structure across multiple components.
-3. Stablecoin ID maps and sets are rebuilt locally even though shared canonical registries already exist.
-4. `createClientFeaturePage()` exists but only some client-heavy routes use it.
-5. `src/app/status/client.tsx` still carries too much page-local presentation and configuration despite an existing status component tree and model hook.
-6. `src/app/coverage/client.tsx` mixes seven-query orchestration, derived row/model construction, page-local design config, and rendering in one file.
-7. Root and worker package trees duplicate shared toolchain dependencies and maintain separate lockfiles and `node_modules` trees.
+### Task 1: Extract shared `clamp()` utility (R-001)
 
-## Baseline Snapshot
+**Files:**
+- Create: `shared/lib/math.ts`
+- Create: `shared/lib/__tests__/math.test.ts`
+- Modify: `shared/lib/mint-burn-signals.ts:40-42` (remove local `clamp`, import from math)
+- Modify: `src/lib/flow-intensity.ts:1-3` (remove local `clamp`, import from math)
+- Modify: `worker/src/lib/dews.ts:125-129` (remove local `clamp`, import from math)
 
-### Architecture boundaries
+- [ ] **Step 1: Write the test for `clamp()`**
 
-- Frontend page layer: `src/app/*`
-- Frontend UI layer: `src/components/*`
-- Frontend hooks/utilities: `src/hooks/*`, `src/lib/*`
-- Shared runtime-neutral logic: `shared/lib/*`, `shared/types/*`
-- Worker HTTP/scheduled entry: `worker/src/index.ts`, `worker/src/handlers/*`
-- Worker API layer: `worker/src/api/*`
-- Worker cron layer: `worker/src/cron/*`
-- Worker runtime/utilities: `worker/src/lib/*`
+```typescript
+// shared/lib/__tests__/math.test.ts
+import { describe, it, expect } from "vitest";
+import { clamp } from "../math";
 
-### Code-volume concentration
+describe("clamp", () => {
+  it("returns value when within range", () => {
+    expect(clamp(5, 0, 10)).toBe(5);
+  });
+  it("returns min when value is below range", () => {
+    expect(clamp(-5, 0, 10)).toBe(0);
+  });
+  it("returns max when value is above range", () => {
+    expect(clamp(15, 0, 10)).toBe(10);
+  });
+  it("returns min for NaN", () => {
+    expect(clamp(NaN, 0, 100)).toBe(0);
+  });
+  it("returns max for Infinity", () => {
+    expect(clamp(Infinity, 0, 100)).toBe(100);
+  });
+  it("returns min for -Infinity", () => {
+    expect(clamp(-Infinity, 0, 100)).toBe(0);
+  });
+  it("handles min === max", () => {
+    expect(clamp(5, 3, 3)).toBe(3);
+  });
+});
+```
 
-Measured during the audit:
+- [ ] **Step 2: Run test to verify it fails**
 
-| Module | Files | Lines |
-|---|---:|---:|
-| `src/app` | 76 | 12,933 |
-| `src/components` | 179 | 29,972 |
-| `src/hooks` | 43 | 3,771 |
-| `src/lib` | 70 | 10,037 |
-| `shared/lib` | 40 | 11,585 |
-| `worker/src/api` | 92 | 17,787 |
-| `worker/src/cron` | 125 | 32,792 |
-| `worker/src/lib` | 103 | 19,139 |
+Run: `npm test -- shared/lib/__tests__/math.test.ts`
+Expected: FAIL — module not found
 
-### Baseline verification already completed
+- [ ] **Step 3: Create `shared/lib/math.ts`**
 
-These commands passed on the current baseline before this plan was written:
+```typescript
+// shared/lib/math.ts
+/** Clamp a number to [min, max]. NaN → min, ±Infinity → nearest bound. */
+export function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) {
+    return value !== value ? min : value > 0 ? max : min; // NaN→min, Inf→max, -Inf→min
+  }
+  return Math.max(min, Math.min(max, value));
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npm test -- shared/lib/__tests__/math.test.ts`
+Expected: PASS
+
+- [ ] **Step 5: Replace local `clamp` in `shared/lib/mint-burn-signals.ts`**
+
+Remove lines 40-42 (the local `clamp` function). Add import at top:
+```typescript
+import { clamp } from "./math";
+```
+
+- [ ] **Step 6: Replace local `clamp` in `src/lib/flow-intensity.ts`**
+
+Remove lines 1-3 (the local `clamp` function). Add import at top:
+```typescript
+import { clamp } from "@shared/lib/math";
+```
+
+- [ ] **Step 7: Replace local `clamp` in `worker/src/lib/dews.ts`**
+
+Remove the exported `clamp` function at lines 125-129. Add import at top:
+```typescript
+import { clamp } from "@shared/lib/math";
+```
+Note: dews.ts `clamp` has swapped parameter order `(min, max, val)`. All call sites within dews.ts must be updated from `clamp(min, max, val)` to `clamp(val, min, max)`. Search for `clamp(` in dews.ts and swap the arguments.
+
+- [ ] **Step 8: Run full test suite**
+
+Run: `npm test`
+Expected: All tests pass
+
+- [ ] **Step 9: Commit**
 
 ```bash
-npm run build
-cd worker && npx tsc --noEmit
+git add shared/lib/math.ts shared/lib/__tests__/math.test.ts shared/lib/mint-burn-signals.ts src/lib/flow-intensity.ts worker/src/lib/dews.ts
+git commit -m "refactor: extract shared clamp() utility (R-001)"
 ```
 
-The plan should therefore be executed as behavior-preserving refactors plus targeted simplification, not as a broad defect hunt.
+---
 
-## Non-Goals
+### Task 2: Add `formatPercent` and `formatSignedPercent` helpers (R-005)
 
-- No public endpoint removals or path changes.
-- No methodology/scoring changes to PSI, DEWS, report cards, liquidity, yield, or peg scoring.
-- No rewrite of `shared/lib/stablecoins.ts` into many files.
-- No redesign of the visual language or route IA.
-- No changes to `src/components/ui/*`.
-- No generic abstraction unless it replaces at least 3 real concrete cases.
-- No package-manager migration that breaks existing local worker development flow.
+**Files:**
+- Modify: `shared/lib/format.ts` (add two functions)
+- Modify: `shared/lib/__tests__/format.test.ts` (add tests)
 
-## Execution Rules
+- [ ] **Step 1: Write the tests**
 
-- Prefer deletions to new abstractions.
-- Keep API response shapes and query keys stable unless explicitly noted.
-- Do not mix package/workspace churn with route or table churn in the same commit series.
-- If a new helper does not remove meaningful duplication, delete it instead of keeping both paths.
-- Update docs when architecture ownership, operator workflow, or implementation conventions change.
-- Use one branch/workstream per major phase to keep reviewable diffs.
+Add to `shared/lib/__tests__/format.test.ts`:
+```typescript
+describe("formatPercent", () => {
+  it("formats positive value", () => {
+    expect(formatPercent(12.345)).toBe("12.35%");
+  });
+  it("formats zero", () => {
+    expect(formatPercent(0)).toBe("0.00%");
+  });
+  it("formats negative value", () => {
+    expect(formatPercent(-5.1)).toBe("-5.10%");
+  });
+  it("respects custom decimals", () => {
+    expect(formatPercent(12.345, 1)).toBe("12.3%");
+  });
+  it("returns dash for nullish", () => {
+    expect(formatPercent(null)).toBe("-");
+    expect(formatPercent(undefined)).toBe("-");
+  });
+});
 
-## Validation Gates
+describe("formatSignedPercent", () => {
+  it("adds + prefix for positive", () => {
+    expect(formatSignedPercent(5.5)).toBe("+5.50%");
+  });
+  it("keeps - prefix for negative", () => {
+    expect(formatSignedPercent(-3.2)).toBe("-3.20%");
+  });
+  it("formats zero without sign", () => {
+    expect(formatSignedPercent(0)).toBe("0.00%");
+  });
+  it("returns dash for nullish", () => {
+    expect(formatSignedPercent(null)).toBe("-");
+  });
+});
+```
 
-### Mandatory gate after every completed phase
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npm test -- shared/lib/__tests__/format.test.ts`
+Expected: FAIL — functions not defined
+
+- [ ] **Step 3: Implement in `shared/lib/format.ts`**
+
+Add at end of file:
+```typescript
+/** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
+export function formatPercent(value: number | null | undefined, decimals = 2): string {
+  return value != null ? `${value.toFixed(decimals)}%` : "-";
+}
+
+/** Format a signed percentage with +/- prefix and % suffix. Returns "-" for nullish. */
+export function formatSignedPercent(value: number | null | undefined, decimals = 2): string {
+  if (value == null) return "-";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(decimals)}%`;
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npm test -- shared/lib/__tests__/format.test.ts`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 
 ```bash
-npm run lint
-npm test
-cd worker && npx tsc --noEmit
-npm run build
+git add shared/lib/format.ts shared/lib/__tests__/format.test.ts
+git commit -m "feat: add formatPercent/formatSignedPercent helpers (R-005)"
 ```
 
-### Targeted suites by workstream
+Note: Sweeping inline `toFixed(2) + "%"` usages across 15+ components is deferred to Phase 2, Task 12 where it is batched with other formatting sweeps.
 
-Use the relevant subset while developing each phase:
+---
+
+### Task 3: Add `nullOn404` option to `apiFetch` (R-007)
+
+**Files:**
+- Modify: `src/lib/api.ts:114-140,212-227`
+- Modify: `src/lib/__tests__/api-fetch-contracts.test.ts` (add test for nullOn404)
+
+**IMPORTANT — return type safety:** The implementation uses function overloads so that existing callers (without `nullOn404`) still get `Promise<T>`, not `Promise<T | null>`. Only callers passing `{ nullOn404: true }` get `Promise<T | null>`.
+
+- [ ] **Step 1: Write test for `nullOn404` behavior**
+
+Add to existing test file `src/lib/__tests__/api-fetch-contracts.test.ts`:
+```typescript
+it("returns null for 404 when nullOn404 is true", async () => {
+  // Mock fetch to return 404
+  globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
+  const result = await apiFetch("/api/stablecoin-reserves/test", undefined, undefined, undefined, { nullOn404: true });
+  expect(result).toBeNull();
+});
+
+it("still throws on 404 when nullOn404 is not set", async () => {
+  globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
+  await expect(apiFetch("/api/stablecoin-reserves/test")).rejects.toThrow(ApiFetchError);
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npm test -- src/lib/__tests__/api-fetch-contracts.test.ts`
+Expected: FAIL — TypeScript rejects the 5th argument at compile time ("Expected 1-4 arguments, got 5"). If using esbuild/vitest (no type-checking), the test runs but the 5th arg is ignored and `apiFetch` throws `ApiFetchError` instead of returning null.
+
+- [ ] **Step 3: Add `nullOn404` option to `apiFetch` with overloads**
+
+In `src/lib/api.ts`, add the options interface and function overloads to preserve backward compatibility:
+```typescript
+export interface ApiFetchOptions {
+  nullOn404?: boolean;
+}
+
+// Overload: without nullOn404 → returns T (preserves existing call sites)
+export async function apiFetch<T>(
+  path: string,
+  schema?: ZodType<T>,
+  init?: RequestInit,
+  contractMode?: ApiContractMode,
+): Promise<T>;
+// Overload: with nullOn404 → returns T | null
+export async function apiFetch<T>(
+  path: string,
+  schema: ZodType<T> | undefined,
+  init: RequestInit | undefined,
+  contractMode: ApiContractMode | undefined,
+  options: ApiFetchOptions & { nullOn404: true },
+): Promise<T | null>;
+// Implementation signature
+export async function apiFetch<T>(
+  path: string,
+  schema?: ZodType<T>,
+  init?: RequestInit,
+  contractMode?: ApiContractMode,
+  options?: ApiFetchOptions,
+): Promise<T | null> {
+  const res = await apiRequest(path, init);
+  if (!res.ok) {
+    if (options?.nullOn404 && res.status === 404) return null;
+    throw await buildFetchError(path, res);
+  }
+  // ... rest of existing implementation unchanged (json parse, schema validation)
+```
+
+- [ ] **Step 4: Replace `fetchStablecoinReserves` with `apiFetch` call**
+
+Replace lines 212-227:
+```typescript
+export async function fetchStablecoinReserves(stablecoinId: string): Promise<import("@shared/types").StablecoinReservesResponse | null> {
+  return apiFetch<import("@shared/types").StablecoinReservesResponse>(
+    API_PATHS.stablecoinReserves(stablecoinId),
+    undefined,
+    undefined,
+    undefined,
+    { nullOn404: true },
+  );
+}
+```
+
+- [ ] **Step 5: Run tests**
+
+Run: `npm test -- src/lib/__tests__/api-fetch-contracts.test.ts`
+Expected: PASS
+
+- [ ] **Step 6: Run build to check types**
+
+Run: `npm run build`
+Expected: Build succeeds — all existing `apiFetch` callers still see `Promise<T>` thanks to overloads
+
+- [ ] **Step 7: Commit**
 
 ```bash
-npx vitest run src/hooks/__tests__/use-sort.test.ts
-npx vitest run src/hooks/__tests__/use-sorted-table-rows.test.ts
-npx vitest run src/hooks/__tests__/use-table-pagination.test.ts
-npx vitest run src/hooks/__tests__/query-polling-policy.test.ts
-npx vitest run src/components/__tests__/flow-table.test.tsx
-npx vitest run src/components/__tests__/liquidity-table.test.ts
-npx vitest run src/components/__tests__/cron-card.test.tsx
-npx vitest run src/components/__tests__/data-quality-cards.test.tsx
-npx vitest run src/lib/__tests__/coverage.test.ts
-npx vitest run src/lib/__tests__/api-endpoints.test.ts
-npx vitest run worker/src/api/__tests__/router-contract.test.ts
-npx vitest run worker/src/api/__tests__/status.test.ts
-npx vitest run worker/src/api/__tests__/status-history.test.ts
-npx vitest run worker/src/api/__tests__/cache-passthrough.test.ts
-npx vitest run worker/src/__tests__/index.fetch.test.ts
+git add src/lib/api.ts src/lib/__tests__/api-fetch-contracts.test.ts
+git commit -m "refactor: add nullOn404 to apiFetch, remove fetchStablecoinReserves duplication (R-007)"
 ```
 
-### Boundary and smoke checks
+---
+
+### Task 4: Move `CRON_INTERVALS` to shared (R-009)
+
+**Files:**
+- Modify: `shared/lib/cron-jobs.ts` (add `CRON_INTERVALS` export)
+- Modify: `worker/src/lib/cron-schedule.ts` (remove `CRON_INTERVALS`, re-export from shared)
+
+- [ ] **Step 1: Add `CRON_INTERVALS` to `shared/lib/cron-jobs.ts`**
+
+After the `CRON_JOB_DEFINITIONS` export, add:
+```typescript
+/** Job name → expected interval in seconds, derived from definitions. */
+export const CRON_INTERVALS = Object.freeze(
+  Object.fromEntries(CRON_JOB_DEFINITIONS.map((item) => [item.job, item.intervalSec])) as Record<string, number>,
+);
+```
+
+- [ ] **Step 2: Simplify `worker/src/lib/cron-schedule.ts`**
+
+Replace entire file with:
+```typescript
+export { CRON_SCHEDULES, CRON_INTERVALS } from "@shared/lib/cron-jobs";
+export type { CronScheduleExpression } from "@shared/lib/cron-jobs";
+```
+
+- [ ] **Step 3: Verify no consumer imports `CronScheduleExpression` from the worker file**
+
+Run: `grep -r "from.*cron-schedule" worker/src/ --include="*.ts" | grep -v "__tests__"`
+Expected: Any imports should still resolve since we re-export.
+
+- [ ] **Step 4: Run tests + type-check**
+
+Run: `npm test && cd worker && npx tsc --noEmit`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
 
 ```bash
-npm run check:worker-boundary
-npm run test:smoke-ui
-npm run test:smoke-api
+git add shared/lib/cron-jobs.ts worker/src/lib/cron-schedule.ts
+git commit -m "refactor: move CRON_INTERVALS to shared, eliminate worker re-derivation (R-009)"
 ```
 
-Run `check:worker-boundary` after Phase 1 and again after Phase 5.
+---
 
-## Docs Expected To Change
+### Task 5: Derive `PRESSURE_VALUE_CLASS` from `flow-signal-ui` (R-011)
 
-Treat these as likely update targets:
+**Files:**
+- Modify: `src/components/flow-table-logic.ts:23-28`
+- Modify: `src/lib/flow-signal-ui.ts` (no changes needed — it's the source of truth)
 
-- `docs/architecture.md`
-- `docs/api-reference.md`
-- `docs/status-dashboard.md`
-- `docs/testing.md`
-- `docs/deployment-process.md`
-- `docs/methodology-page.md`
+- [ ] **Step 1: Replace `PRESSURE_VALUE_CLASS` derivation**
 
-## Recommended Execution Order
+In `src/components/flow-table-logic.ts`, remove the hardcoded `PRESSURE_VALUE_CLASS` object (lines 23-28) and replace with:
 
-```text
-Phase 0: Baseline and fixture capture
-  P0-A baseline verification and snapshots
+```typescript
+import { getFlowPressureUi } from "@/lib/flow-signal-ui";
+import { PRESSURE_SHIFT_STATE_VALUES, type PressureShiftState } from "@shared/lib/mint-burn-signals";
 
-Phase 1: Low-risk convergence
-  A1 canonical stablecoin registries
-  A2 client feature-page shell convergence
-
-Phase 2: Table-pattern convergence
-  B1 shared sortable table shell
-  B2 migrate leaderboard tables
-  B3 normalize stablecoin-table header definitions
-
-Phase 3: Route/endpoint ownership simplification
-  C1 shrink shared endpoint metadata
-  C2 create worker-owned route registry
-  C3 rewire status/probe/cache consumers
-
-Phase 4: Large frontend file decomposition
-  D1 status page decomposition
-  D2 coverage page model extraction
-
-Phase 5: Tooling and package simplification
-  E1 workspace feasibility pass
-  E2 implement single-toolchain dependency path
-  E3 CI/docs normalization
-
-Phase 6: Cleanup and closeout
-  F1 dead-file/dead-export sweep
-  F2 final docs and audit delta capture
+export const PRESSURE_VALUE_CLASS: Record<PressureShiftState, string> = Object.fromEntries(
+  PRESSURE_SHIFT_STATE_VALUES.map((s) => [s, getFlowPressureUi(s, "summary").valueClass]),
+) as Record<PressureShiftState, string>;
 ```
 
-Do not parallelize Phases 2 and 3. They both touch cross-cutting conventions and will create avoidable merge noise if run at the same time.
+- [ ] **Step 2: Verify `getFlowPressureUi` is exported**
+
+Run: `grep "export function getFlowPressureUi" src/lib/flow-signal-ui.ts`
+Expected: Match found
+
+- [ ] **Step 3: Run build + tests**
+
+Run: `npm run build && npm test`
+Expected: PASS
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/components/flow-table-logic.ts
+git commit -m "refactor: derive PRESSURE_VALUE_CLASS from flow-signal-ui (R-011)"
+```
 
 ---
 
-## Phase 0 - Baseline And Fixtures
+### Task 6: Reformat `coin()` factory to multi-line (Q-017)
 
-### [ ] P0-A. Capture current behavior
+**Files:**
+- Modify: `shared/lib/stablecoins.ts:37` (reformat return statement)
 
-**Purpose**
+- [ ] **Step 1: Reformat the `coin()` return statement**
 
-Freeze current behavior before moving route ownership, table shells, or large page composition.
+Read the current `coin()` function and reformat its return statement from a single line to a multi-line object literal. Each field on its own line. Do not change any logic — purely formatting.
 
-**Required actions**
+- [ ] **Step 2: Run tests to verify no behavioral change**
 
-1. Run the mandatory gate once on the untouched branch.
-2. Save representative responses for:
-   - `GET /api/stablecoins`
-   - `GET /api/peg-summary`
-   - `GET /api/dex-liquidity`
-   - `GET /api/status` with a valid admin key
-3. Save a visual smoke pass for:
-   - `/liquidity`
-   - `/depeg`
-   - `/coverage`
-   - `/status`
-4. Save current file counts and line counts for:
-   - `src/components`
-   - `src/app`
-   - `worker/src/api`
-   - `shared/lib`
+Run: `npm test -- shared/lib/__tests__/stablecoins.test.ts`
+Expected: PASS
 
-**Why it matters**
+- [ ] **Step 3: Run build**
 
-Most of the work below is structural. A baseline prevents the refactor from turning into a behavior rewrite by accident.
+Run: `npm run build`
+Expected: PASS
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add shared/lib/stablecoins.ts
+git commit -m "style: reformat coin() factory to multi-line return (Q-017)"
+```
 
 ---
 
-## Phase 1 - Low-Risk Convergence
+### Task 7: Extract `compareNullable()` helper (R-010)
 
-### [ ] A1. Canonicalize stablecoin registry usage
+**Files:**
+- Create: `src/lib/sort-utils.ts`
+- Create: `src/lib/__tests__/sort-utils.test.ts`
+- Modify: `src/components/stablecoin-table-logic.ts` (use helper)
+- Modify: `src/components/flow-table-logic.ts` (use helper)
 
-**Audit finding covered**
+- [ ] **Step 1: Write the test**
 
-Finding 3: stablecoin registries rebuilt locally.
+```typescript
+// src/lib/__tests__/sort-utils.test.ts
+import { describe, it, expect } from "vitest";
+import { compareNullable } from "../sort-utils";
 
-**Primary files**
+describe("compareNullable", () => {
+  it("returns 0 when both null", () => {
+    expect(compareNullable(null, null)).toBe(0);
+  });
+  it("sorts null after non-null (returns 1 when a is null)", () => {
+    expect(compareNullable(null, 5)).toBe(1);
+  });
+  it("sorts non-null before null (returns -1 when b is null)", () => {
+    expect(compareNullable(5, null)).toBe(-1);
+  });
+  it("returns null when both are non-null (caller should compare)", () => {
+    expect(compareNullable(5, 10)).toBeNull();
+  });
+});
+```
 
-- `shared/lib/stablecoins.ts`
-- `shared/lib/tracked-stablecoin-utils.ts`
-- `worker/src/cron/sync-yield-data.ts`
-- `worker/src/cron/yield-sync/rankings.ts`
-- `worker/src/lib/peg-analytics.ts`
-- any other file rebuilding `new Map(TRACKED_STABLECOINS.map(...))` or `new Set(TRACKED_STABLECOINS.map(...))`
+- [ ] **Step 2: Run test to verify it fails**
 
-**Target state**
+Run: `npm test -- src/lib/__tests__/sort-utils.test.ts`
+Expected: FAIL
 
-- `TRACKED_META_BY_ID` and `TRACKED_IDS` from `shared/lib/stablecoins.ts` are the default source everywhere.
-- Derived subsets stay explicit and local only when they are genuinely filtered views.
-- `tracked-stablecoin-utils.ts` becomes a thin derived-helpers module, not a defensive second registry surface.
+- [ ] **Step 3: Implement**
 
-**Implementation steps**
+```typescript
+// src/lib/sort-utils.ts
+/**
+ * Handle nullable values in sort comparators.
+ * Returns a definitive sort order (0, 1, or -1) when nulls are involved,
+ * or null when both values are non-null (caller should do numeric comparison).
+ */
+export function compareNullable(
+  a: number | null | undefined,
+  b: number | null | undefined,
+): number | null {
+  const aNull = a == null;
+  const bNull = b == null;
+  if (aNull && bNull) return 0;
+  if (aNull) return 1;
+  if (bNull) return -1;
+  return null;
+}
+```
 
-1. Replace local base-registry rebuilds with direct imports of `TRACKED_META_BY_ID` / `TRACKED_IDS`.
-2. Keep filtered subsets such as `YIELD_BEARING_STABLECOINS`, but define them from the shared exports without fallback logic.
-3. Delete dead local constants made redundant by the shared registry.
-4. Run a follow-up `rg` for `new Map(TRACKED_STABLECOINS.map` and `new Set(TRACKED_STABLECOINS.map` to catch stragglers.
+- [ ] **Step 4: Run test to verify it passes**
 
-**Required tests**
+Run: `npm test -- src/lib/__tests__/sort-utils.test.ts`
+Expected: PASS
 
-- `npm run build`
-- `npx vitest run src/lib/__tests__/critical-invariants.test.ts`
-- `npx vitest run worker/src/lib/__tests__/peg-analytics.test.ts`
-- `npx vitest run worker/src/cron/__tests__/sync-yield-data.test.ts`
+Note: `depeg-table-logic.ts` is mentioned in the R-010 audit finding but uses `?? fallback` inline defaults instead of the explicit null-guard pattern. It does **not** need modification for this task.
 
-**Docs**
+- [ ] **Step 5: Replace null-guard patterns in `stablecoin-table-logic.ts`**
 
-- Update `docs/architecture.md` only if helper/file ownership changes become materially simpler.
+Find each occurrence of the pattern:
+```typescript
+if (a === null && b === null) return 0;
+if (a === null) return 1;
+if (b === null) return -1;
+```
+Replace with:
+```typescript
+const nc = compareNullable(a, b);
+if (nc !== null) return nc;
+```
+Add import: `import { compareNullable } from "@/lib/sort-utils";`
 
-**Stop conditions**
+- [ ] **Step 6: Replace null-guard patterns in `flow-table-logic.ts`**
 
-- Stop if a local map/set is not equivalent to the global tracked registry and is intentionally filtered or augmented. In that case, rename it to make the special semantics explicit instead of forcing convergence.
+Same replacement pattern. Add import.
 
-### [ ] A2. Converge client-heavy feature routes on `createClientFeaturePage()`
+- [ ] **Step 7: Run tests + build**
 
-**Audit finding covered**
+Run: `npm test && npm run build`
+Expected: PASS
 
-Finding 4: partial adoption of the route shell factory.
+- [ ] **Step 8: Commit**
 
-**Primary files**
-
-- `src/lib/client-feature-page.tsx`
-- `src/app/coverage/page.tsx`
-- `src/app/depeg/page.tsx`
-- `src/app/liquidity/page.tsx`
-- `src/app/yield/page.tsx`
-- `src/app/stability-index/page.tsx`
-- `src/app/portfolio/page.tsx`
-- any other page that is effectively `FeaturePageShell + client`
-
-**Target state**
-
-- All client-heavy feature routes use one route shell pattern unless they have real server-only differences.
-- The factory supports the minimal surface already needed by current routes: metadata stays route-local, while shell composition is standardized.
-
-**Implementation steps**
-
-1. Inventory current `FeaturePageShell` routes and split them into:
-   - eligible for `createClientFeaturePage()`
-   - intentionally manual (server-heavy, taxonomy, or content pages)
-2. Expand `createClientFeaturePage()` only if required for existing route needs:
-   - `preface`
-   - `headerActions`
-   - `beforeClient`
-   - `afterClient`
-3. Migrate `coverage/page.tsx` to the shared factory.
-4. Migrate `depeg/page.tsx` only if its callout and JSON-LD can fit the same factory without making the helper harder to read than the route.
-5. Keep manual routes manual if factory use would introduce conditional helper complexity.
-
-**Required tests**
-
-- `npm run build`
-- `npx vitest run src/__tests__/page-metadata.test.ts`
-- `npm run test:smoke-ui`
-
-**Docs**
-
-- Update `docs/architecture.md` to document the route shell convention if more routes are migrated.
-
-**Stop conditions**
-
-- If making `createClientFeaturePage()` fit `depeg/page.tsx` requires too many optional branches, stop and keep `depeg` manual. The goal is convergence, not a universal page DSL.
+```bash
+git add src/lib/sort-utils.ts src/lib/__tests__/sort-utils.test.ts src/components/stablecoin-table-logic.ts src/components/flow-table-logic.ts
+git commit -m "refactor: extract compareNullable() for table sort helpers (R-010)"
+```
 
 ---
 
-## Phase 2 - Table-Pattern Convergence
+### Task 8: Eliminate `strict-contract-paths.ts` (R-006)
 
-### [ ] B1. Introduce one shared sortable table shell
+**Files:**
+- Modify: `shared/lib/api-endpoints.ts` (add pre-computed export)
+- Delete: `shared/lib/strict-contract-paths.ts`
+- Modify: `src/lib/api.ts:3` (update import)
+- Modify: `src/lib/__tests__/api-endpoints.test.ts:9` (update import)
+- Modify: `worker/src/api/__tests__/router-contract.test.ts:3` (update import)
+- Modify: `scripts/smoke-api.mjs:6` (update dynamic import path)
+- Modify: `docs/scripts.md`, `docs/architecture.md`, `docs/testing.md` (update file references)
 
-**Audit finding covered**
+- [ ] **Step 1: Add pre-computed list to `api-endpoints.ts`**
 
-Finding 2: repeated leaderboard table shells.
+At the bottom of `shared/lib/api-endpoints.ts`, add:
+```typescript
+/** Pre-computed strict contract paths (module-load-time). */
+export const STRICT_CONTRACT_PATHS_LIST = getStrictContractPaths();
+```
 
-**Primary files**
+- [ ] **Step 2: Update all 3 consumers to import from `api-endpoints` directly**
 
-- `src/components/liquidity-table.tsx`
-- `src/components/yield-leaderboard.tsx`
-- `src/components/depeg-tracker-table.tsx`
-- `src/components/flow-table.tsx`
-- `src/components/blacklist-table.tsx`
-- `src/components/sortable-table-head.tsx`
-- `src/hooks/use-sorted-table-rows.ts`
-- `src/hooks/use-sorted-paginated-table.ts`
-- `src/hooks/use-table-pagination.ts`
+In each file, change:
+```typescript
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
+```
+to:
+```typescript
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
+```
 
-**Target state**
+- [ ] **Step 3: Update `scripts/smoke-api.mjs`**
 
-- One shared table-shell pattern owns:
-  - header rendering from a column config
-  - shared sortable-head plumbing
-  - optional pagination footer
-  - consistent empty-state row handling
-- Per-table files still own:
-  - row rendering
-  - comparator functions
-  - table-specific inline controls/filters
+Change the dynamic import from:
+```javascript
+const strictContractModule = await import("../shared/lib/strict-contract-paths.ts");
+```
+to:
+```javascript
+const { STRICT_CONTRACT_PATHS_LIST } = await import("../shared/lib/api-endpoints.ts");
+```
 
-**Implementation steps**
+- [ ] **Step 4: Update documentation references**
 
-1. Create a small shared primitive such as `src/components/sortable-data-table.tsx` or equivalent.
-2. Limit the primitive to shell responsibilities. Do not move data fetching or row/domain formatting into it.
-3. Define a flat column configuration shape:
-   - `key`
-   - `label`
-   - `sortable`
-   - `sortKey`
-   - `className`
-   - `headerTitle`
-   - `renderCell`
-4. Reuse `SortableTableHead` under the hood rather than replacing it.
-5. Keep comparator logic in existing `*-table-logic.ts` files for now.
+In `docs/scripts.md`, `docs/architecture.md`, and `docs/testing.md`, replace references to `shared/lib/strict-contract-paths.ts` with `shared/lib/api-endpoints.ts`.
 
-**Required tests**
+- [ ] **Step 5: Delete `shared/lib/strict-contract-paths.ts`**
 
-- `npx vitest run src/hooks/__tests__/use-sort.test.ts`
-- `npx vitest run src/hooks/__tests__/use-sorted-table-rows.test.ts`
-- `npx vitest run src/hooks/__tests__/use-table-pagination.test.ts`
+```bash
+rm shared/lib/strict-contract-paths.ts
+```
 
-**Docs**
+- [ ] **Step 6: Run tests + build + smoke**
 
-- Update `docs/testing.md` if new table-shell tests are added.
+Run: `npm test && npm run build`
+Expected: PASS
 
-**Stop conditions**
+- [ ] **Step 7: Commit**
 
-- If the shared shell starts absorbing per-table row semantics, back up and keep the primitive limited to headers/pagination/empty-state only.
-
-### [ ] B2. Migrate the repeated leaderboard tables
-
-**Audit finding covered**
-
-Finding 2: repeated leaderboard table shells.
-
-**Primary files**
-
-- `src/components/liquidity-table.tsx`
-- `src/components/yield-leaderboard.tsx`
-- `src/components/depeg-tracker-table.tsx`
-- `src/components/flow-table.tsx`
-- `src/components/blacklist-table.tsx`
-
-**Target state**
-
-- Each table becomes a thin file:
-  - local filters and derived rows
-  - column definition array
-  - row-specific formatting helpers
-- Shared sort/pagination shell logic is removed from each component.
-
-**Implementation steps**
-
-1. Migrate `liquidity-table.tsx` first and use it as the reference implementation.
-2. Migrate `depeg-tracker-table.tsx`.
-3. Migrate `flow-table.tsx`.
-4. Migrate `blacklist-table.tsx`.
-5. Migrate `yield-leaderboard.tsx` last because it has expandable rows and local filter chips.
-6. For `yield-leaderboard`, keep expansion state local and only share the outer table shell.
-
-**Required tests**
-
-- `npx vitest run src/components/__tests__/liquidity-table.test.ts`
-- `npx vitest run src/components/__tests__/flow-table.test.tsx`
-- add/extend targeted tests for `yield-leaderboard` if the migration changes header wiring or pagination behavior
-
-**Docs**
-
-- None expected unless test conventions change.
-
-**Stop conditions**
-
-- If a given table becomes less readable after migration, keep that table custom and document why. The shared shell must simplify, not homogenize.
-
-### [ ] B3. Normalize `stablecoin-table.tsx` header/config duplication without removing virtualization
-
-**Audit finding covered**
-
-Finding 2: stablecoin table duplicates the same head plumbing in a custom implementation.
-
-**Primary files**
-
-- `src/components/stablecoin-table.tsx`
-- `src/components/stablecoin-table-logic.ts`
-- `src/components/stablecoin-table-column-visibility.tsx`
-
-**Target state**
-
-- `stablecoin-table.tsx` stays custom and virtualized.
-- Column/header declarations move into a flat config array so header JSX is no longer manually repeated for every column.
-
-**Implementation steps**
-
-1. Extract a `STABLECOIN_COLUMN_DEFS` structure describing:
-   - column id
-   - sort key
-   - visibility gating
-   - class names
-   - title/tooltip
-   - label
-2. Render headers from config.
-3. Keep cell rendering manual if a cell-config abstraction becomes harder to follow.
-4. Preserve:
-   - virtualization behavior
-   - column visibility prefs
-   - current sort fallback logic
-
-**Required tests**
-
-- `npm run build`
-- `npx vitest run src/hooks/__tests__/use-sort.test.ts`
-- extend/add a `stablecoin-table` test only if header rendering becomes easy to assert
-
-**Stop conditions**
-
-- Do not force row rendering into a generic schema if it makes the file less obvious. The win here is header/config dedup only.
+```bash
+git add shared/lib/api-endpoints.ts src/lib/api.ts src/lib/__tests__/api-endpoints.test.ts worker/src/api/__tests__/router-contract.test.ts scripts/smoke-api.mjs docs/scripts.md docs/architecture.md docs/testing.md
+git rm shared/lib/strict-contract-paths.ts
+git commit -m "refactor: eliminate strict-contract-paths.ts, export directly from api-endpoints (R-006)"
+```
 
 ---
 
-## Phase 3 - Route/Endpoint Ownership Simplification
+## Chunk 2: Phase 2 — Targeted Refactoring
 
-### [ ] C1. Reduce `shared/lib/api-endpoints.ts` to frontend/shared concerns only
+### Task 9: Consolidate duration/age formatters (R-003)
 
-**Audit finding covered**
+**Files:**
+- Modify: `shared/lib/format.ts` (add `formatElapsedSeconds`)
+- Modify: `shared/lib/__tests__/format.test.ts` (add tests)
+- Modify: `src/lib/data-health.ts:155-162` (use shared formatter)
+- Modify: `src/components/status/format.ts:8-15` (use shared formatter)
 
-Finding 1: duplicated endpoint/route ownership.
+- [ ] **Step 1: Write tests for `formatElapsedSeconds`**
 
-**Primary files**
+```typescript
+describe("formatElapsedSeconds", () => {
+  it("formats seconds", () => {
+    expect(formatElapsedSeconds(45)).toBe("45s");
+  });
+  it("formats minutes", () => {
+    expect(formatElapsedSeconds(300)).toBe("5m");
+  });
+  it("formats hours and minutes", () => {
+    expect(formatElapsedSeconds(5400)).toBe("1h 30m");
+  });
+  it("formats hours without extra minutes", () => {
+    expect(formatElapsedSeconds(7200)).toBe("2h");
+  });
+  it("formats days", () => {
+    expect(formatElapsedSeconds(172800)).toBe("2d");
+  });
+  it("returns unknown for null-ish", () => {
+    expect(formatElapsedSeconds(0)).toBe("0s");
+  });
+});
+```
 
-- `shared/lib/api-endpoints.ts`
-- `shared/lib/strict-contract-paths.ts`
-- `src/lib/api.ts`
+- [ ] **Step 2: Implement `formatElapsedSeconds`**
 
-**Target state**
+Add to `shared/lib/format.ts`:
+```typescript
+/** Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d". */
+export function formatElapsedSeconds(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${Math.floor(seconds / 86400)}d`;
+}
+```
 
-- Shared file owns:
-  - `API_PATHS`
-  - query/path builders
-  - strict-contract path list needed by frontend/runtime-neutral callers
-- Worker-only operational metadata moves out:
-  - methods
-  - admin requirement
-  - cache bypass
-  - probe groups
-  - status page actions
+- [ ] **Step 3: Replace `formatHealthAge` in `src/lib/data-health.ts`**
 
-**Implementation steps**
+**Intentional behavioral change:** The old `formatHealthAge` showed `"0m"` for durations under 60 seconds. The new `formatElapsedSeconds` shows the actual seconds (e.g. `"45s"`). This is an intentional improvement — showing `"0m"` for a 45-second-old data point was misleading. Status page operators benefit from sub-minute resolution.
 
-1. Identify every consumer of `getEndpointDefinition`, `getProbePaths`, `validateEndpointMethod`, `isCacheBypassPath`, and `getStatusPageActions`.
-2. Keep only the parts that are truly shared.
-3. Move worker-only operational metadata into a worker-owned registry module in the next step.
-4. Keep `STRICT_CONTRACT_PATHS_LIST` available to the frontend after the split.
+```typescript
+import { formatElapsedSeconds } from "@shared/lib/format";
 
-**Required tests**
+export function formatHealthAge(ms: number | null): string {
+  if (ms == null) return "unknown";
+  return formatElapsedSeconds(ms / 1000);
+}
+```
 
-- `npx vitest run src/lib/__tests__/api-endpoints.test.ts`
-- `npm run build`
+- [ ] **Step 4: Replace `formatAge` in `src/components/status/format.ts`**
 
-**Docs**
+```typescript
+import { formatElapsedSeconds } from "@shared/lib/format";
 
-- Update `docs/api-reference.md` if the source-of-truth description changes.
+export function formatAge(seconds: number): string {
+  return formatElapsedSeconds(seconds);
+}
+```
 
-### [ ] C2. Create a worker-owned route registry and derive router behavior from it
+Note: Keep `formatAge` as a thin re-export to avoid changing all status component imports.
 
-**Audit finding covered**
+- [ ] **Step 5: Run tests + build**
 
-Finding 1: route metadata and route handlers maintained in parallel.
+Run: `npm test && npm run build`
+Expected: PASS
 
-**Primary files**
+- [ ] **Step 6: Commit**
 
-- `worker/src/router.ts`
-- `worker/src/handlers/http.ts`
-- new worker-owned registry module, for example:
-  - `worker/src/router/route-registry.ts`
-  - `worker/src/router/dynamic-routes.ts`
-
-**Target state**
-
-- One worker-owned registry defines:
-  - path
-  - methods
-  - admin requirement
-  - cache bypass
-  - strict-contract status if worker needs it
-  - probe/status action metadata
-  - handler
-- `worker/src/router.ts` becomes a dispatcher, not a second metadata table.
-- `worker/src/handlers/http.ts` gets `isCacheBypassPath()` from the worker registry, not from a shared contract file.
-
-**Implementation steps**
-
-1. Create a `RouteDefinition` type in the worker.
-2. Move static route declarations out of `router.ts` and into the registry.
-3. Represent dynamic routes explicitly:
-   - stablecoin detail
-   - stablecoin summary
-   - stablecoin reserves
-   - discovery dismiss
-   - OG image paths
-4. Derive:
-   - method validation
-   - cache bypass lookup
-   - probe paths
-   - status page actions
-5. Delete the worker-facing metadata now duplicated in `shared/lib/api-endpoints.ts`.
-6. Keep route paths and endpoint behavior unchanged.
-
-**Required tests**
-
-- `npx vitest run worker/src/api/__tests__/router-contract.test.ts`
-- `npx vitest run worker/src/api/__tests__/cache-passthrough.test.ts`
-- `npx vitest run worker/src/__tests__/index.fetch.test.ts`
-- `cd worker && npx tsc --noEmit`
-
-**Docs**
-
-- Update `docs/architecture.md`
-- Update `docs/api-reference.md`
-
-**Stop conditions**
-
-- Stop if the registry abstraction starts hiding real special cases behind opaque callbacks. A flat explicit registry is the target, not a mini-framework.
-
-### [ ] C3. Rewire route-adjacent consumers
-
-**Audit finding covered**
-
-Finding 1: worker router metadata duplication bleeds into status/probe/cache consumers.
-
-**Primary files**
-
-- `worker/src/api/status.ts`
-- `worker/src/api/status-history.ts`
-- `worker/src/handlers/http.ts`
-- any module consuming `getProbePaths()` or `getStatusPageActions()`
-
-**Target state**
-
-- All worker-side operational consumers use the worker route registry.
-- Frontend/shared consumers only depend on path builders and strict-contract lists.
-
-**Required tests**
-
-- `npx vitest run worker/src/api/__tests__/status.test.ts`
-- `npx vitest run worker/src/api/__tests__/status-history.test.ts`
-- `npx vitest run worker/src/api/__tests__/health.test.ts`
+```bash
+git add shared/lib/format.ts shared/lib/__tests__/format.test.ts src/lib/data-health.ts src/components/status/format.ts
+git commit -m "refactor: consolidate duration formatters into shared formatElapsedSeconds (R-003)"
+```
 
 ---
 
-## Phase 4 - Large Frontend File Decomposition
+### Task 10: Unify time constants into shared (R-002, S-004)
 
-### [ ] D1. Decompose `src/app/status/client.tsx`
+**Files:**
+- Create: `shared/lib/time-constants.ts`
+- Modify: `src/lib/constants.ts` (import from shared, keep page-specific constants)
+- Modify: `worker/src/lib/time-constants.ts` (import from shared, keep SECONDS alias)
+- Remove local redefinition in `worker/src/cron/sync-yield-data.ts`
 
-**Audit finding covered**
+- [ ] **Step 1: Create `shared/lib/time-constants.ts`**
 
-Finding 5: status page file still too busy.
+```typescript
+// shared/lib/time-constants.ts
+export const SECONDS_PER_MINUTE = 60;
+export const MINUTES_PER_HOUR = 60;
+export const HOURS_PER_DAY = 24;
+export const MS_PER_SECOND = 1000;
 
-**Primary files**
+export const HOUR_SECONDS = MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
+export const DAY_SECONDS = HOURS_PER_DAY * HOUR_SECONDS;
+export const WEEK_SECONDS = 7 * DAY_SECONDS;
+export const THIRTY_DAYS_SECONDS = 30 * DAY_SECONDS;
 
-- `src/app/status/client.tsx`
-- `src/hooks/use-status-dashboard-model.ts`
-- `src/components/status/*`
-- `src/lib/status-dashboard-model.ts`
+export const HOUR_MS = HOUR_SECONDS * MS_PER_SECOND;
+export const DAY_MS = DAY_SECONDS * MS_PER_SECOND;
+export const WEEK_MS = 7 * DAY_MS;
+```
 
-**Target state**
+- [ ] **Step 2: Update `src/lib/constants.ts` to import from shared**
 
-- `src/app/status/client.tsx` owns:
-  - admin key gate
-  - top-level page selection
-  - assembly of high-level sections
-- `src/components/status/*` owns:
-  - local page-only presentation components currently nested in the page file
-  - static copy/config objects when they are presentation-only
-- `use-status-dashboard-model.ts` remains the single data orchestration hook.
+Replace the time constant definitions (lines 1-23) with imports. Preserve every currently-exported symbol to avoid breaking consumers:
+```typescript
+export {
+  SECONDS_PER_MINUTE,
+  HOUR_SECONDS,
+  DAY_SECONDS,
+  HOUR_MS,
+  DAY_MS,
+  WEEK_MS,
+  THIRTY_DAYS_SECONDS,
+} from "@shared/lib/time-constants";
 
-**Implementation steps**
+// Derived constants unique to frontend (not worth sharing — no worker consumers)
+import { DAY_MS as _DM, HOURS_PER_DAY } from "@shared/lib/time-constants";
 
-1. Move local components out of the page file:
-   - `SummaryBadge`
-   - `StatusSection`
-   - `RecommendedActionStrip`
-   - `PriorityLaneLink`
-   - `NoticeRail`
-2. Move top-fold copy dictionaries and any other pure presentation config into a dedicated status-page config module.
-3. Split the page into:
-   - auth-gated outer shell
-   - authenticated dashboard view
-4. Do not move business logic out of `buildStatusDashboardData()` unless it is presentation-only.
+export const DAY_HOURS = HOURS_PER_DAY;
+export const WEEK_HOURS = 7 * DAY_HOURS;
+export const THIRTY_DAYS_HOURS = 30 * DAY_HOURS;
+export const NINETY_DAYS_HOURS = 90 * DAY_HOURS;
+export const NINETY_DAYS_MS = 90 * _DM;
+export const THREE_DAYS_MS = 3 * _DM;
+export const YEAR_MS = 365.25 * _DM;
+export const TABLE_PAGE_SIZE = 25;
+```
+Keep `CATEGORY_LINKS` unchanged.
 
-**Required tests**
+**Verification:** Run `grep -rn "from.*@/lib/constants" src/ --include="*.ts" --include="*.tsx"` and confirm every imported symbol is still exported.
 
-- `npx vitest run src/components/__tests__/action-recommendations.test.ts`
-- `npx vitest run src/components/__tests__/cron-card.test.tsx`
-- `npx vitest run src/components/__tests__/data-quality-cards.test.tsx`
-- `npm run build`
+- [ ] **Step 3: Update `worker/src/lib/time-constants.ts` to import from shared**
 
-**Docs**
+```typescript
+import {
+  SECONDS_PER_MINUTE,
+  HOUR_SECONDS,
+  DAY_SECONDS,
+  WEEK_SECONDS,
+  THIRTY_DAYS_SECONDS,
+} from "@shared/lib/time-constants";
 
-- Update `docs/status-dashboard.md`
+/** Named durations in seconds — worker convenience alias. */
+export const SECONDS = {
+  ONE_MINUTE: SECONDS_PER_MINUTE,
+  FIFTEEN_MINUTES: 15 * SECONDS_PER_MINUTE,
+  THIRTY_MINUTES: 30 * SECONDS_PER_MINUTE,
+  ONE_HOUR: HOUR_SECONDS,
+  TWO_HOURS: 2 * HOUR_SECONDS,
+  SIX_HOURS: 6 * HOUR_SECONDS,
+  TWELVE_HOURS: 12 * HOUR_SECONDS,
+  ONE_DAY: DAY_SECONDS,
+  TWO_DAYS: 2 * DAY_SECONDS,
+  ONE_WEEK: WEEK_SECONDS,
+  THIRTY_DAYS: THIRTY_DAYS_SECONDS,
+} as const;
+```
 
-**Stop conditions**
+- [ ] **Step 4: Remove local constant in `worker/src/cron/sync-yield-data.ts`**
 
-- If a proposed extraction only moves 10 lines from one file to another with no clarity gain, keep it inline. The point is to separate page orchestration from page-only subcomponents.
+Find `const THIRTY_DAYS_SECONDS = 30 * 86400;` and replace with:
+```typescript
+import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
+```
 
-### [ ] D2. Extract a coverage-page model layer from `src/app/coverage/client.tsx`
+- [ ] **Step 5: Run all tests + type checks**
 
-**Audit finding covered**
+Run: `npm test && npm run build && cd worker && npx tsc --noEmit`
+Expected: PASS
 
-Finding 6: coverage page mixes data orchestration and page rendering.
+- [ ] **Step 6: Commit**
 
-**Primary files**
-
-- `src/app/coverage/client.tsx`
-- `src/lib/coverage.ts`
-- new coverage model module, for example:
-  - `src/hooks/use-coverage-matrix-model.ts`
-  - `src/lib/coverage-page-config.ts`
-
-**Target state**
-
-- Data loading + row/snapshot derivation live in one model layer.
-- Page-local visual config and legends live outside the component body.
-- `coverage/client.tsx` owns only:
-  - local filter/search state
-  - rendering
-  - lightweight view-only derived state
-
-**Implementation steps**
-
-1. Extract query fusion and row building into a dedicated hook or model builder.
-2. Move static page-local config out of the component:
-   - `FEATURE_ACCENT_CLASSES`
-   - `FILTER_OPTIONS`
-   - `MOBILE_PREVIEW_FEATURES`
-   - `LEGEND_ITEMS`
-3. Keep `buildCoverageRow()` and `buildCoverageFeatureSummary()` in `src/lib/coverage.ts` as the canonical derivation primitives.
-4. Return a ready-to-render model from the new hook:
-   - rows
-   - filtered rows
-   - feature summaries
-   - stale-banner input
-   - derived spotlight cards
-5. Leave only rendering and small UI interactions in the page component.
-
-**Required tests**
-
-- `npx vitest run src/lib/__tests__/coverage.test.ts`
-- `npm run build`
-- add focused model-hook tests if substantial logic moves out of the component
-
-**Docs**
-
-- Update `docs/architecture.md` if the coverage page ownership becomes materially clearer.
-
-**Stop conditions**
-
-- Do not create a second derivation path that duplicates `buildCoverageRow()` logic. The extraction must centralize, not clone.
+```bash
+git add shared/lib/time-constants.ts src/lib/constants.ts worker/src/lib/time-constants.ts worker/src/cron/sync-yield-data.ts
+git commit -m "refactor: unify time constants into shared/lib/time-constants (R-002, S-004)"
+```
 
 ---
 
-## Phase 5 - Tooling And Package Simplification
+### Task 11: Refactor `route()` to accept `RouteContext` + simplify `withAdmin` (CC-001)
 
-### [ ] E1. Run a workspace-feasibility pass
+**Files:**
+- Modify: `worker/src/router.ts` (accept RouteContext object)
+- Modify: `worker/src/lib/auth.ts` (simplify withAdmin signature)
+- Modify: `worker/src/route-registry.ts` (rename `ctx` → `execCtx`, remove `adminKey` field)
+- Modify: `worker/src/handlers/http.ts` (pass RouteContext object to route())
+- Modify (adminKey → trustedAdmin sweep — 12 handler files):
+  - `worker/src/api/audit-depeg-history.ts`
+  - `worker/src/api/backfill-stability-index.ts`
+  - `worker/src/api/backfill-mint-burn.ts`
+  - `worker/src/api/backfill-dews.ts`
+  - `worker/src/api/backfill-mint-burn-prices.ts`
+  - `worker/src/api/backfill-cg-prices.ts`
+  - `worker/src/api/reclassify-atomic-roundtrips.ts`
+  - `worker/src/api/backfill-supply-history.ts`
+  - `worker/src/api/backfill-depegs.ts`
+  - `worker/src/api/status.ts`
+  - `worker/src/api/status-history.ts`
+  - `worker/src/api/discovery.ts` (handleDiscoveryCandidates)
+- Modify (test files referencing adminKey — 9 files):
+  - `worker/src/api/__tests__/helpers/auth.ts`
+  - `worker/src/api/__tests__/status.test.ts`
+  - `worker/src/api/__tests__/status-history.test.ts`
+  - `worker/src/api/__tests__/backfill-stability-index.test.ts`
+  - `worker/src/api/__tests__/backfill-mint-burn.test.ts`
+  - `worker/src/api/__tests__/backfill-supply-history.test.ts`
+  - `worker/src/api/__tests__/backfill-cg-prices.test.ts`
+  - `worker/src/api/__tests__/backfill-dews.test.ts`
+  - `worker/src/api/__tests__/backfill-mint-burn-prices.test.ts`
+  - `worker/src/api/__tests__/audit-depeg-history.test.ts`
+  - `worker/src/api/__tests__/backfill-depegs.test.ts`
 
-**Audit finding covered**
+- [ ] **Step 1: Simplify `withAdmin` in `worker/src/lib/auth.ts`**
 
-Finding 7: duplicate toolchain dependencies and lockfiles.
+Remove `isTrustedAdminInput` and the confusing overloaded `withAdmin`. Replace with:
+```typescript
+export function hasValidAdminCredential(
+  request: Request | undefined,
+  trustedAdmin?: boolean,
+): boolean {
+  return trustedAdmin === true || hasOpsApiAccessSignal(request);
+}
 
-**Primary files**
+export async function requireAdmin(
+  request: Request | undefined,
+  trustedAdmin?: boolean,
+): Promise<Response | null> {
+  if (!hasValidAdminCredential(request, trustedAdmin)) {
+    return errorResponse(401, "Unauthorized");
+  }
+  return null;
+}
 
-- `package.json`
-- `worker/package.json`
-- `package-lock.json`
-- `worker/package-lock.json`
-- CI or workflow files if they invoke package-manager commands directly
+/** Executes the handler only when admin auth passes, otherwise returns 401. */
+export async function withAdmin(
+  request: Request | undefined,
+  handler: () => Promise<Response>,
+  trustedAdmin = false,
+): Promise<Response> {
+  const authError = await requireAdmin(request, trustedAdmin);
+  if (authError) return authError;
+  return handler();
+}
+```
 
-**Target state**
+- [ ] **Step 2: Rename `ctx` → `execCtx` in `RouteContext` to avoid `routeCtx.ctx` confusion**
 
-- Confirm whether the repo can move to a single root-managed toolchain without breaking:
-  - `npm run build`
-  - `cd worker && npx tsc --noEmit`
-  - `cd worker && npx wrangler dev`
+In `worker/src/route-registry.ts`, rename the `ctx` field:
+```typescript
+export interface RouteContext {
+  url: URL;
+  db: D1Database;
+  execCtx: ExecutionContext;  // renamed from `ctx` to avoid routeCtx.ctx confusion
+  request?: Request;
+  trustedAdmin?: boolean;     // adminKey removed — boolean only
+  alchemyApiKey?: string | null;
+  mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
+  feedbackEnv?: FeedbackEnv;
+  anthropicApiKey?: string | null;
+  twitterCreds?: TwitterCreds | null;
+  telegramCreds?: TelegramCreds | null;
+  telegramWebhookSecret?: string;
+  telegramBotToken?: string;
+}
+```
 
-**Implementation steps**
+Update all handler destructuring from `{ ctx, ... }` to `{ execCtx, ... }` in `STATIC_ROUTE_HANDLERS_BY_KEY`.
 
-1. Inventory overlapping dependencies:
-   - `typescript`
-   - `zod`
-   - `@types/react`
-2. Confirm whether worker-local commands resolve correctly when the package tree is workspace-managed.
-3. If feasible, proceed to E2.
-4. If not feasible, document the blocker and fall back to version alignment only, then continue to Phase 6.
+- [ ] **Step 3: Sweep adminKey → trustedAdmin in all 12 handler files**
 
-**Required tests**
+For each handler file listed above:
+1. Change parameter from `adminKey?: string` (or `adminSecret?: string` in `backfill-cg-prices.ts`, `backfill-depegs.ts`, `backfill-supply-history.ts`) to `trustedAdmin?: boolean`
+2. Change internal `requireAdmin(request, adminKey)` to `requireAdmin(request, trustedAdmin)`
+3. Change internal `withAdmin(request, adminKey, handler)` calls to `withAdmin(request, handler, trustedAdmin)` — **note the argument order change**: the new signature puts `handler` second and `trustedAdmin` third, whereas the old signature had `adminKey` second and `handler` third
+4. Change internal `runIdempotentAdminAction(..., adminKey)` to `runIdempotentAdminAction(..., trustedAdmin)` (also update `runIdempotentAdminAction`'s signature in `worker/src/lib/idempotency.ts` if it accepts `adminKey`)
 
-- `npm install`
-- `npm run build`
-- `cd worker && npx tsc --noEmit`
+Also update `route-registry.ts` handler entries to destructure `trustedAdmin` instead of `adminKey` in ALL ~18 entries that reference it.
 
-**Stop conditions**
+- [ ] **Step 4: Update test files**
 
-- If workspace conversion breaks local worker development or deploy commands in a way that requires bespoke tooling, stop and keep the package boundary. In that case, implement only version alignment and doc the reason.
+For each test file listed above:
+1. Replace `adminKey: "test-key"` with `trustedAdmin: true` in mock contexts
+2. Update the auth test helper if it provides `adminKey`
 
-### [ ] E2. Implement the single-toolchain dependency path
+- [ ] **Step 5: Refactor `route()` in `worker/src/router.ts`**
 
-**Audit finding covered**
+Replace the 13-parameter signature with:
+```typescript
+import type { RouteContext } from "./route-registry";
 
-Finding 7: duplicate dependency trees.
+export function route(routeCtx: RouteContext): Promise<Response> | null {
+  const path = routeCtx.url.pathname;
+  const methodValidation = validateEndpointMethod(routeCtx.url, routeCtx.request?.method ?? "GET");
+  if (methodValidation) {
+    const resp = errorResponse(405, methodValidation.message);
+    resp.headers.set("Allow", methodValidation.allowedMethods.join(", "));
+    return Promise.resolve(resp);
+  }
 
-**Target state**
+  const staticHandler = STATIC_ROUTE_HANDLERS.get(path);
+  if (staticHandler) {
+    return staticHandler(routeCtx).then((response) =>
+      addAdminGetNoStoreHeader(path, routeCtx.request, response),
+    );
+  }
 
-- Shared toolchain dependencies are managed once.
-- Worker package keeps only genuinely worker-specific runtime/dev dependencies.
-- Duplicate lockfiles are removed if workspace mode is adopted.
+  // Dynamic routes use routeCtx.db and routeCtx.execCtx
+  const summaryResult = matchDynamicRoute(path, /^\/api\/stablecoin-summary\/(.+)$/, (db, id) => handleStablecoinSummary(db, id), routeCtx.db, routeCtx.execCtx);
+  if (summaryResult) return summaryResult;
 
-**Implementation steps**
+  const reservesResult = matchDynamicRoute(path, /^\/api\/stablecoin-reserves\/(.+)$/, (db, id) => handleStablecoinReserves(db, id), routeCtx.db, routeCtx.execCtx);
+  if (reservesResult) return reservesResult;
 
-1. Add npm workspace configuration at the root if E1 passed.
-2. Remove overlapping toolchain packages from `worker/package.json`.
-3. Regenerate lockfiles and verify root + worker scripts still work.
-4. Delete `worker/package-lock.json` only after confirming workspace mode is stable.
+  const detailResult = matchDynamicRoute(path, /^\/api\/stablecoin\/(.+)$/, (db, id, execCtx) => handleStablecoinDetail(db, id, execCtx), routeCtx.db, routeCtx.execCtx);
+  if (detailResult) return detailResult;
 
-**Required tests**
+  const dismissMatch = path.match(/^\/api\/discovery-candidates\/(\d+)\/dismiss$/);
+  if (dismissMatch && routeCtx.request?.method === "POST") {
+    const candidateId = parseInt(dismissMatch[1], 10);
+    return withAdmin(routeCtx.request, () => handleDismissCandidate(routeCtx.db, candidateId), routeCtx.trustedAdmin);
+  }
 
-- mandatory phase gate
-- `npm run check:worker-boundary`
+  if (path.startsWith("/api/og/")) {
+    return handleOg(routeCtx.db, path).then((r) => r ?? errorResponse(404, "Unknown OG route"));
+  }
 
-**Docs**
+  return null;
+}
+```
 
-- Update `docs/deployment-process.md`
-- Update `docs/testing.md`
-- Update any contributor/setup notes that mention `worker/package-lock.json`
+- [ ] **Step 6: Update `handlers/http.ts` to construct and pass `RouteContext`**
 
-### [ ] E3. Normalize command documentation and CI assumptions
+Replace the 13-arg `route()` call (lines 128-142) with a single `RouteContext` object:
+```typescript
+const routeCtx: RouteContext = {
+  url,
+  db: env.DB,
+  execCtx: ctx,          // ExecutionContext → renamed field
+  request,
+  trustedAdmin: isAdmin, // derived from hasValidAdminCredential(request) on line 101
+  alchemyApiKey: env.ALCHEMY_API_KEY ?? null,
+  mintBurnFreshnessConfig,
+  feedbackEnv,
+  anthropicApiKey: env.ANTHROPIC_API_KEY ?? null,
+  twitterCreds,
+  telegramCreds,
+  telegramWebhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
+  telegramBotToken: env.TELEGRAM_BOT_TOKEN,
+};
+const response = await route(routeCtx);
+```
 
-**Target state**
+**Note:** `trustedAdmin` is set to `isAdmin` (line 101: `hasValidAdminCredential(request)`). This is a deliberate behavioral improvement — currently the old code passes `undefined` for `adminKey` and `trustedAdmin` defaults to `false`, so all admin auth goes through `hasOpsApiAccessSignal` inside `requireAdmin`. With this change, the ops-api signal is resolved once at the HTTP layer and threaded through as `trustedAdmin: true`. The end result is equivalent (same auth check, just moved up).
 
-- Human docs and CI commands match the package layout chosen in E2.
+- [ ] **Step 7: Run full test suite + type checks**
 
-**Implementation steps**
+Run: `npm test && npm run build && cd worker && npx tsc --noEmit`
+Expected: PASS
 
-1. Update docs and scripts to use the new workspace commands, if adopted.
-2. Verify there is no stale documentation telling contributors to maintain two separate toolchain dependency trees.
+- [ ] **Step 8: Commit**
+
+```bash
+git add worker/src/router.ts worker/src/lib/auth.ts worker/src/route-registry.ts worker/src/handlers/http.ts worker/src/api/*.ts worker/src/api/__tests__/*.ts worker/src/api/__tests__/helpers/*.ts
+git commit -m "refactor: route() accepts RouteContext, simplify withAdmin to 3-param (CC-001)"
+```
 
 ---
 
-## Phase 6 - Cleanup And Closeout
+### Task 12: Sweep inline date and percentage formatting (R-004, R-005 consumers)
 
-### [ ] F1. Dead-file and dead-export sweep
+**Files:**
+- Modify: `shared/lib/format.ts` (add `"long"` and `"full"` date presets)
+- Modify: 15+ components replacing inline `toLocaleDateString` and `toFixed(2) + "%"` calls
 
-**Purpose**
+- [ ] **Step 1: Add date format presets**
 
-Delete wrappers, helpers, and exports made obsolete by the earlier phases.
+Add to `ChartDateFormat` type and `formatChartDate` switch:
+```typescript
+type ChartDateFormat = "short" | "month-year" | "compact" | "with-time" | "long" | "full";
 
-**Likely targets**
+// In formatChartDate switch:
+case "long":
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+case "full":
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+```
 
-- old one-off route/page wrappers replaced by `createClientFeaturePage()`
-- table helpers or local header builders made obsolete by the shared table shell
-- route metadata exports no longer needed after the worker registry split
-- package-management artifacts removed by workspace convergence
+- [ ] **Step 2: Sweep inline `toLocaleDateString` in components**
 
-**Required actions**
+Replace inline `new Date(...).toLocaleDateString(...)` with `formatChartDate()` presets. Known occurrences (search with `grep -rn "toLocaleDateString" src/components/ src/app/`):
 
-1. Run `rg` for now-unused exports introduced by earlier deletions.
-2. Remove dead imports and stale comments.
-3. Re-run the mandatory gate.
+- `src/components/digest-archive-client.tsx` — date column
+- `src/components/daily-digest.tsx` — digest date header
+- `src/components/usds-status-card.tsx` — last-checked date
+- `src/components/methodology-version-card.tsx` — version date
+- `src/components/stablecoin-detail/safety-score-history-section.tsx` — grade date
+- `src/components/stablecoin-detail/overview-section.tsx` — launch date
+- `src/app/stability-index/client.tsx` — PSI date
+- `src/components/stablecoin-detail/depeg-history-section.tsx` — event dates
+- `src/components/stablecoin-detail/supply-chart-section.tsx` — chart tooltip
+- `src/components/depeg-table.tsx` — event dates
+- `src/components/blacklist-table.tsx` — event dates
+- Additional hits may surface — replace all that match existing presets.
 
-### [ ] F2. Final documentation and audit delta capture
+For each match, determine which preset matches:
+- `{ month: "short", day: "numeric", year: "numeric" }` → `"short"`
+- `{ month: "long", day: "numeric", year: "numeric" }` → `"long"` (new)
+- Patterns with hour/minute → `"full"` (new)
 
-**Purpose**
+- [ ] **Step 3: Sweep inline `.toFixed(2) + "%"` patterns**
 
-Close the work with a durable record of what changed.
+Replace inline `value.toFixed(N) + "%"` with `formatPercent()` / `formatSignedPercent()`. Known occurrences (search with `grep -rn 'toFixed.*%' src/components/ src/app/`):
 
-**Required actions**
+- `src/components/yield-table.tsx` — APY display
+- `src/components/comparison-table.tsx` — delta columns
+- `src/components/kpi-strip.tsx` — percentage KPIs
+- `src/app/stability-index/client.tsx` — PSI component weights
+- `src/components/stablecoin-detail/peg-chart-section.tsx` — deviation %
+- `src/components/stablecoin-detail/report-card-section.tsx` — dimension scores
+- `src/components/liquidity-table.tsx` — liquidity scores
+- `src/components/flow-table.tsx` — flow intensity
+- Additional hits may surface — replace all percentage-formatting patterns.
 
-1. Update all affected docs from earlier phases.
-2. Capture the final:
-   - line count deltas by module
-   - file count reductions
-   - deleted wrapper/module count
-3. Write a short retrospective or execution note in `agents/retrospectives/` if the remediation spans multiple sessions.
+For each match, replace with `formatPercent(value)` or `formatSignedPercent(value)` from `shared/lib/format.ts`.
+
+- [ ] **Step 4: Run tests + build**
+
+Run: `npm test && npm run build`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add shared/lib/format.ts src/components/ src/app/
+git commit -m "refactor: sweep inline date/percent formatting to shared helpers (R-004, R-005)"
+```
 
 ---
 
-## Suggested Commit / PR Boundaries
+### Task 13: Add tests for untested table-logic files (CC-004 partial)
 
-Keep the implementation reviewable. Recommended slices:
+**Files:**
+- Create: `src/components/__tests__/stablecoin-table-logic.test.ts`
+- Create: `src/components/__tests__/flow-table-logic.test.ts`
+- Create: `src/components/__tests__/depeg-table-logic.test.ts`
+- Create: `src/components/__tests__/yield-table-logic.test.ts`
+- Create: `src/components/__tests__/liquidity-table-logic.test.ts`
+- Create: `src/components/__tests__/blacklist-table-logic.test.ts`
 
-1. `phase-1a`: canonical stablecoin registries
-2. `phase-1b`: feature-page shell convergence
-3. `phase-2a`: shared sortable table shell
-4. `phase-2b`: migrate leaderboard tables
-5. `phase-2c`: stablecoin-table header normalization
-6. `phase-3a`: shared endpoint metadata reduction
-7. `phase-3b`: worker route registry migration
-8. `phase-4a`: status page decomposition
-9. `phase-4b`: coverage page model extraction
-10. `phase-5a`: workspace/toolchain simplification
-11. `phase-6`: cleanup and docs
+- [ ] **Step 1: Read each table-logic file to understand exports**
 
-## Final Acceptance Criteria
+Table-logic files and their key exports to test:
+- `src/components/stablecoin-table-logic.ts` — `compareStablecoins(a, b, sortKey)`, sort key enum
+- `src/components/flow-table-logic.ts` — `getPressureScore()`, `getPressureState()`, `getCoverageBadge()`, `PRESSURE_VALUE_CLASS`, sort comparator
+- `src/components/depeg-table-logic.ts` — depeg event sort comparator, severity helpers
+- `src/components/yield-table-logic.ts` — yield sort comparator, APY ranking helpers
+- `src/components/liquidity-table-logic.ts` — liquidity sort comparator, score formatting
+- `src/components/blacklist-table-logic.ts` — blacklist sort comparator, balance formatting
 
-The remediation is complete when all of the following are true:
+- [ ] **Step 2: Write tests for `stablecoin-table-logic.ts`**
 
-- No base tracked-stablecoin registry is rebuilt locally without a real filtered/augmented reason.
-- Client-heavy feature routes follow one clear shell convention.
-- Repeated leaderboard tables share one header/sort/pagination shell pattern.
-- `shared/lib/api-endpoints.ts` no longer carries worker-only operational metadata.
-- Worker routing/probe/cache behavior is derived from one worker-owned registry.
-- `src/app/status/client.tsx` and `src/app/coverage/client.tsx` are materially smaller and clearly separated into model vs presentation concerns.
-- Package/toolchain duplication is removed or explicitly documented as intentionally retained after a feasibility check.
-- The mandatory validation gate passes.
-- Docs reflect the new ownership boundaries and conventions.
+Test the comparator function with various sort keys (name, mcap, peg, safety grade), null values in numeric fields, and ascending/descending direction.
+
+- [ ] **Step 3: Write tests for `flow-table-logic.ts`**
+
+Test `getPressureScore` (returns numeric score for sorting), `getPressureState` (maps FIS to state string), `getCoverageBadge` (returns badge for coverage level), `PRESSURE_VALUE_CLASS` (maps states to CSS classes), and the sort comparator with mixed null/present values.
+
+- [ ] **Step 4: Write tests for remaining table-logic files**
+
+For each of depeg, yield, liquidity, and blacklist: test the sort comparator with representative rows, verify null-handling produces deterministic sort order, and test any helper functions.
+
+- [ ] **Step 5: Run all new tests**
+
+Run: `npm test -- src/components/__tests__/*-table-logic.test.ts`
+Expected: PASS
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/components/__tests__/*-table-logic.test.ts
+git commit -m "test: add tests for table-logic sorting/helper files (CC-004)"
+```
+
+---
+
+### Task 14: Add CI check for cron schedule sync (S-019)
+
+**Files:**
+- Create: `scripts/check-cron-schedule-sync.ts` (`.ts` — run via `tsx`)
+- Modify: `package.json` (add script entry)
+
+- [ ] **Step 1: Create the check script**
+
+Note: This script runs via `tsx` which respects `tsconfig.json` paths. However, since scripts are outside the `src/` directory and may not be covered by the root tsconfig's `paths`, use a relative import from the script's location.
+
+```typescript
+// scripts/check-cron-schedule-sync.ts
+import { readFileSync } from "fs";
+import { CRON_SCHEDULES } from "../shared/lib/cron-jobs.ts";
+
+// Parse wrangler.toml cron triggers
+const wranglerToml = readFileSync("worker/wrangler.toml", "utf-8");
+const cronMatches = wranglerToml.match(/crons\s*=\s*\[([\s\S]*?)\]/);
+if (!cronMatches) {
+  console.error("Could not find crons array in wrangler.toml");
+  process.exit(1);
+}
+const wranglerCrons = new Set(
+  cronMatches[1].match(/"([^"]+)"/g)?.map((s) => s.replace(/"/g, "")) ?? [],
+);
+
+const sharedCrons = new Set(Object.values(CRON_SCHEDULES));
+
+// Compare
+const onlyInWrangler = [...wranglerCrons].filter((c) => !sharedCrons.has(c));
+const onlyInShared = [...sharedCrons].filter((c) => !wranglerCrons.has(c));
+
+if (onlyInWrangler.length || onlyInShared.length) {
+  console.error("Cron schedule mismatch detected!");
+  if (onlyInWrangler.length) console.error("In wrangler.toml only:", onlyInWrangler);
+  if (onlyInShared.length) console.error("In CRON_SCHEDULES only:", onlyInShared);
+  process.exit(1);
+}
+
+console.log(`Cron schedule check passed (${wranglerCrons.size} triggers match).`);
+```
+
+- [ ] **Step 2: Add npm script**
+
+Add to package.json scripts:
+```json
+"check:cron-sync": "tsx scripts/check-cron-schedule-sync.ts"
+```
+
+- [ ] **Step 3: Run the check**
+
+Run: `npm run check:cron-sync`
+Expected: PASS with matching count
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add scripts/check-cron-schedule-sync.ts package.json
+git commit -m "ci: add cron schedule sync check between wrangler.toml and CRON_SCHEDULES (S-019)"
+```
+
+---
+
+### Task 15: Add SQL allowlist validation (Q-008)
+
+**Files:**
+- Modify: `worker/src/api/status-derived-data.ts` (add allowlist check)
+
+- [ ] **Step 1: Add allowlist constants and validation**
+
+`DATASET_FRESHNESS_TARGETS` is a `Record<..., DatasetFreshnessTarget>` (object, not array). Extract table-type entries for the allowlists:
+
+```typescript
+const TABLE_TARGETS = Object.values(DATASET_FRESHNESS_TARGETS).filter(
+  (t): t is Extract<DatasetFreshnessTarget, { type: "table" }> => t.type === "table",
+);
+const ALLOWED_DATASET_TABLES = new Set(TABLE_TARGETS.map((t) => t.table));
+const ALLOWED_DATASET_COLUMNS = new Set(TABLE_TARGETS.map((t) => t.column));
+const ALLOWED_DATASET_WHERE_CLAUSES = new Set(
+  TABLE_TARGETS.map((t) => t.where).filter(Boolean),
+);
+```
+
+In the `getLastTableUpdate` function (line 248), add before the SQL query:
+```typescript
+if (!ALLOWED_DATASET_TABLES.has(target.table)) {
+  throw new Error(`Invalid dataset table: ${target.table}`);
+}
+if (!ALLOWED_DATASET_COLUMNS.has(target.column)) {
+  throw new Error(`Invalid dataset column: ${target.column}`);
+}
+if (target.where && !ALLOWED_DATASET_WHERE_CLAUSES.has(target.where)) {
+  throw new Error(`Invalid dataset where clause: ${target.where}`);
+}
+```
+
+This validates all three interpolated SQL fragments: `target.table`, `target.column`, and `target.where` (currently only `"key = 'stablecoins'"` for the cache table).
+
+- [ ] **Step 2: Run tests**
+
+Run: `npm test`
+Expected: PASS
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add worker/src/api/status-derived-data.ts
+git commit -m "fix: add allowlist validation for SQL interpolation in status-derived-data (Q-008)"
+```
+
+---
+
+### Task 16: Add enrichment counters to blacklist sync (Q-019)
+
+**Files:**
+- Modify: `worker/src/cron/sync-blacklist.ts` (add counters to `enrichRowBalances`)
+
+- [ ] **Step 1: Add counter tracking**
+
+Modify `enrichRowBalances` to return `{ attempted: number; succeeded: number; failed: number }`:
+- Initialize counters at the start
+- Increment `attempted` before each balance fetch
+- Increment `succeeded` on success
+- Increment `failed` in catch block
+- Return the counter object
+- Include counters in the cron run metadata
+
+- [ ] **Step 2: Run tests**
+
+Run: `npm test`
+Expected: PASS
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add worker/src/cron/sync-blacklist.ts
+git commit -m "fix: add enrichment success/failure counters to blacklist sync (Q-019)"
+```
+
+---
+
+## Chunk 3: Phase 3 — Structural Improvements
+
+### Task 17: Decompose `daily-digest.ts` into collector functions (Q-011)
+
+**Files:**
+- Create: `worker/src/cron/daily-digest/collectors.ts`
+- Modify: `worker/src/cron/daily-digest.ts` (extract phases into named functions)
+
+- [ ] **Step 1: Identify all enrichment phases**
+
+Read through `generateDailyDigest` and identify each try/catch phase. Each becomes a named collector function.
+
+- [ ] **Step 2: Create `daily-digest/collectors.ts`**
+
+Extract each data collection phase into a named function:
+- `collectActiveDepegs(db, stablecoinAssets)`
+- `collectBlacklistActivity(db, stablecoinAssets)`
+- `collectSupplyVelocity(db, stablecoinAssets)`
+- `collectSafetyScores(db)`
+- `collectResolvedDepegs(db)`
+- `collectMintBurnFlows(db, mcapById)`
+- `collectDewsStress(db, mcapById)`
+- `collectHistoricalContext(db)`
+- `collectGradeTransitions(db)`
+
+Each function returns its typed result or `null` on failure. The orchestrator calls them sequentially and assembles the results.
+
+- [ ] **Step 3: Update orchestrator to call collectors**
+
+The main `generateDailyDigest` function becomes a clean pipeline that calls each collector and assembles the enrichment data.
+
+- [ ] **Step 4: Run tests**
+
+Run: `npm test -- worker/src/cron/__tests__/daily-digest.test.ts`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add worker/src/cron/daily-digest.ts worker/src/cron/daily-digest/
+git commit -m "refactor: extract daily-digest data collectors into named functions (Q-011)"
+```
+
+---
+
+### Task 18: Wrap remaining API handlers with `withErrorHandler` (S-011)
+
+**Files:**
+- Modify: `worker/src/route-registry.ts` (wrap raw handlers)
+
+- [ ] **Step 1: Identify unwrapped handlers**
+
+Find handlers in `STATIC_ROUTE_HANDLERS_BY_KEY` that are NOT wrapped with `withErrorHandler` or `createCacheHandler`. These are the raw function calls.
+
+- [ ] **Step 2: Wrap each with `withErrorHandler`**
+
+For each identified handler, wrap it:
+```typescript
+"blacklist": withErrorHandler("blacklist", ({ db, url }) => handleBlacklist(db, url)),
+```
+
+- [ ] **Step 3: Run tests**
+
+Run: `npm test`
+Expected: PASS
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add worker/src/route-registry.ts
+git commit -m "refactor: wrap remaining API handlers with withErrorHandler (S-011)"
+```
+
+---
+
+### Task 19: Add Zod schema for DL detail response (CC-005 partial)
+
+**Files:**
+- Modify: `worker/src/api/stablecoin-detail/defillama.ts` (add schema)
+- Modify: `worker/src/cron/enrich-prices.ts` (remove index signature from PeggedAsset)
+
+- [ ] **Step 1: Define Zod schema for DL detail response**
+
+Create a Zod schema that validates the essential fields of the DefiLlama stablecoin detail response.
+
+- [ ] **Step 2: Remove `[key: string]: unknown` from `PeggedAsset`**
+
+Replace with explicit typed fields. Create a separate `RawLlamaAsset` type for the unvalidated API response.
+
+- [ ] **Step 3: Run tests + type-check**
+
+Run: `npm test && cd worker && npx tsc --noEmit`
+Expected: PASS
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add worker/src/api/stablecoin-detail/defillama.ts worker/src/cron/enrich-prices.ts
+git commit -m "refactor: add Zod validation for DL detail response, remove PeggedAsset index signature (CC-005)"
+```
+
+---
+
+### Task 20: Extract `buildContagionLayout` from contagion-graph (Q-010)
+
+**Files:**
+- Create: `src/lib/contagion-layout.ts`
+- Create: `src/lib/__tests__/contagion-layout.test.ts`
+- Modify: `src/components/contagion-graph.tsx` (import layout function)
+
+- [ ] **Step 1: Extract pure layout/simulation logic**
+
+Identify the d3-force simulation setup, node/link creation, and layout calculation in `contagion-graph.tsx`. Extract into `contagion-layout.ts` as a pure function:
+```typescript
+export function buildContagionLayout(data: DependencyGraphData): ContagionLayout { ... }
+```
+
+- [ ] **Step 2: Write tests for the layout function**
+
+Test node positioning, link creation, and edge cases (empty data, single node, circular dependencies).
+
+- [ ] **Step 3: Update component to use extracted function**
+
+The React component imports `buildContagionLayout` and focuses on SVG rendering and interaction.
+
+- [ ] **Step 4: Run tests + build**
+
+Run: `npm test && npm run build`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/lib/contagion-layout.ts src/lib/__tests__/contagion-layout.test.ts src/components/contagion-graph.tsx
+git commit -m "refactor: extract buildContagionLayout from contagion-graph component (Q-010)"
+```
+
+---
+
+## Post-Implementation Verification
+
+After all tasks are complete:
+
+- [ ] **Run full test suite:** `npm test`
+- [ ] **Run full build + type-check:** `npm run build && cd worker && npx tsc --noEmit`
+- [ ] **Run lint:** `npm run lint`
+- [ ] **Run worker boundary check:** `npm run check:worker-boundary`
+- [ ] **Run merge gate:** `npm run test:merge-gate`
+- [ ] **Run cron schedule sync check:** `npm run check:cron-sync`
+
+---
+
+## Deferred / Excluded Findings
+
+The following audit findings are intentionally excluded from this plan. They are either already mitigated, too high-effort for their impact, or require design decisions beyond this remediation scope. Finding IDs match `agents/plans/2026-03-13-comprehensive-codebase-audit.md`.
+
+| Finding | Audit Title | Reason Deferred |
+|---------|-------------|-----------------|
+| R-008 | `encodeStablecoinUrlToken` is an identity function | Intentional future-proofing per active ticker-issuer migration plan. Audit says "leave in place." |
+| Q-001 | `syncStablecoins` 916-line monolith | Decomposition requires deep knowledge of data pipeline ordering constraints. Recommend a dedicated plan after the sync-stablecoins pipeline stabilizes. |
+| Q-002 | `methodology-sections.tsx` 2215-line static JSX | Low severity — purely cosmetic readability. No logic to test. The file is rarely modified and a split adds import complexity. |
+| Q-006 | Semantic overloading of `last_block` column | Requires a D1 schema migration (`ALTER TABLE blacklist_sync_state`). Low impact — behavior is documented in code comments. |
+| Q-007 | API handlers missing test coverage (7 files) | Task 13 covers `*-table-logic.ts` tests (S-005 side). The API handler side (cache-handlers, status-derived-data, etc.) are thin wrappers or already covered by integration-level contract tests. Lower priority than the table-logic gap. |
+| Q-009 | `enrichRowBalances` has 8 parameters | Low severity. Called from one location. A `BlacklistSyncContext` object would help readability but doesn't affect correctness. Can be combined with Q-001/Q-002 when the sync-blacklist pipeline is refactored. |
+| Q-018 | Frontend hooks surface generic error messages | Low severity UX concern. Current behavior is safe (shows loading state, not broken data). A `useApiQueryWithFallback` variant is a feature addition, not a remediation. |
+| S-001 | Global mutable state in worker modules (init pattern) | Requires architectural redesign of worker initialization (5 modules with `initX()` pattern). Medium effort for low immediate impact — the pattern works correctly and is well-documented. |
+| S-003 | Stablecoin metadata god module (4600 lines) | Tolerable at current scale (156 coins). Task 6 reformats `coin()`. Full split (by peg category) deferred until the module exceeds ~200 entries. |
+| S-014 | Hardcoded fallback values (`RUB_FALLBACK`, `RISK_FREE_RATE_FALLBACK`) | Low impact — fallback paths are rarely triggered and the alert system notifies on extended use. |
+| S-015 | In-memory rate limiter as silent fallback | Low impact at current traffic levels. The D1-backed primary limiter handles >99% of requests. A circuit-breaker alert is the right next step but requires design. |
+| S-020 | No Zod validation on API response outputs (partial) | Task 19 covers the highest-priority DL detail response (Q-005 + Q-016). Remaining API output validation for public endpoints is lower priority — frontend strict contracts already catch mismatches at integration level. |
