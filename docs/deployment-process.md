@@ -90,7 +90,7 @@ Defined in `.github/workflows/deploy-cloudflare.yml`:
 
 GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
 
-Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The workflow installs Wrangler from `worker/package-lock.json` and runs it with `npx --no-install` so worker deploys are not blocked by GitHub Actions runtime deprecations in third-party JS actions.
+Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The repo now uses a root npm workspace, so the workflow installs the shared toolchain from the root `package-lock.json` and runs Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
 
 Deployment stops on the first failed job.
 

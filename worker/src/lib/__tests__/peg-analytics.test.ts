@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
-vi.mock("@shared/lib/stablecoins", () => ({
-  TRACKED_STABLECOINS: [
+const { TRACKED_STABLECOINS_MOCK } = vi.hoisted(() => ({
+  TRACKED_STABLECOINS_MOCK: [
     {
       id: "usdt-tether",
       symbol: "AAA",
@@ -18,6 +18,11 @@ vi.mock("@shared/lib/stablecoins", () => ({
       flags: { pegCurrency: "USD", governance: "centralized", navToken: true },
     },
   ],
+}));
+
+vi.mock("@shared/lib/stablecoins", () => ({
+  TRACKED_STABLECOINS: TRACKED_STABLECOINS_MOCK,
+  TRACKED_META_BY_ID: new Map(TRACKED_STABLECOINS_MOCK.map((coin) => [coin.id, coin])),
 }));
 
 vi.mock("@shared/lib/peg-score", () => ({

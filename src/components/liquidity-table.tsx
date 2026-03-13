@@ -2,16 +2,14 @@
 
 import Image from "next/image";
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DataTableShell,
+  type DataTableColumn,
+} from "@/components/data-table-shell";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { SortableTableHead } from "@/components/sortable-table-head";
-import { TablePagination } from "@/components/table-pagination";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { BalanceBar } from "@/components/balance-bar";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +30,23 @@ interface LiquidityTableProps {
   searchQuery: string;
   onRowClick: (id: string) => void;
 }
+
+const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
+  { id: "rank", label: "#", className: "w-[50px] text-right" },
+  { id: "name", label: "Name", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
+  { id: "score", label: "Score", sortKey: "score", className: "text-right" },
+  { id: "tvl", label: "DEX TVL", sortKey: "tvl", className: "text-right" },
+  { id: "tvlTrend", label: "7d Trend", sortKey: "tvlTrend", className: "hidden lg:table-cell text-right" },
+  { id: "volume", label: "24h Vol", sortKey: "volume", className: "text-right" },
+  { id: "volume7d", label: "7d Vol", sortKey: "volume7d", className: "hidden lg:table-cell text-right" },
+  { id: "vtRatio", label: "Vol/TVL", sortKey: "vtRatio", className: "hidden sm:table-cell text-right" },
+  { id: "pools", label: "Pools", sortKey: "pools", className: "hidden sm:table-cell text-right" },
+  { id: "chains", label: "Chains", sortKey: "chains", className: "hidden sm:table-cell text-right" },
+  { id: "topProtocol", label: "Top Protocol", className: "hidden md:table-cell text-left" },
+  { id: "balance", label: "Balance", sortKey: "balance", className: "hidden xl:table-cell text-right" },
+  { id: "organic", label: "Organic", sortKey: "organic", className: "hidden xl:table-cell text-right" },
+  { id: "durability", label: "Durability", sortKey: "durability", className: "hidden xl:table-cell text-right" },
+] as const;
 
 export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: LiquidityTableProps) {
   const {
@@ -63,127 +78,28 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
   const prefetch = usePrefetchStablecoin();
 
   return (
-    <div className="rounded-xl border overflow-x-auto scroll-shadow">
-      <Table className="min-w-[420px]">
-        <TableHeader className="bg-muted/80">
-          <TableRow>
-            <TableHead className="w-[50px] text-right">#</TableHead>
-            <TableHead className="w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none">Name</TableHead>
-            <SortableTableHead
-              sortKey="score"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Score"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right"
-            />
-            <SortableTableHead
-              sortKey="tvl"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="DEX TVL"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right"
-            />
-            <SortableTableHead
-              sortKey="tvlTrend"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="7d Trend"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden lg:table-cell text-right"
-            />
-            <SortableTableHead
-              sortKey="volume"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="24h Vol"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right"
-            />
-            <SortableTableHead
-              sortKey="volume7d"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="7d Vol"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden lg:table-cell text-right"
-            />
-            <SortableTableHead
-              sortKey="vtRatio"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Vol/TVL"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden sm:table-cell text-right"
-            />
-            <SortableTableHead
-              sortKey="pools"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Pools"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden sm:table-cell text-right"
-            />
-            <SortableTableHead
-              sortKey="chains"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Chains"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden sm:table-cell text-right"
-            />
-            <TableHead className="hidden md:table-cell text-left">Top Protocol</TableHead>
-            <SortableTableHead
-              sortKey="balance"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Balance"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden xl:table-cell text-right"
-            />
-            <SortableTableHead
-              sortKey="organic"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Organic"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden xl:table-cell text-right"
-            />
-            <SortableTableHead
-              sortKey="durability"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Durability"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden xl:table-cell text-right"
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginated.map((row, index) => {
+    <DataTableShell
+      columns={LIQUIDITY_COLUMNS}
+      sort={{
+        sortKey,
+        sortDirection,
+        toggleSort,
+        getAriaSortValue,
+        handleSortKeyDown,
+      }}
+      tableClassName="min-w-[420px]"
+      pagination={{
+        page: effectivePage,
+        totalPages,
+        rangeStart,
+        rangeEnd,
+        total: totalRows,
+        onPrevious: onPreviousPage,
+        onNext: onNextPage,
+        noun: "stables tracked on DEXes",
+      }}
+    >
+      {paginated.map((row, index) => {
             const liq = row.liq;
             const vtRatio = liq.totalTvlUsd > 0 ? liq.totalVolume24hUsd / liq.totalTvlUsd : 0;
             const topProtocol = Object.entries(liq.protocolTvl).sort((a, b) => b[1] - a[1])[0];
@@ -272,27 +188,13 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
               </InteractiveTableRow>
             );
           })}
-          {sorted.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-                {searchQuery ? `No results for "${searchQuery}"` : "No stablecoins match the current filters."}
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-      {sorted.length > 0 && (
-        <TablePagination
-          page={effectivePage}
-          totalPages={totalPages}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          total={totalRows}
-          onPrevious={onPreviousPage}
-          onNext={onNextPage}
-          noun="stables tracked on DEXes"
-        />
+      {sorted.length === 0 && (
+        <TableRow>
+          <TableCell colSpan={LIQUIDITY_COLUMNS.length} className="text-center text-muted-foreground py-12">
+            {searchQuery ? `No results for "${searchQuery}"` : "No stablecoins match the current filters."}
+          </TableCell>
+        </TableRow>
       )}
-    </div>
+    </DataTableShell>
   );
 }

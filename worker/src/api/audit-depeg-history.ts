@@ -1,6 +1,6 @@
 import { withErrorHandler, parseIntParam } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
@@ -77,8 +77,6 @@ export const handleAuditDepegHistory = withErrorHandler(
       }
       // Optional symbol filter: ?symbol=USDC (case-insensitive)
       const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
-
-    const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
 
     // 1. Query all closed depeg events
     const allEvents = await db
@@ -176,7 +174,7 @@ export const handleAuditDepegHistory = withErrorHandler(
     const affectedDays = new Set<number>();
 
     for (const event of paginatedEvents) {
-      const meta = metaById.get(event.stablecoin_id);
+      const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
       const geckoId = meta?.geckoId;
 
       if (!geckoId) {

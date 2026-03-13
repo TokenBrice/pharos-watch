@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
@@ -44,9 +44,8 @@ export async function derivePegAnalyticsSnapshot(
     eventsByCoin.set(event.stablecoinId, list);
   }
 
-  const metaById = new Map(TRACKED_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]));
   const priceById = new Map(options.peggedAssets.map((asset) => [asset.id, asset]));
-  const { rates: pegRates } = derivePegRates(options.peggedAssets, metaById, options.fxFallbackRates);
+  const { rates: pegRates } = derivePegRates(options.peggedAssets, TRACKED_META_BY_ID, options.fxFallbackRates);
   const methodologyVersion = getDepegDewsMethodologyVersionAt(options.methodologyAsOf);
   const trackingFallbackStart = nowSec - 4 * 365.25 * 86400;
 

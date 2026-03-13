@@ -10,6 +10,7 @@ interface EndpointStatusPageActionConfig {
 }
 
 interface EndpointDefinition {
+  key: string;
   path: string;
   methods: readonly EndpointMethod[];
   adminRequired: boolean;
@@ -94,6 +95,7 @@ export const API_PATHS = {
 export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
   // Public endpoints probed by the status dashboard.
   {
+    key: "stablecoins",
     path: API_PATHS.stablecoins(),
     methods: ["GET"],
     adminRequired: false,
@@ -103,6 +105,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "stablecoin-detail-canary",
     path: API_PATHS.stablecoinDetail("usdt-tether"),
     methods: ["GET"],
     adminRequired: false,
@@ -113,6 +116,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
   },
   {
+    key: "stablecoin-summary-canary",
     path: API_PATHS.stablecoinSummary("usdt-tether"),
     methods: ["GET"],
     adminRequired: false,
@@ -121,6 +125,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "stablecoin-reserves-canary",
     path: API_PATHS.stablecoinReserves("iusd-infinifi"),
     methods: ["GET"],
     adminRequired: false,
@@ -129,6 +134,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "stablecoin-charts",
     path: API_PATHS.stablecoinCharts(),
     methods: ["GET"],
     adminRequired: false,
@@ -137,6 +143,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "peg-summary",
     path: API_PATHS.pegSummary(),
     methods: ["GET"],
     adminRequired: false,
@@ -146,6 +153,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "health",
     path: API_PATHS.health(),
     methods: ["GET"],
     adminRequired: false,
@@ -154,6 +162,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "blacklist",
     path: API_PATHS.blacklist(),
     methods: ["GET"],
     adminRequired: false,
@@ -162,6 +171,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "depeg-events",
     path: API_PATHS.depegEvents(),
     methods: ["GET"],
     adminRequired: false,
@@ -170,6 +180,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "usds-status",
     path: API_PATHS.usdsStatus(),
     methods: ["GET"],
     adminRequired: false,
@@ -178,6 +189,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "bluechip-ratings",
     path: API_PATHS.bluechipRatings(),
     methods: ["GET"],
     adminRequired: false,
@@ -186,6 +198,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "dex-liquidity",
     path: API_PATHS.dexLiquidity(),
     methods: ["GET"],
     adminRequired: false,
@@ -195,6 +208,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "dex-liquidity-history",
     path: "/api/dex-liquidity-history",
     methods: ["GET"],
     adminRequired: false,
@@ -204,6 +218,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probePath: buildQueryPath("/api/dex-liquidity-history", { stablecoin: "usdt-tether" }),
   },
   {
+    key: "supply-history",
     path: "/api/supply-history",
     methods: ["GET"],
     adminRequired: false,
@@ -213,6 +228,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probePath: API_PATHS.supplyHistory("usdt-tether"),
   },
   {
+    key: "daily-digest",
     path: API_PATHS.dailyDigest(),
     methods: ["GET"],
     adminRequired: false,
@@ -221,6 +237,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "digest-archive",
     path: API_PATHS.digestArchive(),
     methods: ["GET"],
     adminRequired: false,
@@ -229,6 +246,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "digest-snapshot",
     path: "/api/digest-snapshot",
     methods: ["GET"],
     adminRequired: false,
@@ -237,6 +255,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     // Requires a date-specific snapshot that is not stable enough for a generic canary probe.
   },
   {
+    key: "yield-rankings",
     path: API_PATHS.yieldRankings(),
     methods: ["GET"],
     adminRequired: false,
@@ -245,6 +264,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "yield-history",
     path: "/api/yield-history",
     methods: ["GET"],
     adminRequired: false,
@@ -254,6 +274,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probePath: buildQueryPath("/api/yield-history", { stablecoin: "usdt-tether" }),
   },
   {
+    key: "safety-score-history",
     path: "/api/safety-score-history",
     methods: ["GET"],
     adminRequired: false,
@@ -263,6 +284,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probePath: buildQueryPath("/api/safety-score-history", { stablecoin: "usdt-tether" }),
   },
   {
+    key: "stability-index",
     path: API_PATHS.stabilityIndex(),
     methods: ["GET"],
     adminRequired: false,
@@ -272,6 +294,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "report-cards",
     path: API_PATHS.reportCards(),
     methods: ["GET"],
     adminRequired: false,
@@ -281,6 +304,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "redemption-backstops",
     path: API_PATHS.redemptionBackstops(),
     methods: ["GET"],
     adminRequired: false,
@@ -290,6 +314,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "mint-burn-flows",
     path: "/api/mint-burn-flows",
     methods: ["GET"],
     adminRequired: false,
@@ -299,6 +324,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "mint-burn-events",
     path: "/api/mint-burn-events",
     methods: ["GET"],
     adminRequired: false,
@@ -308,6 +334,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probePath: "/api/mint-burn-events?stablecoin=usdt-tether",
   },
   {
+    key: "stress-signals",
     path: "/api/stress-signals",
     methods: ["GET"],
     adminRequired: false,
@@ -317,6 +344,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    key: "feedback",
     path: "/api/feedback",
     methods: ["POST"],
     adminRequired: false,
@@ -324,6 +352,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: true,
   },
   {
+    key: "telegram-webhook",
     path: "/api/telegram-webhook",
     methods: ["POST"],
     adminRequired: false,
@@ -333,6 +362,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
 
   // Admin status/probe endpoints.
   {
+    key: "status",
     path: "/api/status",
     methods: ["GET"],
     adminRequired: true,
@@ -341,6 +371,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "admin",
   },
   {
+    key: "status-history",
     path: "/api/status-history",
     methods: ["GET"],
     adminRequired: true,
@@ -350,6 +381,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probePath: "/api/status-history?limit=10",
   },
   {
+    key: "trigger-digest",
     path: "/api/trigger-digest",
     methods: ["POST"],
     adminRequired: true,
@@ -363,6 +395,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "reset-blacklist-sync",
     path: "/api/reset-blacklist-sync",
     methods: ["POST"],
     adminRequired: true,
@@ -377,6 +410,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "debug-sync-state",
     path: "/api/debug-sync-state",
     methods: ["GET"],
     adminRequired: true,
@@ -390,6 +424,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "backfill-depegs",
     path: "/api/backfill-depegs",
     methods: ["POST"],
     adminRequired: true,
@@ -403,6 +438,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "backfill-supply-history",
     path: "/api/backfill-supply-history",
     methods: ["POST"],
     adminRequired: true,
@@ -416,6 +452,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "backfill-cg-prices",
     path: "/api/backfill-cg-prices",
     methods: ["POST"],
     adminRequired: true,
@@ -429,6 +466,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "backfill-stability-index",
     path: "/api/backfill-stability-index",
     methods: ["POST"],
     adminRequired: true,
@@ -442,6 +480,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "backfill-mint-burn-prices",
     path: "/api/backfill-mint-burn-prices",
     methods: ["POST"],
     adminRequired: true,
@@ -455,6 +494,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "backfill-mint-burn",
     path: "/api/backfill-mint-burn",
     methods: ["POST"],
     adminRequired: true,
@@ -468,6 +508,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "reclassify-atomic-roundtrips",
     path: "/api/reclassify-atomic-roundtrips",
     methods: ["POST"],
     adminRequired: true,
@@ -476,6 +517,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "manual",
   },
   {
+    key: "audit-depeg-history",
     path: "/api/audit-depeg-history",
     methods: ["GET", "POST"],
     adminRequired: true,
@@ -491,6 +533,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "backfill-dews",
     path: "/api/backfill-dews",
     methods: ["GET"],
     adminRequired: true,
@@ -504,6 +547,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "discovery-candidates",
     path: "/api/discovery-candidates",
     methods: ["GET"],
     adminRequired: true,
@@ -513,8 +557,14 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
   },
 ] as const;
 
+export type EndpointKey = (typeof ENDPOINT_DEFINITIONS)[number]["key"];
+
 const ENDPOINT_DEFINITION_BY_PATH = new Map<string, EndpointDefinition>(
   ENDPOINT_DEFINITIONS.map((endpoint) => [endpoint.path, endpoint]),
+);
+
+const ENDPOINT_DEFINITION_BY_KEY = new Map<EndpointKey, EndpointDefinition>(
+  ENDPOINT_DEFINITIONS.map((endpoint) => [endpoint.key, endpoint]),
 );
 
 const STABLECOIN_DETAIL_PATH_PATTERN = /^\/api\/stablecoin\/[^/]+$/;
@@ -548,6 +598,10 @@ export function isCacheBypassPath(path: string): boolean {
 
 export function getEndpointDefinition(path: string): EndpointDefinition | undefined {
   return ENDPOINT_DEFINITION_BY_PATH.get(path);
+}
+
+export function getEndpointDefinitionByKey(key: EndpointKey): EndpointDefinition | undefined {
+  return ENDPOINT_DEFINITION_BY_KEY.get(key);
 }
 
 export function getStrictContractPaths(): readonly string[] {

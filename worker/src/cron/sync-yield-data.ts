@@ -1,5 +1,7 @@
 // worker/src/cron/sync-yield-data.ts
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import {
+  TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { YieldRankingsResponseSchema, type AltYieldSource } from "@shared/types";
 import { setCache, batchExecute, buildInClause } from "../lib/db";
@@ -35,10 +37,6 @@ const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.5;
 const THIRTY_DAYS_SECONDS = 30 * 86400;
 const LOW_SOURCE_TVL_USD = 250_000;
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = SECONDS.TWO_DAYS;
-
-const TRACKED_META_BY_ID = new Map(
-  TRACKED_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]),
-);
 
 type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 

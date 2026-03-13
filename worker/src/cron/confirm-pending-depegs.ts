@@ -7,7 +7,7 @@ import {
   USER_AGENT,
 } from "../lib/constants";
 import { batchExecute } from "../lib/db";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
@@ -61,11 +61,10 @@ export async function confirmPendingDepegs(
   if (rows.length === 0) return;
 
   const now = Math.floor(Date.now() / 1000);
-  const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
   const assetById = new Map(assets.map((a) => [a.id, a]));
 
   // Compute peg rates for reference price lookups
-  const { rates: pegRates } = derivePegRates(assets, metaById, fxFallbackRates);
+  const { rates: pegRates } = derivePegRates(assets, TRACKED_META_BY_ID, fxFallbackRates);
 
   // Load DEX prices
   throwIfAborted(signal);
@@ -91,7 +90,7 @@ export async function confirmPendingDepegs(
     }
 
     const asset = assetById.get(row.stablecoin_id);
-    const meta = metaById.get(row.stablecoin_id);
+    const meta = TRACKED_META_BY_ID.get(row.stablecoin_id);
     const threshold = getDepegThresholdBps(row.peg_type);
     const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";

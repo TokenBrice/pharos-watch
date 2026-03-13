@@ -1,9 +1,5 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { AltYieldSource } from "@shared/types";
-
-const TRACKED_META_BY_ID = new Map(
-  TRACKED_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]),
-);
 
 export function rowToRanking(row: Record<string, unknown>) {
   const stablecoinId = String(row.stablecoin_id);

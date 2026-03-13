@@ -3,11 +3,13 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
+import {
+  DataTableShell,
+  type DataTableColumn,
+} from "@/components/data-table-shell";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { SortableTableHead } from "@/components/sortable-table-head";
-import { TablePagination } from "@/components/table-pagination";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -21,6 +23,21 @@ import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 
 const COLUMN_COUNT = 12;
+
+const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
+  { id: "rank", label: "#", className: "w-[50px] text-right" },
+  { id: "coin", label: "Coin", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
+  { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "text-right", title: "30-day average annual percentage yield" },
+  { id: "safety", label: "Safety", className: "hidden md:table-cell text-center", title: "Pharos Safety Grade / Score" },
+  { id: "pys", label: "PYS", sortKey: "pys", className: "text-right", title: "Pharos Yield Score: risk-adjusted yield ranking" },
+  { id: "source", label: "Source", className: "hidden sm:table-cell text-left" },
+  { id: "yieldType", label: "Type", sortKey: "yieldType", className: "hidden sm:table-cell text-center", title: "Yield mechanism type" },
+  { id: "tvl", label: "TVL", sortKey: "tvl", className: "hidden lg:table-cell text-right", title: "Total value locked in yield source" },
+  { id: "yieldStability", label: "Stability", sortKey: "yieldStability", className: "hidden lg:table-cell text-right", title: "Yield stability over 30 days (0-100%)" },
+  { id: "range30d", label: "30d Range", className: "hidden xl:table-cell text-right" },
+  { id: "signals", label: "Signals", className: "hidden md:table-cell text-center" },
+  { id: "expand", label: <span className="sr-only">Expand row</span>, className: "w-[44px] text-right" },
+] as const;
 
 /** Static PYS color classes (Tailwind purge-safe). */
 function getPysColor(pys: number | null): string {
@@ -135,123 +152,69 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
 
   return (
     <TooltipProvider>
-      <div className="rounded-xl border">
-        <div className="mb-3 flex flex-wrap items-center gap-2 px-3 pt-3">
-          {visibleLabels.map((label) => {
-            // Pick the badge style from the first type that maps to this label
-            const repType = (Object.entries(YIELD_TYPE_LABELS) as [YieldType, string][]).find(
-              ([, l]) => l === label,
-            )?.[0];
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => {
-                  setActiveLabels((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(label)) {
-                      next.delete(label);
-                    } else {
-                      next.add(label);
-                    }
-                    return next;
-                  });
-                }}
-                className={
-                  activeLabels.has(label)
-                    ? `pharos-focus-ring rounded-full border px-2 py-0.5 text-xs font-medium ${repType ? YIELD_TYPE_STYLES[repType].badge : ""}`
-                    : "pharos-focus-ring rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground"
-                }
-              >
-                {label}
-              </button>
-            );
-          })}
-          <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={hideWarnings}
-              onChange={(e) => setHideWarnings(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-border"
-            />
-            Hide warned
-          </label>
-        </div>
-
-        <div className="overflow-x-auto scroll-shadow">
-          <Table>
-            <TableHeader className="bg-muted/80">
-              <TableRow>
-                <TableHead className="w-[50px] text-right">#</TableHead>
-                <TableHead className="w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none">Coin</TableHead>
-                <SortableTableHead
-                  sortKey="apy30d"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="APY (30d)"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                  title="30-day average annual percentage yield"
-                />
-                <TableHead className="hidden md:table-cell text-center" title="Pharos Safety Grade / Score">
-                  Safety
-                </TableHead>
-                <SortableTableHead
-                  sortKey="pys"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="PYS"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                  title="Pharos Yield Score: risk-adjusted yield ranking"
-                />
-                <TableHead className="hidden sm:table-cell text-left">Source</TableHead>
-                <SortableTableHead
-                  sortKey="yieldType"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Type"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="hidden sm:table-cell text-center"
-                  title="Yield mechanism type"
-                />
-                <SortableTableHead
-                  sortKey="tvl"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="TVL"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="hidden lg:table-cell text-right"
-                  title="Total value locked in yield source"
-                />
-                <SortableTableHead
-                  sortKey="yieldStability"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Stability"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="hidden lg:table-cell text-right"
-                  title="Yield stability over 30 days (0-100%)"
-                />
-                <TableHead className="hidden xl:table-cell text-right">30d Range</TableHead>
-                <TableHead className="hidden md:table-cell text-center">Signals</TableHead>
-                <TableHead className="w-[44px] text-right">
-                  <span className="sr-only">Expand row</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.map((row, index) => {
+      <DataTableShell
+        columns={YIELD_COLUMNS}
+        sort={{
+          sortKey,
+          sortDirection,
+          toggleSort,
+          getAriaSortValue,
+          handleSortKeyDown,
+        }}
+        topSlot={
+          <div className="mb-3 flex flex-wrap items-center gap-2 px-3 pt-3">
+            {visibleLabels.map((label) => {
+              const repType = (Object.entries(YIELD_TYPE_LABELS) as [YieldType, string][]).find(
+                ([, l]) => l === label,
+              )?.[0];
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    setActiveLabels((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(label)) {
+                        next.delete(label);
+                      } else {
+                        next.add(label);
+                      }
+                      return next;
+                    });
+                  }}
+                  className={
+                    activeLabels.has(label)
+                      ? `pharos-focus-ring rounded-full border px-2 py-0.5 text-xs font-medium ${repType ? YIELD_TYPE_STYLES[repType].badge : ""}`
+                      : "pharos-focus-ring rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                  }
+                >
+                  {label}
+                </button>
+              );
+            })}
+            <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={hideWarnings}
+                onChange={(e) => setHideWarnings(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-border"
+              />
+              Hide warned
+            </label>
+          </div>
+        }
+        pagination={sorted.length > 0 ? {
+          page: effectivePage,
+          totalPages,
+          rangeStart,
+          rangeEnd,
+          total: totalRows,
+          onPrevious: onPreviousPage,
+          onNext: onNextPage,
+          noun: "coins",
+        } : undefined}
+      >
+        {paginated.map((row, index) => {
                 const grade = row.safetyGrade;
                 const safetyScore = row.safetyScore;
                 const warningSignalCount = row.warningSignals.length;
@@ -448,29 +411,14 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                   </Fragment>
                 );
               })}
-              {sorted.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-                    No yield data available.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          {sorted.length > 0 && (
-            <TablePagination
-              page={effectivePage}
-              totalPages={totalPages}
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-              total={totalRows}
-              onPrevious={onPreviousPage}
-              onNext={onNextPage}
-              noun="coins"
-            />
-          )}
-        </div>
-      </div>
+        {sorted.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={COLUMN_COUNT} className="text-center text-muted-foreground py-12">
+              No yield data available.
+            </TableCell>
+          </TableRow>
+        )}
+      </DataTableShell>
     </TooltipProvider>
   );
 }

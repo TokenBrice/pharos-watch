@@ -1,22 +1,16 @@
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
-import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ShareButton } from "@/components/share-button";
+import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/depeg-dews-version";
 import { safeJsonLd } from "@/lib/json-ld";
-
-const DepegClient = dynamic(
-  () => import("./client").then((m) => ({ default: m.DepegClient })),
-  { loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> },
-);
 
 const depegDescription = `Live peg monitoring for ${TRACKED_STABLECOINS.length} stablecoins. Track peg scores, DEWS early warning signals, real-time deviation heatmaps, and a full history of depeg events — all in one place.`;
 
@@ -58,39 +52,38 @@ const faqJsonLd = {
   ],
 };
 
-export default function DepegPage() {
-  return (
-    <FeaturePageShell
-      breadcrumbName="Depeg Tracker"
-      path="/depeg/"
-      title="Depeg Tracker"
-      statusBadge={{ status: "mature", version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL }}
-      methodology={{
-        version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-        changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
-      }}
-      headerActions={<ShareButton ogPath="/api/og/depeg" />}
-      preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
-        />
-      }
-      leadParagraphs={[
-        `Real-time peg monitoring across ${TRACKED_STABLECOINS.length} stablecoins. Peg scores, DEWS early warning signals, live deviation heatmaps, and a full history of depeg events — all in one place.`,
-      ]}
-    >
-      <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
-        Tired of monitoring the situation? Let Pharos do it for you: get instant Telegram alerts for depeg events and DEWS threat level changes.{" "}
-        <Link
-          href="/telegram#bot"
-          className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-        >
-          Set up alerts&nbsp;&rarr;
-        </Link>
-      </CalloutBanner>
-
-      <DepegClient />
-    </FeaturePageShell>
-  );
-}
+export default createClientFeaturePage({
+  loadClient: () => import("./client").then((m) => ({ default: m.DepegClient })),
+  loading: <Skeleton className="h-[400px] w-full rounded-xl" />,
+  shell: {
+    breadcrumbName: "Depeg Tracker",
+    path: "/depeg/",
+    title: "Depeg Tracker",
+    statusBadge: { status: "mature", version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL },
+    methodology: {
+      version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+      changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+    },
+    headerActions: <ShareButton ogPath="/api/og/depeg" />,
+    preface: (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
+      />
+    ),
+    leadParagraphs: [
+      `Real-time peg monitoring across ${TRACKED_STABLECOINS.length} stablecoins. Peg scores, DEWS early warning signals, live deviation heatmaps, and a full history of depeg events — all in one place.`,
+    ],
+  },
+  beforeClient: (
+    <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+      Tired of monitoring the situation? Let Pharos do it for you: get instant Telegram alerts for depeg events and DEWS threat level changes.{" "}
+      <Link
+        href="/telegram#bot"
+        className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+      >
+        Set up alerts&nbsp;&rarr;
+      </Link>
+    </CalloutBanner>
+  ),
+});

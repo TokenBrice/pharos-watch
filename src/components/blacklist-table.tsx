@@ -2,13 +2,13 @@
 
 import { useCallback, useMemo } from "react";
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DataTableShell,
+  type DataTableColumn,
+} from "@/components/data-table-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +20,6 @@ import type { BlacklistEvent } from "@shared/types";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
-import { SortableTableHead } from "@/components/sortable-table-head";
 import { useSortedTableRows } from "@/hooks/use-sorted-table-rows";
 import { compareBlacklistRows, type BlacklistSortKey } from "@/components/blacklist-table-logic";
 
@@ -30,6 +29,17 @@ interface BlacklistTableProps {
   page: number;
   pageSize: number;
 }
+
+const BLACKLIST_COLUMNS: readonly DataTableColumn<BlacklistSortKey>[] = [
+  { id: "rank", label: "#", className: "w-[50px] text-right" },
+  { id: "date", label: "Date", sortKey: "date" },
+  { id: "stablecoin", label: "Stablecoin", sortKey: "stablecoin" },
+  { id: "chain", label: "Chain", sortKey: "chain" },
+  { id: "event", label: "Event", sortKey: "event" },
+  { id: "address", label: "Address", className: "hidden md:table-cell" },
+  { id: "amount", label: "Amount", className: "hidden sm:table-cell text-right" },
+  { id: "tx", label: "Tx", className: "hidden sm:table-cell text-center" },
+] as const;
 
 export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistTableProps) {
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
@@ -84,61 +94,28 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
   }
 
   return (
-    <div className="rounded-xl border overflow-x-auto">
-      <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
-        <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
-        <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
-          <Download className="h-3.5 w-3.5" />
-          Export CSV
-        </Button>
-      </div>
-      <Table>
-        <TableHeader className="bg-muted/80 backdrop-blur-sm">
-          <TableRow>
-            <TableHead className="w-[50px] text-right">#</TableHead>
-            <SortableTableHead
-              sortKey="date"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Date"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-            />
-            <SortableTableHead
-              sortKey="stablecoin"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Stablecoin"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-            />
-            <SortableTableHead
-              sortKey="chain"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Chain"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-            />
-            <SortableTableHead
-              sortKey="event"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Event"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-            />
-            <TableHead className="hidden md:table-cell">Address</TableHead>
-            <TableHead className="hidden sm:table-cell text-right">Amount</TableHead>
-            <TableHead className="hidden sm:table-cell text-center">Tx</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paged.map((evt, index) => (
+    <DataTableShell
+      columns={BLACKLIST_COLUMNS}
+      sort={{
+        sortKey,
+        sortDirection,
+        toggleSort,
+        getAriaSortValue,
+        handleSortKeyDown,
+      }}
+      containerClassName="rounded-xl border overflow-x-auto"
+      headerClassName="bg-muted/80 backdrop-blur-sm"
+      topSlot={
+        <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
+          <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
+          <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </Button>
+        </div>
+      }
+    >
+      {paged.map((evt, index) => (
             <TableRow key={evt.id}>
               <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
                 {(page - 1) * pageSize + index + 1}
@@ -182,15 +159,13 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
               </TableCell>
             </TableRow>
           ))}
-          {paged.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
-                No blacklist events match your filters.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+      {paged.length === 0 && (
+        <TableRow>
+          <TableCell colSpan={BLACKLIST_COLUMNS.length} className="text-center text-muted-foreground py-12">
+            No blacklist events match your filters.
+          </TableCell>
+        </TableRow>
+      )}
+    </DataTableShell>
   );
 }

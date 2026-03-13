@@ -56,7 +56,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 
 This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, then runs a fast post-deploy browser sanity check on the live site.
 
-The workflow uses `actions/checkout@v5` and `actions/setup-node@v6` pinned by commit SHA so the GitHub-hosted JS actions run on Node 24. Worker deploys intentionally avoid `cloudflare/wrangler-action`; CI installs Wrangler from `worker/package-lock.json` and invokes it directly with `npx --no-install`.
+The workflow uses `actions/checkout@v5` and `actions/setup-node@v6` pinned by commit SHA so the GitHub-hosted JS actions run on Node 24. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler from the `worker` workspace with `npx --no-install`.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production.
 
@@ -585,4 +585,4 @@ When adding a new API endpoint:
 
 **Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), prefer the shared hand-written interfaces and keep any unavoidable schema wiring/casts localized in the consolidated hook module (`src/hooks/api-hooks.ts`).
 
-**Worker CI note:** `shared/types/index.ts` imports `zod`, and the worker type-checks shared modules via the `@shared/*` path alias in the `validate` job (`cd worker && npx tsc --noEmit`) before any deploy step runs. Root deps are installed first (`npm ci`) so shared imports resolve from root `node_modules/`. If you add new npm packages imported at the top level of shared files, they do not need duplication in `worker/package.json` unless the worker uses a worker-local build/runtime path that requires it.
+**Worker CI note:** `shared/types/index.ts` imports `zod`, and the worker type-checks shared modules via the `@shared/*` path alias in the `validate` job (`cd worker && npx tsc --noEmit`) before any deploy step runs. Root deps are installed first (`npm ci`) through the npm workspace so shared imports resolve from root `node_modules/`. If you add new npm packages imported at the top level of shared files, they do not need duplication in `worker/package.json` unless the worker uses a worker-local runtime/deploy path that genuinely requires it.

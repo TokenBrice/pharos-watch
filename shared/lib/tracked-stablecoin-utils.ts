@@ -1,10 +1,8 @@
 import type { ContractDeployment, StablecoinMeta } from "../types";
-import * as stablecoinModule from "./stablecoins";
-
-const TRACKED_META_BY_ID = stablecoinModule.TRACKED_META_BY_ID;
-const TRACKED_STABLECOINS =
-  stablecoinModule.TRACKED_STABLECOINS
-  ?? [...TRACKED_META_BY_ID.values()];
+import {
+  TRACKED_META_BY_ID,
+  TRACKED_STABLECOINS,
+} from "./stablecoins";
 
 export const YIELD_BEARING_STABLECOINS = TRACKED_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.yieldBearing,

@@ -1,11 +1,9 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   buildPriceValidationContext,
   validatePriceCandidate,
   type PriceValidationReferences,
 } from "../../lib/price-validation";
-
-const metaById = new Map(TRACKED_STABLECOINS.map((meta) => [meta.id, meta]));
 
 function pegTypeFromCurrency(pegCurrency: string | undefined): string | undefined {
   if (!pegCurrency || pegCurrency === "VAR" || pegCurrency === "OTHER") {
@@ -24,7 +22,7 @@ export function isPlausibleDexObservationPrice(
   price: number,
   references?: PriceValidationReferences,
 ): boolean {
-  const meta = metaById.get(stablecoinId);
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
 
   const context = buildPriceValidationContext({
     stablecoinId,

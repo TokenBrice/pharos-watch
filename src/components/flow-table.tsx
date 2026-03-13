@@ -9,8 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DataTableShell,
+  type DataTableColumn,
+} from "@/components/data-table-shell";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { SortableTableHead } from "@/components/sortable-table-head";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
@@ -39,6 +42,18 @@ interface FlowTableProps {
   coins: MintBurnCoinFlow[];
   isLoading: boolean;
 }
+
+const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
+  { id: "coin", label: "Coin" },
+  { id: "pressure", label: "Pressure vs 30D", sortKey: "pressure", className: "text-right" },
+  { id: "net24h", label: "Net 24h", sortKey: "net24h", className: "text-right" },
+  { id: "mint24h", label: "Minted 24h", sortKey: "mint24h", className: "hidden text-right sm:table-cell" },
+  { id: "burn24h", label: "Burned 24h", sortKey: "burn24h", className: "hidden text-right sm:table-cell" },
+  { id: "net7d", label: "Net 7d", sortKey: "net7d", className: "hidden text-right md:table-cell" },
+  { id: "net30d", label: "Net 30d", sortKey: "net30d", className: "hidden text-right lg:table-cell" },
+  { id: "net90d", label: "Net 90d", sortKey: "net90d", className: "hidden text-right xl:table-cell" },
+  { id: "largest", label: "Largest Event", sortKey: "largest", className: "hidden text-right xl:table-cell" },
+] as const;
 
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const router = useRouter();
@@ -128,95 +143,17 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
   }
 
   return (
-    <div className="scroll-shadow overflow-x-auto rounded-xl border">
-      <Table>
-        <TableHeader className="bg-muted/80">
-          <TableRow>
-            <TableHead>Coin</TableHead>
-            <SortableTableHead
-              sortKey="pressure"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Pressure vs 30D"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right"
-            />
-            <SortableTableHead
-              sortKey="net24h"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Net 24h"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right"
-            />
-            <SortableTableHead
-              sortKey="mint24h"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Minted 24h"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden text-right sm:table-cell"
-            />
-            <SortableTableHead
-              sortKey="burn24h"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Burned 24h"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden text-right sm:table-cell"
-            />
-            <SortableTableHead
-              sortKey="net7d"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Net 7d"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden text-right md:table-cell"
-            />
-            <SortableTableHead
-              sortKey="net30d"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Net 30d"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden text-right lg:table-cell"
-            />
-            <SortableTableHead
-              sortKey="net90d"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Net 90d"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden text-right xl:table-cell"
-            />
-            <SortableTableHead
-              sortKey="largest"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Largest Event"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden text-right xl:table-cell"
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.map((coin) => {
+    <DataTableShell
+      columns={FLOW_TABLE_COLUMNS}
+      sort={{
+        sortKey,
+        sortDirection,
+        toggleSort,
+        getAriaSortValue,
+        handleSortKeyDown,
+      }}
+    >
+      {sorted.map((coin) => {
             const meta = TRACKED_META_BY_ID.get(coin.stablecoinId);
             const name = meta?.name ?? coin.symbol;
             const pressureScore = getPressureScore(coin);
@@ -353,15 +290,13 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               </InteractiveTableRow>
             );
           })}
-          {sorted.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={9} className="py-12 text-center text-muted-foreground">
-                No mint/burn events in this period.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+      {sorted.length === 0 && (
+        <TableRow>
+          <TableCell colSpan={FLOW_TABLE_COLUMNS.length} className="py-12 text-center text-muted-foreground">
+            No mint/burn events in this period.
+          </TableCell>
+        </TableRow>
+      )}
+    </DataTableShell>
   );
 }

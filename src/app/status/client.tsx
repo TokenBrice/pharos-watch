@@ -4,8 +4,6 @@ import { Fragment, type ReactNode, useEffect, useState } from "react";
 import type { StatusResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
-import { type StatusActionRecommendation } from "@/components/status/action-recommendations";
-import { AdminActionButton } from "@/components/status/admin-action-button";
 import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
 import { AdminKeyForm } from "@/components/status/admin-key-form";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
@@ -20,194 +18,32 @@ import { LiquidityHealthCard } from "@/components/status/liquidity-health";
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
+import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { StatusBanner } from "@/components/status/status-banner";
 import { StatusFacts } from "@/components/status/status-facts";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
+import { TOP_FOLD_COPY } from "@/components/status/top-fold-copy";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
+import {
+  NoticeRail,
+  PriorityLaneLink,
+  StatusSection,
+  SummaryBadge,
+} from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
 import { useAdminSessionKey } from "@/hooks/use-admin-session-key";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
 import {
-  type DashboardNotice,
-  type DashboardSection,
   type DashboardSectionId,
   formatTimestampMs,
   formatTimestampSeconds,
   formatTransitionLabel,
-  getNoticeTone,
   getStatusTone,
   getSeverityBadgeClass,
 } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
-
-function SummaryBadge({ label, value, className }: { label: string; value: string; className?: string }) {
-  return (
-    <div className={cn("rounded-full border border-border/60 bg-background/45 px-3 py-1.5 text-xs", className)}>
-      <span className="text-muted-foreground">{label}</span>
-      <span className="ml-1.5 font-mono tabular-nums text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function StatusSection({
-  id,
-  kicker,
-  title,
-  description,
-  accentClassName,
-  summary,
-  children,
-}: {
-  id: DashboardSectionId;
-  kicker: string;
-  title: string;
-  description: string;
-  accentClassName: string;
-  summary?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section
-      id={id}
-      className={cn(
-        "scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] bg-card/82 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28 sm:px-5 lg:px-6",
-        accentClassName,
-      )}
-    >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <p className="pharos-kicker">{kicker}</p>
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]">{title}</h2>
-            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>
-          </div>
-        </div>
-        {summary ? <div className="flex flex-wrap gap-2 lg:justify-end">{summary}</div> : null}
-      </div>
-      <div className="mt-5 space-y-5">{children}</div>
-    </section>
-  );
-}
-
-function RecommendedActionStrip({
-  recommendations,
-  adminKey,
-  onActionFinished,
-}: {
-  recommendations: StatusActionRecommendation[];
-  adminKey: string;
-  onActionFinished: () => void;
-}) {
-  if (recommendations.length === 0) {
-    return (
-      <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
-        <div className="space-y-2">
-          <p className="pharos-kicker">Recommended Now</p>
-          <h3 className="text-[1.45rem] font-semibold tracking-tight text-foreground">No manual intervention.</h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            The system is holding. Use the lane order below to sweep for softer pressure, not to chase an active breach.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="pharos-kicker">Recommended Now</p>
-          <h3 className="text-[1.45rem] font-semibold tracking-tight text-foreground">Take the shortest path in.</h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            These actions are derived from the current blockers and unhealthy cron lanes.
-          </p>
-        </div>
-      </div>
-      <div className="mt-4 space-y-3">
-        {recommendations.slice(0, 3).map((recommendation) => (
-          <div key={recommendation.action.path} className="rounded-[1.15rem] border border-white/10 bg-black/18 p-3.5">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                      recommendation.severity === "critical"
-                        ? "bg-red-500/15 text-red-700 dark:text-red-400"
-                        : recommendation.severity === "warning"
-                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                          : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {recommendation.severity}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {recommendation.source === "cause" ? "cause" : "cron lane"}
-                  </span>
-                </div>
-                <div className="text-sm font-medium text-foreground">{recommendation.action.label}</div>
-                <div className="text-xs leading-relaxed text-muted-foreground">{recommendation.reason}</div>
-              </div>
-              <AdminActionButton
-                action={recommendation.action}
-                adminKey={adminKey}
-                fullWidth={false}
-                buttonClassName="min-w-[10rem]"
-                onFinished={() => onActionFinished()}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PriorityLaneLink({ section, index }: { section: DashboardSection; index: number }) {
-  return (
-    <a
-      href={`#${section.id}`}
-      className={cn(
-        "pharos-focus-ring group flex items-start justify-between gap-4 border-t border-white/10 py-3.5 first:border-t-0",
-        "transition-colors hover:text-foreground",
-      )}
-    >
-      <div className="min-w-0 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-base leading-none text-white/35">{String(index + 1).padStart(2, "0")}</span>
-          <p className="pharos-kicker">{section.label}</p>
-        </div>
-        <div className="text-base font-semibold tracking-tight text-foreground">{section.title}</div>
-        <div className="text-xs leading-relaxed text-muted-foreground">{section.summary}</div>
-      </div>
-      <span
-        className={cn(
-          "rounded-full border border-border/60 bg-background/55 px-2.5 py-1 text-[11px] font-medium text-foreground",
-          section.valueClassName,
-        )}
-      >
-        {section.value}
-      </span>
-    </a>
-  );
-}
-
-function NoticeRail({ notices }: { notices: DashboardNotice[] }) {
-  if (notices.length === 0) return null;
-
-  return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      {notices.map((notice) => (
-        <div key={notice.id} className={cn("rounded-xl border px-4 py-3", getNoticeTone(notice.tone))}>
-          <div className="text-sm font-medium">{notice.title}</div>
-          <div className="mt-1 text-xs leading-relaxed opacity-90">{notice.detail}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function getCronSeverity(cron: StatusResponse["crons"][string]): number {
   if (!cron.healthy || cron.lastRun?.status === "error" || cron.inFlight?.stale) return 2;
@@ -215,38 +51,6 @@ function getCronSeverity(cron: StatusResponse["crons"][string]): number {
   return 0;
 }
 
-const TOP_FOLD_COPY = {
-  healthy: {
-    eyebrow: "Holding line",
-    title: "Hold the line.",
-    body: "Nothing is demanding intervention right now. Sweep the posture once before pressure builds.",
-    shell: "bg-[linear-gradient(180deg,rgba(2,6,23,0.92),rgba(2,6,23,0.98))] border-emerald-500/18",
-    flareA: "bg-emerald-400/14",
-    flareB: "bg-emerald-300/10",
-    ruler: "via-emerald-300/55",
-    kicker: "text-emerald-300/85",
-  },
-  degraded: {
-    eyebrow: "Pressure building",
-    title: "Take the shortest path.",
-    body: "Start with the promoted action, then work down the hottest lane before the drift spreads.",
-    shell: "bg-[linear-gradient(180deg,rgba(2,6,23,0.92),rgba(2,6,23,0.98))] border-amber-500/18",
-    flareA: "bg-amber-400/14",
-    flareB: "bg-amber-300/10",
-    ruler: "via-amber-300/55",
-    kicker: "text-amber-300/85",
-  },
-  stale: {
-    eyebrow: "Intervention required",
-    title: "Contain the breach.",
-    body: "Treat the rest of the page as supporting evidence until the lead blocker is under control.",
-    shell: "bg-[linear-gradient(180deg,rgba(2,6,23,0.92),rgba(2,6,23,0.98))] border-red-500/18",
-    flareA: "bg-red-400/16",
-    flareB: "bg-red-300/10",
-    ruler: "via-red-300/55",
-    kicker: "text-red-300/88",
-  },
-} as const;
 
 export default function StatusClient() {
   const { adminKey, handleKeySubmit, handleSignOut } = useAdminSessionKey();

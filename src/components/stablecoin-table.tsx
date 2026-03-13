@@ -43,6 +43,54 @@ const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 const ROW_HEIGHT = 40;
 const OVERSCAN = 12;
 
+interface StablecoinHeaderDef {
+  id: ColumnId;
+  label: React.ReactNode;
+  className?: string;
+  title?: string;
+  sortKey?: StablecoinTableSortKey;
+}
+
+const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
+  { id: "rank", label: "#", className: "w-[50px] text-right" },
+  { id: "name", label: "Name", sortKey: "name", className: "w-[90px] xl:w-[200px] max-w-[90px] xl:max-w-none" },
+  { id: "price", label: "Price", sortKey: "price", className: "text-right" },
+  {
+    id: "peg",
+    label: "Peg",
+    sortKey: "peg",
+    className: "text-right",
+    title: "Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first",
+  },
+  { id: "mcap", label: "Market Cap", sortKey: "mcap", className: "text-right" },
+  { id: "change24h", label: "24h", sortKey: "change24h", className: "text-right", title: "24-hour market cap change" },
+  { id: "change7d", label: "7d", sortKey: "change7d", className: "text-right", title: "7-day market cap change" },
+  {
+    id: "grade",
+    label: "Grade",
+    sortKey: "grade",
+    className: "text-center",
+    title: "Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk",
+  },
+  {
+    id: "stability",
+    label: "Peg Score",
+    sortKey: "stability",
+    className: "text-right",
+    title: "Peg Stability Score (0-100): measures peg-holding consistency over 30 days",
+  },
+  {
+    id: "liquidity",
+    label: "Liq",
+    sortKey: "liquidity",
+    className: "text-right",
+    title: "DEX Liquidity Score: measures pool depth, volume, and diversity across decentralized exchanges",
+  },
+  { id: "backing", label: "Backing", className: "text-center", title: "Collateral backing type" },
+  { id: "type", label: "Type", className: "text-center", title: "Stablecoin mechanism type" },
+  { id: "flags", label: "Flags", className: "text-center" },
+] as const;
+
 interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
@@ -229,139 +277,27 @@ export function StablecoinTable({
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
             <TableRow>
-              {isVisible("rank") && (
-                <TableHead scope="col" className="w-[50px] text-right">
-                  #
-                </TableHead>
-              )}
-              {isVisible("name") && (
-                <SortableTableHead
-                  sortKey="name"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Name"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="w-[90px] xl:w-[200px] max-w-[90px] xl:max-w-none"
-                />
-              )}
-              {isVisible("price") && (
-                <SortableTableHead
-                  sortKey="price"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Price"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                />
-              )}
-              {isVisible("peg") && (
-                <SortableTableHead
-                  sortKey="peg"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Peg"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                  title="Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first"
-                />
-              )}
-              {isVisible("mcap") && (
-                <SortableTableHead
-                  sortKey="mcap"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Market Cap"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                />
-              )}
-              {isVisible("change24h") && (
-                <SortableTableHead
-                  sortKey="change24h"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="24h"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                  title="24-hour market cap change"
-                />
-              )}
-              {isVisible("change7d") && (
-                <SortableTableHead
-                  sortKey="change7d"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="7d"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                  title="7-day market cap change"
-                />
-              )}
-              {isVisible("grade") && (
-                <SortableTableHead
-                  sortKey="grade"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Grade"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-center"
-                  title="Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk"
-                />
-              )}
-              {isVisible("stability") && (
-                <SortableTableHead
-                  sortKey="stability"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Peg Score"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                  title="Peg Stability Score (0-100): measures peg-holding consistency over 30 days"
-                />
-              )}
-              {isVisible("liquidity") && (
-                <SortableTableHead
-                  sortKey="liquidity"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  label="Liq"
-                  toggleSort={toggleSort}
-                  getAriaSortValue={getAriaSortValue}
-                  handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
-                  title="DEX Liquidity Score: measures pool depth, volume, and diversity across decentralized exchanges"
-                />
-              )}
-              {isVisible("backing") && (
-                <TableHead scope="col" className="text-center" title="Collateral backing type">
-                  Backing
-                </TableHead>
-              )}
-              {isVisible("type") && (
-                <TableHead scope="col" className="text-center" title="Stablecoin mechanism type">
-                  Type
-                </TableHead>
-              )}
-              {isVisible("flags") && (
-                <TableHead scope="col" className="text-center">
-                  Flags
-                </TableHead>
+              {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) =>
+                column.sortKey ? (
+                  <SortableTableHead
+                    key={column.id}
+                    sortKey={column.sortKey}
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    label={typeof column.label === "string" ? column.label : ""}
+                    toggleSort={toggleSort}
+                    getAriaSortValue={getAriaSortValue}
+                    handleSortKeyDown={handleSortKeyDown}
+                    className={column.className}
+                    title={column.title}
+                  >
+                    {column.label}
+                  </SortableTableHead>
+                ) : (
+                  <TableHead key={column.id} scope="col" className={column.className} title={column.title}>
+                    {column.label}
+                  </TableHead>
+                ),
               )}
             </TableRow>
           </TableHeader>

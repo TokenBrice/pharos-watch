@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-interface TablePaginationProps {
+export interface TablePaginationProps {
   page: number;
   totalPages: number;
   rangeStart: number;

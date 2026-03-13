@@ -197,6 +197,9 @@ src/                              # Next.js frontend (static export)
 │   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
 │   ├── status/                   # Status dashboard component decomposition
 │   │   ├── cron-metadata-summary.ts # Per-job cron metadata summarizer registry for cron-card
+│   │   ├── page-primitives.tsx   # Status-page-only shell pieces (summary badge, section shell, notice rail, lane links)
+│   │   ├── recommended-action-strip.tsx # Status hero intervention strip
+│   │   └── top-fold-copy.ts      # Status top-fold tone/copy config
 │   ├── flow-brrr-overview.tsx    # Shared Bank Run Gauge + Minting Pressure overview shell
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
 │   ├── flow-table.tsx            # Per-coin flow table with pressure-shift states, volumes, and net flows
@@ -265,6 +268,7 @@ src/                              # Next.js frontend (static export)
 │   ├── breadcrumb-json-ld.tsx    # Structured data for breadcrumbs
 │   ├── faq-section.tsx           # Shared FAQ renderer (accordion UI + optional FAQPage JSON-LD script)
 │   ├── sortable-table-head.tsx   # Shared sortable table header
+│   ├── data-table-shell.tsx      # Shared thin sortable-table shell (header rendering + optional pagination/top slot)
 │   ├── interactive-table-row.tsx # Shared clickable/keyboard-accessible table row wrapper
 │   ├── table-pagination.tsx      # Shared pagination component
 │   ├── balance-bar.tsx           # Balance ratio visualization bar
@@ -284,6 +288,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-status.ts             # GET /api/status (admin key auth) using shared polling policy helper
 │   ├── use-admin-session-key.ts  # Session-storage-backed admin key hook for auth-gated operator views
 │   ├── use-status-dashboard-model.ts # Status dashboard polling orchestration + derived operator model
+│   ├── use-coverage-matrix-model.ts # Coverage page query orchestration + derived row/snapshot model
 │   ├── use-compare-selection.ts  # Compare page URL state, slot selection, and preset application
 │   ├── use-compare-data-model.ts # Compare page query wiring + derived chart/card/table models
 │   ├── use-compare-share-actions.ts # Compare page share/download image actions + clipboard fallbacks
@@ -313,6 +318,7 @@ src/                              # Next.js frontend (static export)
     ├── chart-export.ts           # Chart export utilities (PNG download)
     ├── compare-config.ts         # Compare presets, color palette, and ID/symbol selection registry
     ├── compare-pages.ts          # Finite static comparison landing page registry + helpers
+    ├── coverage-page-config.ts   # Coverage-page-only visual config (feature accents, filters, mobile preview, legend)
     ├── status-dashboard-model.ts # Status dashboard pure formatting and derived-data helpers
     ├── start-here-callout.ts     # Browser-persisted Start Here callout state helpers (first-session exposure + /start/ retirement)
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
@@ -351,7 +357,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 │   ├── yield.ts                  # Yield rankings/history contracts
 │   └── mint-burn.ts              # Mint/burn flow, event, and sync contracts
 └── lib/
-    ├── api-endpoints.ts          # Authoritative endpoint metadata + router/status/smoke/strict-contract helpers
+    ├── api-endpoints.ts          # Authoritative endpoint metadata + status/smoke/strict-contract helpers
     ├── chain-provider-registry.ts # Runtime-neutral CoinGecko/DexScreener/GeckoTerminal chain slug registry
     ├── strict-contract-paths.ts  # Strict API contract path exports derived from api-endpoints.ts
     ├── stablecoins.ts            # Tracked stablecoin metadata list
@@ -368,11 +374,12 @@ worker/                           # Cloudflare Worker (API + cron jobs)
 ├── migrations/                   # D1 SQL migration files (72 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
+    ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata
     ├── handlers/
     │   ├── http.ts               # HTTP flow: CORS, edge cache, method/auth gating, router dispatch
     │   ├── scheduled.ts          # Thin cron entrypoint: init env-aware clients + dispatch to slot runner registry
     │   └── scheduled/            # Slot runners + shared lease/runtime context for scheduled execution
-    ├── router.ts                 # Worker-owned static route dispatch table + dynamic route matching
+    ├── router.ts                 # Worker route dispatcher: static registry lookup + dynamic route matching
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/

@@ -1,0 +1,32 @@
+export const TOP_FOLD_COPY = {
+  healthy: {
+    eyebrow: "Holding line",
+    title: "Hold the line.",
+    body: "Nothing is demanding intervention right now. Sweep the posture once before pressure builds.",
+    shell: "bg-[linear-gradient(180deg,rgba(2,6,23,0.92),rgba(2,6,23,0.98))] border-emerald-500/18",
+    flareA: "bg-emerald-400/14",
+    flareB: "bg-emerald-300/10",
+    ruler: "via-emerald-300/55",
+    kicker: "text-emerald-300/85",
+  },
+  degraded: {
+    eyebrow: "Pressure building",
+    title: "Take the shortest path.",
+    body: "Start with the promoted action, then work down the hottest lane before the drift spreads.",
+    shell: "bg-[linear-gradient(180deg,rgba(2,6,23,0.92),rgba(2,6,23,0.98))] border-amber-500/18",
+    flareA: "bg-amber-400/14",
+    flareB: "bg-amber-300/10",
+    ruler: "via-amber-300/55",
+    kicker: "text-amber-300/85",
+  },
+  stale: {
+    eyebrow: "Intervention required",
+    title: "Contain the breach.",
+    body: "Treat the rest of the page as supporting evidence until the lead blocker is under control.",
+    shell: "bg-[linear-gradient(180deg,rgba(2,6,23,0.92),rgba(2,6,23,0.98))] border-red-500/18",
+    flareA: "bg-red-400/16",
+    flareB: "bg-red-300/10",
+    ruler: "via-red-300/55",
+    kicker: "text-red-300/88",
+  },
+} as const;

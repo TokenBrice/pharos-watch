@@ -1,16 +1,14 @@
 "use client";
 
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DataTableShell,
+  type DataTableColumn,
+} from "@/components/data-table-shell";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { SortableTableHead } from "@/components/sortable-table-head";
-import { TablePagination } from "@/components/table-pagination";
 import { DEWSBadge } from "@/components/dews-badge";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -32,6 +30,19 @@ interface DepegTrackerTableProps {
   logos: Record<string, string> | undefined;
   onRowClick: (id: string) => void;
 }
+
+const DEPEG_TRACKER_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
+  { id: "rank", label: "#", className: "w-[50px] text-right" },
+  { id: "name", label: "Name", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
+  { id: "pegScore", label: "Peg Score", sortKey: "pegScore", className: "text-right" },
+  { id: "dewsScore", label: "DEWS", sortKey: "dewsScore", className: "text-right" },
+  { id: "currentDeviationBps", label: "Deviation", sortKey: "currentDeviationBps", className: "text-right" },
+  { id: "pegPct", label: "Peg %", sortKey: "pegPct", className: "text-right hidden md:table-cell" },
+  { id: "eventCount", label: "Events", sortKey: "eventCount", className: "text-right hidden md:table-cell" },
+  { id: "worstDeviationBps", label: "Worst", sortKey: "worstDeviationBps", className: "text-right hidden lg:table-cell" },
+  { id: "dexAgrees", label: "DEX Cross-check", sortKey: "dexAgrees", className: "text-center hidden xl:table-cell" },
+  { id: "trackingSpanDays", label: "Tracking", sortKey: "trackingSpanDays", className: "text-right hidden xl:table-cell" },
+] as const;
 
 export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTableProps) {
   const {
@@ -61,96 +72,28 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
   const prefetch = usePrefetchStablecoin();
 
   return (
-    <div className="rounded-xl border overflow-x-auto scroll-shadow">
-      <Table className="min-w-[420px]">
-        <TableHeader className="bg-muted/80">
-          <TableRow>
-            <TableHead className="w-[50px] text-right">#</TableHead>
-            <TableHead className="w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none">Name</TableHead>
-            <SortableTableHead
-              sortKey="pegScore"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Peg Score"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right"
-            />
-            <SortableTableHead
-              sortKey="dewsScore"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="DEWS"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right"
-            />
-            <SortableTableHead
-              sortKey="currentDeviationBps"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Deviation"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right"
-            />
-            <SortableTableHead
-              sortKey="pegPct"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Peg %"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right hidden md:table-cell"
-            />
-            <SortableTableHead
-              sortKey="eventCount"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Events"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right hidden md:table-cell"
-            />
-            <SortableTableHead
-              sortKey="worstDeviationBps"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Worst"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right hidden lg:table-cell"
-            />
-            <SortableTableHead
-              sortKey="dexAgrees"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="DEX Cross-check"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-center hidden xl:table-cell"
-            />
-            <SortableTableHead
-              sortKey="trackingSpanDays"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Tracking"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-right hidden xl:table-cell"
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginated.map((row, i) => {
+    <DataTableShell
+      columns={DEPEG_TRACKER_COLUMNS}
+      sort={{
+        sortKey,
+        sortDirection,
+        toggleSort,
+        getAriaSortValue,
+        handleSortKeyDown,
+      }}
+      tableClassName="min-w-[420px]"
+      pagination={{
+        page: effectivePage,
+        totalPages,
+        rangeStart,
+        rangeEnd,
+        total: totalRows,
+        onPrevious: onPreviousPage,
+        onNext: onNextPage,
+        noun: "stablecoins",
+      }}
+    >
+      {paginated.map((row, i) => {
             const coin = row.coin;
             const dews = row.dews;
             const absDev = Math.abs(coin.currentDeviationBps ?? 0);
@@ -252,26 +195,14 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
               </InteractiveTableRow>
             );
           })}
-          {paginated.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
-                No depeg events detected.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-      <TablePagination
-        page={effectivePage}
-        totalPages={totalPages}
-        rangeStart={rangeStart}
-        rangeEnd={rangeEnd}
-        total={totalRows}
-        onPrevious={onPreviousPage}
-        onNext={onNextPage}
-        noun="stablecoins"
-      />
-    </div>
+      {paginated.length === 0 && (
+        <TableRow>
+          <TableCell colSpan={DEPEG_TRACKER_COLUMNS.length} className="text-center py-12 text-muted-foreground">
+            No depeg events detected.
+          </TableCell>
+        </TableRow>
+      )}
+    </DataTableShell>
   );
 }
 

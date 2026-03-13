@@ -3,22 +3,11 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Activity,
-  ArrowUpDown,
-  BadgeCheck,
   ChevronDown,
-  Droplets,
-  Landmark,
-  Network,
   Search,
-  ShieldBan,
-  ShieldCheck,
   TableProperties,
-  TrendingUp,
 } from "lucide-react";
 import { formatCurrency } from "@shared/lib/format";
-import { getCirculatingRaw } from "@shared/lib/supply";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import {
@@ -32,183 +21,27 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  useBluechipRatings,
-  useDexLiquidity,
-  usePegSummary,
-  useReportCards,
-  useYieldRankings,
-} from "@/hooks/api-hooks";
-import { useLogos } from "@/hooks/use-logos";
-import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { useStablecoins } from "@/hooks/use-stablecoins";
-import {
-  buildCoverageFeatureSummary,
-  buildCoverageRow,
-  COVERAGE_BADGE_TONE_CLASS,
-  COVERAGE_FEATURES,
   type CoverageFeatureDefinition,
   type CoverageFeatureKey,
   type CoverageFeatureSummary,
   type CoverageRow,
   type CoverageStatus,
+  COVERAGE_BADGE_TONE_CLASS,
+  COVERAGE_FEATURES,
 } from "@/lib/coverage";
+import { useCoverageMatrixModel } from "@/hooks/use-coverage-matrix-model";
+import { useLogos } from "@/hooks/use-logos";
+import {
+  FEATURE_ACCENT_CLASSES,
+  FEATURE_ICON,
+  FILTER_OPTIONS,
+  LEGEND_ITEMS,
+  MOBILE_PREVIEW_FEATURES,
+  type CoverageFilterKey,
+  type CoverageSortKey,
+} from "@/lib/coverage-page-config";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
-
-type CoverageFilterKey =
-  | "all"
-  | "live-reserves"
-  | "yield"
-  | "flows"
-  | "blacklist"
-  | "bluechip";
-
-type CoverageSortKey = "market-cap" | "name" | "most-covered";
-
-const FEATURE_ICON: Record<CoverageFeatureKey, typeof Activity> = {
-  price: Activity,
-  safety: ShieldCheck,
-  dex: Droplets,
-  reserves: Landmark,
-  yield: TrendingUp,
-  flows: ArrowUpDown,
-  blacklist: ShieldBan,
-  bluechip: BadgeCheck,
-  dependency: Network,
-};
-
-const FEATURE_ACCENT_CLASSES: Record<
-  CoverageFeatureKey,
-  {
-    rail: string;
-    ring: string;
-    icon: string;
-    countBar: string;
-    chip: string;
-    tile: string;
-    title: string;
-  }
-> = {
-  price: {
-    rail: "before:bg-sky-400/70",
-    ring: "border-sky-500/28 bg-sky-500/10",
-    icon: "text-sky-700 dark:text-sky-300",
-    countBar: "bg-sky-400/80",
-    chip: "border-sky-500/24 bg-sky-500/10 text-sky-800 dark:text-sky-200",
-    tile: "border-sky-500/18 bg-sky-500/6",
-    title: "text-sky-800 dark:text-sky-100",
-  },
-  safety: {
-    rail: "before:bg-emerald-400/70",
-    ring: "border-emerald-500/28 bg-emerald-500/10",
-    icon: "text-emerald-700 dark:text-emerald-300",
-    countBar: "bg-emerald-400/80",
-    chip: "border-emerald-500/24 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
-    tile: "border-emerald-500/18 bg-emerald-500/6",
-    title: "text-emerald-800 dark:text-emerald-100",
-  },
-  dex: {
-    rail: "before:bg-cyan-400/70",
-    ring: "border-cyan-500/28 bg-cyan-500/10",
-    icon: "text-cyan-700 dark:text-cyan-300",
-    countBar: "bg-cyan-400/80",
-    chip: "border-cyan-500/24 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200",
-    tile: "border-cyan-500/18 bg-cyan-500/6",
-    title: "text-cyan-800 dark:text-cyan-100",
-  },
-  reserves: {
-    rail: "before:bg-amber-400/75",
-    ring: "border-amber-500/30 bg-amber-500/10",
-    icon: "text-amber-700 dark:text-amber-300",
-    countBar: "bg-amber-400/85",
-    chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
-    tile: "border-amber-500/18 bg-amber-500/6",
-    title: "text-amber-800 dark:text-amber-100",
-  },
-  yield: {
-    rail: "before:bg-teal-400/75",
-    ring: "border-teal-500/28 bg-teal-500/10",
-    icon: "text-teal-700 dark:text-teal-300",
-    countBar: "bg-teal-400/85",
-    chip: "border-teal-500/24 bg-teal-500/10 text-teal-800 dark:text-teal-200",
-    tile: "border-teal-500/18 bg-teal-500/6",
-    title: "text-teal-800 dark:text-teal-100",
-  },
-  flows: {
-    rail: "before:bg-indigo-400/75",
-    ring: "border-indigo-500/28 bg-indigo-500/10",
-    icon: "text-indigo-700 dark:text-indigo-300",
-    countBar: "bg-indigo-400/85",
-    chip: "border-indigo-500/24 bg-indigo-500/10 text-indigo-800 dark:text-indigo-200",
-    tile: "border-indigo-500/18 bg-indigo-500/6",
-    title: "text-indigo-800 dark:text-indigo-100",
-  },
-  blacklist: {
-    rail: "before:bg-orange-400/75",
-    ring: "border-orange-500/30 bg-orange-500/10",
-    icon: "text-orange-700 dark:text-orange-300",
-    countBar: "bg-orange-400/85",
-    chip: "border-orange-500/28 bg-orange-500/12 text-orange-800 dark:text-orange-200",
-    tile: "border-orange-500/18 bg-orange-500/6",
-    title: "text-orange-800 dark:text-orange-100",
-  },
-  bluechip: {
-    rail: "before:bg-violet-400/75",
-    ring: "border-violet-500/28 bg-violet-500/10",
-    icon: "text-violet-700 dark:text-violet-300",
-    countBar: "bg-violet-400/85",
-    chip: "border-violet-500/24 bg-violet-500/10 text-violet-800 dark:text-violet-200",
-    tile: "border-violet-500/18 bg-violet-500/6",
-    title: "text-violet-800 dark:text-violet-100",
-  },
-  dependency: {
-    rail: "before:bg-frost-blue/75",
-    ring: "border-frost-blue/28 bg-frost-blue/10",
-    icon: "text-frost-blue",
-    countBar: "bg-frost-blue/85",
-    chip: "border-frost-blue/24 bg-frost-blue/10 text-sky-800 dark:text-sky-200",
-    tile: "border-frost-blue/18 bg-frost-blue/6",
-    title: "text-sky-800 dark:text-sky-100",
-  },
-};
-
-const FILTER_OPTIONS: ReadonlyArray<{
-  key: CoverageFilterKey;
-  label: string;
-}> = [
-  { key: "all", label: "All coins" },
-  { key: "live-reserves", label: "Live reserves" },
-  { key: "yield", label: "Yield" },
-  { key: "flows", label: "Flows" },
-  { key: "blacklist", label: "Blacklist" },
-  { key: "bluechip", label: "Bluechip" },
-] as const;
-
-const MOBILE_PREVIEW_FEATURES: readonly CoverageFeatureKey[] = [
-  "price",
-  "dex",
-  "reserves",
-  "flows",
-] as const;
-
-const LEGEND_ITEMS = [
-  {
-    term: "NR",
-    description: "No current rating or observed row is available for that surface.",
-  },
-  {
-    term: "—",
-    description: "Pharos does not currently expose that feature for the asset.",
-  },
-  {
-    term: "Bootstr.",
-    description: "Tracking is configured, but the history window is still building.",
-  },
-  {
-    term: "Price only",
-    description: "NAV-priced asset with price coverage, but no peg or depeg tracking.",
-  },
-] as const;
 
 function CoverageBadge({
   status,
@@ -536,140 +369,19 @@ function sortRows(rows: CoverageRow[], sort: CoverageSortKey): CoverageRow[] {
 }
 
 export default function CoveragePageClient() {
-  const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CoverageFilterKey>("all");
   const [sort, setSort] = useState<CoverageSortKey>("market-cap");
+  const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const { data: logos } = useLogos();
-
   const {
-    data: stablecoinsData,
-    dataUpdatedAt: stablecoinsUpdatedAt,
-    error: stablecoinsError,
-  } = useStablecoins();
-  const {
-    data: pegData,
-    dataUpdatedAt: pegUpdatedAt,
-    error: pegError,
-    meta: pegMeta,
-  } = usePegSummary();
-  const {
-    data: dexData,
-    dataUpdatedAt: dexUpdatedAt,
-    error: dexError,
-    meta: dexMeta,
-  } = useDexLiquidity();
-  const {
-    data: yieldData,
-    dataUpdatedAt: yieldUpdatedAt,
-    error: yieldError,
-    meta: yieldMeta,
-  } = useYieldRankings();
-  const {
-    data: flowData,
-    dataUpdatedAt: flowUpdatedAt,
-    error: flowError,
-    meta: flowMeta,
-  } = useMintBurnFlows();
-  const {
-    data: bluechipData,
-    dataUpdatedAt: bluechipUpdatedAt,
-    error: bluechipError,
-  } = useBluechipRatings();
-  const {
-    data: reportCardsData,
-    dataUpdatedAt: reportCardsUpdatedAt,
-    error: reportCardsError,
-  } = useReportCards();
-
-  const rows = useMemo(() => {
-    const assetById = new Map(
-      (stablecoinsData?.peggedAssets ?? []).map((asset) => [asset.id, asset]),
-    );
-    const pegIds = new Set((pegData?.coins ?? []).map((coin) => coin.id));
-    const yieldIds = new Set((yieldData?.rankings ?? []).map((row) => row.id));
-    const flowById = new Map(
-      (flowData?.coins ?? []).map((row) => [row.stablecoinId, row]),
-    );
-    const reportCardById = new Map(
-      (reportCardsData?.cards ?? []).map((card) => [card.id, card]),
-    );
-    const dependencyIds = new Set<string>();
-
-    for (const edge of reportCardsData?.dependencyGraph.edges ?? []) {
-      dependencyIds.add(edge.from);
-      dependencyIds.add(edge.to);
-    }
-
-    return TRACKED_STABLECOINS.map((coin) =>
-      buildCoverageRow({
-        coin,
-        marketCapUsd: assetById.has(coin.id)
-          ? getCirculatingRaw(assetById.get(coin.id)!)
-          : 0,
-        hasPegCoverage: pegIds.has(coin.id),
-        safetyScore: reportCardById.get(coin.id)?.overallScore ?? null,
-        dexCoverageClass: dexData?.[coin.id]?.coverageClass ?? null,
-        hasYieldCoverage: yieldIds.has(coin.id),
-        flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
-        bluechipGrade: bluechipData?.[coin.id]?.grade ?? null,
-        hasDependencyCoverage: dependencyIds.has(coin.id),
-      }),
-    );
-  }, [
-    stablecoinsData,
-    pegData,
-    yieldData,
-    flowData,
-    reportCardsData,
-    dexData,
-    bluechipData,
-  ]);
-
-  const totalMcapUsd = useMemo(
-    () => rows.reduce((sum, row) => sum + row.marketCapUsd, 0),
-    [rows],
-  );
-
-  const featureSummaries = useMemo(
-    () =>
-      COVERAGE_FEATURES.map((feature) =>
-        buildCoverageFeatureSummary(feature, rows, totalMcapUsd),
-      ),
-    [rows, totalMcapUsd],
-  );
-
-  const widestFeature = useMemo(
-    () =>
-      [...featureSummaries].sort((left, right) => {
-        if (right.coveragePct !== left.coveragePct) {
-          return right.coveragePct - left.coveragePct;
-        }
-        return (right.mcapSharePct ?? 0) - (left.mcapSharePct ?? 0);
-      })[0] ?? null,
-    [featureSummaries],
-  );
-
-  const narrowestFeature = useMemo(
-    () =>
-      [...featureSummaries].sort((left, right) => {
-        if (left.coveragePct !== right.coveragePct) {
-          return left.coveragePct - right.coveragePct;
-        }
-        return (left.mcapSharePct ?? 0) - (right.mcapSharePct ?? 0);
-      })[0] ?? null,
-    [featureSummaries],
-  );
-
-  const mostConcentratedFeature = useMemo(
-    () =>
-      [...featureSummaries].sort(
-        (left, right) =>
-          ((right.mcapSharePct ?? 0) - right.coveragePct) -
-          ((left.mcapSharePct ?? 0) - left.coveragePct),
-      )[0] ?? null,
-    [featureSummaries],
-  );
+    rows,
+    featureSummaries,
+    widestFeature,
+    narrowestFeature,
+    mostConcentratedFeature,
+    staleQueries,
+  } = useCoverageMatrixModel();
 
   const filteredRows = useMemo(
     () =>
@@ -691,56 +403,7 @@ export default function CoveragePageClient() {
 
   return (
     <div className="space-y-6">
-      <StaleDataBanner
-        queries={[
-          {
-            preset: "stablecoins",
-            dataUpdatedAt: stablecoinsUpdatedAt,
-            error: stablecoinsError,
-            hasData: !!stablecoinsData?.peggedAssets?.length,
-          },
-          {
-            preset: "pegSummary",
-            dataUpdatedAt: pegUpdatedAt,
-            error: pegError,
-            hasData: !!pegData?.coins?.length,
-            meta: pegMeta,
-          },
-          {
-            preset: "dexLiquidity",
-            dataUpdatedAt: dexUpdatedAt,
-            error: dexError,
-            hasData: !!dexData,
-            meta: dexMeta,
-          },
-          {
-            preset: "yieldRankings",
-            dataUpdatedAt: yieldUpdatedAt,
-            error: yieldError,
-            hasData: !!yieldData?.rankings?.length,
-            meta: yieldMeta,
-          },
-          {
-            preset: "mintBurnFlows",
-            dataUpdatedAt: flowUpdatedAt,
-            error: flowError,
-            hasData: !!flowData?.coins?.length,
-            meta: flowMeta,
-          },
-          {
-            preset: "reportCards",
-            dataUpdatedAt: reportCardsUpdatedAt,
-            error: reportCardsError,
-            hasData: !!reportCardsData?.cards?.length,
-          },
-          {
-            preset: "bluechip",
-            dataUpdatedAt: bluechipUpdatedAt,
-            error: bluechipError,
-            hasData: bluechipData != null,
-          },
-        ]}
-      />
+      <StaleDataBanner queries={staleQueries} />
 
       <Card className="rounded-[1.6rem] border border-border/70 bg-card/85 shadow-[0_18px_44px_oklch(0_0_0_/0.14)]">
         <CardHeader className="space-y-5">

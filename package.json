@@ -2,6 +2,9 @@
   "name": "stablecoin-dashboard",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "worker"
+  ],
   "engines": {
     "node": ">=20.0.0"
   },
