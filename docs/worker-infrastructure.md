@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 23 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track 22 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally not part of the shared status metadata set.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 24 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track 23 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally excluded from the shared status metadata set.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -198,7 +198,7 @@ Current consumers:
 
 ## Cron Scheduling
 
-This worker declares 10 cron expressions in `worker/wrangler.toml`. The paid Workers plan allows up to 250 cron triggers. Fetch-heavy jobs (blacklist, mint/burn, DEX discovery, stablecoin charts) and Telegram alerts each run on dedicated triggers to get independent 6-connection pools and CPU budgets.
+This worker declares 10 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool.
 
 ### wrangler.toml Triggers
 
@@ -222,12 +222,12 @@ crons = [
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
-| `sync-stablecoins` | `syncStablecoins()` | `worker/src/cron/sync-stablecoins.ts` | `docs/data-pipeline.md`, `docs/depeg-detection.md` |
-| `snapshot-supply` *(retry path)* | `snapshotSupply()` (chained after `sync-stablecoins`) | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
-| `sync-fx-rates` | `syncFxRates()` | `worker/src/cron/sync-fx-rates.ts` | `docs/data-pipeline.md`, `docs/classification.md` |
-| `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
-| `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
-| `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
+| `sync-stablecoins` | `syncStablecoins()` | `worker/src/cron/sync-stablecoins.ts` | [Data Pipeline](./data-pipeline.md), [Depeg Detection](./depeg-detection.md) |
+| `snapshot-supply` *(retry path)* | `snapshotSupply()` (chained after `sync-stablecoins`) | `worker/src/cron/snapshot-supply.ts` | [Supply Snapshot Pipeline](./supply-snapshot.md) |
+| `sync-fx-rates` | `syncFxRates()` | `worker/src/cron/sync-fx-rates.ts` | [Data Pipeline](./data-pipeline.md), [Classification](./classification.md) |
+| `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | [Pharos Stability Index](./stability-index.md) |
+| `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | [DEWS](./dews.md) |
+| `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | [Status Dashboard](./status-dashboard.md) |
 | *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled/quarter-hourly.ts` | This doc (below) |
 
 **Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled/quarter-hourly.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `sync-stablecoins` now reports explicit capability metadata:
@@ -243,7 +243,7 @@ crons = [
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
-| `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | `docs/blacklist-tracker.md` |
+| `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | [Blacklist Tracker](./blacklist-tracker.md) |
 
 Dedicated trigger for blacklist sync. Uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC, dRPC for historical L2 balance reads, and TronGrid for Tron. Gets its own 6-connection pool and CPU budget.
 
@@ -259,7 +259,7 @@ Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus th
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
-| `sync-dex-discovery` | `syncDexDiscovery()` | `worker/src/cron/dex-discovery/orchestrator.ts` | `docs/dex-liquidity.md` |
+| `sync-dex-discovery` | `syncDexDiscovery()` | `worker/src/cron/dex-discovery/orchestrator.ts` | [DEX Liquidity Score](./dex-liquidity.md) |
 
 Dedicated trigger for DEX pool discovery. Uses strictly sequential fetches (1 connection at a time) from CoinGecko/GeckoTerminal/DexScreener. Stages pools for later merge by `sync-dex-liquidity`.
 
@@ -276,8 +276,8 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-stablecoin-charts` | `syncStablecoinCharts()` | `worker/src/cron/sync-stablecoin-charts.ts` | This doc (below) |
-| `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/dex-liquidity/orchestrator.ts` | `docs/dex-liquidity.md` |
-| `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | `docs/yield-intelligence.md` |
+| `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/dex-liquidity/orchestrator.ts` | [DEX Liquidity Score](./dex-liquidity.md) |
+| `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | [Yield Intelligence](./yield-intelligence.md) |
 
 **Execution model:** All three jobs are chained sequentially: charts → dex-liquidity → yield-data. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `sync-yield-data` is chained after `sync-dex-liquidity` for safety-score dependencies. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency.
 
@@ -287,8 +287,8 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
-| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
-| `announce-cemetery-additions` | `announceCemeteryAdditions()` | `worker/src/cron/announce-cemetery-additions.ts` | `docs/telegram-alerts.md`, `docs/cemetery-and-compare.md` |
+| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
+| `announce-cemetery-additions` | `announceCemeteryAdditions()` | `worker/src/cron/announce-cemetery-additions.ts` | [Telegram Alert Bot](./telegram-alerts.md), [Cemetery and Compare](./cemetery-and-compare.md) |
 
 Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out and channel posting get their own 6-connection pool and CPU budget. The scheduled handler runs the two jobs sequentially: subscriber alerts first, cemetery channel diff second. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
@@ -297,7 +297,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-live-reserves` | `syncLiveReserves()` | `worker/src/cron/sync-live-reserves.ts` | This doc (below) |
-| `sync-redemption-backstops` | `syncRedemptionBackstops()` | `worker/src/cron/sync-redemption-backstops.ts` | `docs/redemption-backstops.md` |
+| `sync-redemption-backstops` | `syncRedemptionBackstops()` | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
 
 **Connection budget:** dedicated hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata.
 
@@ -305,11 +305,11 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
-| `snapshot-supply` | `snapshotSupply()` | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
-| `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
-| `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
+| `snapshot-supply` | `snapshotSupply()` | `worker/src/cron/snapshot-supply.ts` | [Supply Snapshot Pipeline](./supply-snapshot.md) |
+| `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | [Risk Lab](./report-cards.md) |
+| `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | [Pharos Stability Index](./stability-index.md) |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
-| `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
+| `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | [Yield Intelligence](./yield-intelligence.md) |
 
 **Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED) and `sync-usds-status` (Etherscan) use ≤2 concurrent external connections on this trigger.
 
@@ -318,8 +318,8 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
-| `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
-| `discovery-scan` | `runDiscoveryScan()` | `worker/src/cron/discovery-scan.ts` | `docs/data-pipeline.md` |
+| `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | [Digest Pipeline](./digest-pipeline.md) |
+| `discovery-scan` | `runDiscoveryScan()` | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md) |
 
 **Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` (1 long-lived Anthropic API call), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 9 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency.
 
@@ -332,7 +332,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 - Each dispatch run sends up to 200 Telegram message attempts in parallel batches of 5. Overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` for subsequent runs.
 - Subscriber state now supports quiet hours plus per-subscription controls such as `dews_min_band`, `safety_mode`, and `depeg_worsening_bps_step`.
 
-See `docs/telegram-alerts.md` for command syntax, D1 tables, snapshot seeding behavior, and operational setup.
+See [Telegram Alert Bot](./telegram-alerts.md) for command syntax, D1 tables, snapshot seeding behavior, and operational setup.
 
 ### Sub-Modules (not directly registered)
 
@@ -340,10 +340,10 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 
 | File | Called from | Documentation |
 |------|-------------|---------------|
-| `worker/src/cron/detect-depegs.ts` | `syncStablecoins()` | `docs/depeg-detection.md` |
-| `worker/src/cron/confirm-pending-depegs.ts` | `syncStablecoins()` | `docs/depeg-detection.md` |
-| `worker/src/cron/enrich-prices.ts` | `syncStablecoins()` | `docs/data-pipeline.md` |
-| `worker/src/cron/sync-stablecoins/supplemental-assets.ts` | `syncStablecoins()` | `docs/data-pipeline.md` |
+| `worker/src/cron/detect-depegs.ts` | `syncStablecoins()` | [Depeg Detection](./depeg-detection.md) |
+| `worker/src/cron/confirm-pending-depegs.ts` | `syncStablecoins()` | [Depeg Detection](./depeg-detection.md) |
+| `worker/src/cron/enrich-prices.ts` | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md) |
+| `worker/src/cron/sync-stablecoins/supplemental-assets.ts` | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md) |
 
 ---
 
@@ -568,7 +568,7 @@ When a lease cannot be acquired, the run is skipped (non-fatal) and recorded as 
 
 ## Undocumented Cron Details
 
-The three crons below were previously only listed by filename in `docs/architecture.md`. Their full algorithms are documented here.
+The three crons below were previously only listed by filename in [Architecture](./architecture.md). Their full algorithms are documented here.
 
 ### sync-stablecoin-charts
 

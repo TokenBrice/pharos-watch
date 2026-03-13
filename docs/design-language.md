@@ -88,6 +88,8 @@ Most routes use:
 
 The `/start/` orientation route keeps the shared breadcrumb/title shell, then shifts into a broader planning-board layout:
 
+Behavioral contract: [Start Page](./start-page.md)
+
 - Wrapper: `mx-auto max-w-6xl space-y-8`
 - Hero shell: large rounded plotting-board surface with editorial onboarding copy on the left and a route board on the right
 - Route board: staggered CTA cards over subtle route-trace lines, with the dominant top and bottom routes spanning two columns on `sm+`
@@ -99,6 +101,8 @@ The `/start/` orientation route keeps the shared breadcrumb/title shell, then sh
 ### Home Dashboard (Special)
 
 Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top fold composed of:
+
+Behavioral contract: [Homepage](./homepage.md)
 
 - Desktop masthead strip: `pharos-card-shell hidden lg:flex ... px-5 py-5`
 - Start Here onboarding callout: large CTA card appears only during a browser's first homepage session and retires once `/start/` has been opened, so repeat visitors drop straight into live data

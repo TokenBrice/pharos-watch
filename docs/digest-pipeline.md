@@ -104,7 +104,7 @@ The `digest_meta` column stores structured metadata about editorial choices (lea
 
 ## API Endpoints
 
-Read endpoints are public with standard/slow cache headers (5-min or 60-min edge, depending on route). The manual trigger endpoint is admin-only. See `docs/api-reference.md` for full response shapes.
+Read endpoints are public with standard/slow cache headers (5-min or 60-min edge, depending on route). The manual trigger endpoint is admin-only. See [API Reference](./api-reference.md) for the full response shapes.
 
 | Endpoint | Description |
 |----------|-------------|

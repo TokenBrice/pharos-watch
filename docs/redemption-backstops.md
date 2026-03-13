@@ -196,7 +196,7 @@ The cron upserts both current and history rows together through `upsertRedemptio
 - Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
 
-See `docs/api-reference.md` for the exact response shape.
+See [API Reference](./api-reference.md) for the exact response shape.
 
 ---
 

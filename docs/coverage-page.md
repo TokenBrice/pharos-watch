@@ -124,4 +124,4 @@ Update this page when any of the following change:
 - a status label or meaning changes
 - the table gains or loses a column
 
-If the change also affects route inventory, update `docs/architecture.md` and `docs/README.md`.
+If the change also affects route inventory, update [Architecture](./architecture.md) and the [Documentation Index](./README.md).

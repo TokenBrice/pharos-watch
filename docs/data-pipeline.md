@@ -140,7 +140,7 @@ The live `/price/` endpoint requires no API key and is called every 15-minute sy
 
 ## Stability Index (PSI) Computation
 
-`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 15 minutes and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. If the DEWS dependency query is unavailable, the run stores `dewsUnavailable=true` in `input_snapshot` and returns `status: "degraded"` (stress breadth is defaulted to 0 for continuity). See `docs/stability-index.md` for full algorithm, calibration examples, and band definitions.
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 15 minutes and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. If the DEWS dependency query is unavailable, the run stores `dewsUnavailable=true` in `input_snapshot` and returns `status: "degraded"` (stress breadth is defaulted to 0 for continuity). See [Pharos Stability Index](./stability-index.md) for the full algorithm, calibration examples, and band definitions.
 
 **Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 

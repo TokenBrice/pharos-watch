@@ -27,7 +27,7 @@ npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke che
 
 Defined in `.github/workflows/deploy-cloudflare.yml`. Deploys now run in five jobs:
 
-For deployment/worktree operating procedure (including the local merge gate before pushing `main`), see `docs/deployment-process.md`.
+For deployment/worktree operating procedure (including the local merge gate before pushing `main`), see [Deployment Process](./deployment-process.md).
 
 1. `validate` (runs before any deployment):
    - `npm run lint`

@@ -124,7 +124,7 @@ If `totalMcapUsd` is missing or `<= 0`, `computeStabilityIndex()` returns `null`
 
 `GET /api/stability-index` — latest score + recent history (default response uses the latest ~90 daily rows, with today's running average prepended when available). With `?detail=true`, full history with per-day component breakdowns. Cache: standard (5-min edge, 1-min browser).
 
-See `docs/api-reference.md` for full response shape.
+See [API Reference](./api-reference.md) for the full response shape.
 
 ## Frontend
 

@@ -61,7 +61,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `telegram_pending_disambiguation` | Ephemeral mid-conversation state for ticker disambiguation |
 | `telegram_pending_alerts` | Overflow subscriber-alert delivery queue drained by the 5-minute alert cron |
 
-The subscription/disambiguation tables are created in `worker/migrations/0054_telegram_subscribers.sql`; the overflow queue is added by `worker/migrations/0060_telegram_pending_alerts.sql`. For the full bot flow, see `docs/telegram-alerts.md`.
+The subscription/disambiguation tables are created in `worker/migrations/0054_telegram_subscribers.sql`; the overflow queue is added by `worker/migrations/0060_telegram_pending_alerts.sql`. For the full bot flow, see [Telegram Alert Bot](./telegram-alerts.md).
 
 ## Telegram Alert Cron Job
 

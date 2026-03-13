@@ -72,7 +72,7 @@ Each cached map value is a `BluechipRating`:
 - Applies freshness headers with a 43,200-second stale threshold.
 - Returns a top-level object keyed by canonical Pharos stablecoin ID.
 
-See `docs/api-reference.md` for the exact response shape.
+See [API Reference](./api-reference.md) for the exact response shape.
 
 ---
 

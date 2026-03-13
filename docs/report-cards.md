@@ -31,14 +31,14 @@ Cemetery coins get a permanent F.
 
 ### Peg Stability Details
 
-- Direct passthrough of `computePegScore()` output (see `docs/depeg-detection.md` for the composite formula)
+- Direct passthrough of `computePegScore()` output (see [Depeg Detection Pipeline](./depeg-detection.md) for the composite formula)
 - v5.5 peg fairness fixes apply automatically: tracking window is capped to coin age (`coinTrackingStart()`), per-event magnitude floors prevent brief severe depegs from being under-penalized, and active-depeg penalties are steeper
 - NAV tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
 - Yield-bearing annotation added to detail text
 
 ### Liquidity / Exit Details
 
-- The public DEX liquidity dataset stays unchanged and fully market-based (see `docs/dex-liquidity.md`)
+- The public DEX liquidity dataset stays unchanged and fully market-based (see [DEX Liquidity Score](./dex-liquidity.md))
 - Report cards now use `effectiveExitScore`, not raw `liquidityScore`
 - `effectiveExitScore` blends:
   - `liquidityScore` from DEX liquidity
@@ -48,7 +48,7 @@ Cemetery coins get a permanent F.
 - If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
 - If only redemption exists, `effectiveExitScore = round(min(70, redemptionBackstopScore * 0.75))`
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty
-- See `docs/redemption-backstops.md` for redemption component scoring and route-family caps
+- See [Redemption Backstops](./redemption-backstops.md) for redemption component scoring and route-family caps
 
 ### Resilience Details
 
@@ -260,7 +260,7 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 `GET /api/redemption-backstops` — current redemption backstop and effective-exit dataset used by redeemable-asset detail views and report-card liquidity inputs. Cache: standard (`public, s-maxage=300, max-age=60`).
 
-Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
+Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), and `updatedAt`. See [API Reference](./api-reference.md) for the full response shape.
 
 `GET /api/safety-score-history` — per-coin Safety Score grade history timeline (`stablecoin` required, `days` optional). Backed by `safety_grade_history` event rows written daily by `snapshot-safety-grade-history`. Cache: slow (1-hour edge).
 

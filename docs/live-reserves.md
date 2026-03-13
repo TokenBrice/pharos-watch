@@ -202,8 +202,8 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 ## Scope Boundaries
 
 - Live reserve sync is detail-page and status-surface infrastructure, not a replacement for curated reserve metadata everywhere else.
-- `docs/report-cards.md` remains authoritative for report-card reserve scoring behavior; report cards do not yet consume live reserve snapshots.
-- `docs/dependency-map.md` remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
+- [Risk Lab](./report-cards.md) remains authoritative for report-card reserve scoring behavior; report cards do not yet consume live reserve snapshots.
+- [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
 
 ---
 

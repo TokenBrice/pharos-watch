@@ -19,7 +19,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 - **Current methodology version:** `v4.7`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
-- **Internal reconstructed timeline:** `docs/mint-burn-flows-timeline.md`
+- **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
 
 ---
 

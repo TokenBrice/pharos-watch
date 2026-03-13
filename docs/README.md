@@ -26,6 +26,8 @@ Verified entry point for the `/docs` corpus. Use this file to find the authorita
 
 ## Route And Page Contracts
 
+- [homepage.md](./homepage.md) - `/` dashboard composition, filter/query contract, and Start Here callout behavior
+- [start-page.md](./start-page.md) - `/start/` onboarding route, curated route map, and homepage integration contract
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
