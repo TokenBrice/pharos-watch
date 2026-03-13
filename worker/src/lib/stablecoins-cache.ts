@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getCache } from "./db";
+import { getCache } from "./db-cache";
 import type { StablecoinData } from "@shared/types";
 
 // Validate critical fields only -- passthrough preserves all upstream data

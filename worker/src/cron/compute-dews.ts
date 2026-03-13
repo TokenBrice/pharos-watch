@@ -6,7 +6,7 @@ import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/su
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { batchExecute, buildInClause } from "../lib/db";
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput, PoolEntry } from "../lib/dews";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";

@@ -5,7 +5,7 @@ import {
   RISK_FREE_RATE_FALLBACK,
   USER_AGENT,
 } from "../../lib/constants";
-import { getCache } from "../../lib/db";
+import { getCache } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";

@@ -1,4 +1,4 @@
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { evaluateStatusAndPersist } from "../api/status";

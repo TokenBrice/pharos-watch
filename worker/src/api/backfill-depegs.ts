@@ -14,7 +14,7 @@ import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limit";
-import { getCache, setCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db-cache";
 import type { StablecoinMeta } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";

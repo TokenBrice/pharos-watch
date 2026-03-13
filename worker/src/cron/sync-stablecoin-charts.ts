@@ -1,4 +1,5 @@
-import { getCache, setCacheIfNewer, type CronResult } from "../lib/db";
+import { getCache, setCacheIfNewer } from "../lib/db-cache";
+import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
 

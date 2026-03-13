@@ -1,4 +1,4 @@
-import { getCache } from "../../lib/db";
+import { getCache } from "../../lib/db-cache";
 import { sendAlert } from "../../lib/alerts";
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";

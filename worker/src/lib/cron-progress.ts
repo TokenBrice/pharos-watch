@@ -1,4 +1,4 @@
-import type { CronProgressReporter, CronProgressUpdate } from "./db";
+import type { CronProgressReporter, CronProgressUpdate } from "./cron-logger";
 import type { SubrequestBudget } from "./evm-logs";
 
 export function withBudgetMetadata(

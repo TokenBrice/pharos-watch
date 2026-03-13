@@ -1,5 +1,5 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import {

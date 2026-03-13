@@ -1,7 +1,7 @@
 import { batchExecute } from "../lib/db";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { sumPegBuckets } from "@shared/lib/supply";
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {

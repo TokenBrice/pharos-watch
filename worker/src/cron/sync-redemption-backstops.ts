@@ -1,5 +1,5 @@
 import { getConfiguredRedemptionBackstopIds } from "@shared/lib/redemption-backstops";
-import type { CronResult } from "../lib/db";
+import type { CronResult } from "../lib/cron-logger";
 import { buildInClause } from "../lib/db";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import {

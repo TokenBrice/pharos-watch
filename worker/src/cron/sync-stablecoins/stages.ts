@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { getCache } from "../../lib/db";
+import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
 import type { PeggedAsset } from "../enrich-prices";
 

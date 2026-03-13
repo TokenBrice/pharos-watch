@@ -26,7 +26,7 @@ import { getChainRpc } from "../lib/chain-registry";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { throwIfAborted } from "../lib/abort";
-import type { CronProgressReporter } from "../lib/db";
+import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 
 const EVM_SCANNED_TO_LATEST = 99999999;

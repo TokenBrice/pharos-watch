@@ -10,14 +10,10 @@ vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
 }));
 
-vi.mock("../../lib/db", async () => {
-  const actual = await vi.importActual("../../lib/db");
-  return {
-    ...actual,
-    getCache: vi.fn(),
-    setCache: vi.fn(),
-  };
-});
+vi.mock("../../lib/db-cache", () => ({
+  getCache: vi.fn(),
+  setCache: vi.fn(),
+}));
 
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(),
@@ -26,7 +22,7 @@ vi.mock("../../lib/circuit-breaker", () => ({
 
 import { fetchTbillRate } from "../fetch-tbill-rate";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { getCache, setCache } from "../../lib/db";
+import { getCache, setCache } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 
 describe("fetchTbillRate", () => {

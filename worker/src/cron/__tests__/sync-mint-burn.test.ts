@@ -109,6 +109,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 
 import { syncMintBurn } from "../sync-mint-burn";
 import { batchExecute } from "../../lib/db";
+// batchExecute stays in db.ts (core DB utility)
 import {
   fetchAlchemyLogs,
   getAlchemyBlockNumber,

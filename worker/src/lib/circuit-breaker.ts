@@ -4,7 +4,7 @@
  * State is persisted in the D1 cache table under keys like "circuit:defillama-stablecoins".
  */
 
-import { getCache, setCache } from "./db";
+import { getCache, setCache } from "./db-cache";
 import { sendAlert } from "./alerts";
 
 export type CircuitState = "closed" | "open" | "half-open";

@@ -141,12 +141,15 @@ vi.mock("../../lib/db", async (importOriginal) => {
   const orig = await importOriginal<typeof import("../../lib/db")>();
   return {
     ...orig,
-    getCache: vi.fn(async () => null),
-    setCache: vi.fn(async () => {}),
     batchExecute: vi.fn(async () => {}),
     getFirstSeenDates: vi.fn(async () => new Map()),
   };
 });
+
+vi.mock("../../lib/db-cache", () => ({
+  getCache: vi.fn(async () => null),
+  setCache: vi.fn(async () => {}),
+}));
 
 // Stub chain-registry
 vi.mock("../../lib/chain-registry", () => ({
@@ -236,7 +239,8 @@ vi.mock("../../lib/constants", () => ({
 }));
 
 import { syncYieldData } from "../sync-yield-data";
-import { getCache, setCache, batchExecute } from "../../lib/db";
+import { batchExecute } from "../../lib/db";
+import { getCache, setCache } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";

@@ -1,4 +1,5 @@
-import { buildInClause, buildPaginatedQuery, getCache } from "./db";
+import { buildInClause, buildPaginatedQuery } from "./db";
+import { getCache } from "./db-cache";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import type { CacheStatus } from "@shared/types";

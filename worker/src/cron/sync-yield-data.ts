@@ -6,8 +6,9 @@ import {
 import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { YieldRankingsResponseSchema, type AltYieldSource } from "@shared/types";
-import { setCache, batchExecute, buildInClause } from "../lib/db";
-import type { CronResult } from "../lib/db";
+import { batchExecute, buildInClause } from "../lib/db";
+import { setCache } from "../lib/db-cache";
+import type { CronResult } from "../lib/cron-logger";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import {
   PYS_SCALING_FACTOR,

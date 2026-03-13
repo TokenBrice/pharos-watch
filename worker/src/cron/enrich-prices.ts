@@ -2,7 +2,7 @@ import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOU
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { getCache, setCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db-cache";
 import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { PriceConfidence } from "@shared/types";
 import {

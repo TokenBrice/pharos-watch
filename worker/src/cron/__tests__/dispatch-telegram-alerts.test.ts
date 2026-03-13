@@ -4,14 +4,10 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
 
-vi.mock("../../lib/db", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/db")>();
-  return {
-    ...actual,
-    getCache: mockGetCache,
-    setCache: mockSetCache,
-  };
-});
+vi.mock("../../lib/db-cache", () => ({
+  getCache: mockGetCache,
+  setCache: mockSetCache,
+}));
 
 const mockShouldAttemptFetch = vi.fn();
 const mockRecordOutcome = vi.fn();

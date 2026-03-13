@@ -1,4 +1,5 @@
-import { buildInClause, getCache, setCache } from "../../lib/db";
+import { buildInClause } from "../../lib/db";
+import { getCache, setCache } from "../../lib/db-cache";
 import { sendAlert } from "../../lib/alerts";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";

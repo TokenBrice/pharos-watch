@@ -1,7 +1,8 @@
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { formatCurrency } from "@shared/lib/format";
 import type { CauseOfDeath, DeadStablecoin } from "@shared/types";
-import { getCache, setCache, type CronResult } from "../lib/db";
+import { getCache, setCache } from "../lib/db-cache";
+import type { CronResult } from "../lib/cron-logger";
 import { escapeHtml, sendToChat } from "../lib/telegram";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";

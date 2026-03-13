@@ -1,4 +1,5 @@
-import { batchExecute, getPriceCache } from "../db";
+import { batchExecute } from "../db";
+import { getPriceCache } from "../db-cache";
 import type { MintBurnAffectedHour } from "./types";
 
 const LOOKBACK_SEC = 48 * 3600; // 48 hours
