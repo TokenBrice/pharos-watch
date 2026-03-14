@@ -31,11 +31,42 @@ function readParams(config: LiveReservesConfig): PositionsApiParams {
   return params as PositionsApiParams;
 }
 
+/**
+ * Protocol-specific assets used as collateral in Frankencoin / dEURO
+ * that are too niche for the canonical risk map.
+ */
+const PROTOCOL_ASSET_RISK: Record<string, ReserveSlice["risk"]> = {
+  // Governance / participation shares
+  FPS: "very-high",
+  WFPS: "very-high",
+  BOSS: "very-high",
+  // Stablecoins not in canonical map
+  VCHF: "low",
+  // Wrapped BTC variants
+  BBTC: "medium",
+  // Tokenized equities / RWA
+  AAPLX: "high",
+  SPYON: "high",
+  GOOGLX: "high",
+  NVDAX: "high",
+  TSLAX: "high",
+  LENDS: "high",
+  REALU: "high",
+  DQTS: "high",
+  ESC: "high",
+};
+
+function isKnownAsset(symbol: string): boolean {
+  const upper = symbol.toUpperCase();
+  return getCanonicalReserveAssetRisk(upper) !== null || upper in PROTOCOL_ASSET_RISK;
+}
+
 function inferRisk(symbol: string): ReserveSlice["risk"] {
   const upper = symbol.toUpperCase();
   const canonicalRisk = getCanonicalReserveAssetRisk(upper);
   if (canonicalRisk) return canonicalRisk;
-  if (["CRV", "GNO", "UNI"].includes(upper)) return "very-high";
+  const protocolRisk = PROTOCOL_ASSET_RISK[upper];
+  if (protocolRisk) return protocolRisk;
   return "high";
 }
 
@@ -77,7 +108,7 @@ export function adaptCollateralPositions(
     if (totalBalance <= 0) continue;
 
     const risk = inferRisk(entry.symbol);
-    if (!getCanonicalReserveAssetRisk(entry.symbol.toUpperCase())) {
+    if (!isKnownAsset(entry.symbol)) {
       warnings.push({
         code: "unknown-asset",
         message: `Unmapped collateral symbol: ${entry.symbol} (inferred risk: ${risk})`,

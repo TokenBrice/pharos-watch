@@ -51,9 +51,13 @@ export const CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL = {
   TRX: "high",
   HYPE: "high",
   CELO: "high",
+  POL: "high",
 
   // ── Very-high: governance / exotic ─────────────────────────
   DEPS: "very-high",
+  CRV: "very-high",
+  GNO: "very-high",
+  UNI: "very-high",
 } as const satisfies Record<string, ReserveRisk>;
 
 export const CANONICAL_ETH_RESERVE_RISK = CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL.ETH;

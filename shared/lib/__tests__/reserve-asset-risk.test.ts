@@ -20,7 +20,13 @@ describe("canonical reserve asset risk mapping", () => {
   });
 
   it("returns null for symbols outside the canonical direct-asset map", () => {
-    expect(getCanonicalReserveAssetRisk("CRV")).toBeNull();
+    expect(getCanonicalReserveAssetRisk("UNKNOWN_XYZ")).toBeNull();
+  });
+
+  it("covers governance / DeFi tokens as very-high risk", () => {
+    expect(getCanonicalReserveAssetRisk("CRV")).toBe("very-high");
+    expect(getCanonicalReserveAssetRisk("GNO")).toBe("very-high");
+    expect(getCanonicalReserveAssetRisk("UNI")).toBe("very-high");
   });
 
   it("covers all stablecoin reserve assets commonly seen in adapters", () => {

@@ -38,7 +38,29 @@ const FALCON_STABLE_ASSETS = new Set([
   "USDB",
   "GHO",
 ]);
-const FALCON_RWA_ASSETS = new Set(["USTB", "JTRSY", "JAAA"]);
+const FALCON_RWA_ASSETS = new Set(["USTB", "JTRSY", "JAAA", "XAUT"]);
+
+/** Well-known altcoins that legitimately go to the "other" bucket without warning. */
+const FALCON_OTHER_KNOWN = new Set([
+  // L1/L2 natives
+  "SOL", "BNB", "TRX", "XRP", "AVAX", "TON", "NEAR", "ATOM", "SEI",
+  "BERA", "POL", "KAVA", "CELO", "EOS", "FLR", "WFLR", "ASTR",
+  "RON", "RONIN", "METIS", "S", "SONIC", "KLAY", "CFX",
+  // DeFi / governance
+  "CRV", "CVX", "UNI", "DODO", "MORPHO", "PENDLE", "EUL",
+  "GNO", "ANKR", "BAL", "SUSHI", "QI",
+  // Popular / meme
+  "FLOKI", "TRUMP", "HMSTR", "DEXE", "FET",
+  // Other known tokens
+  "LUMIA", "JST", "XDC", "SIREN", "MANTA", "JASMY",
+  "MASK", "IOST", "SUN", "BTTC", "BTT", "WLFI",
+  "PROM", "BABY", "DOLO", "LAYER", "PORTAL",
+  "MANTRA", "YGG", "API3", "COTI", "MOVE",
+  "FIDA", "ID", "A", "SOPH",
+]);
+
+/** Only warn about unknown assets above this USD value. */
+const FALCON_UNKNOWN_WARN_THRESHOLD = 10_000;
 
 function bucketForFalconAsset(label: string): FalconBucket {
   if (FALCON_STABLE_ASSETS.has(label)) return "stable";
@@ -76,10 +98,10 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     const value = sumFalconAssetValue(asset);
     if (!Number.isFinite(value) || value <= 0) continue;
     const bucket = bucketForFalconAsset(asset.label);
-    if (bucket === "other") {
+    if (bucket === "other" && !FALCON_OTHER_KNOWN.has(asset.label) && value > FALCON_UNKNOWN_WARN_THRESHOLD) {
       warnings.push({
         code: "unknown-asset",
-        message: `Unmapped Falcon asset: ${asset.label}`,
+        message: `Unmapped Falcon asset: ${asset.label} ($${value.toFixed(0)})`,
         severity: "warning",
       });
     }

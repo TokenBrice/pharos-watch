@@ -47,7 +47,7 @@ describe("adaptCollateralPositions", () => {
     ]);
   });
 
-  it("emits a warning for symbols without a canonical reserve asset risk", () => {
+  it("emits a warning for symbols not in canonical or protocol-specific risk maps", () => {
     const result = adaptCollateralPositions(
       {
         "0xabc": {
@@ -66,5 +66,31 @@ describe("adaptCollateralPositions", () => {
     expect(result.warnings!.some(
       (w) => w.code === "unknown-asset" && w.message.includes("XYZZY"),
     )).toBe(true);
+  });
+
+  it("does not warn for protocol-specific known assets like FPS or tokenized stocks", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xfps": {
+          address: "0xfps",
+          name: "Frankencoin Pool Shares",
+          symbol: "FPS",
+          decimals: 18,
+          positions: [{ collateralBalance: "1000000000000000000" }],
+        },
+        "0xaapl": {
+          address: "0xaapl",
+          name: "Apple Tokenized",
+          symbol: "AAPLx",
+          decimals: 18,
+          positions: [{ collateralBalance: "1000000000000000000" }],
+        },
+      },
+      {
+        "0xfps": { price: { usd: 500 } },
+        "0xaapl": { price: { usd: 200 } },
+      },
+    );
+    expect(result.warnings).toBeUndefined();
   });
 });

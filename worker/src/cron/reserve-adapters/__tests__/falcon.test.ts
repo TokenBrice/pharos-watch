@@ -36,11 +36,11 @@ describe("adaptFalconTransparency", () => {
       insuranceFund: "5",
       assetCount: 5,
     });
-    expect(result.warnings).toBeDefined();
-    expect(result.warnings!.some((w) => w.code === "unknown-asset" && w.message.includes("AVAX"))).toBe(true);
+    // AVAX is a known altcoin — no warning emitted
+    expect(result.warnings).toBeUndefined();
   });
 
-  it("emits a warning for asset labels that fall into the 'other' bucket", () => {
+  it("emits a warning for unknown assets above the value threshold", () => {
     const payload: FalconTransparencyResponse = {
       snapshot_date: 1773316982,
       usdf: {
@@ -49,7 +49,7 @@ describe("adaptFalconTransparency", () => {
         breakdown: {
           assets: [
             { label: "USDC", ceffu: "50" },
-            { label: "UNKNOWN_TOKEN_XYZ", ceffu: "50" },
+            { label: "UNKNOWN_TOKEN_XYZ", ceffu: "50000" },
           ],
         },
       },
@@ -59,5 +59,41 @@ describe("adaptFalconTransparency", () => {
     expect(result.warnings!.some(
       (w) => w.code === "unknown-asset" && w.message.includes("UNKNOWN_TOKEN_XYZ"),
     )).toBe(true);
+  });
+
+  it("suppresses warnings for unknown assets below the value threshold", () => {
+    const payload: FalconTransparencyResponse = {
+      snapshot_date: 1773316982,
+      usdf: {
+        supply: "100",
+        insurance_fund: "5",
+        breakdown: {
+          assets: [
+            { label: "USDC", ceffu: "50" },
+            { label: "UNKNOWN_TOKEN_XYZ", ceffu: "5" },
+          ],
+        },
+      },
+    };
+    const result = adaptFalconTransparency(payload);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("suppresses warnings for known altcoins regardless of value", () => {
+    const payload: FalconTransparencyResponse = {
+      snapshot_date: 1773316982,
+      usdf: {
+        supply: "100",
+        insurance_fund: "5",
+        breakdown: {
+          assets: [
+            { label: "USDC", ceffu: "50" },
+            { label: "SOL", ceffu: "500000" },
+          ],
+        },
+      },
+    };
+    const result = adaptFalconTransparency(payload);
+    expect(result.warnings).toBeUndefined();
   });
 });
