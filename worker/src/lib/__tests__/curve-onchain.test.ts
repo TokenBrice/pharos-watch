@@ -79,4 +79,110 @@ describe("fetchCurveOnchainPrices", () => {
     const results = await fetchCurveOnchainPrices([config]);
     expect(results.size).toBe(0);
   });
+
+  it("uses get_dy_underlying selector when useUnderlying is true", async () => {
+    const lusdOutput = BigInt("999000000000000000"); // 0.999e18
+    const mockHex = ("0x" + lusdOutput.toString(16).padStart(64, "0")) as `0x${string}`;
+    mockEvmCall.mockResolvedValue(mockHex);
+
+    const config: CurvePoolConfig = {
+      stablecoinId: "lusd-liquity",
+      poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
+      inputIndex: 2,  // USDC (underlying)
+      outputIndex: 0, // LUSD (underlying)
+      inputDecimals: 6,
+      outputDecimals: 18,
+      chain: "ethereum",
+      useUnderlying: true,
+    };
+    const results = await fetchCurveOnchainPrices([config]);
+    expect(results.get("lusd-liquity")).toBeCloseTo(1.001, 3);
+
+    // Verify the underlying selector was used, not get_dy
+    const calldata = mockEvmCall.mock.calls[0][2] as string;
+    expect(calldata.startsWith("0x07211ef7")).toBe(true);
+  });
+
+  it("resolves hop prices by multiplying with via-token price", async () => {
+    const crvusdOutput = BigInt("999000000000000000"); // 0.999e18 crvUSD per 1 USDC
+    const ghoOutput = BigInt("998000000000000000"); // 0.998e18 GHO per 1e18 crvUSD
+
+    mockEvmCall
+      .mockResolvedValueOnce(("0x" + crvusdOutput.toString(16).padStart(64, "0")) as `0x${string}`)
+      .mockResolvedValueOnce(("0x" + ghoOutput.toString(16).padStart(64, "0")) as `0x${string}`);
+
+    const configs: CurvePoolConfig[] = [
+      {
+        stablecoinId: "crvusd-curve",
+        poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
+        inputIndex: 0, outputIndex: 1,
+        inputDecimals: 6, outputDecimals: 18,
+        chain: "ethereum",
+      },
+      {
+        stablecoinId: "gho-aave",
+        poolAddress: "0x0001000100010001000100010001000100010001",
+        inputIndex: 0, outputIndex: 1,
+        inputDecimals: 18, outputDecimals: 18,
+        chain: "ethereum",
+        hop: { viaStablecoinId: "crvusd-curve" },
+      },
+    ];
+
+    const results = await fetchCurveOnchainPrices(configs);
+    expect(results.get("crvusd-curve")).toBeCloseTo(1.001, 3);
+    const expectedGho = (1.0 / 0.998) * (1.0 / 0.999);
+    expect(results.get("gho-aave")).toBeCloseTo(expectedGho, 3);
+  });
+
+  it("excludes hop coin when via-token RPC fails", async () => {
+    mockEvmCall
+      .mockResolvedValueOnce(null) // crvUSD fails
+      .mockResolvedValueOnce(("0x" + BigInt("998000000000000000").toString(16).padStart(64, "0")) as `0x${string}`);
+
+    const configs: CurvePoolConfig[] = [
+      {
+        stablecoinId: "crvusd-curve",
+        poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
+        inputIndex: 0, outputIndex: 1,
+        inputDecimals: 6, outputDecimals: 18,
+        chain: "ethereum",
+      },
+      {
+        stablecoinId: "gho-aave",
+        poolAddress: "0x0001000100010001000100010001000100010001",
+        inputIndex: 0, outputIndex: 1,
+        inputDecimals: 18, outputDecimals: 18,
+        chain: "ethereum",
+        hop: { viaStablecoinId: "crvusd-curve" },
+      },
+    ];
+
+    const results = await fetchCurveOnchainPrices(configs);
+    expect(results.has("crvusd-curve")).toBe(false);
+    expect(results.has("gho-aave")).toBe(false);
+  });
+
+  it("throws when a hop references another hop config", async () => {
+    const configs: CurvePoolConfig[] = [
+      {
+        stablecoinId: "token-a",
+        poolAddress: "0x0000000000000000000000000000000000000001",
+        inputIndex: 0, outputIndex: 1,
+        inputDecimals: 18, outputDecimals: 18,
+        chain: "ethereum",
+        hop: { viaStablecoinId: "token-b" },
+      },
+      {
+        stablecoinId: "token-b",
+        poolAddress: "0x0000000000000000000000000000000000000002",
+        inputIndex: 0, outputIndex: 1,
+        inputDecimals: 18, outputDecimals: 18,
+        chain: "ethereum",
+        hop: { viaStablecoinId: "token-c" },
+      },
+    ];
+
+    await expect(fetchCurveOnchainPrices(configs)).rejects.toThrow(/chained hop/i);
+  });
 });
