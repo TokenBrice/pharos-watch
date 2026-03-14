@@ -148,12 +148,16 @@ export function stampPriceMetadata(
   confidence: PeggedAsset["priceConfidence"],
   updatedAt: number | null,
   consensusSources?: string[],
+  agreeSources?: string[],
 ): void {
   asset.priceSource = source;
   asset.priceConfidence = confidence ?? null;
   asset.priceUpdatedAt = updatedAt;
   if (consensusSources !== undefined) {
     asset.consensusSources = consensusSources;
+  }
+  if (agreeSources !== undefined) {
+    asset.agreeSources = agreeSources;
   }
 }
 
