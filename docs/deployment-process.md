@@ -74,6 +74,12 @@ Default policy:
 
 Docs-only changes are skipped.
 
+Useful merge-gate controls:
+
+- `npm run test:merge-gate -- --staged` to diff staged files instead of `merge-base ... HEAD`
+- `MERGE_GATE_BASE_REF=<ref>` to override the default compare base (`origin/main`)
+- `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
+
 ## CI Deploy Sequence
 
 Defined across:

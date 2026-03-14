@@ -1,21 +1,24 @@
 # Methodology Page Contract
 
-`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. Shared page chrome, helper components, and section metadata now live in `src/app/methodology/methodology-shared.tsx`, while the long-form section bodies are isolated in `src/app/methodology/methodology-sections.tsx` so authored content no longer sits inside the route shell.
+`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ structured data, and the reader-guide hero chrome, while the long-form section bodies live in `src/app/methodology/methodology-sections.tsx`.
 
 ---
 
 ## Route & Structure
 
-- **Route shell:** `src/app/methodology/page.tsx`
+- **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, FAQ JSON-LD, hero/reader-guide shell)
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
 - **Section content module:** `src/app/methodology/methodology-sections.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail
-- **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps the dedicated "How to Read This Page" overview card
+- **Mode persistence contract:** `MethodologyModeToggle` stores `pharos.methodology.mode` in `localStorage` and opens/closes authored `details` blocks via the `data-methodology-details` / `data-methodology-worked-example` attributes emitted by `MethodologyDetails` and `WorkedExample`
+- **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps both the top-right reader-guide hero card and the dedicated "How to Read This Page" overview card
 - **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`
-- **Version badges:** imported from per-system version modules in `shared/lib/*-version.ts`
-- **Changelog wrappers:** config-driven route wrappers via `src/app/methodology/changelog-route-factory.tsx`
-- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` now uses the shared route factory for metadata + shell wiring while still rendering its richer custom body content locally
+- **Version metadata:** per-system version modules in `shared/lib/*-version.ts`, mostly built on top of `shared/lib/methodology-version.ts`
+- **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, and blacklist tracker all live under `src/app/methodology/*-changelog/page.tsx`
+- **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`
+- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory for metadata + shell wiring while still authoring its nav entries and version cards locally
+- **Cross-app methodology links:** `src/lib/methodology-context.ts` and `src/components/methodology-hint.tsx` hard-code the anchors and changelog paths used by cards/tooltips across the app
 
 ---
 
@@ -37,13 +40,23 @@
 
 ## Update Rules
 
-When changing any methodology surface, update all three surfaces in the same change:
+When changing any methodology surface, update the runtime implementation, the detailed `/docs` explainer, and the authored `/methodology` section copy in the same change:
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples (`src/app/methodology/methodology-sections.tsx`; update `page.tsx` only when shell/layout wiring changes).
+3. `/methodology` page copy and worked examples in `src/app/methodology/methodology-sections.tsx`.
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
+
+Also update `src/app/methodology/page.tsx` whenever its FAQ structured-data answers, metadata copy, or reader-guide copy changes. Those claims are runtime-facing even when the shell layout itself is unchanged.
+
+If section IDs or changelog paths change, also update `src/lib/methodology-context.ts` so in-app "View methodology" and "Version history" links keep resolving to the correct anchor/route.
+
+If you add a new methodology changelog route, follow the existing pattern:
+
+1. Add or update the version source in `shared/lib/*-version.ts`.
+2. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createMethodologyChangelogRoute(...)`.
+3. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
 
 If the pricing pipeline's source roster or live-price selection semantics change, also update:
 
@@ -70,6 +83,7 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.6** (2026-03-14): Documented the remaining route-shell contract in `page.tsx` (FAQ/metadata/reader-guide copy), the persisted Reader/Analyst mode toggle behavior, the shared changelog factory, and the cross-app anchor/path dependency in `src/lib/methodology-context.ts`.
 - **v3.5** (2026-03-14): Added Pricing Pipeline section (first position) with 8-source consensus diagram, source weights table, enrichment pipeline, confidence levels, and validation modes. Created `shared/lib/pricing-pipeline-version.ts` and `src/app/methodology/pricing-pipeline-changelog/page.tsx`.
 - **v3.4** (2026-03-12): Corrected the update contract so methodology-copy edits point to `methodology-sections.tsx`, which is where the authored long-form content and worked examples now live.
 - **v3.3** (2026-03-09): Separated discovery pipeline with staged pool confidence decay. Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on an independent 20-minute cron with 3x more budget. Staged pools merge into scoring with freshness confidence decay (`max(0.5, 1 - ageHours/48)`) and explicit defaults contract. Chain-aware source routing reduces wasted API calls. Tiered priority with exponential backoff prevents looping on pool-less coins.

@@ -444,9 +444,20 @@ In addition to the global 55% line threshold, CI enforces a critical-path gate v
 - Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
 - Parses `coverage/lcov.info`
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
+- Applies explicit per-file minimums on top of the global threshold for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `discovery`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/check-critical-coverage.mjs`)
 - For touched critical files, also enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
 
 Gate script: `scripts/check-critical-coverage.mjs`
+
+Useful env controls:
+
+- `CRITICAL_COVERAGE_THRESHOLD`
+- `CRITICAL_COVERAGE_COMPARE_REF`
+- `CRITICAL_COVERAGE_CHANGED_FILES`
+- `CRITICAL_COVERAGE_RATCHET_TOLERANCE`
+- `CRITICAL_COVERAGE_RATCHET_ALL`
+- `CRITICAL_COVERAGE_BASELINE_FILE`
+- Per-file overrides such as `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_DISCOVERY`, and `CRITICAL_COVERAGE_THRESHOLD_HEALTH`
 
 Current critical file set:
 
@@ -454,7 +465,11 @@ Current critical file set:
 - `worker/src/lib/api-utils.ts`
 - `worker/src/lib/auth.ts`
 - `worker/src/lib/evm-rpc.ts`
+- `worker/src/lib/stablecoins-cache.ts`
+- `worker/src/lib/safety-scores.ts`
+- `worker/src/handlers/scheduled.ts`
 - `worker/src/cron/sync-stablecoins.ts`
+- `worker/src/cron/daily-digest.ts`
 - `worker/src/cron/sync-yield-data.ts`
 - `worker/src/api/discovery.ts`
 - `worker/src/api/health.ts`
@@ -463,11 +478,17 @@ Current critical file set:
 - `worker/src/api/dex-liquidity.ts`
 - `worker/src/api/stress-signals.ts`
 - `worker/src/api/mint-burn-flows.ts`
+- `worker/src/api/status.ts`
 - `worker/src/lib/alerts.ts` _(explicit threshold: 80% lines)_
 - `worker/src/lib/auth.ts` _(explicit threshold: 70% lines)_
 - `worker/src/lib/evm-rpc.ts` _(explicit threshold: 70% lines)_
+- `worker/src/lib/stablecoins-cache.ts` _(explicit threshold: 50% lines)_
+- `worker/src/lib/safety-scores.ts` _(explicit threshold: 40% lines)_
+- `worker/src/handlers/scheduled.ts` _(explicit threshold: 40% lines)_
+- `worker/src/cron/daily-digest.ts` _(explicit threshold: 40% lines)_
 - `worker/src/api/discovery.ts` _(explicit threshold: 70% lines)_
 - `worker/src/api/health.ts` _(explicit threshold: 60% lines)_
+- `worker/src/api/status.ts` _(explicit threshold: 40% lines)_
 - `worker/src/api/stablecoin-detail.ts` _(explicit threshold: 30% lines)_
 - `worker/src/cron/dex-liquidity/orchestrator.ts` _(explicit threshold: 55% lines)_
 
@@ -475,7 +496,7 @@ Current critical file set:
 
 - `npm run test:critical-contracts` covers the explicitly enumerated critical handler suites (`peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus shared strict-path registry tests and router mapping tests.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
-- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes).
+- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes). Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path derived from `shared/lib/api-endpoints.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
 - `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces using service-token headers. It accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/status/`, then validates `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage/empty states (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`) and on sustained horizontal overflow across tracked mobile routes.

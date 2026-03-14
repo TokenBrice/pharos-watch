@@ -22,16 +22,16 @@ Only signals where `available = true` participate. Weights are redistributed pro
 
 ## Sub-Signals & Weights
 
-| Signal | Key | Weight | Data Source | What It Detects |
-|--------|-----|--------|-------------|-----------------|
-| Supply Velocity | `supply` | 0.25 | stablecoins cache | Rapid redemptions (bank run) |
-| Pool Balance Drift | `pool` | 0.20 | `dex_liquidity` | One-sided selling pressure in DEX pools |
-| Liquidity Erosion | `liq` | 0.15 | `dex_liquidity_history` | LPs fleeing |
-| Price Confidence | `price` | 0.15 | stablecoins cache | Oracle/data source failures |
-| Cross-Source Divergence | `diverg` | 0.15 | `dex_prices` + cache | Fragmented pricing, trust breakdown |
-| Blacklist Activity | `black` | 0.10 | `blacklist_events` | Issuer emergency freeze surge |
-| Mint/Burn Flow | `flow` | 0.10 | `mint_burn_hourly` | Redemption surge vs minting |
-| Yield Anomaly | `yield` | 0.05 | `yield_data` | Yield warning signals (spike, divergence, TVL outflow, negative trend, reward-heavy) |
+| Signal                  | Key      | Weight | Data Source             | What It Detects                                                                      |
+| ----------------------- | -------- | ------ | ----------------------- | ------------------------------------------------------------------------------------ |
+| Supply Velocity         | `supply` | 0.25   | stablecoins cache       | Rapid redemptions (bank run)                                                         |
+| Pool Balance Drift      | `pool`   | 0.20   | `dex_liquidity`         | One-sided selling pressure in DEX pools                                              |
+| Liquidity Erosion       | `liq`    | 0.15   | `dex_liquidity_history` | LPs fleeing                                                                          |
+| Price Confidence        | `price`  | 0.15   | stablecoins cache       | Oracle/data source failures                                                          |
+| Cross-Source Divergence | `diverg` | 0.15   | `dex_prices` + cache    | Fragmented pricing, trust breakdown                                                  |
+| Blacklist Activity      | `black`  | 0.10   | `blacklist_events`      | Issuer emergency freeze surge                                                        |
+| Mint/Burn Flow          | `flow`   | 0.10   | `mint_burn_hourly`      | Redemption surge vs minting                                                          |
+| Yield Anomaly           | `yield`  | 0.05   | `yield_data`            | Yield warning signals (spike, divergence, TVL outflow, negative trend, reward-heavy) |
 
 Weights sum to 1.15 but only available signals participate, so redistribution normalizes by actual available weight. When `S_flow` and `S_yield` are both unavailable (most coins), effective weight is 1.00 across the 6 original signals.
 
@@ -39,13 +39,13 @@ Weights sum to 1.15 but only available signals participate, so redistribution no
 
 ## Threat Bands
 
-| Range | Band | Hex | Description |
-|-------|------|-----|-------------|
-| 0-15 | **CALM** | `#22c55e` | No stress signals detected |
-| 16-35 | **WATCH** | `#14b8a6` | Mild stress on 1-2 indicators |
-| 36-55 | **ALERT** | `#eab308` | Multiple indicators elevated |
-| 56-75 | **WARNING** | `#f97316` | Strong stress signals, depeg plausible |
-| 76-100 | **DANGER** | `#ef4444` | All precursors firing |
+| Range  | Band        | Hex       | Description                            |
+| ------ | ----------- | --------- | -------------------------------------- |
+| 0-15   | **CALM**    | `#22c55e` | No stress signals detected             |
+| 16-35  | **WATCH**   | `#14b8a6` | Mild stress on 1-2 indicators          |
+| 36-55  | **ALERT**   | `#eab308` | Multiple indicators elevated           |
+| 56-75  | **WARNING** | `#f97316` | Strong stress signals, depeg plausible |
+| 76-100 | **DANGER**  | `#ef4444` | All precursors firing                  |
 
 ---
 
@@ -63,6 +63,7 @@ Measures supply contraction rate. Only negative changes contribute stress.
 ### S_pool — Pool Balance Drift
 
 DEX pool imbalances from `dex_liquidity`. Blends:
+
 - 40% balance stress (1 - weighted_balance_ratio)
 - 35% pool stress score (avg_pool_stress)
 - 25% worst single pool imbalance (from top_pools_json)
@@ -72,6 +73,7 @@ Smoothed with previous reading when available.
 ### S_liq — Liquidity Erosion
 
 7-day change in liquidity score and TVL from `dex_liquidity_history`.
+
 - **Score erosion anchors:** `[0%, 0] → [5%, 15] → [15%, 40] → [30%, 70] → [50%, 100]`
 - **TVL erosion anchors:** `[0%, 0] → [10%, 15] → [25%, 40] → [50%, 70] → [75%, 100]`
 - 50/50 blend
@@ -84,6 +86,7 @@ Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, nul
 ### S_diverg — Cross-Source Price Divergence
 
 Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
+
 - DEX input comes only from `dex_prices` rows refreshed within the last 60 minutes; older rows are ignored instead of lingering as live divergence input
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
@@ -96,6 +99,7 @@ Only for tracked coins (USDC, USDT, PAXG, XAUT). Uses 24h event count with spike
 ### S_flow — Mint/Burn Flow
 
 Available only when `mint_burn_hourly` data exists and is >= 7 days old. Measures:
+
 - **Burn surge:** 24h burn volume / 30d daily average
 - **Burn-to-mint ratio:** 24h burns / 24h mints
 - 60/40 blend of surge and ratio scores
@@ -104,13 +108,13 @@ Available only when `mint_burn_hourly` data exists and is >= 7 days old. Measure
 
 Available only for yield-bearing coins with warning signals in `yield_data`. Maps active warning signals to stress points:
 
-| Warning Signal | Points |
-|----------------|--------|
-| `yield-spike` | 30 |
-| `yield-divergence` | 25 |
-| `tvl-outflow` | 35 |
-| `negative-trend` | 15 |
-| `reward-heavy` | 20 |
+| Warning Signal     | Points |
+| ------------------ | ------ |
+| `yield-spike`      | 30     |
+| `yield-divergence` | 25     |
+| `tvl-outflow`      | 35     |
+| `negative-trend`   | 15     |
+| `reward-heavy`     | 20     |
 
 Score = `min(100, sum of active signal points)`.
 
@@ -131,9 +135,9 @@ Score = `min(100, sum of active signal points)`.
 
 ### Tables
 
-| Table | Pruning | Purpose |
-|-------|---------|---------|
-| `stress_signals` | 7 days | 15-minute rolling samples |
+| Table                   | Pruning  | Purpose                                |
+| ----------------------- | -------- | -------------------------------------- |
+| `stress_signals`        | 7 days   | 15-minute rolling samples              |
 | `stress_signal_history` | 365 days | Daily snapshots (first run of UTC day) |
 
 ### Cron Schedule
@@ -145,6 +149,7 @@ Score = `min(100, sum of active signal points)`.
 **Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Missing optional tables during the bootstrap grace window are tagged `bootstrapAllowed=true` and do not force degraded status.
 
 **Data flow:**
+
 1. Read stablecoins cache, derive peg rates
 2. Read `dex_liquidity`, `dex_prices`, `dex_liquidity_history`
 3. Read `blacklist_events` counts (24h + 7d)
@@ -196,17 +201,17 @@ Untracked `stablecoin` IDs return `404` (`Stablecoin not tracked`).
 
 Validates DEWS against historical depeg events. Reports TP rate and lead time.
 
-**Headers:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` (required)
+**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 ---
 
 ## Frontend Integration
 
-| Component | File | Location |
-|-----------|------|----------|
-| `DEWSBadge` | `src/components/dews-badge.tsx` | Table rows (hidden when CALM) |
-| `DEWSDetail` | `src/components/dews-detail.tsx` | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
-| `DEWSSummary` | `src/components/dews-summary.tsx` | Homepage widget / depeg-page hero radar; title-level contextual methodology hint |
+| Component     | File                              | Location                                                                              |
+| ------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
+| `DEWSBadge`   | `src/components/dews-badge.tsx`   | Table rows (hidden when CALM)                                                         |
+| `DEWSDetail`  | `src/components/dews-detail.tsx`  | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
+| `DEWSSummary` | `src/components/dews-summary.tsx` | Homepage widget / depeg-page hero radar; title-level contextual methodology hint      |
 
 **Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/use-stress-signals.ts`
 
@@ -218,15 +223,15 @@ Validates DEWS against historical depeg events. Reports TP rate and lead time.
 
 The radar is center-is-danger: higher threat bands occupy inner rings, CALM coins form an ambient starfield at the periphery.
 
-| Zone | Radius range | Description |
-|------|-------------|-------------|
-| Center label | r 0–38 | `SCANNING` status label + total monitored count |
-| DANGER | r 45–90 | Innermost elevated ring |
-| WARNING | r 95–140 | |
-| ALERT | r 143–175 | |
-| WATCH | r 178–208 | Outermost elevated ring |
-| CALM starfield | r 212–238 | Non-interactive ambient dots (r=2 core + r=5 bloom, theme-aware opacity tokens) |
-| Outer boundary | r 240 | Radar edge |
+| Zone           | Radius range | Description                                                                     |
+| -------------- | ------------ | ------------------------------------------------------------------------------- |
+| Center label   | r 0–38       | `SCANNING` status label + total monitored count                                 |
+| DANGER         | r 45–90      | Innermost elevated ring                                                         |
+| WARNING        | r 95–140     |                                                                                 |
+| ALERT          | r 143–175    |                                                                                 |
+| WATCH          | r 178–208    | Outermost elevated ring                                                         |
+| CALM starfield | r 212–238    | Non-interactive ambient dots (r=2 core + r=5 bloom, theme-aware opacity tokens) |
+| Outer boundary | r 240        | Radar edge                                                                      |
 
 Dashed ring boundaries are drawn at each zone's inner edge (r=45, 95, 143, 178) using the zone's threat color, plus a faint gray ring at r=212 delimiting the calm zone. Ring/spoke/calm-dot visibility is theme-aware via the DEWS radar tokens listed above. CALM dots are scattered deterministically using `deterministicRadiusOffset(id, 26)` from `src/lib/dews-radar-utils.ts`. The legend renders severity-order bands with live counts: `Danger (n)`, `Warning (n)`, `Alert (n)`, `Watch (n)`, `Calm (n)`. The `Calm` legend marker uses the same faint bloom+core star-dot treatment as the calm outer starfield.
 

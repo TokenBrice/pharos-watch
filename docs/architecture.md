@@ -116,6 +116,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── methodology-sections.tsx # Long-form methodology section bodies extracted from page.tsx
 │   │   ├── changelog-page-utils.ts # Shared metadata + entry mapping helpers for methodology changelog routes
 │   │   ├── changelog-route-factory.tsx # Config-driven wrapper factory for methodology changelog routes
+│   │   ├── pricing-pipeline-changelog/page.tsx # Pricing pipeline methodology changelog
 │   │   ├── scoring-changelog/page.tsx  # Safety Score methodology changelog
 │   │   ├── depeg-changelog/page.tsx    # Depeg/DEWS methodology changelog
 │   │   ├── liquidity-score-changelog/page.tsx # Liquidity score changelog

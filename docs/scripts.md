@@ -21,8 +21,8 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/update-critical-coverage-baseline.mjs` | Refresh `.ci/critical-coverage-baseline.json` from current report                                                                     | `coverage/lcov.info`                                                                                                                                                                                                                                                                                       | Updates baseline coverage ratchet file                                                                  |
 | `scripts/fetch-logos.ts`                        | Refresh logo map from DefiLlama + CoinGecko                                                                                           | Public APIs                                                                                                                                                                                                                                                                                                | Writes `data/logos.json`                                                                                |
 | `scripts/backfill-gold-depegs.sh`               | Batch-run depeg backfill for gold coins                                                                                               | `WORKER_URL`, `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`                                                                                                                                                                                                                                   | Calls `/api/backfill-depegs?stablecoin=...` per gold coin                                               |
-| `scripts/register-telegram-webhook.sh`          | One-time Telegram webhook registration                                                                                                | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`                                                                                                                                                                                                                                                            | Calls Telegram `setWebhook` for `https://api.pharos.watch/api/telegram-webhook?secret=...`              |
-| `scripts/screenshot-og.mjs`                     | Capture OG images for public pages                                                                                                    | Playwright + live `pharos.watch`                                                                                                                                                                                                                                                                           | Writes `public/og-*.png`                                                                                |
+| `scripts/register-telegram-webhook.sh`          | One-time Telegram webhook registration                                                                                                | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, optional `WEBHOOK_BASE_URL`                                                                                                                                                                                                                              | Calls Telegram `setWebhook` for `${WEBHOOK_BASE_URL:-https://api.pharos.watch}/api/telegram-webhook?secret=...` |
+| `scripts/screenshot-og.mjs`                     | Capture OG images for public pages                                                                                                    | System Playwright install (`/usr/lib/node_modules/playwright/index.mjs`) + live `pharos.watch`                                                                                                                                                                                                           | Writes `public/og-*.png`                                                                                |
 
 ## CI-Critical Scripts
 
@@ -52,9 +52,15 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/pull-re
 - Designed to run locally (CoinGecko blocks Worker-origin access patterns).
 - Pulls DefiLlama stablecoin list, maps `gecko_id` to internal IDs, then fetches CoinGecko market data in batches.
 
+### `register-telegram-webhook.sh`
+
+- Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET`.
+- Supports `WEBHOOK_BASE_URL` override; defaults to `https://api.pharos.watch`.
+- Calls Telegram `setWebhook` for `${WEBHOOK_BASE_URL}/api/telegram-webhook?secret=...`.
+
 ### `screenshot-og.mjs`
 
-- Uses Playwright directly.
+- Imports Playwright from `/usr/lib/node_modules/playwright/index.mjs`, so it assumes a system-installed package at that path.
 - Captures fixed 1200×630 screenshots for selected routes and writes them into `public/`.
 
 ### `smoke-ui.mjs`

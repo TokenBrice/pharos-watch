@@ -42,17 +42,22 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 
 ## Public Route Coverage
 
-Some public routes are documented by feature docs rather than dedicated route-contract files. Use this map when you know the route first and need the authoritative doc quickly.
+Some public routes are documented by feature docs or the architecture doc rather than dedicated route-contract files. Use this map when you know the route first and need the authoritative doc quickly.
 
 | Route | Primary doc(s) |
 |-------|-----------------|
 | `/blacklist/` | [blacklist-tracker.md](./blacklist-tracker.md) |
+| `/compare/[slug]/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
 | `/depeg/` | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md) |
 | `/digest/` | [digest-pipeline.md](./digest-pipeline.md) |
+| `/digest/[date]/` | [digest-pipeline.md](./digest-pipeline.md) |
 | `/flows/` | [mint-burn-flows.md](./mint-burn-flows.md) |
 | `/liquidity/` | [dex-liquidity.md](./dex-liquidity.md) |
 | `/safety-scores/` | [report-cards.md](./report-cards.md) |
 | `/stability-index/` | [stability-index.md](./stability-index.md) |
+| `/stablecoins/[peg]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
+| `/stablecoins/backing/[backing]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
+| `/stablecoins/governance/[governance]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/telegram/` | [telegram-alerts.md](./telegram-alerts.md) |
 | `/yield/` | [yield-intelligence.md](./yield-intelligence.md) |
 

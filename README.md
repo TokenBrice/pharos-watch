@@ -106,7 +106,7 @@ src/                              Frontend (Next.js static export)
 │   ├── page.tsx                  Homepage: stats, charts, filters, peg tracker, table
 │   ├── blacklist/                Freeze & blacklist event tracker
 │   ├── cemetery/                 Dead stablecoin graveyard
-│   ├── compare/                  Side-by-side stablecoin comparison
+│   ├── compare/                  Side-by-side comparison tool + static comparison landing pages
 │   ├── coverage/                 Per-coin feature coverage matrix
 │   ├── depeg/                    Live peg monitoring + event feed
 │   ├── dependency-map/           Collateral dependency graph visualization
@@ -233,8 +233,9 @@ For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-
 2. **Worker deploy:** `npm ci` → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler deploy` → `cd worker && npx --no-install wrangler triggers deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`)
 4. **Pages deploy:** `npm ci` → `npm run sync:digests` → `NEXT_PUBLIC_API_BASE=$API_BASE_URL npm run build` → `npm run seo:check` → `npx --no-install wrangler pages deploy out` (with retry in CI)
-5. **Post-deploy UI smoke:** `npm run test:smoke-ui` against `SMOKE_UI_URL` (or `https://pharos.watch` fallback)
-6. **Private ops smoke:** `npm run test:smoke-ops` against `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` using Cloudflare Access service-token headers
+5. **Post-deploy smoke jobs:** after `deploy-pages`, CI runs these in parallel:
+   - `npm run test:smoke-ui` against `SMOKE_UI_URL` (or `https://pharos.watch` fallback)
+   - `npm run test:smoke-ops` against `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` using Cloudflare Access service-token headers
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 Required GitHub variable: `API_BASE_URL`
@@ -243,7 +244,11 @@ Optional GitHub variable: `SMOKE_UI_URL` (for non-default frontend smoke target)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`
 Required ops smoke secrets: `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`, `GITHUB_REPO_NODE_ID`, `GITHUB_DISCUSSION_CATEGORY_ID`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`, `GITHUB_REPO_NODE_ID`, `GITHUB_DISCUSSION_CATEGORY_ID`
+
+Worker vars (see `.env.example` for the current surface): `CORS_ORIGIN`, `SELF_URL`, `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_UI_AUD`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`
+
+Pages Functions secrets for the same-origin ops admin proxy: `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`
 
 Optional mint/burn freshness env overrides (secret or plain env): `MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`, `MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`
 
