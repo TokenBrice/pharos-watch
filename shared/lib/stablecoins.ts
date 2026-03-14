@@ -219,6 +219,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "berachain", address: "0x549943e04f40284185054145c6e4e9568c1d3241", decimals: 6 },
       { chain: "katana", address: "0x203a662b0bd271a6ed5a60edfbd04bfce608fd36", decimals: 6 },
     ],
+    liveReservesConfig: {
+      adapter: "circle-transparency",
+      version: 1,
+      semantics: "attestation-mix",
+      breakerScope: "circle-usdc-reserves",
+      display: { url: "https://www.circle.com/transparency", label: "Circle Transparency" },
+      inputs: { primary: { kind: "http-html", url: "https://www.circle.com/transparency" } },
+      params: { coinType: "usdc" },
+    },
     reserves: [
       { name: "U.S. Treasuries", pct: 75, risk: "very-low" },
       { name: "Overnight Repos", pct: 18, risk: "very-low" },
@@ -1057,6 +1066,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "stellar", address: "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2", decimals: 7 },
       { chain: "solana", address: "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr", decimals: 6 },
     ],
+    liveReservesConfig: {
+      adapter: "circle-transparency",
+      version: 1,
+      semantics: "attestation-mix",
+      breakerScope: "circle-eurc-reserves",
+      display: { url: "https://www.circle.com/transparency", label: "Circle Transparency" },
+      inputs: { primary: { kind: "http-html", url: "https://www.circle.com/transparency" } },
+      params: { coinType: "eurc" },
+    },
     reserves: [
       // Source: Circle transparency page Feb 23, 2026. Confidence: High
       { name: "Deposits at Systemically Important Institutions (EUR)", pct: 99, risk: "very-low" },
