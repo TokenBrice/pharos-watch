@@ -21,13 +21,12 @@ type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
 
 function resolveSourceStatus(
   sourceKey: string,
-  priceSource: string | undefined,
+  agreeSources: string[],
   consensusSources: string[],
   isProtocolRedeem: boolean,
 ): SourceStatus {
   if (isProtocolRedeem) return "not-applicable";
-  const winners = (priceSource ?? "").split("+").map((s) => s.trim().toLowerCase());
-  if (winners.includes(sourceKey)) return "used";
+  if (agreeSources.includes(sourceKey)) return "used";
   if (consensusSources.includes(sourceKey)) return "available";
   return "no-data";
 }
@@ -68,12 +67,14 @@ function formatTimeAgo(updatedAtSec: number | null | undefined): string {
 interface PriceTransparencyCardProps {
   coinData: StablecoinData;
   consensusSources: string[];
+  agreeSources: string[];
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
 }
 
 export function PriceTransparencyCard({
   coinData,
   consensusSources,
+  agreeSources,
   dexPriceCheck,
 }: PriceTransparencyCardProps) {
   if (coinData.price == null) return null;
@@ -154,7 +155,7 @@ export function PriceTransparencyCard({
               {KNOWN_SOURCES.map(({ key, label }) => {
                 const status = resolveSourceStatus(
                   key,
-                  coinData.priceSource,
+                  agreeSources,
                   effectiveConsensusSources,
                   isProtocolRedeem,
                 );
