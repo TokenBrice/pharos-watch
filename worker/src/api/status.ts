@@ -27,7 +27,10 @@ import {
   getTelegramBotStats,
 } from "./status-derived-data";
 import { emptyDataQuality, getDataQuality } from "./status-data-quality";
-import { computeReserveCompositionOverview } from "../lib/live-reserves-store";
+import { computeReserveCompositionOverview, loadFreshLiveReserveMap } from "../lib/live-reserves-store";
+import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
+import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
   CronInFlight,
   CronRun,
@@ -36,6 +39,8 @@ import type {
   LiquidityHealth,
   MintBurnReconciliationSummary,
   PriceSourceHealth,
+  ReserveDriftEntry,
+  ClassificationWarning,
   StatusCause,
   StatusResponse,
 } from "@shared/types";
@@ -810,6 +815,49 @@ export const handleStatus = withErrorHandler(
         console.warn("[status] Mint/burn reconciliation query failed:", err);
       }
 
+      // Reserve drift (threshold: 5 points — lower than the 15pt console.warn threshold)
+      let reserveDrift: ReserveDriftEntry[] | undefined;
+      try {
+        const liveReserveMap = await loadFreshLiveReserveMap(db, now);
+        const driftEntries: ReserveDriftEntry[] = [];
+        for (const [coinId, liveSlices] of liveReserveMap) {
+          const meta = TRACKED_STABLECOINS.find((c) => c.id === coinId);
+          if (!meta?.reserves?.length) continue;
+          const liveScore = computeCollateralQualityFromReserves(liveSlices);
+          const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
+          const delta = Math.abs(liveScore - curatedScore);
+          if (delta > 5) {
+            driftEntries.push({ coinId, liveCollateralScore: liveScore, curatedCollateralScore: curatedScore, delta });
+          }
+        }
+        driftEntries.sort((a, b) => b.delta - a.delta);
+        if (driftEntries.length > 0) reserveDrift = driftEntries;
+      } catch (err) {
+        console.warn("[status] Reserve drift computation failed:", err);
+      }
+
+      // Classification warnings
+      let classificationWarnings: ClassificationWarning[] | undefined;
+      try {
+        const threshold = 0.50;
+        const warnings: ClassificationWarning[] = [];
+        const defiCoins = TRACKED_STABLECOINS.filter((c) => c.flags.governance === "decentralized");
+        for (const coin of defiCoins) {
+          const fraction = computeCentralizedCustodyFraction(coin.id, TRACKED_STABLECOINS);
+          if (fraction > threshold) {
+            warnings.push({
+              coinId: coin.id,
+              governance: coin.flags.governance,
+              centralizedCustodyPct: Math.round(fraction * 100),
+              threshold: threshold * 100,
+            });
+          }
+        }
+        if (warnings.length > 0) classificationWarnings = warnings;
+      } catch (err) {
+        console.warn("[status] Classification warnings computation failed:", err);
+      }
+
       const body: StatusResponse = {
         timestamp: now,
         dbHealthy: raw.dbHealthy,
@@ -839,6 +887,8 @@ export const handleStatus = withErrorHandler(
         priceSourceHealth,
         discoveryCandidates,
         mintBurnReconciliation,
+        reserveDrift,
+        classificationWarnings,
       };
 
       return jsonResponse(body, { "Cache-Control": "no-store" });

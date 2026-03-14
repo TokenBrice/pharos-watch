@@ -272,6 +272,20 @@ export interface MintBurnReconciliationSummary {
   rows: MintBurnReconciliationRow[];
 }
 
+export interface ReserveDriftEntry {
+  coinId: string;
+  liveCollateralScore: number;
+  curatedCollateralScore: number;
+  delta: number;
+}
+
+export interface ClassificationWarning {
+  coinId: string;
+  governance: string;
+  centralizedCustodyPct: number;
+  threshold: number;
+}
+
 export interface StatusResponse {
   timestamp: number;
   dbHealthy: boolean;
@@ -315,6 +329,8 @@ export interface StatusResponse {
     lastSuccessAt: number | null;
     oldestFreshAgeSec: number | null;
   };
+  reserveDrift?: ReserveDriftEntry[];
+  classificationWarnings?: ClassificationWarning[];
 }
 
 export interface StatusHistoryResponse {
