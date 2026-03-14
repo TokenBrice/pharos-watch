@@ -63,6 +63,7 @@ function makeCard(
       governanceQuality: "single-entity",
       dependencies: [],
       navToken: false,
+      collateralFromLive: false,
     },
     isDefunct,
   };

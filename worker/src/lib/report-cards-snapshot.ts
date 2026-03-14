@@ -175,6 +175,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
         governanceQuality: "single-entity" as GovernanceQuality,
         dependencies: [],
         navToken: false,
+        collateralFromLive: false,
       },
       isDefunct: true,
     };
@@ -259,6 +260,7 @@ function computeCard(
     governanceQuality: resolveGovernanceQuality(meta.flags.governance as GovernanceType, meta),
     dependencies: deriveDependencies(meta),
     navToken,
+    collateralFromLive: false,
   };
 
   return {
