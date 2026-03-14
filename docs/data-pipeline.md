@@ -64,6 +64,9 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 
 Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (defillama/coingecko-fallback).
 
+#### Consensus source provenance
+After N-source consensus, each asset receives a `consensusSources: string[]` field listing all source names that returned a valid price for that coin during the sync cycle. For enrichment-pass fallbacks, this is a single-element array. Protocol-redeem overrides replace it with `["protocol-redeem"]`.
+
 ### Provider-Specific Normalization
 
 Primary pricing also includes a few source-specific normalization rules that are easy to miss when reading the high-level algorithm:

@@ -68,11 +68,12 @@ The builder returns one of four states:
 6. `NoticesAndSummarySection`
 7. `McapChart`
 8. `KeyInfoCard`
-9. `YieldDetailSection`
-10. `FlowsSection`
-11. `DexLiquidityCard`
-12. `DepegHistory` (suppressed for NAV tokens)
-13. `FeedbackModal`
+9. `PriceTransparencyCard`
+10. `YieldDetailSection`
+11. `FlowsSection`
+12. `DexLiquidityCard`
+13. `DepegHistory` (suppressed for NAV tokens)
+14. `FeedbackModal`
 
 The server shell then appends `ExploreNextSection` after the client-rendered analytics stack.
 
@@ -81,6 +82,14 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 - `FlowsSection` stays in the rail only when the coin currently appears in the aggregate flows payload, or while that payload is still loading.
 - `DepegHistory` is omitted for NAV tokens.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata.
+- `PriceTransparencyCard` is hidden when `coinData.price == null`.
+
+### Price Transparency Card
+- **Component:** `PriceTransparencyCard` (`src/components/stablecoin-detail/price-transparency-card.tsx`)
+- **Data:** `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from stablecoins API; `consensusSources` and `dexPriceCheck` from peg-summary API
+- **Scrollspy ID:** `price-transparency` (label: "Price Sources")
+- **Hidden when:** `coinData.price == null`
+- Shows current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists.
 
 ---
 
@@ -141,6 +150,7 @@ That shared retry is used by the page-level error surfaces.
 | `CoinNotices` | Coin-specific warnings/info blocks from metadata |
 | `McapChart` | Historical supply / market-cap chart |
 | `KeyInfoCard` | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction |
+| `PriceTransparencyCard` | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists |
 | `YieldDetailSection` | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help |
 | `FlowsSection` | Per-coin mint/burn summary plus event history embed, with contextual Pressure Shift help on the summary card |
 | `DexLiquidityCard` | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links |
@@ -166,6 +176,7 @@ Composite-score surfaces on the detail page now share a lightweight explainabili
 | `src/components/stablecoin-detail/hero-card.tsx` | Detail hero surface |
 | `src/components/stablecoin-detail/notices-and-summary-section.tsx` | Overview + notices wrapper |
 | `src/components/stablecoin-detail/overview-section.tsx` | Summary, reserves, redemption backstop |
+| `src/components/stablecoin-detail/price-transparency-card.tsx` | Price source transparency and confidence card |
 | `src/components/stablecoin-detail/flows-section.tsx` | Detail flow section |
 | `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Redemption route card |
 | `src/components/stablecoin-detail/safety-score-history-section.tsx` | Grade timeline section |

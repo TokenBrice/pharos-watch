@@ -139,6 +139,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `circulatingPrevMonth` | `Record<string, number>`           | Supply ~30 days ago                                                                                                                        |
 | `chainCirculating`     | `Record<string, ChainCirculating>` | Per-chain breakdown                                                                                                                        |
 | `chains`               | `string[]`                         | List of chain names where the token is deployed                                                                                            |
+| `consensusSources`     | `string[]`                         | Source names that returned a valid price for this coin. Defaults to `[]` when absent.                                                      |
 
 **`ChainCirculating`**
 
@@ -489,6 +490,7 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `trackingSpanDays`    | `number`                | Days of history used for score computation                                                                                                    |
 | `methodologyVersion`  | `string`                | Methodology version attributed to this coin snapshot                                                                                          |
 | `dexPriceCheck`       | `DexPriceCheck \| null` | Optional cross-validation against DEX price (shown when coin supply ≥ $1M, DEX data is ≤ 60 minutes old, and aggregate source TVL is ≥ $250K) |
+| `consensusSources`    | `string[]`              | Source names that returned a valid price for this coin. Defaults to `[]` when absent.                                                         |
 
 **`DexPriceCheck`**
 
