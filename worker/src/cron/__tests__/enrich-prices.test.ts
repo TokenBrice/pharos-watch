@@ -679,4 +679,94 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.cgOnly).toBe(1);
     expect(stats.singleSource).toBe(2);
   });
+
+  it("uses Pyth as a single source when Hermes returns an unprefixed feed id", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coins.llama.fi")) {
+        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("hermes.pyth.network")) {
+        return new Response(JSON.stringify({
+          parsed: [
+            {
+              id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+              price: { price: "100010000", expo: -8, conf: "5000", publish_time: 1710000000 },
+            },
+          ],
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const db = makeTestDb();
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
+
+    expect(results.size).toBe(1);
+    const result = results.get("usdt-tether")!;
+    expect(result.source).toBe("pyth");
+    expect(result.confidence).toBe("single-source");
+    expect(result.price).toBeCloseTo(1.0001, 4);
+    expect(stats.singleSource).toBe(1);
+  });
+
+  it("uses exact-case RedStone symbols and recovers batch-dropped results with solo retry", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe", geckoId: "ethena-usde", pegType: "peggedUSD", circulating: {} },
+      { id: "fxusd-f-x-protocol", name: "fxUSD", symbol: "fxUSD", geckoId: "fxusd", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coins.llama.fi")) {
+        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("hermes.pyth.network")) {
+        return new Response(JSON.stringify({ parsed: [] }), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("api.redstone.finance")) {
+        if (url.includes("symbols=USDe%2CfxUSD")) {
+          return new Response(JSON.stringify({
+            USDe: {
+              value: 1.0003,
+              source: { curve: 1.0003 },
+              timestamp: 1710000000000,
+            },
+          }), { status: 200 });
+        }
+        if (url.includes("symbols=fxUSD")) {
+          return new Response(JSON.stringify({
+            fxUSD: {
+              value: 0.9997,
+              source: { curve: 0.9997 },
+              timestamp: 1710000000000,
+            },
+          }), { status: 200 });
+        }
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const db = makeTestDb();
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("symbols=USDe%2CfxUSD"),
+      expect.any(Object),
+    );
+    expect(results.get("usde-ethena")?.source).toBe("redstone");
+    expect(results.get("usde-ethena")?.confidence).toBe("single-source");
+    expect(results.get("fxusd-f-x-protocol")?.source).toBe("redstone");
+    expect(results.get("fxusd-f-x-protocol")?.price).toBeCloseTo(0.9997, 4);
+    expect(stats.singleSource).toBe(2);
+  });
 });

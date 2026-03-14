@@ -2,6 +2,10 @@ import { z } from "zod";
 
 const HERMES_BASE = "https://hermes.pyth.network";
 
+function normalizeFeedId(feedId: string): string {
+  return feedId.toLowerCase().replace(/^0x/, "");
+}
+
 export interface PythPriceResult {
   price: number;
   confidence: number;       // raw confidence in USD
@@ -38,7 +42,7 @@ export async function fetchPythPrices(
   // Reverse map: feedId → stablecoinId
   const reverseMap = new Map<string, string>();
   for (const [coinId, feedId] of feedIds) {
-    reverseMap.set(feedId.toLowerCase(), coinId);
+    reverseMap.set(normalizeFeedId(feedId), coinId);
   }
 
   try {
@@ -55,7 +59,7 @@ export async function fetchPythPrices(
     const data = PythPriceFeedSchema.parse(await res.json());
 
     for (const feed of data.parsed) {
-      const coinId = reverseMap.get(feed.id.toLowerCase());
+      const coinId = reverseMap.get(normalizeFeedId(feed.id));
       if (!coinId) continue;
 
       const rawPrice = BigInt(feed.price.price);
@@ -76,6 +80,10 @@ export async function fetchPythPrices(
         confidenceBps,
         publishTime: feed.price.publish_time,
       });
+    }
+
+    if (feedIds.size > 0 && results.size === 0) {
+      console.warn(`[pyth] Requested ${feedIds.size} feeds but Hermes returned 0 usable results`);
     }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));

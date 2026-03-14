@@ -16,7 +16,7 @@ import {
 } from "../lib/price-validation";
 import { fetchPythPrices } from "../lib/pyth";
 import { fetchBinancePrices, fetchCoinbasePrices } from "../lib/cex-tickers";
-import { fetchRedstonePrices } from "../lib/redstone";
+import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../lib/redstone";
 import { loadDexPriceRows, isTrustedDexPriceRow } from "../lib/depeg-helpers";
 import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
@@ -184,8 +184,11 @@ export async function fetchPrimaryPrices(
   const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number }>();
   const curvePrices = new Map<string, number>();
 
-  // Symbols for Coinbase/RedStone sequential fetch
+  // Coinbase uses uppercased product symbols. RedStone is exact-case and only
+  // queried for the known-supported tracked subset to keep request volume bounded.
   const coinbaseSymbols = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
+  const redstoneSymbolSet = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
+  const redstoneSymbols = [...new Set(candidates.map((a) => a.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)))];
 
   const fetches: Promise<void>[] = [];
 
@@ -268,7 +271,7 @@ export async function fetchPrimaryPrices(
           for (const [coinId, result] of results) {
             pythPrices.set(coinId, { price: result.price, confidenceBps: result.confidenceBps });
           }
-          await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, true);
+          await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, results.size > 0);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[primary-prices] Pyth Hermes API failed:", err);
@@ -310,11 +313,11 @@ export async function fetchPrimaryPrices(
     );
   }
 
-  if (redstoneAllowed) {
+  if (redstoneAllowed && redstoneSymbols.length > 0) {
     fetches.push(
       (async () => {
         try {
-          const prices = await fetchRedstonePrices(coinbaseSymbols, signal);
+          const prices = await fetchRedstonePrices(redstoneSymbols, signal);
           for (const [symbol, result] of prices) {
             redstonePrices.set(symbol, {
               price: result.price,
@@ -322,7 +325,7 @@ export async function fetchPrimaryPrices(
               venueAgreementPct: result.venueAgreementPct,
             });
           }
-          await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, true);
+          await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, prices.size > 0);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[primary-prices] RedStone API failed:", err);
@@ -372,7 +375,7 @@ export async function fetchPrimaryPrices(
     if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2 });
     const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
     if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2 });
-    const redstoneResult = redstonePrices.get(asset.symbol.toUpperCase());
+    const redstoneResult = redstonePrices.get(asset.symbol);
     if (redstoneResult != null) {
       sources.push({
         source: "redstone",

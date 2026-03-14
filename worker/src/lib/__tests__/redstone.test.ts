@@ -1,20 +1,20 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchRedstonePrices } from "../redstone";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../redstone";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("fetchRedstonePrices", () => {
-  it("returns price and venue breakdown", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        USDT: [{
+  it("returns price and venue breakdown from the live object-per-symbol payload shape", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        USDT: {
           value: 0.9998,
           source: { binance: 0.9999, coinbase: 0.9997, curve: 0.9998 },
           timestamp: 1710000000000,
-        }],
-      }),
-    }));
+        },
+      }), { status: 200 }),
+    ));
+
     const results = await fetchRedstonePrices(["USDT"]);
     expect(results.size).toBe(1);
     const r = results.get("USDT")!;
@@ -24,22 +24,83 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("computes venue agreement percentage correctly", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        USDT: [{
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        USDT: {
           value: 0.97,
           source: {
             binance: 0.97, coinbase: 0.97, kraken: 0.97,
             curve: 1.00, uniswap: 1.00,
           },
           timestamp: Date.now(),
-        }],
-      }),
-    }));
+        },
+      }), { status: 200 }),
+    ));
+
     const results = await fetchRedstonePrices(["USDT"]);
     const r = results.get("USDT")!;
-    // 3 out of 5 venues show depeg → 60% venue agreement
     expect(r.venueAgreementPct).toBeCloseTo(60, 0);
+  });
+
+  it("preserves exact-case symbols for mixed-case assets", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        USDe: {
+          value: 1.0002,
+          source: { curve: 1.0001 },
+          timestamp: 1710000000000,
+        },
+        crvUSD: {
+          value: 0.9996,
+          source: { curve: 0.9996 },
+          timestamp: 1710000000000,
+        },
+      }), { status: 200 }),
+    ));
+
+    const results = await fetchRedstonePrices(["USDe", "crvUSD"]);
+    expect(results.get("USDe")?.price).toBeCloseTo(1.0002, 4);
+    expect(results.get("crvUSD")?.price).toBeCloseTo(0.9996, 4);
+  });
+
+  it("retries missing batch symbols individually", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        USDT: {
+          value: 1.0,
+          source: { kraken: 1.0 },
+          timestamp: 1710000000000,
+        },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        TUSD: {
+          value: 0.9993,
+          source: { coingecko: 0.9993 },
+          timestamp: 1710000000000,
+        },
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const results = await fetchRedstonePrices(["USDT", "TUSD"]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(results.get("USDT")?.price).toBe(1);
+    expect(results.get("TUSD")?.price).toBeCloseTo(0.9993, 4);
+  });
+
+  it("filters out symbols that are outside the tracked RedStone allowlist", async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({}), { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const results = await fetchRedstonePrices(["NOTREAL", REDSTONE_TRACKED_SYMBOL_ALLOWLIST[0]]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("NOTREAL"),
+      expect.any(Object),
+    );
+    expect(results.size).toBe(0);
   });
 });
