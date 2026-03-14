@@ -136,4 +136,10 @@ export const CIRCUIT_SOURCE = {
   ALCHEMY: "alchemy",
   TWITTER_API: "twitter-api",
   TELEGRAM_API: "telegram-api",
+  PYTH_PRICES: "pyth-prices",
+  BINANCE_PRICES: "binance-prices",
+  COINBASE_PRICES: "coinbase-prices",
+  REDSTONE_PRICES: "redstone-prices",
+  CURVE_ONCHAIN: "curve-onchain",
+  FX_REALTIME: "fx-realtime",
 } as const;
