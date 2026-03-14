@@ -1,7 +1,6 @@
 import {
   Activity,
   ArrowUpDown,
-  BadgeCheck,
   Droplets,
   Landmark,
   Network,
@@ -16,8 +15,7 @@ export type CoverageFilterKey =
   | "live-reserves"
   | "yield"
   | "flows"
-  | "blacklist"
-  | "bluechip";
+  | "blacklist";
 
 export type CoverageSortKey = "market-cap" | "name" | "most-covered";
 
@@ -29,7 +27,6 @@ export const FEATURE_ICON: Record<CoverageFeatureKey, typeof Activity> = {
   yield: TrendingUp,
   flows: ArrowUpDown,
   blacklist: ShieldBan,
-  bluechip: BadgeCheck,
   dependency: Network,
 };
 
@@ -108,15 +105,6 @@ export const FEATURE_ACCENT_CLASSES: Record<
     tile: "border-orange-500/18 bg-orange-500/6",
     title: "text-orange-800 dark:text-orange-100",
   },
-  bluechip: {
-    rail: "before:bg-violet-400/75",
-    ring: "border-violet-500/28 bg-violet-500/10",
-    icon: "text-violet-700 dark:text-violet-300",
-    countBar: "bg-violet-400/85",
-    chip: "border-violet-500/24 bg-violet-500/10 text-violet-800 dark:text-violet-200",
-    tile: "border-violet-500/18 bg-violet-500/6",
-    title: "text-violet-800 dark:text-violet-100",
-  },
   dependency: {
     rail: "before:bg-frost-blue/75",
     ring: "border-frost-blue/28 bg-frost-blue/10",
@@ -137,7 +125,6 @@ export const FILTER_OPTIONS: ReadonlyArray<{
   { key: "yield", label: "Yield" },
   { key: "flows", label: "Flows" },
   { key: "blacklist", label: "Blacklist" },
-  { key: "bluechip", label: "Bluechip" },
 ] as const;
 
 export const MOBILE_PREVIEW_FEATURES: readonly CoverageFeatureKey[] = [

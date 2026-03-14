@@ -5,7 +5,6 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
 import {
-  useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
   useReportCards,
@@ -25,7 +24,6 @@ export function useCoverageMatrixModel() {
   const dexQuery = useDexLiquidity();
   const yieldQuery = useYieldRankings();
   const flowQuery = useMintBurnFlows();
-  const bluechipQuery = useBluechipRatings();
   const reportCardsQuery = useReportCards();
 
   const rows = useMemo(() => {
@@ -75,7 +73,6 @@ export function useCoverageMatrixModel() {
         dexCoverageClass: dexQuery.data?.[coin.id]?.coverageClass ?? null,
         hasYieldCoverage: yieldIds.has(coin.id),
         flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
-        bluechipGrade: bluechipQuery.data?.[coin.id]?.grade ?? null,
         hasDependencyCoverage: dependencyIds.has(coin.id),
       });
     });
@@ -86,7 +83,6 @@ export function useCoverageMatrixModel() {
     flowQuery.data,
     reportCardsQuery.data,
     dexQuery.data,
-    bluechipQuery.data,
   ]);
 
   const totalMcapUsd = useMemo(
@@ -205,12 +201,6 @@ export function useCoverageMatrixModel() {
         dataUpdatedAt: reportCardsQuery.dataUpdatedAt,
         error: reportCardsQuery.error,
         hasData: !!reportCardsQuery.data?.cards?.length,
-      },
-      {
-        preset: "bluechip" as const,
-        dataUpdatedAt: bluechipQuery.dataUpdatedAt,
-        error: bluechipQuery.error,
-        hasData: bluechipQuery.data != null,
       },
     ],
   };

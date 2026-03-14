@@ -251,7 +251,6 @@ function CoverageFeatureSnapshotRow({
   const Icon = FEATURE_ICON[summary.feature.key];
   const accent = FEATURE_ACCENT_CLASSES[summary.feature.key];
   const breakdownItems = summary.breakdown.split("·").map((item) => item.trim());
-  const showCountMetric = summary.feature.key !== "bluechip";
 
   return (
     <li
@@ -282,26 +281,24 @@ function CoverageFeatureSnapshotRow({
         </p>
       </div>
 
-      <div className={cn("grid gap-3", showCountMetric ? "sm:grid-cols-2" : "sm:grid-cols-1")}>
-        {showCountMetric ? (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between gap-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              <span>{summary.countLabel}</span>
-              <span className="font-mono text-base font-semibold tracking-tight text-foreground">
-                {summary.availableCount}/{totalRows}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-muted/80">
-              <div
-                className={cn("h-full rounded-full", accent.countBar)}
-                style={{ width: `${Math.max(summary.coveragePct, 4)}%` }}
-              />
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {summary.coverageLabel}
-            </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            <span>{summary.countLabel}</span>
+            <span className="font-mono text-base font-semibold tracking-tight text-foreground">
+              {summary.availableCount}/{totalRows}
+            </span>
           </div>
-        ) : null}
+          <div className="h-2 rounded-full bg-muted/80">
+            <div
+              className={cn("h-full rounded-full", accent.countBar)}
+              style={{ width: `${Math.max(summary.coveragePct, 4)}%` }}
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {summary.coverageLabel}
+          </div>
+        </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
@@ -383,8 +380,6 @@ function matchesFilter(row: CoverageRow, filter: CoverageFilterKey): boolean {
       return row.statuses.flows.available;
     case "blacklist":
       return row.statuses.blacklist.available;
-    case "bluechip":
-      return row.statuses.bluechip.available;
     default:
       return true;
   }

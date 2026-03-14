@@ -5,7 +5,6 @@ import {
 } from "@shared/lib/classification";
 import { getReserves } from "@shared/lib/reserve-templates";
 import type {
-  BluechipGrade,
   LiquidityCoverageClass,
   MintBurnCoverageStatus,
   StablecoinMeta,
@@ -20,7 +19,6 @@ export type CoverageFeatureKey =
   | "yield"
   | "flows"
   | "blacklist"
-  | "bluechip"
   | "dependency";
 
 export type CoverageTone =
@@ -92,7 +90,6 @@ interface BuildCoverageRowInput {
   dexCoverageClass: LiquidityCoverageClass | null | undefined;
   hasYieldCoverage: boolean;
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined;
-  bluechipGrade: BluechipGrade | null | undefined;
   hasDependencyCoverage: boolean;
 }
 
@@ -151,14 +148,6 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Blacklist",
     description: "Freeze / blacklist event tracking for issuers with supported event coverage.",
     href: "/blacklist/",
-  },
-  {
-    key: "bluechip",
-    label: "Bluechip",
-    shortLabel: "Bluechip",
-    description: "External Bluechip rating coverage where Bluechip publishes a grade.",
-    href: "https://bluechip.org/en/coins",
-    external: true,
   },
   {
     key: "dependency",
@@ -493,31 +482,6 @@ export function resolveBlacklistCoverage(
   );
 }
 
-export function resolveBluechipCoverage(
-  bluechipGrade: BluechipGrade | null | undefined,
-): CoverageStatus {
-  if (bluechipGrade) {
-    return createStatus(
-      bluechipGrade,
-      bluechipGrade,
-      "sky",
-      true,
-      1,
-      "Bluechip publishes an external safety rating for this asset.",
-    );
-  }
-
-  return createStatus(
-    "none",
-    "—",
-    "slate",
-    false,
-    0,
-    "No Bluechip rating is currently available for this asset.",
-    "Not rated",
-  );
-}
-
 export function resolveDependencyCoverage(
   hasDependencyCoverage: boolean,
 ): CoverageStatus {
@@ -646,7 +610,6 @@ export function buildCoverageRow({
   dexCoverageClass,
   hasYieldCoverage,
   flowCoverageStatus,
-  bluechipGrade,
   hasDependencyCoverage,
 }: BuildCoverageRowInput): CoverageRow {
   const statuses = {
@@ -657,7 +620,6 @@ export function buildCoverageRow({
     yield: resolveYieldCoverage(hasYieldCoverage),
     flows: resolveFlowCoverage(flowCoverageStatus),
     blacklist: resolveBlacklistCoverage(coin),
-    bluechip: resolveBluechipCoverage(bluechipGrade),
     dependency: resolveDependencyCoverage(hasDependencyCoverage),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
@@ -678,7 +640,6 @@ export function buildCoverageRow({
       "yield",
       "flows",
       "blacklist",
-      "bluechip",
       "dependency",
     ]),
     statuses,

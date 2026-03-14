@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 const coverageDescription =
-  "Per-coin feature coverage across Pharos. See which stablecoins have depeg tracking, DEX price verification, reserve views, yield intelligence, mint/burn flows, blacklist tracking, Bluechip ratings, and dependency-map visibility.";
+  "Per-coin feature coverage across Pharos. See which stablecoins have depeg tracking, DEX price verification, reserve views, yield intelligence, mint/burn flows, blacklist tracking, and dependency-map visibility.";
 
 export const metadata = buildPageMetadata({
   title: "Coverage Matrix: Stablecoin Feature Coverage",
