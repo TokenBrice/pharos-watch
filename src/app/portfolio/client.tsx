@@ -308,6 +308,7 @@ export function PortfolioClient() {
         governanceQuality: "single-entity",
         dependencies: [],
         navToken: false,
+        collateralFromLive: false,
       },
     };
   }, [portfolio.holdings.length, portfolio.portfolioGrade, portfolio.portfolioScore, portfolio.dimensionScores]);
