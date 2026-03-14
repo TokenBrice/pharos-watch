@@ -161,10 +161,16 @@ async function fetchCapRedeemQuote(
     signal,
     extraRpcUrls: ETHEREUM_ARCHIVE_FALLBACK_URLS,
   });
-  if (!quoteHex) return null;
+  if (!quoteHex) {
+    console.warn(`[authoritative-price-sources] cusd-cap: RPC returned null`);
+    return null;
+  }
 
   const outputAmount = decodeUint256Word(quoteHex, 0);
-  if (outputAmount == null || outputAmount <= 0n) return null;
+  if (outputAmount == null || outputAmount <= 0n) {
+    console.warn(`[authoritative-price-sources] cusd-cap: contract returned zero or invalid output`);
+    return null;
+  }
 
   const price = ratioToNumber(outputAmount, config.quoteDecimals, sampleInputAmount, config.contractDecimals);
   return Number.isFinite(price) && price > 0 ? price : null;
@@ -248,10 +254,16 @@ async function fetchInfiniFiRedeemQuote(
       extraRpcUrls: ETHEREUM_ARCHIVE_FALLBACK_URLS,
     },
   );
-  if (!quoteHex) return null;
+  if (!quoteHex) {
+    console.warn(`[authoritative-price-sources] iusd-infinifi: RPC returned null`);
+    return null;
+  }
 
   const outputAmount = decodeUint256Word(quoteHex, 0);
-  if (outputAmount == null || outputAmount <= 0n) return null;
+  if (outputAmount == null || outputAmount <= 0n) {
+    console.warn(`[authoritative-price-sources] iusd-infinifi: contract returned zero or invalid output`);
+    return null;
+  }
 
   const price = ratioToNumber(outputAmount, config.quoteDecimals, inputAmount, config.contractDecimals);
   return Number.isFinite(price) && price > 0 ? price : null;
@@ -327,11 +339,17 @@ const crvUsdPriceOracleProvider: PriceSourceProvider = {
       "latest",
       { signal, extraRpcUrls: ETHEREUM_ARCHIVE_FALLBACK_URLS },
     );
-    if (!hex) return null;
+    if (!hex) {
+      console.warn(`[authoritative-price-sources] crvusd-curve: RPC returned null`);
+      return null;
+    }
 
     const rawPrice = BigInt(hex);
     const price = Number(rawPrice) / 1e18;
-    if (price <= 0 || price > 10) return null;
+    if (price <= 0 || price > 10) {
+      console.warn(`[authoritative-price-sources] crvusd-curve: zero or invalid price=${price}`);
+      return null;
+    }
 
     return { price, source: PROTOCOL_REDEEM_SOURCE, confidence: "high" };
   },
