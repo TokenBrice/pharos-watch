@@ -11,7 +11,7 @@ Surface per-coin price source provenance on the coverage page and stablecoin det
 
 Two frontend features plus one small pipeline addition:
 
-1. **Pipeline:** Persist `priceSources: string[]` per coin during sync
+1. **Pipeline:** Persist `consensusSources: string[]` per coin during sync
 2. **Coverage page:** Enrich "Price & Depeg" column with source count and tooltip
 3. **Detail page:** New `PriceTransparencyCard` component
 
@@ -21,30 +21,57 @@ Two frontend features plus one small pipeline addition:
 
 ### What changes
 
-During `fetchPrimaryPrices()` in `enrich-prices.ts`, after consensus runs, stamp a new field `priceSources: string[]` on each asset — the list of source names that returned a valid price for that coin during this sync cycle. Names only, not prices.
+During `fetchPrimaryPrices()` in `enrich-prices.ts`, after consensus runs, stamp a new field `consensusSources: string[]` on each asset — the list of source names that returned a valid price for that coin during this sync cycle. Names only, not prices.
+
+The field is named `consensusSources` (not `priceSources`) to avoid semantic collision with the existing `DexLiquidityData.priceSources` field which is an array of `{ protocol, chain, price, tvl }` objects.
 
 ### Data flow
 
 - `PrimaryPriceResult` gets a new `candidateSources: string[]` field
-- `stampPriceMetadata()` in `sync-stablecoins/shared.ts` copies it onto the `PeggedAsset`
-- Lands in `/api/stablecoins` and `/api/peg-summary` responses as `priceSources: string[]`
-- New field in `StablecoinData` schema (`shared/types/market.ts`): `priceSources` (string array, optional, defaults to empty)
-- New field in `PegSummaryCoin` type: `priceSources` (string array, optional)
+- `stampPriceMetadata()` in `sync-stablecoins/shared.ts` copies it onto the `PeggedAsset` as `consensusSources`
+- Lands in `/api/stablecoins` and `/api/peg-summary` responses as `consensusSources: string[]`
+- New field in `StablecoinDataRawSchema` (`shared/types/market.ts`): `consensusSources: z.array(z.string()).optional()` with transform default `[]`
+- New field in `PegSummaryCoin` type: `consensusSources?: string[]`
+
+### Backward compatibility
+
+The field must be `.optional()` in all schemas with a default of `[]`. Pre-migration cache payloads without the field must still pass `StablecoinListResponseSchema` validation (the fail-closed schema guard in `syncStablecoins()`).
 
 ### Semantics
 
 - Only sources that returned a valid price for this specific coin are included
 - Sources queried but returning nothing are excluded
 - The winning source from `priceSource` is always present in the list
-- Enrichment-pass sources (defillama-contract, coinmarketcap, dexscreener) are included when they resolve a price
+
+### Enrichment-pass sources
+
+Assets that miss the primary consensus pass go through `enrichMissingPrices()`. Each enrichment pass that resolves a price sets `priceSource` on the asset directly. When a price is resolved:
+- `applyResolvedPrice()` already sets `priceSource` — it will also set `consensusSources: [source]` (single-element array since enrichment is a fallback, not multi-source consensus)
+- This ensures no asset has an empty `consensusSources` after sync completes
+
+### Protocol-redeem overrides
+
+When `fetchAuthoritativeLivePriceOverrides()` replaces a market-derived price, the override sets `consensusSources: ["protocol-redeem"]`, replacing the primary consensus sources. This is correct — the protocol quote is authoritative and the market sources were superseded.
+
+### Type changes
+
+| Location | Change |
+|----------|--------|
+| `PeggedAsset` interface (`enrich-prices.ts`) | Add `consensusSources?: string[]` |
+| `PrimaryPriceResult` interface (`enrich-prices.ts`) | Add `candidateSources: string[]` |
+| `StablecoinDataRawSchema` (`shared/types/market.ts`) | Add `consensusSources: z.array(z.string()).optional()` |
+| `StablecoinDataSchema` transform | Map `consensusSources: asset.consensusSources ?? []` |
+| `PegSummaryCoinSchema` (`shared/types/market.ts`) | Add `consensusSources: z.array(z.string()).optional()` |
+| `stampPriceMetadata()` (`sync-stablecoins/shared.ts`) | Accept and stamp `consensusSources` |
+| `applyResolvedPrice()` (`enrich-prices.ts`) | Set `consensusSources: [source]` |
 
 ### Files modified
 
-- `worker/src/cron/enrich-prices.ts` — collect candidate source names during consensus
-- `worker/src/cron/sync-stablecoins/shared.ts` — `stampPriceMetadata()` accepts and stamps `priceSources`
-- `worker/src/cron/sync-stablecoins.ts` — pass candidate sources through
-- `shared/types/market.ts` — add `priceSources` to `StablecoinDataSchema` and `PegSummaryCoin`
-- `worker/src/api/peg-summary.ts` — include `priceSources` in response
+- `worker/src/cron/enrich-prices.ts` — collect candidate source names during consensus; `applyResolvedPrice()` sets single-element `consensusSources`
+- `worker/src/cron/sync-stablecoins/shared.ts` — `stampPriceMetadata()` accepts and stamps `consensusSources`
+- `worker/src/cron/sync-stablecoins.ts` — pass candidate sources through; protocol-redeem override sets `consensusSources: ["protocol-redeem"]`
+- `shared/types/market.ts` — add `consensusSources` to `StablecoinDataRawSchema`, transform, and `PegSummaryCoinSchema`
+- `worker/src/api/peg-summary.ts` — include `consensusSources` in response
 
 ---
 
@@ -57,20 +84,36 @@ During `fetchPrimaryPrices()` in `enrich-prices.ts`, after consensus runs, stamp
 - **"Price only"** (NAV tokens) and **"Missing"** unchanged
 - **Tone colors unchanged** — emerald for Tracked stays regardless of source count
 
+### CoverageStatus changes
+
+The `CoverageStatus` type gains an optional `sourceCount?: number` field. The `CoverageBadge` component reads this to append the count to the label. This keeps the `label` field clean and lets the badge decide formatting.
+
+### resolvePriceCoverage() signature
+
+```typescript
+export function resolvePriceCoverage(
+  coin: StablecoinMeta,
+  hasPegCoverage: boolean,
+  consensusSources?: string[],   // NEW
+  priceConfidence?: string,       // NEW
+): CoverageStatus
+```
+
+`BuildCoverageRowInput` gains `consensusSources?: string[]` and `priceConfidence?: string` fields, plumbed from the peg-summary data via `use-coverage-matrix-model.ts`.
+
 ### Feature snapshot breakdown
 
-The "Price & Depeg" summary row adds a sub-breakdown mirroring existing patterns:
-- `5+ sources: 42 · 3-4 sources: 68 · 1-2 sources: 40`
+The "Price & Depeg" summary row adds a source-count sub-breakdown that **augments** (not replaces) the existing `tracked / price-only` breakdown. The existing `buildCoverageBreakdown()` continues to use `kind` for the primary breakdown. A secondary line below it shows source-depth distribution: `5+ sources: 42 · 3-4: 68 · 1-2: 40`. This is rendered as additional text in the feature snapshot, not as a change to the `kind`-based breakdown mechanism.
 
 ### Mobile cards
 
-Same treatment — badge shows count, expand reveals full source list.
+Same treatment — badge shows count, expand reveals full source list in tooltip.
 
 ### Files modified
 
-- `src/lib/coverage.ts` — `resolvePriceCoverage()` reads `priceSources` and `priceConfidence`
-- `src/app/coverage/client.tsx` — tooltip rendering for enriched Price & Depeg badges
-- `src/hooks/use-coverage-matrix-model.ts` — pass peg-summary `priceSources` into `buildCoverageRow()`
+- `src/lib/coverage.ts` — `resolvePriceCoverage()` extended signature; `CoverageStatus` gets `sourceCount`; `BuildCoverageRowInput` gains new fields
+- `src/app/coverage/client.tsx` — badge rendering for source count; feature snapshot secondary breakdown
+- `src/hooks/use-coverage-matrix-model.ts` — pass peg-summary `consensusSources` and `priceConfidence` into `buildCoverageRow()`
 
 ---
 
@@ -82,7 +125,7 @@ New `PriceTransparencyCard` in `src/components/stablecoin-detail/price-transpare
 
 ### Placement
 
-After `KeyInfoCard`, before `YieldDetailSection` in `src/app/stablecoin/[id]/client.tsx`.
+After `KeyInfoCard`, before `YieldDetailSection` in `src/app/stablecoin/[id]/client.tsx`. Add a new entry to `DETAIL_SECTIONS` for scrollspy navigation (id: `"price-transparency"`, label: `"Price Sources"`).
 
 ### Layout
 
@@ -116,13 +159,13 @@ After `KeyInfoCard`, before `YieldDetailSection` in `src/app/stablecoin/[id]/cli
 ### Status semantics
 
 - **"Used"** (green dot) — the `priceSource` winner. "coingecko+defillama" maps to both CoinGecko and DefiLlama as Used.
-- **"Available"** (blue/sky dot) — in `priceSources` but not the winner
-- **"No data"** (gray dot) — not in `priceSources`
-- **"Protocol"** — special label when `priceSource === "protocol-redeem"`, shown as Used
+- **"Available"** (blue/sky dot) — in `consensusSources` but not the winner
+- **"No data"** (gray dot) — not in `consensusSources`
+- When `priceSource === "protocol-redeem"`, show "Protocol Redemption" as Used, all others as "Not applicable" (the protocol quote superseded market sources)
 
 ### Source list
 
-Hardcoded known sources in display order: CoinGecko, DefiLlama, Pyth Network, Binance, Coinbase, RedStone, Curve on-chain, DEX prices. Compare against `priceSources` array to determine status per source.
+Hardcoded known sources in display order: CoinGecko, DefiLlama, Pyth Network, Binance, Coinbase, RedStone, Curve on-chain, DEX prices. Compare against `consensusSources` array to determine status per source.
 
 ### Confidence badge
 
@@ -139,22 +182,22 @@ Card hidden when `coinData.price == null`. For coins with no price data at all, 
 ### Data sources (no new API calls)
 
 - `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from `useStablecoins()`
-- `pegSummaryCoin.priceSources` from `usePegSummary()`
+- `pegSummaryCoin.consensusSources` from `usePegSummary()`
 - `pegSummaryCoin.dexPriceCheck` from `usePegSummary()`
 
 ### Files modified
 
 - `src/components/stablecoin-detail/price-transparency-card.tsx` — new component
-- `src/app/stablecoin/[id]/client.tsx` — add card to section list
-- `src/hooks/use-stablecoin-detail-view-model.ts` — expose `priceSources` and `dexPriceCheck`
-- `docs/stablecoin-detail-page.md` — add section to contract
+- `src/app/stablecoin/[id]/client.tsx` — add card to section list + `DETAIL_SECTIONS` entry
+- `src/hooks/use-stablecoin-detail-view-model.ts` — expose `consensusSources` and `dexPriceCheck`
+- `src/lib/stablecoin-detail-view-model.ts` — add `consensusSources` and `dexPriceCheck` to `StablecoinDetailReadyViewModel` interface and `buildStablecoinDetailViewModel()` builder
 
 ---
 
 ## Testing
 
 - Unit tests for `resolvePriceCoverage()` with source count variations
-- Unit test for `stampPriceMetadata()` passing `priceSources` through
+- Unit test for `stampPriceMetadata()` passing `consensusSources` through
 - Existing `enrich-prices.test.ts` and `sync-stablecoins.test.ts` updated for new field
 - Build + type-check + lint pass
 
@@ -162,5 +205,6 @@ Card hidden when `coinData.price == null`. For coins with no price data at all, 
 
 - `docs/stablecoin-detail-page.md` — new section in composition list
 - `docs/coverage-page.md` — updated "Price & Depeg" column description
-- `docs/data-pipeline.md` — mention `priceSources` field
-- `docs/api-reference.md` — add `priceSources` to response schemas
+- `docs/data-pipeline.md` — mention `consensusSources` field
+- `docs/api-reference.md` — add `consensusSources` to response schemas
+- `docs/data-flow-map.md` — note `consensusSources` in stablecoins flow
