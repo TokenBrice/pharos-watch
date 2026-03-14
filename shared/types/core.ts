@@ -229,6 +229,7 @@ export interface StablecoinMeta {
   commodityOunces?: number;
   geckoId?: string;
   cmcSlug?: string;
+  pythFeedId?: string;
   protocolSlug?: string;
   proofOfReserves?: ProofOfReserves;
   links?: StablecoinLink[];

@@ -13,6 +13,7 @@ interface StablecoinOpts {
   commodityOunces?: number;
   geckoId?: string;
   cmcSlug?: string;
+  pythFeedId?: string;
   protocolSlug?: string;
   proofOfReserves?: StablecoinMeta["proofOfReserves"];
   links?: StablecoinMeta["links"];
@@ -53,6 +54,7 @@ function coin(id: string, name: string, symbol: string, backing: StablecoinMeta[
     detailProvider: opts?.detailProvider ?? "defillama",
     geckoId: opts?.geckoId,
     cmcSlug: opts?.cmcSlug,
+    pythFeedId: opts?.pythFeedId,
     protocolSlug: opts?.protocolSlug,
     proofOfReserves: opts?.proofOfReserves,
     links: opts?.links,
