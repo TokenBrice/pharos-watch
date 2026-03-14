@@ -130,7 +130,7 @@ Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty fo
 | Tier | Score | Default for GovernanceType | Examples |
 |---|---|---|---|
 | `immutable-code` | 100 | — (must be explicit) | LUSD, BOLD |
-| `dao-governance` | 85 | `decentralized` | crvUSD; overrides: USDS, DAI, GHO, FRAX, DOLA |
+| `dao-governance` | 85 | `decentralized` | overrides: crvUSD, USDS, DAI, GHO, FRAX, DOLA |
 | `multisig` | 55 | `centralized-dependent` | Most CeFi-dep coins without explicit override |
 | `regulated-entity` | 40 | — (auto-promoted) | Centralized issuers with verified regulatory oversight |
 | `single-entity` | 20 | `centralized` | USDT, USDC, PYUSD |

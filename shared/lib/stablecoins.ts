@@ -1021,9 +1021,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Digital assets (USDC + USDT, operational)", pct: 1, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("crvusd-curve", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
+  usd("crvusd-curve", "crvUSD", "crvUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "110",
     geckoId: "crvusd",
+    governanceQuality: "dao-governance",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Curve Savings (scrvUSD)", yieldType: "governance-set" },
     liveReservesConfig: {
@@ -1041,7 +1042,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     },
     dependencies: [{ id: "usdt-tether", weight: 0.10 }, { id: "usdc-circle", weight: 0.10 }, { id: "pyusd-paypal", weight: 0.10 }, { id: "frxusd-frax", weight: 0.10 }],
     deploymentModel: "canonical-bridge",
-    collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
+    collateral: "WBTC, cbBTC (majority), wstETH, sfrxETH, weETH, tBTC, and ETH deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations; WBTC/cbBTC custody by BitGo/Coinbase introduces centralized dependency",
     pegMechanism: "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
     links: [
       { label: "Website", url: "https://www.curve.finance/" },
