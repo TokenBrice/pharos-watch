@@ -139,11 +139,21 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   }
 
   // Now safe to start Curve batch — DL connections are released (max 4 concurrent)
-  const curveResponses = await Promise.all(
-    CURVE_CHAINS.map((chain) =>
-      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT }, signal }),
-    ),
-  );
+  let curveResponses: (Response | null)[];
+  const curveCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API);
+
+  if (curveCircuitAllowed) {
+    curveResponses = await Promise.all(
+      CURVE_CHAINS.map((chain) =>
+        fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT }, signal }),
+      ),
+    );
+    const curveSuccess = curveResponses.some((r) => r?.ok);
+    await recordOutcome(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API, curveSuccess);
+  } else {
+    console.warn("[dex-liquidity] Curve liquidity API circuit open — skipping Curve pool data");
+    curveResponses = CURVE_CHAINS.map(() => null);
+  }
 
   // Only abort if BOTH DL sources AND Curve all failed (truly catastrophic)
   if (!dlYieldsAvailable && curveResponses.every((r) => !r?.ok)) {
