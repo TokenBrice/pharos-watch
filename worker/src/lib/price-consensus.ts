@@ -52,13 +52,17 @@ export function computePriceConsensus(
   // For NAV tokens (pegRef === null), there's no peg to validate against.
   // Use a wider threshold (500 bps = 5%) for clustering. If sources still
   // diverge beyond that, it's a data quality issue → low confidence.
+  // NAV tokens use 500bps (5%) threshold — "high" confidence means sources agree
+  // within 5%, not the tighter 50bps used for pegged tokens. This is intentional:
+  // NAV tokens have floating prices and wider agreement is expected.
   if (pegRef === null || pegRef <= 0) {
     const NAV_THRESHOLD_BPS = 500;
     const navClusters = findAgreementClusters(sources, NAV_THRESHOLD_BPS);
     const navBestCluster = navClusters.reduce((a, b) => a.length >= b.length ? a : b, []);
 
     if (navBestCluster.length >= 2) {
-      const chosen = navBestCluster.reduce((a, b) => a.weight >= b.weight ? a : b);
+      const navMedian = navBestCluster.map(s => s.price).sort((a, b) => a - b)[Math.floor(navBestCluster.length / 2)];
+      const chosen = pickBestSource(navBestCluster, navMedian);
       const navClusterSet = new Set(navBestCluster.map((s) => s.source));
       return {
         price: chosen.price,
@@ -71,7 +75,8 @@ export function computePriceConsensus(
     }
 
     // NAV sources diverge wildly — pick highest-weight, low confidence
-    const chosen = sources.reduce((a, b) => a.weight >= b.weight ? a : b);
+    const allMedian = sources.map(s => s.price).sort((a, b) => a - b)[Math.floor(sources.length / 2)];
+    const chosen = pickBestSource(sources, allMedian);
     return {
       price: chosen.price,
       source: chosen.source,
@@ -91,7 +96,7 @@ export function computePriceConsensus(
 
   if (bestCluster.length >= 2) {
     // Majority agreement — high confidence
-    const chosen = bestCluster.reduce((a, b) => a.weight >= b.weight ? a : b);
+    const chosen = pickBestSource(bestCluster, pegRef);
     return {
       price: chosen.price,
       source: buildSourceLabel(bestCluster),
@@ -134,4 +139,12 @@ function buildSourceLabel(cluster: SourcePrice[]): string {
   const names = cluster.map((s) => s.source).sort();
   if (names.length <= 2) return names.join("+");
   return `${names[0]}+${names.length - 1}more`;
+}
+
+/** Pick highest-weight source; break ties by proximity to reference price. */
+function pickBestSource(cluster: SourcePrice[], ref: number): SourcePrice {
+  return cluster.reduce((a, b) => {
+    if (a.weight !== b.weight) return a.weight > b.weight ? a : b;
+    return Math.abs(a.price - ref) <= Math.abs(b.price - ref) ? a : b;
+  });
 }
