@@ -155,6 +155,7 @@ The optional `sync` object exposes the last operational state:
 | `lastAttemptedAt` | Latest attempt timestamp, when present |
 | `lastSuccessAt` | Latest success timestamp, when present |
 | `warnings[]` | Warning messages surfaced by the adapter |
+| `lastError` | Most recent adapter error message (truncated to 200 chars), when present |
 
 ---
 

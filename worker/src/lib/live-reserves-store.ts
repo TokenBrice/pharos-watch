@@ -384,6 +384,7 @@ export async function resolveReserveResult(
         ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
         ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
         ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+        ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
       },
     };
   }
@@ -401,6 +402,7 @@ export async function resolveReserveResult(
             ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
             ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
             ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+            ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
           }
         : undefined,
     };
@@ -420,6 +422,7 @@ export async function resolveReserveResult(
           ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
           ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
           ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+          ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
         },
       }
     : null;

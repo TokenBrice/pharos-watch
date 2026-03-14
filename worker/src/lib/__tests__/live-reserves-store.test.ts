@@ -146,4 +146,33 @@ describe("live-reserves-store", () => {
     expect(history.some((sql) => sql.includes("reserve_composition"))).toBe(true);
     expect(history.some((sql) => sql.includes("reserve_sync_state"))).toBe(true);
   });
+
+  it("includes lastError in sync view when sync state has an error", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: 1_000,
+          last_success_at: null,
+          last_status: "error",
+          warning_count: 0,
+          warnings: null,
+          last_error: "HTTP 503 for https://api.example.com",
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
+    expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
+  });
 });
