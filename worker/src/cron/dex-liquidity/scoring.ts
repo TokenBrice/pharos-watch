@@ -496,10 +496,10 @@ export async function computeDexPrices(
       tvl: o.tvl * dexPriceConfidenceForProtocol(o.protocol),
     }));
 
-    // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
+    // TVL-weighted median: sort by price, walk until cumulative (confidence-weighted) TVL crosses 50%
     adjustedObs.sort((a, b) => a.price - b.price);
-    const totalTvl = adjustedObs.reduce((s, o) => s + o.tvl, 0);
-    const halfTvl = totalTvl / 2;
+    const adjustedTotalTvl = adjustedObs.reduce((s, o) => s + o.tvl, 0);
+    const halfTvl = adjustedTotalTvl / 2;
     let cumTvl = 0;
     let medianPrice = adjustedObs[0].price;
     for (const obs of adjustedObs) {
@@ -509,6 +509,9 @@ export async function computeDexPrices(
         break;
       }
     }
+
+    // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
+    const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
 
     // Compute deviation from primary price
     const primaryPrice = primaryPrices.get(id);
