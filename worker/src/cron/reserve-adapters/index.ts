@@ -15,6 +15,7 @@ import { fetchOusdReserves } from "./ousd";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchSingleAssetReserves } from "./single-asset";
+import { fetchTetherReserves } from "./tether";
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
@@ -54,6 +55,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   ousd: fetchOusdReserves,
   reservoir: fetchReservoirReserves,
   "single-asset": fetchSingleAssetReserves,
+  tether: fetchTetherReserves,
 };
 
 /** Returns the adapter function for the given key, or null if unknown. */

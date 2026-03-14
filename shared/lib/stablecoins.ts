@@ -150,6 +150,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Gold & Bitcoin", pct: 3, risk: "high" },
       { name: "Other Investments", pct: 1, risk: "medium" },
     ],
+    liveReservesConfig: {
+      adapter: "tether",
+      version: 1,
+      semantics: "attestation-mix",
+      display: { url: "https://tether.to/en/transparency", label: "Tether Transparency" },
+      inputs: { primary: { kind: "http-json", url: "https://app.tether.to/transparency.json" } },
+    },
   }),
   usd("usdc-circle", "USD Coin", "USDC", "rwa-backed", "centralized", {
     llamaId: "2",
