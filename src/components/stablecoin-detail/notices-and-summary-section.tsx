@@ -3,7 +3,7 @@
 import { CoinNotices } from "@/components/coin-notice";
 import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
+import type { PegSummaryCoin, RedemptionBackstopEntry, StablecoinMeta, StablecoinData } from "@shared/types";
 
 interface SummaryData {
   title: string;
@@ -19,6 +19,9 @@ interface NoticesAndSummarySectionProps {
   reserveFetchError: unknown | null;
   redemptionBackstop?: RedemptionBackstopEntry;
   isNavToken: boolean;
+  coinData?: StablecoinData;
+  consensusSources?: string[];
+  dexPriceCheck?: PegSummaryCoin["dexPriceCheck"];
 }
 
 export function NoticesAndSummarySection({
@@ -29,6 +32,9 @@ export function NoticesAndSummarySection({
   reserveFetchError,
   redemptionBackstop,
   isNavToken,
+  coinData,
+  consensusSources,
+  dexPriceCheck,
 }: NoticesAndSummarySectionProps) {
   return (
     <>
@@ -40,6 +46,9 @@ export function NoticesAndSummarySection({
         reserveFetchError={reserveFetchError}
         redemptionBackstop={redemptionBackstop}
         isNavToken={isNavToken}
+        coinData={coinData}
+        consensusSources={consensusSources}
+        dexPriceCheck={dexPriceCheck}
       />
 
       {coin.notices && coin.notices.length > 0 && (

@@ -2,11 +2,12 @@
 
 import { AiSummary } from "@/components/ai-summary";
 import { DEWSDetail } from "@/components/dews-detail";
+import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { ReserveTreemap } from "@/components/reserve-treemap";
 import { ApiFetchError } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
+import type { PegSummaryCoin, RedemptionBackstopEntry, StablecoinMeta, StablecoinData } from "@shared/types";
 
 interface SummaryData {
   title: string;
@@ -22,6 +23,9 @@ interface OverviewSectionProps {
   reserveFetchError: unknown | null;
   redemptionBackstop?: RedemptionBackstopEntry;
   isNavToken: boolean;
+  coinData?: StablecoinData;
+  consensusSources?: string[];
+  dexPriceCheck?: PegSummaryCoin["dexPriceCheck"];
 }
 
 function isNetworkFetchError(error: unknown): boolean {
@@ -105,9 +109,13 @@ export function OverviewSection({
   reserveFetchError,
   redemptionBackstop,
   isNavToken,
+  coinData,
+  consensusSources,
+  dexPriceCheck,
 }: OverviewSectionProps) {
   const hasLeft = !!(summary || reserves || reserveFetchError || redemptionBackstop);
   const hasDews = !isNavToken;
+  const hasPriceTransparency = !!coinData && coinData.price != null;
   const isLiveEnabled = !!coin.liveReservesConfig;
   const reserveFetchNotice = reserveFetchError
     ? buildReserveFetchNotice(reserveFetchError, reserves)
@@ -115,10 +123,21 @@ export function OverviewSection({
 
   return (
     <section id="overview">
-      {!hasLeft && !hasDews ? null : !hasLeft ? (
-        <DEWSDetail stablecoinId={stablecoinId} />
+      {!hasLeft && !hasDews && !hasPriceTransparency ? null : !hasLeft ? (
+        <div className="flex flex-col gap-6">
+          {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
+          {hasPriceTransparency && coinData && (
+            <div id="price-transparency">
+              <PriceTransparencyCard
+                coinData={coinData}
+                consensusSources={consensusSources ?? []}
+                dexPriceCheck={dexPriceCheck}
+              />
+            </div>
+          )}
+        </div>
       ) : (
-        <div className={`grid grid-cols-1 gap-6 ${hasDews ? "lg:grid-cols-2" : ""}`}>
+        <div className={`grid grid-cols-1 gap-6 ${hasDews || hasPriceTransparency ? "lg:grid-cols-2" : ""}`}>
           <div className="flex flex-col gap-6">
             {summary && <AiSummary {...summary} />}
             {reserveFetchNotice ? (
@@ -217,7 +236,20 @@ export function OverviewSection({
               <RedemptionBackstopCard entry={redemptionBackstop} />
             ) : null}
           </div>
-          {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
+          {(hasDews || hasPriceTransparency) && (
+            <div className="flex flex-col gap-6">
+              {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
+              {hasPriceTransparency && coinData && (
+                <div id="price-transparency">
+                  <PriceTransparencyCard
+                    coinData={coinData}
+                    consensusSources={consensusSources ?? []}
+                    dexPriceCheck={dexPriceCheck}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>
