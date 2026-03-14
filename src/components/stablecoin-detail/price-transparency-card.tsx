@@ -128,55 +128,46 @@ export function PriceTransparencyCard({
           </div>
         </div>
 
-        {/* Source table */}
-        <div className="rounded-lg border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
-                  Source
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {isProtocolRedeem ? (
-                <tr className="border-b last:border-b-0">
-                  <td className="px-3 py-2 font-medium">Protocol Redemption</td>
-                  <td className="px-3 py-2">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-                      <span className="text-xs text-muted-foreground">Used</span>
-                    </span>
-                  </td>
-                </tr>
-              ) : null}
-              {KNOWN_SOURCES.map(({ key, label }) => {
-                const status = resolveSourceStatus(
-                  key,
-                  agreeSources,
-                  effectiveConsensusSources,
-                  isProtocolRedeem,
-                );
-                const config = STATUS_CONFIG[status];
-                return (
-                  <tr key={key} className="border-b last:border-b-0">
-                    <td className="px-3 py-2 font-medium">{label}</td>
-                    <td className="px-3 py-2">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span
-                          className={cn("inline-block h-2 w-2 rounded-full", config.dot)}
-                        />
-                        <span className="text-xs text-muted-foreground">{config.label}</span>
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* Source grid - 2-up on desktop */}
+        <div className="rounded-lg border overflow-hidden">
+          {isProtocolRedeem ? (
+            <div className="flex items-center justify-between border-b px-3 py-2 text-sm">
+              <span className="font-medium">Protocol Redemption</span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="text-xs text-muted-foreground">Used</span>
+              </span>
+            </div>
+          ) : null}
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {KNOWN_SOURCES.map(({ key, label }, index) => {
+              const status = resolveSourceStatus(
+                key,
+                agreeSources,
+                effectiveConsensusSources,
+                isProtocolRedeem,
+              );
+              const config = STATUS_CONFIG[status];
+              // Don't add a column divider to the last item when it sits alone in the left column
+              const isLastAndAlone =
+                index === KNOWN_SOURCES.length - 1 && KNOWN_SOURCES.length % 2 === 1;
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 text-sm border-b last:border-b-0",
+                    !isLastAndAlone && "md:[&:nth-child(odd)]:border-r",
+                  )}
+                >
+                  <span className="font-medium">{label}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className={cn("inline-block h-2 w-2 rounded-full", config.dot)} />
+                    <span className="text-xs text-muted-foreground">{config.label}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* DEX Price Check */}
