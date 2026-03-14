@@ -143,16 +143,34 @@ export async function fetchEvmCallHexAtBlock(
 
   const callObj: Record<string, string> = { to, data };
   if (options?.gas) callObj.gas = options.gas;
+  const blockTag = toBlockTag(blockNumberOrTag);
+  const timeoutMs = options?.timeoutMs ?? 10_000;
 
-  const result = await fetchJsonRpcResult<string>(
-    urls,
-    "eth_call",
-    [callObj, toBlockTag(blockNumberOrTag)],
-    options,
-  );
-
-  if (!isHexResult(result ?? undefined) || result === "0x") return null;
-  return result as `0x${string}`;
+  // Try each RPC URL, skipping empty/revert results ("0x") so fallbacks are tried
+  for (const rpcUrl of urls) {
+    try {
+      const res = await fetchWithRetry(
+        rpcUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: options?.signal,
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [callObj, blockTag] }),
+        },
+        1,
+        { timeoutMs },
+      );
+      if (!res?.ok) continue;
+      const body = await res.json() as JsonRpcEnvelope<string>;
+      if (body.error) continue;
+      const result = body.result ?? null;
+      if (!isHexResult(result ?? undefined) || result === "0x") continue;
+      return result as `0x${string}`;
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 export async function fetchEvmUint256AtBlock(
