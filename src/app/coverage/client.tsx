@@ -51,7 +51,9 @@ const SOURCE_DISPLAY_NAMES: Record<string, string> = {
   coinbase: "Coinbase",
   redstone: "RedStone",
   "curve-onchain": "Curve on-chain",
+  "curve-oracle": "Curve oracle",
   "dex-promoted": "DEX prices",
+  "defillama-contract": "DefiLlama (contract)",
   "protocol-redeem": "Protocol Redeem",
 };
 
