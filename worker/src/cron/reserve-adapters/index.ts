@@ -9,6 +9,7 @@ import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
 import { fetchFalconReserves } from "./falcon";
 import { fetchFxReserves } from "./fx";
+import { fetchGhoReserves } from "./gho";
 import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchM0Reserves } from "./m0";
 import { fetchMentoReserves } from "./mento";
@@ -52,6 +53,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   ethena: fetchEthenaReserves,
   falcon: fetchFalconReserves,
   fx: fetchFxReserves,
+  gho: fetchGhoReserves,
   infinifi: fetchInfiniFiReserves,
   m0: fetchM0Reserves,
   mento: fetchMentoReserves,

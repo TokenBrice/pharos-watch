@@ -901,6 +901,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "mantle", address: "0xfc421aD3C883Bf9E7C4f42dE845C4e4405799e73", decimals: 18 },
     ],
     proofOfReserves: { type: "independent-audit", url: "https://github.com/aave-dao/gho-origin/tree/main/audits", provider: "OpenZeppelin, ABDK, Sigma Prime, Certora" },
+    liveReservesConfig: {
+      adapter: "gho",
+      version: 1,
+      semantics: "protocol-reserve",
+      display: { url: "https://aave.com/gho", label: "Aave GHO" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
+    },
     reserves: [
       // Source: Aave V3 Ethereum market data, Eco.com GHO guide, Chaos Labs risk dashboard
       { name: "wstETH", pct: 34, risk: "low" },
