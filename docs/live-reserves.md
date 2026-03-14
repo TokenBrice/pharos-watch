@@ -34,6 +34,18 @@ Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig`
 | `inputs.fallbacks` | Optional fallback inputs |
 | `params` | Adapter-specific validated settings |
 
+### Known Limitation: Fallback Inputs
+
+`inputs.fallbacks` is declared in `LiveReservesConfig` but **not currently implemented**:
+
+- No adapter reads or uses fallback inputs
+- No coin configuration declares fallback inputs
+- The cron orchestrator does not attempt fallback resolution on primary failure
+
+When the primary source fails, the adapter throws and the circuit breaker handles recovery. Implementing fallback resolution would provide meaningful resilience for adapters with fragile primary sources (e.g., HTML-scraped sources like Mento).
+
+**Future implementation path:** Add fallback resolution to `runAdapter()` in `sync-live-reserves.ts` -- try primary input first, and on failure, iterate through `config.inputs.fallbacks` with the same adapter function.
+
 Supported input kinds:
 
 | Kind | Meaning |
@@ -156,6 +168,18 @@ The optional `sync` object exposes the last operational state:
 | `lastSuccessAt` | Latest success timestamp, when present |
 | `warnings[]` | Warning messages surfaced by the adapter |
 | `lastError` | Most recent adapter error message (truncated to 200 chars), when present |
+
+### Edge Cache Implications for Monitoring
+
+When a coin has `mode="live"`, the response is edge-cached for 1 hour (`s-maxage=3600`). If the adapter starts failing *after* a successful response was cached:
+
+- The public API will continue serving the **cached successful response** for up to 1 hour
+- The `sync` object in the cached response will show the **previous** sync state, not the current failure
+- Operators querying the public API will not see the error status until the edge cache expires
+
+**For real-time monitoring**, use the auth-gated `/status` endpoint, which is never edge-cached and always reflects current D1 state.
+
+Fallback/degraded responses use a shorter edge cache (`s-maxage=300`, 5 minutes), so status transitions from fallback modes propagate faster.
 
 ---
 
