@@ -189,6 +189,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         isNavToken={viewModel.isNavToken}
         coinData={viewModel.coinData}
         consensusSources={viewModel.consensusSources}
+        agreeSources={viewModel.agreeSources}
         dexPriceCheck={viewModel.dexPriceCheck}
       />
 

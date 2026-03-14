@@ -25,6 +25,7 @@ interface OverviewSectionProps {
   isNavToken: boolean;
   coinData?: StablecoinData;
   consensusSources?: string[];
+  agreeSources?: string[];
   dexPriceCheck?: PegSummaryCoin["dexPriceCheck"];
 }
 
@@ -111,6 +112,7 @@ export function OverviewSection({
   isNavToken,
   coinData,
   consensusSources,
+  agreeSources,
   dexPriceCheck,
 }: OverviewSectionProps) {
   const hasLeft = !!(summary || reserves || reserveFetchError || redemptionBackstop);
@@ -131,6 +133,7 @@ export function OverviewSection({
               <PriceTransparencyCard
                 coinData={coinData}
                 consensusSources={consensusSources ?? []}
+                agreeSources={agreeSources ?? []}
                 dexPriceCheck={dexPriceCheck}
               />
             </div>
@@ -244,6 +247,7 @@ export function OverviewSection({
                   <PriceTransparencyCard
                     coinData={coinData}
                     consensusSources={consensusSources ?? []}
+                    agreeSources={agreeSources ?? []}
                     dexPriceCheck={dexPriceCheck}
                   />
                 </div>

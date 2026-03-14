@@ -21,6 +21,7 @@ interface NoticesAndSummarySectionProps {
   isNavToken: boolean;
   coinData?: StablecoinData;
   consensusSources?: string[];
+  agreeSources?: string[];
   dexPriceCheck?: PegSummaryCoin["dexPriceCheck"];
 }
 
@@ -34,6 +35,7 @@ export function NoticesAndSummarySection({
   isNavToken,
   coinData,
   consensusSources,
+  agreeSources,
   dexPriceCheck,
 }: NoticesAndSummarySectionProps) {
   return (
@@ -48,6 +50,7 @@ export function NoticesAndSummarySection({
         isNavToken={isNavToken}
         coinData={coinData}
         consensusSources={consensusSources}
+        agreeSources={agreeSources}
         dexPriceCheck={dexPriceCheck}
       />
 

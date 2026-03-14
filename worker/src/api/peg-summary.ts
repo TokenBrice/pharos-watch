@@ -134,6 +134,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       priceConfidence?: StablecoinData["priceConfidence"];
       priceUpdatedAt?: number | null;
       consensusSources?: string[];
+      agreeSources?: string[];
       primaryTrust?: "authoritative" | "confirm_required" | "unusable";
       pegPct: number;
     severityScore: number;
