@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { deriveDependencies } from "@shared/lib/reserve-templates";
 import {
   useBluechipRatings,
   useDexLiquidity,
@@ -43,10 +44,21 @@ export function useCoverageMatrixModel() {
       (reportCardsQuery.data?.cards ?? []).map((card) => [card.id, card]),
     );
     const dependencyIds = new Set<string>();
+    const liveIds = new Set(
+      (reportCardsQuery.data?.cards ?? [])
+        .filter((card) => !card.isDefunct)
+        .map((card) => card.id),
+    );
 
-    for (const edge of reportCardsQuery.data?.dependencyGraph.edges ?? []) {
-      dependencyIds.add(edge.from);
-      dependencyIds.add(edge.to);
+    for (const id of liveIds) {
+      const meta = TRACKED_META_BY_ID.get(id);
+      if (!meta) continue;
+
+      for (const dependency of deriveDependencies(meta)) {
+        if (!liveIds.has(dependency.id)) continue;
+        dependencyIds.add(id);
+        dependencyIds.add(dependency.id);
+      }
     }
 
     return TRACKED_STABLECOINS.map((coin) => {

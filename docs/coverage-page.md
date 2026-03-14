@@ -57,21 +57,29 @@ Status semantics are intentionally user-facing:
 
 ## Source Of Truth Per Column
 
-The page deliberately mixes structural coverage and live dataset coverage:
+The page deliberately mixes structural coverage and live dataset coverage. The implementation entrypoint is `src/hooks/use-coverage-matrix-model.ts`, which builds one `CoverageRow` per tracked stablecoin and resolves each column through `src/lib/coverage.ts`.
 
-| Column | Source |
-|-------|--------|
-| `Price & Depeg` | `/api/peg-summary` plus `StablecoinMeta.flags.navToken` |
-| `Safety Score` | `/api/report-cards` |
-| `DEX Price` | `/api/dex-liquidity` (`coverageClass`) |
-| `Reserves` | `shared/lib/stablecoins.ts` + `getReserves()` from `shared/lib/reserve-templates.ts` |
-| `Yield` | `/api/yield-rankings` |
-| `Flows` | `/api/mint-burn-flows` aggregate `coins[].coverage.status` |
-| `Blacklist` | `BLACKLIST_STABLECOINS` symbol allowlist from `@shared/types` |
-| `Bluechip` | `/api/bluechip-ratings` |
-| `Dependency Map` | `/api/report-cards` `dependencyGraph.edges` |
+| Column | Hook / field used on `/coverage/` | Notes |
+|-------|--------|-------|
+| `Price & Depeg` | `usePegSummary().data.coins[].id`, `consensusSources`, `priceConfidence` plus `TRACKED_STABLECOINS[*].flags.navToken` | `Tracked` requires a live peg-summary row. NAV tokens intentionally map to `Price only` even without depeg logic. |
+| `Safety Score` | `useReportCards().data.cards[].overallScore` | Coverage is `Rated` only when the report card has a non-null overall score. |
+| `DEX Price` | `useDexLiquidity().data[id].coverageClass` | User-facing badge labels are mapped from liquidity `coverageClass`. |
+| `Reserves` | `TRACKED_STABLECOINS[*].liveReservesConfig` first, otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | Live reserve adapters outrank curated or estimated reserve metadata. |
+| `Yield` | `useYieldRankings().data.rankings[].id` | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility. |
+| `Flows` | `useMintBurnFlows().data.coins[].coverage.status` | Mirrors the Ethereum mint/burn coverage state exposed on `/flows`. |
+| `Blacklist` | `BLACKLIST_STABLECOINS` from `@shared/types` | Structural support flag, matching the allowlist used by the blacklist route and worker handlers. |
+| `Bluechip` | `useBluechipRatings().data[id].grade` | Coverage exists only when Bluechip currently publishes a grade for that asset. |
+| `Dependency Map` | `useReportCards().data.cards` filtered to live cards, then `deriveDependencies(meta)` from `@shared/lib/reserve-templates` | This mirrors the live dependency-edge derivation used by `src/app/dependency-map/client.tsx`. |
 
-Current market-cap weights come from `/api/stablecoins` using `getCirculatingRaw()`.
+Additional page-level sources:
+
+| Page element | Source |
+|-------------|--------|
+| Base coin universe | `TRACKED_STABLECOINS` from `@shared/lib/stablecoins` |
+| Market-cap weights | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRaw()` on the cached list payload |
+| Peg/backing/governance labels in each row | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps |
+| Pricing-source tiles | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `useCoverageMatrixModel()` |
+| Snapshot insight cards (`Widest today`, `Narrowest today`, `Major-heavy`) | Derived from the same per-feature summaries used by the feature snapshot rows |
 
 ---
 
@@ -88,6 +96,8 @@ Every row shows:
 - direct link to the underlying surface when one exists
 
 For `Reserves`, the headline metric intentionally emphasizes `Live` reserve tracking. Curated and estimated reserve views still appear in the breakdown so the row distinguishes true live coverage from metadata-only reserve composition.
+
+For `Bluechip`, the snapshot intentionally skips the standalone coin-count callout because the external grade coverage is already expressed by market-cap reach plus the covered/uncovered breakdown chip set.
 
 Breakdowns are intentionally dense and should stay short:
 

@@ -27,7 +27,15 @@ function ensureUrl(input) {
   if (!trimmed) {
     throw new Error("Missing ops smoke URL.");
   }
-  return new URL(trimmed).toString();
+  const url = new URL(trimmed);
+  if (
+    url.hostname === "ops.pharos.watch" &&
+    (url.pathname === "/status" || url.pathname === "/status/")
+  ) {
+    url.pathname = "/admin/";
+    url.search = "";
+  }
+  return url.toString();
 }
 
 async function fetchText(url, headers) {
