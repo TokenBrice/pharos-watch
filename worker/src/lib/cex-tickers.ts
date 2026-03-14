@@ -15,12 +15,14 @@ const BINANCE_PAIR_TO_SYMBOL: Record<string, string> = {
 };
 
 /**
- * Explicit list of stablecoin symbols with confirmed Coinbase USD trading pairs.
- * This avoids ~125 wasted 404 requests per sync.
+ * Explicit list of stablecoin symbols with confirmed active Coinbase Exchange
+ * USD trading pairs. Verified 2026-03-14 against /products endpoint.
+ *
+ * NOTE: USDC has NO Coinbase Exchange USD pair — Coinbase treats USDC as
+ * equivalent to USD (1:1 convertible), so no USDC-USD product exists.
  */
 export const COINBASE_KNOWN_SYMBOLS: readonly string[] = [
-  "USDT", "USDC", "DAI", "PYUSD", "EURC", "GHO",
-  "GUSD", "PAX", "TUSD", "USDP", "FDUSD", "PAXG", "XAUT",
+  "USDT", "DAI", "PAX", "PAXG", "USDS", "USD1",
 ] as const;
 
 /**

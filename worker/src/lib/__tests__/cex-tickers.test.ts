@@ -43,13 +43,13 @@ describe("fetchCoinbasePrices", () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
       if (url.includes("/products/USDT-USD/ticker"))
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "0.9998" }) });
-      if (url.includes("/products/USDC-USD/ticker"))
+      if (url.includes("/products/DAI-USD/ticker"))
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "1.0000" }) });
       return Promise.resolve({ ok: false, status: 404 });
     }));
-    const results = await fetchCoinbasePrices(["USDT", "USDC", "XYZFAKE"]);
+    const results = await fetchCoinbasePrices(["USDT", "DAI", "XYZFAKE"]);
     expect(results.get("USDT")).toBeCloseTo(0.9998, 4);
-    expect(results.get("USDC")).toBeCloseTo(1.0, 4);
+    expect(results.get("DAI")).toBeCloseTo(1.0, 4);
     expect(results.has("XYZFAKE")).toBe(false);
   });
 });
