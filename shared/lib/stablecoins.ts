@@ -3612,6 +3612,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USDC (via Morpho/Yearn vault)", pct: 65, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
       { name: "USDC (via Curve AMO LP)", pct: 35, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
     ],
+    liveReservesConfig: {
+      adapter: "ousd",
+      version: 1,
+      semantics: "collateral-mix",
+      display: { url: "https://www.ousd.com/", label: "Origin Protocol" },
+      inputs: { primary: { kind: "http-json", url: "https://api.originprotocol.com/api/v2/ousd/collateral" } },
+    },
   }),
   usd("btcusd-btcfi", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
     llamaId: "183",

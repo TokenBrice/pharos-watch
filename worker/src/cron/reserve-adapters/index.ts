@@ -11,6 +11,7 @@ import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchM0Reserves } from "./m0";
 import { fetchMentoReserves } from "./mento";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
+import { fetchOusdReserves } from "./ousd";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchSingleAssetReserves } from "./single-asset";
@@ -50,6 +51,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   m0: fetchM0Reserves,
   mento: fetchMentoReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
+  ousd: fetchOusdReserves,
   reservoir: fetchReservoirReserves,
   "single-asset": fetchSingleAssetReserves,
 };
