@@ -8,7 +8,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260312.1",
     "typescript": "~5.9.0",
-    "wrangler": "^4.72.0"
+    "wrangler": "^4.73.0"
   },
   "dependencies": {
     "@cf-wasm/resvg": "^0.3.3",
