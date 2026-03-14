@@ -35,17 +35,33 @@ const GET_DY_UNDERLYING_SELECTOR = "0x07211ef7";
 /**
  * Fetch implied prices via Curve get_dy for a batch of pool configurations.
  * Uses fetchEvmCallHexAtBlock which resolves RPC URLs via chain-registry.ts.
+ *
+ * Two-phase processing:
+ * Phase 1: Execute all RPC calls, store raw implied prices
+ * Phase 2: Resolve hop dependencies, build final results
  */
 export async function fetchCurveOnchainPrices(
   configs: CurvePoolConfig[],
   signal?: AbortSignal,
 ): Promise<Map<string, number>> {
-  const results = new Map<string, number>();
+  // Validate: no chained hops (hop referencing another hop)
+  const hopIds = new Set(configs.filter((c) => c.hop).map((c) => c.stablecoinId));
+  for (const config of configs) {
+    if (config.hop && hopIds.has(config.hop.viaStablecoinId)) {
+      throw new Error(
+        `[curve-onchain] Chained hop detected: ${config.stablecoinId} hops via ${config.hop.viaStablecoinId} which is also a hop`,
+      );
+    }
+  }
+
+  // Phase 1: Execute all RPC calls, store raw implied prices
+  const rawPrices = new Map<string, number>();
 
   for (const config of configs) {
     try {
       const inputAmount = BigInt(10) ** BigInt(config.inputDecimals); // 1 unit
-      const calldata = encodeGetDy(config.inputIndex, config.outputIndex, inputAmount);
+      const selector = config.useUnderlying ? GET_DY_UNDERLYING_SELECTOR : GET_DY_SELECTOR;
+      const calldata = encodeGetDy(selector, config.inputIndex, config.outputIndex, inputAmount);
 
       const resultHex = await fetchEvmCallHexAtBlock(
         config.chain, config.poolAddress, calldata, "latest", { signal },
@@ -58,7 +74,7 @@ export async function fetchCurveOnchainPrices(
       const impliedPrice = inputFloat / outputFloat;
 
       if (impliedPrice > 0 && impliedPrice < 100) {
-        results.set(config.stablecoinId, impliedPrice);
+        rawPrices.set(config.stablecoinId, impliedPrice);
       }
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -66,12 +82,31 @@ export async function fetchCurveOnchainPrices(
     }
   }
 
+  // Phase 2: Resolve hop prices, build final results
+  const results = new Map<string, number>();
+
+  for (const config of configs) {
+    const raw = rawPrices.get(config.stablecoinId);
+    if (raw == null) continue;
+
+    if (config.hop) {
+      const viaPrice = rawPrices.get(config.hop.viaStablecoinId);
+      if (viaPrice == null) continue; // dependency missing
+      const finalPrice = raw * viaPrice;
+      if (finalPrice > 0 && finalPrice < 100) {
+        results.set(config.stablecoinId, finalPrice);
+      }
+    } else {
+      results.set(config.stablecoinId, raw);
+    }
+  }
+
   return results;
 }
 
-function encodeGetDy(i: number, j: number, dx: bigint): string {
+function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string {
   const iHex = BigInt(i).toString(16).padStart(64, "0");
   const jHex = BigInt(j).toString(16).padStart(64, "0");
   const dxHex = dx.toString(16).padStart(64, "0");
-  return `${GET_DY_SELECTOR}${iHex}${jHex}${dxHex}`;
+  return `${selector}${iHex}${jHex}${dxHex}`;
 }
