@@ -39,27 +39,27 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 
 All external API calls go through the Cloudflare Worker. The frontend never calls external APIs directly.
 
-| Source | Purpose | Refresh |
-|--------|---------|---------|
-| [DefiLlama](https://defillama.com/) | Stablecoin supply, price, chain distribution, history | 15 min |
-| [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 30 min |
-| [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 30 min |
-| [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 30 min |
-| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation | 20 min |
-| [GeckoTerminal](https://www.geckoterminal.com/) | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs | 20 min |
-| [DexScreener](https://dexscreener.com/) | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment | Varies by pipeline (15/20/30 min) |
-| [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 15 min (as fallback) |
-| [CoinMarketCap](https://coinmarketcap.com/) | Fallback price enrichment for assets with CMC slugs | 15 min (rate-limited to 1/hour) |
-| Protocol reserve APIs, dashboards, and on-chain accounting reads | Live reserve composition for live-enabled assets | Hourly |
-| [Etherscan v2](https://etherscan.io/) | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains) | 20 min |
-| [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 20 min |
-| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | 20 min |
-| [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN | 15 min |
-| [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies) | 15 min |
-| [gold-api.com](https://gold-api.com/) | Gold and silver spot prices for commodity-pegged stablecoin peg validation | 15 min |
-| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) | 3-month Treasury yield for yield benchmarking (risk-free rate, PYS `excessYield`) | Daily |
-| [Bluechip](https://bluechip.org/) | Independent stablecoin safety ratings (SMIDGE framework) | Daily |
-| [Anthropic](https://anthropic.com/) | AI-generated daily market digest | Daily |
+| Source                                                                  | Purpose                                                                                                    | Refresh                           |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| [DefiLlama](https://defillama.com/)                                     | Stablecoin supply, price, chain distribution, history                                                      | 15 min                            |
+| [DefiLlama Yields](https://yields.llama.fi/)                            | DEX pool TVL, volume, and composition for liquidity scoring                                                | 30 min                            |
+| [Curve Finance API](https://api.curve.finance/)                         | Pool A-factors, per-token balances, implied prices                                                         | 30 min                            |
+| [The Graph](https://thegraph.com/)                                      | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices                        | 30 min                            |
+| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain)           | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 20 min                            |
+| [GeckoTerminal](https://www.geckoterminal.com/)                         | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs                                        | 20 min                            |
+| [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15/20/30 min) |
+| [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
+| [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
+| Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Hourly                            |
+| [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains)                                                | 20 min                            |
+| [TronGrid](https://www.trongrid.io/)                                    | USDT freeze events on Tron                                                                                 | 20 min                            |
+| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | 20 min                            |
+| [frankfurter.app](https://frankfurter.app/)                             | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN                      | 15 min                            |
+| [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies)                                            | 15 min                            |
+| [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 15 min                            |
+| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO)       | 3-month Treasury yield for yield benchmarking (risk-free rate, PYS `excessYield`)                          | Daily                             |
+| [Bluechip](https://bluechip.org/)                                       | Independent stablecoin safety ratings (SMIDGE framework)                                                   | Daily                             |
+| [Anthropic](https://anthropic.com/)                                     | AI-generated daily market digest                                                                           | Daily                             |
 
 DEX discovery sources write to `dex_pool_staging` every 20 minutes on the dedicated discovery cron; `syncDexLiquidity()` then merges staged rows on its separate 30-minute scoring cron. DexScreener also participates in the 15-minute stablecoin price-enrichment path.
 
@@ -223,7 +223,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 
 ## Deployment
 
-Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push to `main`, the daily scheduled rebuild, or manual `workflow_dispatch`:
+GitHub Actions now runs the shared validate gate on pull requests to `main` via `.github/workflows/pull-request-checks.yml`, while production deploys still run only from `.github/workflows/deploy-cloudflare.yml` on push to `main`, the daily scheduled rebuild, or manual `workflow_dispatch`:
 
 For the full operator runbook (including worktree merge flow and pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
 For the full Worker binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).

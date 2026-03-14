@@ -6,7 +6,7 @@ This document defines the production deploy flow and the required local gate for
 
 ## Core Rules
 
-1. Code deploys normally ship from pushes to `main`; the workflow also supports a daily scheduled rebuild and manual `workflow_dispatch`.
+1. Pull requests into `main` run the shared validation gate in GitHub Actions; production deploys still ship from pushes to `main` and the deploy workflow also supports a daily scheduled rebuild plus manual `workflow_dispatch`.
 2. Heavy feature/refactor work must be done in a dedicated worktree branch.
 3. After merging a worktree branch into local `main`, run the merge gate before pushing.
 
@@ -76,7 +76,13 @@ Docs-only changes are skipped.
 
 ## CI Deploy Sequence
 
-Defined in `.github/workflows/deploy-cloudflare.yml`:
+Defined across:
+
+- `.github/workflows/validate-ci.yml` for the shared validate gate
+- `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`
+- `.github/workflows/deploy-cloudflare.yml` for main-branch deploys that reuse the same validate gate
+
+Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `validate`
    - includes `npm run audit:deps`

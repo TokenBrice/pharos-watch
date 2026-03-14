@@ -1,0 +1,16 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pull-request-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    uses: ./.github/workflows/validate-ci.yml
+    with:
+      coverage-compare-ref: ${{ github.event.pull_request.base.sha }}

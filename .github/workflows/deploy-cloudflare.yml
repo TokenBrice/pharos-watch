@@ -9,25 +9,9 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run audit:deps
-      - run: npm run lint
-      - run: npm run check:worker-boundary
-      - run: npm run check:migrations
-      - run: npm test
-      - run: npm run coverage:critical
-        env:
-          CRITICAL_COVERAGE_THRESHOLD: "40"
-          CRITICAL_COVERAGE_COMPARE_REF: ${{ github.event.before }}
-      - run: cd worker && npx tsc --noEmit
+    uses: ./.github/workflows/validate-ci.yml
+    with:
+      coverage-compare-ref: ${{ github.event.before }}
 
   deploy-worker:
     needs: validate
