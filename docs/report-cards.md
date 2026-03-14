@@ -199,7 +199,9 @@ The chain infrastructure score combines **primary chain maturity** with **deploy
 
 Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
 
-Examples: BOLD (immutable-code) = **100** (no chain penalty). LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 20) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper) = **10** (no chain penalty).
+Examples: BOLD (immutable-code) = **100** (exempt from chain penalty). LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 20) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper, Ethereum → infra 100) = **10** (infra ≥ 80, so chain penalty = 0).
+
+Chain penalty applies to `dao-governance`, `multisig`, and `wrapper` tiers. Exempt tiers: `immutable-code`, `single-entity`, `regulated-entity`.
 
 ### Dependency Risk Details
 
@@ -208,7 +210,7 @@ Examples: BOLD (immutable-code) = **100** (no chain penalty). LUSD (immutable-co
 **Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `shared/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages and are not renormalized, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta`.
 
 **Scoring:**
-- **No dependencies**: 95 (any governance tier)
+- **No dependencies**: `SELF_BACKED_SCORE_BY_GOVERNANCE[governance]` — varies by tier: `decentralized` = 90, `centralized-dependent` = 75, `centralized` = 95
 - **With dependencies**: `score = sum(weight_i × upstream_score_i) + (1 − totalWeight) × SELF_BACKED_SCORE`
 - −10 penalty if any dependency scores below 75 (B-)
 - Falls back to 70 if dependency scores unavailable

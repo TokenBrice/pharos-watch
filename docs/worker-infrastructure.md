@@ -406,7 +406,7 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 
 ## logCronRun() Wrapper
 
-**File:** `worker/src/lib/db.ts`
+**File:** `worker/src/lib/cron-logger.ts`
 
 Every cron job is wrapped with `runCronWithLease(...)` + `logCronRun(...)`:
 
@@ -475,7 +475,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state                                                                                                                                                           |
 | `daily-digest`            | 8 min   | LLM generation + distribution                                                                                                                                                                             |
 
-Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/db.ts`.
+Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/cron-lease.ts`.
 
 ### Circuit Breakers
 
@@ -509,6 +509,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `COINBASE_PRICES`                    | `coinbase-prices`             | `enrich-prices` primary consensus                                            |
 | `REDSTONE_PRICES`                    | `redstone-prices`             | `enrich-prices` primary consensus                                            |
 | `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                            |
+| `CURVE_LIQUIDITY_API`                | `curve-liquidity-api`         | `sync-dex-liquidity` (Curve pool liquidity fetch)                            |
 | `FX_REALTIME`                        | `fx-realtime`                 | `sync-fx-rates` real-time FX cross-validation                                |
 | `TWITTER_API`                        | `twitter-api`                 | `daily-digest` social posting                                                |
 | `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
@@ -590,7 +591,7 @@ Chunks statements into batches of 100 (D1's batch limit) and executes sequential
 
 ### Cron Lease Primitives (Phase C)
 
-Lease primitives are implemented in `worker/src/lib/db.ts` and backed by migration `0034_cron_leases.sql`.
+Lease primitives are implemented in `worker/src/lib/cron-lease.ts` and backed by migration `0034_cron_leases.sql`.
 These are infrastructure primitives only; scheduler-wide wiring is handled separately in later phases.
 
 ```sql
@@ -848,7 +849,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `sync-mint-burn-extended`       | 1,200s (20min) | `13,33,53 * * * *`                          |
 | `sync-dex-liquidity`            | 1,800s (30min) | `10,40 * * * *`                             |
 | `sync-yield-data`               | 1,800s (30min) | `10,40 * * * *`                             |
-| `snapshot-supply`               | 86,400s (24h)  | `0 8 * * *`                                 |
+| `snapshot-supply`               | 86,400s (24h)  | `*/15 * * * *` (primary) / `0 8 * * *` (fallback) |
 | `snapshot-safety-grade-history` | 86,400s (24h)  | `0 8 * * *`                                 |
 | `fetch-tbill-rate`              | 86,400s (24h)  | `0 8 * * *`                                 |
 | `snapshot-psi`                  | 86,400s (24h)  | `0 8 * * *`                                 |
@@ -895,7 +896,10 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated 20-minute lanes, half-hourly, hourly reserve sync, Telegram, and daily slots)                                    |
 | `worker/src/lib/env.ts`                            | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides                                                                                       |
 | `worker/wrangler.toml`                             | Deployment config: custom domain, cron triggers, D1 binding, vars                                                                                                   |
-| `worker/src/lib/db.ts`                             | Database helpers: `logCronRun`, `batchExecute`, cache CRUD, block tracking, price cache, cron lease primitives                                                      |
+| `worker/src/lib/db.ts`                             | Database helpers: `batchExecute`, block tracking                                                                                                                    |
+| `worker/src/lib/db-cache.ts`                       | Cache CRUD: `getCache`, `setCache`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`                                                                            |
+| `worker/src/lib/cron-logger.ts`                    | `logCronRun` wrapper and `CronResult` type                                                                                                                          |
+| `worker/src/lib/cron-lease.ts`                     | Cron lease primitives: `acquireCronLease`, `runCronWithLease`, `CRON_TIMEOUT_MS`                                                                                    |
 | `worker/src/lib/auth.ts`                           | Admin auth: `ops-api` Access/service-token signal validation                                                                                                        |
 | `worker/src/lib/alerts.ts`                         | Webhook alerts: auto-detects Discord/Slack format                                                                                                                   |
 | `worker/src/lib/constants.ts`                      | Shared constants: API URLs, thresholds, cache profiles                                                                                                              |

@@ -25,7 +25,7 @@ Clamped to [0, 100], rounded to 1 decimal place.
 |-----------|-------|---------|---------|
 | **Severity** | 0–68 | `min(68, Σ (abs(bps) / 100 × mcap_share × log₂(1 + mcap / $1B) × 60 × factor))` | Depeg impact weighted by market cap significance |
 | **Breadth** | 0–17 | `min(17, Σ sqrt(mcap / $1B) × 3 × factor)` per unique depegged coin | Number of depegging coins, weighted so micro-caps barely register |
-| **Stress Breadth** | 0–5 | `min(5, dewsStressBreadth)` | DEWS-derived count of coins under elevated stress (non-depeg early warnings) |
+| **Stress Breadth** | 0–5 | `min(5, dewsStressBreadth)` | DEWS-derived market-cap-weighted stress signal: each coin in ALERT+ band contributes `sqrt(mcap / $1B) × 1.5`, not a simple count |
 | **Trend** | −5 to +5 | `clamp(-5, 5, mcap_7d_change_pct)` | 7-day total market cap momentum |
 
 Severity and breadth iterate over **active depegs only** (unique coins currently outside their peg threshold), with depreciation applied to chronic depegs.
@@ -55,7 +55,7 @@ factor = depegAgeDays ≤ 30 ? 1.0 : max(0.25, 1.0 - (depegAgeDays - 30) / 120)
 | Age | Factor | Meaning |
 |-----|--------|---------|
 | 0–30 days | 100% | Full impact — fresh depeg, market-relevant |
-| 45 days | 87% | Still significant |
+| 45 days | 87.5% | Still significant |
 | 60 days | 75% | Fading |
 | 90 days | 50% | Half impact |
 | 120 days | 25% | Floor reached |
@@ -118,11 +118,11 @@ If `totalMcapUsd` is missing or `<= 0`, `computeStabilityIndex()` returns `null`
 - **15-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
 - **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 15-min samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
-- **Tables**: `stability_index_samples` (migration 0026) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON). `stability_index` (migration 0022) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON)
+- **Tables**: `stability_index_samples` (migration 0026, columns added by 0035) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`. `stability_index` (migration 0022, columns added by 0035) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`
 
 ## API
 
-`GET /api/stability-index` — latest score + recent history (default response uses the latest ~90 daily rows, with today's running average prepended when available). With `?detail=true`, full history with per-day component breakdowns. Cache: standard (5-min edge, 1-min browser).
+`GET /api/stability-index` — latest score + recent history (default response uses the latest ~91 daily rows, with today's running average prepended when available). With `?detail=true`, up to 730 days of history with per-day component breakdowns. Cache: standard (5-min edge, 1-min browser).
 
 See [API Reference](./api-reference.md) for the full response shape.
 

@@ -486,7 +486,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, buildInClause, logCronRun with protected catch)
         ├── chain-registry.ts     # Worker RPC registry and provider-map re-exports; runtime-neutral provider slugs now live in shared/lib/chain-provider-registry.ts
-        ├── evm-rpc.ts            # Shared JSON-RPC / Etherscan proxy helpers for eth_call, storage, and uint256 reads
+        ├── evm-rpc.ts            # EVM JSON-RPC + Etherscan proxy helpers (eth_call, storage, uint256, block headers, timestamp→block search)
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
@@ -506,7 +506,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── depeg-helpers.ts      # Shared depeg helpers: row mapper, DEX price loader, and event insert statement builder
         ├── dews.ts               # DEWS computation: 8 sub-signals, weighted average, threat bands
         ├── authoritative-price-sources.ts # Shared authoritative live/historical price provider registry for protocol-backed assets
-        ├── evm-rpc.ts            # Generic EVM JSON-RPC helpers (eth_call, block headers, timestamp→block search)
+
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
         ├── coingecko.ts          # CoinGecko API key initialization (shared across crons)
         ├── coingecko-onchain.ts  # CoinGecko Onchain API client (registry-backed network mapping, pool discovery, locked liquidity)

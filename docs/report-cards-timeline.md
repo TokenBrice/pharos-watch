@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history. Covers v1.0 through v5.7 (2026-02-25 → 2026-03-13).
+Internal changelog reconstructed from git history. Covers v1.0 through v5.8 (2026-02-25 → 2026-03-14).
 
 ---
 
@@ -271,6 +271,17 @@ Reserve-derived collateral quality now treats direct ETH and canonical wrapped E
 
 Weights and grade thresholds are unchanged from v5.6.
 
+### v5.8 — Live reserve passthrough for collateral quality (Mar 14)
+
+Collateral quality scoring now consumes live reserve snapshots when available:
+
+- For coins with `liveReservesConfig`, the collateral quality score uses the hourly live snapshot from `reserve_composition` instead of curated `StablecoinMeta.reserves` when the snapshot is fresh (< 48h) and has >= 2 slices.
+- The `collateralFromLive` flag in `RawDimensionInputs` indicates which source was used.
+- A delta alert fires when the live-derived score diverges from curated by >15 points, signaling that curated metadata may need human review.
+- Dependency inference (`deriveDependencies`) remains on curated data because live adapter slices do not carry `coinId` links.
+
+Weights and grade thresholds are unchanged from v5.7.
+
 ---
 
 ## Quick Reference: Weight Evolution
@@ -284,7 +295,7 @@ Weights and grade thresholds are unchanged from v5.6.
 | v3.3       | 25%        | 20%       | —       | 20%        | 15%              | 25%      |
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
-| **v5.0–5.7** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v5.0–5.8** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

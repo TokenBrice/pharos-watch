@@ -15,7 +15,7 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool m
 | Component           | Weight | Source                     | How Computed                                                                                                           |
 | ------------------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **TVL Depth**       | 35%    | DeFiLlama Yields           | Log-scale using effective TVL (quality-adjusted, metapool-deduped): $100K->20, $1M->40, $10M->60, $100M->80, $1B+->100 |
-| **Volume Activity** | 20%    | DeFiLlama Yields           | Log-scale V/T ratio: 33.3*log10(vtRatio/0.005). ~0.5%->13, ~5%->56, ~50%->100                                         |
+| **Volume Activity** | 20%    | DeFiLlama Yields           | Log-scale V/T ratio: 33.3*log10(vtRatio/0.005). ~0.5%->0, ~5%->33, ~50%->67                                            |
 | **Pool Quality**    | 22.5%  | Curve API + DeFiLlama      | Quality-adjusted TVL using mechanism x balance health x pair quality multipliers (see below)                           |
 | **Durability**      | 15%    | DeFiLlama Yields + History | 35% TVL stability, 25% volume consistency, 25% maturity, 15% organic fraction (sqrt curve)                             |
 | **Pair Diversity**  | 7.5%   | DeFiLlama Yields           | Pool count, diminishing returns: min(100, poolCount x 5)                                                               |
@@ -132,9 +132,11 @@ Per-stablecoin durability metric combining: TVL stability from 30-day CV (35%), 
 
 #### Pool Quality Formula
 
-`poolQuality = (qualityAdjustedTvl / effectiveTvl) × 100`
+Pool Quality uses the same log-scale formula as TVL Depth, applied to quality-adjusted TVL:
 
-Where `qualityAdjustedTvl` applies mechanism, balance health, and pair quality multipliers to raw TVL, and `effectiveTvl` applies metapool deduplication and protocol-level caps.
+`poolQuality = min(100, max(0, 20 * log10(max(qualityAdjustedTvl, 1) / 100_000) + 20))`
+
+Where `qualityAdjustedTvl` applies mechanism, balance health, and pair quality multipliers to raw TVL. Examples: $100K→20, $1M→40, $10M→60, $100M→80.
 
 #### Durability Sub-Component Weights
 
@@ -191,12 +193,12 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
   - T2: 1–4 pools or 1 chain, every 3rd run.
   - T3: `>=5` pools on `>=2` chains, every 10th run.
   - Global scheduling is tier-first (`T1 -> T2 -> T3 -> dormant`), with staleness used only as the tie-breaker inside a tier.
-- **Exponential backoff**:
-  - `consecutiveMisses` 0: T1
-  - 3–5: T2
-  - 6–9: T3
+- **Exponential backoff** (applied as a tier floor from `consecutiveMisses`; effective tier is `max(baseTier, backoffTier)`):
+  - 0–2 misses: no backoff override (base tier from pool/chain counts determines placement)
+  - 3–5: floor T2
+  - 6–9: floor T3
   - 10+: dormant (daily gate)
-  - Any discovery hit resets `consecutiveMisses` to 0 and returns the coin to T1 immediately.
+  - Any discovery hit resets `consecutiveMisses` to 0, removing the backoff floor; the coin's tier is then recomputed from its pool/chain counts on the next run.
 - **Chain-aware source routing**: discovery only queries chains with defined entries in a stablecoin’s `contracts` plus optional `tradedContracts` metadata; this avoids unnecessary API calls against un-deployed chains while preserving wrapper/secondary-market discovery addresses.
 - **Freshness confidence decay**: staged pool effective TVL is multiplied by `max(0.5, 1 - ageHours / 48)`; rows older than 24h are excluded from scoring merge.
 - **Staged pool defaults**: `organic_fraction = 0.5`, `balanceRatio = 1.0`, `lockedLiquidity = null`, `maturity = min(daysSinceDiscovered, 30)`, `isStable` inferred from normalized `quoteSymbol`.

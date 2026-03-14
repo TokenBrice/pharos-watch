@@ -124,6 +124,7 @@ Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers)
 | Main Street USD (297) | msY   | Main Street savings         |
 | GAIB AID (353)        | sAID    | GAIB AID staking            |
 | Parallel USDp         | sUSDp   | Parallel savings wrapper    |
+| dUSD (dTRINITY)       | sdUSD   | dTRINITY dStake vault       |
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
@@ -271,7 +272,7 @@ This selection behavior is surfaced in row-level `provenance` metadata on `/api/
 
 ## Database Schema
 
-**Migrations:** `worker/migrations/0031_yield_data.sql` (initial), `worker/migrations/0041_yield_data_multi_source.sql` (multi-source PK), `worker/migrations/0056_yield_history_warning_signals.sql` (warning signal persistence), `worker/migrations/0061_yield_history_source_aware.sql` (per-source history rows)
+**Migrations:** `worker/migrations/0031_yield_data.sql` (initial), `worker/migrations/0033_yield_warning_signals.sql` (warning_signals column), `worker/migrations/0041_yield_data_multi_source.sql` (multi-source PK), `worker/migrations/0056_yield_history_warning_signals.sql` (warning signal persistence), `worker/migrations/0061_yield_history_source_aware.sql` (per-source history rows)
 
 ### `yield_data` — Current Snapshot (one row per coin per source)
 

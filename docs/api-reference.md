@@ -81,9 +81,9 @@ All error responses use `{ "error": "message" }` JSON format.
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                                                         |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                   |
 | 502    | Bad Gateway           | Upstream (DefiLlama / CoinGecko) fetch failed                                                                                        |
-| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated                                                                      |
+| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
 
-**Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`).
+**Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations.
 
 ---
 
@@ -939,7 +939,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `mintBurn.sync.freshnessStatus`      | `"fresh" \| "degraded" \| "stale"` | Public freshness state keyed to the 20-minute critical-lane cadence (`fresh <= 40m`, `degraded <= 60m`, `stale > 60m`)                                                                                                                                                                                                                                                                 |
 | `mintBurn.sync.warning`              | `string \| null`                   | Human-readable warning when the critical lane is stale, degraded, or errored                                                                                                                                                                                                                                                                                                           |
 | `mintBurn.sync.criticalLaneHealthy`  | `boolean`                          | `true` when the latest critical-lane run is `ok`, `degraded`, or `skipped_locked`                                                                                                                                                                                                                                                                                                      |
-| `circuits`                           | `Record<string, CircuitRecord>`    | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api` |
+| `circuits`                           | `Record<string, CircuitRecord>`    | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
 
 **`CacheStatus`**
 
@@ -1582,6 +1582,7 @@ Aggregate responses are filtered to tracked stablecoin IDs only, even if stale r
     }
   },
   "updatedAt": 1740000000,
+  "malformedRows": 0,
   "methodology": {
     "version": "4.6",
     "versionLabel": "v4.6",
@@ -1620,6 +1621,7 @@ Aggregate responses are filtered to tracked stablecoin IDs only, even if stale r
       "methodologyVersion": "4.3"
     }
   ],
+  "malformedRows": 0,
   "methodology": {
     "version": "4.6",
     "versionLabel": "v4.6",
@@ -1631,6 +1633,8 @@ Aggregate responses are filtered to tracked stablecoin IDs only, even if stale r
   }
 }
 ```
+
+**`malformedRows`** — count of DB rows with unparseable JSON signal data (expected 0 under normal operation)
 
 **`methodology`** — same fields and semantics as `/api/depeg-events`
 
@@ -1691,7 +1695,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 Telegram Bot API webhook endpoint. Receives user messages, processes bot commands, and manages subscriptions.
 
-**Authentication:** Secret query parameter (`?secret=...`), not the standard `X-Admin-Key`.
+**Authentication:** `X-Telegram-Bot-Api-Secret-Token` header (primary), with `?secret=...` query parameter as backward-compatible fallback. Not the standard `X-Admin-Key`.
 
 **Rate limiting:** Exempt from IP rate limiter (Telegram sends from fixed IPs).
 

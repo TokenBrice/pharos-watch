@@ -181,3 +181,8 @@ Composite-score surfaces on the detail page now share a lightweight explainabili
 | `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Redemption route card |
 | `src/components/stablecoin-detail/safety-score-history-section.tsx` | Grade timeline section |
 | `src/components/stablecoin-detail/explore-next-section.tsx` | Post-detail navigation hub |
+| `src/components/mcap-chart.tsx` | Supply / market-cap chart (dynamic import) |
+| `src/components/depeg-history.tsx` | Depeg event timeline (dynamic import) |
+| `src/components/key-info-card.tsx` | Key info / metadata card (dynamic import) |
+| `src/components/yield-detail-section.tsx` | Yield detail section (dynamic import) |
+| `src/components/dex-liquidity-card.tsx` | DEX liquidity breakdown card (dynamic import) |

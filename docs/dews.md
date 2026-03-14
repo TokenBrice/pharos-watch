@@ -2,6 +2,16 @@
 
 Per-coin, forward-looking stress score (0-100) estimating depeg probability. Computed every 15 minutes from 8 sub-signals.
 
+## Methodology Versioning
+
+DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
+
+- **Current methodology version:** `4.6`
+- **Public changelog page:** `/methodology/depeg-changelog/`
+- **Canonical source:** `shared/lib/depeg-dews-version.ts`
+
+Each API response includes a `methodology` envelope with `version`, `changelogPath`, and `isCurrent` fields.
+
 ---
 
 ## Score Formula
@@ -174,24 +184,28 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```json
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.6" },
     ...
   },
-  "updatedAt": 1740000000
+  "updatedAt": 1740000000,
+  "malformedRows": 0,
+  "methodology": { "version": "4.6", "versionLabel": "...", "currentVersion": "4.6", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
-**Single coin:** `?stablecoin=usdt-tether&days=30` — Returns latest + daily history.
+**Single coin:** `?stablecoin=usdt-tether&days=30` (default 30, min 1, max 365) — Returns latest + daily history.
 
 Untracked `stablecoin` IDs return `404` (`Stablecoin not tracked`).
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.6" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... } },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "4.6" },
     ...
-  ]
+  ],
+  "malformedRows": 0,
+  "methodology": { "version": "4.6", "versionLabel": "...", "currentVersion": "4.6", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 

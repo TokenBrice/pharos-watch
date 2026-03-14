@@ -7,7 +7,9 @@ The dependency map (`/dependency-map`) renders an interactive collateral graph f
 Primary files:
 - `src/app/dependency-map/page.tsx`
 - `src/app/dependency-map/client.tsx`
-- `src/components/contagion-graph.tsx`
+- `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout logic
+- `src/components/contagion-graph.tsx` — SVG rendering, interaction handlers
+- `src/components/dependency-map-mobile-summary.tsx` — mobile fallback view
 
 ## Data Inputs
 
@@ -21,7 +23,7 @@ Market-cap map construction lives in `src/app/dependency-map/client.tsx` and use
 
 ## Graph Construction
 
-Graph construction happens in `ContagionGraph` (`src/components/contagion-graph.tsx`):
+Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `useMemo` from `ContagionGraph`):
 
 - Filters out `isDefunct` report cards.
 - Builds a live dependency edge set from `TRACKED_STABLECOINS` + `deriveDependencies(meta)` (live source and live target only).

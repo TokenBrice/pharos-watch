@@ -87,11 +87,10 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 - **Live override** — used by `syncStablecoins()` to replace the current cached price
 - **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
 
-- **Current scope:** `cusd-cap`, `iusd-infinifi`, `crvusd-curve`
+- **Current scope:** `cusd-cap`, `iusd-infinifi` (crvUSD was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3; see [Pricing Pipeline](./pricing-pipeline.md))
 - **Source:** direct Ethereum `eth_call` against protocol redemption paths:
   - Cap `getBurnAmount(address,uint256)` for `cUSD -> USDC`
   - infiniFi `RedeemController.receiptToAsset(uint256)` for `iUSD -> USDC`
-  - Curve `PriceAggregator.price()` for `crvUSD` oracle price
 - **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption
 - **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when the quote validates against peg bounds
 
