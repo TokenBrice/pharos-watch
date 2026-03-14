@@ -646,7 +646,7 @@ export async function enrichMissingPrices(
           const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
           const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
           const cmcRes = await fetchWithRetry(
-            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?cryptocurrency_type=stablecoin&limit=200&convert=USD",
+            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD",
             {
               headers: {
                 "X-CMC_PRO_API_KEY": cmcApiKey,
@@ -661,11 +661,11 @@ export async function enrichMissingPrices(
 
           if (cmcRes && cmcRes.ok) {
             const cmcData = (await cmcRes.json()) as {
-              data: Array<{ symbol: string; quote: { USD: { price: number } } }>;
+              data: { coins: Array<{ symbol: string; quote: { USD: { price: number } } }> };
             };
 
             const cmcBySymbol = new Map<string, number>();
-            for (const entry of cmcData.data) {
+            for (const entry of cmcData.data.coins) {
               const price = entry.quote?.USD?.price;
               if (price != null && price > 0) {
                 const sym = entry.symbol.toUpperCase();
@@ -699,9 +699,7 @@ export async function enrichMissingPrices(
             }
             if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
           } else {
-            let cmcBody = "";
-            try { cmcBody = cmcRes ? await cmcRes.text() : ""; } catch { /* ignore */ }
-            console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}: ${cmcBody.slice(0, 500)}`);
+            console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
             if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
           }
         } catch (err) {

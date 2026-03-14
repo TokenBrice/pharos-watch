@@ -94,27 +94,14 @@ Two issues:
 
 ---
 
-### H3: CoinMarketCap Enrichment Permanently Broken (P7)
+### ~~H3: CoinMarketCap Enrichment Permanently Broken (P7)~~ RESOLVED (2026-03-14)
 
 **File:** `worker/src/cron/enrich-prices.ts:614-702`
 **Impact:** Pass 2 enrichment (CMC batch listings) has never successfully executed. Assets that need fallback pricing beyond DefiLlama skip directly to DexScreener.
 
-**Evidence:** The `coinmarketcap-prices` circuit breaker:
-```json
-{
-  "state": "open",
-  "consecutiveFailures": 3,
-  "lastSuccessAt": null,
-  "lastFailureAt": 1773478924
-}
-```
+**Root cause (2026-03-14):** The `cryptocurrency_type=stablecoin` parameter is invalid — CMC API only accepts `all`, `coins`, `tokens`. The API returns HTTP 400: `"cryptocurrency_type" must be one of [all, coins, tokens]`. The API key and plan are valid.
 
-The CMC API key IS configured (the code reaches the fetch), but every attempt fails. Possible causes:
-- The `cryptocurrency_type=stablecoin` filter may require a paid plan
-- The API key may be invalid or expired
-- The Pro API endpoint may reject the free-tier key for `listings/latest`
-
-**Fix:** Verify the CMC API key and plan tier. Test the endpoint manually: `curl -H "X-CMC_PRO_API_KEY: $KEY" "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?cryptocurrency_type=stablecoin&limit=5"`. If the free tier doesn't support this filter, either upgrade or remove `cryptocurrency_type=stablecoin` and filter client-side.
+**Fix applied:** Switched from `/v1/cryptocurrency/listings/latest?cryptocurrency_type=stablecoin` to `/v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1` (CMC's "Stablecoin" category). Returns 256 stablecoins directly (vs 9 stablecoins in the generic top-200 listing). Response structure differs: `data.coins[]` instead of `data[]`. Costs 3 credits/call (vs 1), well within the 10,000/month free tier budget at 1 call/hour.
 
 ---
 
