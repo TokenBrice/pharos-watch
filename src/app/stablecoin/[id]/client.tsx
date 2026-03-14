@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ReportCardDetail } from "@/components/report-card";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
@@ -206,7 +207,9 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
 
       <section id="liquidity">
-        <DexLiquidityCard stablecoinId={viewModel.id} />
+        <SectionErrorBoundary name="liquidity">
+          <DexLiquidityCard stablecoinId={viewModel.id} />
+        </SectionErrorBoundary>
       </section>
 
       {!viewModel.isNavToken ? (
