@@ -15,6 +15,15 @@ const BINANCE_PAIR_TO_SYMBOL: Record<string, string> = {
 };
 
 /**
+ * Explicit list of stablecoin symbols with confirmed Coinbase USD trading pairs.
+ * This avoids ~125 wasted 404 requests per sync.
+ */
+export const COINBASE_KNOWN_SYMBOLS: readonly string[] = [
+  "USDT", "USDC", "DAI", "PYUSD", "EURC", "GHO",
+  "GUSD", "PAX", "TUSD", "USDP", "FDUSD", "PAXG", "XAUT",
+] as const;
+
+/**
  * Fetch all ticker prices from Binance in a single call.
  * Returns Map<symbol, price> for stablecoin/USD pairs only.
  * API weight: 4 (trivial against 6,000/min budget).
