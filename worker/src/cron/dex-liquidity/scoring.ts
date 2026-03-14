@@ -386,7 +386,12 @@ export async function computeStablecoinScores(
     });
   }
 
-  // Global protocol-level TVL cap: clamp deduped protocol totals at DL protocol TVL.
+  // M3: Global protocol-level TVL cap: when reducing excess, chain TVLs are
+  // distributed proportionally rather than attributed to the chain with the
+  // most excess. This is a trade-off — exact chain attribution would require
+  // per-pool chain data which is not available in the global aggregate.
+  //
+  // Clamp deduped protocol totals at DL protocol TVL.
   // After cross-stablecoin dedup, a protocol can still exceed its real TVL when
   // CG/GT virtual reserves are inflated across many pools. The per-coin cap allows
   // up to protocolTvl PER stablecoin, but globally the protocol total must not

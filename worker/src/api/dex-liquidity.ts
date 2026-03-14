@@ -100,6 +100,9 @@ function normalizeTopPools(json: string | null): DexLiquidityPoolResponse[] {
   });
 }
 
+// M7: Wide tolerance windows (24h for 24h baseline, 48h for 7d baseline) handle
+// missed cron runs gracefully. The dex-liquidity cron runs every 30 min, but if
+// several runs are missed, we still find a usable baseline within the tolerance.
 function selectTrendBaseline(
   history: DexHistoryRow[],
   targetSec: number,

@@ -176,6 +176,10 @@ export async function syncDexDiscovery(
       (a, b) => discoveryTierPriority(a.tier) - discoveryTierPriority(b.tier) || compareDiscoveryMeta(a.meta, b.meta),
     );
 
+    // M5: Deadline is checked at coin boundaries only (not mid-crawl), which is
+    // acceptable with a 13-min budget — individual coin crawls take 5-30s, so
+    // overshoot is bounded. Mid-crawl checks would add complexity for negligible
+    // benefit and risk leaving a coin in a partial-crawl state.
     const deadlineMs = Date.now() + 13 * 60_000;
     const knownPoolIds = new Set<string>();
     await onProgress?.({
