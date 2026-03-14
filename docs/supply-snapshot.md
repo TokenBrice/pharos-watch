@@ -22,7 +22,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
 2. Verify cache freshness:
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
-3. Parse cached JSON, extract the `peggedAssets` array
+3. Parse and validate the cached payload via `loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false })`
 4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 158 entries: 156 tracked + 2 shadow)
 5. Floor current date/time to UTC midnight:
    ```typescript
@@ -167,9 +167,10 @@ For CoinGecko-only coins, commodity tokens (gold/silver), or any coin where exte
 Admin endpoint (requires Access service-token headers). Backfills `supply_history` from:
 
 - **Commodity tokens:** CoinGecko `market_chart`
-- **Regular coins:** DefiLlama detail API
+- **CoinGecko-only and commodity detail providers:** CoinGecko `market_chart`
+- **DefiLlama-backed regular coins:** DefiLlama detail API
 
-Other CoinGecko-only non-commodity tokens are skipped because the current backfill path has no historical supply source for them. Non-USD regular coins fetch historical prices for native-to-USD conversion. Batch processing uses `stablecoin`, `batch`, and `batchSize`.
+The handler explicitly supports `detailProvider === "coingecko"` and `detailProvider === "commodity"` in addition to DefiLlama-backed assets. Non-USD regular coins fetch historical prices for native-to-USD conversion. Batch processing uses `stablecoin`, `batch`, and `batchSize`.
 
 ---
 
@@ -179,8 +180,9 @@ Other CoinGecko-only non-commodity tokens are skipped because the current backfi
 
 **File:** `src/hooks/use-stablecoins.ts`
 
-- Fetches `/api/stablecoin/{id}` (detail API, not `/api/supply-history`)
-- Transforms via `detailToSupplyHistory()`: tries normalized `totalCirculatingUSD` first, falls back to legacy `circulating`, filters zero values
+- Fetches `/api/supply-history?stablecoin=<id>&days=<days>`
+- Validates the response with `SupplyHistoryResponseSchema` from `@shared/types`
+- Returns normalized `{ date, circulatingUsd, price }` points directly; there is no detail-endpoint transform in the hook anymore
 - TanStack Query: `staleTime = 1 hour`, `refetchInterval = 2 hours`
 
 ### McapChart
@@ -199,7 +201,7 @@ Aggregated market cap breakdown. Stacked chart showing USDT, USDC, USDS, DAI ind
 
 **File:** `src/app/compare/client.tsx`
 
-Fetches individual supply histories for each selected coin. Side-by-side comparison charts.
+The compare data model fetches per-coin `/api/supply-history` series directly through `useQueries()` in `src/hooks/use-compare-data-model.ts`. Side-by-side comparison charts do not depend on `GET /api/stablecoin/:id`.
 
 ---
 
@@ -207,9 +209,8 @@ Fetches individual supply histories for each selected coin. Side-by-side compari
 
 | Condition | Behavior |
 |-----------|----------|
-| `getCache()` returns `null` | Return degraded (`reason: "cache_missing"`) |
+| `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, or `legacy-array-not-allowed`) |
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
-| No `peggedAssets` in payload | Return degraded (`reason: "cache_payload_missing_pegged_assets"`) |
 | 0 prepared rows (all tracked coins missing/zero supply) | Return degraded (`reason: "all_coins_zero_supply"`) |
 | < 80% of tracked coins have valid data | Log warning, continue |
 | `batchExecute()` exception | Propagate to `logCronRun` error handler |
@@ -218,30 +219,14 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 
 ---
 
-## Chain RPC Configuration
-
-**File:** `worker/src/lib/chain-registry.ts`
-
-Not used by the snapshot cron but available for future on-chain supply fetching.
-
-| Category | Chains |
-|----------|--------|
-| EVM (Alchemy) | Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC |
-| EVM (dRPC fallback) | Gnosis, Fantom, Celo |
-| Tron | Alchemy or TronGrid |
-
-**Strategy:** Alchemy primary, dRPC fallback, public RPC fallback.
-
----
-
 ## Key Constraints
 
 1. Depends entirely on DefiLlama data (no on-chain verification)
 2. Price may be `null` if DL price data is unavailable
 3. One snapshot per UTC day (no intraday data)
-4. Tron `balanceOf` subtraction not yet supported (needs base58-to-hex conversion)
-6. Non-USD peg backfill requires historical prices (may fall back to current price)
-7. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
+4. Strict cache loading means malformed or legacy array payloads fail closed instead of snapshotting partial data
+5. DefiLlama-backed non-USD backfills require historical prices for native-to-USD conversion
+6. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
 
 ---
 
@@ -253,8 +238,10 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 | `worker/src/api/supply-history.ts` | `GET /api/supply-history` handler |
 | `worker/src/api/stablecoin-detail.ts` | Detail API with `supply_history` fallback for CG-only/commodity coins |
 | `worker/src/api/backfill-supply-history.ts` | Admin backfill endpoint |
-| `worker/src/lib/db.ts` | `batchExecute()`, `getCache()`, `logCronRun()` |
-| `worker/src/lib/chain-registry.ts` | Unified chain mappings + chain RPC configs (future on-chain supply) |
+| `worker/src/lib/db.ts` | `batchExecute()` helper used by snapshot and backfill writes |
+| `worker/src/lib/db-cache.ts` | `getCache()` cache-row access helpers |
+| `worker/src/lib/cron-logger.ts` | `CronResult` type and `logCronRun()` wrapper used by scheduled handlers |
+| `worker/src/lib/stablecoins-cache.ts` | Strict/lenient stablecoins-cache loader and failure reasons |
 | `worker/migrations/0015_supply_history.sql` | `supply_history` table |
 | `worker/migrations/0013_onchain_supply.sql` | `onchain_supply` table (per-chain cache) |
 | `shared/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |
@@ -262,6 +249,7 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 | `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata referenced by `PSI_ELIGIBLE_STABLECOINS` |
 | `shared/types/index.ts` | `StablecoinMeta` types |
 | `shared/lib/stablecoins.ts` | Stablecoin metadata |
-| `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook, `detailToSupplyHistory()` transform |
+| `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook for `/api/supply-history` |
+| `src/hooks/use-compare-data-model.ts` | Compare-page supply-history queries |
 | `src/components/mcap-chart.tsx` | Individual mcap chart |
 | `src/components/total-mcap-chart.tsx` | Aggregated mcap breakdown chart |

@@ -278,7 +278,7 @@ src/                              # Next.js frontend (static export)
 │   ├── yield-scatter-plot.tsx    # Yield vs risk scatter chart with quadrant labels
 │   └── theme-toggle.tsx          # Dark/light mode toggle
 ├── hooks/
-│   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (detail-token history derived from GET /api/stablecoin/:id)
+│   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (`/api/supply-history`)
 │   ├── api-hooks.ts              # Consolidated low-friction GET hooks wired to shared API path builders
 │   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
 │   ├── use-logos.ts              # Static logos from data/logos.json

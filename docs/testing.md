@@ -13,6 +13,7 @@ npm run lint          # ESLint across frontend + worker code
 npm run audit:deps    # Fails on high-severity npm advisories
 npm run seo:check     # Static SEO audit against built `out/` HTML
 npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts` -> `worker/src` imports)
+npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts` stays aligned with `worker/wrangler.toml` cron declarations
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report
@@ -56,21 +57,23 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run build`
    - `npm run seo:check`
    - Deploy to Cloudflare Pages
-6. `smoke-ui` (needs `deploy-pages`):
+6. `smoke-ui` (needs `deploy-pages`, runs in parallel with `smoke-ops`):
    - Run `npm run test:smoke-ui`
    - Uses `SMOKE_UI_URL` from `vars.SMOKE_UI_URL` (fallback: `https://pharos.watch`)
    - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
-7. `smoke-ops` (needs `deploy-pages`):
+7. `smoke-ops` (needs `deploy-pages`, runs in parallel with `smoke-ui`):
    - Run `npm run test:smoke-ops`
    - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/status/`, `https://ops-api.pharos.watch`)
    - Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
 
-This arrangement gives pull requests the same validate gate the deploy workflow depends on, prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, and then runs a fast post-deploy browser sanity check on the live site.
+This arrangement gives pull requests the same validate gate the deploy workflow depends on, prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, and then runs parallel public-site and ops-surface smoke checks after Pages deploy.
 
 The workflow uses `actions/checkout@v5` and `actions/setup-node@v6` pinned by commit SHA so the GitHub-hosted JS actions run on Node 24. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the pipeline before deploy.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production.
+
+`npm run check:cron-sync` is currently a local integrity check rather than a CI gate. Run it whenever you change `worker/wrangler.toml` cron expressions or `shared/lib/cron-jobs.ts`.
 
 `npm run seo:check` is the static-export SEO gate. It inspects the built `out/` HTML for missing title/description/canonical/OpenGraph/Twitter tags, duplicate or missing `h1`s on indexable pages, CSR bailout markers, sitemap omissions, orphan pages, and indexable routes that are more than three clicks away from `/`.
 
@@ -288,12 +291,12 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `db-utils.test.ts`                    | `worker/src/lib/db.ts` helpers                             | SQL helper composition and pagination/query utility behavior                                                                          |
 | `idempotency.test.ts`                 | `worker/src/lib/idempotency.ts`                            | Idempotency-key dedupe, replay semantics, and conflict handling                                                                       |
 | `live-reserves-store.test.ts`         | `worker/src/lib/live-reserves-store.ts`                    | Consistent live-snapshot resolution, fallback modes, and reserve-overview aggregation                                                 |
-| `log-cron-run.test.ts`                | `worker/src/lib/db.ts` cron wrapper                        | Success/error/skipped logging and prune fallback behavior                                                                             |
+| `log-cron-run.test.ts`                | `worker/src/lib/cron-logger.ts`                            | Success/error/skipped logging and prune fallback behavior                                                                             |
 | `mint-burn-bridge-classifier.test.ts` | `worker/src/lib/mint-burn-pipeline/classification.ts`      | CCIP bridge-burn classification and review fallbacks                                                                                  |
 | `mint-burn-contracts.test.ts`         | `worker/src/lib/mint-burn-contracts.ts`                    | Contract config invariants, decimals, and event definition coverage                                                                   |
 | `twitter.test.ts`                     | `worker/src/lib/twitter.ts`                                | Digest tweet text building, first-mention cashtag injection, truncation, OAuth posting/error handling                                 |
 | `status-reliability.test.ts`          | `worker/src/lib/status-reliability.ts`                     | Hysteresis transitions, state snapshot staleness, transition listing, probe persistence, discrepancy streak/alert state               |
-| `cron-leases.test.ts`                 | `worker/src/lib/db.ts`                                     | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease`                                                          |
+| `cron-leases.test.ts`                 | `worker/src/lib/cron-lease.ts`                             | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease`                                                          |
 | `mint-burn-pipeline.test.ts`          | `worker/src/lib/mint-burn-pipeline/*`                      | Shared ingestion helpers: inserted/ignored accounting, burn counters, affected-hour aggregation, sync-state upsert modes              |
 | `mint-burn-price-heal.test.ts`        | `worker/src/lib/mint-burn-pipeline/price-heal.ts`          | NULL-price auto-heal path, 48h cutoff, and affected-hour collection                                                                   |
 | `mint-burn-roundtrip.test.ts`         | `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts` | Same-transaction roundtrip tagging semantics                                                                                          |

@@ -66,7 +66,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 ### `POST /api/feedback`
 
 **Auth:** none (public endpoint)
-**CORS:** standard Pharos headers (`Access-Control-Allow-Origin` = Worker `CORS_ORIGIN`, production `https://pharos.watch`)
+**CORS:** standard Pharos headers (`Access-Control-Allow-Origin` = Worker `CORS_ORIGIN`, checked-in production allowlist `https://pharos.watch,https://ops.pharos.watch`)
 **Caching:** not cached (bypasses edge cache)
 
 #### Request body

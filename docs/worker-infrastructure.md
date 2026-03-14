@@ -41,11 +41,11 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `DB` | D1Database | Yes | All crons and API handlers |
 | `CORS_ORIGIN` | string | Yes | Comma-separated CORS allowlist. Repo default: `https://pharos.watch,https://ops.pharos.watch` |
 | `SELF_URL` | string | No | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
-| `OPS_UI_ORIGIN` | string | No | Reserved for later operator-origin phases (`https://ops.pharos.watch`) |
-| `OPS_API_ORIGIN` | string | No | Reserved for later operator-origin phases (`https://ops-api.pharos.watch`) |
-| `CF_ACCESS_TEAM_DOMAIN` | string | No | Reserved for later Cloudflare Access validation / proxy phases |
-| `CF_ACCESS_OPS_UI_AUD` | string | No | Reserved for later Cloudflare Access UI JWT validation |
-| `CF_ACCESS_OPS_API_AUD` | string | No | Reserved for later Cloudflare Access API JWT validation |
+| `OPS_UI_ORIGIN` | string | No | Shared operator-origin override. The worker runtime does not currently read it, but the same value is used by Pages Functions host gating (`https://ops.pharos.watch`) |
+| `OPS_API_ORIGIN` | string | No | Shared operator-origin override. The worker runtime does not currently read it, but the same value is used by Pages Functions proxying (`https://ops-api.pharos.watch`) |
+| `CF_ACCESS_TEAM_DOMAIN` | string | No | Reserved on the worker runtime today; used only for Cloudflare Access-related operator-origin surfaces when configured |
+| `CF_ACCESS_OPS_UI_AUD` | string | No | Reserved on the worker runtime today; future/operator-surface Access UI JWT audience |
+| `CF_ACCESS_OPS_API_AUD` | string | No | Reserved on the worker runtime today; future/operator-surface Access API JWT audience |
 | `ETHERSCAN_API_KEY` | string | No | Blacklist sync, USDS status |
 | `TRONGRID_API_KEY` | string | No | Blacklist sync (Tron chain) |
 | `DRPC_API_KEY` | string | No | L2 archive node balance lookups |
@@ -66,7 +66,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `TWITTER_ACCESS_TOKEN` | string | No | Digest → Twitter (access token) |
 | `TWITTER_ACCESS_TOKEN_SECRET` | string | No | Digest → Twitter (access token secret) |
 | `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram, bot chat replies, subscriber alert dispatch |
-| `TELEGRAM_CHAT_ID` | string | No | Digest → Telegram |
+| `TELEGRAM_CHAT_ID` | string | No | Digest channel posts and cemetery announcements |
 | `TELEGRAM_WEBHOOK_SECRET` | string | No | Random string for webhook URL validation (set via `wrangler secret put`) |
 | `MAINTENANCE_MODE` | `string?` | No | Optional. When set to the exact string `"true"`, the worker returns 503 for all requests. Used as a kill switch. |
 | `MINT_BURN_DISABLED_IDS` | string | No | Mint/burn runtime disable list by stablecoin ID (CSV) |
@@ -213,13 +213,14 @@ Several worker modules use module-scoped `let` variables initialized via `init*(
 
 - `alerts.ts` → `initAlerts(webhookUrl)`
 - `coingecko.ts` → `initCoinGecko(apiKey)`
-- `coingecko-onchain.ts` → `initCoinGeckoOnchain(apiKey)`
-- `chain-registry.ts` → `initChainRpcs(env)`
+- `chain-registry.ts` → `initChainRpcs(alchemyApiKey, drpcApiKey)`
 - `rate-limit.ts` → module-level `ipCounts` Map
 
 This pattern exists because `Env` bindings are unavailable at module initialization time
 in Workers. The `init*()` functions are called at the top of both `handleHttpRequest`
 and `handleScheduledEvent`.
+
+`coingecko-onchain.ts` also exports `initOnchainAvailability(apiKey)` for its module-scoped availability flag, but the current runtime entrypoints do not invoke it.
 
 **Constraints:**
 - State persists within an isolate but resets on cold starts
