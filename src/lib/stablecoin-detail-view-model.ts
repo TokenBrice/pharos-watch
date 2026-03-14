@@ -74,6 +74,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   isNavToken: boolean;
   pegScoreResult: PegSummaryCoin | null;
   consensusSources: string[];
+  agreeSources: string[];
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
   pegScoreBorderClass: string;
   liquidityData: DexLiquidityData | undefined;
@@ -203,6 +204,7 @@ export function buildStablecoinDetailViewModel({
     pegSummaryData?.coins.find((candidate) => candidate.id === id)
     ?? null;
   const consensusSources = pegScoreResult?.consensusSources ?? [];
+  const agreeSources = pegScoreResult?.agreeSources ?? [];
   const dexPriceCheck = pegScoreResult?.dexPriceCheck ?? null;
   const pegScoreBorderClass = derivePegScoreBorderClass(pegScoreResult?.pegScore);
   const liquidityData = liquidityMap?.[id];
@@ -235,6 +237,7 @@ export function buildStablecoinDetailViewModel({
     isNavToken,
     pegScoreResult,
     consensusSources,
+    agreeSources,
     dexPriceCheck,
     pegScoreBorderClass,
     liquidityData,
