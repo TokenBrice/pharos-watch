@@ -490,6 +490,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "U.S. Treasury Bills", pct: 80, risk: "very-low" },
       { name: "Reverse Repo Agreements", pct: 20, risk: "very-low" },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "usyc-hashnote",
+      display: { url: "https://usyc.hashnote.com/", label: "Hashnote" },
+      inputs: { primary: { kind: "http-json", url: "https://usyc.hashnote.com/api/price" } },
+      params: {
+        label: "U.S. Treasury Bills and reverse repos",
+        risk: "very-low",
+        probe: { kind: "json-path", path: ["price"] },
+      },
+    },
   }),
   usd("usdg-paxos", "Global Dollar", "USDG", "rwa-backed", "centralized", {
     llamaId: "286",
@@ -609,6 +622,18 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Overnight Repos", pct: 30, risk: "very-low" },
       { name: "Cash", pct: 10, risk: "very-low" },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "buidl-blackrock",
+      display: { url: "https://securitize.io/blackrock/buidl", label: "Securitize" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
+      params: {
+        label: "U.S. Treasury Bills, cash, repos",
+        risk: "very-low",
+      },
+    },
   }),
   usd("usdd-tron-dao-reserve", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
     llamaId: "14",
@@ -793,6 +818,39 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low", coinId: "ousg-ondo-finance" },
       { name: "USDC (Circle)", pct: 2, risk: "low", coinId: "usdc-circle" },
     ],
+    liveReservesConfig: {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "usd0-usual",
+      display: { url: "https://usual.money/", label: "Usual Money" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
+      params: {
+        branches: [
+          {
+            name: "Hashnote USYC",
+            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+            token: { chain: "ethereum", address: "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b", decimals: 6 },
+            risk: "low",
+            coinId: "usyc-hashnote",
+          },
+          {
+            name: "UsualM (wrapped M0)",
+            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+            token: { chain: "ethereum", address: "0x4Cbc25559DbBD1272EC5B64c7b5F48a2405e6470", decimals: 18 },
+            risk: "low",
+            coinId: "m-m0",
+          },
+          {
+            name: "UsualUSDtb",
+            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+            token: { chain: "ethereum", address: "0x58073531a2809744D1bF311D30FD76B27D662abB", decimals: 18 },
+            risk: "low",
+            coinId: "usdtb-ethena",
+          },
+        ],
+      },
+    },
   }),
   usd("gho-aave", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     llamaId: "118",
@@ -2754,6 +2812,28 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Long AVAX spot positions", pct: 35, risk: "high" },
       { name: "Short AVAX perpetual futures (delta-neutral hedge)", pct: 35, risk: "high" },
     ],
+    liveReservesConfig: {
+      adapter: "accountable",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "uty-xsy",
+      display: { url: "https://accountable.xsy.fi/", label: "Accountable" },
+      inputs: { primary: { kind: "http-json", url: "https://accountable.xsy.fi:10443/dashboard" } },
+      params: {
+        bucket: "reserves_split",
+        riskMap: {
+          Avalanche: "high",
+          Copper: "medium",
+          Katana: "high",
+          Ethereum: "medium",
+          Base: "medium",
+          Plasma: "medium",
+          Arbitrum: "medium",
+          Monad: "high",
+          Bybit: "medium",
+        },
+      },
+    },
   }),
   eur("eurs-stasis", "Stasis Euro", "EURS", "rwa-backed", "centralized", {
     llamaId: "51",
