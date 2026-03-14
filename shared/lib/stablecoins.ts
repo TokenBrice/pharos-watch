@@ -1550,6 +1550,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon-zkevm", address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
       { chain: "xlayer",        address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "frax",
+      version: 1,
+      semantics: "attestation-mix",
+      display: { url: "https://frax.com/transparency", label: "Frax Transparency" },
+      inputs: { primary: { kind: "http-json", url: "https://api.frax.finance/combineddata/" } },
+    },
     reserves: [
       { name: "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)", pct: 55, risk: "low", coinId: "buidl-blackrock" },
       { name: "Superstate USTB (tokenized T-bills)", pct: 20, risk: "low" },
