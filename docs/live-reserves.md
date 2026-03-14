@@ -8,7 +8,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Current coverage:** 29 live-enabled stablecoins across 16 registered adapters
+- **Current coverage:** 35 live-enabled stablecoins across 18 registered adapters
 - **Storage:** `reserve_composition`, `reserve_sync_state`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -190,22 +190,24 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 
 | Adapter | Primary input | Semantics | Configured coins |
 |---------|---------------|-----------|------------------|
-| `accountable` | `http-json` | `protocol-reserve` | 5 |
+| `accountable` | `http-json` | `protocol-reserve` | 6 |
 | `asymmetry` | `http-json` | `collateral-mix` | 1 |
 | `btcfi` | `http-json` | `collateral-mix` | 1 |
 | `collateral-positions-api` | `http-json` | `collateral-mix` | 2 |
 | `crvusd` | `http-json` | `collateral-mix` | 1 |
 | `erc4626-single-asset` | `onchain-evm` | `single-asset` | 2 |
 | `ethena` | `http-json` | `collateral-mix` | 1 |
-| `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 2 |
+| `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 3 |
 | `falcon` | `http-json` | `collateral-mix` | 1 |
 | `fx` | `http-json` | `collateral-mix` | 1 |
 | `infinifi` | `http-json` | `collateral-mix` | 1 |
 | `m0` | `http-json` | `protocol-reserve` | 3 |
 | `mento` | `http-html` | `collateral-mix` | 2 |
 | `openeden-usdo` | `http-json` | `collateral-mix` | 1 |
+| `ousd` | `http-json` | `collateral-mix` | 1 |
 | `reservoir` | `http-json` | `protocol-reserve` | 1 |
-| `single-asset` | `onchain-evm` | `single-asset` | 3 |
+| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 5 |
+| `tether` | `http-json` | `attestation-mix` | 1 |
 
 Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`:
 
