@@ -53,6 +53,7 @@ export interface ReserveCompositionOverview {
   staleCoins: number;
   missingCoins: number;
   degradedCoins: number;
+  errorCoins: number;
   lastSuccessAt: number | null;
   oldestFreshAgeSec: number | null;
 }
@@ -278,6 +279,7 @@ export async function computeReserveCompositionOverview(
       staleCoins: 0,
       missingCoins: 0,
       degradedCoins: 0,
+      errorCoins: 0,
       lastSuccessAt: null,
       oldestFreshAgeSec: null,
     };
@@ -315,6 +317,7 @@ export async function computeReserveCompositionOverview(
   let staleCoins = 0;
   let missingCoins = 0;
   let degradedCoins = 0;
+  let errorCoins = 0;
   let lastSuccessAt: number | null = null;
   let oldestFreshAgeSec: number | null = null;
 
@@ -337,6 +340,11 @@ export async function computeReserveCompositionOverview(
       continue;
     }
 
+    if (sync && sync.last_status === "error") {
+      errorCoins++;
+      continue;
+    }
+
     if (sync && (sync.last_status !== "ok" || (sync.last_success_at != null && !hasSnapshot))) {
       degradedCoins++;
       continue;
@@ -352,6 +360,7 @@ export async function computeReserveCompositionOverview(
     staleCoins,
     missingCoins,
     degradedCoins,
+    errorCoins,
     lastSuccessAt,
     oldestFreshAgeSec,
   };

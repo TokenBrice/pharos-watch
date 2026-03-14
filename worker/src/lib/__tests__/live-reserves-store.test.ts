@@ -192,6 +192,46 @@ describe("live-reserves-store", () => {
     expect(result?.reserves[1].name).toBe("Valid Too");
   });
 
+  it("separates error coins from degraded coins in the overview", async () => {
+    const now = 2_000;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "error",
+            warning_count: 0,
+            warnings: null,
+            last_error: "HTTP 503",
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            slices: JSON.stringify([{ name: "Test Farm", pct: 100, risk: "low" }]),
+            fetched_at: now,
+            source: "infinifi",
+          },
+        ],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now + 100);
+    // errorCoins must exist on the type and be a number
+    expect(typeof overview.errorCoins).toBe("number");
+    // The error coin should be counted, not in degraded
+    expect(overview.errorCoins).toBeGreaterThanOrEqual(1);
+  });
+
   it("includes lastError in sync view when sync state has an error", async () => {
     const db = mockD1([
       {

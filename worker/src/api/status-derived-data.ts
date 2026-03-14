@@ -51,6 +51,7 @@ export function emptyReserveComposition(): StatusResponse["reserveComposition"] 
     staleCoins: 0,
     missingCoins: 0,
     degradedCoins: 0,
+    errorCoins: 0,
     lastSuccessAt: null,
     oldestFreshAgeSec: null,
   };

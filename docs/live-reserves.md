@@ -124,6 +124,7 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 - `staleCoins`
 - `missingCoins`
 - `degradedCoins`
+- `errorCoins`
 - `lastSuccessAt`
 - `oldestFreshAgeSec`
 
