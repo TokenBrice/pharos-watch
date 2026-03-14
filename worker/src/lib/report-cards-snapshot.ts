@@ -20,6 +20,7 @@ import {
   resolveResilienceFactors,
   resolveGovernanceQuality,
   isBlacklistable,
+  computeCollateralQualityFromReserves,
 } from "@shared/lib/report-cards";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 import type {
@@ -240,6 +241,19 @@ function computeCard(
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
+
+  // Delta alerting: warn when live and curated collateral scores diverge significantly
+  if (liveSlices && meta.reserves && meta.reserves.length > 0) {
+    const liveScore = computeCollateralQualityFromReserves(liveSlices);
+    const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
+    const delta = Math.abs(liveScore - curatedScore);
+    if (delta > 15) {
+      console.warn(
+        `[report-cards] Collateral score drift for ${meta.id}: ` +
+        `live=${liveScore}, curated=${curatedScore}, delta=${delta}`,
+      );
+    }
+  }
 
   const navToken = !!meta.flags.navToken;
   const overall = computeOverallGrade(dimensions, { navToken });
