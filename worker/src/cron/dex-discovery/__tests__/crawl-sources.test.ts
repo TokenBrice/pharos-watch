@@ -90,7 +90,7 @@ describe("crawlCoin DexScreener hardening", () => {
       new Set(),
     );
 
-    expect(result).toEqual({ pools: [], priceObs: [] });
+    expect(result).toEqual({ pools: [], priceObs: [], unresolvedChains: [] });
     expect(warnSpy).toHaveBeenCalledWith("[dex-discovery] dexscreener error for ethereum:0xabc", expect.any(Error));
   });
 });

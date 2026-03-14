@@ -136,6 +136,8 @@ export async function syncDexDiscovery(
   const failedCoins: string[] = [];
   const failedCoinErrors: Record<string, string> = {};
   const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
+  const allUnresolvedChains = new Set<string>();
+  const poolsBySource: Record<string, number> = {};
 
   try {
     throwIfAborted(signal);
@@ -223,6 +225,12 @@ export async function syncDexDiscovery(
 
         coinsCrawled += 1;
         poolsDiscovered += result.pools.length;
+        for (const chain of result.unresolvedChains) {
+          allUnresolvedChains.add(chain);
+        }
+        for (const pool of result.pools) {
+          poolsBySource[pool.source] = (poolsBySource[pool.source] ?? 0) + 1;
+        }
       } catch (err) {
         rethrowIfAborted(err, signal);
         console.warn("[dex-discovery]", candidate.stablecoinId, err);
@@ -269,6 +277,8 @@ export async function syncDexDiscovery(
         runSeq,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
+        unresolvedChains: allUnresolvedChains.size > 0 ? [...allUnresolvedChains] : undefined,
+        poolsBySource: Object.keys(poolsBySource).length > 0 ? poolsBySource : undefined,
       }),
     };
   } catch (err) {
@@ -285,6 +295,8 @@ export async function syncDexDiscovery(
         runSeq,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
+        unresolvedChains: allUnresolvedChains.size > 0 ? [...allUnresolvedChains] : undefined,
+        poolsBySource: Object.keys(poolsBySource).length > 0 ? poolsBySource : undefined,
         error,
       }),
     };
