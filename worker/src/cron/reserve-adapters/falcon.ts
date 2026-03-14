@@ -1,4 +1,4 @@
-import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
@@ -70,11 +70,19 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     throw new Error("Falcon transparency payload missing usdf.breakdown.assets");
   }
 
+  const warnings: LiveReserveWarning[] = [];
   const bucketTotals = new Map<FalconBucket, number>();
   for (const asset of assets) {
     const value = sumFalconAssetValue(asset);
     if (!Number.isFinite(value) || value <= 0) continue;
     const bucket = bucketForFalconAsset(asset.label);
+    if (bucket === "other") {
+      warnings.push({
+        code: "unknown-asset",
+        message: `Unmapped Falcon asset: ${asset.label}`,
+        severity: "warning",
+      });
+    }
     bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + value);
   }
 
@@ -118,6 +126,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
 
   return {
     slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       snapshotDate: payload.snapshot_date,
       supply: payload.usdf?.supply,

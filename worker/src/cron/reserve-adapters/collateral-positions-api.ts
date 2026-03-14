@@ -1,4 +1,4 @@
-import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
 import { fetchJsonWithRetry, normalizeSlices, requireJsonInput } from "./helpers";
@@ -59,7 +59,8 @@ export function adaptCollateralPositions(
   details: PositionDetailsPayload,
   prices: PriceMappingPayload,
   otherThresholdPct = 2,
-): ReserveSlice[] {
+): AdapterResult {
+  const warnings: LiveReserveWarning[] = [];
   const values: Array<{ name: string; usd: number; risk: ReserveSlice["risk"]; coinId?: string }> = [];
 
   for (const entry of Object.values(details)) {
@@ -75,16 +76,25 @@ export function adaptCollateralPositions(
 
     if (totalBalance <= 0) continue;
 
+    const risk = inferRisk(entry.symbol);
+    if (!getCanonicalReserveAssetRisk(entry.symbol.toUpperCase())) {
+      warnings.push({
+        code: "unknown-asset",
+        message: `Unmapped collateral symbol: ${entry.symbol} (inferred risk: ${risk})`,
+        severity: "warning",
+      });
+    }
+
     values.push({
       name: `${entry.symbol}${entry.name && entry.name !== entry.symbol ? ` (${entry.name})` : ""}`,
       usd: totalBalance * usdPrice,
-      risk: inferRisk(entry.symbol),
+      risk,
       coinId: inferCoinId(entry.symbol),
     });
   }
 
   const total = values.reduce((acc, value) => acc + value.usd, 0);
-  if (total <= 0) return [];
+  if (total <= 0) return { slices: [] };
 
   const major = values.filter((value) => (value.usd / total) * 100 >= otherThresholdPct);
   const minor = values.filter((value) => (value.usd / total) * 100 < otherThresholdPct);
@@ -110,7 +120,10 @@ export function adaptCollateralPositions(
     });
   }
 
-  return normalizeSlices(slices);
+  return {
+    slices: normalizeSlices(slices),
+    ...(warnings.length > 0 ? { warnings } : {}),
+  };
 }
 
 export async function fetchCollateralPositionsApiReserves(
@@ -126,7 +139,5 @@ export async function fetchCollateralPositionsApiReserves(
     fetchJsonWithRetry<PriceMappingPayload>(params.pricesUrl, signal),
   ]);
 
-  return {
-    slices: adaptCollateralPositions(details, prices, params.otherThresholdPct ?? 2),
-  };
+  return adaptCollateralPositions(details, prices, params.otherThresholdPct ?? 2);
 }
