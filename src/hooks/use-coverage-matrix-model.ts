@@ -32,6 +32,9 @@ export function useCoverageMatrixModel() {
       (stablecoinsQuery.data?.peggedAssets ?? []).map((asset) => [asset.id, asset]),
     );
     const pegIds = new Set((pegQuery.data?.coins ?? []).map((coin) => coin.id));
+    const pegCoinById = new Map(
+      (pegQuery.data?.coins ?? []).map((coin) => [coin.id, coin]),
+    );
     const yieldIds = new Set((yieldQuery.data?.rankings ?? []).map((row) => row.id));
     const flowById = new Map(
       (flowQuery.data?.coins ?? []).map((row) => [row.stablecoinId, row]),
@@ -46,21 +49,24 @@ export function useCoverageMatrixModel() {
       dependencyIds.add(edge.to);
     }
 
-    return TRACKED_STABLECOINS.map((coin) =>
-      buildCoverageRow({
+    return TRACKED_STABLECOINS.map((coin) => {
+      const pegCoin = pegCoinById.get(coin.id);
+      return buildCoverageRow({
         coin,
         marketCapUsd: assetById.has(coin.id)
           ? getCirculatingRaw(assetById.get(coin.id)!)
           : 0,
         hasPegCoverage: pegIds.has(coin.id),
+        consensusSources: pegCoin?.consensusSources,
+        priceConfidence: pegCoin?.priceConfidence ?? undefined,
         safetyScore: reportCardById.get(coin.id)?.overallScore ?? null,
         dexCoverageClass: dexQuery.data?.[coin.id]?.coverageClass ?? null,
         hasYieldCoverage: yieldIds.has(coin.id),
         flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
         bluechipGrade: bluechipQuery.data?.[coin.id]?.grade ?? null,
         hasDependencyCoverage: dependencyIds.has(coin.id),
-      }),
-    );
+      });
+    });
   }, [
     stablecoinsQuery.data,
     pegQuery.data,

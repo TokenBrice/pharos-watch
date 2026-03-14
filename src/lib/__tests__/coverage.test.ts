@@ -162,6 +162,33 @@ describe("coverage helpers", () => {
     expect(summary.breakdown).toBe("tracked 1 · price-only 1");
   });
 
+  it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {
+    const status = resolvePriceCoverage(makeCoin(), true, ["coingecko", "defillama", "pyth"], "high");
+
+    expect(status.kind).toBe("tracked");
+    expect(status.sourceCount).toBe(3);
+    expect(status.sourceNames).toEqual(["coingecko", "defillama", "pyth"]);
+    expect(status.priceConfidence).toBe("high");
+  });
+
+  it("sets sourceCount on tracked price coverage with empty sources", () => {
+    const status = resolvePriceCoverage(makeCoin(), true, [], "single-source");
+
+    expect(status.kind).toBe("tracked");
+    expect(status.sourceCount).toBe(0);
+    expect(status.sourceNames).toEqual([]);
+    expect(status.priceConfidence).toBe("single-source");
+  });
+
+  it("does not set sourceCount when consensusSources omitted (backward compat)", () => {
+    const status = resolvePriceCoverage(makeCoin(), true);
+
+    expect(status.kind).toBe("tracked");
+    expect(status.sourceCount).toBeUndefined();
+    expect(status.sourceNames).toBeUndefined();
+    expect(status.priceConfidence).toBeUndefined();
+  });
+
   it("uses live reserve tracking as the headline metric for reserve summaries", () => {
     const rows = [
       buildCoverageRow({

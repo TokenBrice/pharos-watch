@@ -39,6 +39,9 @@ export interface CoverageStatus {
   available: boolean;
   sortRank: number;
   detail: string;
+  sourceCount?: number;
+  sourceNames?: string[];
+  priceConfidence?: string;
 }
 
 export interface CoverageFeatureDefinition {
@@ -83,6 +86,8 @@ interface BuildCoverageRowInput {
   coin: StablecoinMeta;
   marketCapUsd: number;
   hasPegCoverage: boolean;
+  consensusSources?: string[];
+  priceConfidence?: string;
   safetyScore: number | null | undefined;
   dexCoverageClass: LiquidityCoverageClass | null | undefined;
   hasYieldCoverage: boolean;
@@ -199,6 +204,8 @@ function createStatus(
 export function resolvePriceCoverage(
   coin: StablecoinMeta,
   hasPegCoverage: boolean,
+  consensusSources?: string[],
+  priceConfidence?: string,
 ): CoverageStatus {
   if (coin.flags.navToken) {
     return createStatus(
@@ -212,7 +219,7 @@ export function resolvePriceCoverage(
   }
 
   if (hasPegCoverage) {
-    return createStatus(
+    const status = createStatus(
       "tracked",
       "Tracked",
       "emerald",
@@ -220,6 +227,14 @@ export function resolvePriceCoverage(
       3,
       "Live peg monitoring, peg score coverage, and depeg-event history are available.",
     );
+    if (consensusSources !== undefined) {
+      status.sourceCount = consensusSources.length;
+      status.sourceNames = consensusSources;
+    }
+    if (priceConfidence !== undefined) {
+      status.priceConfidence = priceConfidence;
+    }
+    return status;
   }
 
   return createStatus(
@@ -606,6 +621,8 @@ export function buildCoverageRow({
   coin,
   marketCapUsd,
   hasPegCoverage,
+  consensusSources,
+  priceConfidence,
   safetyScore,
   dexCoverageClass,
   hasYieldCoverage,
@@ -614,7 +631,7 @@ export function buildCoverageRow({
   hasDependencyCoverage,
 }: BuildCoverageRowInput): CoverageRow {
   const statuses = {
-    price: resolvePriceCoverage(coin, hasPegCoverage),
+    price: resolvePriceCoverage(coin, hasPegCoverage, consensusSources, priceConfidence),
     safety: resolveSafetyCoverage(safetyScore),
     dex: resolveDexCoverage(dexCoverageClass),
     reserves: resolveReserveCoverage(coin),
