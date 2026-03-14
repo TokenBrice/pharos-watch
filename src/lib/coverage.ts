@@ -548,9 +548,27 @@ function buildCoverageBreakdown(
   breakdownMap: Map<string, number>,
   availableCount: number,
   totalCount: number,
+  rows?: CoverageRow[],
 ) {
   if (featureKey === "price") {
-    return `tracked ${breakdownMap.get("tracked") ?? 0} · price-only ${breakdownMap.get("price-only") ?? 0}`;
+    const base = `tracked ${breakdownMap.get("tracked") ?? 0} · price-only ${breakdownMap.get("price-only") ?? 0}`;
+    if (!rows) return base;
+
+    // Source-depth distribution
+    let deep = 0; // 5+ sources
+    let mid = 0; // 3-4 sources
+    let shallow = 0; // 1-2 sources
+    for (const row of rows) {
+      const count = row.statuses.price.sourceCount;
+      if (count == null) continue;
+      if (count >= 5) deep++;
+      else if (count >= 3) mid++;
+      else shallow++;
+    }
+    if (deep + mid + shallow > 0) {
+      return `${base} · 5+ sources: ${deep} · 3-4: ${mid} · 1-2: ${shallow}`;
+    }
+    return base;
   }
   if (featureKey === "dex") {
     return `primary ${breakdownMap.get("primary") ?? 0} · mixed ${breakdownMap.get("mixed") ?? 0} · fallback ${breakdownMap.get("fallback") ?? 0}`;
@@ -602,6 +620,7 @@ export function buildCoverageFeatureSummary(
       breakdownMap,
       availableRows.length,
       rows.length,
+      rows,
     ),
   };
 }

@@ -189,6 +189,45 @@ describe("coverage helpers", () => {
     expect(status.priceConfidence).toBeUndefined();
   });
 
+  it("includes source-depth breakdown when consensusSources are present", () => {
+    const rows = [
+      buildCoverageRow({
+        coin: makeCoin({ id: "deep", symbol: "DEEP" }),
+        marketCapUsd: 500,
+        hasPegCoverage: true,
+        consensusSources: ["coingecko", "defillama", "pyth", "binance", "coinbase"],
+        safetyScore: null,
+        dexCoverageClass: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        bluechipGrade: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "shallow", symbol: "SHAL" }),
+        marketCapUsd: 500,
+        hasPegCoverage: true,
+        consensusSources: ["coingecko"],
+        safetyScore: null,
+        dexCoverageClass: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        bluechipGrade: null,
+        hasDependencyCoverage: false,
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(
+      COVERAGE_FEATURES.find((f) => f.key === "price")!,
+      rows,
+      1_000,
+    );
+
+    expect(summary.breakdown).toContain("tracked 2");
+    expect(summary.breakdown).toContain("5+ sources: 1");
+    expect(summary.breakdown).toContain("1-2: 1");
+  });
+
   it("uses live reserve tracking as the headline metric for reserve summaries", () => {
     const rows = [
       buildCoverageRow({

@@ -43,6 +43,32 @@ import {
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 
+const SOURCE_DISPLAY_NAMES: Record<string, string> = {
+  coingecko: "CoinGecko",
+  defillama: "DefiLlama",
+  pyth: "Pyth Network",
+  binance: "Binance",
+  coinbase: "Coinbase",
+  redstone: "RedStone",
+  "curve-onchain": "Curve on-chain",
+  "dex-promoted": "DEX prices",
+};
+
+function buildSourceTooltip(status: CoverageStatus): string {
+  if (!status.sourceNames?.length) return status.detail;
+
+  const confidenceLabel = status.priceConfidence
+    ? `${status.priceConfidence.charAt(0).toUpperCase()}${status.priceConfidence.slice(1).replace("-", " ")} confidence`
+    : "";
+  const sourceList = status.sourceNames
+    .map((s) => SOURCE_DISPLAY_NAMES[s] ?? s)
+    .join(", ");
+
+  return confidenceLabel
+    ? `${confidenceLabel} — ${sourceList}`
+    : sourceList;
+}
+
 function CoverageBadge({
   status,
   compact = false,
@@ -50,17 +76,30 @@ function CoverageBadge({
   status: CoverageStatus;
   compact?: boolean;
 }) {
+  const countSuffix =
+    status.sourceCount != null && status.sourceCount > 0
+      ? compact
+        ? ` (${status.sourceCount})`
+        : ` (${status.sourceCount} sources)`
+      : "";
+
   return (
     <span
-      title={status.detail}
+      title={buildSourceTooltip(status)}
       className={cn(
         "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.01em]",
         compact ? "min-w-[4.25rem]" : "min-w-[4.75rem]",
         COVERAGE_BADGE_TONE_CLASS[status.tone],
       )}
     >
-      <span aria-hidden="true">{status.label}</span>
-      <span className="sr-only">{status.spokenLabel}</span>
+      <span aria-hidden="true">
+        {status.label}
+        {countSuffix}
+      </span>
+      <span className="sr-only">
+        {status.spokenLabel}
+        {countSuffix}
+      </span>
     </span>
   );
 }
