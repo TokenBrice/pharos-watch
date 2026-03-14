@@ -8,7 +8,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Current coverage:** 35 live-enabled stablecoins across 18 registered adapters
+- **Current coverage:** 40 live-enabled stablecoins across 20 registered adapters
 - **Storage:** `reserve_composition`, `reserve_sync_state`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -193,6 +193,8 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `accountable` | `http-json` | `protocol-reserve` | 6 |
 | `asymmetry` | `http-json` | `collateral-mix` | 1 |
 | `btcfi` | `http-json` | `collateral-mix` | 1 |
+| `chainlink-nav` | `onchain-evm` | `single-asset` | 4 |
+| `chainlink-por` | `onchain-evm` | `attestation-mix` | 1 |
 | `collateral-positions-api` | `http-json` | `collateral-mix` | 2 |
 | `crvusd` | `http-json` | `collateral-mix` | 1 |
 | `erc4626-single-asset` | `onchain-evm` | `single-asset` | 2 |
