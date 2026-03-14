@@ -147,10 +147,14 @@ export function stampPriceMetadata(
   source: string,
   confidence: PeggedAsset["priceConfidence"],
   updatedAt: number | null,
+  consensusSources?: string[],
 ): void {
   asset.priceSource = source;
   asset.priceConfidence = confidence ?? null;
   asset.priceUpdatedAt = updatedAt;
+  if (consensusSources !== undefined) {
+    asset.consensusSources = consensusSources;
+  }
 }
 
 export function sumPegBuckets(buckets: Record<string, number> | undefined | null): number {

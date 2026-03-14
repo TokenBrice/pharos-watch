@@ -205,7 +205,7 @@ async function fallbackToCgSupply(
     if (!decision.accepted) continue;
 
     asset.price = override.price;
-    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec);
+    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source]);
     authoritativeOverrideCount++;
   }
 
@@ -567,13 +567,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       );
       if (decision.accepted) {
         asset.price = primary.price;
-        stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec);
+        stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec, primary.candidateSources);
       } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
-        stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec);
+        stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec, [asset.priceSource || "defillama"]);
       }
     } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
       // DL list provided a price but no primary price result — single-source
-      stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec);
+      stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec, [asset.priceSource || "defillama"]);
     }
   }
 
@@ -592,7 +592,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     if (!decision.accepted) continue;
 
     asset.price = override.price;
-    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec);
+    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source]);
   }
   if (protocolOverrideCount > 0) {
     console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);

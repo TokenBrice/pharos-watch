@@ -160,7 +160,9 @@ vi.mock("../../lib/alerts", () => ({
 }));
 
 import { syncStablecoins } from "../sync-stablecoins";
+import { stampPriceMetadata } from "../sync-stablecoins/shared";
 import { enrichMissingPrices, fetchPrimaryPrices } from "../enrich-prices";
+import type { PeggedAsset } from "../enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
@@ -1056,5 +1058,29 @@ describe("syncStablecoins", () => {
     const usdtCopies = payload?.peggedAssets.filter((asset) => asset.id === "usdt-tether").length ?? 0;
     expect(usdtCopies).toBe(1);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
+  });
+});
+
+describe("stampPriceMetadata", () => {
+  it("stamps consensusSources when provided", () => {
+    const asset = { id: "test", name: "Test", symbol: "T", circulating: {}, chains: [] } as PeggedAsset;
+
+    stampPriceMetadata(asset, "coingecko+defillama", "high", 1234, ["coingecko", "defillama"]);
+
+    expect(asset.priceSource).toBe("coingecko+defillama");
+    expect(asset.priceConfidence).toBe("high");
+    expect(asset.priceUpdatedAt).toBe(1234);
+    expect(asset.consensusSources).toEqual(["coingecko", "defillama"]);
+  });
+
+  it("leaves consensusSources unchanged when not provided", () => {
+    const asset = {
+      id: "test", name: "Test", symbol: "T", circulating: {}, chains: [],
+      consensusSources: ["existing"],
+    } as PeggedAsset;
+
+    stampPriceMetadata(asset, "cached", "fallback", 5678);
+
+    expect(asset.consensusSources).toEqual(["existing"]);
   });
 });
