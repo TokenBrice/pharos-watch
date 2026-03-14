@@ -25,8 +25,8 @@ describe("mento adapter", () => {
   });
 
   it("maps parsed reserve composition into Pharos reserve slices", () => {
-    const slices = adaptMentoReserveComposition(SAMPLE_HTML);
-    expect(slices).toEqual([
+    const result = adaptMentoReserveComposition(SAMPLE_HTML);
+    expect(result.slices).toEqual([
       { name: "sUSDS (Sky savings USDS)", pct: 54.8, risk: "low", coinId: "usds-sky" },
       { name: "EURC (Circle euro stablecoin)", pct: 19.9, risk: "low" },
       { name: "CELO", pct: 13.5, risk: "high" },
@@ -36,5 +36,30 @@ describe("mento adapter", () => {
       { name: "USDC", pct: 1.2, risk: "low", coinId: "usdc-circle" },
       { name: "ETH", pct: 0.9, risk: "very-low" },
     ]);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("emits a structural integrity warning when fewer than 3 reserve entries are parsed", () => {
+    const twoEntryHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":80},{\\"symbol\\":\\"ETH\\",\\"percent\\":20}],\\"reserveHoldings\\":{}..."]);
+</script></body></html>`;
+    const result = adaptMentoReserveComposition(twoEntryHtml);
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.some((w) => w.code === "mento-low-entry-count")).toBe(true);
+  });
+
+  it("emits a structural integrity warning when total percentages are below 50%", () => {
+    const lowPctHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":10},{\\"symbol\\":\\"ETH\\",\\"percent\\":5},{\\"symbol\\":\\"CELO\\",\\"percent\\":3}],\\"reserveHoldings\\":{}..."]);
+</script></body></html>`;
+    const result = adaptMentoReserveComposition(lowPctHtml);
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.some((w) => w.code === "mento-low-total-pct")).toBe(true);
+  });
+
+  it("emits an unknown-asset warning for symbols not in TOKEN_CONFIG", () => {
+    const unknownTokenHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":50},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"NEW_TOKEN\\",\\"percent\\":10},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{}..."]);
+</script></body></html>`;
+    const result = adaptMentoReserveComposition(unknownTokenHtml);
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.some((w) => w.code === "unknown-asset" && w.message.includes("NEW_TOKEN"))).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, LiveReserveWarning, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchJsonWithRetry, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface EthenaCollateralRow {
   asset: string;
@@ -95,7 +95,7 @@ export async function fetchEthenaReserves(
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "ethena");
-  const payload = await fetchJsonWithRetry<EthenaCollateralResponse>(primaryInput.url, signal, 12_000);
+  const payload = await fetchJsonWithRetry<EthenaCollateralResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
   const adapted = adaptEthenaCollateral(payload);
   const unknownAssets = listUnexpectedEthenaAssets(payload);
   const warnings: LiveReserveWarning[] = unknownAssets.map((asset) => ({

@@ -387,10 +387,10 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
     !reserveCompositionBootstrap
     && reserveComposition.configuredCoins > 0
     && reserveComposition.freshCoins === 0
-    && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0);
+    && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0 || reserveComposition.errorCoins > 0);
   const reserveCompositionWarning =
     !reserveCompositionBootstrap
-    && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0);
+    && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0 || reserveComposition.errorCoins > 0);
 
   // 5. Raw status synthesis
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
@@ -660,7 +660,7 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       code: "reserve_sync_degraded",
       layer: "data-quality",
       severity: "warning",
-      message: `${reserveComposition.missingCoins} missing, ${reserveComposition.staleCoins} stale, ${reserveComposition.degradedCoins} degraded live reserve feed(s).`,
+      message: `${reserveComposition.errorCoins} error, ${reserveComposition.missingCoins} missing, ${reserveComposition.staleCoins} stale, ${reserveComposition.degradedCoins} degraded live reserve feed(s).`,
     });
   }
 

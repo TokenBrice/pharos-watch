@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isReserveRisk, normalizeSlices, slicesFromValues } from "../helpers";
-import type { ReserveSlice } from "@shared/types";
+import { getAdapterTimeout, isReserveRisk, normalizeSlices, slicesFromValues } from "../helpers";
+import type { LiveReservesConfig, ReserveSlice } from "@shared/types";
 
 describe("normalizeSlices", () => {
   it("rounds to integers by default and adjusts largest to sum to 100", () => {
@@ -135,5 +135,36 @@ describe("isReserveRisk", () => {
     expect(isReserveRisk(null)).toBe(false);
     expect(isReserveRisk(undefined)).toBe(false);
     expect(isReserveRisk(42)).toBe(false);
+  });
+});
+
+describe("getAdapterTimeout", () => {
+  const baseConfig = {
+    adapter: "test",
+    version: 1,
+    semantics: "single-asset" as const,
+    inputs: { primary: { kind: "http-json" as const, url: "https://example.com" } },
+  } satisfies LiveReservesConfig;
+
+  it("returns params.timeoutMs when set", () => {
+    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: 15_000 } })).toBe(15_000);
+  });
+
+  it("returns fallback when params.timeoutMs is not set", () => {
+    expect(getAdapterTimeout(baseConfig, 12_000)).toBe(12_000);
+  });
+
+  it("returns default 10s when no fallback specified", () => {
+    expect(getAdapterTimeout(baseConfig)).toBe(10_000);
+  });
+
+  it("ignores non-positive or oversized timeoutMs", () => {
+    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: -1 } })).toBe(10_000);
+    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: 60_000 } })).toBe(10_000);
+    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: 0 } })).toBe(10_000);
+  });
+
+  it("ignores non-numeric timeoutMs", () => {
+    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: "fast" } })).toBe(10_000);
   });
 });

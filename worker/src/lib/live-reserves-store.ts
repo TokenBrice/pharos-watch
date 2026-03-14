@@ -53,6 +53,7 @@ export interface ReserveCompositionOverview {
   staleCoins: number;
   missingCoins: number;
   degradedCoins: number;
+  errorCoins: number;
   lastSuccessAt: number | null;
   oldestFreshAgeSec: number | null;
 }
@@ -87,10 +88,20 @@ function parseWarnings(value: string | null): LiveReserveWarning[] {
   }
 }
 
+function isValidSlice(item: unknown): item is ReserveSlice {
+  if (!item || typeof item !== "object") return false;
+  const slice = item as Partial<ReserveSlice>;
+  return (
+    typeof slice.name === "string"
+    && typeof slice.pct === "number"
+    && typeof slice.risk === "string"
+  );
+}
+
 function parseSlices(value: string): ReserveSlice[] {
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed as ReserveSlice[] : [];
+    return Array.isArray(parsed) ? parsed.filter(isValidSlice) : [];
   } catch {
     return [];
   }
@@ -268,6 +279,7 @@ export async function computeReserveCompositionOverview(
       staleCoins: 0,
       missingCoins: 0,
       degradedCoins: 0,
+      errorCoins: 0,
       lastSuccessAt: null,
       oldestFreshAgeSec: null,
     };
@@ -305,6 +317,7 @@ export async function computeReserveCompositionOverview(
   let staleCoins = 0;
   let missingCoins = 0;
   let degradedCoins = 0;
+  let errorCoins = 0;
   let lastSuccessAt: number | null = null;
   let oldestFreshAgeSec: number | null = null;
 
@@ -327,6 +340,11 @@ export async function computeReserveCompositionOverview(
       continue;
     }
 
+    if (sync && sync.last_status === "error") {
+      errorCoins++;
+      continue;
+    }
+
     if (sync && (sync.last_status !== "ok" || (sync.last_success_at != null && !hasSnapshot))) {
       degradedCoins++;
       continue;
@@ -342,6 +360,7 @@ export async function computeReserveCompositionOverview(
     staleCoins,
     missingCoins,
     degradedCoins,
+    errorCoins,
     lastSuccessAt,
     oldestFreshAgeSec,
   };
@@ -384,6 +403,7 @@ export async function resolveReserveResult(
         ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
         ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
         ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+        ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
       },
     };
   }
@@ -401,6 +421,7 @@ export async function resolveReserveResult(
             ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
             ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
             ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+            ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
           }
         : undefined,
     };
@@ -420,6 +441,7 @@ export async function resolveReserveResult(
           ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
           ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
           ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+          ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
         },
       }
     : null;

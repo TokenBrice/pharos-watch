@@ -177,6 +177,7 @@ export interface ReserveSyncStateView {
   lastAttemptedAt?: number;
   lastSuccessAt?: number;
   warnings?: string[];
+  lastError?: string;
 }
 
 export interface StablecoinReservesResponse {

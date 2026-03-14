@@ -311,6 +311,7 @@ export interface StatusResponse {
     staleCoins: number;
     missingCoins: number;
     degradedCoins: number;
+    errorCoins: number;
     lastSuccessAt: number | null;
     oldestFreshAgeSec: number | null;
   };

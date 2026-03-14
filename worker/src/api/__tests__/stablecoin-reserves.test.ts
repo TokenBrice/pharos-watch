@@ -60,4 +60,35 @@ describe("handleStablecoinReserves", () => {
     const res = await handleStablecoinReserves(db, "not-a-coin");
     expect(res.status).toBe(404);
   });
+
+  it("surfaces lastError from sync state in the API response", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: null,
+          last_status: "error",
+          warning_count: 0,
+          warnings: null,
+          last_error: "HTTP 503 for https://api.example.com",
+          metadata: "{}",
+        },
+      },
+    ]);
+    const res = await handleStablecoinReserves(db, "iusd-infinifi");
+    expect(res.status).toBe(200);
+    const body = await res.json() as { sync?: { lastError?: string } };
+    expect(body.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
+  });
 });

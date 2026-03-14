@@ -146,4 +146,118 @@ describe("live-reserves-store", () => {
     expect(history.some((sql) => sql.includes("reserve_composition"))).toBe(true);
     expect(history.some((sql) => sql.includes("reserve_sync_state"))).toBe(true);
   });
+
+  it("filters out malformed slices from D1 data during resolution", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const corruptSlices = [
+      { name: "Valid Farm", pct: 60, risk: "low" },
+      { name: "Missing Risk", pct: 20 },
+      { pct: 10, risk: "medium" },
+      { name: "Bad Pct", pct: "fifty", risk: "low" },
+      { name: "Valid Too", pct: 10, risk: "high" },
+    ];
+
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify(corruptSlices),
+          fetched_at: now,
+          source: "infinifi",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
+    expect(result?.reserves).toHaveLength(2);
+    expect(result?.reserves[0].name).toBe("Valid Farm");
+    expect(result?.reserves[1].name).toBe("Valid Too");
+  });
+
+  it("separates error coins from degraded coins in the overview", async () => {
+    const now = 2_000;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "error",
+            warning_count: 0,
+            warnings: null,
+            last_error: "HTTP 503",
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            slices: JSON.stringify([{ name: "Test Farm", pct: 100, risk: "low" }]),
+            fetched_at: now,
+            source: "infinifi",
+          },
+        ],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now + 100);
+    // errorCoins must exist on the type and be a number
+    expect(typeof overview.errorCoins).toBe("number");
+    // The error coin should be counted, not in degraded
+    expect(overview.errorCoins).toBeGreaterThanOrEqual(1);
+  });
+
+  it("includes lastError in sync view when sync state has an error", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: 1_000,
+          last_success_at: null,
+          last_status: "error",
+          warning_count: 0,
+          warnings: null,
+          last_error: "HTTP 503 for https://api.example.com",
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
+    expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
+  });
 });

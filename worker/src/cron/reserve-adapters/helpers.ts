@@ -57,6 +57,18 @@ export function requireOnchainInput(input: LiveReserveInput, adapterName: string
   return input;
 }
 
+const DEFAULT_ADAPTER_TIMEOUT_MS = 10_000;
+const MAX_ADAPTER_TIMEOUT_MS = 30_000;
+
+/** Reads timeout from config.params.timeoutMs, falling back to the adapter's default or 10s. */
+export function getAdapterTimeout(config: LiveReservesConfig, fallbackMs = DEFAULT_ADAPTER_TIMEOUT_MS): number {
+  const paramTimeout = (config.params as Record<string, unknown> | undefined)?.timeoutMs;
+  if (typeof paramTimeout === "number" && paramTimeout > 0 && paramTimeout <= MAX_ADAPTER_TIMEOUT_MS) {
+    return paramTimeout;
+  }
+  return fallbackMs;
+}
+
 export function requireJsonInputFromConfig(
   config: LiveReservesConfig,
   adapterName: string,

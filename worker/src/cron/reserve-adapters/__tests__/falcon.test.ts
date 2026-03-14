@@ -36,5 +36,28 @@ describe("adaptFalconTransparency", () => {
       insuranceFund: "5",
       assetCount: 5,
     });
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.some((w) => w.code === "unknown-asset" && w.message.includes("AVAX"))).toBe(true);
+  });
+
+  it("emits a warning for asset labels that fall into the 'other' bucket", () => {
+    const payload: FalconTransparencyResponse = {
+      snapshot_date: 1773316982,
+      usdf: {
+        supply: "100",
+        insurance_fund: "5",
+        breakdown: {
+          assets: [
+            { label: "USDC", ceffu: "50" },
+            { label: "UNKNOWN_TOKEN_XYZ", ceffu: "50" },
+          ],
+        },
+      },
+    };
+    const result = adaptFalconTransparency(payload);
+    expect(result.warnings).toBeDefined();
+    expect(result.warnings!.some(
+      (w) => w.code === "unknown-asset" && w.message.includes("UNKNOWN_TOKEN_XYZ"),
+    )).toBe(true);
   });
 });
