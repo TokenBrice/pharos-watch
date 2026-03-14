@@ -21,10 +21,16 @@ export interface CurvePoolConfig {
   inputDecimals: number;
   outputDecimals: number;
   chain: string;
+  /** Use get_dy_underlying selector for metapools (e.g., LUSD/3Crv) */
+  useUnderlying?: boolean;
+  /** Two-hop pricing: raw price is in intermediate token, multiply by via-token's USD price */
+  hop?: { viaStablecoinId: string };
 }
 
 // get_dy(int128,int128,uint256) selector
 const GET_DY_SELECTOR = "0x5e0d443f";
+// get_dy_underlying(int128,int128,uint256) selector
+const GET_DY_UNDERLYING_SELECTOR = "0x07211ef7";
 
 /**
  * Fetch implied prices via Curve get_dy for a batch of pool configurations.
