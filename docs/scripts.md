@@ -86,7 +86,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/pull-re
 ### `smoke-ops.mjs`
 
 - Uses Cloudflare Access service-token headers (`OPS_SMOKE_CF_ACCESS_CLIENT_ID` / `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`) rather than raw `ADMIN_KEY`.
-- Defaults to `https://ops.pharos.watch/status/` and `https://ops-api.pharos.watch`, with overrides via `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE`.
+- Defaults to `https://ops.pharos.watch/admin/` and `https://ops-api.pharos.watch`, with overrides via `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE`.
 - Verifies the operator UI shell plus `/api/status`, `/api/status-history?limit=5`, and the safe dry-run `audit-depeg-history` admin path.
 
 ## Safe Usage Guidelines

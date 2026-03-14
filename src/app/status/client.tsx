@@ -1,705 +1,399 @@
 "use client";
 
-import Link from "next/link";
-import { Fragment, type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
-import type { StatusResponse } from "@shared/types";
+import { useMemo } from "react";
+import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { formatElapsedSeconds } from "@shared/lib/format";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
-import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
-import { CronCard } from "@/components/status/cron-card";
-import { DataQualityCards } from "@/components/status/data-quality-cards";
-import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
-import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
-import { formatElapsedSeconds } from "@shared/lib/format";
-import { LiquidityHealthCard } from "@/components/status/liquidity-health";
-import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
-import { PriceSourceHealthCard } from "@/components/status/price-source-health";
-import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
-import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
+import { NoticeRail, StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
-import { StatusBanner } from "@/components/status/status-banner";
-import { StatusFacts } from "@/components/status/status-facts";
-import { SystemDiagnostics } from "@/components/status/system-diagnostics";
-import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
-import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
-import { TransitionTimeline } from "@/components/status/transition-timeline";
-import { NoticeRail, PriorityLaneLink, StatusSection, SummaryBadge } from "@/components/status/page-primitives";
-import { Button } from "@/components/ui/button";
-import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
-import { isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
-import {
-  type DashboardSectionId,
-  formatTimestampMs,
-  formatTimestampSeconds,
-  formatTransitionLabel,
-  getStatusTone,
-  getSeverityBadgeClass,
-} from "@/lib/status-dashboard-model";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useHealth } from "@/hooks/api-hooks";
+import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
+import { buildBrowserProbeSummary, formatTimestampMs, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
 
-function getCronSeverity(cron: StatusResponse["crons"][string]): number {
-  if (!cron.healthy || cron.lastRun?.status === "error" || cron.inFlight?.stale) return 2;
-  if (cron.lastRun?.status === "degraded") return 1;
-  return 0;
+function getWorstCacheRatio(caches: Record<string, { ageSeconds: number | null; maxAge: number }>): number | null {
+  let worst: number | null = null;
+  for (const cache of Object.values(caches)) {
+    if (cache.ageSeconds == null || !Number.isFinite(cache.maxAge) || cache.maxAge <= 0) continue;
+    const ratio = cache.ageSeconds / cache.maxAge;
+    worst = worst == null ? ratio : Math.max(worst, ratio);
+  }
+  return worst;
+}
+
+function getWorstCacheStatus(ratio: number | null): "healthy" | "degraded" | "stale" {
+  if (ratio == null) return "healthy";
+  if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.stale) return "stale";
+  if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.degraded) return "degraded";
+  return "healthy";
+}
+
+function getMintBurnStatus(
+  freshnessStatus: "fresh" | "degraded" | "stale",
+): "healthy" | "degraded" | "stale" {
+  if (freshnessStatus === "stale") return "stale";
+  if (freshnessStatus === "degraded") return "degraded";
+  return "healthy";
+}
+
+function MetricCard({
+  label,
+  value,
+  tone,
+  detail,
+}: {
+  label: string;
+  value: string;
+  tone?: "healthy" | "degraded" | "stale";
+  detail: string;
+}) {
+  const badgeClassName = tone ? getStatusTone(tone).badgeClassName : "border-border/60 bg-background/45";
+
+  return (
+    <div className="rounded-[1.15rem] border border-border/60 bg-background/35 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+        <span className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium", badgeClassName)}>
+          {tone ? getStatusTone(tone).label : "Info"}
+        </span>
+      </div>
+      <div className="mt-3 font-mono text-3xl font-semibold tracking-tight text-foreground">{value}</div>
+      <div className="mt-2 text-sm leading-relaxed text-muted-foreground">{detail}</div>
+    </div>
+  );
 }
 
 export default function StatusClient() {
-  const opsUi = useSyncExternalStore(
-    () => () => undefined,
-    () => isOpsUiHost(),
-    () => null,
-  );
-  const adminAccess: AdminAccess = { mode: "ops-proxy" };
-  const handleOpsSignOut = () => {
-    window.location.assign("/cdn-cgi/access/logout");
+  const {
+    data: healthData,
+    error: healthError,
+    isLoading: healthLoading,
+    refetch: refetchHealth,
+    dataUpdatedAt: healthUpdatedAt,
+  } = useHealth();
+  const {
+    data: probes,
+    error: probesError,
+    isLoading: probesLoading,
+    refetch: refetchProbes,
+    dataUpdatedAt: probesUpdatedAt,
+  } = usePublicEndpointProbes();
+
+  const handleRefresh = () => {
+    void refetchHealth();
+    void refetchProbes();
   };
 
-  if (opsUi == null) {
+  const lastUpdated = Math.max(healthUpdatedAt ?? 0, probesUpdatedAt ?? 0);
+  const notices = useMemo(() => {
+    if (!healthData) return [];
+
+    const items = healthData.warnings.map((warning, index) => ({
+      id: `health-warning-${index}`,
+      title: "Health warning",
+      detail: warning,
+      tone: healthData.status === "stale" ? "critical" : "warning",
+    })) as Array<{
+      id: string;
+      title: string;
+      detail: string;
+      tone: "neutral" | "warning" | "critical";
+    }>;
+
+    if (healthError) {
+      items.unshift({
+        id: "health-fetch-error",
+        title: "Health response is stale",
+        detail: healthError.message,
+        tone: "warning",
+      });
+    }
+
+    if (probesError) {
+      items.push({
+        id: "public-probe-error",
+        title: "Public endpoint probes unavailable",
+        detail: probesError.message,
+        tone: "warning",
+      });
+    }
+
+    return items;
+  }, [healthData, healthError, probesError]);
+
+  if (healthLoading && !healthData) {
     return (
       <FeaturePageShell
         breadcrumbName="System Status"
         path="/status/"
         title="System Status"
-        variant="auth-gated"
         leadParagraphs={[
-          "Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions.",
+          "Public health board for cache freshness, endpoint reachability, and ingestion pressure.",
+          "Operator-only recovery tools now live on the Access-protected ops host under `/admin/`.",
         ]}
       >
-        <div className="py-20 text-center text-muted-foreground">Loading status access...</div>
+        <div className="py-20 text-center text-muted-foreground">Loading system status...</div>
       </FeaturePageShell>
     );
   }
 
-  if (!opsUi) {
+  if (healthError && !healthData) {
     return (
       <FeaturePageShell
         breadcrumbName="System Status"
         path="/status/"
         title="System Status"
-        variant="auth-gated"
-        leadParagraphs={["This route exists, but the operator control plane no longer runs on the public host."]}
+        leadParagraphs={[
+          "Public health board for cache freshness, endpoint reachability, and ingestion pressure.",
+          "Operator-only recovery tools now live on the Access-protected ops host under `/admin/`.",
+        ]}
       >
-        <div className="pt-4">
-          <div className="rounded-[1.6rem] border border-border/60 bg-background/35 p-6 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
-            <div className="space-y-3">
-              <p className="pharos-kicker">Private Surface</p>
-              <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                Operator tooling is no longer available on the public host.
-              </h2>
-              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Manual status operations now run behind the Access-protected ops host. Public `/status/` remains
-                non-indexed, but it no longer accepts an in-browser admin key.
-              </p>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link
-                href="/"
-                className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm font-medium text-foreground hover:border-primary/45 hover:bg-primary/8"
-              >
-                Return to dashboard
-              </Link>
-            </div>
-          </div>
+        <div className="rounded-[1.6rem] border border-red-500/30 bg-red-500/10 p-6 text-red-700 shadow-[0_18px_48px_oklch(0_0_0_/0.16)] dark:text-red-300">
+          Failed to load public status data: {healthError.message}
         </div>
       </FeaturePageShell>
     );
   }
+
+  if (!healthData) {
+    return (
+      <FeaturePageShell
+        breadcrumbName="System Status"
+        path="/status/"
+        title="System Status"
+        leadParagraphs={[
+          "Public health board for cache freshness, endpoint reachability, and ingestion pressure.",
+          "Operator-only recovery tools now live on the Access-protected ops host under `/admin/`.",
+        ]}
+      >
+        <div className="py-20 text-center text-muted-foreground">Public health data is unavailable.</div>
+      </FeaturePageShell>
+    );
+  }
+
+  const statusTone = getStatusTone(healthData.status);
+  const worstCacheRatio = getWorstCacheRatio(healthData.caches);
+  const worstCacheStatus = getWorstCacheStatus(worstCacheRatio);
+  const worstCacheTone = getStatusTone(worstCacheStatus);
+  const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
+  const unhealthyCaches = Object.values(healthData.caches).filter((cache) => !cache.healthy).length;
+  const openCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "open").length;
+  const halfOpenCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "half-open").length;
+  const lastSuccessfulMintBurnSyncAge =
+    healthData.mintBurn.sync.lastSuccessfulSyncAt != null
+      ? formatElapsedSeconds(Math.max(0, healthData.timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))
+      : "—";
 
   return (
     <FeaturePageShell
       breadcrumbName="System Status"
       path="/status/"
       title="System Status"
-      variant="auth-gated"
       leadParagraphs={[
-        opsUi
-          ? "Access-protected operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions."
-          : "Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions.",
+        "Public health board for cache freshness, endpoint reachability, and ingestion pressure.",
+        "Operator-only recovery tools now live on the Access-protected ops host under `/admin/`.",
       ]}
-    >
-      <StatusDashboard adminAccess={adminAccess} onSignOut={handleOpsSignOut} />
-    </FeaturePageShell>
-  );
-}
-
-function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess; onSignOut: () => void }) {
-  const {
-    data,
-    error,
-    handleRefresh,
-    healthData,
-    historyLoading,
-    historyWindow,
-    isLoading,
-    lastUpdated,
-    model,
-    probes,
-    probesLoading,
-    setHistoryWindow,
-  } = useStatusDashboardModel(adminAccess);
-  const diagnosticsSignal =
-    data?.overallStatus !== "healthy" || (model?.notices.length ?? 0) > 0 || (model?.healthDiffersFromStatus ?? false);
-  const reliabilitySignal =
-    (healthData?.status ?? data?.availabilityStatus ?? "healthy") !== "healthy" ||
-    (model?.browserProbeSummary?.failCount ?? 0) > 0 ||
-    (data?.summary.worstCacheRatio ?? 0) > 1;
-  const telegramSignal = (data?.telegramBot?.pendingDeliveries ?? 0) > 0;
-  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
-  const [isReliabilityOpen, setIsReliabilityOpen] = useState(false);
-  const [isHealthyCronGroupsOpen, setIsHealthyCronGroupsOpen] = useState(false);
-  const [isTelegramOpen, setIsTelegramOpen] = useState(false);
-
-  useEffect(() => {
-    if (!diagnosticsSignal) return;
-    const timer = window.setTimeout(() => setIsDiagnosticsOpen(true), 0);
-    return () => window.clearTimeout(timer);
-  }, [diagnosticsSignal]);
-
-  useEffect(() => {
-    if (!reliabilitySignal) return;
-    const timer = window.setTimeout(() => setIsReliabilityOpen(true), 0);
-    return () => window.clearTimeout(timer);
-  }, [reliabilitySignal]);
-
-  useEffect(() => {
-    if (!telegramSignal) return;
-    const timer = window.setTimeout(() => setIsTelegramOpen(true), 0);
-    return () => window.clearTimeout(timer);
-  }, [telegramSignal]);
-
-  if (isLoading) {
-    return (
-      <div className="py-20 text-center">
-        <div className="text-muted-foreground">Loading status...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="py-20 text-center">
-        <div className="text-red-600 dark:text-red-400">{error.message}</div>
-        <Button variant="outline" className="mt-4" onClick={onSignOut}>
-          Sign out
-        </Button>
-      </div>
-    );
-  }
-
-  if (!data) return <div className="p-8 text-center text-muted-foreground">Loading status data...</div>;
-  if (!model) return <div className="p-8 text-center text-muted-foreground">Loading status data...</div>;
-
-  const {
-    allTransitions,
-    browserProbeSummary,
-    clientDataAgeSec,
-    clientDataStale,
-    cronGroups,
-    latestTransition,
-    notices,
-    overallCauseCount,
-    overallTone,
-    recommendedActions,
-    runningCrons,
-    sections,
-    statusHoldingAge,
-    topCauses,
-  } = model;
-  const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
-  const statusEvaluatedAt = data.state.lastEvaluatedAt;
-  const isRecoveryHold = isRecoveryHoldState(data.overallStatus, data.rawOverallStatus);
-  const operationalSections = sections.filter((section) => section.id !== "overview" && section.id !== "history");
-  const sortedCronGroups = cronGroups
-    .map((group) => ({
-      ...group,
-      entries: [...group.entries].sort(([, a], [, b]) => getCronSeverity(b) - getCronSeverity(a)),
-    }))
-    .sort((a, b) => {
-      const aSeverity = Math.max(...a.entries.map(([, cron]) => getCronSeverity(cron)), 0);
-      const bSeverity = Math.max(...b.entries.map(([, cron]) => getCronSeverity(cron)), 0);
-      return bSeverity - aSeverity;
-    });
-  const activeCronGroups = sortedCronGroups.filter((group) =>
-    group.entries.some(([, cron]) => getCronSeverity(cron) > 0),
-  );
-  const healthyCronGroups = sortedCronGroups.filter((group) =>
-    group.entries.every(([, cron]) => getCronSeverity(cron) === 0),
-  );
-
-  const renderCronGroup = (group: (typeof sortedCronGroups)[number]) => (
-    <div key={group.key} className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
-      <div className="space-y-1">
+      headerActions={
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-base font-semibold tracking-tight text-foreground">{group.title}</h3>
-          <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-            {group.badge}
-          </span>
+          <SummaryBadge label="Health Sample" value={formatTimestampSeconds(healthData.timestamp)} />
+          <SummaryBadge label="Client Sync" value={formatTimestampMs(lastUpdated)} />
+          <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
         </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">{group.description}</p>
-      </div>
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        {group.entries.map(([job, cron]) => (
-          <CronCard key={job} job={job} cron={cron} nowSeconds={data.timestamp} />
-        ))}
-      </div>
-    </div>
-  );
-  const sectionNodes: Record<DashboardSectionId, ReactNode> = {
-    overview: (
-      <StatusSection
-        id="overview"
-        kicker="Command Center"
-        title="Current incident picture"
-        description="Start here for the state holding, the active blockers, and the short path into deeper diagnostics."
-        accentClassName="border-l-frost-blue"
-        summary={
-          <>
-            <SummaryBadge label="Overall" value={overallTone.label} className={overallTone.badgeClassName} />
-            <SummaryBadge label="Raw" value={data.rawOverallStatus} />
-            <SummaryBadge label="Confidence" value={`${(data.confidence * 100).toFixed(1)}%`} />
-          </>
-        }
-      >
-        <StatusFacts
-          adminAccess={adminAccess}
-          dbHealthy={data.dbHealthy}
-          summary={data.summary}
-          causes={data.causes}
-          onActionFinished={handleRefresh}
-        />
-        <details
-          open={isDiagnosticsOpen}
-          onToggle={(event) => setIsDiagnosticsOpen(event.currentTarget.open)}
-          className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
-        >
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
-            State machine, probe, and discrepancy diagnostics
-          </summary>
-          <div className="mt-4">
-            <SystemDiagnostics
-              state={data.state}
-              staleness={data.staleness}
-              probe={data.probe}
-              discrepancy={data.discrepancy}
-              browserProbe={browserProbeSummary}
-              nowSeconds={data.timestamp}
-            />
-          </div>
-        </details>
-      </StatusSection>
-    ),
-    pipeline: (
-      <StatusSection
-        id="pipeline"
-        kicker="Data Pipeline"
-        title="Freshness and coverage"
-        description="Use this lane when the issue is data quality rather than routing or cron execution."
-        accentClassName="border-l-cyan-500"
-        summary={
-          <>
-            <SummaryBadge
-              label="Data Quality"
-              value={getStatusTone(data.dataQualityStatus).label}
-              className={getStatusTone(data.dataQualityStatus).badgeClassName}
-            />
-            <SummaryBadge label="Missing Prices" value={String(data.dataQuality.missingPrices)} />
-            <SummaryBadge label="Stale On-chain" value={String(data.dataQuality.staleOnchainSupply)} />
-          </>
-        }
-      >
-        <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h3 className="text-base font-semibold tracking-tight text-foreground">Quality threshold board</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Critical data-quality blockers sort first so the noisiest metrics do not hide the real breakpoints.
-              </p>
-            </div>
-            <span
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-[11px] font-medium",
-                getStatusTone(data.dataQualityStatus).badgeClassName,
-              )}
-            >
-              {getStatusTone(data.dataQualityStatus).label}
-            </span>
-          </div>
-          <div className="mt-4">
-            <DataQualityCards dq={{ ...data.dataQuality, nowSeconds: data.timestamp }} />
-          </div>
-        </div>
-
-        <div className="grid gap-5 xl:grid-cols-2">
-          <PriceSourceHealthCard health={data.priceSourceHealth} nowSeconds={data.timestamp} />
-          <LiquidityHealthCard health={data.liquidityHealth} />
-        </div>
-
-        <div className="grid gap-5 xl:grid-cols-2">
-          <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
-          <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
-        </div>
-        <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
-
-        <DiscoveryCandidatesCard
-          candidates={data.discoveryCandidates}
-          adminAccess={adminAccess}
-          nowSeconds={data.timestamp}
-        />
-      </StatusSection>
-    ),
-    reliability: (
-      <StatusSection
-        id="reliability"
-        kicker="Service Health"
-        title="Probes, breakers, and cache pressure"
-        description="Use this lane when the issue looks like routing, availability, or public-service degradation."
-        accentClassName="border-l-amber-500"
-        summary={
-          <>
-            <SummaryBadge
-              label="Public Health"
-              value={healthData?.status ?? "—"}
-              className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
-            />
-            <SummaryBadge
-              label="Browser Probes"
-              value={browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "—"}
-            />
-            <SummaryBadge label="Worst Cache" value={`${data.summary.worstCacheRatio.toFixed(2)}x`} />
-          </>
-        }
-      >
-        <details
-          open={isReliabilityOpen}
-          onToggle={(event) => setIsReliabilityOpen(event.currentTarget.open)}
-          className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
-        >
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
-            Endpoint probes, circuit breakers, and cache freshness
-          </summary>
-          <div className="mt-4 space-y-5">
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <EndpointHealthGrid probes={probes} isLoading={probesLoading} />
-              <CircuitBreakerTable circuits={healthData?.circuits} />
-            </div>
-            <CacheFreshnessTable caches={data.caches} />
-          </div>
-        </details>
-      </StatusSection>
-    ),
-    crons: (
-      <StatusSection
-        id="crons"
-        kicker="Schedulers"
-        title="Worker job lanes"
-        description="Unhealthy and degraded lanes stay on top. Healthy lanes collapse until you need them."
-        accentClassName="border-l-orange-500"
-        summary={
-          <>
-            <SummaryBadge label="Unhealthy" value={String(data.summary.unhealthyCrons)} />
-            <SummaryBadge label="Degraded" value={String(data.summary.degradedCrons)} />
-            <SummaryBadge label="Running" value={String(runningCrons)} />
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {activeCronGroups.length > 0 ? (
-            activeCronGroups.map((group) => renderCronGroup(group))
-          ) : (
-            <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4 text-sm leading-relaxed text-muted-foreground">
-              No unhealthy cron lanes. Healthy groups are collapsed below.
-            </div>
-          )}
-          {healthyCronGroups.length > 0 ? (
-            <details
-              open={isHealthyCronGroupsOpen}
-              onToggle={(event) => setIsHealthyCronGroupsOpen(event.currentTarget.open)}
-              className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
-            >
-              <summary className="cursor-pointer text-sm font-medium text-foreground">
-                Healthy lanes ({healthyCronGroups.length})
-              </summary>
-              <div className="mt-4 space-y-4">{healthyCronGroups.map((group) => renderCronGroup(group))}</div>
-            </details>
-          ) : null}
-        </div>
-      </StatusSection>
-    ),
-    control: (
-      <StatusSection
-        id="control"
-        kicker="Operations"
-        title="Manual response"
-        description="Recovery tools stay near the top; downstream delivery telemetry is quieter and collapsible."
-        accentClassName="border-l-emerald-500"
-        summary={
-          <>
-            <SummaryBadge label="Suggested Actions" value={String(recommendedActions.length)} />
-            <SummaryBadge label="Alert-ready Chats" value={String(data.telegramBot?.deliverableChats ?? 0)} />
-            <SummaryBadge label="Pending Deliveries" value={String(data.telegramBot?.pendingDeliveries ?? 0)} />
-          </>
-        }
-      >
-        <AdminActionsPanel
-          adminAccess={adminAccess}
-          status={{ causes: data.causes, crons: data.crons }}
-          nowSeconds={data.timestamp}
-          onActionFinished={handleRefresh}
-          showRecommendations={false}
-        />
-        <details
-          open={isTelegramOpen}
-          onToggle={(event) => setIsTelegramOpen(event.currentTarget.open)}
-          className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
-        >
-          <summary className="cursor-pointer text-sm font-medium text-foreground">Telegram delivery telemetry</summary>
-          <div className="mt-4">
-            <TelegramBotStats
-              telegramBot={data.telegramBot}
-              dispatchCron={data.crons["dispatch-telegram-alerts"]}
-              nowSeconds={data.timestamp}
-            />
-          </div>
-        </details>
-      </StatusSection>
-    ),
-    history: (
-      <StatusSection
-        id="history"
-        kicker="Incident Log"
-        title="Timeline and recovery trail"
-        description="Historical context stays last so the page tapers from action into evidence."
-        accentClassName="border-l-rose-500"
-        summary={
-          <>
-            <SummaryBadge label="Window" value={historyWindow} />
-            <SummaryBadge label="Transitions" value={String(allTransitions.length)} />
-            <SummaryBadge label="Latest" value={latestTransition ? formatTransitionLabel(latestTransition) : "—"} />
-          </>
-        }
-      >
-        <TransitionTimeline
-          transitions={allTransitions}
-          window={historyWindow}
-          onWindowChange={setHistoryWindow}
-          isLoading={historyLoading}
-        />
-      </StatusSection>
-    ),
-  };
-
-  return (
-    <div className="space-y-6">
-      <section
-        className={cn(
-          "relative overflow-hidden rounded-[2rem] border px-4 py-5 shadow-[0_34px_90px_oklch(0_0_0_/0.28)] sm:px-5 lg:px-6",
-          topFoldCopy.shell,
-        )}
-      >
-        <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(148,163,184,0.28)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:4rem_4rem]" />
-        <div
+      }
+    >
+      <div className="space-y-6">
+        <section
           className={cn(
-            "pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent to-transparent",
-            topFoldCopy.ruler,
+            "relative overflow-hidden rounded-[2rem] border px-4 py-5 shadow-[0_34px_90px_oklch(0_0_0_/0.24)] sm:px-5 lg:px-6",
+            statusTone.badgeClassName,
           )}
-        />
-        <div
-          className={cn(
-            "pointer-events-none absolute -left-20 top-8 h-64 w-64 rounded-full blur-[125px]",
-            topFoldCopy.flareA,
-          )}
-        />
-        <div
-          className={cn(
-            "pointer-events-none absolute right-[14%] top-[5.5rem] h-52 w-52 rounded-full blur-[130px]",
-            topFoldCopy.flareB,
-          )}
-        />
-        <div className="pointer-events-none absolute right-0 top-20 h-px w-[28%] bg-gradient-to-l from-white/18 to-transparent" />
-        <div className="relative space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className={cn("pharos-kicker", topFoldCopy.kicker)}>Operator Triage</p>
-              <SummaryBadge label="State Eval" value={formatTimestampSeconds(statusEvaluatedAt)} />
-              <SummaryBadge label="Status API" value={formatTimestampSeconds(data.timestamp)} />
-              <SummaryBadge label="Client Sync" value={formatTimestampMs(lastUpdated)} />
-              <SummaryBadge
-                label="Client Age"
-                value={`${clientDataAgeSec}s`}
-                className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
-              <Button variant="outline" size="sm" onClick={onSignOut}>
-                Sign out
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(19rem,0.95fr)]">
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <p className={cn("pharos-kicker", topFoldCopy.kicker)}>{topFoldCopy.eyebrow}</p>
-                  <div className="h-px flex-1 bg-gradient-to-r from-white/18 to-transparent" />
-                </div>
-                <h2 className="max-w-4xl text-[clamp(2.9rem,7vw,5.65rem)] font-semibold leading-[0.92] tracking-[-0.085em] text-foreground">
-                  {topFoldCopy.title}
+        >
+          <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(148,163,184,0.28)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:4rem_4rem]" />
+          <div className="relative space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-3">
+              <div className="space-y-1">
+                <p className="pharos-kicker">Public Monitor</p>
+                <h2 className="text-[clamp(2.65rem,6vw,4.85rem)] font-semibold leading-[0.94] tracking-[-0.08em] text-foreground">
+                  {statusTone.label}
                 </h2>
-                <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{topFoldCopy.body}</p>
+                <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                  Read-only status for the public API surface. Use this page to check freshness pressure, route reachability,
+                  and ingestion health without the operator controls.
+                </p>
               </div>
-
-              <StatusBanner
-                status={data.overallStatus}
-                evaluatedAt={statusEvaluatedAt}
-                availabilityStatus={data.availabilityStatus}
-                dataQualityStatus={data.dataQualityStatus}
-                rawStatus={data.rawOverallStatus}
-                confidence={data.confidence}
-                consecutiveRaw={data.state.consecutiveRaw}
-                thresholds={data.state.thresholds}
-              />
-
               <div className="flex flex-wrap gap-2">
+                <SummaryBadge label="Warnings" value={String(healthData.warnings.length)} />
                 <SummaryBadge
-                  label={isRecoveryHold ? "Recovery Hold" : "Holding"}
-                  value={
-                    isRecoveryHold
-                      ? `${formatElapsedSeconds(statusHoldingAge)} at ${overallTone.label.toLowerCase()} / raw ${data.rawOverallStatus}`
-                      : `${formatElapsedSeconds(statusHoldingAge)} in ${overallTone.label.toLowerCase()}`
-                  }
-                  className={
-                    isRecoveryHold
-                      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                      : undefined
-                  }
+                  label="Probes"
+                  value={probeSummary ? `${probeSummary.passCount}/${probeSummary.sampleCount}` : "—"}
+                  className={probeSummary && probeSummary.failCount > 0 ? getStatusTone("degraded").badgeClassName : undefined}
                 />
                 <SummaryBadge
-                  label="Active Causes"
-                  value={String(overallCauseCount)}
-                  className={
-                    overallCauseCount > 0
-                      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                      : undefined
-                  }
+                  label="Worst Cache"
+                  value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : "—"}
+                  className={worstCacheTone.badgeClassName}
                 />
-                <SummaryBadge
-                  label="Public Health"
-                  value={healthData?.status ?? "—"}
-                  className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
-                />
-                <SummaryBadge
-                  label="Cron Errors"
-                  value={String(data.summary.cronErrors)}
-                  className={
-                    data.summary.cronErrors > 0
-                      ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
-                      : undefined
-                  }
-                />
-              </div>
-
-              <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] p-4 shadow-[0_18px_48px_oklch(0_0_0_/0.18)]">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="pharos-kicker">Current Blockers</p>
-                    <h3 className="text-[1.3rem] font-semibold tracking-tight text-foreground">
-                      What needs attention now
-                    </h3>
-                  </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground">
-                    {topCauses.length > 0 ? `${Math.min(topCauses.length, 3)} immediate` : "clear"}
-                  </span>
-                </div>
-
-                <div className="mt-4 space-y-2.5">
-                  {topCauses.length > 0 ? (
-                    topCauses.slice(0, 3).map((cause) => (
-                      <div
-                        key={`${cause.layer}-${cause.code}-${cause.message}`}
-                        className="rounded-[1.1rem] border border-white/10 bg-black/18 p-3.5"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={cn(
-                              "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                              getSeverityBadgeClass(cause.severity),
-                            )}
-                          >
-                            {cause.severity}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground">{cause.layer}</span>
-                          <span className="font-mono text-[11px] text-muted-foreground">{cause.code}</span>
-                        </div>
-                        <div className="mt-2 text-sm leading-relaxed text-foreground">{cause.message}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-xl border border-border/60 bg-background/45 p-3 text-sm leading-relaxed text-muted-foreground">
-                      No active causes. Current state has held for {formatElapsedSeconds(statusHoldingAge)}.
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-4">
-                  <SummaryBadge label="Last Transition" value={formatTransitionLabel(latestTransition)} />
-                  <SummaryBadge
-                    label="Changed"
-                    value={
-                      latestTransition ? `${formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at))} ago` : "—"
-                    }
-                  />
-                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <RecommendedActionStrip
-                recommendations={recommendedActions}
-                adminAccess={adminAccess}
-                onActionFinished={handleRefresh}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                label="Public API"
+                value={statusTone.label}
+                tone={healthData.status}
+                detail={`${healthData.warnings.length} active warning(s) across public health checks.`}
               />
-
-              <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] p-5 shadow-[0_18px_48px_oklch(0_0_0_/0.18)]">
-                <div className="space-y-1">
-                  <p className="pharos-kicker">Follow This Order</p>
-                  <h3 className="text-[1.3rem] font-semibold tracking-tight text-foreground">
-                    The page now tapers by urgency
-                  </h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    Each step down the page should feel broader, calmer, and less immediately actionable.
-                  </p>
-                </div>
-                <div className="mt-3">
-                  {operationalSections.map((section, index) => (
-                    <PriorityLaneLink key={section.id} section={section} index={index} />
-                  ))}
-                </div>
-              </div>
+              <MetricCard
+                label="Worst Cache"
+                value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : "—"}
+                tone={worstCacheStatus}
+                detail={`${unhealthyCaches} cache lane(s) are outside their freshness target.`}
+              />
+              <MetricCard
+                label="Mint/Burn Sync"
+                value={healthData.mintBurn.sync.freshnessStatus}
+                tone={getMintBurnStatus(healthData.mintBurn.sync.freshnessStatus)}
+                detail={
+                  healthData.mintBurn.sync.lastSuccessfulSyncAt != null
+                    ? `Last successful sync ${lastSuccessfulMintBurnSyncAge} ago.`
+                    : "No successful sync recorded yet."
+                }
+              />
+              <MetricCard
+                label="Circuit Breakers"
+                value={String(openCircuits)}
+                tone={openCircuits > 0 ? "stale" : halfOpenCircuits > 0 ? "degraded" : "healthy"}
+                detail={
+                  openCircuits > 0
+                    ? `${openCircuits} open and ${halfOpenCircuits} half-open breaker(s).`
+                    : halfOpenCircuits > 0
+                      ? `${halfOpenCircuits} breaker(s) are probing recovery.`
+                      : "All registered source breakers are closed."
+                }
+              />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <NoticeRail notices={notices} />
+        <NoticeRail notices={notices} />
 
-      <LongformScrollspyNav
-        sections={sections.map((section) => ({ id: section.id, label: section.label }))}
-        navAriaLabel="System status sections"
-        railLabel="Jump to Lane"
-        rightSlot={
-          <span className="text-xs text-muted-foreground">
-            Latest state eval {formatTimestampSeconds(statusEvaluatedAt)}
-          </span>
-        }
-      />
-      {sections.map((section) => (
-        <Fragment key={section.id}>{sectionNodes[section.id]}</Fragment>
-      ))}
-    </div>
+        <StatusSection
+          id="overview"
+          kicker="Current Picture"
+          title="Public service summary"
+          description="High-signal public telemetry at a glance."
+          accentClassName="border-l-frost-blue"
+          summary={
+            <>
+              <SummaryBadge label="Status" value={statusTone.label} className={statusTone.badgeClassName} />
+              <SummaryBadge label="Blacklist Gaps" value={String(healthData.blacklist.missingAmounts)} />
+              <SummaryBadge label="Major Mint/Burn Stale" value={String(healthData.mintBurn.majorStaleCount)} />
+            </>
+          }
+        >
+          <div className="grid gap-5 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Mint/Burn Sync</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex flex-wrap gap-2">
+                  <SummaryBadge
+                    label="Freshness"
+                    value={healthData.mintBurn.sync.freshnessStatus}
+                    className={getStatusTone(getMintBurnStatus(healthData.mintBurn.sync.freshnessStatus)).badgeClassName}
+                  />
+                  <SummaryBadge label="Major Stale" value={String(healthData.mintBurn.majorStaleCount)} />
+                </div>
+                <p className="leading-relaxed text-muted-foreground">
+                  {healthData.mintBurn.sync.warning ?? "Critical mint/burn lanes are within their expected freshness window."}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-border/60 p-3">
+                    <div className="text-xs text-muted-foreground">Last Successful Sync</div>
+                    <div className="mt-1 font-mono text-sm text-foreground">
+                      {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border/60 p-3">
+                    <div className="text-xs text-muted-foreground">Latest Hourly Sample</div>
+                    <div className="mt-1 font-mono text-sm text-foreground">
+                      {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
+                    </div>
+                  </div>
+                </div>
+                {healthData.mintBurn.staleMajorSymbols.length > 0 ? (
+                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
+                    Impacted majors: {healthData.mintBurn.staleMajorSymbols.join(", ")}
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Blacklist Ingestion</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex flex-wrap gap-2">
+                  <SummaryBadge
+                    label="Missing Amounts"
+                    value={String(healthData.blacklist.missingAmounts)}
+                    className={healthData.blacklist.missingAmounts > 0 ? getStatusTone("degraded").badgeClassName : undefined}
+                  />
+                  <SummaryBadge label="Tracked Events" value={String(healthData.blacklist.totalEvents)} />
+                </div>
+                <p className="leading-relaxed text-muted-foreground">
+                  Missing blacklist amounts surface here because they directly affect public data quality and downstream risk calculations.
+                </p>
+                <div className="rounded-lg border border-border/60 p-3">
+                  <div className="text-xs text-muted-foreground">Public Health Interpretation</div>
+                  <div className="mt-1 leading-relaxed text-foreground">
+                    {healthData.blacklist.missingAmounts > 0
+                      ? "Recent blacklist events are missing amount data and need follow-up."
+                      : "No current blacklist amount gaps are affecting the public health signal."}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </StatusSection>
+
+        <StatusSection
+          id="reliability"
+          kicker="Reliability"
+          title="Route probes, breakers, and cache pressure"
+          description="Public-canary reachability from this browser, plus worker cache and circuit state."
+          accentClassName="border-l-amber-500"
+          summary={
+            <>
+              <SummaryBadge
+                label="Probe Pass"
+                value={probeSummary ? `${probeSummary.passCount}/${probeSummary.sampleCount}` : "—"}
+                className={probeSummary && probeSummary.failCount > 0 ? getStatusTone("degraded").badgeClassName : undefined}
+              />
+              <SummaryBadge label="Open Breakers" value={String(openCircuits)} />
+              <SummaryBadge label="Half-open" value={String(halfOpenCircuits)} />
+            </>
+          }
+        >
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+            <EndpointHealthGrid
+              probes={probes}
+              isLoading={probesLoading}
+              groups={["public"]}
+              description="Browser-origin probe loop from this public session. It covers only public canary routes."
+              footnote="Admin and manual action paths are intentionally excluded from the public probe board."
+            />
+            <CircuitBreakerTable circuits={healthData.circuits} />
+          </div>
+          <CacheFreshnessTable caches={healthData.caches} />
+        </StatusSection>
+      </div>
+    </FeaturePageShell>
   );
 }

@@ -63,7 +63,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
 7. `smoke-ops` (needs `deploy-pages`, runs in parallel with `smoke-ui`):
    - Run `npm run test:smoke-ops`
-   - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/status/`, `https://ops-api.pharos.watch`)
+   - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
    - Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
 
@@ -498,7 +498,7 @@ Current critical file set:
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes). Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path derived from `shared/lib/api-endpoints.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
-- `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces using service-token headers. It accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/status/`, then validates `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
+- `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces using service-token headers. It accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/admin/`, then validates `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage/empty states (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`) and on sustained horizontal overflow across tracked mobile routes.
 
 ### Tier-3 Structural Refactor Targeted Suites

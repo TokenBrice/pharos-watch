@@ -1,6 +1,6 @@
 # Operator Origin Access Setup
 
-Runbook for the operator-origin split that now fronts `/status/` and browser admin calls with Access-protected ops hosts.
+Runbook for the operator-origin split that now fronts `/admin/` and browser admin calls with Access-protected ops hosts while leaving `/status/` public and read-only.
 
 ---
 
@@ -10,7 +10,8 @@ Current repo-side state:
 
 - the Worker is attached to both `api.pharos.watch` and `ops-api.pharos.watch`
 - browser CORS allows both `pharos.watch` and `ops.pharos.watch`
-- `/status/` only serves the live operator panel on `ops.pharos.watch`; the public host is blocked by the Pages host-gate function and returns a non-indexed `404`
+- `/admin/` only serves the live operator panel on `ops.pharos.watch`; the public host is blocked by the Pages host-gate function and returns a non-indexed `404`
+- `/status/` is public and read-only on both the public and ops hosts
 - same-origin Pages Functions proxy `/api/admin/*` from `ops.pharos.watch` to `ops-api.pharos.watch` with Access service-token headers
 
 Still true:
@@ -237,7 +238,7 @@ After adding `ops.pharos.watch` to the Pages project:
 
 ```bash
 curl -I https://ops.pharos.watch/
-curl -I https://ops.pharos.watch/status/
+curl -I https://ops.pharos.watch/admin/
 ```
 
 Expected before Access is attached:

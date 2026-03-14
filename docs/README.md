@@ -38,7 +38,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules
 - [portfolio-page.md](./portfolio-page.md) - `/portfolio/` route shell, local persistence, and report-card dependency contract
 - [privacy-page.md](./privacy-page.md) - `/privacy/` longform policy surface, metadata, and footer integration
-- [status-dashboard.md](./status-dashboard.md) - `/status/` frontend/backend contract and admin actions
+- [status-dashboard.md](./status-dashboard.md) - `/status/` public health surface plus `/admin/` operator dashboard contract
 
 ## Public Route Coverage
 

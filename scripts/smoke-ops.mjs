@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/status/";
+const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
 
 function assert(condition, message) {
@@ -57,7 +57,7 @@ async function run() {
 
   const ui = await fetchText(opsUiUrl, headers);
   if (ui.response.status === 200) {
-    assert(ui.body.includes("System Status"), "Ops UI did not render the System Status shell");
+    assert(ui.body.includes("Operator Admin"), "Ops UI did not render the Operator Admin shell");
     assert(!ui.body.includes("Operator tooling is no longer available on the public host."), "Ops UI returned the public-host fallback shell");
     console.log("[smoke-ops] OK ops UI via service token");
   } else {

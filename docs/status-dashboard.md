@@ -1,12 +1,12 @@
 # Status Dashboard
 
-Operational reference for `/status`: admin auth flow, backend status computation, hysteresis state machine, discrepancy detection, endpoint probing, and inline admin actions.
+Operational reference for the split status surfaces: public `/status/` read-only health monitoring and Access-gated `/admin/` operator triage, including backend status computation, hysteresis state machine, discrepancy detection, endpoint probing, and inline admin actions.
 
 ---
 
 ## Scope
 
-The status dashboard combines seven signals:
+The operator dashboard combines seven signals:
 
 1. Cache freshness (`/api/status` -> `caches`)
 2. Cron health (`/api/status` -> `crons`)
@@ -16,11 +16,16 @@ The status dashboard combines seven signals:
 6. Live reserve sync health (`/api/status` -> `reserveComposition`)
 7. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
 
-This page is **auth-gated in practice** because `/api/status` plus the admin probe/action paths require a valid admin credential. The active frontend operator mode is now:
+The repo now ships two related surfaces:
+
+- `/status/`: public, read-only health board backed by `/api/health` plus public browser probes
+- `/admin/`: Access-protected operator dashboard backed by `/api/admin/*` proxy routes and the admin-only `/api/status` / `/api/status-history` worker endpoints
+
+The active frontend operator mode is now:
 
 - `ops.pharos.watch`: Cloudflare Access-protected operator host. The browser uses same-origin Pages Functions routes under `/api/admin/*`, and those functions proxy to `ops-api.pharos.watch` with a service token.
 
-`pharos.watch/status/` remains non-indexed and is now hard-blocked on the public host via a Pages Function `404`.
+`/admin/` is hard-blocked outside `ops.pharos.watch` via a Pages host-gate function. `/status/` is now public and read-only.
 
 ---
 
@@ -28,20 +33,24 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
 
 ### Route and metadata
 
-- Page: `src/app/status/page.tsx`
-- Client implementation: `src/app/status/client.tsx`
+- Public page: `src/app/status/page.tsx`
+- Public client: `src/app/status/client.tsx`
+- Operator page: `src/app/admin/page.tsx`
+- Operator client: `src/app/admin/client.tsx`
 - Dashboard model hook: `src/hooks/use-status-dashboard-model.ts`
+- Ops host gate: `functions/admin/[[path]].ts`
 - Ops proxy route: `functions/api/admin/[[path]].ts`
 - Pure derived-data helpers: `src/lib/status-dashboard-model.ts`
 - Decomposed UI components: `src/components/status/*`
-- The page shell now adds a command-center top fold above the widget stack:
+- The `/admin/` page shell adds a command-center top fold above the widget stack:
   - a compact triage utility bar for refresh/auth state (`RefreshCountdown`, sign-out, state-evaluation/API/client timestamp chips)
   - consolidated overall-status hero (`StatusBanner`) + a short blocker watchlist
   - when hysteresis is still holding `overallStatus` above `rawOverallStatus`, the hero switches into recovery-hold copy instead of reusing the active-incident stale headline
   - a promoted `Recommended now` action strip derived from active causes / unhealthy cron lanes
   - a `Follow this order` lane list that mirrors the priority-ranked section order
   - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
-- Metadata disables indexing (`robots: { index: false, follow: false }`)
+- `/admin/` disables indexing (`robots: { index: false, follow: false }`)
+- `/status/` stays read-only and uses only public read endpoints
 
 ### Data hooks
 
@@ -56,6 +65,7 @@ This page is **auth-gated in practice** because `/api/status` plus the admin pro
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
   - Public probes still hit the public API origin; admin probes switch to same-origin `/api/admin/*` on the ops host
   - Manual/admin mutation actions are listed but intentionally not auto-probed
+  - Also exports `usePublicEndpointProbes()` for the public `/status/` page, which probes only the public endpoint group
 - `src/hooks/use-status-history.ts`
   - Calls `GET /api/status-history` through same-origin `/api/admin/status-history` on `ops.pharos.watch`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
@@ -423,8 +433,9 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 
 | File                                                 | Role                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/app/status/client.tsx`                          | Ops-host-only status dashboard orchestration shell; the public host no longer renders an interactive `/status/` route                                                                                                                                                                  |
-| `functions/status/[[path]].ts`                       | Pages Functions host gate for `/status/`; returns `404` outside `ops.pharos.watch`, otherwise serves the static status route asset                                                                                                                                                     |
+| `src/app/status/client.tsx`                          | Public read-only system health board backed by `/api/health` plus public browser probes                                                                                                                                                                                                |
+| `src/app/admin/client.tsx`                           | Ops-host-only operator dashboard orchestration shell with triage, cron telemetry, and admin actions                                                                                                                                                                                    |
+| `functions/admin/[[path]].ts`                        | Pages Functions host gate for `/admin/`; returns `404` outside `ops.pharos.watch`, otherwise serves the static admin route asset                                                                                                                                                       |
 | `src/components/status/*`                            | Decomposed status UI modules (banner, facts, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards are grouped by trigger slot, surface trigger expressions + isolation mode, show last-good/error-skip context, and expose full raw metadata in collapsible panels. |
 | `src/components/status/telegram-bot-stats.tsx`       | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                          |
 | `src/components/status/discovery-candidates.tsx`     | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                             |

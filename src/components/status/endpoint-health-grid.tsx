@@ -12,9 +12,18 @@ const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> 
 interface EndpointHealthGridProps {
   probes: EndpointProbeResult[] | undefined;
   isLoading: boolean;
+  groups?: readonly (keyof typeof ENDPOINT_GROUPS)[];
+  description?: string;
+  footnote?: string;
 }
 
-export function EndpointHealthGrid({ probes, isLoading }: EndpointHealthGridProps) {
+export function EndpointHealthGrid({
+  probes,
+  isLoading,
+  groups = ["public", "admin", "manual"],
+  description,
+  footnote,
+}: EndpointHealthGridProps) {
   if (isLoading && !probes) {
     return (
       <Card>
@@ -36,6 +45,12 @@ export function EndpointHealthGrid({ probes, isLoading }: EndpointHealthGridProp
   const probeList = probes ?? [];
   const passCount = probeList.filter((probe) => probe.status != null && probe.status >= 200 && probe.status < 300).length;
   const failCount = probeList.filter((probe) => probe.status == null || probe.status >= 400).length;
+  const isAdminView = groups.includes("admin");
+  const summaryText =
+    footnote ??
+    (isAdminView
+      ? "Skips endpoints without a probe group: digest-snapshot (date-specific), feedback and telegram-webhook (POST-only)."
+      : "Shows public canary coverage only. Admin and manual action routes are intentionally excluded.");
 
   return (
     <Card>
@@ -44,13 +59,15 @@ export function EndpointHealthGrid({ probes, isLoading }: EndpointHealthGridProp
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-xs text-muted-foreground">
-          Browser-origin probe loop from this admin session. Compare it with the worker self-check above when diagnosing
-          divergence.
+          {description ??
+            (isAdminView
+              ? "Browser-origin probe loop from this admin session. Compare it with the worker self-check above when diagnosing divergence."
+              : "Browser-origin probe loop from this session against the public API surface.")}
         </p>
         <p className="text-xs text-muted-foreground">
-          {probeList.length > 0 ? `${passCount}/${probeList.length} passing, ${failCount} failing or unreachable.` : "No browser probe samples yet."} Skips endpoints without a probe group: digest-snapshot (date-specific), feedback and telegram-webhook (POST-only).
+          {probeList.length > 0 ? `${passCount}/${probeList.length} passing, ${failCount} failing or unreachable.` : "No browser probe samples yet."} {summaryText}
         </p>
-        {GROUP_LABELS.map(({ key, label }) => {
+        {GROUP_LABELS.filter(({ key }) => groups.includes(key)).map(({ key, label }) => {
           const paths = [...ENDPOINT_GROUPS[key]];
           const isInline = key === "manual";
 

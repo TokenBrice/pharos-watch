@@ -102,7 +102,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - uses the workspace-installed Wrangler CLI (`npx --no-install wrangler`) with explicit retries for transient Pages API failures during `pages deploy`
 5. `smoke-ui`
 6. `smoke-ops`
-   - private post-deploy ops smoke against `ops.pharos.watch/status/` and `ops-api.pharos.watch`
+   - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
 

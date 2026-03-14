@@ -24,7 +24,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/digest-archive` | All daily digests, newest-first |
 | `GET /api/digest-snapshot` | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD`) for SSG builds |
 | `GET /api/health` | Worker health check (includes circuit breaker states) |
-| `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/status/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers |
+| `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/admin/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers |
 | `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Preferred access is `ops-api.pharos.watch/api/status-history` with Access service-token headers |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
 | `GET /api/og/*` | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards |
@@ -285,7 +285,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-logos.ts              # Static logos from data/logos.json
 │   ├── use-blacklist-events.ts   # GET /api/blacklist
 │   ├── use-depeg-events.ts       # GET /api/depeg-events
-│   ├── use-endpoint-probes.ts    # Parallel endpoint probes (status page); public probes hit api.pharos.watch, admin probes switch to same-origin `/api/admin/*` on ops host
+│   ├── use-endpoint-probes.ts    # Parallel endpoint probes; exports both admin-mode and public-only probe hooks, with admin probes switching to same-origin `/api/admin/*` on the ops host
 │   ├── use-status.ts             # GET /api/status through the ops-host same-origin proxy
 │   ├── use-status-dashboard-model.ts # Status dashboard polling orchestration + derived operator model
 │   ├── use-coverage-matrix-model.ts # Coverage page query orchestration + derived row/snapshot model
@@ -553,4 +553,5 @@ data/
   - `/compare/`
   - `/portfolio/`
   - `/status/`
+  - `/admin/`
 - Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.

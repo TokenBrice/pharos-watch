@@ -1,13 +1,13 @@
 import { resolveOpsUiOrigin } from "../lib/ops-origin";
 
-interface StatusHostGateEnv {
+interface AdminHostGateEnv {
   ASSETS: {
     fetch: typeof fetch;
   };
   OPS_UI_ORIGIN?: string;
 }
 
-export const onRequest = async ({ request, env }: { request: Request; env: StatusHostGateEnv }) => {
+export const onRequest = async ({ request, env }: { request: Request; env: AdminHostGateEnv }) => {
   const requestUrl = new URL(request.url);
   if (requestUrl.origin !== resolveOpsUiOrigin(env)) {
     return new Response("Not found", {

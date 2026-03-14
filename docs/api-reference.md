@@ -100,7 +100,7 @@ This keeps endpoint metadata, router behavior, and method guards aligned from on
 
 ## Admin Auth And Idempotency
 
-Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Direct `ops-api` requests are accepted when Cloudflare Access has already attached either user/JWT headers or service-token headers; the worker itself does not validate JWT signatures or token values. Browser operators should use `https://ops.pharos.watch/status/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
+Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Direct `ops-api` requests are accepted when Cloudflare Access has already attached either user/JWT headers or service-token headers; the worker itself does not validate JWT signatures or token values. Browser operators should use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
@@ -1724,7 +1724,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 
 Preferred operator access now splits by surface:
 
-- Browser / human operators: use `https://ops.pharos.watch/status/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
+- Browser / human operators: use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
 - CLI / automation: call `https://ops-api.pharos.watch/api/...` with `CF-Access-Client-Id` and `CF-Access-Client-Secret` (the documented service-token path). Direct `ops-api` requests also work with Cloudflare Access user/JWT headers.
 
 ### `GET /api/status`
@@ -1733,7 +1733,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 **Preferred access:**
 
-- Browser: `https://ops.pharos.watch/status/` -> same-origin `/api/admin/status`
+- Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
 - CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
 
 **Response shape:** `StatusResponse` (defined in `shared/types/index.ts`)

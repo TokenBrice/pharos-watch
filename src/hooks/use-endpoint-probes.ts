@@ -20,12 +20,15 @@ const ALL_ENDPOINTS = [
   ...ENDPOINT_GROUPS.public,
   ...ENDPOINT_GROUPS.admin,
 ];
+const PUBLIC_ENDPOINTS = [
+  ...ENDPOINT_GROUPS.public,
+];
 
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 
 async function probeEndpoint(
   path: string,
-  adminAccess: AdminAccess,
+  adminAccess?: AdminAccess,
 ): Promise<EndpointProbeResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
@@ -33,7 +36,7 @@ async function probeEndpoint(
 
   try {
     const requestPath = ADMIN_PATHS.has(path)
-      ? buildAdminApiPath(path, adminAccess)
+      ? buildAdminApiPath(path, adminAccess!)
       : path;
     const requestInit = ADMIN_PATHS.has(path)
       ? buildAdminFetchInit()
@@ -67,6 +70,15 @@ export function useEndpointProbes(
   return usePollingQuery(
     ["endpoint-probes", getAdminQueryScope()],
     () => Promise.all(ALL_ENDPOINTS.map((path) => probeEndpoint(path, adminAccess))),
+    CRON_1MIN,
+    { enabled: true, retry: 0 },
+  );
+}
+
+export function usePublicEndpointProbes(): UseQueryResult<EndpointProbeResult[], Error> {
+  return usePollingQuery(
+    ["endpoint-probes", "public"],
+    () => Promise.all(PUBLIC_ENDPOINTS.map((path) => probeEndpoint(path))),
     CRON_1MIN,
     { enabled: true, retry: 0 },
   );
