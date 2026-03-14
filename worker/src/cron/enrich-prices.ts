@@ -608,98 +608,90 @@ export async function enrichMissingPrices(
       }
     }
 
-    // ── Pass 2: CoinMarketCap API (fallback for assets with cmcSlug) ──
+    // ── Pass 2: CoinMarketCap listings batch (covers all CMC-listed stablecoins) ──
+    const missingAfterPass1b = assets
+      .map((a, i) => ({ asset: a, index: i }))
+      .filter((m) => hasMissingPrice(m.asset));
+
     const cmcAllowed =
       cmcApiKey != null && db != null
         ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.CMC_PRICES)
         : true;
-    if (cmcApiKey && cmcAllowed) {
-      const cmcCandidates = assets
-        .map((a, i) => ({ asset: a, index: i }))
-        .filter((m) => hasMissingPrice(m.asset) && m.asset.cmcSlug);
-
-      if (cmcCandidates.length > 0) {
-        // Rate limit: max 1 CMC call per hour, tracked via cache table
-        let shouldCall = true;
-        if (db) {
-          try {
-            const row = await getCache(db, "cmc_last_fetch");
-            if (row && (Math.floor(Date.now() / 1000) - row.updatedAt) < 3600) {
-              shouldCall = false;
-            }
-          } catch (e) {
-            console.warn("[enrich-prices] CMC rate-limit check failed, proceeding with call:", e);
+    if (cmcApiKey && cmcAllowed && missingAfterPass1b.length > 0) {
+      // Rate limit: max 1 CMC call per hour, tracked via cache table
+      let shouldCall = true;
+      if (db) {
+        try {
+          const row = await getCache(db, "cmc_last_fetch");
+          if (row && (Math.floor(Date.now() / 1000) - row.updatedAt) < 3600) {
+            shouldCall = false;
           }
+        } catch (e) {
+          console.warn("[enrich-prices] CMC rate-limit check failed, proceeding with call:", e);
         }
+      }
 
-        if (shouldCall) {
-          try {
-            const slugs = cmcCandidates.map((m) => m.asset.cmcSlug!).join(",");
-            const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
-            const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
-            const cmcRes = await fetchWithRetry(
-              `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?slug=${slugs}`,
-              {
-                headers: {
-                  "X-CMC_PRO_API_KEY": cmcApiKey,
-                  "Accept": "application/json",
-                  "User-Agent": USER_AGENT,
-                },
-                signal: cmcSignal,
+      if (shouldCall) {
+        try {
+          const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
+          const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
+          const cmcRes = await fetchWithRetry(
+            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?cryptocurrency_type=stablecoin&limit=200&convert=USD",
+            {
+              headers: {
+                "X-CMC_PRO_API_KEY": cmcApiKey,
+                Accept: "application/json",
+                "User-Agent": USER_AGENT,
               },
-              CMC_MAX_RETRIES,
-              { timeoutMs: CMC_REQUEST_TIMEOUT_MS },
-            );
+              signal: cmcSignal,
+            },
+            CMC_MAX_RETRIES,
+            { timeoutMs: CMC_REQUEST_TIMEOUT_MS },
+          );
 
-            if (cmcRes && cmcRes.ok) {
-              const cmcData = (await cmcRes.json()) as {
-                data: Record<string, {
-                  slug: string;
-                  quote: { USD: { price: number; market_cap: number } };
-                }>;
-              };
+          if (cmcRes && cmcRes.ok) {
+            const cmcData = (await cmcRes.json()) as {
+              data: Array<{ symbol: string; quote: { USD: { price: number } } }>;
+            };
 
-              // Build slug → CMC entry map (response is keyed by numeric CMC ID)
-              const bySlug = new Map<string, { price: number; marketCap: number }>();
-              for (const entry of Object.values(cmcData.data)) {
-                const usd = entry.quote?.USD;
-                if (usd?.price != null) {
-                  bySlug.set(entry.slug, { price: usd.price, marketCap: usd.market_cap ?? 0 });
-                }
+            const cmcBySymbol = new Map<string, number>();
+            for (const entry of cmcData.data) {
+              const price = entry.quote?.USD?.price;
+              if (price != null && price > 0) {
+                cmcBySymbol.set(entry.symbol.toUpperCase(), price);
               }
-
-              for (const m of cmcCandidates) {
-                const cmcEntry = bySlug.get(m.asset.cmcSlug!);
-                if (!cmcEntry) continue;
-                if (isReasonablePrice(
-                  cmcEntry.price,
-                  m.asset.pegType as string | undefined,
-                  fxRates,
-                  buildPriceReasonablenessOptions(m.asset),
-                )) {
-                  applyResolvedPrice(assets[m.index], cmcEntry.price, "coinmarketcap", "fallback");
-                  passCmcCount++;
-                }
-              }
-
-              // Update rate-limit timestamp
-              if (db) {
-                try {
-                  await setCache(db, "cmc_last_fetch", "1");
-                } catch (e) {
-                  console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", e);
-                }
-              }
-              if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
-            } else {
-              console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
-              if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
             }
-          } catch (err) {
-            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            console.warn("[enrich] CMC API call failed:", err);
+
+            for (const m of missingAfterPass1b) {
+              const cmcPrice = cmcBySymbol.get(m.asset.symbol.toUpperCase());
+              if (cmcPrice != null && isReasonablePrice(
+                cmcPrice,
+                m.asset.pegType as string | undefined,
+                fxRates,
+                buildPriceReasonablenessOptions(m.asset),
+              )) {
+                applyResolvedPrice(assets[m.index], cmcPrice, "coinmarketcap", "fallback");
+                passCmcCount++;
+              }
+            }
+
+            // Update rate-limit timestamp
+            if (db) {
+              try {
+                await setCache(db, "cmc_last_fetch", "1");
+              } catch (e) {
+                console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", e);
+              }
+            }
+            if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
+          } else {
+            console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
             if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
           }
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[enrich] CMC API call failed:", err);
+          if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
         }
       }
     } else if (cmcApiKey && !cmcAllowed) {
