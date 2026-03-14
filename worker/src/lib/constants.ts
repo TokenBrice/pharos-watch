@@ -141,5 +141,6 @@ export const CIRCUIT_SOURCE = {
   COINBASE_PRICES: "coinbase-prices",
   REDSTONE_PRICES: "redstone-prices",
   CURVE_ONCHAIN: "curve-onchain",
+  CURVE_LIQUIDITY_API: "curve-liquidity-api",
   FX_REALTIME: "fx-realtime",
 } as const;
