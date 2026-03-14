@@ -213,6 +213,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       priceConfidence: asset?.priceConfidence ?? null,
       priceUpdatedAt: asset?.priceUpdatedAt ?? null,
       consensusSources: asset?.consensusSources,
+      agreeSources: asset?.agreeSources,
       primaryTrust,
       pegPct: pegData.pegPct,
       severityScore: pegData.severityScore,

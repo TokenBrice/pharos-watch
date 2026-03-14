@@ -30,6 +30,9 @@ function makeCoin(
     circulatingPrevWeek: { peggedUSD: 1_000_000 },
     circulatingPrevMonth: {},
     chainCirculating: {},
+    consensusSources: [],
+    agreeSources: [],
+    supplySource: "defillama",
     chains: ["ethereum"],
     ...overrides,
   };
