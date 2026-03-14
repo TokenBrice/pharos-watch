@@ -670,6 +670,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USDC (redemption reserve)", pct: 10, risk: "low", coinId: "usdc-circle" },
     ],
   }),
+  // No CoinGecko listing (verified 2026-03-14). CG only lists WrappedM (wM). Priced via DL contract fallback.
   usd("m-m0", "M by M0", "M", "rwa-backed", "centralized", {
     llamaId: "213",
     rwa: true,
@@ -1456,6 +1457,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Other custodians (AUSD, JTRSY, WTGXX, USDB)", pct: 10, risk: "low" },
     ],
   }),
+  // No CoinGecko listing (verified 2026-03-14). Priced via DL fallback.
   usd("rwausdi-multipli", "rwaUSDi", "rwaUSDi", "crypto-backed", "centralized-dependent", {
     llamaId: "340",
     deploymentModel: "native-multichain",
@@ -3607,6 +3609,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash and short-term government bonds (EU financial institutions)", pct: 100, risk: "very-low" },
     ],
   }),
+  // No CoinGecko listing (verified 2026-03-14). Different project from "USDu" by Unitas Labs. Priced via DL fallback.
   usd("usdu-usdu-finance", "USDU Finance", "USDU", "crypto-backed", "centralized-dependent", {
     llamaId: "304",
     collateral: "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
