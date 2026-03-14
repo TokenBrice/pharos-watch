@@ -530,7 +530,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       params: {
         label: "U.S. Treasury Bills and reverse repos",
         risk: "very-low",
-        probe: { kind: "json-path", path: ["price"] },
+        probe: { kind: "json-path", path: ["data", "price"] },
       },
     },
   }),
@@ -3915,21 +3915,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "BlackRock FedFund (TFDXX)", pct: 12, risk: "very-low" },
       { name: "USDC liquidity buffer", pct: 3, risk: "low", coinId: "usdc-circle" },
     ],
-    liveReservesConfig: {
-      adapter: "chainlink-nav",
-      version: 1,
-      semantics: "single-asset",
-      breakerScope: "ousg-ondo",
-      display: { url: "https://ondo.finance/ousg", label: "Ondo NAV Oracle" },
-      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
-      params: {
-        oracleAddress: "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094",
-        tokenAddress: "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92",
-        assetLabel: "BlackRock BUIDL + FedFund (U.S. Treasuries)",
-        assetRisk: "very-low",
-        oracleMethod: "getPrice",
-      },
-    },
+    // OUSG oracle (0x9Cad45...) has access-restricted getPrice() — reverts for non-whitelisted callers.
+    // liveReservesConfig disabled until Ondo opens public oracle access.
   }),
   usd("mtbill-midas", "Midas mTBILL", "mTBILL", "rwa-backed", "centralized", {
     detailProvider: "coingecko",

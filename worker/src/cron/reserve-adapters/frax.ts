@@ -3,16 +3,18 @@ import type { AdapterContext, AdapterResult } from "./index";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig } from "./helpers";
 
 export interface FraxCombinedDataResponse {
-  collateral: {
-    collateral_ratio: number;
-    decentralization_ratio: number;
-    total_dollar_value_of_collateral: number;
+  protocol?: {
+    collateral?: {
+      ratio: number;
+      decentralization_ratio: number;
+      total_dollar_value: number;
+    };
   };
 }
 
 export function adaptFraxCombinedData(payload: FraxCombinedDataResponse): AdapterResult {
-  const { collateral } = payload;
-  if (!collateral || !Number.isFinite(collateral.total_dollar_value_of_collateral)) {
+  const collateral = payload.protocol?.collateral;
+  if (!collateral || !Number.isFinite(collateral.total_dollar_value)) {
     throw new Error("Frax combineddata response missing collateral data");
   }
 
@@ -25,9 +27,9 @@ export function adaptFraxCombinedData(payload: FraxCombinedDataResponse): Adapte
       },
     ],
     metadata: {
-      collateralRatio: collateral.collateral_ratio,
+      collateralRatio: collateral.ratio,
       decentralizationRatio: collateral.decentralization_ratio,
-      totalCollateralUsd: collateral.total_dollar_value_of_collateral,
+      totalCollateralUsd: collateral.total_dollar_value,
     },
   };
 }

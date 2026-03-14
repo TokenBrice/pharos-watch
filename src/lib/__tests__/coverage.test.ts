@@ -99,12 +99,11 @@ describe("coverage helpers", () => {
       dexCoverageClass: "primary",
       hasYieldCoverage: false,
       flowCoverageStatus: "partial-history",
-      bluechipGrade: "A",
       hasDependencyCoverage: false,
     });
 
-    expect(row.coverageCount).toBe(6);
-    expect(row.advancedCoverageCount).toBe(5);
+    expect(row.coverageCount).toBe(5);
+    expect(row.advancedCoverageCount).toBe(4);
     expect(row.statuses.yield.available).toBe(false);
     expect(row.statuses.blacklist.available).toBe(false);
   });

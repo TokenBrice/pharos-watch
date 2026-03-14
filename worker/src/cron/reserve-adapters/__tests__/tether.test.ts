@@ -4,9 +4,9 @@ import { adaptTetherTransparency, type TetherTransparencyResponse } from "../tet
 const SAMPLE: TetherTransparencyResponse = {
   data: {
     usdt: {
-      total_assets: 145_000_000_000,
-      total_liabilities: 144_500_000_000,
-      shareholder_eq: 500_000_000,
+      total_assets: "145000000000",
+      total_liabilities: "144500000000",
+      shareholder_eq: "500000000",
     },
   },
 };
