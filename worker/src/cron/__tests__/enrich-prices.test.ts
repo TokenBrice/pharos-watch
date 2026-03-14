@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices } from "../enrich-prices";
+import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice } from "../enrich-prices";
 import type { PeggedAsset } from "../enrich-prices";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
@@ -768,5 +768,27 @@ describe("fetchPrimaryPrices", () => {
     expect(results.get("fxusd-f-x-protocol")?.source).toBe("redstone");
     expect(results.get("fxusd-f-x-protocol")?.price).toBeCloseTo(0.9997, 4);
     expect(stats.singleSource).toBe(2);
+  });
+});
+
+describe("applyResolvedPrice", () => {
+  it("sets consensusSources to single-element array with source name", () => {
+    const asset: PeggedAsset = {
+      id: "test",
+      name: "Test",
+      symbol: "TEST",
+      price: 0,
+      priceSource: "",
+      circulating: {},
+      chains: [],
+    };
+
+    applyResolvedPrice(asset, 0.9998, "cmc", "fallback", 1000);
+
+    expect(asset.price).toBe(0.9998);
+    expect(asset.priceSource).toBe("cmc");
+    expect(asset.priceConfidence).toBe("fallback");
+    expect(asset.priceUpdatedAt).toBe(1000);
+    expect(asset.consensusSources).toEqual(["cmc"]);
   });
 });

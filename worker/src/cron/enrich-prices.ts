@@ -55,13 +55,14 @@ export interface PeggedAsset {
   circulatingPrevMonth?: Record<string, number> | null;
   chains?: string[];
   chainCirculating?: Record<string, Record<string, unknown>>;
+  consensusSources?: string[];
 }
 
 export function hasMissingPrice(a: PeggedAsset): boolean {
   return a.price == null || typeof a.price !== "number" || a.price === 0;
 }
 
-function applyResolvedPrice(
+export function applyResolvedPrice(
   asset: PeggedAsset,
   price: number,
   source: string,
@@ -72,6 +73,7 @@ function applyResolvedPrice(
   asset.priceSource = source;
   asset.priceConfidence = confidence;
   asset.priceUpdatedAt = updatedAtSec;
+  asset.consensusSources = [source];
 }
 
 /** Map DL stablecoins API chain names → DL coins API prefixes */
@@ -117,6 +119,7 @@ export interface PrimaryPriceResult {
   confidence: PriceConfidence;
   dlPrice: number | null;
   cgPrice: number | null;
+  candidateSources: string[];
 }
 
 export interface PriceValidationStats {
@@ -415,6 +418,7 @@ export async function fetchPrimaryPrices(
       confidence: consensus.confidence,
       dlPrice: dl ?? null,
       cgPrice: cg ?? null,
+      candidateSources: sources.map((s) => s.source),
     });
 
     if (consensus.confidence === "high") stats.high++;
