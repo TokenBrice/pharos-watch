@@ -43,6 +43,11 @@ const KeyInfoCard = dynamic(() => import("@/components/key-info-card").then((mod
   loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
 });
 
+const PriceTransparencyCard = dynamic(
+  () => import("@/components/stablecoin-detail/price-transparency-card").then((mod) => mod.PriceTransparencyCard),
+  { ssr: false },
+);
+
 const YieldDetailSection = dynamic(() => import("@/components/yield-detail-section"), {
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
@@ -66,6 +71,7 @@ const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "chart", label: "Chart" },
   { id: "info", label: "Info" },
+  { id: "price-transparency", label: "Price Sources" },
   { id: "yield", label: "Yield" },
   { id: "flows", label: "Flows" },
   { id: "liquidity", label: "Liquidity" },
@@ -195,6 +201,16 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       <section id="info" className="space-y-6">
         <KeyInfoCard meta={viewModel.coin} />
       </section>
+
+      {viewModel.coinData.price != null ? (
+        <section id="price-transparency">
+          <PriceTransparencyCard
+            coinData={viewModel.coinData}
+            consensusSources={viewModel.consensusSources}
+            dexPriceCheck={viewModel.dexPriceCheck}
+          />
+        </section>
+      ) : null}
 
       {detailSections.some((section) => section.id === "yield") ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
 

@@ -1,0 +1,205 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
+import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import { cn } from "@/lib/utils";
+
+/** Canonical known sources in display order */
+const KNOWN_SOURCES = [
+  { key: "coingecko", label: "CoinGecko" },
+  { key: "defillama", label: "DefiLlama" },
+  { key: "pyth", label: "Pyth Network" },
+  { key: "binance", label: "Binance" },
+  { key: "coinbase", label: "Coinbase" },
+  { key: "redstone", label: "RedStone" },
+  { key: "curve-onchain", label: "Curve on-chain" },
+  { key: "dex-promoted", label: "DEX prices" },
+] as const;
+
+type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
+
+function resolveSourceStatus(
+  sourceKey: string,
+  priceSource: string | undefined,
+  consensusSources: string[],
+  isProtocolRedeem: boolean,
+): SourceStatus {
+  if (isProtocolRedeem) return "not-applicable";
+  const winners = (priceSource ?? "").split("+").map((s) => s.trim().toLowerCase());
+  if (winners.includes(sourceKey)) return "used";
+  if (consensusSources.includes(sourceKey)) return "available";
+  return "no-data";
+}
+
+const STATUS_CONFIG: Record<SourceStatus, { dot: string; label: string }> = {
+  used: { dot: "bg-emerald-500", label: "Used" },
+  available: { dot: "bg-sky-400", label: "Available" },
+  "no-data": { dot: "bg-muted-foreground/30", label: "No data" },
+  "not-applicable": { dot: "bg-muted-foreground/30", label: "Not applicable" },
+};
+
+const CONFIDENCE_COLORS: Record<string, string> = {
+  high: "text-emerald-600 dark:text-emerald-400",
+  "single-source": "text-amber-600 dark:text-amber-400",
+  low: "text-rose-600 dark:text-rose-400",
+  fallback: "text-muted-foreground",
+};
+
+function formatPriceSource(source: string): string {
+  const labelMap: Record<string, string> = Object.fromEntries(
+    KNOWN_SOURCES.map((s) => [s.key, s.label]),
+  );
+  return source
+    .split("+")
+    .map((s) => labelMap[s.trim()] ?? s.trim())
+    .join(" + ");
+}
+
+function formatTimeAgo(updatedAtSec: number | null | undefined): string {
+  if (updatedAtSec == null) return "\u2014";
+  const diffSec = Math.floor(Date.now() / 1000) - updatedAtSec;
+  if (diffSec < 60) return "just now";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  return `${Math.floor(diffSec / 86400)}d ago`;
+}
+
+interface PriceTransparencyCardProps {
+  coinData: StablecoinData;
+  consensusSources: string[];
+  dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
+}
+
+export function PriceTransparencyCard({
+  coinData,
+  consensusSources,
+  dexPriceCheck,
+}: PriceTransparencyCardProps) {
+  if (coinData.price == null) return null;
+
+  const isProtocolRedeem = coinData.priceSource === "protocol-redeem";
+
+  return (
+    <Card className="rounded-xl border-l-[3px] border-l-sky-500">
+      <CardHeader className="pb-2">
+        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+          Price Transparency
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Price summary */}
+        <div className="space-y-1 text-sm">
+          <div className="flex items-baseline gap-2">
+            <span className="text-muted-foreground">Current price:</span>
+            <span className="font-semibold tabular-nums">${coinData.price.toFixed(4)}</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-muted-foreground">Source:</span>
+            <span className="font-medium">
+              {isProtocolRedeem ? "Protocol Redemption" : formatPriceSource(coinData.priceSource)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-muted-foreground">Confidence:</span>
+              <span
+                className={cn(
+                  "text-xs font-semibold uppercase tracking-wider",
+                  CONFIDENCE_COLORS[coinData.priceConfidence ?? ""] ?? "text-muted-foreground",
+                )}
+              >
+                {coinData.priceConfidence ?? "\u2014"}
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Updated: {formatTimeAgo(coinData.priceUpdatedAt)}
+            </div>
+          </div>
+        </div>
+
+        {/* Source table */}
+        <div className="rounded-lg border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
+                  Source
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {isProtocolRedeem ? (
+                <tr className="border-b last:border-b-0">
+                  <td className="px-3 py-2 font-medium">Protocol Redemption</td>
+                  <td className="px-3 py-2">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="text-xs text-muted-foreground">Used</span>
+                    </span>
+                  </td>
+                </tr>
+              ) : null}
+              {KNOWN_SOURCES.map(({ key, label }) => {
+                const status = resolveSourceStatus(
+                  key,
+                  coinData.priceSource,
+                  consensusSources,
+                  isProtocolRedeem,
+                );
+                const config = STATUS_CONFIG[status];
+                return (
+                  <tr key={key} className="border-b last:border-b-0">
+                    <td className="px-3 py-2 font-medium">{label}</td>
+                    <td className="px-3 py-2">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className={cn("inline-block h-2 w-2 rounded-full", config.dot)}
+                        />
+                        <span className="text-xs text-muted-foreground">{config.label}</span>
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* DEX Price Check */}
+        {dexPriceCheck ? (
+          <div className="space-y-1">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              DEX Price Check
+            </div>
+            <div className="text-sm">
+              <span className="tabular-nums font-medium">
+                DEX price: ${dexPriceCheck.dexPrice.toFixed(4)}
+              </span>
+              {" \u00B7 "}
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                  dexPriceCheck.agrees
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
+                )}
+              >
+                {dexPriceCheck.agrees ? "Agrees" : "Disagrees"}
+              </span>
+              {" \u00B7 "}
+              <span className="text-muted-foreground">
+                {dexPriceCheck.sourcePools} pool{dexPriceCheck.sourcePools === 1 ? "" : "s"}
+                {" \u00B7 "}${(dexPriceCheck.sourceTvl / 1e6).toFixed(1)}M TVL
+                {" \u00B7 "}{Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps deviation
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
