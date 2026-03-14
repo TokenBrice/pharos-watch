@@ -11,6 +11,8 @@ export interface EvmRpcOptions {
   extraRpcUrls?: string[];
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
+  gas?: string;
 }
 
 export interface EtherscanProxyRequest {
@@ -139,10 +141,13 @@ export async function fetchEvmCallHexAtBlock(
   const urls = buildRpcUrls(chainId, options?.extraRpcUrls);
   if (urls.length === 0) return null;
 
+  const callObj: Record<string, string> = { to, data };
+  if (options?.gas) callObj.gas = options.gas;
+
   const result = await fetchJsonRpcResult<string>(
     urls,
     "eth_call",
-    [{ to, data }, toBlockTag(blockNumberOrTag)],
+    [callObj, toBlockTag(blockNumberOrTag)],
     options,
   );
 

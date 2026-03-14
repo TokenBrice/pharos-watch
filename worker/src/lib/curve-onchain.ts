@@ -63,8 +63,10 @@ export async function fetchCurveOnchainPrices(
       const selector = config.useUnderlying ? GET_DY_UNDERLYING_SELECTOR : GET_DY_SELECTOR;
       const calldata = encodeGetDy(selector, config.inputIndex, config.outputIndex, inputAmount);
 
+      // Metapool get_dy_underlying makes cross-pool calls requiring more gas
+      const gas = config.useUnderlying ? "0x7A120" : undefined; // 500K gas
       const resultHex = await fetchEvmCallHexAtBlock(
-        config.chain, config.poolAddress, calldata, "latest", { signal },
+        config.chain, config.poolAddress, calldata, "latest", { signal, gas },
       );
       if (!resultHex) continue;
 
