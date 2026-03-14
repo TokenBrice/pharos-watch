@@ -192,6 +192,9 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                       })}
                     </div>
                   )}
+                  {key === "resilience" && card.rawInputs.collateralFromLive && (
+                    <span className="text-xs text-muted-foreground ml-4" title="Scored from live reserve data">(live data)</span>
+                  )}
                   {key === "liquidity" && dim.score !== null && (
                     <div className="ml-4 mt-1 space-y-0.5 text-xs text-muted-foreground">
                       {card.rawInputs.liquidityScore != null ? (
