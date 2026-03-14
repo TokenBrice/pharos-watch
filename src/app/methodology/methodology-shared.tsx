@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const METHODOLOGY_SECTIONS = [
+  { id: "pricing-pipeline-methodology", label: "Pricing Pipeline" },
   { id: "stability-index-methodology", label: "Stability Index" },
   { id: "safety-scores-methodology", label: "Safety Scores" },
   { id: "liquidity-methodology", label: "Liquidity Score" },

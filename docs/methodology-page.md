@@ -23,6 +23,7 @@
 
 | Methodology Section   | Primary Runtime Source(s)                                                                                                                                                                                                            |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources.ts`, `worker/src/lib/price-validation.ts`, `shared/lib/pricing-pipeline-version.ts`                              |
 | Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/stability-index-version.ts`                                                                                                                                                         |
 | Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/safety-score-version.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                                     |
 | Liquidity Score       | `worker/src/cron/dex-liquidity/pool-helpers.ts`, `shared/lib/liquidity-score-version.ts`                                                                                                                                             |
@@ -53,6 +54,7 @@ For the safety-score changelog specifically, update both:
 
 ## Verification Shortcuts
 
+- **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`
 - **Safety score base weights / peg multiplier:** `shared/lib/report-cards.ts`
 - **PSI caps, formula, and bands:** `worker/src/lib/stability-index.ts`
 - **Liquidity component weights:** `worker/src/cron/dex-liquidity/pool-helpers.ts`
@@ -62,5 +64,6 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.5** (2026-03-14): Added Pricing Pipeline section (first position) with 8-source consensus diagram, source weights table, enrichment pipeline, confidence levels, and validation modes. Created `shared/lib/pricing-pipeline-version.ts` and `src/app/methodology/pricing-pipeline-changelog/page.tsx`.
 - **v3.4** (2026-03-12): Corrected the update contract so methodology-copy edits point to `methodology-sections.tsx`, which is where the authored long-form content and worked examples now live.
 - **v3.3** (2026-03-09): Separated discovery pipeline with staged pool confidence decay. Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on an independent 20-minute cron with 3x more budget. Staged pools merge into scoring with freshness confidence decay (`max(0.5, 1 - ageHours/48)`) and explicit defaults contract. Chain-aware source routing reduces wasted API calls. Tiered priority with exponential backoff prevents looping on pool-less coins.
