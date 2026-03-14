@@ -85,3 +85,24 @@ export const USD_QUOTE_COIN_IDS = new Set([
 
 /** Per-chain timeout for subgraph queries (UniV3, Aerodrome) */
 export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
+
+/**
+ * Confidence weight for DEX price observations by protocol.
+ * Scales TVL weight in the TVL-weighted median to down-weight
+ * less reliable sources.
+ */
+export function dexPriceConfidenceForProtocol(protocol: string): number {
+  if (protocol === "curve" || protocol === "uniswap-v3" || protocol === "aerodrome") return 1.0;
+  if (
+    protocol.startsWith("staged-cg_onchain") ||
+    protocol.startsWith("geckoterminal") ||
+    protocol.startsWith("coingecko")
+  ) return 0.85;
+  if (
+    protocol.startsWith("dexscreener") ||
+    protocol.startsWith("cg-ticker") ||
+    protocol.startsWith("staged-dexscreener") ||
+    protocol.startsWith("staged-cg_tickers")
+  ) return 0.55;
+  return 0.3;
+}

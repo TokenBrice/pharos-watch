@@ -9,6 +9,7 @@ import type {
   LiquidityCoverageClass,
   LiquiditySourceMix,
 } from "./types";
+import { dexPriceConfidenceForProtocol } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore, normalizeProtocol } from "./pool-helpers";
 
 const HISTORY_CONFIDENCE_MIN = 0.75;
@@ -484,13 +485,19 @@ export async function computeDexPrices(
     if (observations.length === 0) continue;
     observedIds.add(id);
 
+    // H1: Scale TVL weights by source confidence before computing median
+    const adjustedObs = observations.map((o) => ({
+      ...o,
+      tvl: o.tvl * dexPriceConfidenceForProtocol(o.protocol),
+    }));
+
     // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
-    observations.sort((a, b) => a.price - b.price);
-    const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
+    adjustedObs.sort((a, b) => a.price - b.price);
+    const totalTvl = adjustedObs.reduce((s, o) => s + o.tvl, 0);
     const halfTvl = totalTvl / 2;
     let cumTvl = 0;
-    let medianPrice = observations[0].price;
-    for (const obs of observations) {
+    let medianPrice = adjustedObs[0].price;
+    for (const obs of adjustedObs) {
       cumTvl += obs.tvl;
       if (cumTvl >= halfTvl) {
         medianPrice = obs.price;
