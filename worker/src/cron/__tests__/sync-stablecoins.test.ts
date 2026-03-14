@@ -1083,4 +1083,19 @@ describe("stampPriceMetadata", () => {
 
     expect(asset.consensusSources).toEqual(["existing"]);
   });
+
+  it("stamps agreeSources when provided", () => {
+    const asset = { id: "test", name: "Test", symbol: "T", circulating: {}, chains: [] } as PeggedAsset;
+    stampPriceMetadata(asset, "coingecko+defillama", "high", 100, ["coingecko", "defillama"], ["coingecko", "defillama"]);
+    expect(asset.agreeSources).toEqual(["coingecko", "defillama"]);
+  });
+
+  it("leaves agreeSources unchanged when not provided", () => {
+    const asset = {
+      id: "test", name: "Test", symbol: "T", circulating: {}, chains: [],
+      agreeSources: ["existing"],
+    } as PeggedAsset;
+    stampPriceMetadata(asset, "x", "high", 100);
+    expect(asset.agreeSources).toEqual(["existing"]);
+  });
 });

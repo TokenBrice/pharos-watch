@@ -791,4 +791,20 @@ describe("applyResolvedPrice", () => {
     expect(asset.priceUpdatedAt).toBe(1000);
     expect(asset.consensusSources).toEqual(["cmc"]);
   });
+
+  it("agreeSources reflects consensus.agreeSources not candidateSources", async () => {
+    const { computePriceConsensus } = await import("../../lib/price-consensus");
+    const sources = [
+      { source: "coingecko", price: 1.0001, weight: 2 },
+      { source: "defillama", price: 1.0002, weight: 1 },
+      { source: "outlier", price: 1.05, weight: 1 },  // diverges >50bps
+    ];
+    const result = computePriceConsensus(sources, 1.0, 50);
+    expect(result).not.toBeNull();
+    // coingecko and defillama agree; outlier disagrees
+    expect(result!.agreeSources).toContain("coingecko");
+    expect(result!.agreeSources).toContain("defillama");
+    expect(result!.agreeSources).not.toContain("outlier");
+    expect(result!.disagreeSources).toContain("outlier");
+  });
 });
