@@ -16,6 +16,7 @@ import {
 } from "../lib/price-validation";
 import { fetchPythPrices } from "../lib/pyth";
 import { fetchBinancePrices, fetchCoinbasePrices } from "../lib/cex-tickers";
+import { fetchRedstonePrices } from "../lib/redstone";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
@@ -150,8 +151,9 @@ export async function fetchPrimaryPrices(
   const pythAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES);
   const binanceAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
   const coinbaseAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES);
+  const redstoneAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES);
 
-  if (!dlAllowed && !cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed) {
+  if (!dlAllowed && !cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed && !redstoneAllowed) {
     console.warn("[primary-prices] All primary price circuits are open, skipping");
     return { results, stats, cgPrices: new Map() };
   }
@@ -175,8 +177,9 @@ export async function fetchPrimaryPrices(
   const pythPrices = new Map<string, { price: number; confidenceBps: number }>();
   const binancePrices = new Map<string, number>();
   const coinbasePrices = new Map<string, number>();
+  const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number }>();
 
-  // Symbols for Coinbase sequential fetch (only stablecoins with a simple symbol)
+  // Symbols for Coinbase/RedStone sequential fetch
   const coinbaseSymbols = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
 
   const fetches: Promise<void>[] = [];
@@ -302,6 +305,28 @@ export async function fetchPrimaryPrices(
     );
   }
 
+  if (redstoneAllowed) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchRedstonePrices(coinbaseSymbols, signal);
+          for (const [symbol, result] of prices) {
+            redstonePrices.set(symbol, {
+              price: result.price,
+              venueCount: result.venueCount,
+              venueAgreementPct: result.venueAgreementPct,
+            });
+          }
+          await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] RedStone API failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, false);
+        }
+      })(),
+    );
+  }
+
   await Promise.all(fetches);
   throwIfAborted(signal);
 
@@ -322,6 +347,15 @@ export async function fetchPrimaryPrices(
     if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2 });
     const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
     if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2 });
+    const redstoneResult = redstonePrices.get(asset.symbol.toUpperCase());
+    if (redstoneResult != null) {
+      sources.push({
+        source: "redstone",
+        price: redstoneResult.price,
+        weight: 1,
+        metadata: { venueCount: redstoneResult.venueCount, venueAgreementPct: redstoneResult.venueAgreementPct },
+      });
+    }
 
     stats.attempted++;
 
