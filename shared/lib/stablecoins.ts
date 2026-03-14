@@ -2275,7 +2275,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH", pct: 100, risk: CANONICAL_ETH_RESERVE_RISK },
     ],
   }),
-  usd("fxusd-f-x-protocol", "fxUSD", "fxUSD", "crypto-backed", "decentralized", {
+  usd("fxusd-f-x-protocol", "fxUSD", "fxUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "168",
     geckoId: "f-x-protocol-fxusd",
     liveReservesConfig: {
@@ -2290,7 +2290,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     },
     yieldBearing: true,
     yieldConfig: { yieldSource: "f(x) Protocol Stability Pool", yieldType: "governance-set" },
-    collateral: "wstETH and WBTC deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized",
+    collateral: "WBTC (majority) and wstETH deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized; WBTC custody by BitGo/Coinbase introduces centralized dependency",
     pegMechanism: "CDP-style with overcollateralization and liquidations; USDC/fxUSD Stability Pool Gauge on Curve acts as peg keeper (buys fxUSD below peg); fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",
     proofOfReserves: { type: "independent-audit", url: "https://www.openzeppelin.com/news/fx-v2-audit", provider: "OpenZeppelin" },
     links: [
@@ -2302,8 +2302,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x085780639cc2cacd35e474e71f4d000e2405d8f6", decimals: 18 },
     ],
     reserves: [
-      { name: "wstETH (Lido)", pct: 75, risk: "low" },
-      { name: "WBTC", pct: 25, risk: "medium" },
+      // Source: live reserve sync (api.aladdin.club/api1/get_fx_tvl), March 2026. Confidence: High
+      { name: "WBTC", pct: 58, risk: "medium" },
+      { name: "wstETH (Lido)", pct: 42, risk: "low" },
     ],
   }),
   usd("usdn-noble", "Noble Dollar", "USDN", "rwa-backed", "centralized", {
