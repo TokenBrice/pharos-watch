@@ -15,6 +15,7 @@ import {
   type PriceValidationReferences,
 } from "../lib/price-validation";
 import { fetchPythPrices } from "../lib/pyth";
+import { fetchBinancePrices, fetchCoinbasePrices } from "../lib/cex-tickers";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
@@ -147,8 +148,10 @@ export async function fetchPrimaryPrices(
   const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS);
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
   const pythAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES);
+  const binanceAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
+  const coinbaseAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES);
 
-  if (!dlAllowed && !cgAllowed && !pythAllowed) {
+  if (!dlAllowed && !cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed) {
     console.warn("[primary-prices] All primary price circuits are open, skipping");
     return { results, stats, cgPrices: new Map() };
   }
@@ -170,6 +173,11 @@ export async function fetchPrimaryPrices(
     }
   }
   const pythPrices = new Map<string, { price: number; confidenceBps: number }>();
+  const binancePrices = new Map<string, number>();
+  const coinbasePrices = new Map<string, number>();
+
+  // Symbols for Coinbase sequential fetch (only stablecoins with a simple symbol)
+  const coinbaseSymbols = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
 
   const fetches: Promise<void>[] = [];
 
@@ -262,6 +270,38 @@ export async function fetchPrimaryPrices(
     );
   }
 
+  if (binanceAllowed) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchBinancePrices(signal);
+          for (const [symbol, price] of prices) binancePrices.set(symbol, price);
+          await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] Binance ticker failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, false);
+        }
+      })(),
+    );
+  }
+
+  if (coinbaseAllowed) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchCoinbasePrices(coinbaseSymbols, signal);
+          for (const [symbol, price] of prices) coinbasePrices.set(symbol, price);
+          await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] Coinbase ticker failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, false);
+        }
+      })(),
+    );
+  }
+
   await Promise.all(fetches);
   throwIfAborted(signal);
 
@@ -278,6 +318,10 @@ export async function fetchPrimaryPrices(
     if (cg != null) sources.push({ source: "coingecko", price: cg, weight: 2 });
     if (dl != null) sources.push({ source: "defillama", price: dl, weight: 1 });
     if (pyth != null) sources.push({ source: "pyth", price: pyth.price, weight: 2, metadata: { confidenceBps: pyth.confidenceBps } });
+    const binancePrice = binancePrices.get(asset.symbol.toUpperCase());
+    if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2 });
+    const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
+    if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2 });
 
     stats.attempted++;
 
