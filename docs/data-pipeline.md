@@ -44,10 +44,10 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 |--------|--------|--------|-------|
 | CoinGecko `/simple/price` | 2 | built-in | Primary market data |
 | DefiLlama `coins.llama.fi` | 1 | built-in | Cross-validation |
-| Pyth Network Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle prices with confidence intervals |
+| Pyth Network Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle prices with confidence intervals; coverage is driven by curated `pythFeedId` entries in `shared/lib/stablecoins.ts` |
 | Binance spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (single batch call) |
 | Coinbase spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (per-symbol) |
-| RedStone oracle | 1 | `worker/src/lib/redstone.ts` | Per-venue breakdown + agreement % |
+| RedStone oracle | 1 | `worker/src/lib/redstone.ts` | Per-venue breakdown + agreement % for exact-case tracked symbols in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` |
 | Curve on-chain `get_dy()` | 3 | `worker/src/lib/curve-onchain.ts` | StableSwap implied prices |
 | DEX promoted prices | 1 | `worker/src/lib/depeg-helpers.ts` | Promoted from depeg-only to primary voice |
 
@@ -63,6 +63,17 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 - **All sources down** → skip, falls through to enrichment pipeline
 
 Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (defillama/coingecko-fallback).
+
+### Provider-Specific Normalization
+
+Primary pricing also includes a few source-specific normalization rules that are easy to miss when reading the high-level algorithm:
+
+- **Pyth Hermes feed IDs** are normalized to lowercase with any leading `0x` stripped before matching back to tracked assets. Hermes can return feed IDs in either form.
+- **Coinbase** uses uppercased product symbols.
+- **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, and retries any batch-dropped symbol individually once.
+- **Breaker accounting for sparse responses** is data-aware: Pyth and RedStone only count as successful breaker outcomes when they return at least one usable price, not merely a 200 transport response.
+
+These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and `worker/src/cron/enrich-prices.ts`.
 
 ### Authoritative Price Source Registry
 

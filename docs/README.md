@@ -40,9 +40,26 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [privacy-page.md](./privacy-page.md) - `/privacy/` longform policy surface, metadata, and footer integration
 - [status-dashboard.md](./status-dashboard.md) - `/status/` frontend/backend contract and admin actions
 
+## Public Route Coverage
+
+Some public routes are documented by feature docs rather than dedicated route-contract files. Use this map when you know the route first and need the authoritative doc quickly.
+
+| Route | Primary doc(s) |
+|-------|-----------------|
+| `/blacklist/` | [blacklist-tracker.md](./blacklist-tracker.md) |
+| `/depeg/` | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md) |
+| `/digest/` | [digest-pipeline.md](./digest-pipeline.md) |
+| `/flows/` | [mint-burn-flows.md](./mint-burn-flows.md) |
+| `/liquidity/` | [dex-liquidity.md](./dex-liquidity.md) |
+| `/safety-scores/` | [report-cards.md](./report-cards.md) |
+| `/stability-index/` | [stability-index.md](./stability-index.md) |
+| `/telegram/` | [telegram-alerts.md](./telegram-alerts.md) |
+| `/yield/` | [yield-intelligence.md](./yield-intelligence.md) |
+
 ## Feature And Methodology Docs
 
 - [classification.md](./classification.md) - classification system, peg handling, and commodity/non-DL coin treatment
+- [pricing-pipeline.md](./pricing-pipeline.md) - live-price consensus, authoritative overrides, source normalization, and fallback enrichment
 - [bluechip-ratings.md](./bluechip-ratings.md) - Bluechip sync coverage, cache shape, and frontend consumers
 - [depeg-detection.md](./depeg-detection.md) - two-stage depeg detection, confirmation, event lifecycle, and peg score inputs
 - [dews.md](./dews.md) - DEWS formula, sub-signals, bands, and API contract

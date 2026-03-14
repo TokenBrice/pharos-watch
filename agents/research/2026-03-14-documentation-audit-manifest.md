@@ -35,6 +35,7 @@ Primary documentation corpus audited against live code:
 - `docs/mint-burn-flows.md`
 - `docs/operator-origin-access.md`
 - `docs/portfolio-page.md`
+- `docs/pricing-pipeline.md`
 - `docs/privacy-page.md`
 - `docs/redemption-backstops.md`
 - `docs/report-cards-timeline.md`

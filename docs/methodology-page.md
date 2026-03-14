@@ -37,13 +37,19 @@
 
 ## Update Rules
 
-When changing any scoring methodology, update all three surfaces in the same change:
+When changing any methodology surface, update all three surfaces in the same change:
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
 3. `/methodology` page copy and worked examples (`src/app/methodology/methodology-sections.tsx`; update `page.tsx` only when shell/layout wiring changes).
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
+
+If the pricing pipeline's source roster or live-price selection semantics change, also update:
+
+1. `docs/pricing-pipeline.md`
+2. `docs/data-pipeline.md`
+3. `docs/about-page.md` plus `src/app/about/page.tsx`
 
 For the safety-score changelog specifically, update both:
 

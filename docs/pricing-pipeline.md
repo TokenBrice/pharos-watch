@@ -1,0 +1,159 @@
+# Pricing Pipeline
+
+Canonical reference for Pharos live-price selection, fallback enrichment, and source-specific normalization.
+
+For supply fallback behavior and broader cache/integrity guardrails, see [data-pipeline.md](./data-pipeline.md).
+
+---
+
+## Overview
+
+Pharos uses a two-stage pricing system:
+
+1. **Primary consensus** in `fetchPrimaryPrices()` (`worker/src/cron/enrich-prices.ts`)
+2. **Fallback enrichment** in `enrichMissingPrices()` (`worker/src/cron/enrich-prices.ts`)
+
+The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUpdatedAt` fields served through `/api/stablecoins`.
+
+---
+
+## Versioning
+
+- **Current methodology version:** `v2.0`
+- **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
+- **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
+- **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
+
+---
+
+## Primary Consensus
+
+`fetchPrimaryPrices()` gathers all usable live prices for a tracked asset, then runs N-source consensus via `worker/src/lib/price-consensus.ts`.
+
+### Source Weights
+
+| Source | Weight | Module / Origin | Notes |
+|--------|--------|-----------------|-------|
+| CoinGecko `/simple/price` | 2 | built-in fetch path | Primary market-data voice |
+| DefiLlama `coins.llama.fi` | 1 | built-in fetch path | Secondary aggregator voice |
+| Pyth Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle input with confidence intervals |
+| Binance spot | 2 | `worker/src/lib/cex-tickers.ts` | Batch venue input |
+| Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input |
+| RedStone | 1 | `worker/src/lib/redstone.ts` | Per-venue oracle snapshot |
+| Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
+| Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only trusted DEX rows are promoted into primary pricing |
+
+### Consensus Rules
+
+`computePriceConsensus()` behaves as follows:
+
+1. 0 sources -> no result
+2. 1 source -> `single-source`
+3. 2+ sources -> build agreement clusters within a peg-aware threshold
+4. best cluster with 2+ members -> `high` confidence and choose the highest-weight member in that cluster
+5. no 2+ cluster:
+   - fixed pegs -> choose the source closest to peg reference, mark `low`
+   - NAV tokens -> use a wider 500 bps cluster threshold first, otherwise choose the highest-weight source and mark `low`
+
+Source labels are compressed for agreeing clusters:
+
+- 1 source: source name directly
+- 2 sources: `sourceA+sourceB`
+- 3+ sources: `firstSource+Nmore`
+
+---
+
+## Provider-Specific Normalization
+
+Several live providers need normalization before their prices can safely enter consensus:
+
+- **Pyth feed IDs:** `worker/src/lib/pyth.ts` normalizes feed IDs to lowercase and strips any leading `0x` before reverse-matching them to tracked assets. Hermes may return the same feed in prefixed or unprefixed form.
+- **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup.
+- **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (for example `USDe`, `crvUSD`, `fxUSD`). Unsupported symbols are filtered out before transport.
+- **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
+- **Circuit-breaker accounting:** for Pyth and RedStone, a transport-successful request that returns zero usable prices is still recorded as an unsuccessful outcome for breaker state. This avoids treating empty responses as healthy data.
+
+These normalization rules live in code because they are provider quirks, not business-level scoring decisions.
+
+---
+
+## Authoritative Overrides
+
+After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` can replace the chosen live price for specific redeemable assets whose executable value is better represented by direct protocol redemption than by secondary-market liquidity.
+
+### Current Scope
+
+| Asset | Source |
+|-------|--------|
+| `cusd-cap` | Cap `getBurnAmount(address,uint256)` |
+| `iusd-infinifi` | infiniFi `RedeemController.receiptToAsset(uint256)` |
+| `crvusd-curve` | Curve `PriceAggregator.price()` |
+
+When a live override validates successfully, the cached asset is written with:
+
+- `priceSource = "protocol-redeem"`
+- `priceConfidence = "high"`
+
+The same registry also supports historical replay for backfills so admin rebuilds do not silently downgrade back to weaker market sources.
+
+---
+
+## Fallback Enrichment
+
+Assets still missing prices after primary consensus run through `enrichMissingPrices()`:
+
+1. **Pass 1:** DefiLlama `coins.llama.fi` by current contract address
+2. **Pass 1b:** alternate-chain contract fallback via DefiLlama
+3. **Pass 2:** CoinMarketCap `listings/latest` batch match by symbol
+4. **Pass 3:** DexScreener search fallback with liquidity and peg-aware validation gates
+
+The enrichment path is intentionally narrower than primary pricing:
+
+- it exists to fill holes, not overrule good consensus
+- fallback results are validated before they enter `price_cache`
+- invalid fallback prints are dropped instead of poisoning later runs
+
+---
+
+## Confidence Model
+
+The final cached price can carry one of four confidence states:
+
+| Value | Meaning |
+|-------|---------|
+| `high` | 2 or more sources agree, or a validated authoritative override succeeded |
+| `single-source` | only one live source produced a usable price |
+| `low` | multiple sources existed but failed to form a strong agreeing cluster |
+| `fallback` | price came from enrichment rather than primary consensus |
+
+Downstream consumers use these tags for display, depeg confirmation, and risk handling.
+
+---
+
+## Update Rules
+
+When changing live pricing behavior, update all relevant surfaces in the same change:
+
+1. runtime implementation in `worker/src/cron/enrich-prices.ts` or related provider modules
+2. this document for canonical pricing behavior
+3. [data-pipeline.md](./data-pipeline.md) if broader sync/integrity semantics changed
+4. `/methodology` pricing copy in `src/app/methodology/methodology-sections.tsx`
+5. `shared/lib/pricing-pipeline-version.ts` if methodology semantics changed
+6. [about-page.md](./about-page.md) and `src/app/about/page.tsx` when externally visible data sources change
+
+---
+
+## File Index
+
+| File | Role |
+|------|------|
+| `worker/src/cron/enrich-prices.ts` | Primary consensus orchestration and fallback enrichment |
+| `worker/src/lib/price-consensus.ts` | N-source clustering and confidence resolution |
+| `worker/src/lib/authoritative-price-sources.ts` | Redeem-quote live/historical override registry |
+| `worker/src/lib/pyth.ts` | Pyth Hermes integration and feed-ID normalization |
+| `worker/src/lib/redstone.ts` | Exact-case RedStone allowlist, batching, and retry behavior |
+| `worker/src/lib/cex-tickers.ts` | Binance and Coinbase price fetchers |
+| `worker/src/lib/curve-onchain.ts` | Curve on-chain price reads |
+| `worker/src/lib/price-validation.ts` | Peg-aware reasonableness validation |
+| `shared/lib/pricing-pipeline-version.ts` | Methodology version metadata and changelog route |
+| `src/app/methodology/methodology-sections.tsx` | Public longform pricing-pipeline methodology copy |
