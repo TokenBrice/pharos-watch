@@ -15,7 +15,7 @@ import {
   type PriceValidationReferences,
 } from "../lib/price-validation";
 import { fetchPythPrices } from "../lib/pyth";
-import { fetchBinancePrices, fetchCoinbasePrices } from "../lib/cex-tickers";
+import { fetchBinancePrices, fetchCoinbasePrices, COINBASE_KNOWN_SYMBOLS } from "../lib/cex-tickers";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../lib/redstone";
 import { loadDexPriceRows, isTrustedDexPriceRow } from "../lib/depeg-helpers";
 import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
@@ -189,7 +189,10 @@ export async function fetchPrimaryPrices(
 
   // Coinbase uses uppercased product symbols. RedStone is exact-case and only
   // queried for the known-supported tracked subset to keep request volume bounded.
-  const coinbaseSymbols = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
+  const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
+  const coinbaseSymbols = [...new Set(
+    candidates.map((a) => a.symbol.toUpperCase()).filter((s) => coinbaseKnownSet.has(s)),
+  )];
   const redstoneSymbolSet = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
   const redstoneSymbols = [...new Set(candidates.map((a) => a.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)))];
 
@@ -290,7 +293,7 @@ export async function fetchPrimaryPrices(
         try {
           const prices = await fetchBinancePrices(signal);
           for (const [symbol, price] of prices) binancePrices.set(symbol, price);
-          await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, true);
+          await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, prices.size > 0);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[primary-prices] Binance ticker failed:", err);
@@ -306,7 +309,7 @@ export async function fetchPrimaryPrices(
         try {
           const prices = await fetchCoinbasePrices(coinbaseSymbols, signal);
           for (const [symbol, price] of prices) coinbasePrices.set(symbol, price);
-          await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, true);
+          await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, prices.size > 0);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[primary-prices] Coinbase ticker failed:", err);
@@ -344,7 +347,7 @@ export async function fetchPrimaryPrices(
         try {
           const prices = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal);
           for (const [id, price] of prices) curvePrices.set(id, price);
-          await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, true);
+          await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, prices.size > 0);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[primary-prices] Curve on-chain failed:", err);
@@ -665,7 +668,11 @@ export async function enrichMissingPrices(
             for (const entry of cmcData.data) {
               const price = entry.quote?.USD?.price;
               if (price != null && price > 0) {
-                cmcBySymbol.set(entry.symbol.toUpperCase(), price);
+                const sym = entry.symbol.toUpperCase();
+                if (cmcBySymbol.has(sym)) {
+                  console.warn(`[enrich] CMC symbol collision: ${sym} (existing=$${cmcBySymbol.get(sym)}, new=$${price})`);
+                }
+                cmcBySymbol.set(sym, price);
               }
             }
 
@@ -767,13 +774,13 @@ export async function enrichMissingPrices(
 
           if (candidates.length === 0) continue;
 
-          // Take price from highest-liquidity pair
-          candidates.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
-          const price = parseFloat(candidates[0].priceUsd);
-          if (isNaN(price) || !isFinite(price) || price <= 0) {
-            console.warn(`[enrich] DexScreener returned unparseable price for ${m.asset.symbol}: "${candidates[0].priceUsd}"`);
-            continue;
-          }
+          // Take median price across qualifying pools (more robust than single max-liquidity pool)
+          const candidatePrices = candidates
+            .map((c) => parseFloat(c.priceUsd))
+            .filter((p) => !isNaN(p) && isFinite(p) && p > 0)
+            .sort((a, b) => a - b);
+          if (candidatePrices.length === 0) continue;
+          const price = candidatePrices[Math.floor(candidatePrices.length / 2)];
           // Sanity check: peg-type-aware range
           if (isReasonablePrice(
             price,
