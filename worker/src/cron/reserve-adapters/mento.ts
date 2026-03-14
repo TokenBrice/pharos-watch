@@ -1,4 +1,4 @@
-import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./index";
 import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromValues } from "./helpers";
@@ -61,20 +61,49 @@ export function parseMentoReserveComposition(html: string): MentoReserveEntry[] 
     );
 }
 
-export function adaptMentoReserveComposition(html: string): ReserveSlice[] {
+export function adaptMentoReserveComposition(html: string): AdapterResult {
   const entries = parseMentoReserveComposition(html);
-  return slicesFromValues(
+  const warnings: LiveReserveWarning[] = [];
+
+  if (entries.length < 3) {
+    warnings.push({
+      code: "mento-low-entry-count",
+      message: `Mento reserve composition has only ${entries.length} entries (expected >= 3)`,
+      severity: "warning",
+    });
+  }
+
+  const totalPct = entries.reduce((sum, e) => sum + e.percent, 0);
+  if (totalPct < 50) {
+    warnings.push({
+      code: "mento-low-total-pct",
+      message: `Mento reserve composition total is ${totalPct.toFixed(1)}% (expected >= 50%)`,
+      severity: "warning",
+    });
+  }
+
+  const slices = slicesFromValues(
     entries.map((entry) => {
-      const config = TOKEN_CONFIG[entry.symbol] ?? { name: entry.symbol, risk: "medium" as const };
+      const config = TOKEN_CONFIG[entry.symbol];
+      if (!config) {
+        warnings.push({
+          code: "unknown-asset",
+          message: `Unmapped Mento reserve symbol: ${entry.symbol}`,
+          severity: "warning",
+        });
+      }
+      const resolved = config ?? { name: entry.symbol, risk: "medium" as const };
       return {
-        name: config.name,
+        name: resolved.name,
         value: entry.percent,
-        risk: config.risk,
-        ...(config.coinId ? { coinId: config.coinId } : {}),
+        risk: resolved.risk,
+        ...(resolved.coinId ? { coinId: resolved.coinId } : {}),
       };
     }),
     1,
   );
+
+  return { slices, ...(warnings.length > 0 ? { warnings } : {}) };
 }
 
 export async function fetchMentoReserves(
@@ -85,7 +114,5 @@ export async function fetchMentoReserves(
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "mento");
   const html = await fetchTextWithRetry(input.url, signal, getAdapterTimeout(config, 12_000));
-  return {
-    slices: adaptMentoReserveComposition(html),
-  };
+  return adaptMentoReserveComposition(html);
 }
