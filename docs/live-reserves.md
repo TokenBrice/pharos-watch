@@ -8,7 +8,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Current coverage:** 40 live-enabled stablecoins across 20 registered adapters
+- **Current coverage:** 42 live-enabled stablecoins across 22 registered adapters
 - **Storage:** `reserve_composition`, `reserve_sync_state`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -201,6 +201,8 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `ethena` | `http-json` | `collateral-mix` | 1 |
 | `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 3 |
 | `falcon` | `http-json` | `collateral-mix` | 1 |
+| `frax` | `http-json` | `attestation-mix` | 1 |
+| `gho` | `onchain-evm` | `protocol-reserve` | 1 |
 | `fx` | `http-json` | `collateral-mix` | 1 |
 | `infinifi` | `http-json` | `collateral-mix` | 1 |
 | `m0` | `http-json` | `protocol-reserve` | 3 |
