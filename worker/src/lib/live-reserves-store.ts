@@ -87,10 +87,20 @@ function parseWarnings(value: string | null): LiveReserveWarning[] {
   }
 }
 
+function isValidSlice(item: unknown): item is ReserveSlice {
+  if (!item || typeof item !== "object") return false;
+  const slice = item as Partial<ReserveSlice>;
+  return (
+    typeof slice.name === "string"
+    && typeof slice.pct === "number"
+    && typeof slice.risk === "string"
+  );
+}
+
 function parseSlices(value: string): ReserveSlice[] {
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed as ReserveSlice[] : [];
+    return Array.isArray(parsed) ? parsed.filter(isValidSlice) : [];
   } catch {
     return [];
   }

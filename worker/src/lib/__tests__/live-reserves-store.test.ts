@@ -147,6 +147,51 @@ describe("live-reserves-store", () => {
     expect(history.some((sql) => sql.includes("reserve_sync_state"))).toBe(true);
   });
 
+  it("filters out malformed slices from D1 data during resolution", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const corruptSlices = [
+      { name: "Valid Farm", pct: 60, risk: "low" },
+      { name: "Missing Risk", pct: 20 },
+      { pct: 10, risk: "medium" },
+      { name: "Bad Pct", pct: "fifty", risk: "low" },
+      { name: "Valid Too", pct: 10, risk: "high" },
+    ];
+
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify(corruptSlices),
+          fetched_at: now,
+          source: "infinifi",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
+    expect(result?.reserves).toHaveLength(2);
+    expect(result?.reserves[0].name).toBe("Valid Farm");
+    expect(result?.reserves[1].name).toBe("Valid Too");
+  });
+
   it("includes lastError in sync view when sync state has an error", async () => {
     const db = mockD1([
       {
