@@ -80,6 +80,14 @@ export function PriceTransparencyCard({
 
   const isProtocolRedeem = coinData.priceSource === "protocol-redeem";
 
+  // If the DEX Price Check has data, dex-promoted is available even if it wasn't
+  // included in the consensus sources (the consensus pipeline uses a stricter
+  // freshness threshold than the UI display tier).
+  const effectiveConsensusSources =
+    dexPriceCheck && !consensusSources.includes("dex-promoted")
+      ? [...consensusSources, "dex-promoted"]
+      : consensusSources;
+
   return (
     <Card className="rounded-xl border-l-[3px] border-l-sky-500">
       <CardHeader className="pb-2">
@@ -147,7 +155,7 @@ export function PriceTransparencyCard({
                 const status = resolveSourceStatus(
                   key,
                   coinData.priceSource,
-                  consensusSources,
+                  effectiveConsensusSources,
                   isProtocolRedeem,
                 );
                 const config = STATUS_CONFIG[status];
