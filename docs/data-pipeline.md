@@ -22,7 +22,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Alerts**: Webhook alert fires on open and close transitions
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-Sources tracked: `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`.
+Sources tracked: `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `fx-realtime`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`.
 
 ### DefiLlama list vs detail API
 
@@ -36,12 +36,31 @@ Do **not** multiply list endpoint values by price — that would double-convert 
 
 ### Primary Price Fetch
 
-Before the enrichment pipeline runs, `fetchPrimaryPrices()` fetches prices from CoinGecko `/simple/price` as the primary source for all assets with a valid `geckoId`, and cross-validates against the DefiLlama coins API within 50 basis points:
+Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from multiple sources and runs N-source weighted consensus to determine the best price for each asset:
 
-- **Both agree (≤50 bps)** → `priceConfidence: "high"`, use CG price
-- **Disagree (>50 bps)** → `priceConfidence: "low"`, use the candidate closer to the asset's canonical peg reference for fixed pegs (USD, fiat FX, gold, silver). NAV tokens still default to CG because they are intentionally not anchored to a fixed `$1` face value
-- **One source down** → `priceConfidence: "single-source"`, use available
-- **Both down** → skip, falls through to enrichment pipeline
+**Sources** (each behind its own circuit breaker):
+
+| Source | Weight | Module | Notes |
+|--------|--------|--------|-------|
+| CoinGecko `/simple/price` | 2 | built-in | Primary market data |
+| DefiLlama `coins.llama.fi` | 1 | built-in | Cross-validation |
+| Pyth Network Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle prices with confidence intervals |
+| Binance spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (single batch call) |
+| Coinbase spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (per-symbol) |
+| RedStone oracle | 1 | `worker/src/lib/redstone.ts` | Per-venue breakdown + agreement % |
+| Curve on-chain `get_dy()` | 3 | `worker/src/lib/curve-onchain.ts` | StableSwap implied prices |
+| DEX promoted prices | 1 | `worker/src/lib/depeg-helpers.ts` | Promoted from depeg-only to primary voice |
+
+**Consensus algorithm** (`worker/src/lib/price-consensus.ts`):
+
+- Collects all available source prices for each asset
+- Groups sources into agreement clusters within a configurable threshold (default 50 bps for pegged tokens, 500 bps for NAV tokens)
+- Picks the largest agreeing cluster; within that cluster, selects the highest-weight source
+- If no cluster forms, picks the source closest to the asset's canonical peg reference
+- **≥2 sources agree** → `priceConfidence: "high"`
+- **Single source only** → `priceConfidence: "single-source"`
+- **Sources disagree** → `priceConfidence: "low"`, closest to peg reference used
+- **All sources down** → skip, falls through to enrichment pipeline
 
 Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (defillama/coingecko-fallback).
 
@@ -54,10 +73,11 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 - **Live override** — used by `syncStablecoins()` to replace the current cached price
 - **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
 
-- **Current scope:** `cusd-cap`, `iusd-infinifi`
+- **Current scope:** `cusd-cap`, `iusd-infinifi`, `crvusd-curve`
 - **Source:** direct Ethereum `eth_call` against protocol redemption paths:
   - Cap `getBurnAmount(address,uint256)` for `cUSD -> USDC`
   - infiniFi `RedeemController.receiptToAsset(uint256)` for `iUSD -> USDC`
+  - Curve `PriceAggregator.price()` for `crvUSD` oracle price
 - **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption
 - **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when the quote validates against peg bounds
 
@@ -67,7 +87,7 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 
 1. **Pass 1:** Contract address -> DefiLlama coins API
 2. **Pass 1b:** Multi-chain contract address fallback (tries alternate chain addresses via DefiLlama coins API)
-3. **Pass 2:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt so a best-effort fallback cannot dominate cron runtime)
+3. **Pass 2:** CoinMarketCap listings batch (`listings/latest?cryptocurrency_type=stablecoin&limit=200`) — matches by symbol instead of per-slug, covering all CMC-listed stablecoins in one call (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt)
 4. **Pass 3:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-aware fallback validation. Primary sync paths now allow deep downside failures for fixed pegs when the move is being evaluated as an authoritative price, while fallback enrichment still rejects isolated bad prints below the lower bound. Commodity tokens still scale gold/silver references by `commodityOunces` for gram- and 1/1000-ounce assets; capped at 10 searches per run, no retries, 5s per-request timeout, 45s total pass budget)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
