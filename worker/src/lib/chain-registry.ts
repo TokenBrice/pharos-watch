@@ -45,7 +45,7 @@ const DRPC_CHAINS: Record<string, string> = {
 
 /** Public RPCs used as fallbacks (previously primary) */
 const PUBLIC_RPCS: Record<string, string> = {
-  ethereum: "https://cloudflare-eth.com",
+  ethereum: "https://ethereum-rpc.publicnode.com",
   arbitrum: "https://arb1.arbitrum.io/rpc",
   base: "https://mainnet.base.org",
   optimism: "https://mainnet.optimism.io",
