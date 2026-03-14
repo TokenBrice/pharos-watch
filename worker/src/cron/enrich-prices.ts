@@ -17,6 +17,7 @@ import {
 import { fetchPythPrices } from "../lib/pyth";
 import { fetchBinancePrices, fetchCoinbasePrices } from "../lib/cex-tickers";
 import { fetchRedstonePrices } from "../lib/redstone";
+import { loadDexPriceRows, isTrustedDexPriceRow } from "../lib/depeg-helpers";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
@@ -330,6 +331,10 @@ export async function fetchPrimaryPrices(
   await Promise.all(fetches);
   throwIfAborted(signal);
 
+  // Load DEX prices for promotion into primary consensus
+  const nowSec = Math.floor(Date.now() / 1000);
+  const dexRows = await loadDexPriceRows(db);
+
   // N-source consensus per asset
   const DIVERGENCE_THRESHOLD_BPS = 50;
 
@@ -354,6 +359,15 @@ export async function fetchPrimaryPrices(
         price: redstoneResult.price,
         weight: 1,
         metadata: { venueCount: redstoneResult.venueCount, venueAgreementPct: redstoneResult.venueAgreementPct },
+      });
+    }
+    const dexRow = dexRows.get(asset.id);
+    if (dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg")) {
+      sources.push({
+        source: "dex-promoted",
+        price: dexRow.dex_price_usd,
+        weight: 1,
+        metadata: { poolCount: dexRow.source_pool_count, tvl: dexRow.source_total_tvl },
       });
     }
 
