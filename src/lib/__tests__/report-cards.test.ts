@@ -745,7 +745,7 @@ describe("scoreResilience with live reserve slices", () => {
         { name: "wstETH", pct: 100, risk: "low" as const },
       ],
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD" },
-    } as any;
+    } as unknown as StablecoinMeta;
 
     const curatedResult = scoreResilience(meta, false);
 
@@ -766,7 +766,7 @@ describe("scoreResilience with live reserve slices", () => {
         { name: "wstETH", pct: 100, risk: "low" as const },
       ],
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD" },
-    } as any;
+    } as unknown as StablecoinMeta;
 
     const without = scoreResilience(meta, false);
     const withUndefined = scoreResilience(meta, false, undefined);
