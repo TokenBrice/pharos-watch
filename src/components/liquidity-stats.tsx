@@ -60,12 +60,11 @@ export function buildProtocolBreakdown(protocolTvl: Record<string, number>) {
 }
 
 function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
+  const globalData = data[DEX_GLOBAL_KEY];
   const chainTotals = useMemo(() => {
-    // Use global deduped row to avoid double-counting multi-stablecoin pools
-    const globalData = data[DEX_GLOBAL_KEY];
     const totals: Record<string, number> = globalData?.chainTvl ? { ...globalData.chainTvl } : {};
     return Object.entries(totals).sort((a, b) => b[1] - a[1]);
-  }, [data]);
+  }, [globalData]);
 
   const total = chainTotals.reduce((sum, [, v]) => sum + v, 0);
   if (total === 0) return null;
@@ -123,11 +122,10 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
 }
 
 function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
-  // Use global deduped row to avoid double-counting multi-stablecoin pools
+  const globalData = data[DEX_GLOBAL_KEY];
   const { displayEntries, colorMap, total } = useMemo(() => {
-    const globalData = data[DEX_GLOBAL_KEY];
     return buildProtocolBreakdown(globalData?.protocolTvl ?? {});
-  }, [data]);
+  }, [globalData]);
 
   if (total === 0) return null;
 

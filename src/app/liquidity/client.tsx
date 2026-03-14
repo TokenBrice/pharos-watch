@@ -184,6 +184,7 @@ export function LiquidityClient() {
               value={pegFilter}
               onValueChange={(v) => v && setPegFilter(v as PegCurrency | "all")}
               className="flex gap-1"
+              aria-label="Filter by peg currency"
             >
               {PEG_FILTERS.map((f) => (
                 <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs">
