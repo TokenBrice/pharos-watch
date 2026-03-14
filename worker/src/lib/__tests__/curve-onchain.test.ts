@@ -163,6 +163,30 @@ describe("fetchCurveOnchainPrices", () => {
     expect(results.has("gho-aave")).toBe(false);
   });
 
+  it("truncates oversized Vyper return data to first uint256 word", async () => {
+    // Vyper metapools return thousands of bytes; only the first 32-byte word
+    // is the actual get_dy_underlying result (~0.984 LUSD for 1 USDC)
+    const actualValue = BigInt("984321781412057132"); // ~0.984e18 LUSD
+    const word0 = actualValue.toString(16).padStart(64, "0");
+    // Simulate Vyper response: word0 + extra trailing data
+    const trailing = "00000002" + "0".repeat(56) + "0".repeat(64) + "000f4240" + "0".repeat(56);
+    const vyperHex = ("0x" + word0 + trailing) as `0x${string}`;
+    expect(vyperHex.length).toBeGreaterThan(66);
+
+    mockEvmCall.mockResolvedValue(vyperHex);
+
+    const config: CurvePoolConfig = {
+      stablecoinId: "lusd-liquity",
+      poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
+      inputIndex: 2, outputIndex: 0,
+      inputDecimals: 6, outputDecimals: 18,
+      chain: "ethereum",
+      useUnderlying: true,
+    };
+    const results = await fetchCurveOnchainPrices([config]);
+    expect(results.get("lusd-liquity")).toBeCloseTo(1.016, 2);
+  });
+
   it("throws when a hop references another hop config", async () => {
     const configs: CurvePoolConfig[] = [
       {

@@ -70,7 +70,13 @@ export async function fetchCurveOnchainPrices(
       );
       if (!resultHex) continue;
 
-      const outputRaw = BigInt(resultHex);
+      // Vyper contracts (old Curve pools) may return extra memory beyond the
+      // uint256 return value.  Truncate to the first 32-byte word to avoid
+      // BigInt parsing thousands of trailing bytes.
+      const word0 = resultHex.length > 66
+        ? `0x${resultHex.slice(2, 66)}` as `0x${string}`
+        : resultHex;
+      const outputRaw = BigInt(word0);
       const outputFloat = Number(outputRaw) / Math.pow(10, config.outputDecimals);
       const inputFloat = Number(inputAmount) / Math.pow(10, config.inputDecimals);
       const impliedPrice = inputFloat / outputFloat;
