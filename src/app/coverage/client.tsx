@@ -52,6 +52,7 @@ const SOURCE_DISPLAY_NAMES: Record<string, string> = {
   redstone: "RedStone",
   "curve-onchain": "Curve on-chain",
   "dex-promoted": "DEX prices",
+  "protocol-redeem": "Protocol Redeem",
 };
 
 function buildSourceTooltip(status: CoverageStatus): string {
@@ -416,6 +417,8 @@ export default function CoveragePageClient() {
   const {
     rows,
     featureSummaries,
+    pricingSources,
+    authoritativeSources,
     widestFeature,
     narrowestFeature,
     mostConcentratedFeature,
@@ -510,6 +513,61 @@ export default function CoveragePageClient() {
           </ul>
         </CardContent>
       </Card>
+
+      {pricingSources.length > 0 && (
+        <Card className="rounded-[1.6rem] border border-border/70 bg-card/85 shadow-[0_18px_44px_oklch(0_0_0_/0.14)]">
+          <CardHeader className="space-y-2">
+            <p className="pharos-kicker">Pricing Sources</p>
+            <CardTitle as="h2" className="text-xl tracking-tight">
+              Where Pharos gets its prices
+            </CardTitle>
+            <CardDescription className="leading-relaxed">
+              Each stablecoin price is derived from multi-source consensus. These are the providers
+              feeding the pipeline and how many coins each one covers.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5 pt-0">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {pricingSources.map((src) => (
+                <div
+                  key={src.name}
+                  className="flex flex-col items-center gap-1.5 rounded-[1.15rem] border border-border/60 bg-background/40 px-4 py-4"
+                >
+                  <span className="text-sm font-semibold text-foreground">
+                    {SOURCE_DISPLAY_NAMES[src.name] ?? src.name}
+                  </span>
+                  <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+                    {src.count}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">coins</span>
+                </div>
+              ))}
+            </div>
+
+            {authoritativeSources.length > 0 && (
+              <div className="space-y-3">
+                <p className="pharos-kicker">Authoritative Overrides</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {authoritativeSources.map((src) => (
+                    <div
+                      key={src.name}
+                      className="flex flex-col items-center gap-1.5 rounded-[1.15rem] border border-violet-500/20 bg-violet-500/5 px-4 py-4"
+                    >
+                      <span className="text-sm font-semibold text-violet-800 dark:text-violet-300">
+                        {SOURCE_DISPLAY_NAMES[src.name] ?? src.name}
+                      </span>
+                      <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+                        {src.count}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">coins</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="rounded-[1.45rem] border border-border/70 bg-card/80">
         <CardHeader className="space-y-4">
