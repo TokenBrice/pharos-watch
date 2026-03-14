@@ -74,6 +74,31 @@ describe("computePriceConsensus", () => {
     ];
     const result = computePriceConsensus(sources, null, 50);
     expect(result!.confidence).toBe("high");
-    expect(result!.price).toBe(1.12);
+    // Equal weight — tie broken by proximity to cluster median (1.15)
+    expect(result!.price).toBe(1.15);
+  });
+
+  it("breaks weight tie by choosing source closest to peg reference", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.003, weight: 2 },
+      { source: "binance", price: 1.001, weight: 2 },
+      { source: "defillama", price: 1.002, weight: 1 },
+    ];
+    const result = computePriceConsensus(sources, 1.0, 50);
+    expect(result!.confidence).toBe("high");
+    // Binance (1.001) is closer to peg 1.0 than CoinGecko (1.003), same weight
+    expect(result!.price).toBe(1.001);
+  });
+
+  it("breaks weight tie for NAV tokens by choosing source closest to cluster median", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.12, weight: 2 },
+      { source: "binance", price: 1.10, weight: 2 },
+      { source: "defillama", price: 1.11, weight: 1 },
+    ];
+    const result = computePriceConsensus(sources, null, 50);
+    expect(result!.confidence).toBe("high");
+    // Both CG and Binance are equidistant from median 1.11, so either is acceptable
+    expect([1.12, 1.10]).toContain(result!.price);
   });
 });

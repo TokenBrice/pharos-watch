@@ -2,7 +2,7 @@
  * Fetch stablecoin prices via Curve StableSwap get_dy() on-chain calls.
  *
  * get_dy(i, j, dx) simulates swapping dx of token i for token j,
- * returning the output amount. The ratio output/input gives implied price.
+ * returning the output amount. The implied price = inputUsd / outputTokens.
  *
  * Curve StableSwap amplification factor (A=500-5000) makes manipulation
  * extremely expensive — these prices are among the most reliable on-chain signals.
@@ -49,7 +49,7 @@ export async function fetchCurveOnchainPrices(
       const outputRaw = BigInt(resultHex);
       const outputFloat = Number(outputRaw) / Math.pow(10, config.outputDecimals);
       const inputFloat = Number(inputAmount) / Math.pow(10, config.inputDecimals);
-      const impliedPrice = outputFloat / inputFloat;
+      const impliedPrice = inputFloat / outputFloat;
 
       if (impliedPrice > 0 && impliedPrice < 100) {
         results.set(config.stablecoinId, impliedPrice);

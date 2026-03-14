@@ -257,6 +257,7 @@ export async function confirmPendingDepegs(
       const confirmedBy = [
         offchainAgrees ? (asset?.priceSource === "coingecko" || asset?.priceSource === "coingecko+defillama" ? "DefiLlama" : "CoinGecko") : null,
         dexAgrees ? "DEX" : null,
+        cexAgrees ? "CEX" : null,
       ].filter(Boolean).join("+");
       console.log(
         `[depeg-confirm] PROMOTED ${row.symbol}: ${row.first_seen_bps}bps confirmed by ${confirmedBy}${row.reason ? ` (${row.reason})` : ""}`

@@ -2,8 +2,9 @@ import { getCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { validatePayloadWithSchema } from "../lib/api-utils";
-import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
+import { RUB_FALLBACK, USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { fetchRealtimeFxRates } from "../lib/fx-realtime";
+import { recordOutcome } from "../lib/circuit-breaker";
 import { z } from "zod";
 
 /**
@@ -169,6 +170,16 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal, openExch
     }
     const data = frankfurterValidation.data;
 
+    // Warn if ECB date is stale (>24h old — weekends, holidays)
+    const ecbDate = new Date(data.date + "T16:00:00Z");
+    const ecbAgeSec = (Date.now() - ecbDate.getTime()) / 1000;
+    if (ecbAgeSec > 86400) {
+      console.warn(
+        `[sync-fx-rates] ECB rates are ${Math.round(ecbAgeSec / 3600)}h stale (date=${data.date}). ` +
+        `Weekend/holiday — non-USD pegs using last published rates.`,
+      );
+    }
+
     // frankfurter returns units-per-USD (e.g. EUR: 0.93 means 1 USD = 0.93 EUR)
     // We need USD-per-unit (e.g. 1 EUR = $1.08 USD), so take the reciprocal
     const rates: Record<string, number> = {};
@@ -238,33 +249,41 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal, openExch
       const elapsedMinutes = (Math.floor(Date.now() / 1000) - lastFetchTime) / 60;
 
       if (elapsedMinutes >= 55) {
-        const realtimeRates = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
-        if (realtimeRates.size > 0) {
-          await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-            .bind(OXR_CACHE_KEY, String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000)).run();
-        }
-        let realtimeApplied = 0;
-        for (const [pegKey, realtimeRate] of realtimeRates) {
-          const frankfurterRate = rates[pegKey];
-          if (frankfurterRate != null) {
-            const delta = Math.abs(realtimeRate - frankfurterRate) / frankfurterRate;
-            if (delta <= 0.05) {
+        try {
+          const realtimeRates = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
+          if (realtimeRates.size > 0) {
+            await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+              .bind(OXR_CACHE_KEY, String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000)).run();
+          }
+          let realtimeApplied = 0;
+          for (const [pegKey, realtimeRate] of realtimeRates) {
+            const frankfurterRate = rates[pegKey];
+            if (frankfurterRate != null) {
+              const delta = Math.abs(realtimeRate - frankfurterRate) / frankfurterRate;
+              if (delta <= 0.05) {
+                if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
+                  rates[pegKey] = realtimeRate;
+                  realtimeApplied++;
+                }
+              } else {
+                console.warn(`[sync-fx-rates] ${pegKey} diverges: frankfurter=${frankfurterRate}, realtime=${realtimeRate} (${(delta * 100).toFixed(1)}%)`);
+              }
+            } else {
               if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
                 rates[pegKey] = realtimeRate;
                 realtimeApplied++;
               }
-            } else {
-              console.warn(`[sync-fx-rates] ${pegKey} diverges: frankfurter=${frankfurterRate}, realtime=${realtimeRate} (${(delta * 100).toFixed(1)}%)`);
-            }
-          } else {
-            if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
-              rates[pegKey] = realtimeRate;
-              realtimeApplied++;
             }
           }
+          console.log(`[sync-fx-rates] Applied ${realtimeApplied}/${realtimeRates.size} real-time FX rates`);
+          oxrSource = realtimeRates.size > 0 ? (realtimeApplied === realtimeRates.size ? "ok" : "partial") : "unavailable";
+          await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeRates.size > 0);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[sync-fx-rates] OXR real-time fetch failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, false);
+          oxrSource = "unavailable";
         }
-        console.log(`[sync-fx-rates] Applied ${realtimeApplied}/${realtimeRates.size} real-time FX rates`);
-        oxrSource = realtimeRates.size > 0 ? (realtimeApplied === realtimeRates.size ? "ok" : "partial") : "unavailable";
       } else {
         console.log(`[sync-fx-rates] Skipping OXR fetch (last fetch ${Math.round(elapsedMinutes)}min ago, rate limit: 55min)`);
         oxrSource = "rate-limited";

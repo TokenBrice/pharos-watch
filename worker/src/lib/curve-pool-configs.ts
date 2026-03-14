@@ -32,4 +32,47 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     outputDecimals: 18,
     chain: "ethereum",
   },
+  // crvUSD/USDC (factory-crvusd, ~$22M TVL)
+  {
+    stablecoinId: "crvusd-curve",
+    poolAddress: "0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E",
+    inputIndex: 0,  // USDC
+    outputIndex: 1, // crvUSD
+    inputDecimals: 6,
+    outputDecimals: 18,
+    chain: "ethereum",
+  },
+  // PYUSD/USDC PayPool (factory-stable-ng, ~$47M TVL)
+  {
+    stablecoinId: "pyusd-paypal",
+    poolAddress: "0x383E6b4437b59fff47B619CBA855CA29342A8559",
+    inputIndex: 1,  // USDC
+    outputIndex: 0, // PYUSD
+    inputDecimals: 6,
+    outputDecimals: 6,
+    chain: "ethereum",
+  },
+  // FRAX/USDC (main registry, ~$7M TVL)
+  {
+    stablecoinId: "frax-frax",
+    poolAddress: "0xDcEF968d416a41Cdac0ED8702fAC8128A64241A2",
+    inputIndex: 1,  // USDC
+    outputIndex: 0, // FRAX
+    inputDecimals: 6,
+    outputDecimals: 18,
+    chain: "ethereum",
+  },
+  // USDe/USDC (factory-stable-ng, ~$1.2M TVL)
+  {
+    stablecoinId: "usde-ethena",
+    poolAddress: "0x02950460E2b9529D0E00284A5fA2d7bDF3fA4d72",
+    inputIndex: 1,  // USDC
+    outputIndex: 0, // USDe
+    inputDecimals: 6,
+    outputDecimals: 18,
+    chain: "ethereum",
+  },
+  // NOTE: GHO, frxUSD, LUSD omitted — no direct USDC pools on Curve.
+  // GHO/frxUSD have pools via crvUSD (needs two-hop pricing).
+  // LUSD has a 3Crv metapool (needs get_dy_underlying support).
 ];
