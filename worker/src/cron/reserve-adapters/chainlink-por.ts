@@ -1,0 +1,112 @@
+import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { AdapterContext, AdapterResult } from "./index";
+import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
+
+const DECIMALS_SELECTOR = "0x313ce567";
+const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
+
+export interface ChainlinkPorParams {
+  porFeedAddress: string;
+  assetLabel: string;
+  assetRisk: ReserveSlice["risk"];
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+}
+
+interface ChainlinkPorData {
+  reserves: bigint;
+  decimals: number;
+  roundId: bigint;
+  updatedAt: number;
+}
+
+function readParams(config: LiveReservesConfig): ChainlinkPorParams {
+  const params = (config.params ?? {}) as Partial<ChainlinkPorParams>;
+  if (!params.porFeedAddress || !params.assetLabel || !params.assetRisk) {
+    throw new Error("chainlink-por adapter requires params.porFeedAddress, assetLabel, and assetRisk");
+  }
+  return params as ChainlinkPorParams;
+}
+
+/** Parse a raw Chainlink latestRoundData() response into structured data. */
+function parseLatestRoundData(hex: string): { roundId: bigint; answer: bigint; updatedAt: number } {
+  // Strip 0x prefix; latestRoundData returns 5 words (160 hex chars)
+  const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
+  if (stripped.length < 160) {
+    throw new Error(`chainlink-por: latestRoundData response too short (${stripped.length} hex chars)`);
+  }
+  const roundId = BigInt("0x" + stripped.slice(0, 64));
+  const answer = BigInt("0x" + stripped.slice(64, 128));
+  // word 2 = startedAt (skip)
+  const updatedAt = Number(BigInt("0x" + stripped.slice(192, 256)));
+  return { roundId, answer, updatedAt };
+}
+
+/** Pure transformation from decoded Chainlink data + params → AdapterResult. Exported for testing. */
+export function adaptChainlinkPorResponse(data: ChainlinkPorData, params: ChainlinkPorParams): AdapterResult {
+  if (data.reserves <= 0n) {
+    throw new Error("chainlink-por: feed reported zero or negative reserves");
+  }
+
+  return {
+    slices: [
+      {
+        name: params.assetLabel,
+        pct: 100,
+        risk: params.assetRisk,
+      },
+    ],
+    metadata: {
+      totalReservesRaw: data.reserves.toString(),
+      feedDecimals: data.decimals,
+      feedRoundId: data.roundId.toString(),
+      feedUpdatedAt: data.updatedAt,
+    },
+  };
+}
+
+export async function fetchChainlinkPorReserves(
+  _coin: StablecoinMeta,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const input = requireOnchainInput(config.inputs.primary, "chainlink-por");
+  const params = readParams(config);
+
+  const callBase = {
+    contract: params.porFeedAddress,
+    signal,
+    ctx,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    rpcMode: input.rpcMode,
+    chain: input.chain,
+  };
+
+  // 1. Fetch feed decimals (single uint8)
+  const rawDecimals = await fetchOnchainUint256({
+    ...callBase,
+    data: DECIMALS_SELECTOR,
+  });
+  if (rawDecimals == null) {
+    throw new Error("chainlink-por: decimals() call failed");
+  }
+  const decimals = Number(rawDecimals);
+
+  // 2. Fetch latestRoundData() (5 words)
+  const rawRoundData = await fetchOnchainRawCall({
+    ...callBase,
+    data: LATEST_ROUND_DATA_SELECTOR,
+  });
+  if (rawRoundData == null) {
+    throw new Error("chainlink-por: latestRoundData() call failed");
+  }
+
+  const { roundId, answer, updatedAt } = parseLatestRoundData(rawRoundData);
+
+  return adaptChainlinkPorResponse(
+    { reserves: answer, decimals, roundId, updatedAt },
+    params,
+  );
+}

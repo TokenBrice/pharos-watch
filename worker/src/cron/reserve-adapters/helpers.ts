@@ -1,7 +1,12 @@
 import type { LiveReserveInput, LiveReservesConfig, ReserveSlice } from "@shared/types";
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { fetchEtherscanUint256AtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
+import {
+  fetchEtherscanUint256AtBlock,
+  fetchEvmUint256AtBlock,
+  fetchEvmCallHexAtBlock,
+  fetchEtherscanProxyHex,
+} from "../../lib/evm-rpc";
 import type { AdapterContext } from "./index";
 
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
@@ -175,6 +180,43 @@ export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigi
         timeoutMs: 10_000,
       },
     );
+  }
+
+  return null;
+}
+
+export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<string | null> {
+  const extraRpcUrls = [options.rpcUrl, options.fallbackRpcUrl].filter(
+    (url): url is string => typeof url === "string" && url.length > 0,
+  );
+
+  const rpcValue = await fetchEvmCallHexAtBlock(
+    options.chain,
+    options.contract,
+    options.data,
+    "latest",
+    {
+      extraRpcUrls,
+      signal: options.signal,
+      timeoutMs: 10_000,
+    },
+  );
+  if (rpcValue != null) {
+    return rpcValue;
+  }
+
+  if (options.rpcMode === "etherscan-proxy") {
+    if (options.chain !== "ethereum") return null;
+    return fetchEtherscanProxyHex({
+      evmChainId: 1,
+      action: "eth_call",
+      to: options.contract,
+      data: options.data,
+      blockNumberOrTag: "latest",
+      apiKey: options.ctx?.etherscanApiKey,
+      signal: options.signal,
+      timeoutMs: 10_000,
+    });
   }
 
   return null;
