@@ -52,6 +52,7 @@ export interface ReportCardsSnapshot {
     edges: { from: string; to: string }[];
   };
   updatedAt: number;
+  liquidityStale: boolean;
 }
 
 export class ReportCardsSnapshotUnavailableError extends Error {
@@ -68,6 +69,22 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     loadDexLiquidityMap(db),
     loadRedemptionBackstopMap(db),
   ]);
+
+  // M10: Check liquidity data staleness (separate query — loadDexLiquidityMap doesn't include updated_at)
+  let liquidityStale = false;
+  try {
+    const staleness = await db.prepare("SELECT MAX(updated_at) as max_ts FROM dex_liquidity").first<{ max_ts: number | null }>();
+    const maxTs = staleness?.max_ts;
+    if (maxTs != null) {
+      const ageSec = Math.floor(Date.now() / 1000) - maxTs;
+      if (ageSec > 3600) {
+        console.warn(`[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
+        liquidityStale = true;
+      }
+    }
+  } catch {
+    // Non-blocking — staleness check is observability only
+  }
 
   if (stablecoinsCached.kind !== "ok") {
     throw new ReportCardsSnapshotUnavailableError("Cached stablecoins data is corrupt");
@@ -188,6 +205,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     },
     dependencyGraph: { edges },
     updatedAt: stablecoinsCached.updatedAt,
+    liquidityStale,
   };
 }
 

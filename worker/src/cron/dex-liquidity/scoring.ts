@@ -9,6 +9,7 @@ import type {
   LiquidityCoverageClass,
   LiquiditySourceMix,
 } from "./types";
+import { dexPriceConfidenceForProtocol } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore, normalizeProtocol } from "./pool-helpers";
 
 const HISTORY_CONFIDENCE_MIN = 0.75;
@@ -385,7 +386,12 @@ export async function computeStablecoinScores(
     });
   }
 
-  // Global protocol-level TVL cap: clamp deduped protocol totals at DL protocol TVL.
+  // M3: Global protocol-level TVL cap: when reducing excess, chain TVLs are
+  // distributed proportionally rather than attributed to the chain with the
+  // most excess. This is a trade-off — exact chain attribution would require
+  // per-pool chain data which is not available in the global aggregate.
+  //
+  // Clamp deduped protocol totals at DL protocol TVL.
   // After cross-stablecoin dedup, a protocol can still exceed its real TVL when
   // CG/GT virtual reserves are inflated across many pools. The per-coin cap allows
   // up to protocolTvl PER stablecoin, but globally the protocol total must not
@@ -484,19 +490,28 @@ export async function computeDexPrices(
     if (observations.length === 0) continue;
     observedIds.add(id);
 
-    // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
-    observations.sort((a, b) => a.price - b.price);
-    const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
-    const halfTvl = totalTvl / 2;
+    // H1: Scale TVL weights by source confidence before computing median
+    const adjustedObs = observations.map((o) => ({
+      ...o,
+      tvl: o.tvl * dexPriceConfidenceForProtocol(o.protocol),
+    }));
+
+    // TVL-weighted median: sort by price, walk until cumulative (confidence-weighted) TVL crosses 50%
+    adjustedObs.sort((a, b) => a.price - b.price);
+    const adjustedTotalTvl = adjustedObs.reduce((s, o) => s + o.tvl, 0);
+    const halfTvl = adjustedTotalTvl / 2;
     let cumTvl = 0;
-    let medianPrice = observations[0].price;
-    for (const obs of observations) {
+    let medianPrice = adjustedObs[0].price;
+    for (const obs of adjustedObs) {
       cumTvl += obs.tvl;
       if (cumTvl >= halfTvl) {
         medianPrice = obs.price;
         break;
       }
     }
+
+    // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
+    const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
 
     // Compute deviation from primary price
     const primaryPrice = primaryPrices.get(id);

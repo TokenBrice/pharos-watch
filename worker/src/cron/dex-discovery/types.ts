@@ -47,6 +47,7 @@ export const STAGED_POOL_DEFAULTS = {
  * Fresh rows score at 1.0, 24h-old rows decay to 0.5, then fall out entirely.
  */
 export function stagedPoolConfidence(ageHours: number): number {
+  ageHours = Math.max(0, ageHours);
   if (ageHours > 24) return 0;
   return Math.max(0.5, 1 - ageHours / 48);
 }

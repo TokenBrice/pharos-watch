@@ -130,6 +130,19 @@ Per-pool stress metric: `35x(1-balanceRatio) + 25x(1-organicFraction) + 20xImmat
 
 Per-stablecoin durability metric combining: TVL stability from 30-day CV (35%), volume consistency from 30-day CV (25%), oldest pool maturity (25%), and organic fee fraction with sqrt curve (15%). Locked liquidity removed — no reliable data source. Stored as `durability_score`.
 
+#### Pool Quality Formula
+
+`poolQuality = (qualityAdjustedTvl / effectiveTvl) × 100`
+
+Where `qualityAdjustedTvl` applies mechanism, balance health, and pair quality multipliers to raw TVL, and `effectiveTvl` applies metapool deduplication and protocol-level caps.
+
+#### Durability Sub-Component Weights
+
+- **35%** TVL stability — `1 - min(1, CV)` over 30-day snapshots (CV = coefficient of variation)
+- **25%** Volume consistency — same CV formula over 30-day volume snapshots
+- **25%** Maturity — oldest pool age, capped at 365 days: `min(1, oldestDays / 365) × 100`
+- **15%** Organic fraction — `sqrt(organicFraction) × 100` (diminishing returns past 50%; 25% organic → 50 score, 50% → 71 score, 100% → 100 score)
+
 ### Pool Identity (`poolId`)
 
 Each `PoolEntry` carries a `poolId` field formatted as `chain:address` (lowercase). This uniquely identifies a physical pool across stablecoins. A single pool (e.g., USDC/USDT on Raydium) may appear under multiple stablecoin entries — `poolId` enables deduplication for global aggregates.

@@ -196,6 +196,9 @@ export async function syncDexLiquidity(
       .catch(() => ({ results: [] as Array<{ stablecoin_id: string; total_tvl_usd: number }> })),
   ]);
   const previousCoverage = previousCoverageRow?.cnt ?? 0;
+  // M1: First-run bootstrap — when previousCoverage is 0, the minimum threshold
+  // is max(1, floor(0 * 0.6)) = 1, so the guard permits any result with at
+  // least 1 scored coin. This avoids false alarms on initial deployment.
   const minExpectedCoverage = Math.max(1, Math.floor(previousCoverage * 0.6));
   const nearCoverageGuard = previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
 

@@ -26,6 +26,7 @@ export interface CrawlResult {
     chain: string;
     protocol: string;
   }>;
+  unresolvedChains: string[];
 }
 
 export async function crawlCoin(
@@ -42,6 +43,7 @@ export async function crawlCoin(
   const nowSec = Math.floor(Date.now() / 1000);
   const stablecoinMeta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const cgQueriedChains = new Set<string>();
+  const unresolvedChains: string[] = [];
 
   const timeExceeded = (): boolean => !!deadlineMs && Date.now() >= deadlineMs;
   const addPool = (pool: StagedPool): void => {
@@ -58,11 +60,15 @@ export async function crawlCoin(
 
     for (const { chain, address } of coinTargets) {
       throwIfAborted(signal);
-      if (timeExceeded()) return { pools, priceObs };
+      if (timeExceeded()) return { pools, priceObs, unresolvedChains };
 
       const registry = CHAIN_REGISTRY[chain];
       const cgNetwork = CG_CHAIN_MAP[chain] ?? registry?.coingecko;
-      if (!cgNetwork) continue;
+      if (!cgNetwork) {
+        console.warn(`[dex-discovery] Chain "${chain}" not in CG registry for ${stablecoinId}, skipping`);
+        unresolvedChains.push(chain);
+        continue;
+      }
 
       if (cgRequests > 0) {
         await sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);
@@ -338,7 +344,7 @@ export async function crawlCoin(
 
     for (const [chain, address] of dsTargets) {
       throwIfAborted(signal);
-      if (timeExceeded()) return { pools, priceObs };
+      if (timeExceeded()) return { pools, priceObs, unresolvedChains };
 
       const dsChain = DS_CHAIN_MAP[chain];
       if (!dsChain) continue;
@@ -529,5 +535,5 @@ export async function crawlCoin(
     }
   }
 
-  return { pools, priceObs };
+  return { pools, priceObs, unresolvedChains };
 }

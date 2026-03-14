@@ -21,6 +21,7 @@ import {
   CURVE_API_BASE, CURVE_CHAINS,
   UNIV3_SUBGRAPHS, UNIV3_POOL_QUERY,
   AERODROME_SUBGRAPHS, AERODROME_PAIR_QUERY,
+  SUBGRAPH_PER_CHAIN_TIMEOUT_MS,
 } from "./constants";
 import {
   normalizeProtocol, getTrackedContracts,
@@ -139,11 +140,21 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   }
 
   // Now safe to start Curve batch — DL connections are released (max 4 concurrent)
-  const curveResponses = await Promise.all(
-    CURVE_CHAINS.map((chain) =>
-      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT }, signal }),
-    ),
-  );
+  let curveResponses: (Response | null)[];
+  const curveCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API);
+
+  if (curveCircuitAllowed) {
+    curveResponses = await Promise.all(
+      CURVE_CHAINS.map((chain) =>
+        fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT }, signal }),
+      ),
+    );
+    const curveSuccess = curveResponses.some((r) => r?.ok);
+    await recordOutcome(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API, curveSuccess);
+  } else {
+    console.warn("[dex-liquidity] Curve liquidity API circuit open — skipping Curve pool data");
+    curveResponses = CURVE_CHAINS.map(() => null);
+  }
 
   // Only abort if BOTH DL sources AND Curve all failed (truly catastrophic)
   if (!dlYieldsAvailable && curveResponses.every((r) => !r?.ok)) {
@@ -330,13 +341,17 @@ export async function fetchUniV3Data(
   }
 
   for (const [chain, subgraphId] of Object.entries(UNIV3_SUBGRAPHS)) {
+    const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
+    const combinedSignal = signal
+      ? AbortSignal.any([signal, perChainTimeout])
+      : perChainTimeout;
     const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
     const { entityCount, observationCount, observations, shouldLogIndex } = await fetchSubgraphEntities<UniV3SubgraphPool>({
       subgraphUrl,
       sourceLabel: "Uni V3 subgraph",
       chain,
       buildQuery: () => UNIV3_POOL_QUERY,
-      signal,
+      signal: combinedSignal,
       extractEntities: (data) => (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools,
       mapEntity: (pool) => {
         const feeTier = parseInt(pool.feeTier, 10);
@@ -428,13 +443,17 @@ export async function fetchAerodromeData(
   if (!graphApiKey) return { aerodromePriceObs: priceObs, aerodromeIsStable: isStableMap };
 
   for (const [chain, subgraphId] of Object.entries(AERODROME_SUBGRAPHS)) {
+    const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
+    const combinedSignal = signal
+      ? AbortSignal.any([signal, perChainTimeout])
+      : perChainTimeout;
     const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
     const { entityCount, observationCount, observations, shouldLogIndex } = await fetchSubgraphEntities<AerodromeSubgraphPair>({
       subgraphUrl,
       sourceLabel: "Aerodrome subgraph",
       chain,
       buildQuery: () => AERODROME_PAIR_QUERY,
-      signal,
+      signal: combinedSignal,
       extractEntities: (data) => (data as { pairs?: AerodromeSubgraphPair[] } | undefined)?.pairs,
       mapEntity: (pair) => {
         const reserveUSD = parseFloat(pair.reserveUSD);

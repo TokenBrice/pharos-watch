@@ -85,6 +85,7 @@ function mockSnapshot(cards: ReportCard[]) {
     },
     dependencyGraph: { edges: [] },
     updatedAt: 1_777_770_000,
+    liquidityStale: false,
   });
 }
 

@@ -35,6 +35,23 @@ export async function syncRedemptionBackstops(
   );
   const dexLiquidityMap = await loadDexLiquidityMap(db);
   const now = Math.floor(Date.now() / 1000);
+
+  // M10: Check liquidity data staleness
+  let liquidityStale = false;
+  try {
+    const staleness = await db.prepare("SELECT MAX(updated_at) as max_ts FROM dex_liquidity").first<{ max_ts: number | null }>();
+    const maxTs = staleness?.max_ts;
+    if (maxTs != null) {
+      const ageSec = now - maxTs;
+      if (ageSec > 3600) {
+        console.warn(`[sync-redemption-backstops] Liquidity data is stale (age: ${ageSec}s)`);
+        liquidityStale = true;
+      }
+    }
+  } catch {
+    // Non-blocking
+  }
+
   const snapshots = [];
   const failedIds: string[] = [];
 
@@ -103,6 +120,7 @@ export async function syncRedemptionBackstops(
       dynamic: dynamicCount,
       estimated: estimatedCount,
       static: staticCount,
+      liquidityStale,
       ...(failedIds.length > 0 ? { failedIds } : {}),
       ...(missingFromCache.length > 0 ? { missingFromCache } : {}),
     }),

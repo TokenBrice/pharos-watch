@@ -90,6 +90,26 @@ describe("syncDexLiquidity", () => {
     expect(metadata.fallbackMode).toContain("dl-protocols-unavailable");
   });
 
+  it("returns degraded when DL fails but Curve succeeds", async () => {
+    vi.mocked(fetchDataSources).mockResolvedValueOnce({
+      pools: [],
+      dexProjects: new Set<string>(),
+      protocolTvlCaps: new Map<string, number>(),
+      curveResponses: [new Response("{}", { status: 200 })],
+      graphApiKey: "graph-key",
+      dlYieldsAvailable: false,
+      dlProtocolsAvailable: false,
+    });
+
+    const result = await syncDexLiquidity(db, "graph-key");
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      failedSources?: string[];
+    };
+    expect(metadata.failedSources).toContain("defillama-yields");
+  });
+
   it("returns ok when required source families succeed", async () => {
     const result = await syncDexLiquidity(db, "graph-key");
 

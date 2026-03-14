@@ -210,7 +210,11 @@ export async function mergeStagedPools(
       stagedPriceObs.set(stagedPool.stablecoinId, obs);
     }
 
-    // Dedup check — skip pool metrics merge for known pools
+    // Dedup check — skip pool metrics merge for known pools.
+    // Note: Orderbook pools (poolId starting with "orderbook:") naturally skip
+    // fingerprint dedup because they lack token addresses (fingerprint returns null
+    // from buildPoolFingerprint when normalized.length < 2). They are only deduped
+    // by exact poolId match.
     const addressKnown = knownPoolAddrs.has(stagedPool.poolId);
     const fingerprintKnown = fingerprint != null && knownPoolAddrs.has(fingerprint);
     if (addressKnown || fingerprintKnown) {

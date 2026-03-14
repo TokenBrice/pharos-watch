@@ -28,6 +28,7 @@ vi.mock("../crawl-sources", () => ({
       { poolId: "base:0xpool2" },
     ],
     priceObs: [],
+    unresolvedChains: [],
   })),
 }));
 
@@ -108,6 +109,7 @@ describe("syncDexDiscovery", () => {
         makeStagedPool("base:0xpool2"),
       ],
       priceObs: [],
+      unresolvedChains: [],
     });
   });
 

@@ -91,12 +91,18 @@ function normalizeTopPools(json: string | null): DexLiquidityPoolResponse[] {
   const parsed = safeParse<DexLiquidityPoolResponse[]>(json, []);
   return parsed.map((pool) => {
     const normalizedSource = normalizePoolSource(pool.source);
-    return normalizedSource == null
-      ? { ...pool, source: undefined }
-      : { ...pool, source: normalizedSource };
+    if (normalizedSource != null) {
+      return { ...pool, source: normalizedSource };
+    }
+    console.info("[dex-liquidity] Unknown pool source:", pool.source);
+    const { source: _, ...rest } = pool;
+    return rest as DexLiquidityPoolResponse;
   });
 }
 
+// M7: Wide tolerance windows (24h for 24h baseline, 48h for 7d baseline) handle
+// missed cron runs gracefully. The dex-liquidity cron runs every 30 min, but if
+// several runs are missed, we still find a usable baseline within the tolerance.
 function selectTrendBaseline(
   history: DexHistoryRow[],
   targetSec: number,
@@ -143,8 +149,8 @@ function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null): strin
       nearCoverageGuard = parsed.sourceCoverage?.nearCoverageGuard ?? false;
       nearValueGuard = parsed.sourceCoverage?.nearValueGuard ?? false;
       nearMajorCoverageGuard = parsed.sourceCoverage?.nearMajorCoverageGuard ?? false;
-    } catch {
-      // Ignore malformed metadata and fall back to generic warning text.
+    } catch (err) {
+      console.info("[dex-liquidity] Malformed cron metadata:", err instanceof Error ? err.message : String(err));
     }
   }
 
