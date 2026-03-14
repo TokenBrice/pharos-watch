@@ -699,7 +699,9 @@ export async function enrichMissingPrices(
             }
             if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
           } else {
-            console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
+            let cmcBody = "";
+            try { cmcBody = cmcRes ? await cmcRes.text() : ""; } catch { /* ignore */ }
+            console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}: ${cmcBody.slice(0, 500)}`);
             if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
           }
         } catch (err) {
