@@ -5,12 +5,15 @@ import {
   DEPEG_SECONDARY_THRESHOLD_RATIO,
   DEFILLAMA_COINS,
   USER_AGENT,
+  CIRCUIT_SOURCE,
 } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
+import { shouldAttemptFetch } from "../lib/circuit-breaker";
+import { fetchBinancePrices } from "../lib/cex-tickers";
 import {
   buildInsertDepegEventStmt,
   classifyPrimaryDepegTrust,
@@ -194,8 +197,28 @@ export async function confirmPendingDepegs(
       );
     }
 
+    // 4b. CEX ticker check
+    let cexAgrees: boolean | null = null;
+    const cexAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
+    if (cexAllowed) {
+      try {
+        const cexPrices = await fetchBinancePrices(signal);
+        const cexPrice = cexPrices.get(row.symbol.toUpperCase());
+        if (cexPrice && cexPrice > 0) {
+          const cexBps = Math.abs(Math.round(((cexPrice / row.peg_reference) - 1) * 10000));
+          cexAgrees = cexBps >= secondaryBar;
+          console.log(
+            `[depeg-confirm] ${row.symbol} CEX check: price=$${cexPrice}, deviation=${cexBps}bps, ` +
+            `bar=${secondaryBar}bps, agrees=${cexAgrees}`,
+          );
+        }
+      } catch (err) {
+        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+      }
+    }
+
     // 5. Decision
-    if (offchainAgrees === true || dexAgrees === true) {
+    if (offchainAgrees === true || dexAgrees === true || cexAgrees === true) {
       // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
       const authoritativePrice =
         asset != null &&
