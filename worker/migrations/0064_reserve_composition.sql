@@ -1,4 +1,4 @@
--- Live reserve composition synced daily from protocol data APIs.
+-- Live reserve composition synced hourly from protocol data APIs.
 -- One row per coin (latest snapshot only).
 CREATE TABLE IF NOT EXISTS reserve_composition (
   stablecoin_id TEXT NOT NULL PRIMARY KEY,
