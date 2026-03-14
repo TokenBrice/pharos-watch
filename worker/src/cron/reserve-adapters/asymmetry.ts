@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
 import { requireJsonInput, fetchJsonWithRetry, normalizeSlices } from "./helpers";
 
@@ -23,8 +24,8 @@ const BRANCH_RISK_MAP: Record<string, BranchRiskConfig> = {
   scrvUSD: { risk: "medium", coinId: "crvusd-curve", depType: "wrapper" },
   sUSDS: { risk: "low", coinId: "usds-sky", depType: "wrapper" },
   sfrxUSD: { risk: "medium", coinId: "frax-frax", depType: "wrapper" },
-  tBTC: { risk: "medium" },
-  WBTC: { risk: "medium" },
+  tBTC: { risk: getCanonicalReserveAssetRisk("TBTC") ?? "medium" },
+  WBTC: { risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium" },
 };
 
 export function adaptAsymmetry(payload: AsymmetryPayload): ReserveSlice[] {

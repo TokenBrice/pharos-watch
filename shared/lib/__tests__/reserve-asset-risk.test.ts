@@ -22,4 +22,14 @@ describe("canonical reserve asset risk mapping", () => {
   it("returns null for symbols outside the canonical direct-asset map", () => {
     expect(getCanonicalReserveAssetRisk("CRV")).toBeNull();
   });
+
+  it("covers all stablecoin reserve assets commonly seen in adapters", () => {
+    expect(getCanonicalReserveAssetRisk("USDT")).toBe("low");
+    expect(getCanonicalReserveAssetRisk("USDS")).toBe("low");
+    expect(getCanonicalReserveAssetRisk("FRXUSD")).toBe("low");
+    expect(getCanonicalReserveAssetRisk("CBBTC")).toBe("medium");
+    expect(getCanonicalReserveAssetRisk("SOLVBTC")).toBe("medium");
+    expect(getCanonicalReserveAssetRisk("SOL")).toBe("high");
+    expect(getCanonicalReserveAssetRisk("CELO")).toBe("high");
+  });
 });

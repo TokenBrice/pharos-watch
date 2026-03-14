@@ -220,6 +220,8 @@ Additional response fields:
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
 - `summary`: compact availability rollup (`unhealthyCrons`, `degradedCrons`, `cronErrors`, `worstCacheRatio`)
 - `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `lastSuccessAt`, `oldestFreshAgeSec`)
+- `reserveDrift`: optional array of coins where the live-derived collateral quality score diverges from curated by more than 5 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
+- `classificationWarnings`: optional array of decentralized-governance coins where centralized custody fraction exceeds 50% (`coinId`, `governance`, `centralizedCustodyPct`, `threshold`). Signals potential governance reclassification candidates. Omitted when no warnings.
 
 For event-backed domains, `datasetFreshness` follows the writer rather than the latest emitted event so quiet periods do not look falsely late:
 

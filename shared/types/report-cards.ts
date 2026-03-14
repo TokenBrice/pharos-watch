@@ -73,6 +73,7 @@ const RawDimensionInputsSchema = z.object({
   governanceQuality: GovernanceQualitySchema,
   dependencies: z.array(DependencyWeightSchema),
   navToken: z.boolean(),
+  collateralFromLive: z.boolean().optional().default(false),
 });
 
 export interface RawDimensionInputs extends z.infer<typeof RawDimensionInputsSchema> {

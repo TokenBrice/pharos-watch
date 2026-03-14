@@ -472,6 +472,7 @@ export function isBlacklistable(
 export function scoreResilience(
   meta: StablecoinMeta,
   canBeBlacklisted: boolean | "possible" | "possible-inherited",
+  liveReserveSlices?: ReserveSlice[],
 ): ReportCardDimension {
   const factors = resolveResilienceFactors(meta);
   const blacklistScore = canBeBlacklisted === true ? 33
@@ -484,9 +485,11 @@ export function scoreResilience(
 
   const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];
 
-  const hasReserves = meta.reserves && meta.reserves.length > 0;
+  // Prefer live slices for collateral quality when available
+  const effectiveReserves = liveReserveSlices ?? meta.reserves;
+  const hasReserves = effectiveReserves && effectiveReserves.length > 0;
   const collateralScore = hasReserves
-    ? computeCollateralQualityFromReserves(meta.reserves!)
+    ? computeCollateralQualityFromReserves(effectiveReserves!)
     : COLLATERAL_QUALITY_SCORE[factors.collateralQuality];
   const collateralLabel = hasReserves
     ? collateralScoreLabel(collateralScore)

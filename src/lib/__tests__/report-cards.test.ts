@@ -738,6 +738,43 @@ describe("scoreDecentralization", () => {
   });
 });
 
+describe("scoreResilience with live reserve slices", () => {
+  it("uses liveReserveSlices when provided instead of meta.reserves", () => {
+    const meta = {
+      reserves: [
+        { name: "wstETH", pct: 100, risk: "low" as const },
+      ],
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD" },
+    } as any;
+
+    const curatedResult = scoreResilience(meta, false);
+
+    const liveSlices = [
+      { name: "WBTC", pct: 60, risk: "medium" as const },
+      { name: "wstETH", pct: 40, risk: "low" as const },
+    ];
+
+    const liveResult = scoreResilience(meta, false, liveSlices);
+
+    // curated: 100% low = 75 collateral. live: 60*50 + 40*75 = 60 collateral → different scores
+    expect(liveResult.score).not.toBe(curatedResult.score);
+  });
+
+  it("falls back to meta.reserves when liveReserveSlices is undefined", () => {
+    const meta = {
+      reserves: [
+        { name: "wstETH", pct: 100, risk: "low" as const },
+      ],
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD" },
+    } as any;
+
+    const without = scoreResilience(meta, false);
+    const withUndefined = scoreResilience(meta, false, undefined);
+
+    expect(withUndefined.score).toBe(without.score);
+  });
+});
+
 describe("golden-path: overall grade from realistic coin profiles", () => {
   // These tests compose all 5 dimension scorers + computeOverallGrade.
   // They catch regressions in any scorer that cascade to a wrong final grade.

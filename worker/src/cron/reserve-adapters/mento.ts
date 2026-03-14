@@ -20,7 +20,7 @@ interface TokenConfig {
 const TOKEN_CONFIG: Record<string, TokenConfig> = {
   sUSDS: { name: "sUSDS (Sky savings USDS)", risk: "low", coinId: "usds-sky" },
   EURC: { name: "EURC (Circle euro stablecoin)", risk: "low" },
-  CELO: { name: "CELO", risk: "high" },
+  CELO: { name: "CELO", risk: getCanonicalReserveAssetRisk("CELO") ?? "high" },
   USDGLO: { name: "USDGLO (Glo Dollar)", risk: "low" },
   stETH: { name: "stETH (Lido staked ETH)", risk: getCanonicalReserveAssetRisk("stETH") ?? "low" },
   USDT: { name: "USDT", risk: "low", coinId: "usdt-tether" },

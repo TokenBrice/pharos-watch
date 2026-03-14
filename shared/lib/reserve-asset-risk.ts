@@ -1,12 +1,38 @@
 import type { ReserveRisk } from "../types";
 
 export const CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL = {
+  // ── Very-low: no/minimal counterparty risk ─────────────────
+  ETH: "very-low",
+  WETH: "very-low",
+
+  // ── Low: stablecoin / tokenized layer ──────────────────────
   USDC: "low",
+  USDT: "low",
   DAI: "low",
+  USDS: "low",
   LUSD: "low",
+  BOLD: "low",
   ZCHF: "low",
   DEURO: "low",
-  DEPS: "very-high",
+  FRAX: "low",
+  FRXUSD: "low",
+  PYUSD: "low",
+  GHO: "low",
+  DOLA: "low",
+  AUSD: "low",
+  TUSD: "low",
+  GUSD: "low",
+  STETH: "low",
+  WSTETH: "low",
+  RETH: "low",
+  WEETH: "low",
+  SFRXETH: "low",
+  LSETH: "low",
+  BUIDL: "low",
+  USTB: "low",
+  USYC: "low",
+
+  // ── Medium: wrapped / structured / centralized-custody ─────
   BTC: "medium",
   WBTC: "medium",
   CBBTC: "medium",
@@ -14,16 +40,20 @@ export const CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL = {
   LBTC: "medium",
   TBTC: "medium",
   ZKBTC: "medium",
-  ETH: "very-low",
-  WETH: "very-low",
-  STETH: "low",
-  WSTETH: "low",
-  RETH: "low",
-  WEETH: "low",
-  SFRXETH: "low",
-  LSETH: "low",
+  SOLVBTC: "medium",
+  BTCB: "medium",
   PAXG: "medium",
   XAUT: "medium",
+
+  // ── High: volatile native assets ───────────────────────────
+  SOL: "high",
+  BNB: "high",
+  TRX: "high",
+  HYPE: "high",
+  CELO: "high",
+
+  // ── Very-high: governance / exotic ─────────────────────────
+  DEPS: "very-high",
 } as const satisfies Record<string, ReserveRisk>;
 
 export const CANONICAL_ETH_RESERVE_RISK = CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL.ETH;

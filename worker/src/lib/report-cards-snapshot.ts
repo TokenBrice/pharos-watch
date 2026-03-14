@@ -5,6 +5,7 @@ import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
 import { loadDexLiquidityMap } from "./dex-liquidity";
 import { loadRedemptionBackstopMap } from "./redemption-backstops-store";
+import { loadFreshLiveReserveMap } from "./live-reserves-store";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -19,6 +20,7 @@ import {
   resolveResilienceFactors,
   resolveGovernanceQuality,
   isBlacklistable,
+  computeCollateralQualityFromReserves,
 } from "@shared/lib/report-cards";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 import type {
@@ -38,6 +40,7 @@ import type {
   CustodyModel,
   ReportCardGrade,
   RedemptionBackstopEntry,
+  ReserveSlice,
 } from "@shared/types";
 
 export interface ReportCardsSnapshot {
@@ -63,11 +66,12 @@ export class ReportCardsSnapshotUnavailableError extends Error {
 }
 
 export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCardsSnapshot> {
-  const [stablecoinsCached, bluechipCached, dexLiqMap, redemptionBackstopMap] = await Promise.all([
+  const [stablecoinsCached, bluechipCached, dexLiqMap, redemptionBackstopMap, liveReserveMap] = await Promise.all([
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
     getCache(db, "bluechip-ratings"),
     loadDexLiquidityMap(db),
     loadRedemptionBackstopMap(db),
+    loadFreshLiveReserveMap(db),
   ]);
 
   // M10: Check liquidity data staleness (separate query — loadDexLiquidityMap doesn't include updated_at)
@@ -128,6 +132,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
       bluechipMap,
       overallScores,
       blacklistableIds,
+      liveReserveMap,
     );
     liveCards.push(card);
     if (card.overallScore !== null) {
@@ -175,6 +180,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
         governanceQuality: "single-entity" as GovernanceQuality,
         dependencies: [],
         navToken: false,
+        collateralFromLive: false,
       },
       isDefunct: true,
     };
@@ -217,6 +223,7 @@ function computeCard(
   bluechipMap: Record<string, BluechipRating>,
   overallScores: Map<string, number>,
   blacklistableIds: ReadonlySet<string>,
+  liveReserveMap: Map<string, ReserveSlice[]>,
 ): ReportCard {
   const peg = pegDataById.get(meta.id);
   const liq = dexLiqMap[meta.id];
@@ -225,14 +232,28 @@ function computeCard(
 
   const canBeBlacklisted = isBlacklistable(meta, blacklistableIds);
   const resilienceFactors = resolveResilienceFactors(meta);
+  const liveSlices = liveReserveMap.get(meta.id);
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta),
     liquidity: scoreLiquidity(liq, redemption),
-    resilience: scoreResilience(meta, canBeBlacklisted),
+    resilience: scoreResilience(meta, canBeBlacklisted, liveSlices),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
+
+  // Delta alerting: warn when live and curated collateral scores diverge significantly
+  if (liveSlices && meta.reserves && meta.reserves.length > 0) {
+    const liveScore = computeCollateralQualityFromReserves(liveSlices);
+    const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
+    const delta = Math.abs(liveScore - curatedScore);
+    if (delta > 15) {
+      console.warn(
+        `[report-cards] Collateral score drift for ${meta.id}: ` +
+        `live=${liveScore}, curated=${curatedScore}, delta=${delta}`,
+      );
+    }
+  }
 
   const navToken = !!meta.flags.navToken;
   const overall = computeOverallGrade(dimensions, { navToken });
@@ -259,6 +280,7 @@ function computeCard(
     governanceQuality: resolveGovernanceQuality(meta.flags.governance as GovernanceType, meta),
     dependencies: deriveDependencies(meta),
     navToken,
+    collateralFromLive: !!liveSlices,
   };
 
   return {

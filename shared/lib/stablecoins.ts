@@ -760,7 +760,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: The Defiant Feb 19 2026 (DefiLlama breakdown), USD.AI Dec 18 2025 PYUSD integration. Confidence: Medium
       { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 56, risk: "low", coinId: "m-m0" },
-      { name: "PYUSD (PayPal USD)", pct: 43, risk: "medium", coinId: "pyusd-paypal" },
+      { name: "PYUSD (PayPal USD)", pct: 43, risk: "low", coinId: "pyusd-paypal" },
       { name: "GPU-collateralized loans (NVIDIA hardware)", pct: 1, risk: "high" },
     ],
   }),
@@ -1021,9 +1021,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Digital assets (USDC + USDT, operational)", pct: 1, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("crvusd-curve", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
+  usd("crvusd-curve", "crvUSD", "crvUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "110",
     geckoId: "crvusd",
+    governanceQuality: "dao-governance",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Curve Savings (scrvUSD)", yieldType: "governance-set" },
     liveReservesConfig: {
@@ -1041,7 +1042,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     },
     dependencies: [{ id: "usdt-tether", weight: 0.10 }, { id: "usdc-circle", weight: 0.10 }, { id: "pyusd-paypal", weight: 0.10 }, { id: "frxusd-frax", weight: 0.10 }],
     deploymentModel: "canonical-bridge",
-    collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
+    collateral: "WBTC, cbBTC (majority), wstETH, sfrxETH, weETH, tBTC, and ETH deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations; WBTC/cbBTC custody by BitGo/Coinbase introduces centralized dependency",
     pegMechanism: "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
     links: [
       { label: "Website", url: "https://www.curve.finance/" },
@@ -3730,7 +3731,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       // Source: Ondo Finance docs + Arbitrum STEP application. Migrated from SHV ETF to BUIDL in March 2024.
       { name: "BlackRock BUIDL (U.S. T-bills, cash, repos)", pct: 85, risk: "low", coinId: "buidl-blackrock" },
       { name: "BlackRock FedFund (TFDXX)", pct: 12, risk: "very-low" },
-      { name: "USDC liquidity buffer", pct: 3, risk: "very-low", coinId: "usdc-circle" },
+      { name: "USDC liquidity buffer", pct: 3, risk: "low", coinId: "usdc-circle" },
     ],
   }),
   usd("mtbill-midas", "Midas mTBILL", "mTBILL", "rwa-backed", "centralized", {

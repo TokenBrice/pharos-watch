@@ -366,6 +366,38 @@ export async function computeReserveCompositionOverview(
   };
 }
 
+/**
+ * Load all fresh live reserve snapshots as a Map<stablecoinId, ReserveSlice[]>.
+ * Only includes snapshots with ≥2 slices that are fresher than `freshnessSec`.
+ */
+export async function loadFreshLiveReserveMap(
+  db: D1Database,
+  now = Math.floor(Date.now() / 1000),
+  freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
+  minSlices = 2,
+): Promise<Map<string, ReserveSlice[]>> {
+  const cutoff = now - freshnessSec;
+  const rows = await db
+    .prepare(
+      "SELECT stablecoin_id, slices FROM reserve_composition WHERE fetched_at > ?",
+    )
+    .bind(cutoff)
+    .all<{ stablecoin_id: string; slices: string }>();
+
+  const map = new Map<string, ReserveSlice[]>();
+  for (const row of rows.results) {
+    try {
+      const slices: ReserveSlice[] = JSON.parse(row.slices);
+      if (slices.length >= minSlices) {
+        map.set(row.stablecoin_id, slices);
+      }
+    } catch {
+      // Skip malformed JSON
+    }
+  }
+  return map;
+}
+
 export async function resolveReserveResult(
   db: D1Database,
   stablecoinId: string,
