@@ -13,7 +13,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
 
-This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync only affects live-enabled detail-page reserve views and status monitoring. Report cards and the dependency map still derive from curated/static reserve metadata.
+This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8) collateral quality scoring in report cards. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
 
 ---
 
@@ -232,7 +232,9 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 ## Scope Boundaries
 
 - Live reserve sync is detail-page and status-surface infrastructure, not a replacement for curated reserve metadata everywhere else.
-- [Risk Lab](./report-cards.md) remains authoritative for report-card reserve scoring behavior; report cards do not yet consume live reserve snapshots.
+- [Risk Lab](./report-cards.md) uses live reserve snapshots for collateral quality scoring when
+  available (v5.8+). Dependency inference, blacklist-inherited checks, and all other scoring
+  dimensions still use curated reserve metadata.
 - [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
 
 ---

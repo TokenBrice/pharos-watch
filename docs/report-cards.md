@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.7)
+## Overall Grade (v5.8)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v5.7 did not change weights or thresholds. It aligned reserve-derived collateral quality so direct `ETH` and canonical `WETH` slices share the same `very-low` risk tier.
+Current-version note: v5.8 integrates live reserve snapshots into collateral quality scoring (see Live Reserve Passthrough below). v5.7 aligned reserve-derived collateral quality so direct `ETH` and canonical `WETH` slices share the same `very-low` risk tier.
 
 ## Dimensions
 
@@ -75,9 +75,22 @@ Current-version note: v5.7 did not change weights or thresholds. It aligned rese
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
-Current scope note: the live reserve sync pipeline used on certain detail pages does **not** feed report-card scoring yet. Report cards still use curated reserve metadata from `StablecoinMeta.reserves`.
-
 For coins with curated reserve compositions, collateral quality is computed as a weighted average of per-slice risk scores:
+
+#### Live Reserve Passthrough (v5.8)
+
+For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
+uses the hourly live snapshot from `reserve_composition` instead of curated
+`StablecoinMeta.reserves` when the snapshot is fresh (< 48h) and has >= 2 slices.
+This prevents collateral scores from drifting as protocol reserve compositions evolve.
+
+The `collateralFromLive` flag in `RawDimensionInputs` indicates which source was used.
+Dependency inference (`deriveDependencies`) remains on curated data because live
+adapter slices do not carry `coinId` links.
+
+A delta alert fires when the live-derived score diverges from curated by >15 points,
+signaling that curated metadata (and potentially the governance classification) may
+need human review.
 
 | Reserve Risk Tier | Score | Description | Examples |
 |---|---|---|---|
@@ -274,7 +287,7 @@ Implementation notes:
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, `collateralFromLive`) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 
