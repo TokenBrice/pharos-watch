@@ -1,6 +1,7 @@
 import { fetchAccountableReserves } from "./accountable";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchBtcfiReserves } from "./btcfi";
+import { fetchChainlinkNavReserves } from "./chainlink-nav";
 import { fetchChainlinkPorReserves } from "./chainlink-por";
 import { fetchCollateralPositionsApiReserves } from "./collateral-positions-api";
 import { fetchCrvUsdReserves } from "./crvusd";
@@ -42,6 +43,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   accountable: fetchAccountableReserves,
   asymmetry: fetchAsymmetryReserves,
   btcfi: fetchBtcfiReserves,
+  "chainlink-nav": fetchChainlinkNavReserves,
   "chainlink-por": fetchChainlinkPorReserves,
   "collateral-positions-api": fetchCollateralPositionsApiReserves,
   crvusd: fetchCrvUsdReserves,
