@@ -18,6 +18,8 @@ import { fetchPythPrices } from "../lib/pyth";
 import { fetchBinancePrices, fetchCoinbasePrices } from "../lib/cex-tickers";
 import { fetchRedstonePrices } from "../lib/redstone";
 import { loadDexPriceRows, isTrustedDexPriceRow } from "../lib/depeg-helpers";
+import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
+import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
@@ -153,8 +155,9 @@ export async function fetchPrimaryPrices(
   const binanceAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
   const coinbaseAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES);
   const redstoneAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES);
+  const curveAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN);
 
-  if (!dlAllowed && !cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed && !redstoneAllowed) {
+  if (!dlAllowed && !cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
     console.warn("[primary-prices] All primary price circuits are open, skipping");
     return { results, stats, cgPrices: new Map() };
   }
@@ -179,6 +182,7 @@ export async function fetchPrimaryPrices(
   const binancePrices = new Map<string, number>();
   const coinbasePrices = new Map<string, number>();
   const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number }>();
+  const curvePrices = new Map<string, number>();
 
   // Symbols for Coinbase/RedStone sequential fetch
   const coinbaseSymbols = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
@@ -328,6 +332,22 @@ export async function fetchPrimaryPrices(
     );
   }
 
+  if (curveAllowed && CURVE_POOL_CONFIGS.length > 0) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal);
+          for (const [id, price] of prices) curvePrices.set(id, price);
+          await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] Curve on-chain failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, false);
+        }
+      })(),
+    );
+  }
+
   await Promise.all(fetches);
   throwIfAborted(signal);
 
@@ -361,6 +381,8 @@ export async function fetchPrimaryPrices(
         metadata: { venueCount: redstoneResult.venueCount, venueAgreementPct: redstoneResult.venueAgreementPct },
       });
     }
+    const curvePrice = curvePrices.get(asset.id);
+    if (curvePrice != null) sources.push({ source: "curve-onchain", price: curvePrice, weight: 3 });
     const dexRow = dexRows.get(asset.id);
     if (dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg")) {
       sources.push({
