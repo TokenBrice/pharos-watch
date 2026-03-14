@@ -1,0 +1,86 @@
+import { z } from "zod";
+
+const HERMES_BASE = "https://hermes.pyth.network";
+
+export interface PythPriceResult {
+  price: number;
+  confidence: number;       // raw confidence in USD
+  confidenceBps: number;    // confidence as basis points of price
+  publishTime: number;      // unix seconds
+}
+
+const PythPriceFeedSchema = z.object({
+  parsed: z.array(z.object({
+    id: z.string(),
+    price: z.object({
+      price: z.string(),
+      expo: z.number(),
+      conf: z.string(),
+      publish_time: z.number(),
+    }),
+  })),
+});
+
+/**
+ * Fetch latest prices from Pyth Hermes API.
+ * Free public API, no auth required, 30 req/10s rate limit.
+ *
+ * @param feedIds Map of stablecoinId → Pyth price feed ID (hex)
+ * @returns Map of stablecoinId → PythPriceResult
+ */
+export async function fetchPythPrices(
+  feedIds: Map<string, string>,
+  signal?: AbortSignal,
+): Promise<Map<string, PythPriceResult>> {
+  const results = new Map<string, PythPriceResult>();
+  if (feedIds.size === 0) return results;
+
+  // Reverse map: feedId → stablecoinId
+  const reverseMap = new Map<string, string>();
+  for (const [coinId, feedId] of feedIds) {
+    reverseMap.set(feedId.toLowerCase(), coinId);
+  }
+
+  try {
+    const ids = [...feedIds.values()].map((id) => `ids[]=${id}`).join("&");
+    const res = await fetch(
+      `${HERMES_BASE}/v2/updates/price/latest?${ids}`,
+      { signal, headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) {
+      console.warn(`[pyth] Hermes API returned ${res.status}`);
+      return results;
+    }
+
+    const data = PythPriceFeedSchema.parse(await res.json());
+
+    for (const feed of data.parsed) {
+      const coinId = reverseMap.get(feed.id.toLowerCase());
+      if (!coinId) continue;
+
+      const rawPrice = BigInt(feed.price.price);
+      const rawConf = BigInt(feed.price.conf);
+      const expo = feed.price.expo;
+      const multiplier = Math.pow(10, expo);
+
+      const price = Number(rawPrice) * multiplier;
+      const confidence = Number(rawConf) * multiplier;
+
+      if (price <= 0) continue;
+
+      const confidenceBps = Math.round((confidence / price) * 10000);
+
+      results.set(coinId, {
+        price,
+        confidence,
+        confidenceBps,
+        publishTime: feed.price.publish_time,
+      });
+    }
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn("[pyth] Fetch failed:", err);
+  }
+
+  return results;
+}
