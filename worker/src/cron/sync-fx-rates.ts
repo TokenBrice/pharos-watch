@@ -3,6 +3,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
+import { fetchRealtimeFxRates } from "../lib/fx-realtime";
 import { z } from "zod";
 
 /**
@@ -103,7 +104,7 @@ const MetalPriceSchema = z.object({
   price: z.number(),
 });
 
-export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function syncFxRates(db: D1Database, signal?: AbortSignal, openExchangeRatesKey?: string): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   try {
     // Load previous rates for delta validation
@@ -228,6 +229,48 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
       // Fall through to hardcoded fallback for RUB
     }
 
+    // Real-time FX cross-validation (P0) — rate limited to 1/hour for free tier
+    let oxrSource: "ok" | "partial" | "rate-limited" | "unavailable" = "unavailable";
+    if (openExchangeRatesKey) {
+      const OXR_CACHE_KEY = "fx-oxr-last-fetch";
+      const lastFetch = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_CACHE_KEY).first<{ value: string }>();
+      const lastFetchTime = lastFetch ? parseInt(lastFetch.value, 10) : 0;
+      const elapsedMinutes = (Math.floor(Date.now() / 1000) - lastFetchTime) / 60;
+
+      if (elapsedMinutes >= 55) {
+        const realtimeRates = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
+        if (realtimeRates.size > 0) {
+          await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+            .bind(OXR_CACHE_KEY, String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000)).run();
+        }
+        let realtimeApplied = 0;
+        for (const [pegKey, realtimeRate] of realtimeRates) {
+          const frankfurterRate = rates[pegKey];
+          if (frankfurterRate != null) {
+            const delta = Math.abs(realtimeRate - frankfurterRate) / frankfurterRate;
+            if (delta <= 0.05) {
+              if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
+                rates[pegKey] = realtimeRate;
+                realtimeApplied++;
+              }
+            } else {
+              console.warn(`[sync-fx-rates] ${pegKey} diverges: frankfurter=${frankfurterRate}, realtime=${realtimeRate} (${(delta * 100).toFixed(1)}%)`);
+            }
+          } else {
+            if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
+              rates[pegKey] = realtimeRate;
+              realtimeApplied++;
+            }
+          }
+        }
+        console.log(`[sync-fx-rates] Applied ${realtimeApplied}/${realtimeRates.size} real-time FX rates`);
+        oxrSource = realtimeRates.size > 0 ? (realtimeApplied === realtimeRates.size ? "ok" : "partial") : "unavailable";
+      } else {
+        console.log(`[sync-fx-rates] Skipping OXR fetch (last fetch ${Math.round(elapsedMinutes)}min ago, rate limit: 55min)`);
+        oxrSource = "rate-limited";
+      }
+    }
+
     // Fallback: RUB if secondary API also failed — use last-cached rate from D1, else hardcoded constant
     if (!rates["peggedRUB"]) {
       if (typeof prevRates["peggedRUB"] === "number" && prevRates["peggedRUB"] > 0) {
@@ -316,6 +359,7 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
             ? "partial"
             : "fallback",
         "gold-api.com": metalsSource,
+        openExchangeRates: oxrSource,
       },
     };
     return { itemCount: Object.keys(rates).length, metadata: JSON.stringify(metadata) };
