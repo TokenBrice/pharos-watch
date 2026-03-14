@@ -1,7 +1,7 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchTextWithRetry, requireHtmlInput, slicesFromValues } from "./helpers";
+import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromValues } from "./helpers";
 
 interface MentoReserveEntry {
   symbol: string;
@@ -84,7 +84,7 @@ export async function fetchMentoReserves(
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "mento");
-  const html = await fetchTextWithRetry(input.url, signal, 12_000);
+  const html = await fetchTextWithRetry(input.url, signal, getAdapterTimeout(config, 12_000));
   return {
     slices: adaptMentoReserveComposition(html),
   };

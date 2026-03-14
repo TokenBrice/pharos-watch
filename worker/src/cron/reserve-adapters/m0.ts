@@ -1,7 +1,7 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface M0GraphQlResponse {
   data?: {
@@ -105,7 +105,7 @@ export async function fetchM0Reserves(
       signal,
     },
     2,
-    { timeoutMs: 12_000 },
+    { timeoutMs: getAdapterTimeout(config, 12_000) },
   );
 
   if (!res) throw new Error("M0 GraphQL: fetchWithRetry returned null (all retries failed)");

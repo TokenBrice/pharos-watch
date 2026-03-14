@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchJsonWithRetry, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface FalconBreakdownAsset {
   label: string;
@@ -134,6 +134,6 @@ export async function fetchFalconReserves(
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "falcon");
-  const payload = await fetchJsonWithRetry<FalconTransparencyResponse>(primaryInput.url, signal, 12_000);
+  const payload = await fetchJsonWithRetry<FalconTransparencyResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
   return adaptFalconTransparency(payload);
 }
