@@ -30,6 +30,10 @@ describe("stagedPoolConfidence", () => {
   it("returns 0 for pool older than 24h", () => {
     expect(stagedPoolConfidence(25)).toBe(0);
   });
+
+  it("clamps negative age to 0 (clock skew protection)", () => {
+    expect(stagedPoolConfidence(-5)).toBe(1);
+  });
 });
 
 describe("stagedPoolMaturityDays", () => {
@@ -372,5 +376,38 @@ describe("mergeStagedPools", () => {
     expect(result.skippedCount).toBe(1);
     // TVL $30K × confidence 1.0 = $30K < $50K threshold — no price observation
     expect(result.priceObservations.get("usdt-tether")).toBeUndefined();
+  });
+
+  it("orderbook pools skip fingerprint dedup (null tokens)", async () => {
+    const now = 1710000000;
+    const mockDb = createMockDb([{
+      pool_id: "orderbook:binance:usdt-tether",
+      stablecoin_id: "usdt-tether",
+      source: "cg_tickers",
+      chain: "orderbook",
+      protocol: "binance",
+      symbol: "USDT/USD",
+      tvl_usd: 500000,
+      volume_24h: 1000000,
+      fee_tier: null,
+      balance_ratio: null,
+      is_stable: 0,
+      base_token: null,
+      quote_token: null,
+      quote_symbol: "USD",
+      price_usd: 1.0001,
+      locked_liq_pct: null,
+      discovered_at: now - 86400 * 5,
+      refreshed_at: now,
+    }]);
+    const metrics = new Map();
+    // Fingerprint for this pool would be null (no tokens), so it should NOT be
+    // skipped by fingerprint dedup — only exact poolId match matters
+    const knownPoolAddrs = new Set<string>();
+
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolAddrs, now);
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedByFingerprintCount).toBe(0);
   });
 });
