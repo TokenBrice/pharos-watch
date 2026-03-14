@@ -210,6 +210,12 @@ export interface PriceSourceHealth {
     "defillama-contract": number;
     coinmarketcap: number;
     dexscreener: number;
+    pyth: number;
+    binance: number;
+    coinbase: number;
+    redstone: number;
+    "curve-onchain": number;
+    "dex-promoted": number;
     cached: number;
     missing: number;
   };
