@@ -598,6 +598,21 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "iShares Short Treasury Bond ETF", pct: 15, risk: "very-low" },
       { name: "Bank Demand Deposits", pct: 5, risk: "very-low" },
     ],
+    liveReservesConfig: {
+      adapter: "chainlink-nav",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "usdy-ondo",
+      display: { url: "https://ondo.finance/usdy", label: "Ondo NAV Oracle" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
+      params: {
+        oracleAddress: "0xA0219AA5B31e65Bc920B5b6DFb8EdF0988121De0",
+        tokenAddress: "0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
+        assetLabel: "Short-term U.S. Treasuries and bank deposits",
+        assetRisk: "very-low",
+        oracleMethod: "getPrice",
+      },
+    },
   }),
   usd("buidl-blackrock", "BlackRock USD", "BUIDL", "rwa-backed", "centralized", {
     llamaId: "173",
@@ -945,6 +960,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "First Digital Trust fund investments (at cost, opaque)", pct: 99, risk: "very-high" },
       { name: "Cash at depository institutions", pct: 1, risk: "very-low" },
     ],
+    liveReservesConfig: {
+      adapter: "chainlink-por",
+      version: 1,
+      semantics: "attestation-mix",
+      breakerScope: "tusd-archblock",
+      display: { url: "https://data.chain.link/feeds/ethereum/mainnet/tusd-por", label: "Chainlink PoR" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
+      params: {
+        porFeedAddress: "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5",
+        assetLabel: "USD reserves (Moore Hong Kong attested)",
+        assetRisk: "very-low",
+      },
+    },
   }),
   usd("fdusd-first-digital", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
     llamaId: "119",
@@ -3796,6 +3824,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       { name: "Short-term U.S. Treasury Bills and government agency securities (WAM ~28 days)", pct: 100, risk: "very-low" },
     ],
+    liveReservesConfig: {
+      adapter: "chainlink-nav",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "ustb-superstate",
+      display: { url: "https://superstate.com/assets/ustb", label: "Superstate Oracle" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
+      params: {
+        oracleAddress: "0x289B5036cd942e619E1Ee48670F98d214E745AAC",
+        tokenAddress: "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e",
+        assetLabel: "Short-duration U.S. government securities",
+        assetRisk: "very-low",
+      },
+    },
   }),
   usd("ousg-ondo-finance", "Ondo OUSG", "OUSG", "rwa-backed", "centralized", {
     detailProvider: "coingecko",
@@ -3827,6 +3869,21 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "BlackRock FedFund (TFDXX)", pct: 12, risk: "very-low" },
       { name: "USDC liquidity buffer", pct: 3, risk: "low", coinId: "usdc-circle" },
     ],
+    liveReservesConfig: {
+      adapter: "chainlink-nav",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "ousg-ondo",
+      display: { url: "https://ondo.finance/ousg", label: "Ondo NAV Oracle" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
+      params: {
+        oracleAddress: "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094",
+        tokenAddress: "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92",
+        assetLabel: "BlackRock BUIDL + FedFund (U.S. Treasuries)",
+        assetRisk: "very-low",
+        oracleMethod: "getPrice",
+      },
+    },
   }),
   usd("mtbill-midas", "Midas mTBILL", "mTBILL", "rwa-backed", "centralized", {
     detailProvider: "coingecko",
@@ -3857,6 +3914,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)", pct: 97, risk: "very-low" },
       { name: "USD cash buffer", pct: 3, risk: "very-low" },
     ],
+    liveReservesConfig: {
+      adapter: "chainlink-nav",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "mtbill-midas",
+      display: { url: "https://midas.app/transparency", label: "Ankura Trust Oracle" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
+      params: {
+        oracleAddress: "0x056339C044055819E8Db84E71f5f2E1F536b2E5b",
+        tokenAddress: "0xDD629E5241CbC5919847783e6C96B2De4754e438",
+        assetLabel: "BlackRock IB01 T-Bill ETF",
+        assetRisk: "very-low",
+      },
+    },
   }),
   usd("wsrusd-reservoir", "Wrapped Savings rUSD", "wsrUSD", "rwa-backed", "centralized-dependent", {
     detailProvider: "coingecko",
