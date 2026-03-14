@@ -171,7 +171,11 @@ Feature requests are posted to GitHub Discussions using the GraphQL `createDiscu
 - Auto-verification snapshot (data corrections only)
 - Footer: `*Submitted via Pharos feedback widget*`
 
-All user-supplied string fields are sanitised: newlines stripped, lengths capped.
+User-supplied strings are only partially normalized before the GitHub write:
+
+- `stablecoinName` and `pageUrl` have newlines stripped and length caps applied in `formatBody()`
+- issue titles are length-validated by the request schema / handler rules
+- `description` and `expectedValue` are otherwise preserved verbatim in the body after request validation
 
 #### Responses
 

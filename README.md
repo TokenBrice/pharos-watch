@@ -30,19 +30,25 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 
 - **Frontend:** Next.js 16 (App Router, static export), React 19, TypeScript (strict)
 - **Styling:** Tailwind CSS v4, shadcn/ui (Radix primitives)
-- **Charts:** TanStack Query, Recharts
+- **Data fetching:** TanStack Query
+- **Charts:** Recharts
 - **API:** Cloudflare Worker (cron-based data fetching + REST endpoints)
 - **Database:** Cloudflare D1 (SQLite — caches stablecoin data and stores blacklist/depeg/liquidity/yield/mint-burn histories)
 - **Hosting:** Cloudflare Pages
 
 ## Data Sources
 
-All external API calls go through the Cloudflare Worker. The frontend never calls external APIs directly.
+All external API calls and on-chain contract reads go through the Cloudflare Worker. The frontend never calls providers directly.
 
 | Source                                                                  | Purpose                                                                                                    | Refresh                           |
 | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | [DefiLlama](https://defillama.com/)                                     | Stablecoin supply, price, chain distribution, history                                                      | 15 min                            |
-| [DefiLlama Yields](https://yields.llama.fi/)                            | DEX pool TVL, volume, and composition for liquidity scoring                                                | 30 min                            |
+| [Pyth Network](https://www.pyth.network/)                               | Oracle price input for the 15-minute price consensus pipeline                                              | 15 min                            |
+| [Binance](https://www.binance.com/)                                     | Batch CEX spot prices for listed USD pairs                                                                 | 15 min                            |
+| [Coinbase Exchange](https://exchange.coinbase.com/)                     | Per-symbol CEX spot prices for listed USD pairs                                                            | 15 min                            |
+| [RedStone](https://redstone.finance/)                                   | Exact-case oracle snapshots used as an additional pricing voice                                            | 15 min                            |
+| [DefiLlama Yields](https://defillama.com/yields)                        | DEX pool TVL, volume, and composition for liquidity scoring                                                | 30 min                            |
+| [DefiLlama Protocols](https://defillama.com/protocols)                  | Protocol TVL context used by DEX liquidity scoring and fallback coverage checks                            | 30 min                            |
 | [Curve Finance API](https://api.curve.finance/)                         | Pool A-factors, per-token balances, implied prices                                                         | 30 min                            |
 | [The Graph](https://thegraph.com/)                                      | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices                        | 30 min                            |
 | [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain)           | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 20 min                            |
@@ -50,12 +56,14 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15/20/30 min) |
 | [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
+| Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as cUSD, iUSD, and crvUSD                    | 15 min                            |
 | Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Hourly                            |
 | [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains)                                                | 20 min                            |
 | [TronGrid](https://www.trongrid.io/)                                    | USDT freeze events on Tron                                                                                 | 20 min                            |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | 20 min                            |
 | [frankfurter.app](https://frankfurter.app/)                             | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN                      | 15 min                            |
-| [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies)                                            | 15 min                            |
+| [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set     | 15 min cron (rate-limited to 1/h) |
+| [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live CNH, RUB, UAH, and ARS rates for peg coverage outside the ECB set                                     | 15 min                            |
 | [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 15 min                            |
 | [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO)       | 3-month Treasury yield for yield benchmarking (risk-free rate, PYS `excessYield`)                          | Daily                             |
 | [Bluechip](https://bluechip.org/)                                       | Independent stablecoin safety ratings (SMIDGE framework)                                                   | Daily                             |
@@ -126,7 +134,7 @@ src/                              Frontend (Next.js static export)
 │   ├── status/                   Access-gated operator status panel
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
-│   └── about/                    About & methodology
+│   └── about/                    About / product overview
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
@@ -144,7 +152,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migration files (73 total)
+└── migrations/                   D1 SQL migration files (74 total)
 ```
 
 ## Documentation

@@ -41,6 +41,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 | Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input |
 | RedStone | 1 | `worker/src/lib/redstone.ts` | Per-venue oracle snapshot |
 | Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
+| Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/enrich-prices.ts` | Additional primary-consensus voice for crvUSD |
 | Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only trusted DEX rows are promoted into primary pricing |
 
 ### Consensus Rules
@@ -87,7 +88,6 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 |-------|--------|
 | `cusd-cap` | Cap `getBurnAmount(address,uint256)` |
 | `iusd-infinifi` | infiniFi `RedeemController.receiptToAsset(uint256)` |
-| `crvusd-curve` | Curve `PriceAggregator.price()` |
 
 When a live override validates successfully, the cached asset is written with:
 
@@ -95,6 +95,8 @@ When a live override validates successfully, the cached asset is written with:
 - `priceConfidence = "high"`
 
 The same registry also supports historical replay for backfills so admin rebuilds do not silently downgrade back to weaker market sources.
+
+`crvusd-curve` no longer lives in the authoritative-override registry. Its Curve `PriceAggregator.price()` quote is now injected into primary consensus as the `curve-oracle` source alongside the other live pricing voices.
 
 ---
 

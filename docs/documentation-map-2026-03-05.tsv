@@ -1,4 +1,5 @@
 path	format	description	status	note
+docs/documentation-map-2026-03-05.tsv	tsv	Legacy-named documentation surface map	current	Filename retained from the 2026-03-05 docs reorganization; contents are refreshed for later audit passes and are not a point-in-time March 5 snapshot.
 docs/	dir	Canonical product and system docs	current	Active Pharos documentation corpus.
 docs/homepage.md	md	Homepage route contract	current	Documents `/` dashboard composition, URL filter contract, and Start Here onboarding callout behavior.
 docs/start-page.md	md	Start Here route contract	current	Documents `/start/` onboarding route structure, curated route atlas, and homepage callout retirement handshake.

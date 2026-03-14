@@ -55,6 +55,12 @@ Primary documentation corpus audited against live code:
 - `docs/yield-intelligence-timeline.md`
 - `docs/yield-intelligence.md`
 
+Live documentation surfaces audited against runtime code:
+
+- `/methodology/` (`src/app/methodology/page.tsx`)
+- `src/app/methodology/methodology-shared.tsx`
+- `src/app/methodology/methodology-sections.tsx`
+
 Secondary discovered documentation/instruction files:
 
 - `AGENTS.md`
@@ -77,6 +83,7 @@ Verification surfaces used for this audit:
 
 Notes:
 
+- Inventory size: 51 files under `/docs/`, plus root `README.md`, auxiliary `AGENTS.md` / `CLAUDE.md`, and the live `/methodology/` route surface.
 - `/docs/` plus `README.md` remain the canonical product documentation surface.
 - `/agents/` is an audit workspace and archive, not canonical product documentation.
-- `docs/documentation-map-2026-03-05.tsv` was inventoried as a retained historical artifact, not rewritten as a live contract doc.
+- `docs/documentation-map-2026-03-05.tsv` is a legacy-named audit-support artifact. It is explicitly non-canonical and no longer described as a March 5 point-in-time snapshot.

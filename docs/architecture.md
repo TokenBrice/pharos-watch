@@ -76,7 +76,7 @@ Representative tree of architecture-significant files and directories. For an ex
 ```
 src/                              # Next.js frontend (static export)
 ├── app/
-│   ├── page.tsx                  # Homepage: hero, KPI summary, and interactive dashboard client
+│   ├── page.tsx                  # Homepage server shell: ItemList JSON-LD, desktop masthead, KPI summary, interactive dashboard client
 │   ├── blacklist/                # Freeze & blacklist event tracker
 │   │   ├── page.tsx
 │   │   ├── layout.tsx
@@ -152,7 +152,7 @@ src/                              # Next.js frontend (static export)
 │   │   └── client.tsx
 │   ├── telegram/                 # Telegram alerts + digest landing page
 │   │   └── page.tsx
-│   ├── about/                    # About & methodology
+│   ├── about/                    # About / product overview
 │   │   ├── page.tsx
 │   │   └── error.tsx
 │   ├── status/                   # Operator status shell; interactive only on the Access-protected ops host
@@ -237,7 +237,7 @@ src/                              # Next.js frontend (static export)
 │   ├── stablecoin-logo.tsx       # Logo component with fallback
 │   ├── coin-notice.tsx           # Coin-specific warning/info notices (detail page)
 │   ├── section-error-boundary.tsx # Section-level error boundary wrapper
-│   ├── site-header.tsx           # Site header with nav and search
+│   ├── site-header.tsx           # Homepage desktop masthead with tracked-coin, peg, chain, and pipeline coverage pills
 │   ├── bluechip-header-badge.tsx # Bluechip grade badge in header
 │   ├── dex-liquidity-card.tsx    # DEX liquidity card with trend chart (detail page)
 │   ├── liquidity-stats.tsx       # Liquidity page summary stat cards + protocol/chain breakdown bars
@@ -262,7 +262,7 @@ src/                              # Next.js frontend (static export)
 │   ├── page-error.tsx            # Shared error boundary component
 │   ├── create-page-error.tsx     # Factory for route-level error.tsx wrappers
 │   ├── feature-page-shell.tsx    # Shared page header/breadcrumb/status shell for feature routes
-│   ├── longform-scrollspy-nav.tsx # Sticky scrollspy navigator for methodology/changelog long-form pages
+│   ├── longform-scrollspy-nav.tsx # Sticky scrollspy navigator shared by methodology, stablecoin detail, and status long-form pages
 │   ├── methodology-changelog-page.tsx # Shared renderer for methodology changelog pages
 │   ├── methodology-version-card.tsx # Shared changelog version card
 │   ├── stale-data-banner.tsx     # Stale data warning banner
@@ -375,7 +375,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (73 total)
+├── migrations/                   # D1 SQL migration files (74 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata

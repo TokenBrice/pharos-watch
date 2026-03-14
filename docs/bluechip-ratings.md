@@ -81,6 +81,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 - `src/hooks/api-hooks.ts` exposes `useBluechipRatings()` with `CRON_24H`.
 - `src/components/bluechip-header-badge.tsx` renders the external Bluechip badge/link on stablecoin detail pages.
 - `src/app/compare/client.tsx` includes Bluechip data in compare-page fetch orchestration and freshness tracking.
+- `src/hooks/use-coverage-matrix-model.ts` hydrates `bluechipGrade` into `/coverage` rows via `useBluechipRatings()`.
 - `worker/src/lib/report-cards-snapshot.ts` copies the fetched grade into report-card `rawInputs.bluechipGrade` for client-side analysis surfaces.
 
 `src/lib/bluechip.ts` contains:

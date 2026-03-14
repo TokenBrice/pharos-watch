@@ -6,7 +6,7 @@ Pharos runs a Telegram bot for opt-in stablecoin alerts and channel posts.
 
 The subsystem has four moving parts:
 
-- `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret in the query string, and stores subscriber state in D1.
+- `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret from `X-Telegram-Bot-Api-Secret-Token` (with legacy `?secret=` query fallback), and stores subscriber state in D1.
 - `worker/src/cron/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, and safety-grade snapshots against cached prior snapshots, then fans out consolidated messages to matching subscribers.
 - `worker/src/cron/announce-cemetery-additions.ts` diffs the deployed `DEAD_STABLECOINS` list against a cached snapshot and posts one consolidated channel message when new cemetery entries appear after a deploy.
 - `worker/src/lib/telegram.ts` and `worker/src/lib/telegram-alerts.ts` handle Bot API sends, ticker parsing, message formatting, and HTML escaping.

@@ -64,10 +64,11 @@ Primary files:
 
 ### Selection and URL contract
 
-- Maximum selection: `MAX_COINS = 5`.
+- Maximum selection: `MAX_COMPARE_COINS = 5`.
 - URL is the source of truth for selection state.
 - Query param `coins` accepts:
   - canonical ticker-issuer IDs (primary format, e.g. `usdt-tether`)
+  - legacy DefiLlama / historical IDs that still resolve through the shared ID registry
   - lowercase symbols (legacy fallback)
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 

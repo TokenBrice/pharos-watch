@@ -278,7 +278,7 @@ Navigation active state uses `border-l-frost-blue`.
 
 ### Interactive Card Pattern
 
-Homepage explore cards use:
+`pharos-interactive-card` is the richer hover-lift utility used on the about-page feature grid. Homepage callouts currently stay on lighter `pharos-card-shell` variants without the extra interactive-card class.
 
 ```tsx
 className =
@@ -394,9 +394,9 @@ Common chart skeletons:
 ### Navigation Active vs Inactive
 
 - Active sidebar item:
-  - `border-l-[3px] border-l-frost-blue text-foreground bg-muted/50`
+  - `border-l-[3px] border-l-frost-blue bg-muted/60 text-foreground shadow-sm`
 - Inactive sidebar item:
-  - `text-muted-foreground hover:bg-muted/50 hover:text-foreground border-l-[3px] border-l-transparent`
+  - `border-l-[3px] border-l-transparent text-muted-foreground hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground`
 
 ### Focus Treatment
 

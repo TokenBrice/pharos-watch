@@ -2,7 +2,7 @@ import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
   currentVersion: "1.0",
-  changelogPath: "/methodology/#safety-scores",
+  changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
     {
       version: "1.0",

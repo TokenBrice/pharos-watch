@@ -99,4 +99,4 @@ Some public routes are documented by feature docs or the architecture doc rather
 
 ## Reference Artifact
 
-- [documentation-map-2026-03-05.tsv](./documentation-map-2026-03-05.tsv) - point-in-time documentation surface map from the March 5, 2026 reorganization; useful for audits, not the canonical source of truth
+- [documentation-map-2026-03-05.tsv](./documentation-map-2026-03-05.tsv) - legacy-named documentation surface map retained for audit support; refreshed during later audits and explicitly non-canonical
