@@ -1,8 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
-const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
-const routeMock = vi.fn(async () => new Response("{}", { status: 200 }));
+type HealthProbeStatus = "healthy" | "degraded" | "stale";
+
+function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "healthy"): Response {
+  let rawUrl = "https://api.pharos.watch";
+  if (typeof input === "string") {
+    rawUrl = input;
+  } else if (input instanceof URL) {
+    rawUrl = input.toString();
+  } else if (
+    input
+    && typeof input === "object"
+    && "url" in input
+    && typeof (input as { url: unknown }).url === "string"
+  ) {
+    rawUrl = (input as { url: string }).url;
+  }
+
+  const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
+  if (url.pathname === "/api/health") {
+    return new Response(JSON.stringify({ status: healthStatus }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  return new Response("{}", { status: 200 });
+}
+
+const fetchMock = vi.fn();
+const routeMock = vi.fn();
 const sendAlertMock = vi.fn(async () => true);
 const writeStatusProbeRunMock = vi.fn(async () => {});
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
@@ -63,8 +90,8 @@ describe("runStatusSelfCheck", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", fetchMock);
-    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
-    routeMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    fetchMock.mockImplementation(async (input: unknown) => buildProbeResponse(input));
+    routeMock.mockImplementation(async ({ url }: { url: URL }) => buildProbeResponse(url));
     buildDiscrepancyMock.mockImplementation(
       (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
         hasDivergence: true,
@@ -128,6 +155,57 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.slowestProbes).toHaveLength(2);
     expect(metadata.slowestProbes?.every((probe) => typeof probe.path === "string")).toBe(true);
     expect(metadata.slowestProbes?.every((probe) => typeof probe.latencyMs === "number")).toBe(true);
+  });
+
+  it("downgrades the probe aggregate when /api/health reports degraded in a 200 response", async () => {
+    fetchMock.mockImplementation(async (input: unknown) => buildProbeResponse(input, "degraded"));
+    buildDiscrepancyMock.mockImplementation(
+      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+        hasDivergence: false,
+        severityDelta: 0,
+        statusSeverity: 1,
+        probeSeverity: 1,
+        details: "no-divergence",
+        probeAgeSeconds: 0,
+        consecutiveDivergent: streak,
+      }),
+    );
+    evaluateStatusAndPersistMock.mockResolvedValueOnce({
+      raw: { rawOverallStatus: "degraded" },
+      effectiveStatus: "degraded",
+    });
+    updateDiscrepancyObservationMock.mockResolvedValueOnce({
+      consecutiveDivergent: 0,
+      lastAlertAt: null,
+      consecutiveProbeFailures: 1,
+      lastProbeAlertAt: null,
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[
+      writeStatusProbeRunMock.mock.calls.length - 1
+    ] as unknown[] | undefined;
+    const latestProbeWrite = latestProbeWriteCall?.[2] as {
+      status?: string;
+      failCount?: number;
+      details?: {
+        failed?: Array<{ path?: string; status?: number; error?: string | null }>;
+      };
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.probeStatus).toBe("degraded");
+    expect(metadata.failCount).toBe(1);
+    expect(latestProbeWrite.status).toBe("degraded");
+    expect(latestProbeWrite.failCount).toBe(1);
+    expect(latestProbeWrite.details?.failed).toEqual([
+      expect.objectContaining({
+        path: "/api/health",
+        status: 200,
+        error: "reported-degraded",
+      }),
+    ]);
   });
 
   it("alerts on sustained probe failures even when no status divergence exists", async () => {

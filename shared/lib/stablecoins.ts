@@ -13,6 +13,7 @@ interface StablecoinOpts {
   commodityOunces?: number;
   geckoId?: string;
   cmcSlug?: string;
+  pythFeedId?: string;
   protocolSlug?: string;
   proofOfReserves?: StablecoinMeta["proofOfReserves"];
   links?: StablecoinMeta["links"];
@@ -53,6 +54,7 @@ function coin(id: string, name: string, symbol: string, backing: StablecoinMeta[
     detailProvider: opts?.detailProvider ?? "defillama",
     geckoId: opts?.geckoId,
     cmcSlug: opts?.cmcSlug,
+    pythFeedId: opts?.pythFeedId,
     protocolSlug: opts?.protocolSlug,
     proofOfReserves: opts?.proofOfReserves,
     links: opts?.links,
@@ -93,6 +95,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("usdt-tether", "Tether", "USDT", "rwa-backed", "centralized", {
     llamaId: "1",
     geckoId: "tether",
+    pythFeedId: "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
     deploymentModel: "native-multichain",
     collateral: "U.S. Treasury bills and repurchase agreements (~92%), secured loans, gold, Bitcoin, and other investments; quarterly attestations by BDO Italia",
     pegMechanism: "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
@@ -151,6 +154,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("usdc-circle", "USD Coin", "USDC", "rwa-backed", "centralized", {
     llamaId: "2",
     geckoId: "usd-coin",
+    pythFeedId: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
     deploymentModel: "native-multichain",
     collateral: "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
     pegMechanism: "Direct 1:1 redemption through Circle",
@@ -219,6 +223,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "Ethena staking (sUSDe)", yieldType: "governance-set" },
     geckoId: "ethena-usde",
+    pythFeedId: "0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d",
     collateral: "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
     pegMechanism: "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     proofOfReserves: { type: "real-time", url: "https://app.ethena.fi/dashboards/transparency", provider: "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk" },
@@ -285,6 +290,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("usds-sky", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     llamaId: "209",
     geckoId: "usds",
+    pythFeedId: "0x77f0971af11cc8bac224917275c1bf55f2319ed5c654a1ca955c82fa2d297ea1",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Sky Savings Rate (sUSDS)", yieldType: "governance-set" },
     governanceQuality: "dao-governance",
@@ -348,6 +354,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("dai-makerdao", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     llamaId: "5",
     geckoId: "dai",
+    pythFeedId: "0xb0948a5e5313200c632b51bb5ca32f6de0d36e9950a942d19751e833f70dabfd",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Dai Savings Rate (sDAI)", yieldType: "governance-set" },
     governanceQuality: "dao-governance",
@@ -387,6 +394,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("pyusd-paypal", "PayPal USD", "PYUSD", "rwa-backed", "centralized", {
     llamaId: "120",
     geckoId: "paypal-usd",
+    pythFeedId: "0xc1da1b73d7f01e7ddd54b3766cf7fcd644395ad14f70aa706ec5384c59e76692",
     deploymentModel: "third-party-bridge",
     collateral: "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
     pegMechanism: "Direct 1:1 redemption through PayPal/Paxos",
@@ -780,6 +788,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("gho-aave", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     llamaId: "118",
     geckoId: "gho",
+    pythFeedId: "0x2a0e948f637a8c251d9f06055e72eb4b3880dd57848bbdb02993c8165d7df4ee",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Aave Safety Module (sGHO)", yieldType: "governance-set" },
     deploymentModel: "third-party-bridge",
@@ -838,6 +847,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("tusd-trueusd", "TrueUSD", "TUSD", "rwa-backed", "centralized", {
     llamaId: "7",
     geckoId: "true-usd",
+    pythFeedId: "0x433faaa801ecdb6618e3897177a118b273a8e18cc3ff545aadfc207d58d028f7",
     deploymentModel: "native-multichain",
     collateral: "U.S. dollars held in segregated accounts at regulated financial institutions, attested daily by Moore Hong Kong",
     pegMechanism: "Direct 1:1 redemption through Techteryx; minting controlled by Chainlink Proof of Reserve feed preventing supply from exceeding attested reserves",
@@ -865,6 +875,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("fdusd-first-digital", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
     llamaId: "119",
     geckoId: "first-digital-usd",
+    pythFeedId: "0xccdc1a08923e2e4f4b1e6ea89de6acbc5fe1948e9706f5604b8cb50bc1ed3979",
     deploymentModel: "native-multichain",
     collateral: "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
     pegMechanism: "Direct 1:1 redemption through FD121 (BVI) Limited; reserves custodied by First Digital Trust Limited",
@@ -918,6 +929,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   eur("eurc-circle", "EURC", "EURC", "rwa-backed", "centralized", {
     llamaId: "50",
     geckoId: "euro-coin",
+    pythFeedId: "0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c",
     deploymentModel: "native-multichain",
     collateral: "Euro-denominated cash and short-term euro government securities held in segregated, bankruptcy-remote accounts at regulated financial institutions in the EEA",
     pegMechanism: "Direct 1:1 redemption through Circle Internet Financial Europe SAS (licensed EMI under MiCA); Circle Mint enables institutional mint/redeem at zero fees with near-instant settlement",
@@ -1108,6 +1120,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("frax-frax", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
     llamaId: "6",
     geckoId: "frax",
+    pythFeedId: "0x735f591e4fed988cd38df74d8fcedecf2fe8d9111664e0fd500db9aa78b316b1",
     deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
     collateral: "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",

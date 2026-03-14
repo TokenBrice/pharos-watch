@@ -290,6 +290,7 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
    - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising the real handler/auth path
    - explicit non-default `SELF_URL`: real HTTPS `fetch()` probes with a 10s timeout per endpoint
    - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency
+   - `/api/health` is parsed semantically: a `200` response with body `status: degraded|stale` downgrades the synthetic probe instead of counting as healthy-on-transport
    - cache-backed bootstrap probes (`/api/usds-status`, `/api/bluechip-ratings`, `/api/yield-rankings`) are treated as bootstrap misses rather than hard failures only while their producing cron has never recorded a run
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.

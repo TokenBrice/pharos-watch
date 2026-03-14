@@ -1,0 +1,71 @@
+/**
+ * Fetch stablecoin prices via Curve StableSwap get_dy() on-chain calls.
+ *
+ * get_dy(i, j, dx) simulates swapping dx of token i for token j,
+ * returning the output amount. The ratio output/input gives implied price.
+ *
+ * Curve StableSwap amplification factor (A=500-5000) makes manipulation
+ * extremely expensive — these prices are among the most reliable on-chain signals.
+ *
+ * Uses the existing `fetchEvmCallHexAtBlock()` from `evm-rpc.ts` which handles
+ * chain registry resolution and fallback RPCs.
+ */
+
+import { fetchEvmCallHexAtBlock } from "./evm-rpc";
+
+export interface CurvePoolConfig {
+  stablecoinId: string;
+  poolAddress: string;
+  inputIndex: number;    // coin index of the reference asset (e.g., USDC=1 in 3pool)
+  outputIndex: number;   // coin index of the target stablecoin
+  inputDecimals: number;
+  outputDecimals: number;
+  chain: string;
+}
+
+// get_dy(int128,int128,uint256) selector
+const GET_DY_SELECTOR = "0x5e0d443f";
+
+/**
+ * Fetch implied prices via Curve get_dy for a batch of pool configurations.
+ * Uses fetchEvmCallHexAtBlock which resolves RPC URLs via chain-registry.ts.
+ */
+export async function fetchCurveOnchainPrices(
+  configs: CurvePoolConfig[],
+  signal?: AbortSignal,
+): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+
+  for (const config of configs) {
+    try {
+      const inputAmount = BigInt(10) ** BigInt(config.inputDecimals); // 1 unit
+      const calldata = encodeGetDy(config.inputIndex, config.outputIndex, inputAmount);
+
+      const resultHex = await fetchEvmCallHexAtBlock(
+        config.chain, config.poolAddress, calldata, "latest", { signal },
+      );
+      if (!resultHex) continue;
+
+      const outputRaw = BigInt(resultHex);
+      const outputFloat = Number(outputRaw) / Math.pow(10, config.outputDecimals);
+      const inputFloat = Number(inputAmount) / Math.pow(10, config.inputDecimals);
+      const impliedPrice = outputFloat / inputFloat;
+
+      if (impliedPrice > 0 && impliedPrice < 100) {
+        results.set(config.stablecoinId, impliedPrice);
+      }
+    } catch (err) {
+      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+      console.warn(`[curve-onchain] get_dy failed for ${config.stablecoinId}:`, err);
+    }
+  }
+
+  return results;
+}
+
+function encodeGetDy(i: number, j: number, dx: bigint): string {
+  const iHex = BigInt(i).toString(16).padStart(64, "0");
+  const jHex = BigInt(j).toString(16).padStart(64, "0");
+  const dxHex = dx.toString(16).padStart(64, "0");
+  return `${GET_DY_SELECTOR}${iHex}${jHex}${dxHex}`;
+}

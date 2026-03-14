@@ -1614,7 +1614,9 @@ export function MethodologySections() {
           <p>
             Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets,
             low-confidence primary prices, and extreme moves, plus a per-coin peg score that penalizes time off peg,
-            event severity, active depegs, and unstable event spread.
+            event severity, active depegs, and unstable event spread. Pending depeg confirmation checks off-chain
+            sources (CoinGecko or DefiLlama), CEX tickers (Binance), and DEX prices before promoting or rejecting
+            candidates.
           </p>
           <p>
             DEX cross-validation uses explicit trust gates. Detection and pending confirmation only trust fresh DEX rows
@@ -1973,12 +1975,13 @@ export function MethodologySections() {
                   7-day changes in liquidity score and TVL
                 </li>
                 <li>
-                  <span className="text-foreground">Price Confidence (0.15)</span> &mdash; oracle/data source failures,
-                  mapping confidence levels to stress values
+                  <span className="text-foreground">Price Confidence (0.15)</span> &mdash; N-source consensus failures
+                  across CoinGecko, DefiLlama, Pyth, Binance, Coinbase, RedStone, Curve on-chain, and DEX prices;
+                  maps confidence levels (high/single-source/low/fallback) to stress values
                 </li>
                 <li>
                   <span className="text-foreground">Cross-Source Divergence (0.15)</span> &mdash; fragmented pricing
-                  between primary price, DEX price, and peg reference
+                  between multi-source consensus price, DEX price, and peg reference
                 </li>
                 <li>
                   <span className="text-foreground">Blacklist Activity (0.10)</span> &mdash; issuer emergency freeze

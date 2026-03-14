@@ -54,6 +54,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `ALERT_WEBHOOK_URL` | string | No | Discord/Slack error alerts |
 | `ANTHROPIC_API_KEY` | string | No | Daily digest LLM generation |
 | `CMC_API_KEY` | string | No | Price fallback (CoinMarketCap) |
+| `OPENEXCHANGERATES_API_KEY` | string | No | Real-time FX rate cross-validation (Open Exchange Rates) |
 | `COINGECKO_API_KEY` | string | No | Price enrichment, depeg confirmation |
 | `GITHUB_PAT` | string | No | Feedback → GitHub Issues/Discussions |
 | `GITHUB_REPO_NODE_ID` | string | No | Feature request → GitHub Discussions |
@@ -477,6 +478,12 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `TREASURY_RATES` | `treasury-rates` | `fetch-tbill-rate` |
 | `ETHERSCAN` | `etherscan` | `sync-blacklist` |
 | `ALCHEMY` | `alchemy` | `sync-mint-burn` |
+| `PYTH_PRICES` | `pyth-prices` | `enrich-prices` primary consensus |
+| `BINANCE_PRICES` | `binance-prices` | `enrich-prices` primary consensus |
+| `COINBASE_PRICES` | `coinbase-prices` | `enrich-prices` primary consensus |
+| `REDSTONE_PRICES` | `redstone-prices` | `enrich-prices` primary consensus |
+| `CURVE_ONCHAIN` | `curve-onchain` | `enrich-prices` primary consensus |
+| `FX_REALTIME` | `fx-realtime` | `sync-fx-rates` real-time FX cross-validation |
 | `TWITTER_API` | `twitter-api` | `daily-digest` social posting |
 | `TELEGRAM_API` | `telegram-api` | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
 | Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured source or exact shared-source cluster |

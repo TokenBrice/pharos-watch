@@ -5,6 +5,7 @@ import { shouldAttemptFetch, recordOutcome, recordOutcomeSafe } from "../lib/cir
 import { getCache, setCache } from "../lib/db-cache";
 import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { PriceConfidence } from "@shared/types";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   buildPriceValidationContext,
   buildPriceReasonablenessOptions,
@@ -13,6 +14,13 @@ import {
   PRICE_BOUNDS,
   type PriceValidationReferences,
 } from "../lib/price-validation";
+import { fetchPythPrices } from "../lib/pyth";
+import { fetchBinancePrices, fetchCoinbasePrices } from "../lib/cex-tickers";
+import { fetchRedstonePrices } from "../lib/redstone";
+import { loadDexPriceRows, isTrustedDexPriceRow } from "../lib/depeg-helpers";
+import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
+import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
+import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
 
@@ -143,18 +151,41 @@ export async function fetchPrimaryPrices(
 
   const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS);
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
+  const pythAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES);
+  const binanceAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
+  const coinbaseAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES);
+  const redstoneAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES);
+  const curveAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN);
 
-  if (!dlAllowed && !cgAllowed) {
-    console.warn("[primary-prices] Both DL coins and CG prices circuits are open, skipping");
+  if (!dlAllowed && !cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
+    console.warn("[primary-prices] All primary price circuits are open, skipping");
     return { results, stats, cgPrices: new Map() };
   }
 
-  // Batch fetch both sources in parallel
+  // Batch fetch sources in parallel
   const geckoIds = candidates.map((a) => a.geckoId!);
   const BATCH_SIZE = 250; // CG supports 250 IDs per call
 
   const dlPrices = new Map<string, number>();
   const cgPrices = new Map<string, number>();
+
+  // Build Pyth feed map from tracked stablecoin metadata
+  const metaById = new Map(TRACKED_STABLECOINS.map((m) => [m.id, m]));
+  const pythFeedIds = new Map<string, string>();
+  for (const asset of candidates) {
+    const meta = metaById.get(asset.id);
+    if (meta?.pythFeedId) {
+      pythFeedIds.set(asset.id, meta.pythFeedId);
+    }
+  }
+  const pythPrices = new Map<string, { price: number; confidenceBps: number }>();
+  const binancePrices = new Map<string, number>();
+  const coinbasePrices = new Map<string, number>();
+  const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number }>();
+  const curvePrices = new Map<string, number>();
+
+  // Symbols for Coinbase/RedStone sequential fetch
+  const coinbaseSymbols = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
 
   const fetches: Promise<void>[] = [];
 
@@ -229,51 +260,176 @@ export async function fetchPrimaryPrices(
     );
   }
 
+  if (pythAllowed && pythFeedIds.size > 0) {
+    fetches.push(
+      (async () => {
+        try {
+          const results = await fetchPythPrices(pythFeedIds, signal);
+          for (const [coinId, result] of results) {
+            pythPrices.set(coinId, { price: result.price, confidenceBps: result.confidenceBps });
+          }
+          await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] Pyth Hermes API failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, false);
+        }
+      })(),
+    );
+  }
+
+  if (binanceAllowed) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchBinancePrices(signal);
+          for (const [symbol, price] of prices) binancePrices.set(symbol, price);
+          await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] Binance ticker failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, false);
+        }
+      })(),
+    );
+  }
+
+  if (coinbaseAllowed) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchCoinbasePrices(coinbaseSymbols, signal);
+          for (const [symbol, price] of prices) coinbasePrices.set(symbol, price);
+          await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] Coinbase ticker failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, false);
+        }
+      })(),
+    );
+  }
+
+  if (redstoneAllowed) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchRedstonePrices(coinbaseSymbols, signal);
+          for (const [symbol, result] of prices) {
+            redstonePrices.set(symbol, {
+              price: result.price,
+              venueCount: result.venueCount,
+              venueAgreementPct: result.venueAgreementPct,
+            });
+          }
+          await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] RedStone API failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, false);
+        }
+      })(),
+    );
+  }
+
+  if (curveAllowed && CURVE_POOL_CONFIGS.length > 0) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal);
+          for (const [id, price] of prices) curvePrices.set(id, price);
+          await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] Curve on-chain failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, false);
+        }
+      })(),
+    );
+  }
+
   await Promise.all(fetches);
   throwIfAborted(signal);
 
-  // Cross-validate per asset
+  // Load DEX prices for promotion into primary consensus
+  const nowSec = Math.floor(Date.now() / 1000);
+  const dexRows = await loadDexPriceRows(db);
+
+  // N-source consensus per asset
   const DIVERGENCE_THRESHOLD_BPS = 50;
 
   for (const asset of candidates) {
     const gId = asset.geckoId!;
     const dl = dlPrices.get(gId) ?? null;
     const cg = cgPrices.get(gId) ?? null;
+    const pyth = pythPrices.get(asset.id);
+
+    const sources: SourcePrice[] = [];
+    if (cg != null) sources.push({ source: "coingecko", price: cg, weight: 2 });
+    if (dl != null) sources.push({ source: "defillama", price: dl, weight: 1 });
+    if (pyth != null) sources.push({ source: "pyth", price: pyth.price, weight: 2, metadata: { confidenceBps: pyth.confidenceBps } });
+    const binancePrice = binancePrices.get(asset.symbol.toUpperCase());
+    if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2 });
+    const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
+    if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2 });
+    const redstoneResult = redstonePrices.get(asset.symbol.toUpperCase());
+    if (redstoneResult != null) {
+      sources.push({
+        source: "redstone",
+        price: redstoneResult.price,
+        weight: 1,
+        metadata: { venueCount: redstoneResult.venueCount, venueAgreementPct: redstoneResult.venueAgreementPct },
+      });
+    }
+    const curvePrice = curvePrices.get(asset.id);
+    if (curvePrice != null) sources.push({ source: "curve-onchain", price: curvePrice, weight: 3 });
+    const dexRow = dexRows.get(asset.id);
+    if (dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg")) {
+      sources.push({
+        source: "dex-promoted",
+        price: dexRow.dex_price_usd,
+        weight: 1,
+        metadata: { poolCount: dexRow.source_pool_count, tvl: dexRow.source_total_tvl },
+      });
+    }
+
     stats.attempted++;
 
-    if (dl != null && cg != null) {
-      const mid = (dl + cg) / 2;
-      const divergenceBps = mid > 0 ? Math.abs(dl - cg) / mid * 10_000 : Infinity;
+    const context = buildPriceValidationContext({
+      stablecoinId: String(asset.id),
+      pegType: asset.pegType,
+      navToken: asset.navToken,
+      commodityOunces: asset.commodityOunces,
+    });
+    const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
+    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS);
 
-      if (divergenceBps <= DIVERGENCE_THRESHOLD_BPS) {
-        // Both agree — high confidence, prefer CG (primary)
-        results.set(asset.id, { price: cg, source: "coingecko+defillama", confidence: "high", dlPrice: dl, cgPrice: cg });
-        stats.high++;
-      } else {
-        const context = buildPriceValidationContext({
-          stablecoinId: String(asset.id),
-          pegType: asset.pegType,
-          navToken: asset.navToken,
-          commodityOunces: asset.commodityOunces,
-        });
-        const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
-        // When diverging: use closer-to-reference, default to CG (primary)
-        const chosen = pegRef != null ? (Math.abs(dl - pegRef) <= Math.abs(cg - pegRef) ? dl : cg) : cg;
-        const chosenSource = chosen === dl ? "defillama" : "coingecko";
-        results.set(asset.id, { price: chosen, source: chosenSource, confidence: "low", dlPrice: dl, cgPrice: cg });
-        stats.low++;
-        stats.divergences.push({ id: asset.id, symbol: asset.symbol, dlPrice: dl, cgPrice: cg, bps: Math.round(divergenceBps) });
-      }
-    } else if (dl != null) {
-      results.set(asset.id, { price: dl, source: "defillama", confidence: "single-source", dlPrice: dl, cgPrice: null });
-      stats.singleSource++;
-      stats.dlOnly++;
-    } else if (cg != null) {
-      results.set(asset.id, { price: cg, source: "coingecko", confidence: "single-source", dlPrice: null, cgPrice: cg });
-      stats.singleSource++;
-      stats.cgOnly++;
+    if (!consensus) continue; // no sources
+
+    results.set(asset.id, {
+      price: consensus.price,
+      source: consensus.source,
+      confidence: consensus.confidence,
+      dlPrice: dl ?? null,
+      cgPrice: cg ?? null,
+    });
+
+    if (consensus.confidence === "high") stats.high++;
+    else if (consensus.confidence === "single-source") stats.singleSource++;
+    else stats.low++;
+
+    // Track single-source breakdown
+    if (consensus.confidence === "single-source") {
+      if (consensus.source === "defillama") stats.dlOnly++;
+      else if (consensus.source === "coingecko") stats.cgOnly++;
     }
-    // else: both missing — skip, falls through to legacy enrichment
+
+    // Track divergences for observability
+    if (consensus.confidence === "low" && dl != null && cg != null) {
+      const mid = (dl + cg) / 2;
+      const bps = mid > 0 ? Math.round(Math.abs(dl - cg) / mid * 10_000) : 0;
+      stats.divergences.push({ id: asset.id, symbol: asset.symbol, dlPrice: dl, cgPrice: cg, bps });
+    }
   }
 
   if (stats.divergences.length > 0) {
@@ -452,98 +608,90 @@ export async function enrichMissingPrices(
       }
     }
 
-    // ── Pass 2: CoinMarketCap API (fallback for assets with cmcSlug) ──
+    // ── Pass 2: CoinMarketCap listings batch (covers all CMC-listed stablecoins) ──
+    const missingAfterPass1b = assets
+      .map((a, i) => ({ asset: a, index: i }))
+      .filter((m) => hasMissingPrice(m.asset));
+
     const cmcAllowed =
       cmcApiKey != null && db != null
         ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.CMC_PRICES)
         : true;
-    if (cmcApiKey && cmcAllowed) {
-      const cmcCandidates = assets
-        .map((a, i) => ({ asset: a, index: i }))
-        .filter((m) => hasMissingPrice(m.asset) && m.asset.cmcSlug);
-
-      if (cmcCandidates.length > 0) {
-        // Rate limit: max 1 CMC call per hour, tracked via cache table
-        let shouldCall = true;
-        if (db) {
-          try {
-            const row = await getCache(db, "cmc_last_fetch");
-            if (row && (Math.floor(Date.now() / 1000) - row.updatedAt) < 3600) {
-              shouldCall = false;
-            }
-          } catch (e) {
-            console.warn("[enrich-prices] CMC rate-limit check failed, proceeding with call:", e);
+    if (cmcApiKey && cmcAllowed && missingAfterPass1b.length > 0) {
+      // Rate limit: max 1 CMC call per hour, tracked via cache table
+      let shouldCall = true;
+      if (db) {
+        try {
+          const row = await getCache(db, "cmc_last_fetch");
+          if (row && (Math.floor(Date.now() / 1000) - row.updatedAt) < 3600) {
+            shouldCall = false;
           }
+        } catch (e) {
+          console.warn("[enrich-prices] CMC rate-limit check failed, proceeding with call:", e);
         }
+      }
 
-        if (shouldCall) {
-          try {
-            const slugs = cmcCandidates.map((m) => m.asset.cmcSlug!).join(",");
-            const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
-            const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
-            const cmcRes = await fetchWithRetry(
-              `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?slug=${slugs}`,
-              {
-                headers: {
-                  "X-CMC_PRO_API_KEY": cmcApiKey,
-                  "Accept": "application/json",
-                  "User-Agent": USER_AGENT,
-                },
-                signal: cmcSignal,
+      if (shouldCall) {
+        try {
+          const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
+          const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
+          const cmcRes = await fetchWithRetry(
+            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?cryptocurrency_type=stablecoin&limit=200&convert=USD",
+            {
+              headers: {
+                "X-CMC_PRO_API_KEY": cmcApiKey,
+                Accept: "application/json",
+                "User-Agent": USER_AGENT,
               },
-              CMC_MAX_RETRIES,
-              { timeoutMs: CMC_REQUEST_TIMEOUT_MS },
-            );
+              signal: cmcSignal,
+            },
+            CMC_MAX_RETRIES,
+            { timeoutMs: CMC_REQUEST_TIMEOUT_MS },
+          );
 
-            if (cmcRes && cmcRes.ok) {
-              const cmcData = (await cmcRes.json()) as {
-                data: Record<string, {
-                  slug: string;
-                  quote: { USD: { price: number; market_cap: number } };
-                }>;
-              };
+          if (cmcRes && cmcRes.ok) {
+            const cmcData = (await cmcRes.json()) as {
+              data: Array<{ symbol: string; quote: { USD: { price: number } } }>;
+            };
 
-              // Build slug → CMC entry map (response is keyed by numeric CMC ID)
-              const bySlug = new Map<string, { price: number; marketCap: number }>();
-              for (const entry of Object.values(cmcData.data)) {
-                const usd = entry.quote?.USD;
-                if (usd?.price != null) {
-                  bySlug.set(entry.slug, { price: usd.price, marketCap: usd.market_cap ?? 0 });
-                }
+            const cmcBySymbol = new Map<string, number>();
+            for (const entry of cmcData.data) {
+              const price = entry.quote?.USD?.price;
+              if (price != null && price > 0) {
+                cmcBySymbol.set(entry.symbol.toUpperCase(), price);
               }
-
-              for (const m of cmcCandidates) {
-                const cmcEntry = bySlug.get(m.asset.cmcSlug!);
-                if (!cmcEntry) continue;
-                if (isReasonablePrice(
-                  cmcEntry.price,
-                  m.asset.pegType as string | undefined,
-                  fxRates,
-                  buildPriceReasonablenessOptions(m.asset),
-                )) {
-                  applyResolvedPrice(assets[m.index], cmcEntry.price, "coinmarketcap", "fallback");
-                  passCmcCount++;
-                }
-              }
-
-              // Update rate-limit timestamp
-              if (db) {
-                try {
-                  await setCache(db, "cmc_last_fetch", "1");
-                } catch (e) {
-                  console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", e);
-                }
-              }
-              if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
-            } else {
-              console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
-              if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
             }
-          } catch (err) {
-            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            console.warn("[enrich] CMC API call failed:", err);
+
+            for (const m of missingAfterPass1b) {
+              const cmcPrice = cmcBySymbol.get(m.asset.symbol.toUpperCase());
+              if (cmcPrice != null && isReasonablePrice(
+                cmcPrice,
+                m.asset.pegType as string | undefined,
+                fxRates,
+                buildPriceReasonablenessOptions(m.asset),
+              )) {
+                applyResolvedPrice(assets[m.index], cmcPrice, "coinmarketcap", "fallback");
+                passCmcCount++;
+              }
+            }
+
+            // Update rate-limit timestamp
+            if (db) {
+              try {
+                await setCache(db, "cmc_last_fetch", "1");
+              } catch (e) {
+                console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", e);
+              }
+            }
+            if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
+          } else {
+            console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
             if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
           }
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[enrich] CMC API call failed:", err);
+          if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
         }
       }
     } else if (cmcApiKey && !cmcAllowed) {

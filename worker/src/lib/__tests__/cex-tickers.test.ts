@@ -1,0 +1,43 @@
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { fetchBinancePrices, fetchCoinbasePrices } from "../cex-tickers";
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("fetchBinancePrices", () => {
+  it("returns stablecoin/USD prices from ticker endpoint", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([
+        { symbol: "USDTUSD", price: "0.9999" },
+        { symbol: "USDCUSD", price: "1.0001" },
+        { symbol: "BTCUSD", price: "65000" },
+      ]),
+    }));
+    const results = await fetchBinancePrices();
+    expect(results.get("USDT")).toBeCloseTo(0.9999, 4);
+    expect(results.get("USDC")).toBeCloseTo(1.0001, 4);
+    expect(results.has("BTC")).toBe(false);
+  });
+
+  it("returns empty map on failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+    const results = await fetchBinancePrices();
+    expect(results.size).toBe(0);
+  });
+});
+
+describe("fetchCoinbasePrices", () => {
+  it("returns prices for listed stablecoin products", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/products/USDT-USD/ticker"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "0.9998" }) });
+      if (url.includes("/products/USDC-USD/ticker"))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "1.0000" }) });
+      return Promise.resolve({ ok: false, status: 404 });
+    }));
+    const results = await fetchCoinbasePrices(["USDT", "USDC", "XYZFAKE"]);
+    expect(results.get("USDT")).toBeCloseTo(0.9998, 4);
+    expect(results.get("USDC")).toBeCloseTo(1.0, 4);
+    expect(results.has("XYZFAKE")).toBe(false);
+  });
+});

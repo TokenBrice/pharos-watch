@@ -830,6 +830,16 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     status = "degraded";
   }
 
+  function mapSourceToBucket(
+    source: string,
+    dist: PriceSourceHealth["sourceDistribution"],
+  ): keyof PriceSourceHealth["sourceDistribution"] | null {
+    if (source in dist) return source as keyof typeof dist;
+    const firstSource = source.split("+")[0];
+    if (firstSource in dist) return firstSource as keyof typeof dist;
+    return null;
+  }
+
   const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
   const finalSourceDistribution: PriceSourceHealth["sourceDistribution"] = {
     "coingecko+defillama": 0,
@@ -839,6 +849,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     "defillama-contract": 0,
     coinmarketcap: 0,
     dexscreener: 0,
+    pyth: 0,
+    binance: 0,
+    coinbase: 0,
+    redstone: 0,
+    "curve-onchain": 0,
+    "dex-promoted": 0,
     cached: 0,
     missing: 0,
   };
@@ -856,8 +872,9 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     }
 
     const source = asset.priceSource;
-    if (source && source in finalSourceDistribution) {
-      finalSourceDistribution[source as keyof typeof finalSourceDistribution]++;
+    const bucket = source ? mapSourceToBucket(source, finalSourceDistribution) : null;
+    if (bucket) {
+      finalSourceDistribution[bucket]++;
     }
 
     const confidence = asset.priceConfidence;

@@ -210,6 +210,54 @@ describe("authoritative-price-sources", () => {
     );
   });
 
+  it("returns a live crvUSD override from the PriceAggregator price() call", async () => {
+    // price() returns crvUSD price scaled by 1e18: 0.9996 * 1e18 = 999600000000000000
+    const crvUsdHex =
+      "0x" + BigInt("999600000000000000").toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(crvUsdHex);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "crvusd-curve",
+        name: "crvUSD",
+        symbol: "crvUSD",
+        circulating: { peggedUSD: 400_000_000 },
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7",
+      "0xa035b1fe",
+      "latest",
+      expect.objectContaining({
+        extraRpcUrls: ["https://ethereum-rpc.publicnode.com"],
+      }),
+    );
+
+    expect(overrides.get("crvusd-curve")).toEqual({
+      price: 0.9996,
+      source: "protocol-redeem",
+      confidence: "high",
+    });
+  });
+
+  it("returns null for crvUSD when RPC returns null", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "crvusd-curve",
+        name: "crvUSD",
+        symbol: "crvUSD",
+        circulating: { peggedUSD: 400_000_000 },
+      },
+    ]);
+
+    expect(overrides.has("crvusd-curve")).toBe(false);
+  });
+
   it("preserves existing backfill rows when authoritative history coverage is too low", async () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(22_874_100);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);

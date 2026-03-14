@@ -22,6 +22,7 @@ interface ProbeResult {
   ok: boolean;
   error?: string;
   bootstrapMiss?: boolean;
+  semanticStatus?: StatusLevel;
 }
 
 interface ProbeLatencySummary {
@@ -40,12 +41,18 @@ const CRITICAL_PROBE_PATHS = [
 ];
 
 const DEFAULT_SELF_URL = "https://api.pharos.watch";
+const HEALTH_PROBE_PATH = "/api/health";
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_FAILURE_ALERT_THRESHOLD = 3;
 const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = {
   "/api/usds-status": "sync-usds-status",
   "/api/bluechip-ratings": "sync-bluechip",
   "/api/yield-rankings": "sync-yield-data",
+};
+const PROBE_STATUS_SEVERITY: Record<StatusLevel, number> = {
+  healthy: 0,
+  degraded: 1,
+  stale: 2,
 };
 
 export async function isBootstrapCacheMiss(
@@ -116,6 +123,10 @@ function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyM
   return "stale";
 }
 
+function maxProbeStatus(left: StatusLevel, right: StatusLevel): StatusLevel {
+  return PROBE_STATUS_SEVERITY[left] >= PROBE_STATUS_SEVERITY[right] ? left : right;
+}
+
 function resolveProbeBaseUrl(selfUrl?: string): URL {
   const trimmed = selfUrl?.trim();
   if (!trimmed) {
@@ -139,6 +150,43 @@ async function cancelResponseBody(response: Response): Promise<void> {
     await response.body?.cancel();
   } catch {
     // Non-blocking: some runtimes may expose already-consumed or non-cancelable bodies.
+  }
+}
+
+async function evaluateProbeResponse(
+  path: string,
+  response: Response,
+): Promise<Pick<ProbeResult, "ok" | "error" | "semanticStatus">> {
+  const httpOk = response.status >= 200 && response.status < 300;
+  if (path !== HEALTH_PROBE_PATH || !httpOk) {
+    await cancelResponseBody(response);
+    return { ok: httpOk };
+  }
+
+  try {
+    const payload = await response.json() as { status?: unknown };
+    if (payload.status === "healthy") {
+      return {
+        ok: true,
+        semanticStatus: "healthy",
+      };
+    }
+    if (payload.status === "degraded" || payload.status === "stale") {
+      return {
+        ok: false,
+        error: `reported-${payload.status}`,
+        semanticStatus: payload.status,
+      };
+    }
+    return {
+      ok: false,
+      error: "invalid-health-status",
+    };
+  } catch {
+    return {
+      ok: false,
+      error: "invalid-health-payload",
+    };
   }
 }
 
@@ -169,12 +217,14 @@ async function probePathExternally(
       signal: timeoutController.signal,
     });
     const status = res.status;
-    await cancelResponseBody(res);
+    const semantic = await evaluateProbeResponse(path, res);
     return {
       path,
       status,
       latencyMs: Math.max(0, Date.now() - startedAt),
-      ok: status >= 200 && status < 300,
+      ok: semantic.ok,
+      ...(semantic.error ? { error: semantic.error } : {}),
+      ...(semantic.semanticStatus ? { semanticStatus: semantic.semanticStatus } : {}),
     };
   } catch (error) {
     return {
@@ -228,13 +278,25 @@ async function probePathInternally(
     }
     const status = response.status;
     const bootstrapMiss = await isBootstrapCacheMiss(db, path, status);
-    await cancelResponseBody(response);
+    if (bootstrapMiss) {
+      await cancelResponseBody(response);
+      return {
+        path,
+        status,
+        latencyMs: Math.max(0, Date.now() - startedAt),
+        ok: true,
+        error: "bootstrap-cache-miss",
+        bootstrapMiss: true,
+      };
+    }
+    const semantic = await evaluateProbeResponse(path, response);
     return {
       path,
       status,
       latencyMs: Math.max(0, Date.now() - startedAt),
-      ok: bootstrapMiss || (status >= 200 && status < 300),
-      ...(bootstrapMiss ? { error: "bootstrap-cache-miss", bootstrapMiss: true } : {}),
+      ok: semantic.ok,
+      ...(semantic.error ? { error: semantic.error } : {}),
+      ...(semantic.semanticStatus ? { semanticStatus: semantic.semanticStatus } : {}),
     };
   } catch (error) {
     return {
@@ -275,7 +337,14 @@ export async function runStatusSelfCheck(
   const latencySummary = buildLatencySummary(probes);
   const slowestProbes = getSlowestProbes(probes);
   const p95LatencyMs = latencySummary.p95Ms;
-  const probeStatus = classifyProbeStatus(sampleCount, failCount, p95LatencyMs);
+  const semanticProbeStatus = probes.reduce<StatusLevel>(
+    (worst, probe) => probe.semanticStatus ? maxProbeStatus(worst, probe.semanticStatus) : worst,
+    "healthy",
+  );
+  const probeStatus = maxProbeStatus(
+    classifyProbeStatus(sampleCount, failCount, p95LatencyMs),
+    semanticProbeStatus,
+  );
 
   await writeStatusProbeRun(db, now, {
     status: probeStatus,

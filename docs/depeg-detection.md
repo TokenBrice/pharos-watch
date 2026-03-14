@@ -174,6 +174,13 @@ Age checks:
 - Agrees if deviation >= `secondaryBar` (50% of primary threshold)
 - Non-fatal: if fetch fails, the off-chain agreement remains `null`
 
+**CEX ticker check:**
+
+- Fetches Binance spot ticker for the coin's symbol (e.g., `USDTUSDC`) as an additional secondary confirmation source
+- Only attempted for coins with known Binance trading pairs
+- Agrees if deviation >= `secondaryBar`
+- Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`
+
 **DEX check:**
 
 - Read from `dex_prices` table (same data as Stage 1)
@@ -182,14 +189,15 @@ Age checks:
 
 ### Decision Matrix
 
-| Off-chain agrees | DEX agrees | Action |
-|------------------|-----------|--------|
-| true | any | PROMOTE to `depeg_events` |
-| any | true | PROMOTE to `depeg_events` |
-| false | false | REJECT (both disagree) |
-| false | null | REJECT (off-chain check disagrees, no DEX) |
-| null | false | Keep pending (retry next cycle) |
-| null | null | Keep pending (retry next cycle) |
+| Off-chain agrees | CEX agrees | DEX agrees | Action |
+|------------------|-----------|-----------|--------|
+| true | any | any | PROMOTE to `depeg_events` |
+| any | true | any | PROMOTE to `depeg_events` |
+| any | any | true | PROMOTE to `depeg_events` |
+| false | false | false | REJECT (all disagree) |
+| false | false/null | null | REJECT (off-chain + CEX disagree, no DEX) |
+| null | null | false | Keep pending (retry next cycle) |
+| null | null | null | Keep pending (retry next cycle) |
 
 Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, peak = worst of current vs `first_seen`, then deletes from `depeg_pending`.
 
