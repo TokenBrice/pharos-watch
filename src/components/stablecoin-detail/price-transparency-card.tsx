@@ -14,6 +14,7 @@ const KNOWN_SOURCES = [
   { key: "coinbase", label: "Coinbase" },
   { key: "redstone", label: "RedStone" },
   { key: "curve-onchain", label: "Curve on-chain" },
+  { key: "curve-oracle", label: "Curve oracle" },
   { key: "dex-promoted", label: "DEX prices" },
 ] as const;
 

@@ -20,6 +20,8 @@ import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../lib/r
 import { loadDexPriceRows, isTrustedDexPriceRow } from "../lib/depeg-helpers";
 import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
+import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../lib/authoritative-price-sources";
+import { fetchEvmCallHexAtBlock } from "../lib/evm-rpc";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
@@ -188,6 +190,7 @@ export async function fetchPrimaryPrices(
   const coinbasePrices = new Map<string, number>();
   const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number }>();
   const curvePrices = new Map<string, number>();
+  let curveOraclePrice: number | null = null; // crvUSD PriceAggregator TWAP
 
   // Coinbase uses uppercased product symbols. RedStone is exact-case and only
   // queried for the known-supported tracked subset to keep request volume bounded.
@@ -357,6 +360,23 @@ export async function fetchPrimaryPrices(
         }
       })(),
     );
+    // crvUSD PriceAggregator TWAP oracle — separate from pool get_dy
+    fetches.push(
+      (async () => {
+        try {
+          const hex = await fetchEvmCallHexAtBlock(
+            "ethereum", CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR, "latest", { signal },
+          );
+          if (hex) {
+            const price = Number(BigInt(hex)) / 1e18;
+            if (price > 0 && price < 10) curveOraclePrice = price;
+          }
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] crvUSD oracle failed:", err);
+        }
+      })(),
+    );
   }
 
   await Promise.all(fetches);
@@ -394,6 +414,9 @@ export async function fetchPrimaryPrices(
     }
     const curvePrice = curvePrices.get(asset.id);
     if (curvePrice != null) sources.push({ source: "curve-onchain", price: curvePrice, weight: 3 });
+    if (asset.id === "crvusd-curve" && curveOraclePrice != null) {
+      sources.push({ source: "curve-oracle", price: curveOraclePrice, weight: 3 });
+    }
     const dexRow = dexRows.get(asset.id);
     if (dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg")) {
       sources.push({

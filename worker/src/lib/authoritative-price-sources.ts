@@ -15,11 +15,9 @@ const CAP_GET_BURN_AMOUNT_SELECTOR = "0xb7c4a6bf"; // getBurnAmount(address,uint
 const IUSD_RECEIPT_TO_ASSET_SELECTOR = "0xf308cf65"; // receiptToAsset(uint256)
 const IUSD_INFINIFI_REDEEM_CONTROLLER = "0xCb1747E89a43DEdcF4A2b831a0D94859EFeC7601";
 
-const CRVUSD_CURVE_ID = "crvusd-curve";
-// crvUSD PriceAggregator contract on Ethereum mainnet
-const CRVUSD_PRICE_AGGREGATOR = "0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7";
-// price() selector — returns crvUSD price in USD scaled by 1e18
-const CRVUSD_PRICE_SELECTOR = "0xa035b1fe";
+// crvUSD PriceAggregator — exported for use as a regular consensus source
+export const CRVUSD_PRICE_AGGREGATOR = "0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7";
+export const CRVUSD_PRICE_SELECTOR = "0xa035b1fe"; // price() — returns crvUSD price in USD scaled by 1e18
 
 const CAP_SAMPLE_SUPPLY_FRACTION = 0.01;
 const CAP_SAMPLE_NOTIONAL_MIN_USD = 1_000;
@@ -326,36 +324,7 @@ const iusdInfinifiProvider: PriceSourceProvider = {
   },
 };
 
-const crvUsdPriceOracleProvider: PriceSourceProvider = {
-  source: PROTOCOL_REDEEM_SOURCE,
-  matches(stablecoinId: string): boolean {
-    return stablecoinId === CRVUSD_CURVE_ID;
-  },
-  async fetchLivePrice(_asset: PeggedAsset, signal?: AbortSignal): Promise<CurrentPriceOverride | null> {
-    const hex = await fetchEvmCallHexAtBlock(
-      ETHEREUM_CHAIN,
-      CRVUSD_PRICE_AGGREGATOR,
-      CRVUSD_PRICE_SELECTOR,
-      "latest",
-      { signal, extraRpcUrls: ETHEREUM_ARCHIVE_FALLBACK_URLS },
-    );
-    if (!hex) {
-      console.warn(`[authoritative-price-sources] crvusd-curve: RPC returned null`);
-      return null;
-    }
-
-    const rawPrice = BigInt(hex);
-    const price = Number(rawPrice) / 1e18;
-    if (price <= 0 || price > 10) {
-      console.warn(`[authoritative-price-sources] crvusd-curve: zero or invalid price=${price}`);
-      return null;
-    }
-
-    return { price, source: PROTOCOL_REDEEM_SOURCE, confidence: "high" };
-  },
-};
-
-const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [capCusdProvider, iusdInfinifiProvider, crvUsdPriceOracleProvider];
+const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [capCusdProvider, iusdInfinifiProvider];
 
 export async function fetchAuthoritativeLivePriceOverrides(
   assets: PeggedAsset[],
