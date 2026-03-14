@@ -5,6 +5,7 @@ import { shouldAttemptFetch, recordOutcome, recordOutcomeSafe } from "../lib/cir
 import { getCache, setCache } from "../lib/db-cache";
 import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { PriceConfidence } from "@shared/types";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   buildPriceValidationContext,
   buildPriceReasonablenessOptions,
@@ -13,6 +14,8 @@ import {
   PRICE_BOUNDS,
   type PriceValidationReferences,
 } from "../lib/price-validation";
+import { fetchPythPrices } from "../lib/pyth";
+import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
 
@@ -143,18 +146,30 @@ export async function fetchPrimaryPrices(
 
   const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS);
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
+  const pythAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES);
 
-  if (!dlAllowed && !cgAllowed) {
-    console.warn("[primary-prices] Both DL coins and CG prices circuits are open, skipping");
+  if (!dlAllowed && !cgAllowed && !pythAllowed) {
+    console.warn("[primary-prices] All primary price circuits are open, skipping");
     return { results, stats, cgPrices: new Map() };
   }
 
-  // Batch fetch both sources in parallel
+  // Batch fetch sources in parallel
   const geckoIds = candidates.map((a) => a.geckoId!);
   const BATCH_SIZE = 250; // CG supports 250 IDs per call
 
   const dlPrices = new Map<string, number>();
   const cgPrices = new Map<string, number>();
+
+  // Build Pyth feed map from tracked stablecoin metadata
+  const metaById = new Map(TRACKED_STABLECOINS.map((m) => [m.id, m]));
+  const pythFeedIds = new Map<string, string>();
+  for (const asset of candidates) {
+    const meta = metaById.get(asset.id);
+    if (meta?.pythFeedId) {
+      pythFeedIds.set(asset.id, meta.pythFeedId);
+    }
+  }
+  const pythPrices = new Map<string, { price: number; confidenceBps: number }>();
 
   const fetches: Promise<void>[] = [];
 
@@ -229,51 +244,78 @@ export async function fetchPrimaryPrices(
     );
   }
 
+  if (pythAllowed && pythFeedIds.size > 0) {
+    fetches.push(
+      (async () => {
+        try {
+          const results = await fetchPythPrices(pythFeedIds, signal);
+          for (const [coinId, result] of results) {
+            pythPrices.set(coinId, { price: result.price, confidenceBps: result.confidenceBps });
+          }
+          await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, true);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] Pyth Hermes API failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, false);
+        }
+      })(),
+    );
+  }
+
   await Promise.all(fetches);
   throwIfAborted(signal);
 
-  // Cross-validate per asset
+  // N-source consensus per asset
   const DIVERGENCE_THRESHOLD_BPS = 50;
 
   for (const asset of candidates) {
     const gId = asset.geckoId!;
     const dl = dlPrices.get(gId) ?? null;
     const cg = cgPrices.get(gId) ?? null;
+    const pyth = pythPrices.get(asset.id);
+
+    const sources: SourcePrice[] = [];
+    if (cg != null) sources.push({ source: "coingecko", price: cg, weight: 2 });
+    if (dl != null) sources.push({ source: "defillama", price: dl, weight: 1 });
+    if (pyth != null) sources.push({ source: "pyth", price: pyth.price, weight: 2, metadata: { confidenceBps: pyth.confidenceBps } });
+
     stats.attempted++;
 
-    if (dl != null && cg != null) {
-      const mid = (dl + cg) / 2;
-      const divergenceBps = mid > 0 ? Math.abs(dl - cg) / mid * 10_000 : Infinity;
+    const context = buildPriceValidationContext({
+      stablecoinId: String(asset.id),
+      pegType: asset.pegType,
+      navToken: asset.navToken,
+      commodityOunces: asset.commodityOunces,
+    });
+    const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
+    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS);
 
-      if (divergenceBps <= DIVERGENCE_THRESHOLD_BPS) {
-        // Both agree — high confidence, prefer CG (primary)
-        results.set(asset.id, { price: cg, source: "coingecko+defillama", confidence: "high", dlPrice: dl, cgPrice: cg });
-        stats.high++;
-      } else {
-        const context = buildPriceValidationContext({
-          stablecoinId: String(asset.id),
-          pegType: asset.pegType,
-          navToken: asset.navToken,
-          commodityOunces: asset.commodityOunces,
-        });
-        const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
-        // When diverging: use closer-to-reference, default to CG (primary)
-        const chosen = pegRef != null ? (Math.abs(dl - pegRef) <= Math.abs(cg - pegRef) ? dl : cg) : cg;
-        const chosenSource = chosen === dl ? "defillama" : "coingecko";
-        results.set(asset.id, { price: chosen, source: chosenSource, confidence: "low", dlPrice: dl, cgPrice: cg });
-        stats.low++;
-        stats.divergences.push({ id: asset.id, symbol: asset.symbol, dlPrice: dl, cgPrice: cg, bps: Math.round(divergenceBps) });
-      }
-    } else if (dl != null) {
-      results.set(asset.id, { price: dl, source: "defillama", confidence: "single-source", dlPrice: dl, cgPrice: null });
-      stats.singleSource++;
-      stats.dlOnly++;
-    } else if (cg != null) {
-      results.set(asset.id, { price: cg, source: "coingecko", confidence: "single-source", dlPrice: null, cgPrice: cg });
-      stats.singleSource++;
-      stats.cgOnly++;
+    if (!consensus) continue; // no sources
+
+    results.set(asset.id, {
+      price: consensus.price,
+      source: consensus.source,
+      confidence: consensus.confidence,
+      dlPrice: dl ?? null,
+      cgPrice: cg ?? null,
+    });
+
+    if (consensus.confidence === "high") stats.high++;
+    else if (consensus.confidence === "single-source") stats.singleSource++;
+    else stats.low++;
+
+    // Track single-source breakdown
+    if (consensus.confidence === "single-source") {
+      if (consensus.source === "defillama") stats.dlOnly++;
+      else if (consensus.source === "coingecko") stats.cgOnly++;
     }
-    // else: both missing — skip, falls through to legacy enrichment
+
+    // Track divergences for observability
+    if (consensus.confidence === "low" && dl != null && cg != null) {
+      const mid = (dl + cg) / 2;
+      const bps = mid > 0 ? Math.round(Math.abs(dl - cg) / mid * 10_000) : 0;
+      stats.divergences.push({ id: asset.id, symbol: asset.symbol, dlPrice: dl, cgPrice: cg, bps });
+    }
   }
 
   if (stats.divergences.length > 0) {

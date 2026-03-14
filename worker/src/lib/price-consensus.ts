@@ -50,15 +50,34 @@ export function computePriceConsensus(
   }
 
   // For NAV tokens (pegRef === null), there's no peg to validate against.
-  // 2+ sources is high confidence; pick highest-weight.
+  // Use a wider threshold (500 bps = 5%) for clustering. If sources still
+  // diverge beyond that, it's a data quality issue → low confidence.
   if (pegRef === null || pegRef <= 0) {
+    const NAV_THRESHOLD_BPS = 500;
+    const navClusters = findAgreementClusters(sources, NAV_THRESHOLD_BPS);
+    const navBestCluster = navClusters.reduce((a, b) => a.length >= b.length ? a : b, []);
+
+    if (navBestCluster.length >= 2) {
+      const chosen = navBestCluster.reduce((a, b) => a.weight >= b.weight ? a : b);
+      const navClusterSet = new Set(navBestCluster.map((s) => s.source));
+      return {
+        price: chosen.price,
+        source: buildSourceLabel(navBestCluster),
+        confidence: "high",
+        agreeSources: navBestCluster.map((s) => s.source),
+        disagreeSources: sources.filter((s) => !navClusterSet.has(s.source)).map((s) => s.source),
+        allPrices,
+      };
+    }
+
+    // NAV sources diverge wildly — pick highest-weight, low confidence
     const chosen = sources.reduce((a, b) => a.weight >= b.weight ? a : b);
     return {
       price: chosen.price,
       source: chosen.source,
-      confidence: "high",
-      agreeSources: sources.map((s) => s.source),
-      disagreeSources: [],
+      confidence: "low",
+      agreeSources: [chosen.source],
+      disagreeSources: sources.filter((s) => s !== chosen).map((s) => s.source),
       allPrices,
     };
   }
