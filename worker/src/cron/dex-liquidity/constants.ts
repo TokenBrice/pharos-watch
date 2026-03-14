@@ -82,3 +82,6 @@ export const USD_QUOTE_COIN_IDS = new Set([
   "tether", "usd-coin", "dai", "true-usd", "frax", "c1usd",
   "binance-usd", "paxos-standard",
 ]);
+
+/** Per-chain timeout for subgraph queries (UniV3, Aerodrome) */
+export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
