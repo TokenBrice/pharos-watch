@@ -76,6 +76,7 @@ export async function syncLiveReserves(
   const coinsWithWarnings: string[] = [];
   const breakerKeys = new Set<string>();
   const sharedSourceResults = new Map<string, Promise<AdapterResult>>();
+  const recordedBreakerOutcomes = new Set<string>();
 
   const runAdapter = (
     coin: ConfiguredCoin,
@@ -133,7 +134,10 @@ export async function syncLiveReserves(
         lastError: `Unknown adapter: ${config.adapter}`,
         metadata: { reason: "unknown-adapter" },
       }));
-      await recordOutcomeSafe(db, breakerKey, false);
+      if (!recordedBreakerOutcomes.has(breakerKey)) {
+        await recordOutcomeSafe(db, breakerKey, false);
+        recordedBreakerOutcomes.add(breakerKey);
+      }
       continue;
     }
 
@@ -153,7 +157,10 @@ export async function syncLiveReserves(
           lastError: "Adapter returned zero reserve slices",
           metadata: { reason: "empty-slices" },
         }));
-        await recordOutcomeSafe(db, breakerKey, false);
+        if (!recordedBreakerOutcomes.has(breakerKey)) {
+          await recordOutcomeSafe(db, breakerKey, false);
+          recordedBreakerOutcomes.add(breakerKey);
+        }
         continue;
       }
 
@@ -183,7 +190,10 @@ export async function syncLiveReserves(
           lastSuccessAt: now,
         }),
       );
-      await recordOutcomeSafe(db, breakerKey, true);
+      if (!recordedBreakerOutcomes.has(breakerKey)) {
+        await recordOutcomeSafe(db, breakerKey, true);
+        recordedBreakerOutcomes.add(breakerKey);
+      }
       synced++;
     } catch (e) {
       console.error(`[sync-live-reserves] Failed for ${coin.id}:`, e);
@@ -199,7 +209,10 @@ export async function syncLiveReserves(
         lastError: e instanceof Error ? e.message : String(e),
         metadata: { reason: "adapter-exception" },
       }));
-      await recordOutcomeSafe(db, breakerKey, false);
+      if (!recordedBreakerOutcomes.has(breakerKey)) {
+        await recordOutcomeSafe(db, breakerKey, false);
+        recordedBreakerOutcomes.add(breakerKey);
+      }
     }
   }
 
