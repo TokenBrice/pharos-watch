@@ -72,7 +72,29 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     outputDecimals: 18,
     chain: "ethereum",
   },
-  // NOTE: GHO, frxUSD, LUSD omitted — no direct USDC pools on Curve.
-  // GHO/frxUSD have pools via crvUSD (needs two-hop pricing).
-  // LUSD has a 3Crv metapool (needs get_dy_underlying support).
+  // ── Metapools (get_dy_underlying) ──
+  // Underlying indices for 3Crv metapools: 0=metapool token, 1=DAI(18), 2=USDC(6), 3=USDT(6)
+
+  // LUSD/3Crv metapool (~$5M TVL)
+  {
+    stablecoinId: "lusd-liquity",
+    poolAddress: "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
+    inputIndex: 2,  // USDC (underlying)
+    outputIndex: 0, // LUSD (underlying)
+    inputDecimals: 6,
+    outputDecimals: 18,
+    chain: "ethereum",
+    useUnderlying: true,
+  },
+  // MIM/3Crv metapool (~$2M TVL)
+  {
+    stablecoinId: "mim-abracadabra",
+    poolAddress: "0x5a6A4D54456819380173272A5E8E9B9904BdF41B",
+    inputIndex: 2,  // USDC (underlying)
+    outputIndex: 0, // MIM (underlying)
+    inputDecimals: 6,
+    outputDecimals: 18,
+    chain: "ethereum",
+    useUnderlying: true,
+  },
 ];
