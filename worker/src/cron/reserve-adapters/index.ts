@@ -20,6 +20,7 @@ import { fetchOusdReserves } from "./ousd";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchSingleAssetReserves } from "./single-asset";
+import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchTetherReserves } from "./tether";
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 
@@ -65,6 +66,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   ousd: fetchOusdReserves,
   reservoir: fetchReservoirReserves,
   "single-asset": fetchSingleAssetReserves,
+  "sky-makercore": fetchSkyMakercoreReserves,
   tether: fetchTetherReserves,
 };
 

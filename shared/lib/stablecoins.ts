@@ -330,6 +330,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "optimism", address: "0x4f13a96ec5c4cf34e442b46bbd98a0791f20edc3", decimals: 18 },
       { chain: "unichain", address: "0x7e10036acc4b56d4dfca3b77810356ce52313f9c", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "sky-makercore",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "sky-makercore-collateral",
+      inputs: { primary: { kind: "http-json", url: "https://api.llama.fi/protocol/makerdao" } },
+    },
     reserves: [
       { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
       { name: "USDC via PSM", pct: 30, risk: "low", coinId: "usdc-circle", depType: "mechanism" },
@@ -400,6 +407,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "near", address: "6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near", decimals: 18 },
       { chain: "pulsechain", address: "0xefd766ccb38eaf1dfd701853bfce31359239f305", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "sky-makercore",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "sky-makercore-collateral",
+      inputs: { primary: { kind: "http-json", url: "https://api.llama.fi/protocol/makerdao" } },
+    },
     reserves: [
       { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
       { name: "USDC via PSM", pct: 33, risk: "low", coinId: "usdc-circle", depType: "mechanism" },
