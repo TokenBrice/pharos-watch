@@ -33,10 +33,10 @@ function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): ReserveSli
 function classifySymbol(symbol: string): { name: string; risk: ReserveSlice["risk"] } | null {
   const upper = symbol.toUpperCase();
   if (["WBTC", "CBBTC", "LBTC", "ZKBTC"].includes(upper)) {
-    return { name: "WBTC / cbBTC / LBTC", risk: "medium" };
+    return { name: "WBTC / cbBTC / LBTC", risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium" };
   }
   if (upper === "TBTC") {
-    return { name: "tBTC", risk: "medium" };
+    return { name: "tBTC", risk: getCanonicalReserveAssetRisk("TBTC") ?? "medium" };
   }
   if (["WSTETH", "SFRXETH", "WEETH"].includes(upper)) {
     return { name: "wstETH / sfrxETH / weETH", risk: getCanonicalReserveAssetRisk(upper) ?? "low" };

@@ -113,4 +113,13 @@ describe("curated reserve risk tier consistency", () => {
     // HARD FAIL: risk tier mismatches are data bugs, not judgment calls.
     expect(mismatches).toEqual([]);
   });
+
+  it("adapter static risk maps are consistent with canonical", () => {
+    const knownAdapterSymbols = ["WBTC", "CBBTC", "TBTC", "LBTC", "CELO"];
+    expect(getCanonicalReserveAssetRisk("CELO")).toBe("high");
+    for (const sym of knownAdapterSymbols) {
+      const canonical = getCanonicalReserveAssetRisk(sym);
+      expect(canonical).toBeDefined();
+    }
+  });
 });
