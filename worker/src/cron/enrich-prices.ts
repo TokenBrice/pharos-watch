@@ -56,6 +56,7 @@ export interface PeggedAsset {
   chains?: string[];
   chainCirculating?: Record<string, Record<string, unknown>>;
   consensusSources?: string[];
+  agreeSources?: string[];
 }
 
 export function hasMissingPrice(a: PeggedAsset): boolean {
@@ -120,6 +121,7 @@ export interface PrimaryPriceResult {
   dlPrice: number | null;
   cgPrice: number | null;
   candidateSources: string[];
+  agreeSources: string[];
 }
 
 export interface PriceValidationStats {
@@ -422,6 +424,7 @@ export async function fetchPrimaryPrices(
       dlPrice: dl ?? null,
       cgPrice: cg ?? null,
       candidateSources: sources.map((s) => s.source),
+      agreeSources: consensus.agreeSources,
     });
 
     if (consensus.confidence === "high") stats.high++;
