@@ -620,7 +620,9 @@ export function scoreDependencyRisk(
 ): ReportCardDimension {
   const deps = deriveDependencies(meta);
   if (!deps || deps.length === 0) {
-    return { grade: scoreToGrade(95), score: 95, detail: "Not dependent on upstream stablecoins" };
+    const governance = meta.flags.governance;
+    const selfScore = SELF_BACKED_SCORE_BY_GOVERNANCE[governance];
+    return { grade: scoreToGrade(selfScore), score: selfScore, detail: `Self-backed: ${governance === "centralized-dependent" ? "Partially centralized" : governance === "centralized" ? "Centralized" : "Decentralized"} (${selfScore})` };
   }
 
   // Gather upstream scores with weights
