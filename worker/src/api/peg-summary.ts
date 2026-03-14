@@ -133,6 +133,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       priceSource?: string;
       priceConfidence?: StablecoinData["priceConfidence"];
       priceUpdatedAt?: number | null;
+      consensusSources?: string[];
       primaryTrust?: "authoritative" | "confirm_required" | "unusable";
       pegPct: number;
     severityScore: number;
@@ -211,6 +212,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       priceSource: asset?.priceSource,
       priceConfidence: asset?.priceConfidence ?? null,
       priceUpdatedAt: asset?.priceUpdatedAt ?? null,
+      consensusSources: asset?.consensusSources,
       primaryTrust,
       pegPct: pegData.pegPct,
       severityScore: pegData.severityScore,

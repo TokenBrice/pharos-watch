@@ -143,6 +143,7 @@ export function makeAsset(overrides: Partial<StablecoinData> = {}): StablecoinDa
     priceSource: "defillama",
     priceConfidence: "high",
     priceUpdatedAt: Math.floor(Date.now() / 1000),
+    consensusSources: [],
     supplySource: "defillama",
     circulating: { peggedUSD: 100_000_000 },
     circulatingPrevDay: { peggedUSD: 99_500_000 },
