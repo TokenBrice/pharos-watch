@@ -12,12 +12,211 @@ import {
   isTrustedDexPriceRow,
   loadDexPriceRows,
   type DepegRow,
+  type DexPriceRow,
   type PendingDepegReason,
 } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { DepegEvent, PegAssetBase } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
+
+// --- Helpers ---
+
+/** Returns true when the DEX price row for this asset is fresh and trusted for depeg decisions. */
+function isDexFresh(
+  dexRow: DexPriceRow | undefined,
+  dexAbsBps: number | null,
+  now: number,
+): boolean {
+  return dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
+}
+
+interface LoopContext {
+  db: D1Database;
+  now: number;
+  asset: PegAssetBase;
+  price: number;
+  bps: number;
+  absBps: number;
+  direction: "above" | "below";
+  threshold: number;
+  pegRef: number;
+  supply: number;
+  primaryTrust: "authoritative" | "confirm_required";
+  dexRow: DexPriceRow | undefined;
+  dexBps: number | null;
+  dexAbsBps: number | null;
+  dexConfirmsDirection: boolean;
+  requiresConfirmation: boolean;
+  pendingReason: PendingDepegReason;
+  buildLiveEvent: (
+    direction: "above" | "below",
+    peakDeviationBps: number,
+    eventPrice: number,
+    pegReference: number,
+  ) => DepegEvent;
+  buildInsertPendingStmt: (
+    direction: "above" | "below",
+    bps: number,
+    eventPrice: number,
+    pegReference: number,
+    reason: PendingDepegReason,
+  ) => D1PreparedStatement;
+}
+
+/**
+ * Handles an existing open event where deviation still exceeds threshold.
+ * Covers same-direction peak updates, direction changes, and DEX false-positive auto-close.
+ * Returns statements to batch and an updated `seen` set action.
+ */
+function handleExistingEvent(
+  ctx: LoopContext,
+  existing: DepegRow,
+  seen: Set<number>,
+): D1PreparedStatement[] {
+  const {
+    db, now, asset, price, bps, absBps, direction, threshold,
+    pegRef, primaryTrust, dexRow, dexAbsBps, dexConfirmsDirection,
+    requiresConfirmation, pendingReason,
+    buildLiveEvent, buildInsertPendingStmt,
+  } = ctx;
+  const stmts: D1PreparedStatement[] = [];
+
+  // Direction change: close old event and open a new one
+  if (existing.direction !== direction) {
+    if (primaryTrust === "authoritative" || dexConfirmsDirection) {
+      stmts.push(
+        db.prepare(
+          "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+        ).bind(now, price, existing.id)
+      );
+      if (requiresConfirmation) {
+        stmts.push(buildInsertPendingStmt(direction, bps, price, pegRef, pendingReason));
+      } else {
+        stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(direction, bps, price, pegRef)));
+      }
+    } else {
+      seen.add(existing.id);
+    }
+    return stmts;
+  }
+
+  // Same direction — event stays open
+  seen.add(existing.id);
+  if ((primaryTrust === "authoritative" || dexConfirmsDirection) && absBps > Math.abs(existing.peak_deviation_bps)) {
+    // Update peak if this deviation is worse
+    stmts.push(
+      db.prepare(
+        "UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?"
+      ).bind(bps, price, existing.id)
+    );
+  }
+
+  // DEX cross-validation for ongoing events
+  if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+    const eventAge = now - existing.started_at;
+    if (eventAge >= SECONDS.THIRTY_MINUTES) {
+      // Event open 30+ min AND DEX has >=$1M TVL — auto-close
+      console.warn(
+        `[depeg] Auto-closing false-positive event for ${asset.symbol} (id=${existing.id}): ` +
+        `primary=${bps}bps but DEX=${dexAbsBps}bps for ${Math.round(eventAge / 60)}min ` +
+        `(${dexRow.source_pool_count} pools, $${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+      );
+      stmts.push(
+        db.prepare(
+          "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+        ).bind(now, dexRow.dex_price_usd, existing.id)
+      );
+      seen.delete(existing.id); // Remove from seen since we're closing it
+    } else {
+      console.warn(
+        `[depeg] DEX disagrees with ongoing event for ${asset.symbol}: ` +
+        `primary=${bps}bps vs DEX=${dexAbsBps}bps (event age ${Math.round(eventAge / 60)}min)`
+      );
+    }
+  }
+
+  return stmts;
+}
+
+/**
+ * Handles opening a new depeg event when no existing event is open.
+ * Routes to pending confirmation for large-cap / low-confidence / extreme moves,
+ * or applies DEX cross-validation before instant event creation.
+ * Returns statements to batch, or null to signal a `continue` (DEX suppression).
+ */
+function handleNewDepeg(ctx: LoopContext): D1PreparedStatement[] | null {
+  const {
+    db, asset, bps, direction, threshold, pegRef, supply,
+    dexRow, dexAbsBps, dexConfirmsDirection, requiresConfirmation, pendingReason,
+    buildLiveEvent, buildInsertPendingStmt,
+  } = ctx;
+  const stmts: D1PreparedStatement[] = [];
+
+  if (supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) {
+    // >=$1B coin: insert into pending table for confirmation next cycle
+    stmts.push(buildInsertPendingStmt(direction, bps, ctx.price, pegRef, pendingReason));
+    console.log(
+      `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (supply $${(supply / 1e9).toFixed(1)}B)`
+    );
+    return stmts;
+  }
+
+  if (requiresConfirmation) {
+    if (pendingReason === "extreme-move" && dexConfirmsDirection) {
+      stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(direction, bps, ctx.price, pegRef)));
+    } else {
+      stmts.push(buildInsertPendingStmt(direction, bps, ctx.price, pegRef, pendingReason));
+      console.log(`[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (${pendingReason})`);
+    }
+    return stmts;
+  }
+
+  // <$1B coin, no special confirmation needed — DEX cross-validation then instant event
+  if (isDexFresh(dexRow, dexAbsBps, ctx.now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+    console.log(
+      `[depeg] Suppressed new event for ${asset.symbol}: ` +
+      `primary=${bps}bps but DEX=${dexAbsBps}bps (${dexRow.source_pool_count} pools, ` +
+      `$${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+    );
+    return null; // signal: skip this asset (continue)
+  }
+
+  stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(direction, bps, ctx.price, pegRef)));
+  return stmts;
+}
+
+/**
+ * Handles an existing open event where price has recovered below threshold.
+ * Closes via authoritative primary or confirming DEX data, otherwise keeps open.
+ */
+function handleRecovery(
+  ctx: LoopContext,
+  existing: DepegRow,
+  seen: Set<number>,
+): D1PreparedStatement[] {
+  const { db, now, price, threshold, primaryTrust, dexRow, dexAbsBps } = ctx;
+  const stmts: D1PreparedStatement[] = [];
+
+  if (primaryTrust === "authoritative") {
+    // Price recovered — close the event
+    stmts.push(
+      db.prepare(
+        "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+      ).bind(now, price, existing.id)
+    );
+  } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+    stmts.push(
+      db.prepare(
+        "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+      ).bind(now, dexRow.dex_price_usd, existing.id)
+    );
+  } else {
+    seen.add(existing.id);
+  }
+
+  return stmts;
+}
 
 // --- Depeg event detection ---
 
@@ -31,50 +230,6 @@ export async function detectDepegEvents(
   const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
   const now = syncStart;
-
-  const buildLiveEvent = (
-    asset: PegAssetBase,
-    direction: "above" | "below",
-    peakDeviationBps: number,
-    eventPrice: number,
-    pegReference: number,
-  ): DepegEvent => ({
-    id: 0,
-    stablecoinId: asset.id,
-    symbol: asset.symbol,
-    pegType: asset.pegType ?? "",
-    direction,
-    peakDeviationBps,
-    startedAt: now,
-    endedAt: null,
-    startPrice: eventPrice,
-    peakPrice: eventPrice,
-    recoveryPrice: null,
-    pegReference,
-    source: "live",
-  });
-
-  const buildInsertPendingStmt = (
-    asset: PegAssetBase,
-    direction: "above" | "below",
-    bps: number,
-    eventPrice: number,
-    pegReference: number,
-    reason: PendingDepegReason,
-  ): D1PreparedStatement =>
-    db.prepare(
-      `INSERT INTO depeg_pending (
-         stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference, reason
-       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(stablecoin_id) DO NOTHING`
-    ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, eventPrice, pegReference, reason);
-
-  const computeDexBps = (assetId: string, pegReference: number): number | null => {
-    const dexRow = dexPriceRows.get(assetId);
-    if (!dexRow || !isTrustedDexPriceRow(dexRow, now, "depeg")) return null;
-    return Math.round(((dexRow.dex_price_usd / pegReference) - 1) * 10000);
-  };
 
   // Load DEX-implied prices for cross-validation.
   // loadDexPriceRows handles missing-table fallbacks and logging.
@@ -159,10 +314,13 @@ export async function detectDepegEvents(
 
     const bps = Math.round(((price / pegRef) - 1) * 10000);
     const absBps = Math.abs(bps);
-    const direction = bps >= 0 ? "above" : "below";
+    const direction: "above" | "below" = bps >= 0 ? "above" : "below";
     const existing = openEvents.get(asset.id);
     const threshold = getDepegThresholdBps(asset.pegType);
-    const dexBps = computeDexBps(asset.id, pegRef);
+    const dexRow = dexPriceRows.get(asset.id);
+    const dexBps = dexRow && isTrustedDexPriceRow(dexRow, now, "depeg")
+      ? Math.round(((dexRow.dex_price_usd / pegRef) - 1) * 10000)
+      : null;
     const dexAbsBps = dexBps == null ? null : Math.abs(dexBps);
     const dexConfirmsDirection =
       dexBps != null && dexAbsBps != null && dexAbsBps >= threshold && (dexBps >= 0 ? "above" : "below") === direction;
@@ -177,116 +335,59 @@ export async function detectDepegEvents(
           ? "low-confidence"
           : "large-cap";
 
-    if (absBps >= threshold) {
-      if (existing) {
-        // Direction change: close old event and open a new one
-        if (existing.direction !== direction) {
-          if (primaryTrust === "authoritative" || dexConfirmsDirection) {
-            stmts.push(
-              db.prepare(
-                "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-              ).bind(now, price, existing.id)
-            );
-            if (requiresConfirmation) {
-              stmts.push(buildInsertPendingStmt(asset, direction, bps, price, pegRef, pendingReason));
-            } else {
-              stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(asset, direction, bps, price, pegRef)));
-            }
-          } else {
-            seen.add(existing.id);
-          }
-        } else {
-          // Same direction — event stays open
-          seen.add(existing.id);
-          if ((primaryTrust === "authoritative" || dexConfirmsDirection) && absBps > Math.abs(existing.peak_deviation_bps)) {
-            // Update peak if this deviation is worse
-            stmts.push(
-              db.prepare(
-                "UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?"
-              ).bind(bps, price, existing.id)
-            );
-          }
+    const buildLiveEvent = (
+      dir: "above" | "below",
+      peakDeviationBps: number,
+      eventPrice: number,
+      pegReference: number,
+    ): DepegEvent => ({
+      id: 0,
+      stablecoinId: asset.id,
+      symbol: asset.symbol,
+      pegType: asset.pegType ?? "",
+      direction: dir,
+      peakDeviationBps,
+      startedAt: now,
+      endedAt: null,
+      startPrice: eventPrice,
+      peakPrice: eventPrice,
+      recoveryPrice: null,
+      pegReference,
+      source: "live",
+    });
 
-          // DEX cross-validation for ongoing events
-          const dexRow = dexPriceRows.get(asset.id);
-          const dexFresh = dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
-          if (dexFresh && dexRow && dexAbsBps != null) {
-            if (dexAbsBps < threshold) {
-              // DEX disagrees with ongoing depeg
-              const eventAge = now - existing.started_at;
-              if (eventAge >= SECONDS.THIRTY_MINUTES) {
-                // Event open 30+ min AND DEX has >=$1M TVL — auto-close
-                console.warn(
-                  `[depeg] Auto-closing false-positive event for ${asset.symbol} (id=${existing.id}): ` +
-                  `primary=${bps}bps but DEX=${dexAbsBps}bps for ${Math.round(eventAge / 60)}min ` +
-                  `(${dexRow.source_pool_count} pools, $${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
-                );
-                stmts.push(
-                  db.prepare(
-                    "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-                  ).bind(now, dexRow.dex_price_usd, existing.id)
-                );
-                seen.delete(existing.id); // Remove from seen since we're closing it
-              } else {
-                console.warn(
-                  `[depeg] DEX disagrees with ongoing event for ${asset.symbol}: ` +
-                  `primary=${bps}bps vs DEX=${dexAbsBps}bps (event age ${Math.round(eventAge / 60)}min)`
-                );
-              }
-            }
-          }
-        }
+    const buildInsertPendingStmt = (
+      dir: "above" | "below",
+      devBps: number,
+      eventPrice: number,
+      pegReference: number,
+      reason: PendingDepegReason,
+    ): D1PreparedStatement =>
+      db.prepare(
+        `INSERT INTO depeg_pending (
+           stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference, reason
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(stablecoin_id) DO NOTHING`
+      ).bind(asset.id, asset.symbol, asset.pegType ?? "", dir, devBps, now, eventPrice, pegReference, reason);
+
+    const ctx: LoopContext = {
+      db, now, asset, price, bps, absBps, direction, threshold,
+      pegRef, supply, primaryTrust, dexRow, dexBps, dexAbsBps,
+      dexConfirmsDirection, requiresConfirmation, pendingReason,
+      buildLiveEvent, buildInsertPendingStmt,
+    };
+
+    if (existing) {
+      if (absBps >= threshold) {
+        stmts.push(...handleExistingEvent(ctx, existing, seen));
       } else {
-        // Open new event — check supply threshold for multi-source confirmation
-        if (supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) {
-          // >=$1B coin: insert into pending table for confirmation next cycle
-          stmts.push(buildInsertPendingStmt(asset, direction, bps, price, pegRef, pendingReason));
-          console.log(
-            `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (supply $${(supply / 1e9).toFixed(1)}B)`
-          );
-        } else if (requiresConfirmation) {
-          if (pendingReason === "extreme-move" && dexConfirmsDirection) {
-            stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(asset, direction, bps, price, pegRef)));
-          } else {
-            stmts.push(buildInsertPendingStmt(asset, direction, bps, price, pegRef, pendingReason));
-            console.log(`[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (${pendingReason})`);
-          }
-        } else {
-          // <$1B coin: existing behavior — DEX cross-validation then instant event
-          const dexRow = dexPriceRows.get(asset.id);
-          const dexFresh = dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
-          if (dexFresh && dexRow && dexAbsBps != null) {
-            if (dexAbsBps < threshold) {
-              console.log(
-                `[depeg] Suppressed new event for ${asset.symbol}: ` +
-                `primary=${bps}bps but DEX=${dexAbsBps}bps (${dexRow.source_pool_count} pools, ` +
-                `$${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
-              );
-              continue;
-            }
-          }
-          stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(asset, direction, bps, price, pegRef)));
-        }
+        stmts.push(...handleRecovery(ctx, existing, seen));
       }
-    } else if (existing) {
-      const dexRow = dexPriceRows.get(asset.id);
-      const dexFresh = dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
-      if (primaryTrust === "authoritative") {
-        // Price recovered — close the event
-        stmts.push(
-          db.prepare(
-            "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-          ).bind(now, price, existing.id)
-        );
-      } else if (dexFresh && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
-        stmts.push(
-          db.prepare(
-            "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-          ).bind(now, dexRow.dex_price_usd, existing.id)
-        );
-      } else {
-        seen.add(existing.id);
-      }
+    } else if (absBps >= threshold) {
+      const result = handleNewDepeg(ctx);
+      if (result === null) continue; // DEX suppression
+      stmts.push(...result);
     }
   }
 
