@@ -1,3 +1,10 @@
+/**
+ * Mint/Burn Bridge Classification — Async Orchestration
+ *
+ * Wraps the pure classifier (../mint-burn-bridge-classifier.ts) with
+ * transaction context fetching from the chain RPC. Handles I/O and
+ * batch processing; delegates classification logic to the pure module.
+ */
 import {
   getAlchemyTransactionByHash,
   getAlchemyTransactionReceipt,

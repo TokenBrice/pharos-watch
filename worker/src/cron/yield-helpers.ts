@@ -1,5 +1,18 @@
-// worker/src/cron/yield-helpers.ts
-// Pure computation functions for yield intelligence. No I/O.
+/**
+ * Yield Pipeline — Pure Computation Functions
+ *
+ * Contains all math/scoring functions for yield intelligence. No I/O.
+ *
+ * Functions by pipeline stage:
+ * - APY computation:    computeApyFromRate(), computeApyFromPrice()
+ * - Scoring:            computePYS() (Pharos Yield Score)
+ * - Variance analysis:  computeYieldStability(), computeApyVarianceScore()
+ * - Warning detection:  detectWarningSignals()
+ * - Pool matching:      matchAllDlPools() (3-layer resolution), findBestLendingPool()
+ *
+ * I/O counterparts live in yield-sync/: sources.ts (pool discovery), resolve.ts
+ * (APY resolution), cache.ts (KV caching), rankings.ts (DB row mapping).
+ */
 
 export const STALE_THRESHOLD_MS = 90 * 60 * 1000; // 3 sync cycles
 

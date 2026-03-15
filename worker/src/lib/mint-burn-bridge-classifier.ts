@@ -1,3 +1,11 @@
+/**
+ * Mint/Burn Bridge Classifier — Pure Logic
+ *
+ * Classifies burn events as real burns or bridge transfers based on
+ * contract-level bridge detection config. Pure function: no I/O, no DB access.
+ *
+ * Async orchestration wrapper: ../mint-burn-pipeline/classification.ts
+ */
 import type {
   MintBurnBridgeDetectionConfig,
   MintBurnType,

@@ -1,3 +1,12 @@
+/**
+ * DEX Liquidity Cron Config — Specific to the dex-liquidity scoring cron
+ *
+ * DefiLlama URLs, Curve chain configs, Uniswap V3 subgraph IDs,
+ * Aerodrome queries, governance lookup, rate limits, TVL factors.
+ *
+ * Reusable DEX utilities (symbol maps, quality multipliers):
+ * see ../../lib/dex-constants.ts
+ */
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";

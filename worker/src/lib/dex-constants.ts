@@ -1,4 +1,12 @@
-/** DEX pipeline constants extracted from sync-dex-liquidity.ts */
+/**
+ * DEX Core Constants — Reusable across any DEX operation
+ *
+ * Quality multipliers, symbol normalization, composite pool names,
+ * blocked DEX IDs, DEX symbol aliases.
+ *
+ * Cron-specific config (subgraph URLs, rate limits, TVL factors):
+ * see ../cron/dex-liquidity/constants.ts
+ */
 
 export const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
 

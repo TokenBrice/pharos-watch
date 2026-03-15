@@ -1,3 +1,11 @@
+/**
+ * Yield Pipeline — DB Row Mapping & Ranking Helpers
+ *
+ * Converts raw D1 query results into typed ranking objects for the API.
+ * Also handles warning signal deserialization and TVL-weighted median computation.
+ *
+ * Pure computation counterparts live in ../yield-helpers.ts.
+ */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { AltYieldSource } from "@shared/types";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
