@@ -151,13 +151,19 @@ export function matchAllDlPools(
     }
   }
 
-  // Layer 3: Base-symbol fallback (only when both static maps miss — stablecoin=true required)
+  // Layer 3: Base-symbol fallback (only when BOTH static maps miss — stablecoin=true required).
+  // Intentionally uses .includes() instead of === to catch DL pools with prefixed/suffixed
+  // symbols (e.g., "FEUSDH" for USDH, "STEAKEURCV" for EURCV). Layers 1 and 2 catch most
+  // coins first, so Layer 3 only fires when both miss. A minimum symbol length of 4 prevents
+  // short symbols like "USD" from matching everything.
   if (found.length === 0) {
     const sym = symbol.toLowerCase();
-    const candidates = dlPools.filter(p => p.exposure === "single" && p.stablecoin && p.symbol.toLowerCase().includes(sym));
-    if (candidates.length > 0) {
-      const best = candidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
-      found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
+    if (sym.length >= 4) {
+      const candidates = dlPools.filter(p => p.exposure === "single" && p.stablecoin && p.symbol.toLowerCase().includes(sym));
+      if (candidates.length > 0) {
+        const best = candidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
+        found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
+      }
     }
   }
 

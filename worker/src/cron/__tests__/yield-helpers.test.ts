@@ -412,6 +412,16 @@ describe("matchAllDlPools", () => {
     expect(result.length).toBeGreaterThan(0);
     expect(result[0].pool).toBe("other-uuid");
   });
+
+  it("skips Layer 3 includes fallback for symbols shorter than 4 chars", () => {
+    const pools = [
+      { pool: "p1", symbol: "USDH", project: "test", tvlUsd: 5e6, apy: 3, apyBase: 3, apyReward: null, exposure: "single", stablecoin: true },
+      { pool: "p2", symbol: "USDT", project: "test", tvlUsd: 10e6, apy: 2, apyBase: 2, apyReward: null, exposure: "single", stablecoin: true },
+    ];
+    // "USD" is 3 chars — should not match anything via includes
+    const result = matchAllDlPools("no-static-match", "USD", pools, {}, {});
+    expect(result).toHaveLength(0);
+  });
 });
 
 describe("findBestLendingPool", () => {
