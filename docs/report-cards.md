@@ -92,6 +92,11 @@ A delta alert fires when the live-derived score diverges from curated by >15 poi
 signaling that curated metadata (and potentially the governance classification) may
 need human review.
 
+Delta alerts are fired from the hourly reserve sync cron via `checkCollateralDrift()`.
+Drift data is also included in the report-cards snapshot as `collateralDriftCoins` for
+`/status` visibility. Coins using curated fallback (no fresh live data) are tracked as
+`liveToFallbackCoins` in the snapshot metadata.
+
 **Known Limitation: Blacklist Inherited Uses Curated Data**
 
 `isBlacklistable()` computes `"possible-inherited"` blacklistability from curated

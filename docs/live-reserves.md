@@ -8,7 +8,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Current coverage:** 45 live-enabled stablecoins across 24 registered adapters
+- **Current coverage:** 45 live-enabled stablecoins across 23 registered adapters
 - **Storage:** `reserve_composition`, `reserve_sync_state`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -68,6 +68,16 @@ Supported input kinds:
 3. Builds a breaker key as `live-reserves:${breakerScope ?? adapter}`.
 4. Checks the per-source circuit breaker before each coin fetch.
 5. Persists either a fresh snapshot (`reserve_composition`) plus sync-state row, or an error/degraded/skipped sync-state row.
+
+**Adapter output validation:** After each adapter returns, `validateAdapterOutput()` checks
+that all slice `risk` values are valid enum members, all `pct` values are finite and non-negative,
+and the sum is within 5 points of 100%. Invalid output is treated as an error. Sum deviation
+is propagated as a warning.
+
+**Circuit breaker recording:** Breaker outcomes are deferred until the entire sync loop
+completes, recording the worst outcome per breaker key (failure trumps success). This
+prevents first-coin-wins bias where a successful early coin would mask failures of later
+coins sharing the same breaker key.
 
 Cron result statuses:
 
