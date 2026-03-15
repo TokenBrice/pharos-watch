@@ -6,6 +6,7 @@ import {
   CIRCUIT_SOURCE,
   USER_AGENT,
   FRED_TBILL_CSV_URL,
+  TREASURY_YIELD_XML_URL,
   FRED_FETCH_TIMEOUT_MS,
   FRED_FETCH_MAX_RETRIES,
 } from "../lib/constants";
@@ -42,6 +43,32 @@ function parseFredLatest(csv: string): { recordDate: string; rate: number } | nu
     return { recordDate, rate };
   }
   return null;
+}
+
+/** Parse the latest 3-month yield from Treasury.gov yield curve XML. */
+export function parseTreasuryYieldXml(xml: string): { recordDate: string; rate: number } | null {
+  const blockPattern =
+    /<G_NEW_DATE>[\s\S]*?<BC_3MONTH>([\d.]+)<\/BC_3MONTH>[\s\S]*?<NEW_DATE>([\d/-]+)<\/NEW_DATE>[\s\S]*?<\/G_NEW_DATE>/g;
+  let lastRate: number | null = null;
+  let lastDateRaw: string | null = null;
+
+  let match: RegExpExecArray | null;
+  while ((match = blockPattern.exec(xml)) !== null) {
+    const rate = parseFloat(match[1]);
+    if (isValidRate(rate)) {
+      lastRate = rate;
+      lastDateRaw = match[2];
+    }
+  }
+
+  if (lastRate == null || lastDateRaw == null) return null;
+
+  // Convert MM-DD-YYYY to YYYY-MM-DD
+  const parts = lastDateRaw.split("-");
+  if (parts.length !== 3) return null;
+  const recordDate = `${parts[2]}-${parts[0]}-${parts[1]}`;
+
+  return { recordDate, rate: lastRate };
 }
 
 async function loadPreviousBenchmark(db: D1Database) {
@@ -103,11 +130,7 @@ async function handleDegradedFallback(
   };
 }
 
-export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
-  if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
-    return handleDegradedFallback(db, "circuit-open");
-  }
-
+async function tryFredCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
   try {
     const res = await fetchWithRetry(FRED_TBILL_CSV_URL, {
       headers: { "User-Agent": USER_AGENT },
@@ -115,39 +138,72 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
     }, FRED_FETCH_MAX_RETRIES, { timeoutMs: FRED_FETCH_TIMEOUT_MS });
 
     if (!res?.ok) {
-      await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
-      return handleDegradedFallback(db, "fred-api-error", { apiStatus: res?.status ?? null });
+      console.warn(`[fetch-tbill-rate] FRED CSV returned ${res?.status ?? "null"}`);
+      return null;
     }
 
     const csv = await res.text();
-    const parsed = parseFredLatest(csv);
-    if (!parsed) {
-      await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
-      return handleDegradedFallback(db, "fred-invalid-data");
+    return parseFredLatest(csv);
+  } catch (err) {
+    console.warn(`[fetch-tbill-rate] FRED CSV failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+async function tryTreasuryXml(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  try {
+    const res = await fetchWithRetry(TREASURY_YIELD_XML_URL, {
+      headers: { "User-Agent": USER_AGENT },
+      signal,
+    }, 1, { timeoutMs: FRED_FETCH_TIMEOUT_MS });
+
+    if (!res?.ok) {
+      console.warn(`[fetch-tbill-rate] Treasury XML returned ${res?.status ?? "null"}`);
+      return null;
     }
 
-    await writeStructuredBenchmark(db, {
+    const xml = await res.text();
+    return parseTreasuryYieldXml(xml);
+  } catch (err) {
+    console.warn(`[fetch-tbill-rate] Treasury XML failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+  if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
+    return handleDegradedFallback(db, "circuit-open");
+  }
+
+  // Try FRED CSV first, then Treasury yield XML as fallback.
+  const fredResult = await tryFredCsv(signal);
+  const source = fredResult ? "fred-dgs3mo" : null;
+  const parsed = fredResult ?? await tryTreasuryXml(signal);
+  const effectiveSource = source ?? (parsed ? "treasury-yield-xml" : null);
+
+  if (!parsed || !effectiveSource) {
+    await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
+    return handleDegradedFallback(db, "all-sources-failed");
+  }
+
+  await writeStructuredBenchmark(db, {
+    rate: parsed.rate,
+    recordDate: parsed.recordDate,
+    fetchedAt: Math.floor(Date.now() / 1000),
+    source: effectiveSource,
+    isFallback: false,
+    fallbackMode: null,
+  });
+  await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
+  console.log(`[fetch-tbill-rate] ${effectiveSource}: ${parsed.rate}% (as of ${parsed.recordDate})`);
+  return {
+    status: "ok",
+    itemCount: 1,
+    metadata: buildMetadata({
+      fallbackMode: source ? null : "fred-failed-treasury-ok",
+      source: effectiveSource,
       rate: parsed.rate,
       recordDate: parsed.recordDate,
-      fetchedAt: Math.floor(Date.now() / 1000),
-      source: "fred-dgs3mo",
-      isFallback: false,
-      fallbackMode: null,
-    });
-    await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
-    console.log(`[fetch-tbill-rate] FRED DGS3MO: ${parsed.rate}% (as of ${parsed.recordDate})`);
-    return {
-      status: "ok",
-      itemCount: 1,
-      metadata: buildMetadata({
-        fallbackMode: null,
-        source: "fred-dgs3mo",
-        rate: parsed.rate,
-        recordDate: parsed.recordDate,
-      }),
-    };
-  } catch (err) {
-    await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
-    return handleDegradedFallback(db, "fred-exception", { error: String(err).slice(0, 240) });
-  }
+    }),
+  };
 }
