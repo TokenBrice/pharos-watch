@@ -1,19 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
+import { PublicStatusHero } from "@/components/status/public-status-hero";
 import { NoticeRail, StatusSection, SummaryBadge } from "@/components/status/page-primitives";
-import { RefreshCountdown } from "@/components/status/refresh-countdown";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHealth } from "@/hooks/api-hooks";
 import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
-import { buildBrowserProbeSummary, formatTimestampMs, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
-import { cn } from "@/lib/utils";
+import { buildBrowserProbeSummary, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 
 function getWorstCacheRatio(caches: Record<string, { ageSeconds: number | null; maxAge: number }>): number | null {
   let worst: number | null = null;
@@ -40,30 +38,33 @@ function getMintBurnStatus(
   return "healthy";
 }
 
-function MetricCard({
-  label,
-  value,
-  tone,
-  detail,
+function PublicSignalCard({
+  kicker,
+  title,
+  badges,
+  description,
+  children,
 }: {
-  label: string;
-  value: string;
-  tone?: "healthy" | "degraded" | "stale";
-  detail: string;
+  kicker: string;
+  title: string;
+  badges?: ReactNode;
+  description: string;
+  children: ReactNode;
 }) {
-  const badgeClassName = tone ? getStatusTone(tone).badgeClassName : "border-border/60 bg-background/45";
-
   return (
-    <div className="rounded-[1.15rem] border border-border/60 bg-background/35 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-        <span className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium", badgeClassName)}>
-          {tone ? getStatusTone(tone).label : "Info"}
-        </span>
+    <article className="rounded-[1.35rem] border border-border/70 bg-background/45 p-5 shadow-[0_16px_36px_oklch(0_0_0_/0.12)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <p className="pharos-kicker">{kicker}</p>
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold tracking-tight text-foreground">{title}</h3>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        {badges ? <div className="flex flex-wrap gap-2">{badges}</div> : null}
       </div>
-      <div className="mt-3 font-mono text-3xl font-semibold tracking-tight text-foreground">{value}</div>
-      <div className="mt-2 text-sm leading-relaxed text-muted-foreground">{detail}</div>
-    </div>
+      <div className="mt-5 space-y-4">{children}</div>
+    </article>
   );
 }
 
@@ -132,8 +133,7 @@ export default function StatusClient() {
         path="/status/"
         title="System Status"
         leadParagraphs={[
-          "Public health board for cache freshness, endpoint reachability, and ingestion pressure.",
-          "Operator-only recovery tools now live on the Access-protected ops host under `/admin/`.",
+          "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
         ]}
       >
         <div className="py-20 text-center text-muted-foreground">Loading system status...</div>
@@ -148,8 +148,7 @@ export default function StatusClient() {
         path="/status/"
         title="System Status"
         leadParagraphs={[
-          "Public health board for cache freshness, endpoint reachability, and ingestion pressure.",
-          "Operator-only recovery tools now live on the Access-protected ops host under `/admin/`.",
+          "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
         ]}
       >
         <div className="rounded-[1.6rem] border border-red-500/30 bg-red-500/10 p-6 text-red-700 shadow-[0_18px_48px_oklch(0_0_0_/0.16)] dark:text-red-300">
@@ -166,8 +165,7 @@ export default function StatusClient() {
         path="/status/"
         title="System Status"
         leadParagraphs={[
-          "Public health board for cache freshness, endpoint reachability, and ingestion pressure.",
-          "Operator-only recovery tools now live on the Access-protected ops host under `/admin/`.",
+          "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
         ]}
       >
         <div className="py-20 text-center text-muted-foreground">Public health data is unavailable.</div>
@@ -178,7 +176,6 @@ export default function StatusClient() {
   const statusTone = getStatusTone(healthData.status);
   const worstCacheRatio = getWorstCacheRatio(healthData.caches);
   const worstCacheStatus = getWorstCacheStatus(worstCacheRatio);
-  const worstCacheTone = getStatusTone(worstCacheStatus);
   const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
   const unhealthyCaches = Object.values(healthData.caches).filter((cache) => !cache.healthy).length;
   const openCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "open").length;
@@ -194,90 +191,22 @@ export default function StatusClient() {
       path="/status/"
       title="System Status"
       leadParagraphs={[
-        "Public health board for cache freshness, endpoint reachability, and ingestion pressure.",
-        "Operator-only recovery tools now live on the Access-protected ops host under `/admin/`.",
+        "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
       ]}
-      headerActions={
-        <div className="flex flex-wrap items-center gap-2">
-          <SummaryBadge label="Health Sample" value={formatTimestampSeconds(healthData.timestamp)} />
-          <SummaryBadge label="Client Sync" value={formatTimestampMs(lastUpdated)} />
-          <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
-        </div>
-      }
     >
       <div className="space-y-6">
-        <section
-          className={cn(
-            "relative overflow-hidden rounded-[2rem] border px-4 py-5 shadow-[0_34px_90px_oklch(0_0_0_/0.24)] sm:px-5 lg:px-6",
-            statusTone.badgeClassName,
-          )}
-        >
-          <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(148,163,184,0.28)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:4rem_4rem]" />
-          <div className="relative space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-3">
-              <div className="space-y-1">
-                <p className="pharos-kicker">Public Monitor</p>
-                <h2 className="text-[clamp(2.65rem,6vw,4.85rem)] font-semibold leading-[0.94] tracking-[-0.08em] text-foreground">
-                  {statusTone.label}
-                </h2>
-                <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                  Read-only status for the public API surface. Use this page to check freshness pressure, route reachability,
-                  and ingestion health without the operator controls.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <SummaryBadge label="Warnings" value={String(healthData.warnings.length)} />
-                <SummaryBadge
-                  label="Probes"
-                  value={probeSummary ? `${probeSummary.passCount}/${probeSummary.sampleCount}` : "—"}
-                  className={probeSummary && probeSummary.failCount > 0 ? getStatusTone("degraded").badgeClassName : undefined}
-                />
-                <SummaryBadge
-                  label="Worst Cache"
-                  value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : "—"}
-                  className={worstCacheTone.badgeClassName}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <MetricCard
-                label="Public API"
-                value={statusTone.label}
-                tone={healthData.status}
-                detail={`${healthData.warnings.length} active warning(s) across public health checks.`}
-              />
-              <MetricCard
-                label="Worst Cache"
-                value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : "—"}
-                tone={worstCacheStatus}
-                detail={`${unhealthyCaches} cache lane(s) are outside their freshness target.`}
-              />
-              <MetricCard
-                label="Mint/Burn Sync"
-                value={healthData.mintBurn.sync.freshnessStatus}
-                tone={getMintBurnStatus(healthData.mintBurn.sync.freshnessStatus)}
-                detail={
-                  healthData.mintBurn.sync.lastSuccessfulSyncAt != null
-                    ? `Last successful sync ${lastSuccessfulMintBurnSyncAge} ago.`
-                    : "No successful sync recorded yet."
-                }
-              />
-              <MetricCard
-                label="Circuit Breakers"
-                value={String(openCircuits)}
-                tone={openCircuits > 0 ? "stale" : halfOpenCircuits > 0 ? "degraded" : "healthy"}
-                detail={
-                  openCircuits > 0
-                    ? `${openCircuits} open and ${halfOpenCircuits} half-open breaker(s).`
-                    : halfOpenCircuits > 0
-                      ? `${halfOpenCircuits} breaker(s) are probing recovery.`
-                      : "All registered source breakers are closed."
-                }
-              />
-            </div>
-          </div>
-        </section>
+        <PublicStatusHero
+          healthData={healthData}
+          lastUpdated={lastUpdated}
+          probeSummary={probeSummary}
+          worstCacheRatio={worstCacheRatio}
+          worstCacheStatus={worstCacheStatus}
+          unhealthyCaches={unhealthyCaches}
+          openCircuits={openCircuits}
+          halfOpenCircuits={halfOpenCircuits}
+          lastSuccessfulMintBurnSyncAge={lastSuccessfulMintBurnSyncAge}
+          onRefresh={handleRefresh}
+        />
 
         <NoticeRail notices={notices} />
 
@@ -285,8 +214,8 @@ export default function StatusClient() {
           id="overview"
           kicker="Current Picture"
           title="Public service summary"
-          description="High-signal public telemetry at a glance."
-          accentClassName="border-l-frost-blue"
+          description="The public read path reduced to the signals most likely to affect downstream trust."
+          accentClassName="border-l-frost-blue bg-[linear-gradient(180deg,rgba(11,18,32,0.88),rgba(4,10,20,0.94))]"
           summary={
             <>
               <SummaryBadge label="Status" value={statusTone.label} className={statusTone.badgeClassName} />
@@ -296,11 +225,11 @@ export default function StatusClient() {
           }
         >
           <div className="grid gap-5 xl:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Mint/Burn Sync</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+            <PublicSignalCard
+              kicker="Sync Watch"
+              title="Mint/Burn Sync"
+              description="Critical mint/burn writer freshness determines whether the public flows surface is current."
+              badges={
                 <div className="flex flex-wrap gap-2">
                   <SummaryBadge
                     label="Freshness"
@@ -309,36 +238,37 @@ export default function StatusClient() {
                   />
                   <SummaryBadge label="Major Stale" value={String(healthData.mintBurn.majorStaleCount)} />
                 </div>
-                <p className="leading-relaxed text-muted-foreground">
-                  {healthData.mintBurn.sync.warning ?? "Critical mint/burn lanes are within their expected freshness window."}
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-border/60 p-3">
-                    <div className="text-xs text-muted-foreground">Last Successful Sync</div>
-                    <div className="mt-1 font-mono text-sm text-foreground">
-                      {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-border/60 p-3">
-                    <div className="text-xs text-muted-foreground">Latest Hourly Sample</div>
-                    <div className="mt-1 font-mono text-sm text-foreground">
-                      {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
-                    </div>
+              }
+            >
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {healthData.mintBurn.sync.warning ?? "Critical mint/burn lanes are within their expected freshness window."}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[1rem] border border-border/60 bg-background/35 p-3">
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Successful Sync</div>
+                  <div className="mt-2 font-mono text-sm text-foreground">
+                    {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
                   </div>
                 </div>
-                {healthData.mintBurn.staleMajorSymbols.length > 0 ? (
-                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
-                    Impacted majors: {healthData.mintBurn.staleMajorSymbols.join(", ")}
+                <div className="rounded-[1rem] border border-border/60 bg-background/35 p-3">
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Latest Hourly Sample</div>
+                  <div className="mt-2 font-mono text-sm text-foreground">
+                    {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
                   </div>
-                ) : null}
-              </CardContent>
-            </Card>
+                </div>
+              </div>
+              {healthData.mintBurn.staleMajorSymbols.length > 0 ? (
+                <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+                  Impacted majors: {healthData.mintBurn.staleMajorSymbols.join(", ")}
+                </div>
+              ) : null}
+            </PublicSignalCard>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Blacklist Ingestion</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+            <PublicSignalCard
+              kicker="Data Integrity"
+              title="Blacklist Ingestion"
+              description="Blacklist amount gaps spill directly into public risk surfaces and should be treated as a trust issue, not just a back-office discrepancy."
+              badges={
                 <div className="flex flex-wrap gap-2">
                   <SummaryBadge
                     label="Missing Amounts"
@@ -347,19 +277,20 @@ export default function StatusClient() {
                   />
                   <SummaryBadge label="Tracked Events" value={String(healthData.blacklist.totalEvents)} />
                 </div>
-                <p className="leading-relaxed text-muted-foreground">
-                  Missing blacklist amounts surface here because they directly affect public data quality and downstream risk calculations.
-                </p>
-                <div className="rounded-lg border border-border/60 p-3">
-                  <div className="text-xs text-muted-foreground">Public Health Interpretation</div>
-                  <div className="mt-1 leading-relaxed text-foreground">
-                    {healthData.blacklist.missingAmounts > 0
-                      ? "Recent blacklist events are missing amount data and need follow-up."
-                      : "No current blacklist amount gaps are affecting the public health signal."}
-                  </div>
+              }
+            >
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Missing blacklist amounts surface here because they directly affect public data quality and downstream risk calculations.
+              </p>
+              <div className="rounded-[1rem] border border-border/60 bg-background/35 p-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Public Health Interpretation</div>
+                <div className="mt-2 leading-relaxed text-foreground">
+                  {healthData.blacklist.missingAmounts > 0
+                    ? "Recent blacklist events are missing amount data and need follow-up."
+                    : "No current blacklist amount gaps are affecting the public health signal."}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </PublicSignalCard>
           </div>
         </StatusSection>
 
@@ -367,8 +298,8 @@ export default function StatusClient() {
           id="reliability"
           kicker="Reliability"
           title="Route probes, breakers, and cache pressure"
-          description="Public-canary reachability from this browser, plus worker cache and circuit state."
-          accentClassName="border-l-amber-500"
+          description="Browser canary reachability, worker cache pressure, and breaker posture for the public edge."
+          accentClassName="border-l-amber-500 bg-[linear-gradient(180deg,rgba(24,18,10,0.42),rgba(7,10,18,0.94))]"
           summary={
             <>
               <SummaryBadge

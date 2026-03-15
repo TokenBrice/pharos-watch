@@ -51,6 +51,13 @@ The active frontend operator mode is now:
   - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
 - `/status/` stays read-only and uses only public read endpoints
+- The public `/status/` top fold now keeps browser-sync metadata inside a dedicated `Live watch` side panel instead of the page-title row, so the page title stays stable at narrow and medium widths
+- `src/components/status/public-status-hero.tsx`
+  - Renders the public-monitor hero with:
+    - a status narrative headline instead of the old single-word + four-card metric template
+    - a lead-signal panel for the first public warning or steady-state watch note
+    - a live-watch side panel for health sample time, client sync time, browser probe summary, circuit-breaker posture, refresh control, and operator-handoff note
+- The public `Overview` lane now uses flatter signal cards for mint/burn sync and blacklist ingestion rather than nesting generic `Card` shells inside the section wrapper
 
 ### Data hooks
 
