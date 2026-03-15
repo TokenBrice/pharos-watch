@@ -236,8 +236,13 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
     cronRows = await db
       .prepare(
         `SELECT job, started_at, duration_ms, status, error, item_count, metadata
-         FROM cron_runs
-         WHERE job IN (${cronJobInClause.sql})
+         FROM (
+           SELECT job, started_at, duration_ms, status, error, item_count, metadata,
+                  ROW_NUMBER() OVER (PARTITION BY job ORDER BY started_at DESC) AS rn
+           FROM cron_runs
+           WHERE job IN (${cronJobInClause.sql})
+         )
+         WHERE rn <= 10
          ORDER BY started_at DESC`,
       )
       .bind(...cronJobInClause.binds)
