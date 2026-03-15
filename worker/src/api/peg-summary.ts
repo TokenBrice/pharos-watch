@@ -86,6 +86,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   };
 
   // 2. Load DEX prices + shared peg analytics snapshot
+  // Narrower column set than dex-liquidity endpoint. Catch pattern mirrors depeg-helpers.ts loadDexPriceRows() (M-3).
   const dexPriceResult = await db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices").all<{
     stablecoin_id: string;
     dex_price_usd: number;

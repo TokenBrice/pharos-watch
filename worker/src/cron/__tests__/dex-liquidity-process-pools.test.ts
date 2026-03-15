@@ -284,4 +284,40 @@ describe("processPoolMetrics", () => {
     expect(metrics.get("usdt-tether")?.poolCount).toBe(1);
     expect(metrics.get("usdc-circle")?.poolCount).toBe(1);
   });
+
+  it("ignores organicFraction when apyBase is NaN", () => {
+    const pool = makePool({ apyBase: NaN, apy: 5, symbol: "USDT-USDC" });
+    const metrics = processPoolMetrics(
+      [pool],
+      new Set(["curve"]),
+      new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+    const m = metrics.get("usdt-tether");
+    expect(m).toBeDefined();
+    // NaN apyBase should not mark organic fraction as measured
+    expect(m!.totalTvlForOrganic).toBe(0);
+  });
+
+  it("uses apyBase fallback when apy is Infinity (avoids NaN from division)", () => {
+    const pool = makePool({ apyBase: 3, apy: Infinity, symbol: "USDT-USDC" });
+    const metrics = processPoolMetrics(
+      [pool],
+      new Set(["curve"]),
+      new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+    const m = metrics.get("usdt-tether");
+    expect(m).toBeDefined();
+    // apyBase is finite and positive → else-if branch sets organicFraction=1.0
+    expect(m!.totalTvlForOrganic).toBe(100_000);
+  });
 });

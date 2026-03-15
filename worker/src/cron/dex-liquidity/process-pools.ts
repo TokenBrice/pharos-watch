@@ -145,10 +145,12 @@ export function processPoolMetrics(
     }
 
     // Organic fraction from DeFiLlama APY data
-    if (pool.apyBase != null && pool.apy > 0.01) {
+    // Guard against NaN/Infinity from upstream data to prevent score corruption (H-1)
+    if (pool.apyBase != null && Number.isFinite(pool.apyBase) &&
+        pool.apy != null && Number.isFinite(pool.apy) && pool.apy > 0.01) {
       organicFraction = Math.min(1, Math.max(0, pool.apyBase / pool.apy));
       hasMeasuredOrganicFraction = true;
-    } else if (pool.apyBase != null) {
+    } else if (pool.apyBase != null && Number.isFinite(pool.apyBase)) {
       organicFraction = pool.apyBase > 0 ? 1.0 : 0;
       hasMeasuredOrganicFraction = true;
     }

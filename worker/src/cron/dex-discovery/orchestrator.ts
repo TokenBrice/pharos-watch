@@ -220,20 +220,28 @@ export async function syncDexDiscovery(
           validationReferences,
         );
 
-        await upsertStagedPools(db, result.pools);
-        await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec);
+        try {
+          await upsertStagedPools(db, result.pools);
+          await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec);
 
-        for (const pool of result.pools) {
-          knownPoolIds.add(pool.poolId);
-        }
+          for (const pool of result.pools) {
+            knownPoolIds.add(pool.poolId);
+          }
 
-        coinsCrawled += 1;
-        poolsDiscovered += result.pools.length;
-        for (const chain of result.unresolvedChains) {
-          allUnresolvedChains.add(chain);
-        }
-        for (const pool of result.pools) {
-          poolsBySource[pool.source] = (poolsBySource[pool.source] ?? 0) + 1;
+          coinsCrawled += 1;
+          poolsDiscovered += result.pools.length;
+          for (const chain of result.unresolvedChains) {
+            allUnresolvedChains.add(chain);
+          }
+          for (const pool of result.pools) {
+            poolsBySource[pool.source] = (poolsBySource[pool.source] ?? 0) + 1;
+          }
+        } catch (persistErr) {
+          rethrowIfAborted(persistErr, signal);
+          // Persistence failed but crawl succeeded — do NOT record miss (H-3)
+          console.warn("[dex-discovery] Persistence failed for", candidate.stablecoinId, persistErr);
+          failedCoins.push(candidate.stablecoinId);
+          failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(persistErr);
         }
       } catch (err) {
         rethrowIfAborted(err, signal);

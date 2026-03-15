@@ -75,4 +75,21 @@ describe("isPlausibleDexObservationPrice", () => {
     expect(isPlausibleDexObservationPrice("fpi-frax", 3.5)).toBe(true);
     expect(isPlausibleDexObservationPrice("fpi-frax", 0)).toBe(false);
   });
+
+  it("accepts EUR-pegged price with live FX reference and rejects far outliers", () => {
+    expect(isPlausibleDexObservationPrice("eurc-circle", 1.12, liveRefs)).toBe(true);
+    expect(isPlausibleDexObservationPrice("eurc-circle", 50, liveRefs)).toBe(false);
+  });
+
+  it("handles missing references gracefully for commodity pegs", () => {
+    expect(isPlausibleDexObservationPrice("xaut-tether", 2900)).toBe(true);
+    expect(isPlausibleDexObservationPrice("xaut-tether", 0.5)).toBe(false);
+  });
+
+  it("validates fractional gold tokens with commodityOunces scaling", () => {
+    // GGBR has commodityOunces: 0.001 (1 milligram of gold)
+    expect(isPlausibleDexObservationPrice("ggbr-goldfish-gold", 2.9, liveRefs)).toBe(true);
+    expect(isPlausibleDexObservationPrice("ggbr-goldfish-gold", 0.001, liveRefs)).toBe(false);
+    expect(isPlausibleDexObservationPrice("ggbr-goldfish-gold", 3000, liveRefs)).toBe(false);
+  });
 });

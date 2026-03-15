@@ -92,7 +92,7 @@ function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
     }
 
     const lockedLiquidityPct = getPoolExtraNumber(pool.extra, "lockedLiquidityPct");
-    if (lockedLiquidityPct != null && lockedLiquidityPct > 0) {
+    if (lockedLiquidityPct != null && lockedLiquidityPct >= 0) {
       lockedLiqWeightedSum += pool.tvlUsd * (lockedLiquidityPct / 100);
       totalTvlForLocked += pool.tvlUsd;
     }
@@ -135,12 +135,14 @@ function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   };
 }
 
-function computeSeriesStability(values: number[]): number | null {
-  if (values.length < 7) return null;
-  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+/** @internal Exported for testing only. */
+export function computeSeriesStability(values: number[]): number | null {
+  const finite = values.filter((v) => Number.isFinite(v));
+  if (finite.length < 7) return null;
+  const mean = finite.reduce((sum, value) => sum + value, 0) / finite.length;
   if (mean <= 0) return null;
-  const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
-  const cv = Math.sqrt(variance) / mean;
+  const variance = finite.reduce((sum, value) => sum + (value - mean) ** 2, 0) / finite.length;
+  const cv = Math.sqrt(Math.max(0, variance)) / mean;
   return Math.round((1 - Math.min(1, cv)) * 10000) / 10000;
 }
 

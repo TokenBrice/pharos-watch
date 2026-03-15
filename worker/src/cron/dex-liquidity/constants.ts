@@ -97,8 +97,26 @@ export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
 
 /**
  * Confidence weight for DEX price observations by protocol.
- * Scales TVL weight in the TVL-weighted median to down-weight
- * less reliable sources.
+ * Scales TVL weight in the TVL-weighted median to down-weight less reliable sources.
+ *
+ * Tier 1 (1.0): Primary scoring sources — exact match
+ *   "curve", "uniswap-v3", "aerodrome"
+ *
+ * Tier 2 (0.85): Discovery-stage CoinGecko/GeckoTerminal — startsWith match
+ *   "staged-cg_onchain-<dexId>"  (e.g., "staged-cg_onchain-raydium")
+ *   "geckoterminal-<dexId>"      (e.g., "geckoterminal-uniswap_v3")
+ *   "coingecko-<exchange>"       (e.g., "coingecko-binance")
+ *
+ * Tier 3 (0.55): DexScreener and CG tickers fallback — startsWith match
+ *   "dexscreener-<dexId>"        (e.g., "dexscreener-raydium")
+ *   "cg-ticker-<exchange>"       (e.g., "cg-ticker-kinesis")
+ *   "staged-dexscreener-<dexId>"
+ *   "staged-cg_tickers-<exchange>"
+ *
+ * Tier 4 (0.3): Unknown/unrecognized protocols — fallback
+ *
+ * startsWith is used for Tiers 2-3 because the crawl pipeline appends
+ * source-specific dexId/exchange suffixes to the protocol string.
  */
 export function dexPriceConfidenceForProtocol(protocol: string): number {
   if (protocol === "curve" || protocol === "uniswap-v3" || protocol === "aerodrome") return 1.0;

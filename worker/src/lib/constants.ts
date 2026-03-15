@@ -15,8 +15,9 @@ export function getDepegThresholdBps(pegType: string | undefined): number {
   return pegType === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
 }
 
-/** Maximum age (in seconds) for a DEX price observation to be considered fresh */
-export const DEX_FRESHNESS_SEC = 1200;
+/** Maximum age (in seconds) for a DEX price observation to be considered fresh.
+ *  Set to 35 min to cover the full 30-min scoring cron cycle + 5 min buffer (M-1). */
+export const DEX_FRESHNESS_SEC = 2100;
 
 /** Minimum per-pool liquidity required for a DEX price observation to be stored. */
 export const DEX_PRICE_OBSERVATION_MIN_TVL_USD = 50_000;

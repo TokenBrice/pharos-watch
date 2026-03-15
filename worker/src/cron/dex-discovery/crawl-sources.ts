@@ -361,6 +361,7 @@ export async function crawlCoin(
           if (tvl < 1_000) continue;
           const vol24h = pair.volume?.h24 ?? 0;
           if (vol24h === 0 && tvl < 10_000) continue;
+          if (tvl > 0 && vol24h / tvl > 50) continue; // Skip wash-traded pools (M-4)
 
           const poolAddress = pair.pairAddress?.toLowerCase();
           const dexId = pair.dexId;

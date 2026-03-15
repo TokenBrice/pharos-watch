@@ -29,6 +29,7 @@ import { MethodologyCardActions, MethodologyLabel } from "@/components/methodolo
 
 function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
+  if (Math.abs(value) < 0.05) return null;
   const isPositive = value >= 0;
   return (
     <span
@@ -146,12 +147,17 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
   );
 }
 
-function TopPoolsTable({ pools }: { pools: DexLiquidityPool[] }) {
+function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; totalPoolCount?: number }) {
   if (pools.length === 0) return null;
+  const displayed = pools.slice(0, 5).length;
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Top Pools</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {totalPoolCount != null && totalPoolCount > displayed
+          ? `Top ${displayed} of ${totalPoolCount} pools`
+          : "Top Pools"}
+      </p>
       <div className="rounded-lg border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
@@ -569,7 +575,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
         {isRated && <TvlTrendChart stablecoinId={stablecoinId} />}
 
-        {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} />}
+        {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
 
         <MethodologyCardActions topic="liquidityScore" />
       </CardContent>
