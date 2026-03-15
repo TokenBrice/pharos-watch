@@ -1,3 +1,5 @@
+import { computePysComponents } from "@shared/lib/yield-scoring";
+
 export const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "yield-spike": "Yield spike",
   "yield-divergence": "Yield divergence",
@@ -22,7 +24,7 @@ export function getPysColor(pys: number | null): string {
 
 /**
  * Compute PYS breakdown components for display (tooltips, stat cards).
- * This mirrors the intermediate values from the worker's `computePYS()` in yield-helpers.ts.
+ * Delegates to the shared PYS module — single source of truth.
  * The final PYS score is served by the API — this is for breakdown UI only.
  */
 export function computePysBreakdown(
@@ -30,9 +32,9 @@ export function computePysBreakdown(
   safetyScore: number | null,
   yieldStability: number | null,
 ) {
-  const effectiveSafety = safetyScore ?? 40;
-  const riskPenalty = Math.max(0.5, (101 - effectiveSafety) / 20);
-  const yieldEfficiency = apy30d / riskPenalty;
-  const sustainabilityMult = Math.max(0.3, yieldStability ?? 1.0);
-  return { riskPenalty, yieldEfficiency, sustainabilityMult };
+  // yieldStability in the API = 1.0 - apyVarianceScore
+  const apyVarianceScore = 1.0 - (yieldStability ?? 1.0);
+  const { riskPenalty, yieldEfficiency, sustainabilityMultiplier } =
+    computePysComponents({ apy30d, safetyScore, apyVarianceScore });
+  return { riskPenalty, yieldEfficiency, sustainabilityMult: sustainabilityMultiplier };
 }
