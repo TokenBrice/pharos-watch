@@ -8,7 +8,7 @@ export const compareYieldRows: (
   a: YieldRanking,
   b: YieldRanking,
   sort: TableSortState<YieldTableSortKey>,
-) => number = createTableComparator<YieldRanking, YieldTableSortKey>({
+) => number = createTableComparator<YieldTableSortKey, YieldRanking>({
   pys: (r) => r.pharosYieldScore ?? -1,
   apy30d: (r) => r.apy30d,
   safetyScore: (r) => r.safetyScore ?? -1,

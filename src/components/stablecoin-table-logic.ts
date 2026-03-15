@@ -1,5 +1,5 @@
 import { downloadCsv } from "@/lib/csv-export";
-import { compareNullable } from "@/lib/sort-utils";
+import { createTableComparator } from "@/lib/table-comparator";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -96,87 +96,33 @@ export function sortStablecoins({
 }: SortStablecoinsParams): StablecoinData[] {
   const metaById = TRACKED_META_BY_ID;
 
-  return [...filtered].sort((a, b) => {
-    let aVal: number;
-    let bVal: number;
-
-    switch (effectiveSortKey) {
-      case "name":
-        return sort.direction === "asc"
-          ? a.name.localeCompare(b.name)
-          : b.name.localeCompare(a.name);
-      case "price":
-        aVal = a.price ?? 0;
-        bVal = b.price ?? 0;
-        break;
-      case "mcap":
-        aVal = getCirculatingRaw(a);
-        bVal = getCirculatingRaw(b);
-        break;
-      case "change24h": {
-        const aPrev24 = getPrevDayRaw(a);
-        const bPrev24 = getPrevDayRaw(b);
-        aVal = aPrev24 > 0 ? (getCirculatingRaw(a) - aPrev24) / aPrev24 : 0;
-        bVal = bPrev24 > 0 ? (getCirculatingRaw(b) - bPrev24) / bPrev24 : 0;
-        break;
-      }
-      case "change7d": {
-        const aPrev7 = getPrevWeekRaw(a);
-        const bPrev7 = getPrevWeekRaw(b);
-        aVal = aPrev7 > 0 ? (getCirculatingRaw(a) - aPrev7) / aPrev7 : 0;
-        bVal = bPrev7 > 0 ? (getCirculatingRaw(b) - bPrev7) / bPrev7 : 0;
-        break;
-      }
-      case "stability": {
-        const aScore = pegScores?.get(a.id)?.pegScore ?? null;
-        const bScore = pegScores?.get(b.id)?.pegScore ?? null;
-        const nc = compareNullable(aScore, bScore);
-        if (nc !== null) return nc;
-        aVal = aScore!;
-        bVal = bScore!;
-        break;
-      }
-      case "liquidity": {
-        const aScore = dexLiquidity?.[a.id]?.liquidityScore ?? null;
-        const bScore = dexLiquidity?.[b.id]?.liquidityScore ?? null;
-        const nc = compareNullable(aScore, bScore);
-        if (nc !== null) return nc;
-        aVal = aScore!;
-        bVal = bScore!;
-        break;
-      }
-      case "grade": {
-        const aScore = reportCards?.[a.id]?.overallScore ?? null;
-        const bScore = reportCards?.[b.id]?.overallScore ?? null;
-        const nc = compareNullable(aScore, bScore);
-        if (nc !== null) return nc;
-        aVal = aScore!;
-        bVal = bScore!;
-        break;
-      }
-      case "peg": {
-        const getAbsBps = (coin: StablecoinData) => {
-          const meta = metaById.get(coin.id);
-          if (meta?.flags.navToken) return null;
-          const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
-          const price = coin.price;
-          return price != null && ref > 0 ? Math.abs(price / ref - 1) * 10_000 : null;
-        };
-        const aDev = getAbsBps(a);
-        const bDev = getAbsBps(b);
-        const nc = compareNullable(aDev, bDev);
-        if (nc !== null) return nc;
-        aVal = aDev!;
-        bVal = bDev!;
-        break;
-      }
-      default:
-        aVal = getCirculatingRaw(a);
-        bVal = getCirculatingRaw(b);
-    }
-
-    return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
+  const compare = createTableComparator<StablecoinTableSortKey, StablecoinData>({
+    name: (r) => r.name.toLowerCase(),
+    price: (r) => r.price ?? 0,
+    mcap: (r) => getCirculatingRaw(r),
+    change24h: (r) => {
+      const prev = getPrevDayRaw(r);
+      return prev > 0 ? (getCirculatingRaw(r) - prev) / prev : 0;
+    },
+    change7d: (r) => {
+      const prev = getPrevWeekRaw(r);
+      return prev > 0 ? (getCirculatingRaw(r) - prev) / prev : 0;
+    },
+    stability: (r) => pegScores?.get(r.id)?.pegScore ?? null,
+    liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
+    grade: (r) => reportCards?.[r.id]?.overallScore ?? null,
+    peg: (r) => {
+      const meta = metaById.get(r.id);
+      if (meta?.flags.navToken) return null;
+      const ref = getPegReference(r.pegType, pegRates, meta?.commodityOunces);
+      const price = r.price;
+      return price != null && ref > 0 ? Math.abs(price / ref - 1) * 10_000 : null;
+    },
   });
+
+  return [...filtered].sort((a, b) =>
+    compare(a, b, { key: effectiveSortKey, direction: sort.direction }),
+  );
 }
 
 export function exportStablecoinsCsv(

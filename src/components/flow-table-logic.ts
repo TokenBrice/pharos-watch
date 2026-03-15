@@ -1,5 +1,5 @@
 import { getPressureShiftState, PRESSURE_SHIFT_STATE_VALUES, type PressureShiftState } from "@shared/lib/mint-burn-signals";
-import { compareNullable } from "@/lib/sort-utils";
+import { createTableComparator } from "@/lib/table-comparator";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import type { MintBurnCoinFlow } from "@shared/types";
 import { getFlowPressureUi } from "@/lib/flow-signal-ui";
@@ -56,57 +56,21 @@ export function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; class
   }
 }
 
+const _compareFlowRows = createTableComparator<FlowTableSortKey, MintBurnCoinFlow>({
+  net24h: (r) => Math.abs(r.netFlow24hUsd),
+  mint24h: (r) => r.mintVolume24hUsd,
+  burn24h: (r) => r.burnVolume24hUsd,
+  net7d: (r) => Math.abs(r.netFlow7dUsd),
+  net30d: (r) => Math.abs(r.netFlow30dUsd),
+  net90d: (r) => Math.abs(r.netFlow90dUsd),
+  largest: (r) => r.largestEvent24h?.amountUsd ?? 0,
+  pressure: (r) => getPressureScore(r),
+});
+
 export function compareFlowRows(
   a: MintBurnCoinFlow,
   b: MintBurnCoinFlow,
   sort: TableSortState<FlowTableSortKey>,
 ): number {
-  let aVal: number;
-  let bVal: number;
-
-  switch (sort.key) {
-    case "net24h":
-      aVal = Math.abs(a.netFlow24hUsd);
-      bVal = Math.abs(b.netFlow24hUsd);
-      break;
-    case "mint24h":
-      aVal = a.mintVolume24hUsd;
-      bVal = b.mintVolume24hUsd;
-      break;
-    case "burn24h":
-      aVal = a.burnVolume24hUsd;
-      bVal = b.burnVolume24hUsd;
-      break;
-    case "net7d":
-      aVal = Math.abs(a.netFlow7dUsd);
-      bVal = Math.abs(b.netFlow7dUsd);
-      break;
-    case "net30d":
-      aVal = Math.abs(a.netFlow30dUsd);
-      bVal = Math.abs(b.netFlow30dUsd);
-      break;
-    case "net90d":
-      aVal = Math.abs(a.netFlow90dUsd);
-      bVal = Math.abs(b.netFlow90dUsd);
-      break;
-    case "largest":
-      aVal = a.largestEvent24h?.amountUsd ?? 0;
-      bVal = b.largestEvent24h?.amountUsd ?? 0;
-      break;
-    case "pressure": {
-      const aPressure = getPressureScore(a);
-      const bPressure = getPressureScore(b);
-      const nc = compareNullable(aPressure, bPressure);
-      if (nc !== null) return nc;
-      aVal = aPressure!;
-      bVal = bPressure!;
-      break;
-    }
-    default:
-      aVal = Math.abs(a.netFlow24hUsd);
-      bVal = Math.abs(b.netFlow24hUsd);
-      break;
-  }
-
-  return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
+  return _compareFlowRows(a, b, sort);
 }

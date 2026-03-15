@@ -213,11 +213,11 @@ describe("compareFlowRows — pressure sort key", () => {
 });
 
 describe("compareFlowRows — default fallback", () => {
-  it("uses net24h abs value for unknown sort key", () => {
+  it("returns 0 for unknown sort key (no-op)", () => {
     const a = makeFlow({ netFlow24hUsd: 10_000_000 });
     const b = makeFlow({ netFlow24hUsd: 1_000_000 });
     // Cast to satisfy TS — simulates unknown key
     const result = compareFlowRows(a, b, { key: "unknown" as FlowTableSortKey, direction: "desc" });
-    expect(result).toBeLessThan(0); // a ranks first
+    expect(result).toBe(0); // unknown key preserves original order
   });
 });

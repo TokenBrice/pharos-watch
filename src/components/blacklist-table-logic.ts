@@ -8,7 +8,7 @@ export const compareBlacklistRows: (
   a: BlacklistEvent,
   b: BlacklistEvent,
   sort: TableSortState<BlacklistSortKey>,
-) => number = createTableComparator<BlacklistEvent, BlacklistSortKey>({
+) => number = createTableComparator<BlacklistSortKey, BlacklistEvent>({
   date: (r) => r.timestamp,
   stablecoin: (r) => r.stablecoin,
   chain: (r) => r.chainName,

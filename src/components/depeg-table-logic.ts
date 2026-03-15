@@ -35,7 +35,7 @@ const fieldExtractors: Record<DepegFieldKey, (r: DepegTrackerRow) => number> = {
   trackingSpanDays: (r) => r.coin.trackingSpanDays,
 };
 
-const compareByField = createTableComparator<DepegTrackerRow, DepegFieldKey>(fieldExtractors);
+const compareByField = createTableComparator<DepegFieldKey, DepegTrackerRow>(fieldExtractors);
 
 export function compareDepegTrackerRows(
   a: DepegTrackerRow,

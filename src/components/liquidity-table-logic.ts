@@ -24,7 +24,7 @@ export const compareLiquidityRows: (
   a: LiquidityRow,
   b: LiquidityRow,
   sort: TableSortState<LiquiditySortKey>,
-) => number = createTableComparator<LiquidityRow, LiquiditySortKey>({
+) => number = createTableComparator<LiquiditySortKey, LiquidityRow>({
   score: (r) => r.liq.liquidityScore ?? 0,
   tvl: (r) => r.liq.totalTvlUsd,
   tvlTrend: (r) => r.liq.tvlChange7d ?? 0,
