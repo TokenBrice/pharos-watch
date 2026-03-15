@@ -28,6 +28,7 @@ interface ChartDatum {
   mint: number;
   burn: number;
   net: number;
+  isInterpolated: boolean;
 }
 
 export function FlowChart({ hourly, isLoading }: FlowChartProps) {
@@ -47,6 +48,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
         mint: bucket?.mintVolumeUsd ?? 0,
         burn: -(bucket?.burnVolumeUsd ?? 0),
         net: bucket?.netFlowUsd ?? 0,
+        isInterpolated: !bucket,
       });
     }
     return filled;
@@ -56,6 +58,8 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     if (chartData.length < 2) return 0;
     return (chartData[chartData.length - 1].ts - chartData[0].ts) / HOUR_MS;
   }, [chartData]);
+
+  const hasInterpolated = useMemo(() => chartData.some((d) => d.isInterpolated), [chartData]);
 
   const formatXAxisTick = useCallback((ts: number) => {
     if (rangeHours <= 48) {
@@ -167,6 +171,11 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+      {hasInterpolated && (
+        <p className="mt-1 text-[11px] text-muted-foreground/60">
+          Gaps in hourly data are filled with zero values.
+        </p>
+      )}
     </div>
   );
 }

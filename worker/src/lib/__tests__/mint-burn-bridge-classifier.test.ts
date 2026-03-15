@@ -131,5 +131,19 @@ describe("classifyBridgeAwareBurnRows", () => {
       expect(row.burn_type).toBe("review_required");
       expect(row.burn_review_reason).toBe("bridge-signal-with-unknown-pool");
     });
+
+    it(`[${coin.symbol}] treats null tx context as review_required (Alchemy lookup failure)`, () => {
+      const row = makeBurnRow({
+        tx_hash: `0xnull-ctx-${coin.stablecoinId}`,
+        counterparty: coin.detection.knownBridgePoolAddresses[0],
+      });
+      // null context = Alchemy failed to fetch tx/receipt
+      const txContext = new Map<string, null>([[row.tx_hash, null]]);
+
+      classifyBridgeAwareBurnRows([row], coin.detection, txContext);
+
+      expect(row.burn_type).toBe("review_required");
+      expect(row.burn_review_reason).toBe("tx-context-unavailable");
+    });
   }
 });

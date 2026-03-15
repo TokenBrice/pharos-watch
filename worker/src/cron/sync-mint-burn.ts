@@ -21,6 +21,7 @@ import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
 import { getNullPriceBacklog, healNullPrices } from "../lib/mint-burn-pipeline/price-heal";
+import { sweepRecentRoundtrips } from "../lib/mint-burn-pipeline/roundtrip-sweep";
 import {
   collectAffectedHours,
   insertMintBurnRows,
@@ -786,6 +787,20 @@ export async function syncMintBurn(
     }
   }
 
+  // Sweep for cross-run atomic roundtrips (only on non-error runs).
+  let roundtripSweepCount = 0;
+  if (status !== "error") {
+    try {
+      const sweepResult = await sweepRecentRoundtrips(db, Math.floor(Date.now() / 1000));
+      roundtripSweepCount = sweepResult.reclassified;
+      if (roundtripSweepCount > 0) {
+        console.log(`[sync-mint-burn] Roundtrip sweep reclassified ${roundtripSweepCount} rows`);
+      }
+    } catch (error) {
+      console.warn("[sync-mint-burn] Roundtrip sweep failed (non-fatal):", error);
+    }
+  }
+
   const metadata = JSON.stringify(withBudgetMetadata(budget, {
     lane,
     jobName,
@@ -829,6 +844,7 @@ export async function syncMintBurn(
     runStatePersistenceFailed,
     nullPricesHealed,
     nullPriceBacklog,
+    roundtripSweepCount,
   }));
 
   await reportCronProgress(reportProgress, {

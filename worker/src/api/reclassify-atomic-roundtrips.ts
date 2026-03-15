@@ -1,5 +1,6 @@
 import { requireAdmin } from "../lib/auth";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
+import { batchExecute } from "../lib/db";
 import { recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
 import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
 
@@ -22,45 +23,50 @@ export const handleReclassifyAtomicRoundtrips = withErrorHandler(
     const authErr = await requireAdmin(request, trustedAdmin);
     if (authErr) return authErr;
 
+    // Single discovery query that also returns chain_id + timestamp for affected hours.
+    // This replaces the old per-group SELECT loop.
     const { results: roundtripTxs } = await db.prepare(
-      `SELECT tx_hash, stablecoin_id
+      `SELECT tx_hash, stablecoin_id, chain_id,
+              MIN(timestamp) as min_ts,
+              COUNT(*) as cnt
        FROM mint_burn_events
        WHERE flow_type = 'standard'
-       GROUP BY tx_hash, stablecoin_id
+       GROUP BY tx_hash, stablecoin_id, chain_id
        HAVING COUNT(DISTINCT direction) > 1
        LIMIT ?`,
-    ).bind(BATCH_SIZE).all<{ tx_hash: string; stablecoin_id: string }>();
+    ).bind(BATCH_SIZE).all<{
+      tx_hash: string;
+      stablecoin_id: string;
+      chain_id: string;
+      min_ts: number;
+      cnt: number;
+    }>();
 
     if (roundtripTxs.length === 0) {
       return jsonResponse({ done: true, updated: 0 });
     }
 
+    // Collect affected hours from discovery results (no per-tx query needed).
     const affectedHours = new Map<string, MintBurnAffectedHour>();
-    let updated = 0;
+    for (const row of roundtripTxs) {
+      const hourTs = Math.floor(row.min_ts / 3600) * 3600;
+      const key = `${row.stablecoin_id}-${row.chain_id}-${hourTs}`;
+      affectedHours.set(key, {
+        stablecoinId: row.stablecoin_id,
+        chainId: row.chain_id,
+        hourTs,
+      });
+    }
 
-    for (const { tx_hash, stablecoin_id } of roundtripTxs) {
-      const { results: events } = await db.prepare(
-        `SELECT chain_id, timestamp FROM mint_burn_events
-         WHERE tx_hash = ? AND stablecoin_id = ? AND flow_type = 'standard'`,
-      ).bind(tx_hash, stablecoin_id).all<{ chain_id: string; timestamp: number }>();
-
-      for (const event of events) {
-        const hourTs = Math.floor(event.timestamp / 3600) * 3600;
-        const key = `${stablecoin_id}-${event.chain_id}-${hourTs}`;
-        affectedHours.set(key, {
-          stablecoinId: stablecoin_id,
-          chainId: event.chain_id,
-          hourTs,
-        });
-      }
-
-      const result = await db.prepare(
+    // Batch UPDATE all matched rows in one batchExecute call.
+    const updateStmts = roundtripTxs.map((row) =>
+      db.prepare(
         `UPDATE mint_burn_events
          SET flow_type = 'atomic_roundtrip'
          WHERE tx_hash = ? AND stablecoin_id = ? AND flow_type = 'standard'`,
-      ).bind(tx_hash, stablecoin_id).run();
-      updated += result.meta.changes ?? 0;
-    }
+      ).bind(row.tx_hash, row.stablecoin_id),
+    );
+    const updated = await batchExecute(db, updateStmts);
 
     await recalcAffectedHours(db, affectedHours);
 

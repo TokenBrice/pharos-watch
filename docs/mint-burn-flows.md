@@ -160,7 +160,7 @@ Current scope: **83 contract configs** across **82 stablecoin IDs** (6 critical 
 | apxUSD | apxusd-apyx | 18 | Extended | Transfer |
 | reUSD | reusd-re-protocol | 18 | Risky | Deposited + InstantRedemptionProcessed (2 configs, Ethereum) |
 
-Flight-to-quality classification is now **report-card-cache driven only**. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, FTQ classification is marked unavailable in the response (`gauge.classificationSource = "unavailable"`, `sync.classificationWarning != null`) instead of silently falling back to a hardcoded safe-haven list.
+Flight-to-quality classification is now **report-card-cache driven only**. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, FTQ classification is marked unavailable in the response (`gauge.classificationSource = "unavailable"`, `sync.classificationWarning != null`) instead of silently falling back to a hardcoded safe-haven list. No hardcoded fallback is implemented — FTQ requires fresh report-card data.
 
 Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to exclude flash loan / atomic arb noise from aggregation.
 
@@ -210,6 +210,7 @@ Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to 
    - Cron metadata now includes both `nullPricesHealed` and `nullPriceBacklog` (`recent`, `historical`) so operators can distinguish live healable gaps from older debt.
 8. **Emit active progress** — long runs call the shared cron `reportProgress(...)` hook so `/api/status` can surface the active stage, queue position, and budget heartbeat while the lease is still live.
 9. **Escalate degraded runs** — the critical lane emits `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`. The extended lane keeps the same observability metadata but does not escalate long-tail backlog pressure to `error`.
+10. **Sweep cross-run roundtrips** — on non-error runs, query up to 200 `(tx_hash, stablecoin_id)` groups within the last 48 hours where both mint and burn directions exist but `flow_type = 'standard'`. Reclassify to `atomic_roundtrip` and re-aggregate affected hourly buckets. This catches roundtrips where the mint and burn were ingested in separate cron runs.
 
 **Counterparty resolution:** For mints, `topics[2]` (recipient). For burns, `topics[1]` (sender).
 
@@ -230,6 +231,7 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 | `context.ts` | Shared loaders for current prices and historical price series |
 | `persistence.ts` | `INSERT OR IGNORE` event writes, burn classification updates, affected-hour aggregation |
 | `price-heal.ts` | Auto-heal recent NULL-price rows from `price_cache` and return affected hours |
+| `roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection (48h window, 200 limit) |
 | `sync-state.ts` | Sync-state key helpers plus mode-specific upserts (`replace` for cron, `monotonic-max` for backfill) |
 
 Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
@@ -271,9 +273,9 @@ Per-coin UI and API now answer two different questions explicitly:
    - `flat`: `netFlow24hUsd = 0` with activity
    - `inactive`: no 24h activity
 2. **Pressure Shift vs 30D** — how unusual current pressure is versus the coin's own baseline
-   - `improving`: score `> 10`
-   - `stable`: score between `-10` and `+10`
-   - `worsening`: score `< -10`
+   - `improving`: score `> 10` (strictly greater; score of exactly 10 is stable)
+   - `stable`: score between `-10` and `+10` (inclusive on both boundaries)
+   - `worsening`: score `< -10` (strictly less; score of exactly -10 is stable)
    - `nr`: insufficient history or no current activity
 
 Invariant: minting vs burning semantics now always come from raw net flow, never from score sign.
@@ -335,6 +337,9 @@ CREATE TABLE mint_burn_events (
   direction TEXT NOT NULL,             -- "mint" or "burn"
   amount REAL NOT NULL,                -- Token-native amount
   amount_usd REAL,                     -- NULL if price unavailable at sync time
+  price_used REAL,                     -- Price at resolution time
+  price_timestamp INTEGER,             -- When the price was sourced (cache update time), NOT the event's block timestamp
+  price_source TEXT,                   -- "supply-history-daily", "price-cache-current", or "price_cache_heal"
   flow_type TEXT DEFAULT 'standard',   -- "standard" or "atomic_roundtrip"
   counterparty TEXT,                   -- Address that received/sent tokens
   tx_hash TEXT NOT NULL,
@@ -549,6 +554,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 | Duplicate events | `INSERT OR IGNORE` on deterministic `id` key prevents duplicates |
 | Unknown stablecoin ID in per-coin API | Returns 404 with descriptive error |
 | Missing `stablecoin` param in events API | Returns 400 |
+| Partial-coverage cron run | Hourly aggregation rebuilds from all DB events for affected hours; buckets may be temporarily incomplete for configs still catching up |
 
 ### Circuit Breaker Separation
 
@@ -605,6 +611,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `worker/src/lib/mint-burn-pipeline/context.ts` | Shared current/historical price context loaders |
 | `worker/src/lib/mint-burn-pipeline/persistence.ts` | Shared event write + hourly recompute helpers |
 | `worker/src/lib/mint-burn-pipeline/price-heal.ts` | Shared NULL-price auto-heal helper |
+| `worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection |
 | `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
 | `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit override addresses for special vault events |
 | `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: pressure shift (FIS), gauge, flight-to-quality |

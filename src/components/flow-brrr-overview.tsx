@@ -324,6 +324,8 @@ function IterationOne({
                   <div
                     className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow-[0_0_0_3px_rgba(15,23,42,0.45)] transition-all"
                     style={{ left: `calc(${snapshot.leverPct}% - 10px)` }}
+                    role="img"
+                    aria-label={`Bank Run Gauge at ${Math.round(snapshot.leverPct)}%`}
                   />
                 )}
               </div>

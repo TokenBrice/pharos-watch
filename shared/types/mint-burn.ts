@@ -10,10 +10,10 @@ const MintBurnGaugeSchema = z.object({
   band: z.string().nullable(),
   intensitySemantics: z.enum(["midpoint-v1", "signed-v2"]).optional(),
   flightToQuality: z.boolean(),
-  flightIntensity: z.number(),
+  flightIntensity: z.number().finite(),
   classificationSource: z.enum(["report-card-cache", "unavailable"]).optional(),
-  trackedCoins: z.number(),
-  trackedMcapUsd: z.number(),
+  trackedCoins: z.number().int().nonnegative(),
+  trackedMcapUsd: z.number().finite().nonnegative(),
 });
 export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
 
@@ -65,14 +65,14 @@ const MintBurnCoinFlowSchema = z.object({
   baselineDailyNetUsd: z.number().nullable().optional(),
   baselineDailyAbsUsd: z.number().nullable().optional(),
   baselineDataDays: z.number().nullable().optional(),
-  netFlow24hUsd: z.number(),
-  mintVolume24hUsd: z.number(),
-  burnVolume24hUsd: z.number(),
-  mintCount24h: z.number(),
-  burnCount24h: z.number(),
-  netFlow7dUsd: z.number(),
-  netFlow30dUsd: z.number(),
-  netFlow90dUsd: z.number(),
+  netFlow24hUsd: z.number().finite(),
+  mintVolume24hUsd: z.number().finite().nonnegative(),
+  burnVolume24hUsd: z.number().finite().nonnegative(),
+  mintCount24h: z.number().int().nonnegative(),
+  burnCount24h: z.number().int().nonnegative(),
+  netFlow7dUsd: z.number().finite(),
+  netFlow30dUsd: z.number().finite(),
+  netFlow90dUsd: z.number().finite(),
   largestEvent24h: z
     .object({
       direction: z.enum(["mint", "burn"]),
@@ -86,10 +86,10 @@ const MintBurnCoinFlowSchema = z.object({
 export type MintBurnCoinFlow = z.infer<typeof MintBurnCoinFlowSchema>;
 
 const MintBurnHourlyBucketSchema = z.object({
-  hourTs: z.number(),
-  netFlowUsd: z.number(),
-  mintVolumeUsd: z.number(),
-  burnVolumeUsd: z.number(),
+  hourTs: z.number().int().nonnegative(),
+  netFlowUsd: z.number().finite(),
+  mintVolumeUsd: z.number().finite().nonnegative(),
+  burnVolumeUsd: z.number().finite().nonnegative(),
 });
 export type MintBurnHourlyBucket = z.infer<typeof MintBurnHourlyBucketSchema>;
 
@@ -106,21 +106,21 @@ export type MintBurnFlowsResponse = z.infer<typeof MintBurnFlowsResponseSchema>;
 
 const MintBurnPerCoinChainSchema = z.object({
   chainId: z.string(),
-  mintVolumeUsd: z.number(),
-  burnVolumeUsd: z.number(),
-  mintCount: z.number(),
-  burnCount: z.number(),
-  netFlowUsd: z.number(),
+  mintVolumeUsd: z.number().finite().nonnegative(),
+  burnVolumeUsd: z.number().finite().nonnegative(),
+  mintCount: z.number().int().nonnegative(),
+  burnCount: z.number().int().nonnegative(),
+  netFlowUsd: z.number().finite(),
 });
 
 export const MintBurnPerCoinResponseSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
-  mintVolumeUsd: z.number(),
-  burnVolumeUsd: z.number(),
-  netFlowUsd: z.number(),
-  mintCount: z.number(),
-  burnCount: z.number(),
+  mintVolumeUsd: z.number().finite().nonnegative(),
+  burnVolumeUsd: z.number().finite().nonnegative(),
+  netFlowUsd: z.number().finite(),
+  mintCount: z.number().int().nonnegative(),
+  burnCount: z.number().int().nonnegative(),
   chains: z.array(MintBurnPerCoinChainSchema),
   hourly: z.array(MintBurnHourlyBucketSchema),
   updatedAt: z.number(),

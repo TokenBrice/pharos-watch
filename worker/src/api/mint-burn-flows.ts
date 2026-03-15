@@ -106,7 +106,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     const nowDayTs = bucketDay(nowSec);
     const baselineWindowStart = nowDayTs - BASELINE_WINDOW_DAYS * DAY_SEC;
 
-    // Load grade-based classification (falls back to hardcoded SAFE_HAVEN_IDS if unavailable)
+    // Load grade-based classification (FTQ disabled when cache unavailable; see classificationWarning)
     const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_MAX_AGE_MS });
     const gradeClassification = reportCardCache.kind === "ok"
       ? buildFlightToQualityClassification(reportCardCache.payload)

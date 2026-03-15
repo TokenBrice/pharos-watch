@@ -200,13 +200,15 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
                   <TableCell className="text-right font-mono tabular-nums text-sm">
                     {evt.amountUsd != null ? (
                       formatCurrency(evt.amountUsd)
-                    ) : (
+                    ) : evt.amount > 0 ? (
                       <div className="flex flex-col items-end gap-1">
                         <span>{formatTokenAmount(evt.amount)} {evt.symbol}</span>
                         <Badge variant="outline" className="text-[10px]">
                           Unpriced
                         </Badge>
                       </div>
+                    ) : (
+                      <span className="text-muted-foreground">&mdash;</span>
                     )}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-sm">
