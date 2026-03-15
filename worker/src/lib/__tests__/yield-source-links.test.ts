@@ -41,4 +41,25 @@ describe("resolveYieldSourceUrl", () => {
       }),
     ).toBe("https://ethena.fi/");
   });
+
+  it("returns null when no curated link and no metadata link exists", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "nonexistent-coin",
+        sourceKey: "unknown-pool",
+        yieldSource: "Unknown Protocol",
+      }),
+    ).toBeNull();
+  });
+
+  it("resolves URL for newly added lending protocols", () => {
+    // Verify at least one of the newly added protocols resolves
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "usdc-circle",
+        sourceKey: "radiant-v2:usdc",
+        yieldSource: "Radiant v2",
+      }),
+    ).toBe("https://app.radiant.capital/");
+  });
 });
