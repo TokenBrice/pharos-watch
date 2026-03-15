@@ -475,6 +475,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
   { stablecoinId: "ustb-superstate", spreadBps: 15, label: "T-bill proxy (net of 0.15% fee)" },
   { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy" },
+  { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
 ];
 
 /**
@@ -523,6 +524,14 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "jupiter-lend",
   "stables-labs-usdx",
   "benqi-lending", // $133M total TVL, $8M stablecoin; USDC/USDT on Avalanche
+  // Tier 4 (expansion — targeted coverage additions)
+  "radiant-v2",
+  "fraxlend-v2",
+  "clearpool",
+  "centrifuge",
+  "sturdy-v2",
+  "goldfinch",
+  "truefi",
 ]);
 
 /** Human-readable display names for DeFiLlama lending protocol slugs. */
@@ -555,6 +564,13 @@ export const LENDING_PROTOCOL_LABELS: Record<string, string> = {
   "jupiter-lend": "Jupiter Lend",
   "stables-labs-usdx": "Stables Labs",
   "benqi-lending": "BENQI",
+  "radiant-v2": "Radiant v2",
+  "fraxlend-v2": "Fraxlend",
+  "clearpool": "Clearpool",
+  "centrifuge": "Centrifuge",
+  "sturdy-v2": "Sturdy v2",
+  "goldfinch": "Goldfinch",
+  "truefi": "TrueFi",
 };
 
 /**
