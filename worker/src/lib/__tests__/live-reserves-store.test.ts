@@ -260,4 +260,83 @@ describe("live-reserves-store", () => {
     const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
     expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
   });
+
+  it("filters slices with invalid risk enum values during resolution", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify([
+            { name: "Good", pct: 60, risk: "low" },
+            { name: "Bad", pct: 40, risk: "bogus" },
+          ]),
+          fetched_at: now,
+          source: "infinifi",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
+    expect(result!.reserves).toHaveLength(1);
+    expect(result!.reserves[0].name).toBe("Good");
+  });
+
+  it("filters slices with negative pct during resolution", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify([
+            { name: "Valid", pct: 80, risk: "medium" },
+            { name: "Negative", pct: -10, risk: "low" },
+            { name: "Zero", pct: 0, risk: "high" },
+          ]),
+          fetched_at: now,
+          source: "infinifi",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
+    expect(result!.reserves).toHaveLength(1);
+    expect(result!.reserves[0].name).toBe("Valid");
+  });
 });

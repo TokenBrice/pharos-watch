@@ -88,13 +88,19 @@ function parseWarnings(value: string | null): LiveReserveWarning[] {
   }
 }
 
+const VALID_RISKS = new Set(["very-low", "low", "medium", "high", "very-high"]);
+
 function isValidSlice(item: unknown): item is ReserveSlice {
   if (!item || typeof item !== "object") return false;
   const slice = item as Partial<ReserveSlice>;
   return (
     typeof slice.name === "string"
+    && slice.name.length > 0
     && typeof slice.pct === "number"
+    && Number.isFinite(slice.pct)
+    && slice.pct > 0
     && typeof slice.risk === "string"
+    && VALID_RISKS.has(slice.risk)
   );
 }
 
@@ -387,7 +393,8 @@ export async function loadFreshLiveReserveMap(
   const map = new Map<string, ReserveSlice[]>();
   for (const row of rows.results) {
     try {
-      const slices: ReserveSlice[] = JSON.parse(row.slices);
+      const raw: unknown[] = JSON.parse(row.slices);
+      const slices = raw.filter(isValidSlice);
       if (slices.length >= minSlices) {
         map.set(row.stablecoin_id, slices);
       }
