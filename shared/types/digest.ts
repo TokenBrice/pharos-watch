@@ -112,6 +112,14 @@ export interface DigestInputData {
     };
     mcapUsd: number;
   }[];
+  yieldAnomalies?: {
+    symbol: string;
+    currentApy: number;
+    apy7d: number;
+    apy30d: number;
+    warnings: string[];
+    mcapUsd: number;
+  }[];
 }
 
 export interface DailyDigestResponse {

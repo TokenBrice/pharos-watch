@@ -23,6 +23,7 @@ import {
   collectHistoricalContext,
   collectGradeTransitions,
   collectPsiContributors,
+  collectYieldAnomalies,
   type CollectorContext,
 } from "./daily-digest/collectors";
 
@@ -54,9 +55,9 @@ const SYSTEM_PROMPT =
   "Everything else is background — don't dilute the lead.\n" +
   "TENSION priority: DEWS band changes > gauge drift > active depegs > grade transitions. " +
   "Historical context supports the narrative but doesn't lead.\n" +
-  "WATCHFUL priority: the single most interesting signal, whatever category it's in. " +
+  "WATCHFUL priority: the single most interesting signal, whatever category it's in. Yield anomalies (APY spikes, divergence) and liquidity shifts are valid leads here. " +
   "Grade transitions, DEWS shifts, supply reversals, and blacklist contrasts are equally valid leads. Pick the sharpest story.\n" +
-  "CALM priority: historical context > grade transitions > supply mover context > structural observations. " +
+  "CALM priority: historical context > grade transitions > supply mover context > yield anomalies > structural observations. " +
   "The PSI band streak is always worth mentioning. Find the story in the micro-data.\n" +
   "In all regimes: pick the 1-2 most compelling stories. Weave grades and scores into observations, don't list them. " +
   "A D-grade on an $8M coin is noise. A coin entering DANGER band while PSI reads BEDROCK is a story.\n\n" +
@@ -91,7 +92,7 @@ const SYSTEM_PROMPT =
   "You MUST respond with valid JSON: {\"title\": \"...\", \"extended\": \"...\", \"text\": \"...\", \"meta\": {\"lead\": \"...\", \"tone\": \"...\", \"coins\": [\"...\", \"...\"]}}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The meta field captures your editorial choices for variety tracking: " +
-  "lead is the primary signal you led with (e.g., \"psi-streak\", \"dews-band-change\", \"ftq\", \"grade-transition\", \"supply-reversal\", \"blacklist-contrast\", \"macro-observation\"); " +
+  "lead is the primary signal you led with (e.g., \"psi-streak\", \"dews-band-change\", \"ftq\", \"grade-transition\", \"supply-reversal\", \"blacklist-contrast\", \"macro-observation\", \"yield-anomaly\", \"liquidity-shift\"); " +
   "tone is the dominant tone (e.g., \"bemused\", \"foreboding\", \"clinical\", \"wistful\", \"darkly-amused\", \"urgent\"); " +
   "coins are the 1-3 coin symbols you featured most prominently.\n\n" +
   // 10. Title + text + extended specs
@@ -287,6 +288,16 @@ function buildUserPrompt(
       }
     }
     lines.push(`  Distribution: median ${medianGrade}, ${aboveBCount} above B, ${fCount} rated F`);
+  }
+
+  // Enrichment: yield anomalies
+  if (data.yieldAnomalies && data.yieldAnomalies.length > 0) {
+    lines.push("", "Yield Anomalies:");
+    for (const y of data.yieldAnomalies) {
+      lines.push(
+        `  ${y.symbol}: ${y.currentApy}% APY (7d avg ${y.apy7d}%, 30d avg ${y.apy30d}%), mcap ${formatCurrency(y.mcapUsd)}, warnings: ${y.warnings.join(", ")}`,
+      );
+    }
   }
 
   // Enrichment: resolved depegs
@@ -494,6 +505,7 @@ export async function generateDailyDigest(
   const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
   const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades);
   const psiContributors = await collectPsiContributors(ctx);
+  const yieldAnomalies = await collectYieldAnomalies(ctx);
 
   // --- Build input data ---
   const inputData: DigestInputData = {
@@ -513,6 +525,7 @@ export async function generateDailyDigest(
     historicalContext,
     psiContributors,
     gradeTransitions,
+    yieldAnomalies,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentMeta);

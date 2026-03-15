@@ -670,3 +670,53 @@ export async function collectGradeTransitions(
   }
   return undefined;
 }
+
+// ---------------------------------------------------------------------------
+// 11. Yield anomalies
+// ---------------------------------------------------------------------------
+
+export async function collectYieldAnomalies(
+  ctx: CollectorContext,
+): Promise<DigestInputData["yieldAnomalies"]> {
+  try {
+    const rows = await ctx.db
+      .prepare(
+        `SELECT stablecoin_id, symbol, current_apy, apy_7d, apy_30d, warning_signals
+         FROM yield_data
+         WHERE is_best = 1 AND warning_signals IS NOT NULL AND warning_signals != '[]'
+         ORDER BY current_apy DESC`,
+      )
+      .all<{
+        stablecoin_id: string; symbol: string;
+        current_apy: number; apy_7d: number; apy_30d: number;
+        warning_signals: string;
+      }>();
+
+    const candidates = (rows.results ?? [])
+      .map((r) => {
+        let warnings: string[] = [];
+        try { warnings = JSON.parse(r.warning_signals) as string[]; } catch { /* ignore */ }
+        if (warnings.length === 0) return null;
+
+        const mcapUsd = ctx.mcapById.get(r.stablecoin_id) ?? 0;
+        if (mcapUsd < 10_000_000) return null;
+
+        return {
+          symbol: r.symbol,
+          currentApy: Math.round(r.current_apy * 100) / 100,
+          apy7d: Math.round(r.apy_7d * 100) / 100,
+          apy30d: Math.round(r.apy_30d * 100) / 100,
+          warnings,
+          mcapUsd,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .sort((a, b) => b.mcapUsd * b.warnings.length - a.mcapUsd * a.warnings.length)
+      .slice(0, 5);
+
+    return candidates.length > 0 ? candidates : undefined;
+  } catch (e) {
+    console.error("[daily-digest] Failed to collect yield anomalies:", e);
+    return undefined;
+  }
+}
