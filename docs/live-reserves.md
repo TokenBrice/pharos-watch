@@ -8,7 +8,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Current coverage:** 44 live-enabled stablecoins across 24 registered adapters
+- **Current coverage:** 45 live-enabled stablecoins across 24 registered adapters
 - **Storage:** `reserve_composition`, `reserve_sync_state`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -193,13 +193,14 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `accountable` | `http-json` | `protocol-reserve` | 6 |
 | `asymmetry` | `http-json` | `collateral-mix` | 1 |
 | `btcfi` | `http-json` | `collateral-mix` | 1 |
-| `chainlink-nav` | `onchain-evm` | `single-asset` | 4 |
+| `chainlink-nav` | `onchain-evm` | `single-asset` | 3 |
 | `chainlink-por` | `onchain-evm` | `attestation-mix` | 1 |
+| `circle-transparency` | `http-json` | `attestation-mix` | 2 |
 | `collateral-positions-api` | `http-json` | `collateral-mix` | 2 |
 | `crvusd` | `http-json` | `collateral-mix` | 1 |
 | `erc4626-single-asset` | `onchain-evm` | `single-asset` | 2 |
 | `ethena` | `http-json` | `collateral-mix` | 1 |
-| `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 3 |
+| `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 2 |
 | `falcon` | `http-json` | `collateral-mix` | 1 |
 | `frax` | `http-json` | `attestation-mix` | 1 |
 | `gho` | `onchain-evm` | `protocol-reserve` | 1 |
@@ -208,9 +209,9 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `m0` | `http-json` | `protocol-reserve` | 3 |
 | `mento` | `http-html` | `collateral-mix` | 2 |
 | `openeden-usdo` | `http-json` | `collateral-mix` | 1 |
-| `ousd` | `http-json` | `collateral-mix` | 1 |
+| `ousd` | `http-json` | `collateral-mix` | 0 |
 | `reservoir` | `http-json` | `protocol-reserve` | 1 |
-| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 5 |
+| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 6 |
 | `sky-makercore` | `http-json` | `collateral-mix` | 2 |
 | `tether` | `http-json` | `attestation-mix` | 1 |
 
@@ -242,6 +243,7 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 - [Risk Lab](./report-cards.md) uses live reserve snapshots for collateral quality scoring when
   available (v5.8+). Dependency inference, blacklist-inherited checks, and all other scoring
   dimensions still use curated reserve metadata.
+- `isBlacklistable()` inherited detection still uses curated `meta.reserves` (which carry `coinId` links). Live adapter slices lack `coinId`, so inherited blacklist scoring cannot use live data. The collateral drift alert flags when these two sources diverge.
 - [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
 
 ---

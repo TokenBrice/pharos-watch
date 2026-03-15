@@ -23,7 +23,7 @@ Current-version note: v5.8 integrates live reserve snapshots into collateral qua
 | **Liquidity / Exit** | 30% | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present |
 | **Resilience** | 20% | Token metadata (3 sub-factors) | Weighted avg of collateral quality, custody model, and blacklist capability |
 | **Decentralization** | 15% | Governance quality + chain infrastructure | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
-| **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → 95. With deps → blended score (upstream × weight + self-backed), −10 if any < 75. Self-backed varies by governance (90/75/95) |
+| **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75 |
 
 ### Peg Stability (multiplier)
 
@@ -91,6 +91,19 @@ adapter slices do not carry `coinId` links.
 A delta alert fires when the live-derived score diverges from curated by >15 points,
 signaling that curated metadata (and potentially the governance classification) may
 need human review.
+
+**Known Limitation: Blacklist Inherited Uses Curated Data**
+
+`isBlacklistable()` computes `"possible-inherited"` blacklistability from curated
+`StablecoinMeta.reserves` (which carry `coinId` links), not from live adapter
+snapshots. Live adapter slices do not carry `coinId` because adapters return generic
+slice names without linking to tracked Pharos stablecoin IDs.
+
+This means the blacklist capability sub-factor and the collateral quality sub-factor
+within Resilience can see different reserve compositions when live data diverges from
+curated. The collateral drift alert (>15pt divergence) helps operators detect when
+curated metadata needs updating, which also refreshes the blacklist-inherited
+calculation.
 
 | Reserve Risk Tier | Score | Description | Examples |
 |---|---|---|---|
@@ -313,7 +326,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. The current snapshot size is ~237 cards (156 tracked + 81 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. The current snapshot size is ~238 cards (157 tracked + 81 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 
