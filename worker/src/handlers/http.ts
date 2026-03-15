@@ -99,7 +99,7 @@ export async function handleHttpRequest(
   }
 
   const url = new URL(request.url);
-  const isAdmin = hasValidAdminCredential(request);
+  const isAdmin = await hasValidAdminCredential(request, undefined, env);
   if (url.pathname.startsWith("/api/") && url.pathname !== "/api/telegram-webhook" && !isAdmin) {
     const rateLimitResponse = await checkPublicApiRateLimit(
       env.DB,

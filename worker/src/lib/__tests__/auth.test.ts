@@ -38,13 +38,13 @@ describe("auth helpers", () => {
     expect(result).toBeNull();
   });
 
-  it("reports admin validity from ops-api access signals only", () => {
+  it("reports admin validity from ops-api access signals only", async () => {
     const request = new Request("https://ops-api.pharos.watch/api/status", {
       headers: { "Cf-Access-Authenticated-User-Email": "operator@example.com" },
     });
     const publicRequest = new Request("https://api.pharos.watch/api/status");
 
-    expect(hasValidAdminCredential(request)).toBe(true);
-    expect(hasValidAdminCredential(publicRequest)).toBe(false);
+    expect(await hasValidAdminCredential(request)).toBe(true);
+    expect(await hasValidAdminCredential(publicRequest)).toBe(false);
   });
 });

@@ -17,37 +17,37 @@ describe("timingSafeCompare", () => {
 });
 
 describe("hasValidAdminCredential", () => {
-  it("returns true when trustedAdmin is true", () => {
-    expect(hasValidAdminCredential(undefined, true)).toBe(true);
+  it("returns true when trustedAdmin is true", async () => {
+    expect(await hasValidAdminCredential(undefined, true)).toBe(true);
   });
-  it("returns false when no request and not trusted", () => {
-    expect(hasValidAdminCredential(undefined)).toBe(false);
+  it("returns false when no request and not trusted", async () => {
+    expect(await hasValidAdminCredential(undefined)).toBe(false);
   });
-  it("returns false for non-ops-api request", () => {
+  it("returns false for non-ops-api request", async () => {
     const req = new Request("https://api.pharos.watch/api/test");
-    expect(hasValidAdminCredential(req)).toBe(false);
+    expect(await hasValidAdminCredential(req)).toBe(false);
   });
-  it("returns true for ops-api request with JWT header", () => {
+  it("returns true for ops-api request with JWT header (no AUD configured)", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test", {
       headers: { "Cf-Access-Jwt-Assertion": "some-jwt-token" },
     });
-    expect(hasValidAdminCredential(req)).toBe(true);
+    expect(await hasValidAdminCredential(req)).toBe(true);
   });
-  it("returns true for ops-api request with email header", () => {
+  it("returns true for ops-api request with email header", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test", {
       headers: { "Cf-Access-Authenticated-User-Email": "admin@example.com" },
     });
-    expect(hasValidAdminCredential(req)).toBe(true);
+    expect(await hasValidAdminCredential(req)).toBe(true);
   });
-  it("returns true for ops-api request with service token headers", () => {
+  it("returns true for ops-api request with service token headers", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test", {
       headers: { "CF-Access-Client-Id": "id", "CF-Access-Client-Secret": "secret" },
     });
-    expect(hasValidAdminCredential(req)).toBe(true);
+    expect(await hasValidAdminCredential(req)).toBe(true);
   });
-  it("returns false for ops-api request without access headers", () => {
+  it("returns false for ops-api request without access headers", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test");
-    expect(hasValidAdminCredential(req)).toBe(false);
+    expect(await hasValidAdminCredential(req)).toBe(false);
   });
 });
 

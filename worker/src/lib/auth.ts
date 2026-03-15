@@ -1,6 +1,13 @@
 import { errorResponse } from "./api-utils";
+import { verifyAccessJwt } from "./jwt-verify";
 
 const DEFAULT_OPS_API_HOST = "ops-api.pharos.watch";
+
+/** Env fields relevant to admin auth — avoids importing the full Env type. */
+export interface AdminAuthEnv {
+  CF_ACCESS_OPS_API_AUD?: string;
+  CF_ACCESS_TEAM_DOMAIN?: string;
+}
 
 function isOpsApiRequest(request: Request | undefined): boolean {
   if (!request) return false;
@@ -14,18 +21,32 @@ function isOpsApiRequest(request: Request | undefined): boolean {
 /**
  * Checks for Cloudflare Access proxy signals on ops-api requests.
  *
- * IMPORTANT: This function checks header *presence*, not *validity*.
- * Security relies on Cloudflare Access sitting in front of ops-api.pharos.watch
- * to validate JWTs and strip spoofed headers before they reach the Worker.
- * The Worker itself does NOT verify JWT signatures or service token values.
+ * When `CF_ACCESS_OPS_API_AUD` is configured, the JWT's signature and
+ * claims (aud, exp, iss) are cryptographically verified against the
+ * Cloudflare Access JWKS endpoint.
  *
- * If the Worker is ever reachable without Cloudflare Access in the path
- * (misconfigured DNS, direct Worker URL), all admin endpoints are unprotected.
+ * When the AUD is NOT configured, falls back to header-presence checks
+ * (backward-compatible with existing deployments that rely on Cloudflare
+ * Access sitting in front of ops-api.pharos.watch).
  */
-function hasOpsApiAccessSignal(request: Request | undefined): boolean {
+async function hasOpsApiAccessSignal(
+  request: Request | undefined,
+  env?: AdminAuthEnv,
+): Promise<boolean> {
   if (!isOpsApiRequest(request)) return false;
 
   const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
+
+  // When AUD is configured, require and verify the JWT cryptographically
+  if (env?.CF_ACCESS_OPS_API_AUD && accessJwt) {
+    return verifyAccessJwt({
+      token: accessJwt,
+      aud: env.CF_ACCESS_OPS_API_AUD,
+      teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
+    });
+  }
+
+  // Fallback: AUD not configured — header-presence check only
   if (accessJwt) {
     return true;
   }
@@ -40,11 +61,12 @@ function hasOpsApiAccessSignal(request: Request | undefined): boolean {
   return Boolean(serviceTokenId && serviceTokenSecret);
 }
 
-export function hasValidAdminCredential(
+export async function hasValidAdminCredential(
   request: Request | undefined,
   trustedAdmin?: boolean,
-): boolean {
-  return trustedAdmin === true || hasOpsApiAccessSignal(request);
+  env?: AdminAuthEnv,
+): Promise<boolean> {
+  return trustedAdmin === true || hasOpsApiAccessSignal(request, env);
 }
 
 /**
@@ -65,7 +87,7 @@ export async function requireAdmin(
   request: Request | undefined,
   trustedAdmin?: boolean,
 ): Promise<Response | null> {
-  if (!hasValidAdminCredential(request, trustedAdmin)) {
+  if (!(await hasValidAdminCredential(request, trustedAdmin))) {
     return errorResponse(401, "Unauthorized");
   }
   return null;

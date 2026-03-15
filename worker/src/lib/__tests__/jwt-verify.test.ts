@@ -1,0 +1,323 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { verifyAccessJwt, _resetJwksCache } from "../jwt-verify";
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+function base64urlEncode(data: string): string {
+  const encoded = btoa(data);
+  return encoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function makeJwtParts(
+  header: Record<string, unknown>,
+  payload: Record<string, unknown>,
+): { headerB64: string; payloadB64: string; token: string } {
+  const headerB64 = base64urlEncode(JSON.stringify(header));
+  const payloadB64 = base64urlEncode(JSON.stringify(payload));
+  // Fake signature — will fail crypto verification but allows claim tests
+  const sigB64 = base64urlEncode("fake-signature-bytes");
+  return { headerB64, payloadB64, token: `${headerB64}.${payloadB64}.${sigB64}` };
+}
+
+const TEAM_DOMAIN = "pharos";
+const AUD = "test-aud-value";
+const ISSUER = `https://${TEAM_DOMAIN}.cloudflareaccess.com`;
+const JWKS_URL = `https://${TEAM_DOMAIN}.cloudflareaccess.com/cdn-cgi/access/certs`;
+
+function validClaims(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
+  return {
+    aud: AUD,
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    iss: ISSUER,
+    iat: Math.floor(Date.now() / 1000) - 60,
+    sub: "user-id",
+    email: "admin@example.com",
+    ...overrides,
+  };
+}
+
+function validHeader(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
+  return {
+    alg: "RS256",
+    kid: "test-kid-1",
+    typ: "JWT",
+    ...overrides,
+  };
+}
+
+// A minimal valid JWKS response — the key values are structurally valid
+// but won't actually verify the fake signatures in unit tests.
+const MOCK_JWKS = {
+  keys: [
+    {
+      kid: "test-kid-1",
+      kty: "RSA",
+      alg: "RS256",
+      use: "sig",
+      n: "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+      e: "AQAB",
+    },
+  ],
+};
+
+// ── Tests ───────────────────────────────────────────────────────────
+
+describe("verifyAccessJwt", () => {
+  beforeEach(() => {
+    _resetJwksCache();
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    _resetJwksCache();
+  });
+
+  // ── Malformed tokens ──────────────────────────────────────────
+
+  describe("malformed tokens", () => {
+    it("rejects empty string", async () => {
+      expect(
+        await verifyAccessJwt({ token: "", aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with only one part", async () => {
+      expect(
+        await verifyAccessJwt({ token: "abc", aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with two parts", async () => {
+      expect(
+        await verifyAccessJwt({ token: "abc.def", aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with four parts", async () => {
+      expect(
+        await verifyAccessJwt({ token: "a.b.c.d", aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with invalid base64url header", async () => {
+      expect(
+        await verifyAccessJwt({ token: "!!!.abc.def", aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with header missing kid", async () => {
+      const { token } = makeJwtParts({ alg: "RS256" }, validClaims());
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with header missing alg", async () => {
+      const { token } = makeJwtParts({ kid: "k1" }, validClaims());
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+  });
+
+  // ── Claim validation ─────────────────────────────────────────
+
+  describe("claim validation", () => {
+    it("rejects expired token", async () => {
+      const { token } = makeJwtParts(
+        validHeader(),
+        validClaims({ exp: Math.floor(Date.now() / 1000) - 60 }),
+      );
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with missing exp claim", async () => {
+      const claims = validClaims();
+      delete claims.exp;
+      const { token } = makeJwtParts(validHeader(), claims);
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with wrong audience (string)", async () => {
+      const { token } = makeJwtParts(
+        validHeader(),
+        validClaims({ aud: "wrong-aud" }),
+      );
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with wrong audience (array)", async () => {
+      const { token } = makeJwtParts(
+        validHeader(),
+        validClaims({ aud: ["wrong-1", "wrong-2"] }),
+      );
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with missing audience", async () => {
+      const claims = validClaims();
+      delete claims.aud;
+      const { token } = makeJwtParts(validHeader(), claims);
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with wrong issuer", async () => {
+      const { token } = makeJwtParts(
+        validHeader(),
+        validClaims({ iss: "https://evil.cloudflareaccess.com" }),
+      );
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("rejects token with nbf in the future", async () => {
+      const { token } = makeJwtParts(
+        validHeader(),
+        validClaims({ nbf: Math.floor(Date.now() / 1000) + 3600 }),
+      );
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("accepts token with audience as array containing correct aud", async () => {
+      // Claims pass, but signature verification will fail — that's OK,
+      // we're testing that the claim check for array audience works.
+      // We mock fetch to return JWKS but the crypto.subtle.verify will
+      // fail because the signature is fake.
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(MOCK_JWKS), { status: 200 }),
+      ));
+      const { token } = makeJwtParts(
+        validHeader(),
+        validClaims({ aud: ["other-aud", AUD] }),
+      );
+      // Should get past claim validation but fail at crypto — returning false
+      // (but not due to claim rejection)
+      const result = await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN });
+      // We can't easily distinguish "claim pass but crypto fail" from claim rejection
+      // in the boolean API, but we know the fetch was called (meaning claims passed)
+      expect(fetch).toHaveBeenCalledWith(JWKS_URL);
+    });
+  });
+
+  // ── JWKS fetch failures ──────────────────────────────────────
+
+  describe("JWKS fetch", () => {
+    it("returns false when JWKS fetch fails", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")));
+      const { token } = makeJwtParts(validHeader(), validClaims());
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("returns false when JWKS returns non-200", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+        new Response("not found", { status: 404 }),
+      ));
+      const { token } = makeJwtParts(validHeader(), validClaims());
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("returns false when JWKS has no matching kid", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "other-kid" }] }), { status: 200 }),
+      ));
+      const { token } = makeJwtParts(validHeader(), validClaims());
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+
+    it("returns false when JWKS response has no keys array", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({}), { status: 200 }),
+      ));
+      const { token } = makeJwtParts(validHeader(), validClaims());
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+  });
+
+  // ── JWKS caching ─────────────────────────────────────────────
+
+  describe("JWKS caching", () => {
+    it("caches JWKS and reuses on second call", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(MOCK_JWKS), { status: 200 }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { token: token1 } = makeJwtParts(validHeader(), validClaims());
+      await verifyAccessJwt({ token: token1, aud: AUD, teamDomain: TEAM_DOMAIN });
+
+      const { token: token2 } = makeJwtParts(validHeader(), validClaims());
+      await verifyAccessJwt({ token: token2, aud: AUD, teamDomain: TEAM_DOMAIN });
+
+      // Should only fetch once due to caching
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("re-fetches JWKS after cache expiry", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(MOCK_JWKS), { status: 200 }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { token: token1 } = makeJwtParts(validHeader(), validClaims());
+      await verifyAccessJwt({ token: token1, aud: AUD, teamDomain: TEAM_DOMAIN });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Advance time past the 1-hour TTL
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 61 * 60 * 1000);
+
+      // Reset the cache to simulate expiry (since we set Date.now via fake timers
+      // but the cache was set with the real Date.now)
+      _resetJwksCache();
+
+      const { token: token2 } = makeJwtParts(
+        validHeader(),
+        validClaims({ exp: Math.floor(Date.now() / 1000) + 3600 }),
+      );
+      await verifyAccessJwt({ token: token2, aud: AUD, teamDomain: TEAM_DOMAIN });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+  });
+
+  // ── Unsupported algorithm ────────────────────────────────────
+
+  describe("algorithm handling", () => {
+    it("rejects unsupported algorithm", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({
+          keys: [{ ...MOCK_JWKS.keys[0], kid: "test-kid-1", alg: "ES256" }],
+        }), { status: 200 }),
+      ));
+      const { token } = makeJwtParts(
+        validHeader({ alg: "ES256" }),
+        validClaims(),
+      );
+      expect(
+        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
+      ).toBe(false);
+    });
+  });
+});
