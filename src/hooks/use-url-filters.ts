@@ -23,6 +23,8 @@ export function useUrlFilters() {
     typeof window !== "undefined" ? window.location.search : ""
   ));
 
+  // syncFromLocation is referentially stable (empty useCallback deps) —
+  // safe to use as a useEffect dependency without causing re-subscription loops.
   const syncFromLocation = useCallback(() => {
     if (typeof window === "undefined") return;
     setSearch(window.location.search);
