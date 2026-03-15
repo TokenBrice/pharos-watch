@@ -555,3 +555,9 @@ data/
   - `/status/`
   - `/admin/`
 - Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
+
+---
+
+## TypeScript Target Constraints
+
+Root tsconfig targets ES2017 (for browser compatibility via Next.js). Worker tsconfig targets ES2021 (Cloudflare Workers runtime). Shared modules in `shared/lib/` MUST be ES2017-compatible as they compile under both targets — avoid `??=`, `||=`, `Array.at()`, and other post-ES2017 features in shared code.

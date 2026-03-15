@@ -963,3 +963,16 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/cron/status-self-check.ts`             | Status reliability self-check: default-origin internal router probes, external `SELF_URL` HTTP probes, hysteresis persistence, discrepancy + probe-failure alerting |
 | `worker/src/lib/status-reliability.ts`             | Status state machine + transition/probe/discrepancy persistence helpers                                                                                             |
 | `worker/migrations/0001_initial.sql`               | `cache`, `blacklist_events`, `blacklist_sync_state` tables                                                                                                          |
+
+---
+
+### Migration Squash Strategy
+
+Currently at 74 D1 migrations. When the count approaches ~150, perform a one-time squash:
+
+1. Export current schema: `wrangler d1 export stablecoin-db --remote --output=baseline.sql`
+2. Replace all migration files with a single `0001_baseline.sql`
+3. Reset D1's internal migration tracking
+4. Verify with a fresh `wrangler d1 migrations apply --remote`
+
+See also `docs/MANIFEST.md` for the rollback runbook.
