@@ -4690,6 +4690,50 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "apcxUSDT (custodial 1:1 USDT wrapper)", pct: 100, risk: "high", coinId: "usdt-tether", depType: "wrapper" },
     ],
   }),
+  other("cetes-etherfuse", "Etherfuse CETES", "CETES", "rwa-backed", "centralized", "MXN", {
+    detailProvider: "coingecko",
+    geckoId: "cetes",
+    yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Mexican government CETES bonds", yieldType: "nav-appreciation" },
+    collateral: "Short-term Mexican federal government bonds (CETES — Certificados de la Tesorería de la Federación), BBB- rated sovereign debt with maturities set by government auctions; held in segregated custody through INDEVAL (Instituto para el Depósito de Valores) via participating brokerages",
+    pegMechanism: "NAV-accreting token; price starts near MXN 1.00 and appreciates continuously as zero-coupon CETES bonds discount to face value; bonds rolled at each maturity date; subscription and redemption through Etherfuse at current NAV; KYC required",
+    proofOfReserves: { type: "independent-audit", url: "https://app.etherfuse.com/legal/proof-of-reserves" },
+    jurisdiction: { country: "Mexico", regulator: "CNBV, IPAB & CONDUSEF" },
+    links: [
+      { label: "Website", url: "https://etherfuse.com/" },
+      { label: "Twitter", url: "https://x.com/etherfuse" },
+      { label: "Docs", url: "https://docs.etherfuse.com/" },
+      { label: "Proof of Reserve", url: "https://app.etherfuse.com/legal/proof-of-reserves" },
+    ],
+    contracts: [
+      { chain: "solana",  address: "CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f", decimals: 6 },
+      { chain: "base",    address: "0x834df4c1d8f51be24322e39e4766697be015512f", decimals: 6 },
+      { chain: "polygon", address: "0x834df4c1d8f51be24322e39e4766697be015512f", decimals: 6 },
+      { chain: "stellar", address: "CETES-GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC", decimals: 7 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "regulated-entity",
+    deploymentModel: "native-multichain",
+    reserves: [
+      { name: "CETES (Mexican federal government bonds, BBB-, WAM <1 year)", pct: 100, risk: "low" },
+    ],
+    liveReservesConfig: {
+      // Option A: ERC-20 total-supply probe on Base confirms on-chain liveness.
+      // Option C (future): custom etherfuse adapter against their reserves API
+      // once Etherfuse publishes a public JSON endpoint for reserve composition.
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "cetes-etherfuse",
+      display: { url: "https://app.etherfuse.com/legal/proof-of-reserves", label: "Etherfuse PoR" },
+      inputs: { primary: { kind: "onchain-evm", chain: "base", rpcMode: "alchemy" } },
+      params: {
+        label: "Mexican federal government bonds (CETES)",
+        risk: "low",
+      },
+    },
+  }),
   usd("syrupusdc-maple", "Maple syrupUSDC", "syrupUSDC", "rwa-backed", "centralized-dependent", {
     detailProvider: "coingecko",
     geckoId: "syrupusdc",

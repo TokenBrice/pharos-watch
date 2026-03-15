@@ -82,7 +82,8 @@ async function fetchLogos(): Promise<void> {
     }
   }
 
-  // Write to data/logos.json
+  // Write to data/logos.json — preserve manually-placed local entries (those
+  // pointing to /logos/... paths) so downloaded images survive script reruns.
   const fs = await import("fs");
   const path = await import("path");
   const { fileURLToPath } = await import("url");
@@ -90,6 +91,19 @@ async function fetchLogos(): Promise<void> {
   const outDir = path.join(__dirname, "..", "data");
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, "logos.json");
+
+  let existing: Record<string, string> = {};
+  try {
+    existing = JSON.parse(fs.readFileSync(outPath, "utf-8"));
+  } catch {
+    // file doesn't exist yet — start fresh
+  }
+  for (const [id, url] of Object.entries(existing)) {
+    if (url.startsWith("/logos/") && !(id in logoMap)) {
+      logoMap[id] = url;
+    }
+  }
+
   fs.writeFileSync(outPath, JSON.stringify(logoMap, null, 2));
   console.log(`Wrote ${Object.keys(logoMap).length} logos to ${outPath}`);
 }
