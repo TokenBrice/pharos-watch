@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 24 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track 23 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally excluded from the shared status metadata set.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 25 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track 24 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally excluded from the shared status metadata set.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
