@@ -2,6 +2,7 @@ import { buildInClause, buildPaginatedQuery } from "./db";
 import { getCache } from "./db-cache";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import type { CacheStatus } from "@shared/types";
 import type { ZodType } from "zod";
 
@@ -27,7 +28,7 @@ export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): Freshn
   return {
     updatedAt,
     ageSeconds: age,
-    status: ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale",
+    status: ratio <= FRESHNESS_RATIOS.FRESH ? "fresh" : ratio <= FRESHNESS_RATIOS.DEGRADED ? "degraded" : "stale",
   };
 }
 
@@ -127,7 +128,7 @@ export async function buildCacheStatuses(
 
     const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
     if (ratio > worstRatio) worstRatio = ratio;
-    caches[key] = { ageSeconds, maxAge, healthy: ratio <= 1.5 };
+    caches[key] = { ageSeconds, maxAge, healthy: ratio <= FRESHNESS_RATIOS.DEGRADED };
   }
 
   return { caches, worstRatio, failures };

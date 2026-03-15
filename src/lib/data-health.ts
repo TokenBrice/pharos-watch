@@ -1,6 +1,7 @@
 import type { ApiMeta } from "@/lib/api";
 import { ApiFetchError } from "@/lib/api";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 type DataHealthState = "fresh" | "degraded" | "stale" | "unavailable" | "error";
 
@@ -46,7 +47,7 @@ function pickBaseState(meta: ApiMeta | null | undefined, ageMs: number | null, s
   if (meta?.status === "degraded" || meta?.warning) return "degraded";
   if (ageMs === null) return "unavailable";
   if (ageMs <= staleTime) return "fresh";
-  if (ageMs <= 1.5 * staleTime) return "degraded";
+  if (ageMs <= FRESHNESS_RATIOS.DEGRADED * staleTime) return "degraded";
   return "stale";
 }
 

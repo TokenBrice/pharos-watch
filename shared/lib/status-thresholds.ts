@@ -1,3 +1,14 @@
+// --- Data freshness ratio boundaries ---
+// Canonical thresholds for age/interval ratio. Used by worker buildFreshnessMeta
+// and frontend data-health.ts to classify cache freshness consistently.
+export const FRESHNESS_RATIOS = {
+  /** Data is fresh if age <= interval * FRESH */
+  FRESH: 1.0,
+  /** Data is degraded if age <= interval * DEGRADED */
+  DEGRADED: 1.5,
+  // Anything beyond DEGRADED is stale
+} as const;
+
 // --- Blacklist gap thresholds ---
 export const BLACKLIST_RECENT_WINDOW_SEC = 24 * 3600;
 export const STATUS_BLACKLIST_THRESHOLDS = {
