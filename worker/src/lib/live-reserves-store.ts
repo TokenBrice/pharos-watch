@@ -399,7 +399,7 @@ export async function loadFreshLiveReserveMap(
         map.set(row.stablecoin_id, slices);
       }
     } catch {
-      // Skip malformed JSON
+      console.warn(`[live-reserves-store] Skipping malformed slices JSON for ${row.stablecoin_id}`);
     }
   }
   return map;
