@@ -53,8 +53,10 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         .all<PsiSupplyRow>();
       const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
-      await db.exec("DROP TABLE IF EXISTS stability_index_rebuild");
-      await db.exec(rebuildTableSql);
+      await db.batch([
+        db.prepare("DROP TABLE IF EXISTS stability_index_rebuild"),
+        db.prepare(rebuildTableSql),
+      ]);
 
       // Iterate day by day — build all statements first, then atomically swap
       const stmts: D1PreparedStatement[] = [];

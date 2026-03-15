@@ -143,37 +143,59 @@ describe("handleBackfillStabilityIndex", () => {
     expect(body.daysBackfilled).toBeGreaterThanOrEqual(2);
   });
 
-  it("runs rebuild table DDL as separate exec statements", async () => {
+  it("runs rebuild table DDL atomically via db.batch and cleans up via exec", async () => {
     const execCalls: string[] = [];
+    const batchCalls: string[][] = [];
     const nowSec = Math.floor(Date.now() / 1000);
     const start = nowSec - 86400;
     const day = Math.floor(nowSec / 86400) * 86400;
 
+    const db = makeDb({
+      earliest: start,
+      depegRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -120,
+          peg_reference: 1,
+          started_at: start,
+          ended_at: null,
+        },
+      ],
+      supplyRows: [
+        { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000 },
+      ],
+      onExec: (sql) => execCalls.push(sql),
+    });
+
+    // Track SQL for each prepared statement via a WeakMap
+    const stmtSqlMap = new WeakMap<object, string>();
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      const s = origPrepare(sql);
+      stmtSqlMap.set(s, sql);
+      return s;
+    }) as typeof db.prepare;
+
+    const origBatch = db.batch.bind(db);
+    db.batch = (async (stmts: D1PreparedStatement[]) => {
+      batchCalls.push(stmts.map((s) => stmtSqlMap.get(s as unknown as object) ?? "<unknown>"));
+      return origBatch(stmts);
+    }) as typeof db.batch;
+
     const res = await handleBackfillStabilityIndex(
-      makeDb({
-        earliest: start,
-        depegRows: [
-          {
-            stablecoin_id: "usdt-tether",
-            peak_deviation_bps: -120,
-            peg_reference: 1,
-            started_at: start,
-            ended_at: null,
-          },
-        ],
-        supplyRows: [
-          { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000 },
-        ],
-        onExec: (sql) => execCalls.push(sql),
-      }),
+      db,
       true,
       makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
     );
 
     expect(res.status).toBe(200);
-    expect(execCalls).toEqual([
+    // First batch should contain the DDL: DROP + CREATE (atomic)
+    expect(batchCalls[0]).toEqual([
       "DROP TABLE IF EXISTS stability_index_rebuild",
       "CREATE TABLE stability_index_rebuild ( computed_at INTEGER PRIMARY KEY, score REAL NOT NULL, band TEXT NOT NULL, components TEXT NOT NULL, input_snapshot TEXT NOT NULL, methodology_version TEXT NOT NULL )",
+    ]);
+    // Cleanup exec still runs
+    expect(execCalls).toEqual([
       "DROP TABLE IF EXISTS stability_index_rebuild",
     ]);
   });

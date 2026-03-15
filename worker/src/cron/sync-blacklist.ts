@@ -25,6 +25,7 @@ import { fetchEvmTokenBalance } from "./blacklist/balance-providers";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TronEventsResponseSchema } from "../lib/external-api-schemas";
+import { bigIntToDecimal } from "../lib/bigint";
 import { throwIfAborted } from "../lib/abort";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
@@ -460,9 +461,10 @@ async function fetchTronEventsIncremental(
         if (!eventType) continue;
 
         const affectedAddress = evt.result._user || evt.result._blackListedUser || evt.result["0"] || "";
+        const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
         const amount =
-          eventType === "destroy" && (evt.result._balance || evt.result._value || evt.result["1"])
-            ? Number(evt.result._balance || evt.result._value || evt.result["1"]) / Math.pow(10, config.decimals)
+          eventType === "destroy" && rawAmountStr
+            ? bigIntToDecimal(BigInt(rawAmountStr), config.decimals)
             : null;
         const timestamp = Math.floor(evt.block_timestamp / 1000);
         const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
@@ -752,16 +754,19 @@ async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<number>
   return batchExecute(db, stmts);
 }
 
-export async function syncBlacklist(
-  db: D1Database,
-  etherscanApiKey: string | null,
-  trongridApiKey: string | null,
-  drpcApiKey: string | null,
-  externalEtherscanRL?: RateLimitedFetch,
-  signal?: AbortSignal,
-  onProgress?: CronProgressReporter,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<SyncBlacklistResult> {
+export interface SyncBlacklistOptions {
+  db: D1Database;
+  etherscanApiKey: string | null;
+  trongridApiKey: string | null;
+  drpcApiKey: string | null;
+  externalEtherscanRL?: RateLimitedFetch;
+  signal?: AbortSignal;
+  onProgress?: CronProgressReporter;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+}
+
+export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBlacklistResult> {
+  const { db, etherscanApiKey, trongridApiKey, drpcApiKey, externalEtherscanRL, signal, onProgress, chainRpcs } = opts;
   const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);
   const budget = createBudget(900);

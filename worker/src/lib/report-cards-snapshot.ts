@@ -137,7 +137,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   const liveToFallbackCoins: string[] = [];
 
   for (const meta of sortedMetas) {
-    const card = computeCard(
+    const card = computeCard({
       meta,
       pegDataById,
       dexLiqMap,
@@ -146,7 +146,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
       overallScores,
       blacklistableIds,
       liveReserveMap,
-    );
+    });
     liveCards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
@@ -244,16 +244,19 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   };
 }
 
-function computeCard(
-  meta: (typeof TRACKED_STABLECOINS)[number],
-  pegDataById: Map<string, PegSummaryCoin>,
-  dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>,
-  redemptionBackstopMap: Record<string, RedemptionBackstopEntry>,
-  bluechipMap: Record<string, BluechipRating>,
-  overallScores: Map<string, number>,
-  blacklistableIds: ReadonlySet<string>,
-  liveReserveMap: Map<string, ReserveSlice[]>,
-): ReportCard {
+interface ComputeCardInput {
+  meta: (typeof TRACKED_STABLECOINS)[number];
+  pegDataById: Map<string, PegSummaryCoin>;
+  dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>;
+  redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
+  bluechipMap: Record<string, BluechipRating>;
+  overallScores: Map<string, number>;
+  blacklistableIds: ReadonlySet<string>;
+  liveReserveMap: Map<string, ReserveSlice[]>;
+}
+
+function computeCard(input: ComputeCardInput): ReportCard {
+  const { meta, pegDataById, dexLiqMap, redemptionBackstopMap, bluechipMap, overallScores, blacklistableIds, liveReserveMap } = input;
   const peg = pegDataById.get(meta.id);
   const liq = dexLiqMap[meta.id];
   const redemption = redemptionBackstopMap[meta.id];
