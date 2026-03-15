@@ -289,7 +289,7 @@ describe("handleTelegramWebhook", () => {
 
     const db = mockD1([
       {
-        match: "SELECT * FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
         first: {
           alert_types: JSON.stringify(["dews"]),
@@ -373,7 +373,7 @@ describe("handleTelegramWebhook", () => {
 
     const db = mockD1([
       {
-        match: "SELECT * FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
         rows: [],
         first: {
           action_type: "subscribe",

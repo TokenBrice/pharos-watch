@@ -6,7 +6,7 @@ describe("handleDiscoveryCandidates", () => {
   it("returns active candidates sorted by market_cap desc", async () => {
     const db = mockD1([
       {
-        match: "SELECT * FROM discovery_candidates",
+        match: "gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen, dismissed FROM discovery_candidates",
         rows: [
           { id: 1, gecko_id: "big", llama_id: null, name: "Big", symbol: "BIG", market_cap: 50_000_000, source: "both", first_seen: 1000, last_seen: 2000, dismissed: 0, dismissed_at: null, dismissed_mcap: null },
           { id: 2, gecko_id: "small", llama_id: null, name: "Small", symbol: "SML", market_cap: 10_000_000, source: "coingecko", first_seen: 1500, last_seen: 2000, dismissed: 0, dismissed_at: null, dismissed_mcap: null },

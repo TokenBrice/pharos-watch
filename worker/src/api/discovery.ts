@@ -42,7 +42,7 @@ export const handleDiscoveryCandidates = withErrorHandler("discovery-candidates"
 
   const [rows, countResult] = await Promise.all([
     db.prepare(
-      `SELECT * FROM discovery_candidates ${whereClause} ORDER BY market_cap DESC LIMIT ? OFFSET ?`,
+      `SELECT id, gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen, dismissed FROM discovery_candidates ${whereClause} ORDER BY market_cap DESC LIMIT ? OFFSET ?`,
     ).bind(limit, offset).all(),
     db.prepare(
       `SELECT COUNT(*) as total FROM discovery_candidates ${whereClause}`,

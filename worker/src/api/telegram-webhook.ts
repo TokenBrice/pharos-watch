@@ -96,7 +96,7 @@ export async function handleTelegramWebhook(
 
   try {
     const pendingRow = await db
-      .prepare("SELECT * FROM telegram_pending_disambiguation WHERE chat_id = ?")
+      .prepare("SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at FROM telegram_pending_disambiguation WHERE chat_id = ?")
       .bind(chatId)
       .first<PendingDisambiguationRow>();
 

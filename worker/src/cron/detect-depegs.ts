@@ -84,7 +84,7 @@ export async function detectDepegEvents(
   // Load all open events in one query
   throwIfAborted(signal);
   const openResult = await db
-    .prepare("SELECT * FROM depeg_events WHERE ended_at IS NULL")
+    .prepare("SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NULL")
     .all<DepegRow>();
 
   // Group open events by coin — detect duplicates

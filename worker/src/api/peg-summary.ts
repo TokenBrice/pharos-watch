@@ -86,7 +86,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   };
 
   // 2. Load DEX prices + shared peg analytics snapshot
-  const dexPriceResult = await db.prepare("SELECT * FROM dex_prices").all<{
+  const dexPriceResult = await db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices").all<{
     stablecoin_id: string;
     dex_price_usd: number;
     deviation_from_primary_bps: number | null;

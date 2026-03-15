@@ -81,7 +81,7 @@ export const handleAuditDepegHistory = withErrorHandler(
     // 1. Query all closed depeg events
     const allEvents = await db
       .prepare(
-        "SELECT * FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at"
+        "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at"
       )
       .all<DepegRow>();
     const events = allEvents.results ?? [];

@@ -57,7 +57,7 @@ export async function confirmPendingDepegs(
 ): Promise<void> {
   throwIfAborted(signal);
   const pending = await db
-    .prepare("SELECT * FROM depeg_pending")
+    .prepare("SELECT id, stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference, reason FROM depeg_pending")
     .all<PendingRow>();
 
   const rows = pending.results ?? [];

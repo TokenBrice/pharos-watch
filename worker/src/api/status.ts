@@ -744,7 +744,7 @@ export const handleStatus = withErrorHandler(
       let discoveryCandidates: DiscoveryCandidate[] | null = null;
       try {
         const discRows = await db.prepare(
-          "SELECT * FROM discovery_candidates WHERE dismissed = 0 ORDER BY market_cap DESC LIMIT 20",
+          "SELECT id, gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen, dismissed FROM discovery_candidates WHERE dismissed = 0 ORDER BY market_cap DESC LIMIT 20",
         ).all();
         discoveryCandidates = (discRows.results ?? []).map((row: Record<string, unknown>) => ({
           id: row.id as number,

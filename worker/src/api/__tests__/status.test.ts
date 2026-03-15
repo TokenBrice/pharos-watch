@@ -127,7 +127,7 @@ describe("handleStatus", () => {
         first: { latest: now - 120 },
       },
       {
-        match: "SELECT * FROM discovery_candidates WHERE dismissed = 0",
+        match: "FROM discovery_candidates WHERE dismissed = 0",
         rows: [
           {
             id: 12,
@@ -267,7 +267,7 @@ describe("handleStatus", () => {
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
       {
-        match: "SELECT * FROM discovery_candidates WHERE dismissed = 0",
+        match: "FROM discovery_candidates WHERE dismissed = 0",
         rows: [],
       },
     ]);

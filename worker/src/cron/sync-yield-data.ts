@@ -841,7 +841,13 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   await db.prepare("DELETE FROM yield_history WHERE recorded_at < ?").bind(pruneCutoff).run();
 
   const rankingsData = await db
-    .prepare("SELECT * FROM yield_data WHERE is_best = 1 ORDER BY pharos_yield_score DESC")
+    .prepare(
+      `SELECT stablecoin_id, source_key, symbol, current_apy, apy_base, apy_reward, apy_7d, apy_30d,
+              yield_source, yield_type, data_source, source_tvl_usd, pharos_yield_score,
+              safety_score, safety_grade, yield_to_risk, excess_yield, yield_stability,
+              apy_variance_30d, apy_min_30d, apy_max_30d, warning_signals, updated_at
+       FROM yield_data WHERE is_best = 1 ORDER BY pharos_yield_score DESC`,
+    )
     .all();
 
   const altSourcesData = await db
