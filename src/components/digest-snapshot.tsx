@@ -271,7 +271,41 @@ export function DigestSnapshot({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 7. Supply Velocity */}
+        {/* 7. Yield Anomalies */}
+        {inputData.yieldAnomalies && inputData.yieldAnomalies.length > 0 && (
+          <SnapshotCard title="Yield Anomalies" icon={<TrendingUp className="h-4 w-4" />} borderClass="border-l-amber-500">
+            {inputData.yieldAnomalies.map((y) => (
+              <div key={y.symbol} className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="font-mono font-medium">{y.symbol}</span>
+                <span className="text-muted-foreground">
+                  {y.currentApy}% APY (7d: {y.apy7d}%, 30d: {y.apy30d}%)
+                </span>
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  {y.warnings.join(", ")}
+                </span>
+              </div>
+            ))}
+          </SnapshotCard>
+        )}
+
+        {/* 8. Liquidity Shifts */}
+        {inputData.liquidityShifts && inputData.liquidityShifts.length > 0 && (
+          <SnapshotCard title="DEX Liquidity Shifts" icon={<BarChart3 className="h-4 w-4" />} borderClass="border-l-blue-500">
+            {inputData.liquidityShifts.map((l) => (
+              <div key={l.symbol} className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="font-mono font-medium">{l.symbol}</span>
+                <span className={l.scoreDelta > 0 ? "text-emerald-600" : "text-red-600"}>
+                  {l.previousScore} → {l.currentScore} ({l.scoreDelta > 0 ? "+" : ""}{l.scoreDelta})
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  TVL {formatCurrency(l.currentTvl)}
+                </span>
+              </div>
+            ))}
+          </SnapshotCard>
+        )}
+
+        {/* 9. Supply Velocity */}
         {inputData.supplyVelocity && inputData.supplyVelocity.length > 0 && (
           <SnapshotCard
             title="Supply Velocity"
@@ -295,7 +329,7 @@ export function DigestSnapshot({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 8. Resolved Depegs */}
+        {/* 10. Resolved Depegs */}
         {inputData.resolvedDepegs && inputData.resolvedDepegs.length > 0 && (
           <SnapshotCard
             title="Resolved Depegs"

@@ -162,8 +162,13 @@ export function DigestArchiveClient() {
               {formatWireDate(d.generatedAt)}
             </span>
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium truncate block">
+              <span className="text-sm font-medium truncate flex items-center gap-1.5">
                 {d.digestTitle || "Signal & Noise"}
+                {d.digestType === "weekly" && (
+                  <span className="rounded bg-accent/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-accent-foreground/80">
+                    Weekly
+                  </span>
+                )}
               </span>
               {(d.psiBand || d.totalMcapUsd != null) && (
                 <div className="flex items-center gap-2 mt-0.5 sm:hidden">
