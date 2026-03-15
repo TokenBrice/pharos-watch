@@ -37,7 +37,7 @@ export default defineConfig({
         "coverage/**",
       ],
       thresholds: {
-        lines: 55,
+        lines: 66,
       },
     },
   },
