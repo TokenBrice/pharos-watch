@@ -2,6 +2,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
+import { validateAdapterOutput } from "./reserve-adapters/validate";
 import {
   getReserveSyncState,
   upsertReserveSnapshot,
@@ -143,6 +144,34 @@ export async function syncLiveReserves(
 
     try {
       const result = await runAdapter(coin, config, adapter);
+
+      const validation = validateAdapterOutput(result);
+      if (!validation.valid) {
+        console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${validation.warnings.map(w => w.message).join("; ")}`);
+        failed++;
+        coinsWithErrors.push(coin.id);
+        await upsertReserveSyncState(db, buildReserveSyncStateRecord({
+          stablecoinId: coin.id,
+          config,
+          breakerKey,
+          previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
+          now,
+          status: "error",
+          lastError: `Validation failed: ${validation.warnings.map(w => w.message).join("; ")}`,
+          metadata: { reason: "validation-failed" },
+        }));
+        if (!recordedBreakerOutcomes.has(breakerKey)) {
+          await recordOutcomeSafe(db, breakerKey, false);
+          recordedBreakerOutcomes.add(breakerKey);
+        }
+        continue;
+      }
+
+      // Propagate sum-deviation warnings to result warnings
+      if (validation.warnings.length > 0) {
+        result.warnings = [...(result.warnings ?? []), ...validation.warnings];
+      }
+
       if (result.slices.length === 0) {
         console.warn(`[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
         failed++;
