@@ -1,7 +1,7 @@
 import { initChainRpcs } from "../lib/chain-registry";
 import { initAlerts } from "../lib/alerts";
 import { initCoinGecko } from "../lib/coingecko";
-import { CRON_SCHEDULES } from "../lib/cron-schedule";
+import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
 import type { Env } from "../lib/env";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import { runQuarterHourlySlot } from "./scheduled/quarter-hourly";

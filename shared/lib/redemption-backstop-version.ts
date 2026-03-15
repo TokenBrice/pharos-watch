@@ -31,8 +31,5 @@ export const REDEMPTION_BACKSTOP_VERSION_LABEL = redemptionBackstop.versionLabel
 /** Public methodology route for Redemption Backstop methodology. */
 export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = redemptionBackstop.changelogPath;
 
-/** Reconstructed changelog data. */
-export const REDEMPTION_BACKSTOP_CHANGELOG = redemptionBackstop.changelog;
-
 /** Resolve Redemption Backstop methodology version active at a given Unix timestamp (seconds). */
 export const getRedemptionBackstopVersionAt = redemptionBackstop.getVersionAt;

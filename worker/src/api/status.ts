@@ -12,7 +12,7 @@ import {
   clampConfidence,
   type StatusLevel,
 } from "../lib/status-reliability";
-import { CRON_INTERVALS } from "../lib/cron-schedule";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_CACHE_RATIO_THRESHOLDS,

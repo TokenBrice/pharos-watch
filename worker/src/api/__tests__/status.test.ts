@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
-import { CRON_INTERVALS } from "../../lib/cron-schedule";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 stubCryptoForAuth();
 

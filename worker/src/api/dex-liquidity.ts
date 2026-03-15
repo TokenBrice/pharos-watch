@@ -1,6 +1,6 @@
 import {
   withErrorHandler,
-  safeParse,
+  safeJsonParse,
   addFreshnessHeaders,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
@@ -88,7 +88,7 @@ function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undef
 }
 
 function normalizeTopPools(json: string | null): DexLiquidityPoolResponse[] {
-  const parsed = safeParse<DexLiquidityPoolResponse[]>(json, []);
+  const parsed = safeJsonParse<DexLiquidityPoolResponse[]>(json, []);
   return parsed.map((pool) => {
     const normalizedSource = normalizePoolSource(pool.source);
     if (normalizedSource != null) {
@@ -238,8 +238,8 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       poolCount: row.pool_count,
       pairCount: row.pair_count,
       chainCount: row.chain_count,
-      protocolTvl: safeParse<Record<string, number>>(row.protocol_tvl_json, {}),
-      chainTvl: safeParse<Record<string, number>>(row.chain_tvl_json, {}),
+      protocolTvl: safeJsonParse<Record<string, number>>(row.protocol_tvl_json, {}),
+      chainTvl: safeJsonParse<Record<string, number>>(row.chain_tvl_json, {}),
       topPools: normalizeTopPools(row.top_pools_json),
       liquidityScore: row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
@@ -251,7 +251,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: safeParse<unknown[] | null>(dexPrice?.price_sources_json, null),
+      priceSources: safeJsonParse<unknown[] | null>(dexPrice?.price_sources_json, null),
       // v2 fields
       effectiveTvlUsd: row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,
@@ -260,10 +260,10 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       durabilityScore: row.durability_score ?? null,
       coverageClass: row.coverage_class ?? "legacy",
       coverageConfidence: row.coverage_confidence ?? 0.5,
-      sourceMix: safeParse<Record<string, { poolCount: number; tvlUsd: number }>>(row.source_mix_json, {}),
+      sourceMix: safeJsonParse<Record<string, { poolCount: number; tvlUsd: number }>>(row.source_mix_json, {}),
       balanceMeasuredTvlUsd: row.balance_measured_tvl_usd ?? 0,
       organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
-      scoreComponents: safeParse<unknown>(row.score_components_json, null),
+      scoreComponents: safeJsonParse<unknown>(row.score_components_json, null),
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
       methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.updated_at),
     };

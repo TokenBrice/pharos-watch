@@ -1,4 +1,4 @@
-import { withErrorHandler, safeParse, errorResponse, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import type { DigestInputData } from "@shared/types";
 
@@ -76,9 +76,9 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
     return errorResponse(404, "No digest found for this date");
   }
 
-  const inputData = safeParse<DigestInputData | null>(targetRow.input_data, null);
+  const inputData = safeJsonParse<DigestInputData | null>(targetRow.input_data, null);
   const prevInputData = prevRow
-    ? safeParse<DigestInputData | null>(prevRow.input_data, null)
+    ? safeJsonParse<DigestInputData | null>(prevRow.input_data, null)
     : null;
 
   // Depeg episodes active on that date

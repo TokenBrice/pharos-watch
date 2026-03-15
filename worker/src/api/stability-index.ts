@@ -1,7 +1,7 @@
 import {
   withErrorHandler,
   addFreshnessHeaders,
-  safeParse,
+  safeJsonParse,
   jsonResponse,
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
@@ -66,7 +66,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   // Build current from latest sample, falling back to latest history row
   const currentSource = latestSample ?? results[0];
-  const snapshot = safeParse(currentSource.input_snapshot, {} as Record<string, unknown>);
+  const snapshot = safeJsonParse(currentSource.input_snapshot, {} as Record<string, unknown>);
   const contributors = Array.isArray(snapshot.contributors) ? snapshot.contributors : [];
 
   const avg24h = avg24hRow?.avg != null ? Math.round(avg24hRow.avg * 10) / 10 : undefined;
@@ -80,7 +80,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       date: r.computed_at,
       score: r.score,
       band: r.band,
-      components: safeParse(r.components, {}),
+      components: safeJsonParse(r.components, {}),
       methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
     }
     : {
@@ -122,7 +122,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       band: currentSource.band,
       avg24h,
       avg24hBand,
-      components: safeParse(currentSource.components, {}),
+      components: safeJsonParse(currentSource.components, {}),
       contributors,
       totalMcapUsd: snapshot.totalMcapUsd ?? 0,
       computedAt,

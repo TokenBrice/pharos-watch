@@ -5,7 +5,7 @@ import {
   errorResponse,
   parseIntParam,
   jsonResponse,
-  safeParse,
+  safeJsonParse,
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
@@ -75,12 +75,12 @@ export const handleStressSignals = withErrorHandler(
       const methodologyVersion = getDepegDewsMethodologyVersionAt(computedAt);
       let malformedRows = 0;
       const currentSignals = latest
-        ? safeParse<Record<string, unknown> | null>(latest.signals_json, null)
+        ? safeJsonParse<Record<string, unknown> | null>(latest.signals_json, null)
         : null;
       if (latest && currentSignals == null) malformedRows++;
 
       const historyRows = history.results.map((r) => {
-        const parsedSignals = safeParse<Record<string, unknown> | null>(r.signals_json, null);
+        const parsedSignals = safeJsonParse<Record<string, unknown> | null>(r.signals_json, null);
         if (parsedSignals == null) {
           malformedRows++;
           return null;
@@ -144,7 +144,7 @@ export const handleStressSignals = withErrorHandler(
       if (!TRACKED_IDS.has(row.stablecoin_id)) {
         continue;
       }
-      const parsedSignals = safeParse<Record<string, unknown> | null>(row.signals_json, null);
+      const parsedSignals = safeJsonParse<Record<string, unknown> | null>(row.signals_json, null);
       if (parsedSignals == null) {
         malformedRows++;
         continue;

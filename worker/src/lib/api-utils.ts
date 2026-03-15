@@ -157,7 +157,7 @@ export function withErrorHandler<T extends unknown[]>(
 }
 
 /** Safely parse JSON, returning fallback on failure */
-export function safeParse<T>(json: string | null | undefined, fallback: T): T {
+export function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
   if (json == null) return fallback;
   try { return JSON.parse(json) as T; } catch { return fallback; }
 }
