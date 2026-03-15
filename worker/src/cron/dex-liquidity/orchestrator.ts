@@ -56,9 +56,21 @@ export async function syncDexLiquidity(
   );
 
   // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations
-  const { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs } = await fetchUniV3Data(
-    graphApiKey, symbolToIds, addressToId, signal, validationReferences,
-  );
+  let uniV3PoolFees = new Map<string, number>();
+  let uniV3SymbolFees = new Map<string, number>();
+  let uniV3PriceObs = new Map<string, DexPriceObs[]>();
+  try {
+    const uniV3Data = await fetchUniV3Data(
+      graphApiKey, symbolToIds, addressToId, signal, validationReferences,
+    );
+    uniV3PoolFees = uniV3Data.uniV3PoolFees;
+    uniV3SymbolFees = uniV3Data.uniV3SymbolFees;
+    uniV3PriceObs = uniV3Data.uniV3PriceObs;
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    console.warn("[dex-liquidity] UniV3 fetch failed (non-fatal):", err);
+    failedSources.push("univ3-subgraph");
+  }
   if (addressToId.size > 0) {
     console.log(`[dex-liquidity] Learned ${addressToId.size} token addresses for disambiguation`);
   }

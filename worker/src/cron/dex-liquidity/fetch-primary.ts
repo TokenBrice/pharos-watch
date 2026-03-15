@@ -341,6 +341,7 @@ export async function fetchUniV3Data(
   }
 
   for (const [chain, subgraphId] of Object.entries(UNIV3_SUBGRAPHS)) {
+    try {
     const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
     const combinedSignal = signal
       ? AbortSignal.any([signal, perChainTimeout])
@@ -423,6 +424,11 @@ export async function fetchUniV3Data(
     if (shouldLogIndex) {
       console.log(`[dex-liquidity] Indexed ${entityCount} Uni V3 pools from ${chain} subgraph (${observationCount} price obs)`);
     }
+    } catch (err) {
+      // Only propagate if the cron-level signal is aborted; per-chain timeouts are non-fatal
+      if (signal?.aborted) throw err;
+      console.warn(`[dex-liquidity] Uni V3 subgraph ${chain} failed (non-fatal):`, err);
+    }
   }
 
   console.log(`[dex-liquidity] Collected ${uniV3PriceObs.size} coins with Uni V3 price observations`);
@@ -443,6 +449,7 @@ export async function fetchAerodromeData(
   if (!graphApiKey) return { aerodromePriceObs: priceObs, aerodromeIsStable: isStableMap };
 
   for (const [chain, subgraphId] of Object.entries(AERODROME_SUBGRAPHS)) {
+    try {
     const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
     const combinedSignal = signal
       ? AbortSignal.any([signal, perChainTimeout])
@@ -513,6 +520,10 @@ export async function fetchAerodromeData(
     mergePriceObservations(priceObs, observations);
     if (shouldLogIndex) {
       console.log(`[dex-liquidity] Indexed ${entityCount} Aerodrome pairs from ${chain} subgraph (${observationCount} price obs)`);
+    }
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      console.warn(`[dex-liquidity] Aerodrome subgraph ${chain} failed (non-fatal):`, err);
     }
   }
 
