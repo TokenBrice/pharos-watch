@@ -12,7 +12,7 @@ import {
   splitMessage,
   type ConsolidatedAlerts,
   type DewsChange,
-  type DepegEvent,
+  type DepegAlertPayload,
   type DepegResolved,
   type DepegWorsening,
   type SafetyChange,
@@ -86,7 +86,7 @@ const SAFETY_GRADE_RANK: Record<string, number> = {
 
 type AlertType = keyof typeof ALERT_COLUMN_BY_TYPE;
 type DewsSnapshot = Record<string, string>;
-type DepegSnapshot = Record<string, DepegEvent>;
+type DepegSnapshot = Record<string, DepegAlertPayload>;
 type SafetySnapshot = Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
 
 interface DewsRow {
@@ -711,7 +711,7 @@ export async function dispatchTelegramAlerts(
     const previousActiveIds = new Set(Object.keys(previousDepegSnapshot));
     const currentActiveIds = new Set(Object.keys(currentSnapshots.depeg));
 
-    const depegTriggered: DepegEvent[] = activeDepegRows
+    const depegTriggered: DepegAlertPayload[] = activeDepegRows
       .filter((row) => !previousActiveIds.has(row.stablecoin_id))
       .map((row) => ({
         stablecoinId: row.stablecoin_id,

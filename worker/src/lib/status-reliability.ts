@@ -6,6 +6,7 @@ import type {
   StatusStaleness,
   StatusTransition,
 } from "@shared/types";
+import { clamp } from "@shared/lib/math";
 
 export type StatusLevel = "healthy" | "degraded" | "stale";
 
@@ -74,7 +75,7 @@ const SEVERITY: Record<StatusLevel, number> = { healthy: 0, degraded: 1, stale: 
 
 export function clampConfidence(confidence: number): number {
   if (!Number.isFinite(confidence)) return 0.1;
-  return Math.min(1, Math.max(0.1, confidence));
+  return clamp(confidence, 0.1, 1);
 }
 
 function parseCauses(json: string | null | undefined): StatusCause[] {

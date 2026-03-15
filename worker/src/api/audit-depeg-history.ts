@@ -1,4 +1,4 @@
-import { withErrorHandler, parseIntParam } from "../lib/api-utils";
+import { withErrorHandler, parseIntParam, jsonResponse, errorResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
@@ -14,8 +14,7 @@ import {
   type PsiDepegEventRow,
   type PsiSupplyRow,
 } from "../lib/psi-recompute";
-
-const DAY = 86400;
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 type Verdict = "false_positive" | "confirmed" | "no_data" | "skipped" | "error";
 
@@ -91,25 +90,23 @@ export const handleAuditDepegHistory = withErrorHandler(
       const ids = deleteIds.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
       const toDelete = events.filter((e) => ids.includes(e.id));
       if (toDelete.length === 0) {
-        return new Response(JSON.stringify({ error: "No matching events found", requestedIds: ids }), {
-          status: 404, headers: { "Content-Type": "application/json" },
-        });
+        return errorResponse(404, "No matching events found");
       }
 
       if (dryRun) {
-        return new Response(JSON.stringify({
+        return jsonResponse({
           dryRun: true,
           deletedEvents: toDelete.map((e) => ({ id: e.id, symbol: e.symbol, startedAt: e.started_at, peakBps: e.peak_deviation_bps })),
           daysRecomputed: 0,
-        }, null, 2), { headers: { "Content-Type": "application/json" } });
+        });
       }
 
       const affectedDays = new Set<number>();
       for (const event of toDelete) {
         await db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id).run();
-        const startDay = Math.floor(event.started_at / DAY) * DAY;
-        const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY) * DAY;
-        for (let d = startDay; d <= endDay; d += DAY) {
+        const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
+        const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY_SECONDS) * DAY_SECONDS;
+        for (let d = startDay; d <= endDay; d += DAY_SECONDS) {
           affectedDays.add(d);
         }
         console.log(`[audit] Direct delete: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps`);
@@ -117,11 +114,11 @@ export const handleAuditDepegHistory = withErrorHandler(
 
       const daysRecomputed = await recomputeStabilityDays(db, affectedDays);
 
-      return new Response(JSON.stringify({
+      return jsonResponse({
         dryRun: false,
         deletedEvents: toDelete.map((e) => ({ id: e.id, symbol: e.symbol, startedAt: e.started_at, peakBps: e.peak_deviation_bps })),
         daysRecomputed,
-      }, null, 2), { headers: { "Content-Type": "application/json" } });
+      });
     }
 
     // Build supply lookup only when min-supply > 0
@@ -145,7 +142,7 @@ export const handleAuditDepegHistory = withErrorHandler(
           if (Math.abs(s.date - ts) < Math.abs(best.date - ts)) best = s;
           if (s.date > ts) break;
         }
-        return Math.abs(best.date - ts) <= 30 * DAY ? best.supply : 0;
+        return Math.abs(best.date - ts) <= 30 * DAY_SECONDS ? best.supply : 0;
       };
     }
 
@@ -263,9 +260,9 @@ export const handleAuditDepegHistory = withErrorHandler(
             });
 
             // Track affected days for stability index recomputation
-            const startDay = Math.floor(event.started_at / DAY) * DAY;
-            const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY) * DAY;
-            for (let d = startDay; d <= endDay; d += DAY) {
+            const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
+            const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY_SECONDS) * DAY_SECONDS;
+            for (let d = startDay; d <= endDay; d += DAY_SECONDS) {
               affectedDays.add(d);
             }
 
@@ -302,9 +299,7 @@ export const handleAuditDepegHistory = withErrorHandler(
       result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
     }
 
-      return new Response(JSON.stringify(result, null, 2), {
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse(result);
     }, trustedAdmin);
   }
 );

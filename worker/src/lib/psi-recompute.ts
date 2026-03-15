@@ -1,7 +1,7 @@
 import { binarySearchNearest } from "./binary-search";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
-const DAY = 86400;
-const MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC = 14 * DAY;
+const MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC = 14 * DAY_SECONDS;
 
 export interface PsiDepegEventRow {
   stablecoin_id: string;
@@ -102,12 +102,12 @@ export function buildStabilityInputForDay(
     depegs.push({
       bps: worstBps,
       mcapUsd: snapshot?.mcap ?? 0,
-      depegAgeDays: Math.max(0, (day - earliestStart) / DAY),
+      depegAgeDays: Math.max(0, (day - earliestStart) / DAY_SECONDS),
     });
   }
 
   const totalMcapUsd = getTotalMcapForDay(supplyByCoin, day);
-  const totalMcap7dAgo = getTotalMcapForDay(supplyByCoin, day - 7 * DAY);
+  const totalMcap7dAgo = getTotalMcapForDay(supplyByCoin, day - 7 * DAY_SECONDS);
   const mcap7dChangePct =
     totalMcap7dAgo > 0
       ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100

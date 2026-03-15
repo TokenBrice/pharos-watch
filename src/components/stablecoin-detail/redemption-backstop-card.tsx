@@ -10,14 +10,12 @@ import {
   REDEMPTION_SETTLEMENT_LABELS,
 } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionBackstopEntry } from "@shared/types";
+import { formatCurrency } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 function formatCapacityUsd(value: number | null): string | null {
   if (value == null || !Number.isFinite(value) || value <= 0) return null;
-  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${Math.round(value)}`;
+  return formatCurrency(value, 1);
 }
 
 function scoreToneClass(score: number | null): string {

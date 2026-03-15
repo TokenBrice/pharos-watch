@@ -1,5 +1,6 @@
 import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
 
@@ -68,7 +69,6 @@ export const handleBackfillDEWS = withErrorHandler(
         });
       }
 
-      const DAY = 86400;
       const results: EventResult[] = [];
       let tpCount = 0;
       let totalLeadTimeDays = 0;
@@ -83,20 +83,20 @@ export const handleBackfillDEWS = withErrorHandler(
 
         // Check 7 days before the depeg event
         for (let d = 7; d >= 0; d--) {
-          const targetDay = event.started_at - d * DAY;
-          const dayMidnight = Math.floor(targetDay / DAY) * DAY;
+          const targetDay = event.started_at - d * DAY_SECONDS;
+          const dayMidnight = Math.floor(targetDay / DAY_SECONDS) * DAY_SECONDS;
 
           // Reconstruct supply
           const current = coinSupply?.get(dayMidnight) ?? 0;
-          const prevDay = coinSupply?.get(dayMidnight - DAY) ?? current;
-          const prevWeek = coinSupply?.get(dayMidnight - 7 * DAY) ?? current;
+          const prevDay = coinSupply?.get(dayMidnight - DAY_SECONDS) ?? current;
+          const prevWeek = coinSupply?.get(dayMidnight - 7 * DAY_SECONDS) ?? current;
 
           if (current <= 0) continue;
 
           // Find closest liquidity data
-          const liqNow = coinLiq.find((l) => Math.abs(l.snapshotDate - dayMidnight) < 2 * DAY);
+          const liqNow = coinLiq.find((l) => Math.abs(l.snapshotDate - dayMidnight) < 2 * DAY_SECONDS);
           const liq7d = coinLiq.find(
-            (l) => Math.abs(l.snapshotDate - (dayMidnight - 7 * DAY)) < 2 * DAY,
+            (l) => Math.abs(l.snapshotDate - (dayMidnight - 7 * DAY_SECONDS)) < 2 * DAY_SECONDS,
           );
 
           const input: DEWSInput = {

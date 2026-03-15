@@ -1,4 +1,5 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
@@ -263,7 +264,6 @@ async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTime
   // CG days=max returns different granularities per coin (daily for old coins,
   // hourly/5-min for newer ones), so we must aggregate per-coin first to give
   // each coin equal weight in the cross-coin daily median.
-  const DAY = 86400;
   const coinDailies: Record<string, Map<number, number>[]> = { GOLD: [], SILVER: [] };
 
   for (const meta of allCommodityCoins) {
@@ -281,7 +281,7 @@ async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTime
     const dayBuckets = new Map<number, { sum: number; count: number }>();
     for (const p of prices) {
       const perOz = oz && oz > 0 ? p.price / oz : p.price;
-      const day = Math.floor(p.timestamp / DAY) * DAY;
+      const day = Math.floor(p.timestamp / DAY_SECONDS) * DAY_SECONDS;
       const bucket = dayBuckets.get(day) ?? { sum: 0, count: 0 };
       bucket.sum += perOz;
       bucket.count++;
