@@ -108,7 +108,7 @@ vi.mock("@shared/lib/stablecoins", () => {
 // Stub enrich-prices to avoid complex 4-pass pipeline
 vi.mock("../enrich-prices", () => ({
   enrichMissingPrices: vi.fn(async () => ({
-    totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0,
+    totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0, failedPasses: [],
   })),
   hasMissingPrice: vi.fn((a: { price?: number | null }) => a.price == null || typeof a.price !== "number" || a.price === 0),
   fetchPrimaryPrices: vi.fn(async () => ({
@@ -233,7 +233,7 @@ describe("syncStablecoins", () => {
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
     fetchWithRetryMock.mockReset();
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
-      totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0,
+      totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0, failedPasses: [],
     });
     vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({
       results: new Map(),

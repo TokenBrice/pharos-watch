@@ -39,6 +39,7 @@ export async function sendAlert(title: string, message: string): Promise<boolean
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body,
+      signal: AbortSignal.timeout(5000),
     });
 
     if (!response.ok) {

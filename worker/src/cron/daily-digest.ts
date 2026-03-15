@@ -437,8 +437,17 @@ export async function generateDailyDigest(
     ? getConditionBand(avg24h)
     : currentPsiSource?.band ?? null;
 
-  const stabilityIndex = currentPsiSource && displayScore != null && displayBand
-    ? { score: displayScore, band: displayBand, components: JSON.parse(currentPsiSource.components) }
+  let parsedComponents: { severity: number; breadth: number; stressBreadth?: number; trend: number } | null = null;
+  if (currentPsiSource) {
+    try {
+      parsedComponents = JSON.parse(currentPsiSource.components);
+    } catch (err) {
+      console.warn("[daily-digest] Failed to parse PSI components JSON:", err instanceof Error ? err.message : err);
+      parsedComponents = null;
+    }
+  }
+  const stabilityIndex = currentPsiSource && displayScore != null && displayBand && parsedComponents != null
+    ? { score: displayScore, band: displayBand, components: parsedComponents }
     : null;
 
   // Yesterday: daily snapshot for comparison

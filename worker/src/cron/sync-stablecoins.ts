@@ -432,6 +432,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const llamaData = await llamaRes!.json() as { peggedAssets: PeggedAsset[]; fxFallbackRates?: Record<string, number> };
   const rawAssetCount = llamaData.peggedAssets?.length ?? 0;
 
+  if (llamaData.peggedAssets === undefined) console.warn("[sync] DefiLlama response missing peggedAssets field — possible API contract change");
   if (!llamaData.peggedAssets || llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Unexpected asset count (${llamaData.peggedAssets?.length}), need ${MIN_VALID_ASSET_COUNT}+, skipping cache write`);
     await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);

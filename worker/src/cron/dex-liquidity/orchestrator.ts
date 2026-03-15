@@ -170,11 +170,11 @@ export async function syncDexLiquidity(
     db
       .prepare("SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL")
       .first<{ cnt: number }>()
-      .catch(() => null),
+      .catch((e) => { console.warn("[dex-liquidity] Failed to read previous coverage count — using safe high fallback:", e instanceof Error ? e.message : e); return { cnt: 9999 }; }),
     db
       .prepare("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = '__global__'")
       .first<{ total_tvl_usd: number | null }>()
-      .catch(() => null),
+      .catch((e) => { console.warn("[dex-liquidity] Failed to read previous global TVL:", e); return null; }),
     db
       .prepare(
         `SELECT coverage_class, COUNT(*) as cnt
@@ -183,7 +183,7 @@ export async function syncDexLiquidity(
          GROUP BY coverage_class`
       )
       .all<{ coverage_class: string | null; cnt: number }>()
-      .catch(() => ({ results: [] as Array<{ coverage_class: string | null; cnt: number }> })),
+      .catch((e) => { console.warn("[dex-liquidity] Failed to read previous coverage classes:", e); return { results: [] as Array<{ coverage_class: string | null; cnt: number }> }; }),
     db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd
@@ -193,7 +193,7 @@ export async function syncDexLiquidity(
          LIMIT 10`
       )
       .all<{ stablecoin_id: string; total_tvl_usd: number }>()
-      .catch(() => ({ results: [] as Array<{ stablecoin_id: string; total_tvl_usd: number }> })),
+      .catch((e) => { console.warn("[dex-liquidity] Failed to read previous top coverage:", e); return { results: [] as Array<{ stablecoin_id: string; total_tvl_usd: number }> }; }),
   ]);
   const previousCoverage = previousCoverageRow?.cnt ?? 0;
   // M1: First-run bootstrap — when previousCoverage is 0, the minimum threshold

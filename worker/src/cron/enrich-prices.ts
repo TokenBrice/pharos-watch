@@ -489,6 +489,7 @@ export interface EnrichmentStats {
   passCmc: number;
   passDex: number;
   finalMissing: number;
+  failedPasses: string[];
 }
 
 const CMC_REQUEST_TIMEOUT_MS = 10_000;
@@ -552,7 +553,7 @@ export async function enrichMissingPrices(
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
-  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0 };
+  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0, failedPasses: [] };
 
   // Load FX rates for dynamic price bounds
   let fxRates: Record<string, number> | undefined;
@@ -569,9 +570,11 @@ export async function enrichMissingPrices(
   let pass1bCount = 0;
   let passCmcCount = 0;
   let passDexCount = 0;
+  const failedPasses: string[] = [];
 
+  // ── Pass 1/1b: Contract addresses via DefiLlama coins API ──
+  // Wrapped separately so DL failure does not abort CMC/DexScreener passes.
   try {
-    // ── Pass 1: Contract addresses via DefiLlama coins API ──
     const withAddress: { index: number; coinId: string }[] = [];
     for (let i = 0; i < assets.length; i++) {
       const a = assets[i];
@@ -643,7 +646,13 @@ export async function enrichMissingPrices(
         }
       }
     }
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn("[enrich-prices] Pass 1/1b (DefiLlama contracts) failed — continuing with CMC/DexScreener:", err);
+    failedPasses.push("dl-contracts");
+  }
 
+  try {
     // ── Pass 2: CoinMarketCap listings batch (covers all CMC-listed stablecoins) ──
     const missingAfterPass1b = assets
       .map((a, i) => ({ asset: a, index: i }))
@@ -843,10 +852,11 @@ export async function enrichMissingPrices(
     if (totalEnriched > 0) {
       console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
     }
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, passDex: passDexCount, finalMissing };
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, passDex: passDexCount, finalMissing, failedPasses };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[sync-stablecoins] Price enrichment failed:", err);
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, passDex: passDexCount, finalMissing: totalMissing };
+    failedPasses.push("passes-2-3");
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, passDex: passDexCount, finalMissing: totalMissing, failedPasses };
   }
 }
