@@ -2,6 +2,12 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { AltYieldSource } from "@shared/types";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 
+function toNum(val: unknown): number | null {
+  if (typeof val === "number") return val;
+  if (typeof val === "string") { const n = parseFloat(val); return Number.isFinite(n) ? n : null; }
+  return null;
+}
+
 export function rowToRanking(row: Record<string, unknown>) {
   const stablecoinId = String(row.stablecoin_id);
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
@@ -10,11 +16,11 @@ export function rowToRanking(row: Record<string, unknown>) {
     id: stablecoinId,
     symbol: row.symbol,
     name: meta?.name ?? String(row.symbol),
-    currentApy: row.current_apy,
-    apy7d: row.apy_7d,
-    apy30d: row.apy_30d,
-    apyBase: row.apy_base,
-    apyReward: row.apy_reward,
+    currentApy: toNum(row.current_apy),
+    apy7d: toNum(row.apy_7d),
+    apy30d: toNum(row.apy_30d),
+    apyBase: toNum(row.apy_base),
+    apyReward: toNum(row.apy_reward),
     yieldSource: row.yield_source,
     yieldSourceUrl: resolveYieldSourceUrl({
       stablecoinId,
@@ -23,16 +29,16 @@ export function rowToRanking(row: Record<string, unknown>) {
     }),
     yieldType: row.yield_type,
     dataSource: row.data_source,
-    sourceTvlUsd: row.source_tvl_usd,
-    pharosYieldScore: row.pharos_yield_score,
-    safetyScore: row.safety_score,
+    sourceTvlUsd: toNum(row.source_tvl_usd),
+    pharosYieldScore: toNum(row.pharos_yield_score),
+    safetyScore: toNum(row.safety_score),
     safetyGrade: row.safety_grade,
-    yieldToRisk: row.yield_to_risk,
-    excessYield: row.excess_yield,
-    yieldStability: row.yield_stability,
-    apyVariance30d: row.apy_variance_30d,
-    apyMin30d: row.apy_min_30d,
-    apyMax30d: row.apy_max_30d,
+    yieldToRisk: toNum(row.yield_to_risk),
+    excessYield: toNum(row.excess_yield),
+    yieldStability: toNum(row.yield_stability),
+    apyVariance30d: toNum(row.apy_variance_30d),
+    apyMin30d: toNum(row.apy_min_30d),
+    apyMax30d: toNum(row.apy_max_30d),
     warningSignals: parseWarningSignals(row.warning_signals),
     altSources: [] as AltYieldSource[],
   };
@@ -84,9 +90,13 @@ export function parseWarningSignals(raw: unknown): string[] {
   if (typeof raw !== "string" || raw.trim() === "") return [];
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      console.warn("[yield-sync] warning_signals is not an array:", typeof parsed);
+      return [];
+    }
     return parsed.filter((value): value is string => typeof value === "string");
-  } catch {
+  } catch (e) {
+    console.warn("[yield-sync] failed to parse warning_signals:", e instanceof Error ? e.message : String(e));
     return [];
   }
 }

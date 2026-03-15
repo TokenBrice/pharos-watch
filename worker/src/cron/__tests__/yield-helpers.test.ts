@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   STALE_THRESHOLD_MS,
   computeApyFromRate,
@@ -10,7 +10,7 @@ import {
   matchAllDlPools,
   findBestLendingPool,
 } from "../yield-helpers";
-import { computeTvlWeightedMedianApy } from "../yield-sync/rankings";
+import { computeTvlWeightedMedianApy, parseWarningSignals } from "../yield-sync/rankings";
 
 // computeTvlWeightedMedianApy is internal to sync-yield-data.ts - tested via integration
 describe("STALE_THRESHOLD_MS", () => {
@@ -564,5 +564,39 @@ describe("computeTvlWeightedMedianApy", () => {
       { apy_30d: 8, source_tvl_usd: 1_000_000 },
     ]);
     expect(result).toBe(5);
+  });
+});
+
+describe("parseWarningSignals", () => {
+  it("returns empty array for empty string", () => {
+    expect(parseWarningSignals("")).toEqual([]);
+  });
+
+  it("parses valid JSON array of strings", () => {
+    expect(parseWarningSignals('["yield-spike","tvl-outflow"]')).toEqual(["yield-spike", "tvl-outflow"]);
+  });
+
+  it("filters out non-string elements", () => {
+    expect(parseWarningSignals('[1, "yield-spike", null, true]')).toEqual(["yield-spike"]);
+  });
+
+  it("returns empty array and logs warning for malformed JSON", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(parseWarningSignals("{not valid json")).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[yield-sync] failed to parse warning_signals"),
+      expect.any(String),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("returns empty array and logs warning for non-array JSON", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(parseWarningSignals('{"key": "value"}')).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[yield-sync] warning_signals is not an array"),
+      expect.any(String),
+    );
+    warnSpy.mockRestore();
   });
 });
