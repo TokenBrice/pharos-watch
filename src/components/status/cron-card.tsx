@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getStatusCronDisplay } from "./cron-config";
 import { summarizeCronMetadata } from "./cron-metadata-summary";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { formatDuration, formatInterval } from "./format";
+import { formatLatency, formatInterval } from "./format";
 
 interface CronCardProps {
   job: string;
@@ -129,7 +129,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
                 {cron.lastRun.status}
               </Badge>
               <span className="text-muted-foreground">{formatElapsedSeconds(nowSeconds - cron.lastRun.startedAt)} ago</span>
-              <span className="text-muted-foreground">({formatDuration(cron.lastRun.durationMs)})</span>
+              <span className="text-muted-foreground">({formatLatency(cron.lastRun.durationMs)})</span>
               {cron.lastRun.itemCount != null && (
                 <span className="text-muted-foreground">{cron.lastRun.itemCount} items</span>
               )}
@@ -198,7 +198,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
                       ? "bg-zinc-500"
                       : "bg-red-500"
               }`}
-              title={`${run.status} — ${new Date(run.startedAt * 1000).toLocaleString()} (${formatDuration(run.durationMs)})`}
+              title={`${run.status} — ${new Date(run.startedAt * 1000).toLocaleString()} (${formatLatency(run.durationMs)})`}
             />
           ))}
         </div>

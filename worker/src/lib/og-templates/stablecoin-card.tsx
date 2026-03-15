@@ -1,4 +1,8 @@
 import { CardFrame, Sparkline, TEXT_SECONDARY, FROST_BLUE } from "./shared";
+import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
+import { THREAT_BAND_HEX } from "@shared/lib/classification";
+import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
+import { formatCurrency } from "@shared/lib/format";
 
 export interface StablecoinCardData {
   name: string;
@@ -14,53 +18,6 @@ export interface StablecoinCardData {
   flow7d: number;
   sparklineData: number[];
   hasActiveDepeg: boolean;
-}
-
-/**
- * Grade hex colors aligned with GRADE_RADAR_COLORS from shared/lib/report-cards.ts.
- * A-range = emerald, B-range = blue, C-range = amber, D = orange, F = red, NR = zinc.
- */
-const GRADE_COLORS: Record<string, string> = {
-  "A+": "#10b981",
-  A: "#10b981",
-  "A-": "#10b981",
-  "B+": "#3b82f6",
-  B: "#3b82f6",
-  "B-": "#3b82f6",
-  "C+": "#f59e0b",
-  C: "#f59e0b",
-  "C-": "#f59e0b",
-  D: "#f97316",
-  F: "#ef4444",
-  NR: "#71717a",
-};
-
-/** DEWS band hex colors aligned with THREAT_BAND_HEX from shared/lib/classification.ts. */
-const DEWS_BAND_COLORS: Record<string, string> = {
-  CALM: "#22c55e",
-  WATCH: "#14b8a6",
-  ALERT: "#eab308",
-  WARNING: "#f97316",
-  DANGER: "#ef4444",
-};
-
-/** PSI band hex colors aligned with PSI_HEX_COLORS from shared/lib/psi-colors.ts. */
-const PSI_BAND_COLORS: Record<string, string> = {
-  BEDROCK: "#22c55e",
-  STEADY: "#14b8a6",
-  TREMOR: "#eab308",
-  FRACTURE: "#f97316",
-  CRISIS: "#ef4444",
-  MELTDOWN: "#991b1b",
-};
-
-function formatUsd(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1e12) return `$${(abs / 1e12).toFixed(1)}T`;
-  if (abs >= 1e9) return `$${(abs / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `$${(abs / 1e6).toFixed(0)}M`;
-  if (abs >= 1e3) return `$${(abs / 1e3).toFixed(0)}K`;
-  return `$${abs.toFixed(0)}`;
 }
 
 function getAdaptiveTreatment(data: StablecoinCardData): {
@@ -90,18 +47,18 @@ function getAdaptiveTreatment(data: StablecoinCardData): {
 
 export function StablecoinCard({ data }: { data: StablecoinCardData }) {
   const treatment = getAdaptiveTreatment(data);
-  const gradeColor = GRADE_COLORS[data.grade] ?? TEXT_SECONDARY;
-  const dewsColor = DEWS_BAND_COLORS[data.dewsBand] ?? TEXT_SECONDARY;
-  const psiColor = PSI_BAND_COLORS[data.psiBand] ?? TEXT_SECONDARY;
+  const gradeColor = GRADE_RADAR_COLORS[gradeRange(data.grade as Parameters<typeof gradeRange>[0])] ?? TEXT_SECONDARY;
+  const dewsColor = THREAT_BAND_HEX[data.dewsBand as keyof typeof THREAT_BAND_HEX] ?? TEXT_SECONDARY;
+  const psiColor = PSI_HEX_COLORS[data.psiBand as keyof typeof PSI_HEX_COLORS] ?? TEXT_SECONDARY;
   const sign = data.flow7d >= 0 ? "+" : "";
   const secondaryMetrics = [
-    { label: "MARKET CAP", value: formatUsd(data.mcap) },
+    { label: "MARKET CAP", value: formatCurrency(data.mcap, 1) },
     ...(data.vol24h != null
-      ? [{ label: "24H VOLUME", value: formatUsd(data.vol24h) }]
+      ? [{ label: "24H VOLUME", value: formatCurrency(data.vol24h, 1) }]
       : []),
     {
       label: "7D FLOW",
-      value: `${sign}${formatUsd(data.flow7d)}`,
+      value: `${sign}${formatCurrency(data.flow7d, 1)}`,
       color: data.flow7d >= 0 ? "#22c55e" : "#ef4444",
     },
   ];

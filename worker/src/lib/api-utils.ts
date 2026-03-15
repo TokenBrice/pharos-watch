@@ -21,7 +21,7 @@ export interface FreshnessMeta {
   status: "fresh" | "degraded" | "stale";
 }
 
-function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
+export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
   const age = Math.floor(Date.now() / 1000) - updatedAt;
   const ratio = age / maxAgeSec;
   return {

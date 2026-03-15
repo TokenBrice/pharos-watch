@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { errorResponse, jsonResponse } from "../lib/api-utils";
+import { formatCurrency } from "@shared/lib/format";
 import { checkFeedbackRateLimit } from "../lib/rate-limit";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -83,12 +84,7 @@ async function verifyDataCorrection(
       if (Math.abs(dev) > 1) verifiedLabel = "verified: confirmed";
     }
 
-    const mcapStr =
-      totalUSD > 1e9
-        ? `$${(totalUSD / 1e9).toFixed(2)}B`
-        : totalUSD > 1e6
-          ? `$${(totalUSD / 1e6).toFixed(0)}M`
-          : `$${totalUSD.toFixed(0)}`;
+    const mcapStr = formatCurrency(totalUSD);
 
     // "Confirmed" = data issue is real (warning); "Unconfirmed" = data looks OK (checkmark)
     const verificationSummary =

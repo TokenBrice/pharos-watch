@@ -1,4 +1,5 @@
 import { CardFrame, TEXT_SECONDARY } from "./shared";
+import { THREAT_BAND_HEX } from "@shared/lib/classification";
 
 export interface DepegCardData {
   activeDepegCount: number;
@@ -14,12 +15,10 @@ export interface DepegCardData {
   };
 }
 
-// Hardcoded hex colors matching THREAT_BAND_HEX from classification.ts
-// (Satori cannot use CSS variables or imports from non-local modules)
-const DANGER_HEX = "#ef4444";
-const ALERT_HEX = "#eab308";
-const WARNING_HEX = "#f97316";
-const NORMAL_HEX = "#22c55e";
+const DANGER_HEX = THREAT_BAND_HEX.DANGER;
+const ALERT_HEX = THREAT_BAND_HEX.ALERT;
+const WARNING_HEX = THREAT_BAND_HEX.WARNING;
+const NORMAL_HEX = THREAT_BAND_HEX.CALM;
 
 export function DepegCard({ data }: { data: DepegCardData }) {
   const depegColor = data.activeDepegCount === 0 ? NORMAL_HEX : DANGER_HEX;

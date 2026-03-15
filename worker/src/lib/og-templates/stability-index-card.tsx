@@ -1,4 +1,5 @@
 import { CardFrame, Sparkline, TEXT_SECONDARY } from "./shared";
+import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
 
 export interface StabilityIndexCardData {
   psiScore: number;
@@ -8,19 +9,8 @@ export interface StabilityIndexCardData {
   bands: Array<{ name: string; active: boolean }>;
 }
 
-// Hardcoded hex colors matching PSI_HEX_COLORS from shared/lib/psi-colors.ts
-// (Satori cannot use CSS variables or runtime imports)
-const BAND_COLORS: Record<string, string> = {
-  BEDROCK: "#22c55e",
-  STEADY: "#14b8a6",
-  TREMOR: "#eab308",
-  FRACTURE: "#f97316",
-  CRISIS: "#ef4444",
-  MELTDOWN: "#991b1b",
-};
-
 function getBandColor(band: string): string {
-  return BAND_COLORS[band] ?? "#8b8fa3";
+  return PSI_HEX_COLORS[band as keyof typeof PSI_HEX_COLORS] ?? "#8b8fa3";
 }
 
 export function StabilityIndexCard({

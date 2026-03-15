@@ -1,6 +1,7 @@
 import { YieldRankingsResponseSchema, type ReportCard, type YieldRanking, type YieldRankingsResponse } from "@shared/types";
 import {
   addFreshnessHeaders,
+  buildFreshnessMeta,
   createCacheHandler,
   errorResponse,
   jsonResponse,
@@ -20,16 +21,6 @@ export const handleBluechipRatings = createCacheHandler("bluechip-ratings", "blu
 export const handleUsdsStatus = createCacheHandler("usds-status", "usds-status", CACHE_PROFILES.standard, 86400);
 
 const YIELD_RANKINGS_MAX_AGE_SEC = 1800;
-
-function buildFreshnessMeta(updatedAt: number, maxAgeSec: number) {
-  const ageSeconds = Math.floor(Date.now() / 1000) - updatedAt;
-  const ratio = ageSeconds / maxAgeSec;
-  return {
-    updatedAt,
-    ageSeconds,
-    status: ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale",
-  };
-}
 
 function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalingFactor: number): number {
   if (row.apy30d <= 0) return 0;
