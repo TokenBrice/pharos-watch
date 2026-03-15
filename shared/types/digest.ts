@@ -120,6 +120,15 @@ export interface DigestInputData {
     warnings: string[];
     mcapUsd: number;
   }[];
+  liquidityShifts?: {
+    symbol: string;
+    currentScore: number;
+    previousScore: number;
+    scoreDelta: number;
+    currentTvl: number;
+    previousTvl: number;
+    mcapUsd: number;
+  }[];
 }
 
 export interface DailyDigestResponse {

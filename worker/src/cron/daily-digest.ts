@@ -24,6 +24,7 @@ import {
   collectGradeTransitions,
   collectPsiContributors,
   collectYieldAnomalies,
+  collectLiquidityShifts,
   type CollectorContext,
 } from "./daily-digest/collectors";
 
@@ -300,6 +301,17 @@ function buildUserPrompt(
     }
   }
 
+  // Enrichment: DEX liquidity shifts
+  if (data.liquidityShifts && data.liquidityShifts.length > 0) {
+    lines.push("", "DEX Liquidity Shifts (day-over-day):");
+    for (const l of data.liquidityShifts) {
+      const dir = l.scoreDelta > 0 ? "+" : "";
+      lines.push(
+        `  ${l.symbol}: score ${l.previousScore} -> ${l.currentScore} (${dir}${l.scoreDelta}), TVL ${formatCurrency(l.previousTvl)} -> ${formatCurrency(l.currentTvl)}, mcap ${formatCurrency(l.mcapUsd)}`,
+      );
+    }
+  }
+
   // Enrichment: resolved depegs
   if (data.resolvedDepegs && data.resolvedDepegs.length > 0) {
     lines.push("");
@@ -506,6 +518,7 @@ export async function generateDailyDigest(
   const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades);
   const psiContributors = await collectPsiContributors(ctx);
   const yieldAnomalies = await collectYieldAnomalies(ctx);
+  const liquidityShifts = await collectLiquidityShifts(ctx);
 
   // --- Build input data ---
   const inputData: DigestInputData = {
@@ -526,6 +539,7 @@ export async function generateDailyDigest(
     psiContributors,
     gradeTransitions,
     yieldAnomalies,
+    liquidityShifts,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentMeta);

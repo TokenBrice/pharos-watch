@@ -720,3 +720,66 @@ export async function collectYieldAnomalies(
     return undefined;
   }
 }
+
+// ---------------------------------------------------------------------------
+// 12. DEX liquidity shifts (day-over-day)
+// ---------------------------------------------------------------------------
+
+export async function collectLiquidityShifts(
+  ctx: CollectorContext,
+): Promise<DigestInputData["liquidityShifts"]> {
+  try {
+    // Compare yesterday vs day-before-yesterday.
+    // The digest runs at 08:05 UTC — today's dex_liquidity_history row
+    // may not exist yet since snapshots come from the :10/:40 cron.
+    const dayBeforeYesterday = ctx.yesterdayTs - SECONDS.ONE_DAY;
+    const rows = await ctx.db
+      .prepare(
+        `SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date
+         FROM dex_liquidity_history h
+         WHERE h.snapshot_date IN (?, ?)
+           AND h.liquidity_score IS NOT NULL
+         ORDER BY h.stablecoin_id, h.snapshot_date DESC`,
+      )
+      .bind(ctx.yesterdayTs, dayBeforeYesterday)
+      .all<{ stablecoin_id: string; liquidity_score: number; total_tvl_usd: number; snapshot_date: number }>();
+
+    const byId = new Map<string, { latest?: (typeof rows.results)[number]; previous?: (typeof rows.results)[number] }>();
+    for (const r of rows.results ?? []) {
+      const entry = byId.get(r.stablecoin_id) ?? {};
+      if (r.snapshot_date === ctx.yesterdayTs) entry.latest = r;
+      else entry.previous = r;
+      byId.set(r.stablecoin_id, entry);
+    }
+
+    const shifts: NonNullable<DigestInputData["liquidityShifts"]> = [];
+    for (const [id, { latest, previous }] of byId) {
+      if (!latest || !previous) continue;
+      const delta = latest.liquidity_score - previous.liquidity_score;
+      if (Math.abs(delta) < 8) continue;
+
+      const mcapUsd = ctx.mcapById.get(id) ?? 0;
+      if (mcapUsd < 10_000_000) continue;
+
+      const coin = ctx.trackedStablecoinAssets.find((c) => c.id === id);
+      if (!coin) continue;
+
+      shifts.push({
+        symbol: coin.symbol,
+        currentScore: latest.liquidity_score,
+        previousScore: previous.liquidity_score,
+        scoreDelta: delta,
+        currentTvl: latest.total_tvl_usd,
+        previousTvl: previous.total_tvl_usd,
+        mcapUsd,
+      });
+    }
+
+    shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
+
+    return shifts.length > 0 ? shifts.slice(0, 5) : undefined;
+  } catch (e) {
+    console.error("[daily-digest] Failed to collect liquidity shifts:", e);
+    return undefined;
+  }
+}
