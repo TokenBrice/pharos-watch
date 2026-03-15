@@ -118,7 +118,7 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
           <div className="flex min-w-0 flex-col gap-4">
             {visibleParagraphs.map((para, i) => {
               const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
-              const headerText = headerMatch?.[1];
+              const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
               const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
               return (
                 <p
@@ -167,7 +167,7 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
 
           {visibleParagraphs.map((para, i) => {
             const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
-            const headerText = headerMatch?.[1];
+            const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
             const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
             return (
               <p

@@ -484,6 +484,7 @@ export async function collectPsiContributors(
     if (!snapshot.contributors || snapshot.contributors.length === 0) return undefined;
 
     return snapshot.contributors
+      .filter((c) => typeof c.bps === "number" && typeof c.mcapUsd === "number" && typeof c.factor === "number")
       .map((c) => ({
         symbol: c.symbol,
         bps: c.bps,
@@ -603,7 +604,7 @@ export async function collectHistoricalContext(
 }
 
 // ---------------------------------------------------------------------------
-// 9. Grade transitions (last 48h)
+// 10. Grade transitions (last 48h)
 // ---------------------------------------------------------------------------
 
 export async function collectGradeTransitions(

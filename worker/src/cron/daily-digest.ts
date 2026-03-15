@@ -101,7 +101,7 @@ const SYSTEM_PROMPT =
   "coins are the 1-3 coin symbols you featured most prominently.\n\n" +
   // 10. Title + text + extended specs
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
-  "The extended field (write this FIRST): 2-3 short paragraphs of editorial analysis, separated by \\n\\n. " +
+  "The extended field (write this FIRST): 3-4 short paragraphs of editorial analysis, separated by \\n\\n. " +
   "The text field (write this AFTER extended): distill the single most compelling take from your extended analysis into a tweet-sized line. " +
   "Do NOT start or repeat the title in this field — the title is prepended automatically. " +
   "The title and text will be concatenated as '{title}\\n\\n{text}' for a tweet. " +
