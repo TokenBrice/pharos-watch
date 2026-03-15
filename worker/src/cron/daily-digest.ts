@@ -11,6 +11,7 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { DigestResponseSchema } from "../lib/schemas";
 import {
   collectActiveDepegs,
   collectBlacklistActivity,
@@ -554,16 +555,17 @@ export async function generateDailyDigest(
     }
   }
 
-  // Parse JSON response for title + text + extended + meta
+  // Parse and validate JSON response for title + text + extended + meta
   let digestTitle: string;
   let digestText: string;
   let digestExtended: string;
   let digestMeta: string | null = null;
   try {
-    const parsed = JSON.parse(jsonText) as { title?: string; text?: string; extended?: string; meta?: { lead?: string; tone?: string; coins?: string[] } };
-    digestTitle = (parsed.title ?? "").trim();
-    digestText = (parsed.text ?? "").trim();
-    digestExtended = (parsed.extended ?? "").trim();
+    const raw = JSON.parse(jsonText);
+    const parsed = DigestResponseSchema.parse(raw);
+    digestTitle = parsed.title.trim();
+    digestText = parsed.text.trim();
+    digestExtended = parsed.extended.trim();
     if (!digestText) throw new Error("empty text field");
     if (parsed.meta) {
       digestMeta = JSON.stringify(parsed.meta);

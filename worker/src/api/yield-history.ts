@@ -7,6 +7,7 @@ import {
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
+import { z } from "zod";
 
 interface YieldHistoryRow {
   recorded_at: number;
@@ -83,7 +84,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
       apyReward: row.apy_reward,
       exchangeRate: row.exchange_rate,
       sourceTvlUsd: row.source_tvl_usd,
-      warningSignals: row.warning_signals ? JSON.parse(row.warning_signals) as string[] : [],
+      warningSignals: row.warning_signals ? z.array(z.string()).catch([]).parse(JSON.parse(row.warning_signals)) : [],
       sourceKey: normalizedSourceKey,
       yieldSource: row.yield_source,
       yieldSourceUrl: resolveYieldSourceUrl({

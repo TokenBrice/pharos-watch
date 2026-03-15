@@ -23,6 +23,7 @@ import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
 import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../lib/authoritative-price-sources";
 import { fetchEvmCallHexAtBlock } from "../lib/evm-rpc";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
+import { DLPriceResponseSchema } from "../lib/schemas";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
 
@@ -214,9 +215,10 @@ export async function fetchPrimaryPrices(
             signal ? { signal } : undefined,
           );
           if (res?.ok) {
-            const data = (await res.json()) as { coins: Record<string, { price: number }> };
+            const raw = await res.json();
+            const data = DLPriceResponseSchema.parse(raw);
             for (const [key, val] of Object.entries(data.coins)) {
-              if (val?.price != null && val.price > 0) {
+              if (val.price > 0) {
                 const gId = key.replace("coingecko:", "");
                 dlPrices.set(gId, val.price);
               }
@@ -511,9 +513,9 @@ interface FetchPriceMapByIdsConfig {
 
 function parseDefiLlamaPriceMap(json: unknown): Map<string, number> {
   const prices = new Map<string, number>();
-  const coins = (json as { coins?: Record<string, DefiLlamaCoinPrice> }).coins ?? {};
+  const { coins } = DLPriceResponseSchema.parse(json);
   for (const [id, info] of Object.entries(coins)) {
-    if (info?.price != null && info.price > 0) {
+    if (info.price > 0) {
       prices.set(id, info.price);
     }
   }

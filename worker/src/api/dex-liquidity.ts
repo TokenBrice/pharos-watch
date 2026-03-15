@@ -8,6 +8,7 @@ import {
 import { CACHE_PROFILES } from "../lib/constants";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 import type { LiquidityPoolSourceFamily } from "@shared/types";
+import { DexLiquidityCronMetadataSchema } from "../lib/schemas";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;
@@ -137,18 +138,12 @@ function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null): strin
   let nearMajorCoverageGuard = false;
   if (latestCron.metadata) {
     try {
-      const parsed = JSON.parse(latestCron.metadata) as {
-        failedSources?: string[];
-        sourceCoverage?: {
-          nearCoverageGuard?: boolean;
-          nearValueGuard?: boolean;
-          nearMajorCoverageGuard?: boolean;
-        };
-      };
-      failedSources = parsed.failedSources ?? [];
-      nearCoverageGuard = parsed.sourceCoverage?.nearCoverageGuard ?? false;
-      nearValueGuard = parsed.sourceCoverage?.nearValueGuard ?? false;
-      nearMajorCoverageGuard = parsed.sourceCoverage?.nearMajorCoverageGuard ?? false;
+      const raw = JSON.parse(latestCron.metadata);
+      const parsed = DexLiquidityCronMetadataSchema.parse(raw);
+      failedSources = parsed.failedSources;
+      nearCoverageGuard = parsed.sourceCoverage.nearCoverageGuard;
+      nearValueGuard = parsed.sourceCoverage.nearValueGuard;
+      nearMajorCoverageGuard = parsed.sourceCoverage.nearMajorCoverageGuard;
     } catch (err) {
       console.info("[dex-liquidity] Malformed cron metadata:", err instanceof Error ? err.message : String(err));
     }
