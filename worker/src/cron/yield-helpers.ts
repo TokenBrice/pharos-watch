@@ -49,6 +49,7 @@ export function computeYieldStability(apySamples: number[]): number | null {
   if (Math.abs(mean) < 1e-10) return null;
   const variance = apySamples.reduce((s, v) => s + (v - mean) ** 2, 0) / apySamples.length;
   const cv = Math.sqrt(variance) / Math.abs(mean);
+  if (!Number.isFinite(cv)) return null;
   return Math.max(0, Math.min(1, Math.round((1 - cv) * 100) / 100));
 }
 
@@ -57,7 +58,9 @@ export function computeApyVarianceScore(apySamples: number[]): number | null {
   const mean = apySamples.reduce((s, v) => s + v, 0) / apySamples.length;
   if (Math.abs(mean) < 1e-10) return null;
   const variance = apySamples.reduce((s, v) => s + (v - mean) ** 2, 0) / apySamples.length;
-  return Math.min(1, Math.sqrt(variance) / Math.abs(mean));
+  const cv = Math.sqrt(variance) / Math.abs(mean);
+  if (!Number.isFinite(cv)) return null;
+  return Math.min(1, cv);
 }
 
 interface WarningInput {

@@ -98,6 +98,11 @@ describe("computeYieldStability", () => {
     const volatile = computeYieldStability([1, 10, 2, 9])!;
     expect(stable).toBeGreaterThan(volatile);
   });
+
+  it("returns null when CV is Infinity (tiny mean, extreme variance)", () => {
+    // mean = 5e-10 (above 1e-10 guard), variance overflows to Infinity → cv = Infinity
+    expect(computeYieldStability([1e-9, 1e200, -1e200, 1e-9])).toBeNull();
+  });
 });
 
 describe("computeApyVarianceScore", () => {
@@ -124,6 +129,11 @@ describe("computeApyVarianceScore", () => {
   it("caps at 1", () => {
     const result = computeApyVarianceScore([0.001, 100, 0.001, 100]);
     expect(result).toBeLessThanOrEqual(1);
+  });
+
+  it("returns null when CV is Infinity", () => {
+    // Same mechanism: mean bypasses near-zero guard but variance overflows
+    expect(computeApyVarianceScore([1e-9, 1e200, -1e200, 1e-9])).toBeNull();
   });
 });
 
