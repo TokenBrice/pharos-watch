@@ -10,7 +10,10 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { formatCurrency } from "@shared/lib/format";
+import { splitDigestParagraphs } from "@/lib/digest";
+import { cn } from "@/lib/utils";
 
+const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, i) => i);
 
 function tsToDateSlug(ts: number): string {
@@ -33,6 +36,68 @@ function formatWireDate(ts: number): string {
     .toUpperCase();
 }
 
+function formatWeeklyMasthead(ts: number): string {
+  const d = new Date(ts * 1000);
+  const end = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const start = new Date(d.getTime() - 6 * 86400_000).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  return `${start} – ${end}`;
+}
+
+function WeeklyRecapSection({ entry }: { entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number } }) {
+  const paragraphs = splitDigestParagraphs(entry.digestExtended);
+  if (paragraphs.length === 0) return null;
+
+  return (
+    <div className="mt-8 space-y-4">
+      {/* Weekly header */}
+      <div className="border-t border-b border-border py-3 space-y-0.5">
+        <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground/80">
+          Weekly Recap
+        </p>
+        <p className="text-xs text-muted-foreground/70">
+          {formatWeeklyMasthead(entry.generatedAt)}
+        </p>
+      </div>
+
+      <div className="space-y-3 py-2 mx-auto max-w-[68ch]">
+        <h3 className="text-xl font-bold sm:text-2xl" style={SERIF}>
+          {entry.digestTitle || "The Week in Review"}
+        </h3>
+
+        {paragraphs.map((para, i) => {
+          const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
+          const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
+          const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
+          return (
+            <p
+              key={i}
+              className={cn(
+                "text-[1.02rem] leading-8 text-foreground/88",
+                i === 0 && "border-l-2 border-border/60 pl-4 italic",
+              )}
+              style={SERIF}
+            >
+              {headerText && (
+                <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
+                  {headerText}.{" "}
+                </span>
+              )}
+              {bodyText}
+            </p>
+          );
+        })}
+
+        <Link
+          href={`/digest/${tsToDateSlug(entry.generatedAt)}/`}
+          className="inline-block mt-1 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Full weekly detail &rarr;
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function DigestArchiveClient() {
   const { data, isLoading, dataUpdatedAt, error, refetch } = useDigestArchive();
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -53,15 +118,21 @@ export function DigestArchiveClient() {
 
   const activeMonth = selectedMonth ?? monthOptions[0]?.key ?? null;
 
-  // Skip today's digest (shown in broadsheet) and filter by selected month
+  // Latest weekly recap (if any)
+  const latestWeekly = useMemo(() => {
+    return data?.digests.find((d) => d.digestType === "weekly") ?? null;
+  }, [data]);
+
+  // Skip today's digest (shown in broadsheet) and latest weekly (shown separately), filter by month
   const latestSlug = data?.digests[0] ? tsToDateSlug(data.digests[0].generatedAt) : null;
   const wireDigests = useMemo(() => {
     if (!data?.digests || !activeMonth) return [];
     return data.digests.filter((d) => {
       if (tsToDateSlug(d.generatedAt) === latestSlug) return false;
+      if (latestWeekly && d.generatedAt === latestWeekly.generatedAt) return false;
       return tsToMonthKey(d.generatedAt) === activeMonth;
     });
-  }, [data, activeMonth, latestSlug]);
+  }, [data, activeMonth, latestSlug, latestWeekly]);
 
   if (isLoading) {
     return (
@@ -114,6 +185,11 @@ export function DigestArchiveClient() {
       <div className="[&>div]:lg:max-w-[84ch]">
         <DailyDigest variant="full" />
       </div>
+
+      {/* Weekly recap (latest) */}
+      {latestWeekly && latestWeekly.digestExtended && (
+        <WeeklyRecapSection entry={latestWeekly} />
+      )}
 
       {/* Archive divider (double-rule) */}
       <div className="my-6 space-y-0.5">
