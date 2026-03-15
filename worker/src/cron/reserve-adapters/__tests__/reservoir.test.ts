@@ -31,6 +31,28 @@ describe("adaptReservoirReserves", () => {
     ]);
   });
 
+  it("returns empty slices for zero total assets", () => {
+    const { slices } = adaptReservoirReserves({
+      assets: [],
+      liabilities: [],
+      totalAssets: "0",
+      totalLiabilities: "0",
+      equity: "0",
+    });
+    expect(slices).toHaveLength(0);
+  });
+
+  it("returns empty slices for NaN total assets", () => {
+    const { slices } = adaptReservoirReserves({
+      assets: [{ label: "USDC", totalBalanceValue: "100" }],
+      liabilities: [],
+      totalAssets: "not-a-number",
+      totalLiabilities: "0",
+      equity: "0",
+    });
+    expect(slices).toHaveLength(0);
+  });
+
   it("returns unmapped assets separately for operator review", () => {
     const { unknownAssets } = adaptReservoirReserves({
       ...SAMPLE_RESPONSE,
