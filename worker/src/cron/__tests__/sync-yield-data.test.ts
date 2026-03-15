@@ -1055,6 +1055,145 @@ describe("syncYieldData", () => {
     configs.length = 0;
   });
 
+  it("resolves OUSG rate-derived yield with 50bps spread", async () => {
+    const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
+    configs.push({ stablecoinId: "100", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" });
+
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      { match: "yield_history", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.25", updatedAt: Math.floor(Date.now() / 1000) };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.itemCount).toBeGreaterThanOrEqual(1);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const rateDerivedRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "rate-derived",
+    );
+    expect(rateDerivedRow).toBeDefined();
+    // APY should be 4.25 - 0.50 = 3.75
+    expect(Number(rateDerivedRow?.boundValues?.[3])).toBeCloseTo(3.75, 2);
+    expect(rateDerivedRow?.boundValues?.[12]).toBe("rate-derived");
+
+    configs.length = 0;
+  });
+
+  it("produces valid APY entry from expanded ON_CHAIN_RATE_CONFIGS", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "100",
+            source_key: "onchain:100",
+            recorded_at: nowSec - 8 * 86400,
+            is_best: 1,
+            apy: 5,
+            source_tvl_usd: null,
+            data_source: "onchain",
+            yield_source: null,
+            yield_type: null,
+            exchange_rate: 1.0,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+
+    vi.mocked(getChainRpc).mockReturnValue({
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      rpcUrl: "https://rpc.example/eth",
+      explorerUrl: "https://etherscan.io",
+    });
+
+    // Mock fetch to handle the convertToAssets RPC call
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | Request, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("rpc.example/eth")) {
+          const body = JSON.parse(String(init?.body)) as {
+            params?: Array<{ data?: string } | string>;
+          };
+          const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
+          if (callData?.startsWith("0x07a2d13a")) {
+            // Return exchange rate of ~1.05e18 (5% appreciation)
+            return new Response(
+              JSON.stringify({
+                result: "0x" + BigInt("1050000000000000000").toString(16).padStart(64, "0"),
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+        }
+        return new Response(JSON.stringify({ error: "Not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const testChainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example/eth",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+    const result = await syncYieldData(db, undefined, testChainRpcs);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const onChainRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[12] === "onchain",
+    );
+    expect(onChainRow).toBeDefined();
+    expect(Number(onChainRow?.boundValues?.[3])).toBeGreaterThan(0);
+
+    onChainConfigs.length = 0;
+  });
+
   it("marks yield sync degraded when the retained benchmark is still fresh", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
