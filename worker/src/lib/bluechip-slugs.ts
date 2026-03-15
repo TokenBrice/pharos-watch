@@ -19,4 +19,5 @@ export const BLUECHIP_SLUG_MAP: Record<string, string> = {
   rlusd: "rlusd-ripple",
   xsgd: "xsgd-straitsx",
   ousd: "ousd-origin-protocol",
+  cetes: "cetes-etherfuse",
 };
