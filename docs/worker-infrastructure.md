@@ -402,6 +402,21 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
 - Never add a fetching job to a slot with headroom ≤1 (Triggers 8 and 10 are full).
 
+### Cron Error Handling Policy
+
+All cron jobs follow a 4-tier error classification:
+
+| Tier | Example | Action | Log Level |
+|------|---------|--------|-----------|
+| **Fatal** | D1 unreachable, binding error | `sendAlert()` + abort job | `error` |
+| **Recoverable** | External API timeout, HTTP 5xx | Retry with backoff (max 3), then warn | `warn` |
+| **Validation** | Malformed API response, schema mismatch | Skip record, continue processing | `warn` |
+| **Degradation** | Partial sync, stale data | Update status page, continue | `warn` |
+
+**Fire-and-forget cleanup** (e.g., rate-limit pruning, cache eviction) may use `.catch()` with a counter. Non-critical background operations should never crash the main job.
+
+**Alert deduplication:** Use job name + error category as the dedup key. Don't send the same alert more than once per 10-minute window.
+
 ## Telegram Alert Bot
 
 - Webhook ingress (`POST /api/telegram-webhook`) receives Telegram commands and writes subscriber/subscription state into D1.
