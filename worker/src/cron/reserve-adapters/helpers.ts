@@ -161,6 +161,7 @@ export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigi
       extraRpcUrls,
       signal: options.signal,
       timeoutMs: 10_000,
+      chainRpcs: options.ctx?.chainRpcs,
     },
   );
   if (rpcValue != null) {
@@ -199,6 +200,7 @@ export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<stri
       extraRpcUrls,
       signal: options.signal,
       timeoutMs: 10_000,
+      chainRpcs: options.ctx?.chainRpcs,
     },
   );
   if (rpcValue != null) {
