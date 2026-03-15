@@ -409,7 +409,7 @@ export async function generateDailyDigest(
   const recentMeta: { meta: DigestMeta | null; rawText: string | null }[] = (recentRows.results ?? []).map((r) => {
     let meta: DigestMeta | null = null;
     if (r.digest_meta) {
-      try { meta = JSON.parse(r.digest_meta) as DigestMeta; } catch { /* ignore */ }
+      try { meta = JSON.parse(r.digest_meta) as DigestMeta; } catch { /* expected: legacy digest without structured meta */ }
     }
     const rawText = !meta ? (r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text) : null;
     return { meta, rawText };

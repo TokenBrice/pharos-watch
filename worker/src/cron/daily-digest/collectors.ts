@@ -446,7 +446,7 @@ export async function collectDewsStress(
               .sort(([, a], [, b]) => b.value - a.value)
               .slice(0, 3)
               .map(([key, sig]) => ({ name: SIGNAL_LABELS[key] ?? key, value: Math.round(sig.value) }));
-          } catch { /* ignore */ }
+          } catch { /* expected: malformed signals_json — render without top signals */ }
 
           return {
             symbol: coin.symbol, band: r.band, score: r.score,
@@ -696,7 +696,7 @@ export async function collectYieldAnomalies(
     const candidates = (rows.results ?? [])
       .map((r) => {
         let warnings: string[] = [];
-        try { warnings = JSON.parse(r.warning_signals) as string[]; } catch { /* ignore */ }
+        try { warnings = JSON.parse(r.warning_signals) as string[]; } catch { /* expected: malformed warning_signals JSON */ }
         if (warnings.length === 0) return null;
 
         const mcapUsd = ctx.mcapById.get(r.stablecoin_id) ?? 0;

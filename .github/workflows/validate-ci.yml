@@ -25,6 +25,9 @@ jobs:
       - run: npm run lint
       - run: npm run check:worker-boundary
       - run: npm run check:migrations
+      - run: npm run check:cron-sync
+      - run: npm run check:doc-counts
+      - run: npm run check:duplicate-exports
       - run: npm test
       - run: npm run coverage:critical
         env:

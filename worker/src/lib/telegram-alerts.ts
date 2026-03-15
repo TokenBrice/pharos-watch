@@ -177,7 +177,7 @@ export interface DewsChange {
   topSignals: { name: string; value: number }[];
 }
 
-export interface DepegEvent {
+export interface DepegAlertPayload {
   stablecoinId: string;
   symbol: string;
   direction: "above" | "below";
@@ -221,7 +221,7 @@ export function formatDewsLine(e: DewsChange): string {
   return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldBand} → ${e.newBand} (score: ${e.score})${signals ? `\nTop signals: ${signals}` : ""}`;
 }
 
-export function formatDepegTriggeredLine(e: DepegEvent): string {
+export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
   const pct = (e.deviationBps / 100).toFixed(1);
   return `<b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg\nDeviation: ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})`;
 }
@@ -244,7 +244,7 @@ export function formatSafetyLine(e: SafetyChange): string {
 
 export interface ConsolidatedAlerts {
   dews: DewsChange[];
-  depegTriggered: DepegEvent[];
+  depegTriggered: DepegAlertPayload[];
   depegResolved: DepegResolved[];
   depegWorsening: DepegWorsening[];
   safety: SafetyChange[];

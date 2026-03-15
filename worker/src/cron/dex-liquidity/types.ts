@@ -68,24 +68,13 @@ export interface LiquidityMetrics {
   totalTvlForLocked: number;
 }
 
-export type LiquidityPoolSourceFamily =
-  | "dl"
-  | "cg_onchain"
-  | "gecko_terminal"
-  | "dexscreener"
-  | "cg_tickers";
+import type {
+  LiquidityPoolSourceFamily,
+  LiquiditySourceMixEntry,
+  LiquidityCoverageClass,
+} from "@shared/types";
 
-export type LiquidityCoverageClass =
-  | "primary"
-  | "mixed"
-  | "fallback"
-  | "legacy"
-  | "unobserved";
-
-export interface LiquiditySourceMixEntry {
-  poolCount: number;
-  tvlUsd: number;
-}
+export type { LiquidityPoolSourceFamily, LiquiditySourceMixEntry, LiquidityCoverageClass };
 
 export type LiquiditySourceMix = Partial<Record<LiquidityPoolSourceFamily, LiquiditySourceMixEntry>>;
 

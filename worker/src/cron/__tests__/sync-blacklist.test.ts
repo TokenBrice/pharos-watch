@@ -129,7 +129,7 @@ vi.mock("@shared/lib/chains", () => ({
   },
 }));
 
-import { syncBlacklist } from "../sync-blacklist";
+import { syncBlacklist, type SyncBlacklistOptions } from "../sync-blacklist";
 import { fetchEvmLogsForTopic, getEvmBlockNumber } from "../../lib/evm-logs";
 import { getLastBlock, setLastBlock, batchExecute } from "../../lib/db";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
@@ -147,6 +147,17 @@ const testChainRpcs = new Map<string, ChainRpcConfig>([
     explorerUrl: "https://basescan.org",
   }],
 ]);
+
+function buildTestOpts(overrides: Partial<SyncBlacklistOptions> = {}): SyncBlacklistOptions {
+  return {
+    db: makeDb(),
+    etherscanApiKey: "etherscan-key",
+    trongridApiKey: "tron-key",
+    drpcApiKey: null,
+    chainRpcs: testChainRpcs,
+    ...overrides,
+  };
+}
 
 function makeDb() {
   return mockD1([
@@ -223,7 +234,7 @@ describe("syncBlacklist", () => {
       ),
     );
 
-    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+    const result = await syncBlacklist(buildTestOpts({ db }));
 
     // Should have found the 1 EVM event
     expect(result.itemCount).toBe(1);
@@ -285,7 +296,7 @@ describe("syncBlacklist", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+    const result = await syncBlacklist(buildTestOpts({ db }));
 
     // Tron event should be processed despite EVM failure
     expect(result.itemCount).toBe(1);
@@ -312,7 +323,7 @@ describe("syncBlacklist", () => {
       ),
     );
 
-    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+    const result = await syncBlacklist(buildTestOpts({ db }));
 
     expect(result.itemCount).toBe(0);
     const meta = JSON.parse(result.metadata);
@@ -342,7 +353,7 @@ describe("syncBlacklist", () => {
       ),
     );
 
-    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+    const result = await syncBlacklist(buildTestOpts({ db }));
 
     expect(result.status).toBe("degraded");
     const meta = JSON.parse(result.metadata);
@@ -367,7 +378,7 @@ describe("syncBlacklist", () => {
       ),
     );
 
-    await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+    await syncBlacklist(buildTestOpts({ db }));
 
     // setLastBlock should be called for both configs (EVM advances to chain head - safety margin)
     expect(setLastBlock).toHaveBeenCalled();
@@ -411,7 +422,7 @@ describe("syncBlacklist", () => {
       ),
     );
 
-    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+    const result = await syncBlacklist(buildTestOpts({ db }));
 
     expect(result.itemCount).toBe(1);
     const meta = JSON.parse(result.metadata);
@@ -473,7 +484,7 @@ describe("syncBlacklist", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await syncBlacklist(db, "etherscan-key", "tron-key", "drpc-key", undefined, undefined, undefined, testChainRpcs);
+    const result = await syncBlacklist(buildTestOpts({ db, drpcApiKey: "drpc-key" }));
 
     expect(result.itemCount).toBe(1);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("lb.drpc.org"))).toBe(true);
@@ -494,7 +505,7 @@ describe("syncBlacklist", () => {
       ),
     );
 
-    await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+    await syncBlacklist(buildTestOpts({ db }));
 
     const backfillQuery = db.getHistory().find((entry) =>
       entry.sql.includes("FROM blacklist_events")
@@ -530,7 +541,7 @@ describe("syncBlacklist", () => {
       ),
     );
 
-    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+    const result = await syncBlacklist(buildTestOpts({ db }));
 
     expect(result.itemCount).toBe(0);
     const meta = JSON.parse(result.metadata);
@@ -579,7 +590,7 @@ describe("syncBlacklist", () => {
     );
 
     try {
-      await syncBlacklist(db, "etherscan-key", "tron-key", null, undefined, undefined, undefined, testChainRpcs);
+      await syncBlacklist(buildTestOpts({ db }));
 
       const baseCalls = vi.mocked(fetchAlchemyLogs).mock.calls
         .filter((call) => call[1] === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");

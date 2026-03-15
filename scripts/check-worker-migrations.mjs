@@ -8,6 +8,22 @@ const migrationFiles = readdirSync(migrationsDir)
   .filter((file) => file.endsWith(".sql"))
   .sort();
 
+// Check for duplicate sequence numbers (use full alphanumeric prefix to handle 0031a)
+const sequenceNumbers = migrationFiles.map(f => f.match(/^(\d+[a-z]?)/)?.[1]).filter(Boolean);
+const duplicates = sequenceNumbers.filter((num, i) => sequenceNumbers.indexOf(num) !== i);
+const uniqueDuplicates = [...new Set(duplicates)];
+// Known legacy duplicates that can't be renumbered without replay risk
+const KNOWN_LEGACY_DUPLICATES = new Set(["0056", "0061"]);
+const newDuplicates = uniqueDuplicates.filter(n => !KNOWN_LEGACY_DUPLICATES.has(n));
+if (newDuplicates.length > 0) {
+  console.error(`❌ Duplicate migration sequence numbers: ${newDuplicates.join(", ")}`);
+  console.error("Each migration must have a unique numeric prefix.");
+  process.exit(1);
+}
+if (uniqueDuplicates.length > 0) {
+  console.warn(`⚠️  Known legacy duplicate prefixes: ${uniqueDuplicates.join(", ")} (suppressed)`);
+}
+
 if (migrationFiles.length === 0) {
   console.error(`No migration files found in ${migrationsDir}`);
   process.exit(1);

@@ -2,7 +2,7 @@ import { getCache, setCache } from "../lib/db-cache";
 import { withErrorHandler } from "../lib/api-utils";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { recordOutcome, shouldAttemptFetch } from "../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchCommodityTokens } from "./stablecoin-detail/commodity";
 import { fetchCoinGeckoOnlyTokens } from "./stablecoin-detail/coingecko-only";
@@ -39,13 +39,6 @@ export const handleStablecoinDetail = withErrorHandler(
           }
         })(),
       );
-    };
-    const safeRecordOutcome = async (source: string, success: boolean): Promise<void> => {
-      try {
-        await recordOutcome(db, source, success);
-      } catch {
-        // Non-blocking for detail endpoint.
-      }
     };
     const pegType = `pegged${meta?.flags.pegCurrency ?? "USD"}`;
     const loadSupplyHistoryFallback = async (
@@ -135,7 +128,7 @@ export const handleStablecoinDetail = withErrorHandler(
           coingeckoApiKey,
         });
         const historyFresh = isDetailHistoryFresh(tokens);
-        await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, tokens.length > 0 && historyFresh);
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, tokens.length > 0 && historyFresh);
         if (tokens.length === 0) {
           const fallbackTokens = await loadSupplyHistoryFallback("coingecko-history-empty");
           if (fallbackTokens.length > 0) {
@@ -155,7 +148,7 @@ export const handleStablecoinDetail = withErrorHandler(
         queueCacheWrite(body);
         return createFreshUpstreamResponse(body);
       } catch (err) {
-        await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, false);
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, false);
         logUpstreamException("coingecko-detail", id, err);
         const fallback = await trySupplyHistoryFallback("coingecko-upstream-failure");
         if (fallback) return fallback;
@@ -180,7 +173,7 @@ export const handleStablecoinDetail = withErrorHandler(
       );
 
       if (!res?.ok) {
-        await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
         logUpstreamFailure("defillama-stablecoin-detail", id, res?.status ?? "no-response");
         const fallback = await trySupplyHistoryFallback("defillama-upstream-failure");
         if (fallback) return fallback;
@@ -192,7 +185,7 @@ export const handleStablecoinDetail = withErrorHandler(
       try {
         body = normalizeDefiLlamaDetailBody(upstreamBody, meta);
       } catch (err) {
-        await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
         logUpstreamException("defillama-stablecoin-detail-parse", id, err);
         const fallback = await trySupplyHistoryFallback("defillama-parse-failure");
         if (fallback) return fallback;
@@ -200,10 +193,10 @@ export const handleStablecoinDetail = withErrorHandler(
       }
 
       queueCacheWrite(body);
-      await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, true);
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, true);
       return createFreshUpstreamResponse(body);
     } catch (err) {
-      await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
       logUpstreamException("defillama-stablecoin-detail", id, err);
       const fallback = await trySupplyHistoryFallback("defillama-exception");
       if (fallback) return fallback;

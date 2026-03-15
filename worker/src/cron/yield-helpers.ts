@@ -16,9 +16,7 @@
 
 export const STALE_THRESHOLD_MS = 90 * 60 * 1000; // 3 sync cycles
 
-// --- PYS formula constants ---
-const PYS_RISK_PENALTY_FLOOR = 0.5;
-const PYS_SUSTAINABILITY_FLOOR = 0.3;
+export { computePYS, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR } from "@shared/lib/yield-scoring";
 
 // --- Warning signal thresholds ---
 const YIELD_SPIKE_THRESHOLD = 2.0;
@@ -39,21 +37,6 @@ export function computeApyFromRate(rateNow: number, ratePrev: number, days: numb
 
 export function computeApyFromPrice(priceNow: number, pricePrev: number, days: number): number {
   return computeApyFromRate(priceNow, pricePrev, days);
-}
-
-interface PYSInput {
-  apy30d: number;
-  safetyScore: number;
-  apyVarianceScore: number;
-  scalingFactor: number;
-}
-
-export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor }: PYSInput): number {
-  if (apy30d <= 0) return 0;
-  const riskPenalty = Math.max(PYS_RISK_PENALTY_FLOOR, (101 - safetyScore) / 20);
-  const yieldEfficiency = apy30d / riskPenalty;
-  const sustainabilityMultiplier = Math.max(PYS_SUSTAINABILITY_FLOOR, 1.0 - apyVarianceScore);
-  return Math.min(100, Math.round(yieldEfficiency * sustainabilityMultiplier * scalingFactor));
 }
 
 export function computeYieldStability(apySamples: number[]): number | null {

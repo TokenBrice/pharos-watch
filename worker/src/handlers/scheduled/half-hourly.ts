@@ -1,3 +1,11 @@
+/**
+ * Half-hourly trigger (10,40 * * * *):
+ *   sync-stablecoin-charts (1) → sync-dex-liquidity (4) → sync-yield-data (2)
+ *
+ * Jobs are chained sequentially so the heaviest phase (dex-liquidity with
+ * up to 4 concurrent Curve-chain fetches) does not overlap with yield-sync.
+ * Connection budget: 4/6 peak (dex-liquidity Curve-chains phase)
+ */
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import { syncDexLiquidity } from "../../cron/dex-liquidity";
 import { syncYieldData } from "../../cron/sync-yield-data";

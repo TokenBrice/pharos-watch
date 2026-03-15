@@ -1,3 +1,10 @@
+/**
+ * Five-minute Telegram trigger (2,7,12,... * * * *):
+ *   dispatch-telegram-alerts (1) → announce-cemetery-additions (1)
+ *
+ * Both jobs send sequential Telegram API calls and are chained.
+ * Connection budget: 1/6 peak
+ */
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import { announceCemeteryAdditions } from "../../cron/announce-cemetery-additions";
 import type { ScheduledRuntimeContext } from "./context";

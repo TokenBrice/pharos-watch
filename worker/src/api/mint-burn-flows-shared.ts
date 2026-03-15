@@ -42,7 +42,8 @@ export interface EventRow {
   explorer_tx_url: string;
 }
 
-export const DAY_SEC = 86400;
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+export const DAY_SEC = DAY_SECONDS;
 export const BASELINE_WINDOW_DAYS = 30;
 export const FLOW_CACHE_PREFIX = "mint-burn-flows:v2";
 export const ETHEREUM_CHAIN_ID = "ethereum";

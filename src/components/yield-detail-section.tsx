@@ -12,7 +12,7 @@ import { useYieldRankings } from "@/hooks/api-hooks";
 import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency, formatPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
@@ -45,8 +45,7 @@ const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
 
 function formatSignedPercent(value: number | null) {
   if (value === null) return "—";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
+  return sharedFormatSignedPercent(value);
 }
 
 function PysBreakdown({

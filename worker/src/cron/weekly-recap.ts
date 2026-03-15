@@ -49,7 +49,7 @@ function buildWeeklyInputData(
       const inputData = JSON.parse(row.input_data) as DigestInputData;
       const date = new Date(row.generated_at * 1000).toISOString().slice(0, 10);
       parsed.push({ date, title: row.digest_title ?? "Untitled", text: row.digest_text, inputData });
-    } catch { /* skip malformed */ }
+    } catch { /* expected: malformed input_data JSON — skip entry */ }
   }
   if (parsed.length < 5) return null;
 
@@ -231,7 +231,7 @@ export async function generateWeeklyRecap(
       weekStart: weeklyData.weekStartDate,
       weekEnd: weeklyData.weekEndDate,
     });
-  } catch {
+  } catch { /* degraded: LLM returned non-JSON — fall back to raw text */
     digestTitle = "";
     digestText = stripDashes(rawText.trim());
     digestExtended = "";

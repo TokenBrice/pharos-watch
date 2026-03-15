@@ -35,6 +35,13 @@ function pruneExpired(now: number): void {
   }
 }
 
+/**
+ * Best-effort rate limiting within a single Workers isolate.
+ *
+ * @deprecated This Map-based limiter is NOT shared across isolates or data centers.
+ * Use `checkPublicApiRateLimit()` (D1-backed) for distributed rate limiting.
+ * This function only provides per-isolate throttling (~5-30s window).
+ */
 export function checkRateLimit(
   ip: string,
   limit = 60,

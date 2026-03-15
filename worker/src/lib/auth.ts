@@ -18,17 +18,6 @@ function isOpsApiRequest(request: Request | undefined): boolean {
   }
 }
 
-/**
- * Checks for Cloudflare Access proxy signals on ops-api requests.
- *
- * When `CF_ACCESS_OPS_API_AUD` is configured, the JWT's signature and
- * claims (aud, exp, iss) are cryptographically verified against the
- * Cloudflare Access JWKS endpoint.
- *
- * When the AUD is NOT configured, falls back to header-presence checks
- * (backward-compatible with existing deployments that rely on Cloudflare
- * Access sitting in front of ops-api.pharos.watch).
- */
 async function hasOpsApiAccessSignal(
   request: Request | undefined,
   env?: AdminAuthEnv,
@@ -37,28 +26,21 @@ async function hasOpsApiAccessSignal(
 
   const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
 
-  // When AUD is configured, require and verify the JWT cryptographically
-  if (env?.CF_ACCESS_OPS_API_AUD && accessJwt) {
-    return verifyAccessJwt({
-      token: accessJwt,
-      aud: env.CF_ACCESS_OPS_API_AUD,
-      teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
-    });
+  // Require AUD to be configured for JWT verification
+  if (!env?.CF_ACCESS_OPS_API_AUD) {
+    console.warn("[auth] CF_ACCESS_OPS_API_AUD not configured — rejecting ops-api admin request");
+    return false;
   }
 
-  // Fallback: AUD not configured — header-presence check only
-  if (accessJwt) {
-    return true;
+  if (!accessJwt) {
+    return false;
   }
 
-  const accessEmail = request?.headers.get("Cf-Access-Authenticated-User-Email")?.trim();
-  if (accessEmail) {
-    return true;
-  }
-
-  const serviceTokenId = request?.headers.get("CF-Access-Client-Id")?.trim();
-  const serviceTokenSecret = request?.headers.get("CF-Access-Client-Secret")?.trim();
-  return Boolean(serviceTokenId && serviceTokenSecret);
+  return verifyAccessJwt({
+    token: accessJwt,
+    aud: env.CF_ACCESS_OPS_API_AUD,
+    teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
+  });
 }
 
 export async function hasValidAdminCredential(

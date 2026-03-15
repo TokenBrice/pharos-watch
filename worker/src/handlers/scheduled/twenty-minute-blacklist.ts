@@ -14,16 +14,16 @@ export async function runTwentyMinuteBlacklistSlot(runtime: ScheduledRuntimeCont
   const etherscanRL = createRateLimiter(4);
   const etherscanKey = runtime.env.ETHERSCAN_API_KEY ?? null;
   const blacklistJob = runtime.runLeasedCron("sync-blacklist", (signal, reportProgress) =>
-    syncBlacklist(
-      runtime.db,
-      etherscanKey,
-      runtime.env.TRONGRID_API_KEY ?? null,
-      runtime.env.DRPC_API_KEY ?? null,
-      etherscanRL,
+    syncBlacklist({
+      db: runtime.db,
+      etherscanApiKey: etherscanKey,
+      trongridApiKey: runtime.env.TRONGRID_API_KEY ?? null,
+      drpcApiKey: runtime.env.DRPC_API_KEY ?? null,
+      externalEtherscanRL: etherscanRL,
       signal,
-      reportProgress,
-      runtime.chainRpcs,
-    ),
+      onProgress: reportProgress,
+      chainRpcs: runtime.chainRpcs,
+    }),
   );
   runtime.ctx.waitUntil(blacklistJob);
   runtime.ctx.waitUntil(blacklistJob.then(

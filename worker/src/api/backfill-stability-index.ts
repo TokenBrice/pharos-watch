@@ -1,5 +1,6 @@
 import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
 import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
@@ -26,7 +27,6 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       ].join(" ");
 
       const now = Math.floor(Date.now() / 1000);
-      const DAY = 86400;
 
       // Determine backfill window: find earliest depeg event
       const earliest = await db
@@ -38,8 +38,8 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       }
 
       // Start from earliest depeg event, iterate day by day
-      const startDay = Math.floor(earliest.earliest / DAY) * DAY;
-      const endDay = Math.floor(now / DAY) * DAY;
+      const startDay = Math.floor(earliest.earliest / DAY_SECONDS) * DAY_SECONDS;
+      const endDay = Math.floor(now / DAY_SECONDS) * DAY_SECONDS;
 
       // Load all depeg events into memory for fast lookup
       const allDepegs = await db
@@ -53,15 +53,17 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         .all<PsiSupplyRow>();
       const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
-      await db.exec("DROP TABLE IF EXISTS stability_index_rebuild");
-      await db.exec(rebuildTableSql);
+      await db.batch([
+        db.prepare("DROP TABLE IF EXISTS stability_index_rebuild"),
+        db.prepare(rebuildTableSql),
+      ]);
 
       // Iterate day by day — build all statements first, then atomically swap
       const stmts: D1PreparedStatement[] = [];
       let count = 0;
       let skippedInsufficientData = 0;
 
-      for (let day = startDay; day <= endDay; day += DAY) {
+      for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
         const input = buildStabilityInputForDay(day, now, depegEvents, supplyByCoin);
         const result = computeStabilityIndex({
           depegs: input.depegs,
