@@ -5,13 +5,14 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("fetchPythPrices", () => {
   it("returns prices with confidence intervals for unprefixed Hermes feed ids", async () => {
+    const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         parsed: [
           {
             id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
-            price: { price: "100013000", expo: -8, conf: "61000", publish_time: 1710000000 },
+            price: { price: "100013000", expo: -8, conf: "61000", publish_time: freshPublishTime },
           },
         ],
       }),
@@ -24,7 +25,7 @@ describe("fetchPythPrices", () => {
     const r = results.get("usdt-tether")!;
     expect(r.price).toBeCloseTo(1.00013, 4);
     expect(r.confidenceBps).toBeGreaterThan(0);
-    expect(r.publishTime).toBe(1710000000);
+    expect(r.publishTime).toBe(freshPublishTime);
   });
 
   it("warns when feeds were requested but none map back to tracked assets", async () => {
@@ -66,6 +67,26 @@ describe("fetchPythPrices", () => {
     }));
     const feedIds = new Map([["broken-coin", "0xabc"]]);
     const results = await fetchPythPrices(feedIds);
+    expect(results.size).toBe(0);
+  });
+
+  it("rejects feeds older than PYTH_MAX_STALENESS_SEC (RISK-3)", async () => {
+    const stalePublishTime = Math.floor(Date.now() / 1000) - 600; // 10 min ago (> 5 min threshold)
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        parsed: [
+          {
+            id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+            price: { price: "100010000", expo: -8, conf: "5000", publish_time: stalePublishTime },
+          },
+        ],
+      }),
+    }));
+
+    const feedIds = new Map([["usdt-tether", "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b"]]);
+    const results = await fetchPythPrices(feedIds);
+
     expect(results.size).toBe(0);
   });
 });

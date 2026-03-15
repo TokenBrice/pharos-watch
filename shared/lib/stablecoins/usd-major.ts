@@ -366,6 +366,7 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "Falcon Finance savings (sUSDf)", yieldType: "lending-vault" },
     geckoId: "falcon-finance",
+    cmcSlug: "falcon-finance",
     pythFeedId: "0xfeb26a319cfbb09cfa85b382e4d97f48e6b8727a2b5e7e2fff0692ff676d5239",
     deploymentModel: "third-party-bridge",
     collateral: "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
@@ -896,6 +897,7 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
   usd("cusd-cap", "Cap cUSD", "CUSD", "rwa-backed", "centralized-dependent", {
     llamaId: "296",
     geckoId: "cap-usd",
+    cmcSlug: "cap-cusd",
     governanceQuality: "wrapper",
     collateral: "Basket of regulated stablecoins: USDC, USDT, pyUSD, BUIDL, and BENJI (max 40% each)",
     pegMechanism: "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
@@ -920,6 +922,7 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
   usd("usr-resolv", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
     llamaId: "197",
     geckoId: "resolv-usr",
+    pythFeedId: "0x10b013adec14c0fe839ca0fe54cec9e4d0b6c1585ac6d7e70010dac015e57f9c",
     deploymentModel: "third-party-bridge",
     collateral: "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
     pegMechanism: "Delta-neutral portfolio: long spot ETH/BTC on-chain balanced by equal short perpetual futures on CEXs (Binance, Hyperliquid, Deribit) via Fireblocks Off-Exchange; USR redeemable 1:1 at any time; RLP (Resolv Liquidity Pool) absorbs negative funding-rate and liquidation risk",
@@ -1055,6 +1058,7 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "Avalon savings (sUSDa)", yieldType: "lending-vault" },
     geckoId: "usda-2",
+    cmcSlug: "avalon-usda",
     deploymentModel: "third-party-bridge",
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",

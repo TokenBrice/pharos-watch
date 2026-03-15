@@ -2,6 +2,9 @@ import { z } from "zod";
 
 const HERMES_BASE = "https://hermes.pyth.network";
 
+/** Maximum age (seconds) of a Pyth price feed before it's considered stale */
+const PYTH_MAX_STALENESS_SEC = 300; // 5 minutes
+
 function normalizeFeedId(feedId: string): string {
   return feedId.toLowerCase().replace(/^0x/, "");
 }
@@ -71,6 +74,12 @@ export async function fetchPythPrices(
       const confidence = Number(rawConf) * multiplier;
 
       if (price <= 0) continue;
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (nowSec - feed.price.publish_time > PYTH_MAX_STALENESS_SEC) {
+        console.warn(`[pyth] Skipping stale feed for ${coinId}: publish_time=${feed.price.publish_time}, age=${nowSec - feed.price.publish_time}s`);
+        continue;
+      }
 
       const confidenceBps = Math.round((confidence / price) * 10000);
 

@@ -453,6 +453,54 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("dexscreener.com");
   });
+
+  it("prefers cmcSlug-based matching over symbol for CMC fallback (BUG-1)", async () => {
+    // Two coins share symbol "GUSD" — slug-based matching should pick the right price
+    const assets: PeggedAsset[] = [
+      {
+        id: "gusd-gemini", name: "Gemini Dollar", symbol: "GUSD", price: 0,
+        cmcSlug: "gemini-dollar", pegType: "peggedUSD", circulating: {},
+      },
+      {
+        id: "gusd-gate", name: "Gate USD", symbol: "GUSD", price: 0,
+        cmcSlug: "gatechain-token", pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["cmc_last_fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    mockFetch([
+      {
+        match: "pro-api.coinmarketcap.com",
+        body: {
+          data: {
+            coins: [
+              { slug: "gemini-dollar", symbol: "GUSD", quote: { USD: { price: 1.0001 } } },
+              { slug: "gatechain-token", symbol: "GUSD", quote: { USD: { price: 0.998 } } },
+            ],
+          },
+        },
+      },
+    ]);
+
+    const stats = await enrichMissingPrices(assets, "test-cmc-key", db);
+
+    // Both should be priced correctly via slug, not clobbered by symbol collision
+    expect(assets[0].price).toBe(1.0001);
+    expect(assets[0].priceSource).toBe("coinmarketcap");
+    expect(assets[1].price).toBe(0.998);
+    expect(assets[1].priceSource).toBe("coinmarketcap");
+    expect(stats.passCmc).toBe(2);
+  });
 });
 
 // --- fetchPrimaryPrices tests ---
@@ -681,6 +729,7 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("uses Pyth as a single source when Hermes returns an unprefixed feed id", async () => {
+    const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
@@ -697,7 +746,7 @@ describe("fetchPrimaryPrices", () => {
           parsed: [
             {
               id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
-              price: { price: "100010000", expo: -8, conf: "5000", publish_time: 1710000000 },
+              price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
             },
           ],
         }), { status: 200 });

@@ -101,4 +101,24 @@ describe("computePriceConsensus", () => {
     // Both CG and Binance are equidistant from median 1.11, so either is acceptable
     expect([1.12, 1.10]).toContain(result!.price);
   });
+
+  it("agrees at exactly 50bps boundary (inclusive)", () => {
+    // 1.0000 and 1.0050 are exactly 50bps apart: |1.0050-1.0000|/1.0025 * 10000 ≈ 49.9 bps
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.0000, weight: 1 },
+      { source: "defillama", price: 1.0050, weight: 1 },
+    ];
+    const result = computePriceConsensus(sources, 1.0, 50);
+    expect(result!.confidence).toBe("high");
+  });
+
+  it("disagrees just beyond 50bps boundary", () => {
+    // 1.0000 and 1.0060 are ~60bps apart — should disagree
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.0000, weight: 1 },
+      { source: "defillama", price: 1.0060, weight: 1 },
+    ];
+    const result = computePriceConsensus(sources, 1.0, 50);
+    expect(result!.confidence).toBe("low");
+  });
 });

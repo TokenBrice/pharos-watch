@@ -48,6 +48,7 @@ export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = [
   "XSGD",
   "crvUSD",
   "fxUSD",
+  "sUSDe",
 ] as const;
 
 const REDSTONE_TRACKED_SYMBOL_SET = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);

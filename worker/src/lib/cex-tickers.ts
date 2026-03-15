@@ -27,7 +27,7 @@ const BINANCE_PAIR_TO_SYMBOL: Record<string, string> = {
  * symbol "USDP" (rebranded), so "PAX" never matches in the symbol filter.
  */
 export const COINBASE_KNOWN_SYMBOLS: readonly string[] = [
-  "USDT", "DAI", "PAXG", "USDS", "USD1",
+  "USDT", "DAI", "PAXG", "USDS", "USD1", "HONEY",
 ] as const;
 
 /**

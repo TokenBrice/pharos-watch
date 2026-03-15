@@ -81,7 +81,7 @@ export async function fetchCurveOnchainPrices(
       const inputFloat = Number(inputAmount) / Math.pow(10, config.inputDecimals);
       const impliedPrice = inputFloat / outputFloat;
 
-      if (impliedPrice > 0 && impliedPrice < 100) {
+      if (impliedPrice > 0 && impliedPrice < 10_000) {
         rawPrices.set(config.stablecoinId, impliedPrice);
       }
     } catch (err) {
@@ -101,7 +101,7 @@ export async function fetchCurveOnchainPrices(
       const viaPrice = rawPrices.get(config.hop.viaStablecoinId);
       if (viaPrice == null) continue; // dependency missing
       const finalPrice = raw * viaPrice;
-      if (finalPrice > 0 && finalPrice < 100) {
+      if (finalPrice > 0 && finalPrice < 10_000) {
         results.set(config.stablecoinId, finalPrice);
       }
     } else {

@@ -69,10 +69,12 @@ Source labels are compressed for agreeing clusters:
 Several live providers need normalization before their prices can safely enter consensus:
 
 - **Pyth feed IDs:** `worker/src/lib/pyth.ts` normalizes feed IDs to lowercase and strips any leading `0x` before reverse-matching them to tracked assets. Hermes may return the same feed in prefixed or unprefixed form.
-- **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup.
-- **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (for example `USDe`, `crvUSD`, `fxUSD`). Unsupported symbols are filtered out before transport.
+- **Pyth staleness guard:** Feeds with `publish_time` older than 5 minutes (`PYTH_MAX_STALENESS_SEC = 300`) are rejected before entering consensus. This prevents stale oracle snapshots from poisoning the price.
+- **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup. Active pairs: USDT, DAI, PAXG, USDS, USD1, HONEY.
+- **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (31 symbols including `USDe`, `crvUSD`, `fxUSD`, `sUSDe`). Unsupported symbols are filtered out before transport.
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **Circuit-breaker accounting:** for Pyth and RedStone, a transport-successful request that returns zero usable prices is still recorded as an unsuccessful outcome for breaker state. This avoids treating empty responses as healthy data.
+- **Curve on-chain sanity bound:** Implied prices from `get_dy` calls are capped at `< 10,000` (to accommodate commodity tokens like PAXG/XAUT at ~$2,900).
 
 These normalization rules live in code because they are provider quirks, not business-level scoring decisions.
 
@@ -106,7 +108,7 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 
 1. **Pass 1:** DefiLlama `coins.llama.fi` by current contract address
 2. **Pass 1b:** alternate-chain contract fallback via DefiLlama
-3. **Pass 2:** CoinMarketCap `listings/latest` batch match by symbol
+3. **Pass 2:** CoinMarketCap `listings/latest` batch — prefers `cmcSlug`-based matching over symbol to avoid cross-contamination in collision groups (e.g., two coins sharing "GUSD")
 4. **Pass 3:** DexScreener search fallback with liquidity and peg-aware validation gates
 
 The enrichment path is intentionally narrower than primary pricing:

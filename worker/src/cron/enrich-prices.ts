@@ -699,10 +699,11 @@ export async function enrichMissingPrices(
 
           if (cmcRes && cmcRes.ok) {
             const cmcData = (await cmcRes.json()) as {
-              data: { coins: Array<{ symbol: string; quote: { USD: { price: number } } }> };
+              data: { coins: Array<{ slug?: string; symbol: string; quote: { USD: { price: number } } }> };
             };
 
             const cmcBySymbol = new Map<string, number>();
+            const cmcBySlug = new Map<string, number>();
             for (const entry of cmcData.data.coins) {
               const price = entry.quote?.USD?.price;
               if (price != null && price > 0) {
@@ -711,11 +712,18 @@ export async function enrichMissingPrices(
                   console.warn(`[enrich] CMC symbol collision: ${sym} (existing=$${cmcBySymbol.get(sym)}, new=$${price})`);
                 }
                 cmcBySymbol.set(sym, price);
+                if (entry.slug) {
+                  cmcBySlug.set(entry.slug.toLowerCase(), price);
+                }
               }
             }
 
             for (const m of missingAfterPass1b) {
-              const cmcPrice = cmcBySymbol.get(m.asset.symbol.toUpperCase());
+              // Prefer slug-based matching to avoid symbol collisions
+              const slug = m.asset.cmcSlug;
+              const cmcPrice = slug
+                ? cmcBySlug.get(slug.toLowerCase()) ?? cmcBySymbol.get(m.asset.symbol.toUpperCase())
+                : cmcBySymbol.get(m.asset.symbol.toUpperCase());
               if (cmcPrice != null && isReasonablePrice(
                 cmcPrice,
                 m.asset.pegType as string | undefined,
@@ -770,16 +778,16 @@ export async function enrichMissingPrices(
         try {
           // DexScreener is the last, best-effort fallback. Keep the whole pass
           // time-bounded so a wave of missing prices cannot exhaust the cron slot.
-          if (idx > 0) {
-            await sleepWithSignal(200, signal);
-          }
-
           const remainingBudgetMs = dexBudgetDeadlineMs - Date.now();
           if (remainingBudgetMs <= 0) {
             console.warn(
               `[enrich] DexScreener pass budget exhausted after ${dexAttempts}/${dexCandidates.length} searches`,
             );
             break;
+          }
+
+          if (idx > 0) {
+            await sleepWithSignal(200, signal);
           }
 
           dexAttempts++;
