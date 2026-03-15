@@ -416,6 +416,7 @@ export async function resolveBlockTimestamps(
   }
 
   const freshResolvedForCache = new Map<number, number>();
+  let batchErrors = 0;
   for (let i = 0; i < unresolved.length; i += TIMESTAMP_BATCH_SIZE) {
     if (budgetExhausted(budget)) break;
     budget.count++;
@@ -466,8 +467,15 @@ export async function resolveBlockTimestamps(
         }
       }
     } catch (e) {
-      console.warn(`[alchemy-logs] batch timestamp fetch failed:`, e);
+      batchErrors++;
+      console.warn(`[alchemy-logs] batch timestamp fetch failed (${batchErrors}):`, e);
     }
+  }
+
+  if (batchErrors > 0) {
+    const totalNeeded = uniqueBlocks.length;
+    const stillMissing = uniqueBlocks.filter((b) => !timestamps.has(b)).length;
+    console.warn(`[alchemy-logs] timestamp resolution incomplete: ${stillMissing}/${totalNeeded} blocks still unresolved after ${batchErrors} batch error(s)`);
   }
 
   if (persistentCache && freshResolvedForCache.size > 0) {
