@@ -262,6 +262,7 @@ function computeCard(
   const canBeBlacklisted = isBlacklistable(meta, blacklistableIds);
   const resilienceFactors = resolveResilienceFactors(meta);
   const liveSlices = liveReserveMap.get(meta.id);
+  const deps = deriveDependencies(meta);
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta),
@@ -294,7 +295,7 @@ function computeCard(
     custodyModel: resilienceFactors.custodyModel,
     governanceTier: meta.flags.governance as GovernanceType,
     governanceQuality: resolveGovernanceQuality(meta.flags.governance as GovernanceType, meta),
-    dependencies: deriveDependencies(meta),
+    dependencies: deps,
     navToken,
     collateralFromLive: !!liveSlices,
   };
@@ -309,10 +310,7 @@ function computeCard(
     dimensions,
     ratedDimensions: overall.ratedDimensions,
     rawInputs,
-    ...(() => {
-      const deps = deriveDependencies(meta);
-      return deps.length > 0 ? { dependencies: deps } : {};
-    })(),
+    ...(deps.length > 0 ? { dependencies: deps } : {}),
     isDefunct: false,
   };
 }
