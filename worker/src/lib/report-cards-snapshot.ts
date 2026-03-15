@@ -315,7 +315,7 @@ function computeCard(
   };
 }
 
-function topologicalOrder(metas: StablecoinMeta[]): StablecoinMeta[] {
+export function topologicalOrder(metas: StablecoinMeta[]): StablecoinMeta[] {
   const metaMap = new Map(metas.map((meta) => [meta.id, meta]));
   const visited = new Set<string>();
   const result: StablecoinMeta[] = [];
