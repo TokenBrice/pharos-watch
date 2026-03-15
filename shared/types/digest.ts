@@ -129,6 +129,11 @@ export interface DigestInputData {
     previousTvl: number;
     mcapUsd: number;
   }[];
+  crossDayTrends?: {
+    psiTrajectory: { date: string; score: number; band: string }[];
+    mcapTrajectory: { date: string; mcapUsd: number }[];
+    gaugeTrajectory: { date: string; gaugeScore: number }[] | null;
+  };
 }
 
 export interface DailyDigestResponse {

@@ -783,3 +783,59 @@ export async function collectLiquidityShifts(
     return undefined;
   }
 }
+
+// ---------------------------------------------------------------------------
+// 13. Cross-day trends (7-day trajectories from archived digests)
+// ---------------------------------------------------------------------------
+
+export async function collectCrossDayTrends(
+  ctx: CollectorContext,
+): Promise<DigestInputData["crossDayTrends"]> {
+  try {
+    const rows = await ctx.db
+      .prepare(
+        `SELECT generated_at, input_data FROM daily_digest
+         WHERE generated_at >= ?
+           AND (digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly')
+         ORDER BY generated_at DESC
+         LIMIT 7`,
+      )
+      .bind(ctx.nowSec - 7 * SECONDS.ONE_DAY)
+      .all<{ generated_at: number; input_data: string }>();
+
+    const entries = rows.results ?? [];
+    if (entries.length < 3) return undefined;
+
+    const psiTrajectory: { date: string; score: number; band: string }[] = [];
+    const mcapTrajectory: { date: string; mcapUsd: number }[] = [];
+    const gaugeTrajectory: { date: string; gaugeScore: number }[] = [];
+
+    for (const row of entries) {
+      try {
+        const data = JSON.parse(row.input_data) as DigestInputData;
+        const date = new Date(row.generated_at * 1000).toISOString().slice(0, 10);
+
+        if (data.stabilityIndex) {
+          psiTrajectory.push({ date, score: data.stabilityIndex.score, band: data.stabilityIndex.band });
+        }
+        mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        if (data.mintBurnFlows) {
+          gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
+        }
+      } catch { /* skip malformed entries */ }
+    }
+
+    psiTrajectory.reverse();
+    mcapTrajectory.reverse();
+    gaugeTrajectory.reverse();
+
+    return {
+      psiTrajectory,
+      mcapTrajectory,
+      gaugeTrajectory: gaugeTrajectory.length >= 3 ? gaugeTrajectory : null,
+    };
+  } catch (e) {
+    console.error("[daily-digest] Failed to collect cross-day trends:", e);
+    return undefined;
+  }
+}

@@ -25,6 +25,7 @@ import {
   collectPsiContributors,
   collectYieldAnomalies,
   collectLiquidityShifts,
+  collectCrossDayTrends,
   type CollectorContext,
 } from "./daily-digest/collectors";
 
@@ -66,7 +67,9 @@ const SYSTEM_PROMPT =
   "HISTORICAL CONTEXT: You will receive \"Context:\" lines after PSI and supply data. USE THEM. " +
   "\"PSI at 72\" is a data point. \"PSI at 72, its lowest since March\" is journalism. " +
   "Streaks, precedents, and ATH comparisons make the reader feel the weight of a number. " +
-  "Always prefer the contextual framing over the raw value.\n\n" +
+  "Always prefer the contextual framing over the raw value.\n" +
+  "You also receive 7-day trajectories for PSI, mcap, and gauge. Use these to identify multi-day trends: " +
+  "\"third consecutive day of gauge deterioration\" or \"PSI recovering from Monday's dip\" are more compelling than point-in-time comparisons.\n\n" +
   // 8. Narrative structure
   "NARRATIVE STRUCTURE — adapt to the day's regime (provided in the data). " +
   "Always reference the PSI score and band, but it does not have to be the opening line. " +
@@ -183,6 +186,26 @@ function buildUserPrompt(
     lines.push("  PSI severity contributors (top coins driving the score):");
     for (const c of data.psiContributors) {
       lines.push(`    ${c.symbol}: ${c.bps} bps, mcap ${formatCurrency(c.mcapUsd)}, impact ${c.marketImpact}`);
+    }
+  }
+
+  // Cross-day trends
+  if (data.crossDayTrends) {
+    const { psiTrajectory, mcapTrajectory, gaugeTrajectory } = data.crossDayTrends;
+    if (psiTrajectory.length >= 3) {
+      lines.push(
+        `PSI 7-day trajectory: ${psiTrajectory.map((p) => `${p.score} [${p.band}]`).join(" -> ")}`,
+      );
+    }
+    if (mcapTrajectory.length >= 3) {
+      lines.push(
+        `Market cap 7-day trajectory: ${mcapTrajectory.map((m) => formatCurrency(m.mcapUsd)).join(" -> ")}`,
+      );
+    }
+    if (gaugeTrajectory && gaugeTrajectory.length >= 3) {
+      lines.push(
+        `Bank Run Gauge 7-day trajectory: ${gaugeTrajectory.map((g) => Math.round(g.gaugeScore * 10) / 10).join(" -> ")}`,
+      );
     }
   }
 
@@ -519,6 +542,7 @@ export async function generateDailyDigest(
   const psiContributors = await collectPsiContributors(ctx);
   const yieldAnomalies = await collectYieldAnomalies(ctx);
   const liquidityShifts = await collectLiquidityShifts(ctx);
+  const crossDayTrends = await collectCrossDayTrends(ctx);
 
   // --- Build input data ---
   const inputData: DigestInputData = {
@@ -540,6 +564,7 @@ export async function generateDailyDigest(
     gradeTransitions,
     yieldAnomalies,
     liquidityShifts,
+    crossDayTrends,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentMeta);
