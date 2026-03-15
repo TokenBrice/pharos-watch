@@ -27,23 +27,23 @@ describe("hasValidAdminCredential", () => {
     const req = new Request("https://api.pharos.watch/api/test");
     expect(await hasValidAdminCredential(req)).toBe(false);
   });
-  it("returns true for ops-api request with JWT header (no AUD configured)", async () => {
+  it("rejects ops-api request with JWT header when AUD not configured", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test", {
       headers: { "Cf-Access-Jwt-Assertion": "some-jwt-token" },
     });
-    expect(await hasValidAdminCredential(req)).toBe(true);
+    expect(await hasValidAdminCredential(req)).toBe(false);
   });
-  it("returns true for ops-api request with email header", async () => {
+  it("rejects ops-api request with only email header", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test", {
       headers: { "Cf-Access-Authenticated-User-Email": "admin@example.com" },
     });
-    expect(await hasValidAdminCredential(req)).toBe(true);
+    expect(await hasValidAdminCredential(req)).toBe(false);
   });
-  it("returns true for ops-api request with service token headers", async () => {
+  it("rejects ops-api request with only service token headers", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test", {
       headers: { "CF-Access-Client-Id": "id", "CF-Access-Client-Secret": "secret" },
     });
-    expect(await hasValidAdminCredential(req)).toBe(true);
+    expect(await hasValidAdminCredential(req)).toBe(false);
   });
   it("returns false for ops-api request without access headers", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test");
