@@ -245,7 +245,6 @@ function getConfidencePriority(tier: ConfidenceTier): number {
 function shouldDegradeForRiskFreeRate(meta: Awaited<ReturnType<typeof loadRiskFreeRateSnapshot>>): boolean {
   if (!meta.fallbackMode) return false;
   if (meta.isFallback) return true;
-  if (typeof meta.fallbackMode === "string" && meta.fallbackMode.includes("retained")) return true;
   return meta.ageSeconds == null || meta.ageSeconds > MAX_RETAINED_RISK_FREE_RATE_AGE_SEC;
 }
 

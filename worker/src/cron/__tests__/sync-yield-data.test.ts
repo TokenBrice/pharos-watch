@@ -1194,7 +1194,7 @@ describe("syncYieldData", () => {
     onChainConfigs.length = 0;
   });
 
-  it("marks yield sync degraded when the retained benchmark is still fresh", async () => {
+  it("does not degrade when the retained benchmark is still fresh", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -1228,9 +1228,9 @@ describe("syncYieldData", () => {
       fallbackMode: string | null;
     };
 
-    // Retained rates now trigger degradation regardless of age
-    expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toBe("risk-free-rate:fred-api-error-retained");
+    // Fresh retained rates (under 2 days old) should not trigger degradation
+    expect(result.status).toBeUndefined();
+    expect(metadata.fallbackMode).toBeNull();
 
     const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
     expect(rankingsCacheCall).toBeDefined();
