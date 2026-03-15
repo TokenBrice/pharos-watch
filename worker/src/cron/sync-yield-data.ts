@@ -43,6 +43,8 @@ const LOW_SOURCE_TVL_USD = 250_000;
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = SECONDS.TWO_DAYS;
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
+/** 30-day history window + 5-day buffer for legacy source-unaware rows. */
+const LEGACY_HISTORY_MAX_AGE_SEC = SECONDS.THIRTY_DAYS + 5 * SECONDS.ONE_DAY;
 
 type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 
@@ -308,8 +310,7 @@ function pickHistoryRowsForSource(
     legacyDataSources.size === 1 &&
     legacyDataSources.has(dataSource);
 
-  const LEGACY_MAX_AGE_SEC = 35 * 86400; // 30d window + 5d buffer
-  const legacyCutoff = startSec - LEGACY_MAX_AGE_SEC;
+  const legacyCutoff = startSec - LEGACY_HISTORY_MAX_AGE_SEC;
   const freshLegacyRows = legacyRows.filter((row) => row.recorded_at >= legacyCutoff);
 
   if (
