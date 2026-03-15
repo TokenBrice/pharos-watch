@@ -380,6 +380,28 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 
 **Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` (1 long-lived Anthropic API call), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 9 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency.
 
+### Cron Slot Capacity and Connection Pool Budget
+
+Workers enforce a **6 concurrent fetch connections** limit per cron trigger invocation. All jobs sharing a trigger slot share this pool. Exceeding 6 causes `fetch()` to queue or fail.
+
+| Trigger | Cron Expression | Max Concurrent External Connections | Headroom |
+|---------|----------------|:---:|:---:|
+| 1 | `*/15 * * * *` | 3 (sync-stablecoins + sync-fx-rates + status-self-check) | 3 |
+| 2 | `3,23,43 * * * *` | 4 (multi-chain blacklist scans) | 2 |
+| 3 | `4,24,44 * * * *` | 2 (Alchemy JSON-RPC) | 4 |
+| 4 | `6,26,46 * * * *` | 1 (sequential CG/GT/DexScreener) | 5 |
+| 5 | `13,33,53 * * * *` | 2 (Alchemy JSON-RPC, extended lane) | 4 |
+| 6 | `10,40 * * * *` | 4 (charts + DEX liquidity + yield) | 2 |
+| 7 | `11 * * * *` | 2 (reserve adapters + redemption) | 4 |
+| 8 | `2,7,…,57 * * * *` | 5 (Telegram fan-out batch sends) | 1 |
+| 9 | `0 8 * * *` | 2 (FRED + Etherscan) | 4 |
+| 10 | `5 8 * * *` | 5 (bluechip + Anthropic + CoinGecko) | 1 |
+
+**Policy for new jobs:**
+- Jobs requiring ≤1 external connection may share any slot with headroom ≥2.
+- Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
+- Never add a fetching job to a slot with headroom ≤1 (Triggers 8 and 10 are full).
+
 ## Telegram Alert Bot
 
 - Webhook ingress (`POST /api/telegram-webhook`) receives Telegram commands and writes subscriber/subscription state into D1.
