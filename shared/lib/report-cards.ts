@@ -322,7 +322,7 @@ export function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): 
   const totalPct = reserves.reduce((s, r) => s + r.pct, 0);
   if (totalPct === 0) return 0;
   const weighted = reserves.reduce(
-    (s, r) => s + r.pct * RESERVE_QUALITY_SCORE[r.risk],
+    (s, r) => s + r.pct * (RESERVE_QUALITY_SCORE[r.risk] ?? 0),
     0,
   );
   return Math.round(weighted / totalPct);

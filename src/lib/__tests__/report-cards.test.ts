@@ -602,6 +602,24 @@ describe("computeCollateralQualityFromReserves", () => {
     const reserves = [{ name: "Ghost", pct: 0, risk: "very-low" as const }];
     expect(computeCollateralQualityFromReserves(reserves)).toBe(0);
   });
+
+  it("treats unknown risk values as 0 instead of producing NaN", () => {
+    const slices = [
+      { name: "Good", pct: 50, risk: "low" as const },
+      { name: "Bad", pct: 50, risk: "bogus" as unknown as "low" },
+    ];
+    const score = computeCollateralQualityFromReserves(slices);
+    expect(Number.isFinite(score)).toBe(true);
+    expect(score).toBe(Math.round((50 * 75 + 50 * 0) / 100)); // 38
+  });
+
+  it("returns 0 when all risk values are invalid", () => {
+    const slices = [
+      { name: "A", pct: 60, risk: "invalid" as unknown as "low" },
+      { name: "B", pct: 40, risk: "nope" as unknown as "low" },
+    ];
+    expect(computeCollateralQualityFromReserves(slices)).toBe(0);
+  });
 });
 
 describe("scoreDecentralization", () => {
