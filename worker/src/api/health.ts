@@ -179,8 +179,8 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
           circuits[source] = { ...DEFAULT_CIRCUIT_RECORD };
         }
       }
-      const hasOpenCircuit = Object.values(circuits).some((c) => c.state === "open");
-      if (hasOpenCircuit && worstRatioMut < 1.6) {
+      const openCircuitCount = Object.values(circuits).filter((c) => c.state === "open").length;
+      if (openCircuitCount >= 3 && worstRatioMut < 1.6) {
         worstRatioMut = 1.6; // degraded
       }
     } catch (err) {

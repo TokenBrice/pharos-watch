@@ -30,7 +30,7 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 **Commit:** `unreleased`
 
-- Discovery sources now run on an independent 20-minute cron with a 13-minute crawl budget instead of sharing a short scoring-run budget
+- Discovery sources now run on a dedicated 30-minute cron with a 20-minute crawl budget instead of sharing a short scoring-run budget
 - Staged pools merge into scoring with freshness confidence decay `max(0.5, 1 - ageHours/48)` and fall out after 24 hours
 - Chain-aware source routing now skips irrelevant networks, reducing wasted crawl attempts
 - Tiered priority with exponential backoff prevents repeated looping on pool-less coins

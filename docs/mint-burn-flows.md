@@ -27,7 +27,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 - **Critical lane pattern:** `4,24,44 * * * *` (every 20 minutes, offset at :04/:24/:44)
 - **Extended lane pattern:** `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
-- **Trigger mode:** isolated. `sync-blacklist` and `sync-dex-discovery` run on their own dedicated 20-minute triggers (`3,23,43 * * * *` and `6,26,46 * * * *`).
+- **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated 20-minute trigger (`3,23,43 * * * *`); `sync-dex-discovery` runs on a dedicated 30-minute trigger (`6,36 * * * *`).
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
 - **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`

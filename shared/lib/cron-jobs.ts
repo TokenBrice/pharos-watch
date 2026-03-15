@@ -11,7 +11,7 @@ export const CRON_SCHEDULES = {
   quarterHourly: "*/15 * * * *",
   twentyMinuteOffset: "3,23,43 * * * *",
   twentyMinuteMintBurn: "4,24,44 * * * *",
-  twentyMinuteDexDiscovery: "6,26,46 * * * *",
+  thirtyMinuteDexDiscovery: "6,36 * * * *",
   twentyMinuteExtendedOffset: "13,33,53 * * * *",
   halfHourlyOffset: "10,40 * * * *",
   hourlyReserveSync: "11 * * * *",
@@ -61,7 +61,7 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "twenty-minute",
     title: "20-minute slot",
     badge: "~20 min",
-    description: "On-chain intake jobs shown together by cadence, but each heavy lane runs on its own isolated trigger.",
+    description: "On-chain intake jobs (blacklist, mint/burn) shown together by cadence, each on its own isolated trigger.",
   },
   {
     key: "half-hourly",
@@ -173,9 +173,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-dex-discovery",
     label: "DEX pool discovery",
-    group: "twenty-minute",
-    intervalSec: 1200,
-    scheduleKey: "twentyMinuteDexDiscovery",
+    group: "half-hourly",
+    intervalSec: 1800,
+    scheduleKey: "thirtyMinuteDexDiscovery",
     triggerMode: "isolated",
   },
   {

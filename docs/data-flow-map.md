@@ -34,7 +34,7 @@ Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worke
 - `*/15 * * * *`: sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / FX / PSI / DEWS / status self-check
 - `3,23,43 * * * *`: blacklist sync
 - `4,24,44 * * * *`: mint/burn critical lane
-- `6,26,46 * * * *`: DEX discovery staging
+- `6,36 * * * *`: DEX discovery staging (every 30 minutes)
 - `13,33,53 * * * *`: mint/burn extended lane
 - `10,40 * * * *`: stablecoin charts, then DEX liquidity, then yield sync
 - `11 * * * *`: live reserve sync, then redemption backstop sync

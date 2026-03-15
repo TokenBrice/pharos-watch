@@ -265,7 +265,7 @@ crons = [
   "*/15 * * * *",
   "3,23,43 * * * *",
   "4,24,44 * * * *",
-  "6,26,46 * * * *",
+  "6,36 * * * *",
   "13,33,53 * * * *",
   "10,40 * * * *",
   "11 * * * *",
@@ -312,7 +312,7 @@ Dedicated trigger for blacklist sync. Uses Etherscan for supported chains, chain
 
 Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus the Alchemy circuit breaker. Offset by 1 minute from blacklist to stagger Worker cold starts.
 
-### Trigger 4: `6,26,46 * * * *` (DEX discovery — dedicated)
+### Trigger 4: `6,36 * * * *` (DEX discovery — dedicated, every 30 minutes)
 
 | Job                  | Function             | File                                            | Documentation                             |
 | -------------------- | -------------------- | ----------------------------------------------- | ----------------------------------------- |
@@ -389,7 +389,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 1 | `*/15 * * * *` | 3 (sync-stablecoins + sync-fx-rates + status-self-check) | 3 |
 | 2 | `3,23,43 * * * *` | 4 (multi-chain blacklist scans) | 2 |
 | 3 | `4,24,44 * * * *` | 2 (Alchemy JSON-RPC) | 4 |
-| 4 | `6,26,46 * * * *` | 1 (sequential CG/GT/DexScreener) | 5 |
+| 4 | `6,36 * * * *` | 1 (sequential CG/GT/DexScreener) | 5 |
 | 5 | `13,33,53 * * * *` | 2 (Alchemy JSON-RPC, extended lane) | 4 |
 | 6 | `10,40 * * * *` | 4 (charts + DEX liquidity + yield) | 2 |
 | 7 | `11 * * * *` | 2 (reserve adapters + redemption) | 4 |
@@ -506,7 +506,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | Default                   | 5 min   | Standard jobs complete in <60s                                                                                                                                                                            |
 | `sync-stablecoins`        | 8 min   | Core quarter-hour pipeline entrypoint now includes dual-primary pricing, supplemental overlays, multi-pass enrichment, and depeg processing; explicit headroom avoids timing out on bounded fallback work |
 | `sync-dex-liquidity`      | 13 min  | 150+ pool crawl, with headroom below the platform wall-clock limit                                                                                                                                        |
-| `sync-dex-discovery`      | 16 min  | Multi-source pool staging; isolated trigger allows extended runtime                                                                                                                                       |
+| `sync-dex-discovery`      | 23 min  | Multi-source pool staging; dedicated 30-minute trigger allows extended runtime                                                                                                                            |
 | `sync-blacklist`          | 12 min  | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime                                                                                                                           |
 | `sync-mint-burn`          | 10 min  | Multi-contract EVM log scan; isolated trigger allows extended runtime                                                                                                                                     |
 | `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state                                                                                                                                                           |
@@ -882,7 +882,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `dispatch-telegram-alerts`      | 300s (5min)    | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` |
 | `sync-blacklist`                | 1,200s (20min) | `3,23,43 * * * *`                           |
 | `sync-mint-burn`                | 1,200s (20min) | `4,24,44 * * * *`                           |
-| `sync-dex-discovery`            | 1,200s (20min) | `6,26,46 * * * *`                           |
+| `sync-dex-discovery`            | 1,800s (30min) | `6,36 * * * *`                              |
 | `sync-mint-burn-extended`       | 1,200s (20min) | `13,33,53 * * * *`                          |
 | `sync-dex-liquidity`            | 1,800s (30min) | `10,40 * * * *`                             |
 | `sync-yield-data`               | 1,800s (30min) | `10,40 * * * *`                             |
@@ -930,7 +930,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/handlers/http.ts`                      | HTTP request pipeline: CORS, method gating, edge cache, route-context assembly, router dispatch                                                                     |
 | `worker/src/handlers/scheduled.ts`                 | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch                                                                                      |
 | `worker/src/handlers/scheduled/context.ts`         | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing                                                          |
-| `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated 20-minute lanes, half-hourly, hourly reserve sync, Telegram, and daily slots)                                    |
+| `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated 20-minute lanes, half-hourly including DEX discovery, hourly reserve sync, Telegram, and daily slots)             |
 | `worker/src/lib/env.ts`                            | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides                                                                                       |
 | `worker/wrangler.toml`                             | Deployment config: custom domain, cron triggers, D1 binding, vars                                                                                                   |
 | `worker/src/lib/db.ts`                             | Database helpers: `batchExecute`, block tracking                                                                                                                    |

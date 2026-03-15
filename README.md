@@ -176,7 +176,7 @@ Cloudflare Worker (API layer)
   ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + FX rates + PSI compute + DEWS + status self-check
   ├── Cron: 3,23,43 * * * *                     → blacklist sync
   ├── Cron: 4,24,44 * * * *                     → mint/burn critical lane
-  ├── Cron: 6,26,46 * * * *                     → DEX discovery staging
+  ├── Cron: 6,36 * * * *                         → DEX discovery staging
   ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
   ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + yield sync
   ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots

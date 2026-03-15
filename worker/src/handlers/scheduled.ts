@@ -21,7 +21,7 @@ const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = {
   [CRON_SCHEDULES.quarterHourly]: runQuarterHourlySlot,
   [CRON_SCHEDULES.twentyMinuteOffset]: runTwentyMinuteBlacklistSlot,
   [CRON_SCHEDULES.twentyMinuteMintBurn]: runTwentyMinuteMintBurnCriticalSlot,
-  [CRON_SCHEDULES.twentyMinuteDexDiscovery]: runTwentyMinuteDexDiscoverySlot,
+  [CRON_SCHEDULES.thirtyMinuteDexDiscovery]: runTwentyMinuteDexDiscoverySlot,
   [CRON_SCHEDULES.twentyMinuteExtendedOffset]: runTwentyMinuteMintBurnExtendedSlot,
   [CRON_SCHEDULES.halfHourlyOffset]: runHalfHourlySlot,
   [CRON_SCHEDULES.hourlyReserveSync]: runHourlyReserveSyncSlot,

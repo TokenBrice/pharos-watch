@@ -5,7 +5,7 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   // a controlled error instead of losing the invocation without a cron_runs row.
   "sync-stablecoins": 8 * 60_000,
   "sync-dex-liquidity": 13 * 60_000,
-  "sync-dex-discovery": 16 * 60_000,
+  "sync-dex-discovery": 23 * 60_000,
   "sync-blacklist": 12 * 60_000,
   "sync-mint-burn": 10 * 60_000,
   "sync-mint-burn-extended": 10 * 60_000,

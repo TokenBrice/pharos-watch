@@ -320,7 +320,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncDexDiscovery).not.toHaveBeenCalled();
   });
 
-  it("runs only DEX discovery on the dedicated :06/:26/:46 trigger", async () => {
+  it("runs only DEX discovery on the dedicated :06/:36 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -329,7 +329,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "6,26,46 * * * *" } as ScheduledEvent,
+      { cron: "6,36 * * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );

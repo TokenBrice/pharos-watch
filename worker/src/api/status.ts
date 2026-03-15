@@ -398,9 +398,12 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
     && reserveComposition.configuredCoins > 0
     && reserveComposition.freshCoins === 0
     && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0 || reserveComposition.errorCoins > 0);
+  const reserveIssueCount =
+    reserveComposition.missingCoins + reserveComposition.staleCoins + reserveComposition.degradedCoins + reserveComposition.errorCoins;
+  const reserveWarningFloor = Math.max(3, Math.ceil(reserveComposition.configuredCoins * 0.1));
   const reserveCompositionWarning =
     !reserveCompositionBootstrap
-    && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0 || reserveComposition.errorCoins > 0);
+    && reserveIssueCount >= reserveWarningFloor;
 
   // 5. Raw status synthesis
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =

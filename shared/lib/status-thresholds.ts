@@ -1,7 +1,7 @@
 // --- Blacklist gap thresholds ---
 export const BLACKLIST_RECENT_WINDOW_SEC = 24 * 3600;
 export const STATUS_BLACKLIST_THRESHOLDS = {
-  missingRatioDegraded: 0.005,
+  missingRatioDegraded: 0.01,
   missingRatioStale: 0.02,
   missingRecentStale: 25,
 } as const;

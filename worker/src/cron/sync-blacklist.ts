@@ -1226,14 +1226,18 @@ export async function syncBlacklist(
       apiErrors,
     },
   }, budget);
+  // Tolerate up to 25% of configs failing (transient upstream timeouts) before
+  // marking the run degraded.  More than 50% is a full error.
+  const degradedThreshold = Math.max(1, Math.ceil(CONTRACT_CONFIGS.length * 0.25));
+  const errorThreshold = Math.ceil(CONTRACT_CONFIGS.length / 2);
   const status: SyncBlacklistResult["status"] =
-    apiErrors > 0
-      ? apiErrors > CONTRACT_CONFIGS.length / 2
-        ? "error"
-        : "degraded"
-      : runtimeBudgetHit
+    apiErrors > errorThreshold
+      ? "error"
+      : apiErrors > degradedThreshold
         ? "degraded"
-        : "ok";
+        : runtimeBudgetHit
+          ? "degraded"
+          : "ok";
   return {
     status,
     itemCount: totalInsertedRows,

@@ -863,39 +863,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low", coinId: "ousg-ondo-finance" },
       { name: "USDC (Circle)", pct: 2, risk: "low", coinId: "usdc-circle" },
     ],
-    liveReservesConfig: {
-      adapter: "evm-branch-balances",
-      version: 1,
-      semantics: "collateral-mix",
-      breakerScope: "usd0-usual",
-      display: { url: "https://usual.money/", label: "Usual Money" },
-      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" } },
-      params: {
-        branches: [
-          {
-            name: "Hashnote USYC",
-            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
-            token: { chain: "ethereum", address: "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b", decimals: 6 },
-            risk: "low",
-            coinId: "usyc-hashnote",
-          },
-          {
-            name: "UsualM (wrapped M0)",
-            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
-            token: { chain: "ethereum", address: "0x4Cbc25559DbBD1272EC5B64c7b5F48a2405e6470", decimals: 18 },
-            risk: "low",
-            coinId: "m-m0",
-          },
-          {
-            name: "UsualUSDtb",
-            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
-            token: { chain: "ethereum", address: "0x58073531a2809744D1bF311D30FD76B27D662abB", decimals: 18 },
-            risk: "low",
-            coinId: "usdtb-ethena",
-          },
-        ],
-      },
-    },
+    // liveReservesConfig disabled 2026-03-15: UsualM token lacks a DefiLlama
+    // price feed, causing the evm-branch-balances adapter to fail permanently.
+    // Re-enable once coins.llama.fi covers the UsualM token (0x4Cbc…6470).
   }),
   usd("gho-aave", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     llamaId: "118",
@@ -3693,13 +3663,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USDC (via Morpho/Yearn vault)", pct: 65, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
       { name: "USDC (via Curve AMO LP)", pct: 35, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
     ],
-    liveReservesConfig: {
-      adapter: "ousd",
-      version: 1,
-      semantics: "collateral-mix",
-      display: { url: "https://www.ousd.com/", label: "Origin Protocol" },
-      inputs: { primary: { kind: "http-json", url: "https://api.originprotocol.com/api/v2/ousd/collateral" } },
-    },
+    // liveReservesConfig disabled 2026-03-15: Origin Protocol deprecated the
+    // /api/v2/ousd/collateral endpoint (returns 404). Re-enable when a
+    // replacement API is available.
   }),
   usd("btcusd-btcfi", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
     llamaId: "183",
