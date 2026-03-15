@@ -22,6 +22,7 @@ import {
   collectDewsStress,
   collectHistoricalContext,
   collectGradeTransitions,
+  collectPsiContributors,
   type CollectorContext,
 } from "./daily-digest/collectors";
 
@@ -77,10 +78,15 @@ const SYSTEM_PROMPT =
   "CALM: Find the story in the stillness. P1 = PSI frame + structural context (macro supply trend, grade distribution, band streak). " +
   "P2 = the most interesting micro-observation (a single coin's velocity, a DEWS signal ticking up from nothing, a resolved depeg aftermath). " +
   "P3 (optional) = a memorable closing line. Tone: bemused, wistful, or darkly amused.\n" +
-  "The extended field is 2-3 paragraphs following the P1/P2/P3 structure above. P3 is optional — two tight paragraphs that say everything beat three that pad. " +
+  "The extended field is 3-4 paragraphs following the P1/P2/P3/P4 structure above. P3 and P4 are optional — three tight paragraphs that say everything beat four that pad. " +
   "The text field distills the single sharpest take.\n" +
   "FOCUS: never mention more than 3 data categories in a single digest. Depth on 1-2 stories beats shallow coverage of 6. " +
   "If a data point doesn't connect to your lead story or provide meaningful contrast, leave it out entirely.\n\n" +
+  "OPTIONAL SECTION HEADERS: When the digest covers two distinct stories, you may use bold inline headers to separate them. " +
+  "Format: start a paragraph with **Header** (markdown bold) followed by the paragraph text. " +
+  "Use short, punchy headers (2-4 words): e.g., **Peg Watch**, **Capital Flows**, **Yield Signal**, **Safety Shift**, **Structural Note**. " +
+  "Do NOT use headers on every paragraph — only when two stories are genuinely distinct. A single-narrative digest needs no headers. " +
+  "P1 (the lead) should NEVER have a header — it stands alone.\n\n" +
   // 9. Output format with meta field
   "You MUST respond with valid JSON: {\"title\": \"...\", \"extended\": \"...\", \"text\": \"...\", \"meta\": {\"lead\": \"...\", \"tone\": \"...\", \"coins\": [\"...\", \"...\"]}}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
@@ -96,7 +102,7 @@ const SYSTEM_PROMPT =
   "The title and text will be concatenated as '{title}\\n\\n{text}' for a tweet. " +
   "The combined result MUST be under 270 characters (leave ~10 chars headroom for cashtag formatting).\n\n" +
   // 11. Density contract
-  "DENSITY RULES for the extended field: each paragraph should be 30-60 words. Total extended field: 80-160 words. " +
+  "DENSITY RULES for the extended field: each paragraph should be 40-70 words. Total extended field: 150-280 words. You may write 3-4 paragraphs following the regime structure. " +
   "Every sentence must contain a specific number, coin name, or sharp observation. " +
   "No throat-clearing (\"Meanwhile\", \"In other news\", \"It's worth noting\"). " +
   "No hedging qualifiers (\"somewhat\", \"arguably\", \"it remains to be seen\"). " +
@@ -171,6 +177,13 @@ function buildUserPrompt(
     }
   }
 
+  if (data.psiContributors && data.psiContributors.length > 0) {
+    lines.push("  PSI severity contributors (top coins driving the score):");
+    for (const c of data.psiContributors) {
+      lines.push(`    ${c.symbol}: ${c.bps} bps, mcap ${formatCurrency(c.mcapUsd)}, impact ${c.marketImpact}`);
+    }
+  }
+
   if (data.biggestSupplyChange) {
     const { symbol, changeUsd, currentMcap } = data.biggestSupplyChange;
     const direction = changeUsd >= 0 ? "increase" : "decrease";
@@ -241,7 +254,10 @@ function buildUserPrompt(
     if (elevatedCoins.length > 0) {
       lines.push("  Elevated coins (ALERT+):");
       for (const c of elevatedCoins) {
-        lines.push(`    ${c.symbol}: ${c.band} (score ${c.score}, mcap ${formatCurrency(c.mcapUsd)})`);
+        const driverStr = c.topSignals?.length
+          ? `, driven by ${c.topSignals.map((s) => `${s.name}=${s.value}`).join(", ")}`
+          : "";
+        lines.push(`    ${c.symbol}: ${c.band} (score ${c.score}, mcap ${formatCurrency(c.mcapUsd)}${driverStr})`);
       }
     }
   }
@@ -477,6 +493,7 @@ export async function generateDailyDigest(
   const dewsStress = await collectDewsStress(ctx);
   const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
   const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades);
+  const psiContributors = await collectPsiContributors(ctx);
 
   // --- Build input data ---
   const inputData: DigestInputData = {
@@ -494,6 +511,7 @@ export async function generateDailyDigest(
     mintBurnFlows,
     dewsStress,
     historicalContext,
+    psiContributors,
     gradeTransitions,
   };
 
@@ -512,7 +530,7 @@ export async function generateDailyDigest(
       },
       body: JSON.stringify({
         model: "claude-opus-4-6",
-        max_tokens: 800,
+        max_tokens: 1400,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPromptContent }],
       }),

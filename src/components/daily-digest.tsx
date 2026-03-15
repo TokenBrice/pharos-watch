@@ -116,18 +116,28 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
             </h2>
           </div>
           <div className="flex min-w-0 flex-col gap-4">
-            {visibleParagraphs.map((para, i) => (
-              <p
-                key={i}
-                className={cn(
-                  "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
-                  i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
-                )}
-                style={SERIF}
-              >
-                {para}
-              </p>
-            ))}
+            {visibleParagraphs.map((para, i) => {
+              const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
+              const headerText = headerMatch?.[1];
+              const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
+              return (
+                <p
+                  key={i}
+                  className={cn(
+                    "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
+                    i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
+                  )}
+                  style={SERIF}
+                >
+                  {headerText && (
+                    <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
+                      {headerText}.{" "}
+                    </span>
+                  )}
+                  {bodyText}
+                </p>
+              );
+            })}
             {shouldShowCta && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
                 <Link
@@ -155,18 +165,28 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
             {data?.digestTitle || "Signal & Noise"}
           </h2>
 
-          {visibleParagraphs.map((para, i) => (
-            <p
-              key={i}
-              className={cn(
-                "text-[1.05rem] leading-8 text-foreground/92",
-                i === 0 && "border-l-2 border-border/60 pl-4 italic",
-              )}
-              style={SERIF}
-            >
-              {para}
-            </p>
-          ))}
+          {visibleParagraphs.map((para, i) => {
+            const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
+            const headerText = headerMatch?.[1];
+            const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
+            return (
+              <p
+                key={i}
+                className={cn(
+                  "text-[1.05rem] leading-8 text-foreground/92",
+                  i === 0 && "border-l-2 border-border/60 pl-4 italic",
+                )}
+                style={SERIF}
+              >
+                {headerText && (
+                  <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
+                    {headerText}.{" "}
+                  </span>
+                )}
+                {bodyText}
+              </p>
+            );
+          })}
 
           {shouldShowCta && (
             <Link

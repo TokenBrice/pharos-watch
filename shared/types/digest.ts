@@ -73,6 +73,7 @@ export interface DigestInputData {
       band: string;
       score: number;
       mcapUsd: number;
+      topSignals?: { name: string; value: number }[];
     }[];
   };
   historicalContext?: {
@@ -91,6 +92,12 @@ export interface DigestInputData {
       largestWeeklyChangeDaysAgo: number;
     } | null;
   };
+  psiContributors?: {
+    symbol: string;
+    bps: number;
+    mcapUsd: number;
+    marketImpact: number;
+  }[];
   gradeTransitions?: {
     symbol: string;
     fromGrade: string;

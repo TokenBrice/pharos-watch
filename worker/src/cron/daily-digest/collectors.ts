@@ -436,7 +436,22 @@ export async function collectDewsStress(
         .filter((r) => ALERT_BANDS.has(r.band))
         .map((r) => {
           const coin = ctx.trackedStablecoinAssets.find((c) => c.id === r.stablecoin_id);
-          return coin ? { symbol: coin.symbol, band: r.band, score: r.score, mcapUsd: getCirculatingRaw(coin) } : null;
+          if (!coin) return null;
+
+          let topSignals: { name: string; value: number }[] = [];
+          try {
+            const signals = JSON.parse(r.signals_json) as Record<string, { value: number; available: boolean }>;
+            topSignals = Object.entries(signals)
+              .filter(([, sig]) => sig.available && sig.value > 0)
+              .sort(([, a], [, b]) => b.value - a.value)
+              .slice(0, 3)
+              .map(([key, sig]) => ({ name: SIGNAL_LABELS[key] ?? key, value: Math.round(sig.value) }));
+          } catch { /* ignore */ }
+
+          return {
+            symbol: coin.symbol, band: r.band, score: r.score,
+            mcapUsd: getCirculatingRaw(coin), topSignals,
+          };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null && r.mcapUsd > 10_000_000)
         .sort((a, b) => b.score - a.score)
@@ -451,7 +466,40 @@ export async function collectDewsStress(
 }
 
 // ---------------------------------------------------------------------------
-// 8. Historical context (PSI precedent, band streak, supply mover)
+// 8. PSI contributors (top coins driving the stability index score)
+// ---------------------------------------------------------------------------
+
+export async function collectPsiContributors(
+  ctx: CollectorContext,
+): Promise<DigestInputData["psiContributors"]> {
+  try {
+    const latestSample = await ctx.db
+      .prepare("SELECT input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+      .first<{ input_snapshot: string }>();
+    if (!latestSample) return undefined;
+
+    const snapshot = JSON.parse(latestSample.input_snapshot) as {
+      contributors?: { id: string; symbol: string; bps: number; mcapUsd: number; ageDays: number; factor: number }[];
+    };
+    if (!snapshot.contributors || snapshot.contributors.length === 0) return undefined;
+
+    return snapshot.contributors
+      .map((c) => ({
+        symbol: c.symbol,
+        bps: c.bps,
+        mcapUsd: c.mcapUsd,
+        marketImpact: Math.round(Math.abs(c.bps) * c.mcapUsd / 1e9 * c.factor * 10) / 10,
+      }))
+      .sort((a, b) => b.marketImpact - a.marketImpact)
+      .slice(0, 3);
+  } catch (e) {
+    console.error("[daily-digest] Failed to collect PSI contributors:", e);
+    return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 9. Historical context (PSI precedent, band streak, supply mover)
 // ---------------------------------------------------------------------------
 
 export async function collectHistoricalContext(
