@@ -40,6 +40,7 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
   // USDS -> sUSDS (Sky Savings Rate wrapper)
   "usds-sky": {
     variantSymbol: "sUSDS",
+    variantAddress: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
     variantChain: "ethereum",
   },
   // GHO -> sGHO (Aave Safety Module staking wrapper)
@@ -50,26 +51,31 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
   // DAI -> sDAI (Dai Savings Rate wrapper)
   "dai-makerdao": {
     variantSymbol: "sDAI",
+    variantAddress: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
     variantChain: "ethereum",
   },
   // crvUSD -> scrvUSD (Curve Savings vault)
   "crvusd-curve": {
     variantSymbol: "scrvUSD",
+    variantAddress: "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367",
     variantChain: "ethereum",
   },
   // FRXUSD -> sfrxUSD (Frax Staking wrapper)
   "frxusd-frax": {
     variantSymbol: "sfrxUSD",
+    variantAddress: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
     variantChain: "ethereum",
   },
   // DOLA -> sDOLA (Inverse Finance Savings)
   "dola-inverse-finance": {
     variantSymbol: "sDOLA",
+    variantAddress: "0xb45ad160634c528cc3d2926d9807104fa3157305",
     variantChain: "ethereum",
   },
   // BOLD -> yBOLD (Yearn vault over Liquity Stability Pool)
   "bold-liquity": {
     variantSymbol: "yBOLD",
+    variantAddress: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
     variantChain: "ethereum",
   },
 
@@ -105,6 +111,7 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
   // Falcon USD -> sUSDf (savings wrapper, $87M TVL)
   "usdf-falcon": {
     variantSymbol: "sUSDf",
+    variantAddress: "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
     variantChain: "ethereum",
     yieldSource: "Falcon Finance savings (sUSDf)",
     yieldType: "lending-vault",
@@ -140,6 +147,7 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
   // Noon USN -> sUSN (savings wrapper, $24M TVL — governance-set rate)
   "usn-noon": {
     variantSymbol: "sUSN",
+    variantAddress: "0xE24a3DC889621612422A64E6388927901608B91D",
     variantChain: "ethereum",
     yieldSource: "Noon savings (sUSN)",
     yieldType: "governance-set",
