@@ -178,8 +178,8 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
 
 /**
  * Maps Pharos stablecoin ID -> DeFiLlama pool UUID for deterministic yield matching.
- * GATE: 21/24 coins matched (threshold: >=15/24).
- * Empty string = no DL pool found (comment explains why).
+ * Entries below are curated; count grows as new yield-bearing coins are added.
+ * Commented-out IDs = no DL pool found (comment explains why).
  *
  * Selection criteria for each coin:
  *   - Prefer the NATIVE/protocol pool (e.g., ethena-usde for sUSDe, ondo-yield-assets for USDY)
