@@ -122,7 +122,7 @@ function buildWeeklyPrompt(data: WeeklyInputData): string {
   return lines.join("\n");
 }
 
-export async function generateWeeklyDigest(
+export async function generateWeeklyRecap(
   db: D1Database,
   anthropicApiKey: string | null,
   telegramCreds: TelegramCreds | null = null,
@@ -138,14 +138,14 @@ export async function generateWeeklyDigest(
     return { metadata: "skipped: not Monday" };
   }
 
-  // Check if weekly digest already exists for this week
+  // Check if weekly recap already exists for this week
   const weekStart = Math.floor(Date.now() / 1000) - 2 * SECONDS.ONE_DAY;
   const existing = await db
     .prepare("SELECT id FROM daily_digest WHERE generated_at >= ? AND json_extract(digest_meta, '$.type') = 'weekly'")
     .bind(weekStart)
     .first();
   if (existing) {
-    return { metadata: "skipped: weekly digest already exists" };
+    return { metadata: "skipped: weekly recap already exists" };
   }
 
   // Fetch last 7 daily digests (exclude weekly entries)
@@ -200,7 +200,7 @@ export async function generateWeeklyDigest(
 
   const result = (await response.json()) as { content?: { type: string; text: string }[] };
   const rawText = result.content?.[0]?.text ?? "";
-  if (!rawText) throw new Error("Claude API returned empty weekly digest text");
+  if (!rawText) throw new Error("Claude API returned empty weekly recap text");
 
   // Parse JSON response (same extraction logic as daily)
   let jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();

@@ -270,8 +270,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     triggerMode: "shared",
   },
   {
-    job: "weekly-digest",
-    label: "Weekly digest",
+    job: "weekly-recap",
+    label: "Weekly recap",
     group: "daily",
     intervalSec: 604800,
     scheduleKey: "daily0805Utc",

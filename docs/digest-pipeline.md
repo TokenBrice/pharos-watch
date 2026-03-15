@@ -193,9 +193,9 @@ Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`
 
 ---
 
-## Weekly Digest
+## Weekly Recap
 
-**File:** `worker/src/cron/weekly-digest.ts`
+**File:** `worker/src/cron/weekly-recap.ts`
 **Schedule:** Mondays only, chained after `daily-digest` via `.finally()` on the same `"5 8 * * *"` trigger
 **Dedup guard:** skips if a `digest_meta.type = "weekly"` row exists within the last 2 days
 
@@ -305,7 +305,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | File | Role |
 |------|------|
 | `worker/src/cron/daily-digest.ts` | Generation logic: data collection, LLM call, storage, distribution dispatch |
-| `worker/src/cron/weekly-digest.ts` | Weekly recap generation: aggregates 7 days, calls Claude, stores with `type: "weekly"` meta |
+| `worker/src/cron/weekly-recap.ts` | Weekly recap generation: aggregates 7 days, calls Claude, stores with `type: "weekly"` meta |
 | `worker/src/lib/twitter.ts` | OAuth 1.0a signing, cashtag injection, tweet posting |
 | `worker/src/lib/telegram.ts` | HTML message formatting, Telegram Bot API posting |
 | `worker/src/api/daily-digest.ts` | `GET /api/daily-digest` handler |

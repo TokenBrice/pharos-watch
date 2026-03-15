@@ -1,6 +1,6 @@
 import { syncBluechip } from "../../cron/sync-bluechip";
 import { generateDailyDigest } from "../../cron/daily-digest";
-import { generateWeeklyDigest } from "../../cron/weekly-digest";
+import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { runDiscoveryScan } from "../../cron/discovery-scan";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
@@ -8,9 +8,9 @@ import type { ScheduledRuntimeContext } from "./context";
 export function runDaily0805Slot(runtime: ScheduledRuntimeContext): void {
   runtime.ctx.waitUntil(runtime.runLeasedCron("sync-bluechip", (signal) => syncBluechip(runtime.db, signal)));
 
-  // Chain weekly digest after daily — sequential to share connection pool.
+  // Chain weekly recap after daily — sequential to share connection pool.
   // Uses .finally() so weekly runs even if daily fails (it reads from D1, not daily result).
-  // The weekly-digest function checks if today is Monday and returns immediately on other days.
+  // The weekly-recap function checks if today is Monday and returns immediately on other days.
   runtime.ctx.waitUntil(
     runtime.runLeasedCron("daily-digest", (signal) => {
       return generateDailyDigest(
@@ -22,8 +22,8 @@ export function runDaily0805Slot(runtime: ScheduledRuntimeContext): void {
         signal,
       );
     }).finally(() =>
-      runtime.runLeasedCron("weekly-digest", (signal) => {
-        return generateWeeklyDigest(
+      runtime.runLeasedCron("weekly-recap", (signal) => {
+        return generateWeeklyRecap(
           runtime.db,
           runtime.env.ANTHROPIC_API_KEY ?? null,
           buildTelegramCreds(runtime.env),
