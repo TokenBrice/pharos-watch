@@ -363,6 +363,87 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     inputAmount:
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
+  {
+    stablecoinId: "reusd-re-protocol",
+    chain: "ethereum",
+    contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "usds-sky",
+    chain: "ethereum",
+    contract: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "dai-makerdao",
+    chain: "ethereum",
+    contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "crvusd-curve",
+    chain: "ethereum",
+    contract: "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "frxusd-frax",
+    chain: "ethereum",
+    contract: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "dola-inverse-finance",
+    chain: "ethereum",
+    contract: "0xb45ad160634c528cc3d2926d9807104fa3157305",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "bold-liquity",
+    chain: "ethereum",
+    contract: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "usdf-falcon",
+    chain: "ethereum",
+    contract: "0xc8cf6d7991f15525488b2a83df53468d682ba4b0",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
+  {
+    stablecoinId: "usn-noon",
+    chain: "ethereum",
+    contract: "0xE24a3DC889621612422A64E6388927901608B91D",
+    selector: "0x07a2d13a",
+    decimals: 18,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+  },
 ];
 
 /**
