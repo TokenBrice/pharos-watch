@@ -164,6 +164,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("usdf-astherus", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
     llamaId: "219",
     geckoId: "astherus-usdf",
+    cmcSlug: "astherus",
     collateral: "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
     pegMechanism: "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",
     links: [
@@ -187,6 +188,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("dusd-standx", "StandX DUSD", "DUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "252",
     geckoId: "standx-dusd",
+    cmcSlug: "standx-dusd",
     dependencies: [{ id: "usdt-tether", weight: 0.5 }, { id: "usdc-circle", weight: 0.5 }],
     deploymentModel: "native-multichain",
     collateral: "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
@@ -242,6 +244,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("gusd-gate", "Gate USD", "GUSD", "rwa-backed", "centralized", {
     llamaId: "306",
     geckoId: "gusd",
+    cmcSlug: "gatechain-token",
     collateralQuality: "exotic",
     custodyModel: "cex",
     collateral: "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC",
@@ -372,6 +375,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("pusd-pleasing", "Pleasing USD", "PUSD", "rwa-backed", "centralized-dependent", {
     llamaId: "341",
     geckoId: "pleasing-usd",
+    cmcSlug: "pleasing-usd",
     collateral: "USDT deposits held by Pleasing International; ecosystem interoperability with tokenized gold (PGOLD)",
     pegMechanism: "1:1 mint and redemption against USDT through the Pleasing Golden platform",
     jurisdiction: { country: "Hong Kong" },
@@ -394,6 +398,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     yieldBearing: true, navToken: true,
     yieldConfig: { yieldSource: "Re Protocol vault", yieldType: "governance-set" },
     geckoId: "re-protocol-reusd",
+    cmcSlug: "re-protocol-reusd",
     deploymentModel: "native-multichain",
     collateral: "USDC, USDe, and sUSDe deployed into delta-neutral ETH basis trades or short-duration U.S. Treasury bills via the Re Protocol Insurance Capital Layer",
     pegMechanism: "NAV-based token price recalculated daily at UTC 00:00 via Chainlink price feed; yield accrues from delta-neutral ETH basis trade or T-bill returns plus 250 bps protocol spread; atomic redemptions when instant liquidity available, otherwise queue mode",
@@ -536,6 +541,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "Unitas savings (sUSDu)", yieldType: "governance-set" },
     geckoId: "usdu",
+    cmcSlug: "unitas-protocol",
     dependencies: [{ id: "usdc-circle", weight: 0.8 }],
     deploymentModel: "native-multichain",
     collateralQuality: "exotic",
@@ -697,6 +703,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("reusd-resupply", "Resupply USD", "REUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "256",
     geckoId: "resupply-usd",
+    cmcSlug: "resupply-reusd",
     collateralQuality: "exotic",
     collateral: "crvUSD and frxUSD lending vault tokens from Curve Lend and Fraxlend",
     pegMechanism: "Communal redemption model with 1% fee establishing a price floor; borrow rate is the higher of half the lending rate, half the sfrxUSD rate, or 2%; underlying collateral depends on crvUSD/frxUSD ecosystems which rely on centralized stablecoin peg keepers",
@@ -717,6 +724,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("gusd-gemini", "Gemini Dollar", "GUSD", "rwa-backed", "centralized", {
     llamaId: "19",
     geckoId: "gemini-dollar",
+    cmcSlug: "gemini-dollar",
     pythFeedId: "0xe186e116f2c7642d0d8aa89c32345d83ebeb350242b2274c46a19ea82e04fb8d",
     collateral: "Cash deposits at State Street and Western Alliance Bank, U.S. Treasury bills (maturities ≤3 months), and government money market funds, held in segregated accounts for the benefit of GUSD holders",
     pegMechanism: "Direct 1:1 redemption through Gemini",
@@ -739,6 +747,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("usdp-paxos", "Pax Dollar", "USDP", "rwa-backed", "centralized", {
     llamaId: "11",
     geckoId: "paxos-standard",
+    cmcSlug: "pax-dollar",
     pythFeedId: "0xa6c8eca9aea31d6bb81fd6576638f30692d4afaa73237c097c193477aa5003b3",
     deploymentModel: "native-multichain",
     collateral: "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
@@ -1014,6 +1023,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     llamaId: "8",
     governanceQuality: "immutable-code",
     geckoId: "liquity-usd",
+    pythFeedId: "0xc9dc99720306ef43fd301396a6f8522c8be89c6c77e8c27d87966918a943fd20",
     liveReservesConfig: {
       adapter: "single-asset",
       version: 1,
@@ -1174,6 +1184,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("honey-berachain", "Honey", "HONEY", "crypto-backed", "centralized-dependent", {
     llamaId: "231",
     geckoId: "honey-3",
+    pythFeedId: "0xf67b033925d73d43ba4401e00308d9b0f26ab4fbd1250e8b5407b9eaade7e1f4",
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
     pegMechanism: "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",
@@ -1483,6 +1494,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("msusd-metronome", "Metronome Synth USD", "MSUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "326",
     geckoId: "metronome-synth-usd",
+    cmcSlug: "metronome-synth-usd",
     deploymentModel: "third-party-bridge",
     collateral: "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75–85%",
     pegMechanism: "Overcollateralized CDP: users deposit crypto collateral (CF 75–85%) to mint msUSD at a fixed 1% annual fee; no direct redemption — only debt repayment to reclaim collateral. Peg maintained by zero-slippage intra-protocol synth swaps (Synth Marketplace) that arbitrageurs exploit when msUSD trades below par, plus collateral-provider buybacks of discounted msUSD",
@@ -1803,6 +1815,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("usdm-mega", "MegaUSD", "USDM", "rwa-backed", "centralized-dependent", {
     llamaId: "342",
     rwa: true, geckoId: "megausd",
+    cmcSlug: "mega-usdm",
     collateral: "~90% USDtb (BlackRock BUIDL tokenized Treasuries via Securitize) with liquid stablecoins for redemptions",
     pegMechanism: "Issued on Ethena's USDtb rails; reserve yield funds MegaETH sequencer costs",
     links: [
@@ -1840,6 +1853,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("cusd-celo", "Celo Dollar", "cUSD", "algorithmic", "centralized-dependent", {
     llamaId: "24",
     geckoId: "celo-dollar",
+    cmcSlug: "celo-dollar",
     deploymentModel: "third-party-bridge",
     liveReservesConfig: {
       adapter: "mento",
@@ -1994,6 +2008,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "Main Street savings (msY)", yieldType: "lending-vault" },
     geckoId: "main-street-usd",
+    cmcSlug: "main-street-usd",
     pythFeedId: "0xc753c899ffdfcc8d1a02440fe380501b454b559122998bcd245d9063d07cc162",
     collateral: "USDC held 1:1 as reserve; yield generated by deploying USDC into delta-neutral options volatility arbitrage strategies (options box spreads) on centralized exchanges via msY staking",
     pegMechanism: "Direct 1:1 redemption for USDC; peg maintained by full USDC reserve backing; yield accrues to stakers (msY) not to msUSD holders",
@@ -2014,6 +2029,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("usdm-moneta", "Moneta", "USDM", "rwa-backed", "centralized", {
     llamaId: "215",
     geckoId: "usdm-2",
+    cmcSlug: "moneta-usdm",
     collateral: "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",
     pegMechanism: "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
     proofOfReserves: { type: "real-time", url: "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet", provider: "Charli3" },
@@ -2059,6 +2075,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("usda-anzens", "Anzens USDA", "USDA", "rwa-backed", "centralized", {
     llamaId: "245",
     geckoId: "anzens-usda",
+    cmcSlug: "anzens-usda",
     pythFeedId: "0x3a1050a3c03354c94ed44acf808327f05b7f9d610f38644684f5ce4796cce27b",
     collateral: "USD and dollar-equivalent reserves including U.S. Treasuries, held in segregated accounts custodied by BitGo Trust (Qualified Custodian)",
     pegMechanism: "Direct 1:1 USD redemption through Anzens via KYC-verified bank transfers; minting and burning available to retail and institutional users in eligible U.S. states",
@@ -2145,6 +2162,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("pusd-plume", "Plume USD", "pUSD", "rwa-backed", "centralized", {
     llamaId: "266",
     geckoId: "plume-usd",
+    cmcSlug: "plume-usd",
     deploymentModel: "native-multichain",
     collateral: "1:1 backed by USDC and USDT deposited into a Nucleus BoringVault; USD1 and AUSD also approved as collateral",
     pegMechanism: "Zero-fee mint/redeem at 1:1 for USDC on Ethereum or Plume Chain; reserves managed by Nucleus BoringVault contracts with OFAC compliance checks",
@@ -2321,6 +2339,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   // No CoinGecko listing (verified 2026-03-14). Different project from "USDu" by Unitas Labs. Priced via DL fallback.
   usd("usdu-usdu-finance", "USDU Finance", "USDU", "crypto-backed", "centralized-dependent", {
     llamaId: "304",
+    cmcSlug: "usdu",
     collateral: "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
     pegMechanism: "Protocol-minted via DAO-approved adapters; convertible to USDC via Curve pools",
     links: [
@@ -2346,6 +2365,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("dusd-dtrinity", "dTRINITY dUSD", "dUSD", "crypto-backed", "centralized-dependent", {
     detailProvider: "coingecko",
     geckoId: "dtrinity-usd",
+    cmcSlug: "dtrinity-dusd",
     yieldBearing: true, rwa: false, navToken: false,
     collateral: "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
     pegMechanism: "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
@@ -2509,6 +2529,15 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     collateral: "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
     pegMechanism: "wsrUSD is a non-rebasing ERC-4626 vault token that accrues yield per block as rUSD is deposited into the srUSD savings vault; token price appreciates continuously from $1.00 as protocol yield accrues; users can unwrap wsrUSD → srUSD → rUSD at any time; rUSD itself is minted 1:1 via a Peg Stability Module (PSM) against USDC, auto-topped every 10 minutes on each chain",
     proofOfReserves: { type: "real-time", url: "https://app.reservoir.xyz/reserves", provider: "Reservoir Protocol (on-chain live balance sheet)" },
+    reserves: [
+      { name: "USDC positions", pct: 30, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "USDT / USDT0 positions", pct: 25, risk: "low", coinId: "usdt-tether", depType: "wrapper" },
+      { name: "rUSD strategy vaults", pct: 20, risk: "medium" },
+      { name: "PYUSD lending markets", pct: 10, risk: "low", coinId: "pyusd-paypal", depType: "wrapper" },
+      { name: "GHO lending markets", pct: 5, risk: "medium", coinId: "gho-aave", depType: "wrapper" },
+      { name: "USD1 lending markets", pct: 5, risk: "medium", coinId: "usd1-world-liberty-financial", depType: "wrapper" },
+      { name: "RLUSD lending markets", pct: 5, risk: "low", coinId: "rlusd-ripple", depType: "wrapper" },
+    ],
     liveReservesConfig: {
       adapter: "reservoir",
       version: 1,
@@ -2554,6 +2583,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
   usd("usdp-parallel", "Parallel USDp", "USDp", "crypto-backed", "decentralized", {
     detailProvider: "coingecko",
     geckoId: "parallel-usdp",
+    cmcSlug: "parallel-usdp",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Parallel Savings (sUSDp)", yieldType: "governance-set" },
     deploymentModel: "native-multichain",
