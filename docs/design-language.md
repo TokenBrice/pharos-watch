@@ -108,6 +108,7 @@ Behavioral contract: [Homepage](./homepage.md)
 - Start Here onboarding callout: large CTA card appears only during a browser's first homepage session and retires once `/start/` has been opened, so repeat visitors drop straight into live data
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card hides the `Live market health`, `24h`, and `7d` pills from the desktop switch (`lg`, `1024px`) through `1599px` to protect the score/band lockup; outside that band it keeps the full desktop treatment
+- Digest preview: broadsheet split with a mono masthead, hairline `Executive Summary` label, newspaper-style `Newsreader` title on the left, and the lead paragraph plus CTA rail on the right at desktop
 
 ### Stablecoin Detail (Special)
 
@@ -141,6 +142,7 @@ Digest entries use:
 | ------------------------- | -------------------------------------------------------------------------------------------- |
 | Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.08]`                  |
 | Digest article title      | `text-3xl font-extrabold tracking-tighter`                                                   |
+| Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]` |
 | Home logotype label       | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]`                         |
 | Primary section heading   | `leading-none font-semibold`                                                                 |
 | Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                            |

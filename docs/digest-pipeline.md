@@ -195,9 +195,10 @@ Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`
 **Cache:** `staleTime: 86400s`, `refetchInterval: 172800s`
 
 The latest digest is presented in a broadsheet newspaper style:
-- **Masthead:** "PHAROS DAILY DIGEST" centered in small-caps with the full date below, bordered by horizontal rules
-- **Headline:** Digest title in large serif font (Georgia)
-- **Body:** Extended text paragraphs in serif italic. On the homepage, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. The `/digest/` archive broadsheet shows the full editorial body.
+- **Masthead:** compact uppercase lockup with the full date; the homepage preview uses a slightly sharper mono masthead treatment than the archive broadsheet
+- **Headline:** the homepage preview uses `Newsreader` at a larger newspaper-style display scale, while the full `/digest/` broadsheet keeps the original serif headline treatment
+- **Body:** Extended text paragraphs in serif italic (`Georgia`). On the homepage, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. The `/digest/` archive broadsheet shows the full editorial body.
+- **Homepage preview split:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right
 
 The `text` field remains the short distribution summary used for metadata and digest detail intros. The shared broadsheet renderer prefers `extended`, and falls back to `text` only if `extended` is unavailable.
 

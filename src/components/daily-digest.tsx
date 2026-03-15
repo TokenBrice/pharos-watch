@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Newsreader } from "next/font/google";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/api-hooks";
 import { getDigestBodyParagraphs } from "@/lib/digest";
@@ -17,6 +18,15 @@ function formatMasthead(ts: number): string {
 }
 
 const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
+
+const digestDisplay = Newsreader({
+  weight: "variable",
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  display: "swap",
+  axes: ["opsz"],
+  fallback: ["Georgia", "Times New Roman", "serif"],
+});
 
 interface DailyDigestProps {
   variant?: "preview" | "full";
@@ -50,10 +60,10 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
           <Skeleton className="h-3 w-48" />
           <Skeleton className="h-3 w-36" />
         </div>
-        <div className={cn(isPreview ? "grid gap-5 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]" : "space-y-3")}>
+        <div className={cn(isPreview ? "grid gap-5 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)]" : "space-y-3")}>
           <div className="space-y-3">
-            {isPreview && <Skeleton className="h-6 w-40 rounded-full" />}
-            <Skeleton className="h-10 w-full max-w-[28rem]" />
+            {isPreview && <Skeleton className="h-3 w-36" />}
+            <Skeleton className={cn("w-full", isPreview ? "h-20 max-w-[20rem] sm:max-w-[24rem]" : "h-10 max-w-[28rem]")} />
           </div>
           <div className="space-y-3">
             <Skeleton className="h-4 w-full" />
@@ -73,21 +83,35 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
           isPreview && "flex flex-wrap items-end justify-between gap-3",
         )}
       >
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">Pharos Daily Digest</p>
+        <p
+          className={cn(
+            isPreview
+              ? "font-mono text-[0.76rem] font-semibold uppercase tracking-[0.34em] text-muted-foreground/90 sm:text-[0.8rem]"
+              : "text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground",
+          )}
+        >
+          Pharos Daily Digest
+        </p>
         {data?.generatedAt && (
-          <p className="mt-0.5 text-xs text-muted-foreground">{formatMasthead(data.generatedAt)}</p>
+          <p className={cn("mt-0.5 text-xs", isPreview ? "text-muted-foreground/85" : "text-muted-foreground")}>
+            {formatMasthead(data.generatedAt)}
+          </p>
         )}
       </div>
 
       {isPreview ? (
-        <div className="grid gap-5 py-5 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] lg:gap-10">
-          <div className="space-y-4">
-            <div className="flex justify-end">
-              <span className="inline-flex rounded-full border border-border/60 bg-background/55 px-3 py-1 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Executive Summary
-              </span>
+        <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
+              <span className="h-px w-12 bg-border/70" />
+              <span className="font-mono font-medium">Executive Summary</span>
             </div>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-[2.55rem]" style={SERIF}>
+            <h2
+              className={cn(
+                digestDisplay.className,
+                "max-w-[10ch] text-[clamp(2.8rem,6vw,5rem)] font-semibold leading-[0.88] tracking-[-0.045em] text-foreground/98 [text-wrap:balance]",
+              )}
+            >
               {data?.digestTitle || "Signal & Noise"}
             </h2>
           </div>
@@ -96,8 +120,8 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
               <p
                 key={i}
                 className={cn(
-                  "text-[1.08rem] leading-8 text-foreground/92 lg:text-[1.14rem]",
-                  i === 0 && "border-l-2 border-border/60 pl-4 italic sm:pl-5",
+                  "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
+                  i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
                 )}
                 style={SERIF}
               >
@@ -105,19 +129,19 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
               </p>
             ))}
             {shouldShowCta && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 lg:self-end">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
                 <Link
                   href="/digest/"
-                  className="text-sm font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+                  className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {ctaLabel} &rarr;
                 </Link>
-                <span className="text-border">|</span>
+                <span className="text-border/70">|</span>
                 <a
                   href="https://t.me/pharoswatch"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+                  className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Telegram &rarr;
                 </a>
