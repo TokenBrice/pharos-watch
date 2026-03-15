@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { buildInClause } from "../../lib/db";
 import {
@@ -30,9 +30,6 @@ import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const BPROTOCOL_LQTY_ONLY_SOURCE_KEY = "bprotocol-lqty-only";
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
-const TRACKED_META_BY_ID = new Map(
-  TRACKED_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]),
-);
 
 interface SafetyScoreSnapshot {
   score: number;
