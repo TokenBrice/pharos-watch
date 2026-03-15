@@ -18,4 +18,5 @@ export const BLUECHIP_SLUG_MAP: Record<string, string> = {
   tusd: "tusd-trueusd",
   rlusd: "rlusd-ripple",
   xsgd: "xsgd-straitsx",
+  ousd: "ousd-origin-protocol",
 };
