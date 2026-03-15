@@ -19,7 +19,7 @@ Each digest has four fields produced by the LLM:
 |-------|-------------|------------|
 | `title` | 2–6 word punchy headline | — |
 | `text` | Tweet-sized distillation of the day's key take | ≤270 chars combined with title |
-| `extended` | 2–3 short paragraphs of editorial analysis | 80–160 words target |
+| `extended` | 3–4 short paragraphs of editorial analysis | 150–280 words target |
 | `meta` | Editorial choice metadata for variety enforcement | `{ lead, tone, coins }` |
 
 ---
@@ -33,7 +33,7 @@ Each digest has four fields produced by the LLM:
 
 ### Data collection
 
-The cron assembles a `DigestInputData` object from 12 sources before calling the LLM:
+The cron assembles a `DigestInputData` object from 16 sources before calling the LLM:
 
 | Category | Source | Key signals |
 |----------|--------|-------------|
@@ -48,11 +48,17 @@ The cron assembles a `DigestInputData` object from 12 sources before calling the
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), band changes crossing WATCH/ALERT boundary, elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
 | Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>10 simultaneous changes excluded) |
+| PSI contributors | `stability_index_samples` (input_snapshot) | Top 3 coins driving PSI severity by market impact (|bps| x mcap x factor) |
+| Yield anomalies | `yield_data` (is_best rows) | Coins with active warning signals (spike, divergence, tvl-outflow); APY vs 7d/30d averages; filtered to mcap >$10M |
+| DEX liquidity shifts | `dex_liquidity_history` | Day-over-day score changes >=8 points; TVL comparison; filtered to mcap >$10M |
+| Cross-day trends | `daily_digest` (archived input_data) | 7-day trajectories for PSI score/band, total mcap, and Bank Run Gauge; requires >=3 days of history |
 | Recent digests | last 5 rows from `daily_digest` | Passed to LLM to enforce variety |
 
 `DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
 
 Four additional optional fields were added to `DigestInputData` in the v2 refinement: `mintBurnFlows`, `dewsStress`, `historicalContext`, and `gradeTransitions`. All are populated only when their source data exists — the LLM writes from what's available.
+
+A further enrichment pass added four more optional fields: `psiContributors`, `yieldAnomalies`, `liquidityShifts`, and `crossDayTrends`. All are populated only when their source data exists.
 
 Safety score computation is shared with the yield cron via `worker/src/lib/safety-scores.ts` (`computeSafetyScoresSnapshot()`), so grade lookups use one canonical scoring path.
 
@@ -64,7 +70,8 @@ Safety score computation is shared with the yield cron via `worker/src/lib/safet
 - **Priority rule:** rank everything by market impact (deviation × mcap); enrichment priority varies by regime
 - **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, active depegs, gauge score, FTQ status, and DEWS ALERT+ count
 - **Narrative structure:** regime-aware P1/P2/P3 paragraph structure; PSI is always referenced but doesn't have to open; max 3 data categories per digest
-- **Density contract:** 30–60 words per paragraph, 80–160 words total for the extended field
+- **Density contract:** 40–70 words per paragraph, 150–280 words total for the extended field
+- **Structured sections:** When the digest covers two distinct stories, the LLM may use bold inline headers (e.g., `**Peg Watch**`, `**Capital Flows**`) to separate paragraphs. P1 (the lead) never has a header. The frontend renders these as styled inline spans.
 - **Variety enforcement:** structured `meta` field (lead signal, tone, featured coins) from recent digests replaces raw text dump; falls back to raw text for pre-meta entries
 - **Output:** raw JSON `{ "title": "...", "extended": "...", "text": "...", "meta": { "lead": "...", "tone": "...", "coins": [...] } }` — no markdown fences
 
@@ -186,6 +193,45 @@ Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`
 
 ---
 
+## Weekly Digest
+
+**File:** `worker/src/cron/weekly-digest.ts`
+**Schedule:** Mondays only, chained after `daily-digest` via `.finally()` on the same `"5 8 * * *"` trigger
+**Dedup guard:** skips if a `digest_meta.type = "weekly"` row exists within the last 2 days
+
+### Data collection
+
+Fetches the last 7 daily digests (excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), parses their stored `input_data`, and aggregates:
+
+| Metric | Derivation |
+|--------|-----------|
+| PSI range | Min, max, start, end scores + dominant band (most frequent) |
+| Market cap range | Start, end, net change, percentage change |
+| Depeg total | Sum of `activeDepegCount` across all days |
+| Blacklist total | Sum of `blacklistActivity.eventCount` across all days |
+| Grade transitions | Sum of `gradeTransitions.length` across all days |
+| Gauge range | Min/max `mintBurnFlows.gaugeScore` (null if <3 data points) |
+
+Requires >=5 daily digests to proceed.
+
+### LLM call
+
+- **Model:** `claude-opus-4-6`
+- **Timeout:** 120 seconds
+- **max_tokens:** 2000
+- **Voice:** Same sardonic columnist, but synthesizing rather than reporting
+- **Structure:** 4-6 paragraphs, 250-400 words: week's headline, dominant story, counter-narrative, supply/capital flows, optional structural observation
+
+### Storage
+
+Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"` plus `weekStart` and `weekEnd` date strings. The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`).
+
+### Distribution
+
+Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:".
+
+---
+
 ## Frontend
 
 ### Broadsheet (shared component)
@@ -259,6 +305,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | File | Role |
 |------|------|
 | `worker/src/cron/daily-digest.ts` | Generation logic: data collection, LLM call, storage, distribution dispatch |
+| `worker/src/cron/weekly-digest.ts` | Weekly recap generation: aggregates 7 days, calls Claude, stores with `type: "weekly"` meta |
 | `worker/src/lib/twitter.ts` | OAuth 1.0a signing, cashtag injection, tweet posting |
 | `worker/src/lib/telegram.ts` | HTML message formatting, Telegram Bot API posting |
 | `worker/src/api/daily-digest.ts` | `GET /api/daily-digest` handler |
