@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requireAdmin, hasValidAdminCredential } from "../auth";
 
-vi.mock("../jwt-verify", () => ({
-  verifyAccessJwt: vi.fn().mockResolvedValue(true),
-}));
+const TEST_TOKEN_ID = "test-service-token-id";
+const TEST_TOKEN_SECRET = "test-service-token-secret";
+const TEST_ENV = {
+  OPS_API_SERVICE_TOKEN_ID: TEST_TOKEN_ID,
+  OPS_API_SERVICE_TOKEN_SECRET: TEST_TOKEN_SECRET,
+};
 
 describe("auth helpers", () => {
   afterEach(() => {
@@ -16,31 +19,36 @@ describe("auth helpers", () => {
     expect(result?.status).toBe(401);
   });
 
-  it("rejects ops-api requests when CF_ACCESS_OPS_API_AUD is not configured", async () => {
-    const request = new Request("https://ops-api.pharos.watch/api/status", {
-      headers: { "Cf-Access-Authenticated-User-Email": "operator@example.com" },
-    });
-    const result = await requireAdmin(request);
-    expect(result?.status).toBe(401);
-  });
-
-  it("rejects ops-api requests with spoofed service token headers when AUD not set", async () => {
+  it("rejects ops-api requests when service token secrets are not configured", async () => {
     const request = new Request("https://ops-api.pharos.watch/api/status", {
       headers: {
-        "CF-Access-Client-Id": "svc-id",
-        "CF-Access-Client-Secret": "svc-secret",
+        "CF-Access-Client-Id": TEST_TOKEN_ID,
+        "CF-Access-Client-Secret": TEST_TOKEN_SECRET,
       },
     });
-    const result = await requireAdmin(request);
-    expect(result?.status).toBe(401);
+    const result = await hasValidAdminCredential(request, false, {});
+    expect(result).toBe(false);
   });
 
-  it("accepts ops-api request with valid JWT when AUD is configured", async () => {
+  it("rejects ops-api requests with wrong service token", async () => {
     const request = new Request("https://ops-api.pharos.watch/api/status", {
-      headers: { "Cf-Access-Jwt-Assertion": "valid-jwt" },
+      headers: {
+        "CF-Access-Client-Id": "wrong-id",
+        "CF-Access-Client-Secret": "wrong-secret",
+      },
     });
-    const env = { CF_ACCESS_OPS_API_AUD: "test-aud" };
-    const result = await hasValidAdminCredential(request, false, env);
+    const result = await hasValidAdminCredential(request, false, TEST_ENV);
+    expect(result).toBe(false);
+  });
+
+  it("accepts ops-api request with valid service token", async () => {
+    const request = new Request("https://ops-api.pharos.watch/api/status", {
+      headers: {
+        "CF-Access-Client-Id": TEST_TOKEN_ID,
+        "CF-Access-Client-Secret": TEST_TOKEN_SECRET,
+      },
+    });
+    const result = await hasValidAdminCredential(request, false, TEST_ENV);
     expect(result).toBe(true);
   });
 

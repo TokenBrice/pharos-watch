@@ -7,6 +7,8 @@ export interface Env {
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_OPS_UI_AUD?: string;
   CF_ACCESS_OPS_API_AUD?: string;
+  OPS_API_SERVICE_TOKEN_ID?: string;
+  OPS_API_SERVICE_TOKEN_SECRET?: string;
   ETHERSCAN_API_KEY?: string;
   TRONGRID_API_KEY?: string;
   DRPC_API_KEY?: string;

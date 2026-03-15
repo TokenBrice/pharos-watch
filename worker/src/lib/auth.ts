@@ -1,12 +1,11 @@
 import { errorResponse } from "./api-utils";
-import { verifyAccessJwt } from "./jwt-verify";
 
 const DEFAULT_OPS_API_HOST = "ops-api.pharos.watch";
 
 /** Env fields relevant to admin auth — avoids importing the full Env type. */
 export interface AdminAuthEnv {
-  CF_ACCESS_OPS_API_AUD?: string;
-  CF_ACCESS_TEAM_DOMAIN?: string;
+  OPS_API_SERVICE_TOKEN_ID?: string;
+  OPS_API_SERVICE_TOKEN_SECRET?: string;
 }
 
 function isOpsApiRequest(request: Request | undefined): boolean {
@@ -18,29 +17,36 @@ function isOpsApiRequest(request: Request | undefined): boolean {
   }
 }
 
+/**
+ * Validates ops-api admin requests by comparing CF Access service token
+ * headers against stored secrets using timing-safe comparison.
+ *
+ * ops-api.pharos.watch is a Worker custom domain (not behind CF Access proxy),
+ * so Cf-Access-Jwt-Assertion is NOT injected. The smoke test and ops UI send
+ * CF-Access-Client-Id / CF-Access-Client-Secret directly.
+ */
 async function hasOpsApiAccessSignal(
   request: Request | undefined,
   env?: AdminAuthEnv,
 ): Promise<boolean> {
   if (!isOpsApiRequest(request)) return false;
 
-  const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
-
-  // Require AUD to be configured for JWT verification
-  if (!env?.CF_ACCESS_OPS_API_AUD) {
-    console.warn("[auth] CF_ACCESS_OPS_API_AUD not configured — rejecting ops-api admin request");
+  if (!env?.OPS_API_SERVICE_TOKEN_ID || !env?.OPS_API_SERVICE_TOKEN_SECRET) {
+    console.warn("[auth] OPS_API_SERVICE_TOKEN_ID/SECRET not configured — rejecting ops-api admin request");
     return false;
   }
 
-  if (!accessJwt) {
-    return false;
-  }
+  const clientId = request?.headers.get("CF-Access-Client-Id")?.trim();
+  const clientSecret = request?.headers.get("CF-Access-Client-Secret")?.trim();
 
-  return verifyAccessJwt({
-    token: accessJwt,
-    aud: env.CF_ACCESS_OPS_API_AUD,
-    teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
-  });
+  if (!clientId || !clientSecret) return false;
+
+  const [idMatch, secretMatch] = await Promise.all([
+    timingSafeCompare(clientId, env.OPS_API_SERVICE_TOKEN_ID),
+    timingSafeCompare(clientSecret, env.OPS_API_SERVICE_TOKEN_SECRET),
+  ]);
+
+  return idMatch && secretMatch;
 }
 
 export async function hasValidAdminCredential(
