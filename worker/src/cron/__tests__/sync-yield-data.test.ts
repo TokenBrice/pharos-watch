@@ -165,7 +165,7 @@ vi.mock("../yield-helpers", async (importOriginal) => {
     computeApyFromPrice: vi.fn(() => 4.0),
     computePYS: vi.fn(() => 75.0),
     computeYieldStability: vi.fn(() => 0.95),
-    computeApyVarianceScore: vi.fn(() => 90),
+    computeApyVarianceScore: vi.fn(() => 0.1),
     detectWarningSignals: vi.fn(() => []),
     findBestLendingPool: vi.fn(() => null),
   };
@@ -1046,7 +1046,7 @@ describe("syncYieldData", () => {
     configs.length = 0;
   });
 
-  it("keeps yield sync healthy when the retained benchmark is still fresh", async () => {
+  it("marks yield sync degraded when the retained benchmark is still fresh", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -1080,8 +1080,9 @@ describe("syncYieldData", () => {
       fallbackMode: string | null;
     };
 
-    expect(result.status).toBeUndefined();
-    expect(metadata.fallbackMode).toBeNull();
+    // Retained rates now trigger degradation regardless of age
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode).toBe("risk-free-rate:fred-api-error-retained");
 
     const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
     expect(rankingsCacheCall).toBeDefined();

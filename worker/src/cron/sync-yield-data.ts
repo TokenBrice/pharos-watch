@@ -37,11 +37,11 @@ import {
   rowToRanking,
 } from "./yield-sync/rankings";
 
-const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.5;
+const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
 const LOW_SOURCE_TVL_USD = 250_000;
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = SECONDS.TWO_DAYS;
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
-const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.5;
+const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
 
 type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 
@@ -242,6 +242,7 @@ function getConfidencePriority(tier: ConfidenceTier): number {
 function shouldDegradeForRiskFreeRate(meta: Awaited<ReturnType<typeof loadRiskFreeRateSnapshot>>): boolean {
   if (!meta.fallbackMode) return false;
   if (meta.isFallback) return true;
+  if (typeof meta.fallbackMode === "string" && meta.fallbackMode.includes("retained")) return true;
   return meta.ageSeconds == null || meta.ageSeconds > MAX_RETAINED_RISK_FREE_RATE_AGE_SEC;
 }
 
@@ -289,6 +290,7 @@ function pickHistoryRowsForSource(
   sourceHistory: Map<string, YieldHistorySnapshotRow[]>,
   legacyHistoryById: Map<string, YieldHistorySnapshotRow[]>,
   resolvedCountByCoin: Map<string, number>,
+  startSec: number,
 ): { rows: YieldHistorySnapshotRow[]; usedLegacyHistory: boolean } {
   const directRows = sourceHistory.get(buildHistoryKey(stablecoinId, sourceKey)) ?? [];
   if (directRows.length > 0) {
@@ -305,12 +307,16 @@ function pickHistoryRowsForSource(
     legacyDataSources.size === 1 &&
     legacyDataSources.has(dataSource);
 
+  const LEGACY_MAX_AGE_SEC = 35 * 86400; // 30d window + 5d buffer
+  const legacyCutoff = startSec - LEGACY_MAX_AGE_SEC;
+  const freshLegacyRows = legacyRows.filter((row) => row.recorded_at >= legacyCutoff);
+
   if (
-    legacyRows.length > 0 &&
+    freshLegacyRows.length > 0 &&
     (resolvedCountByCoin.get(stablecoinId) ?? 0) <= 1 &&
     legacyMatchesCurrentSourceFamily
   ) {
-    return { rows: legacyRows, usedLegacyHistory: true };
+    return { rows: freshLegacyRows, usedLegacyHistory: true };
   }
 
   return { rows: [], usedLegacyHistory: false };
@@ -507,6 +513,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
         sourceHistory,
         legacyHistoryById,
         resolvedCountByCoin,
+        startSec,
       );
       const historyRows = historySelection.rows;
       const samples = historyRows.map((row) => row.apy);
@@ -519,7 +526,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
       const apy7d = apy7dSamples.reduce((sum, value) => sum + value, 0) / apy7dSamples.length;
       const apy30d = samples.reduce((sum, value) => sum + value, 0) / samples.length;
-      const apyVarianceScore = computeApyVarianceScore(samples);
+      const apyVarianceScore = computeApyVarianceScore(samples) ?? 0;
       const yieldStability = computeYieldStability(samples);
       const stdDev30d =
         samples.length >= 2
@@ -611,6 +618,16 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
             rejected = true;
           }
         }
+      }
+
+      if (
+        canonicalReference &&
+        canonicalReference.currentApy === 0 &&
+        candidate.currentApy > 1 &&
+        canonicalReference.sourceKey !== candidate.sourceKey &&
+        getConfidencePriority(canonicalReference.confidenceTier) > getConfidencePriority(candidate.confidenceTier)
+      ) {
+        anomalies.push("canonical-zero-vs-positive");
       }
 
       if (anomalies.includes("source-zero-vs-history")) {

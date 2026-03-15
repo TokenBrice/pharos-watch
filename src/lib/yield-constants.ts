@@ -5,6 +5,7 @@ export const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "reward-heavy": "Reward heavy",
   "tvl-outflow": "TVL outflow",
   "data-stale": "Data stale",
+  "zero-yield": "Zero yield",
 };
 
 export function formatYieldWarningSignal(signal: string) {

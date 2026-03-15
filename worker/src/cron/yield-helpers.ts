@@ -13,6 +13,9 @@ const YIELD_DIVERGENCE_THRESHOLD = 3.0;
 const NEGATIVE_TREND_THRESHOLD = 0.7;
 const REWARD_HEAVY_THRESHOLD = 0.8;
 const TVL_OUTFLOW_THRESHOLD = -0.2;
+const YIELD_SPIKE_MIN_APY = 2.0; // only flag spike if currentApy > 2%
+const NEGATIVE_TREND_MIN_APY = 1.0; // only flag negative trend if apy30d > 1%
+const ZERO_YIELD_HISTORY_THRESHOLD = 0.5; // flag when current=0 but 30d avg > 0.5%
 
 export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
   if (ratePrev <= 0 || rateNow <= 0 || days <= 0) return 0;
@@ -43,16 +46,16 @@ export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFacto
 export function computeYieldStability(apySamples: number[]): number | null {
   if (apySamples.length < 2) return null;
   const mean = apySamples.reduce((s, v) => s + v, 0) / apySamples.length;
-  if (Math.abs(mean) < 1e-10) return 1;
+  if (Math.abs(mean) < 1e-10) return null;
   const variance = apySamples.reduce((s, v) => s + (v - mean) ** 2, 0) / apySamples.length;
   const cv = Math.sqrt(variance) / Math.abs(mean);
   return Math.max(0, Math.min(1, Math.round((1 - cv) * 100) / 100));
 }
 
-export function computeApyVarianceScore(apySamples: number[]): number {
-  if (apySamples.length < 2) return 0;
+export function computeApyVarianceScore(apySamples: number[]): number | null {
+  if (apySamples.length < 2) return null;
   const mean = apySamples.reduce((s, v) => s + v, 0) / apySamples.length;
-  if (Math.abs(mean) < 1e-10) return 0;
+  if (Math.abs(mean) < 1e-10) return null;
   const variance = apySamples.reduce((s, v) => s + (v - mean) ** 2, 0) / apySamples.length;
   return Math.min(1, Math.sqrt(variance) / Math.abs(mean));
 }
@@ -68,14 +71,15 @@ interface WarningInput {
 
 export function detectWarningSignals(input: WarningInput): string[] {
   const signals: string[] = [];
-  if (input.apy30d > 0 && input.currentApy / input.apy30d > YIELD_SPIKE_THRESHOLD) signals.push("yield-spike");
+  if (input.apy30d > 0 && input.currentApy > YIELD_SPIKE_MIN_APY && input.currentApy / input.apy30d > YIELD_SPIKE_THRESHOLD) signals.push("yield-spike");
   if (input.medianApy > 0 && input.currentApy > input.medianApy * YIELD_DIVERGENCE_THRESHOLD) signals.push("yield-divergence");
-  if (input.apy30d > 0 && input.currentApy < input.apy30d * NEGATIVE_TREND_THRESHOLD) signals.push("negative-trend");
+  if (input.apy30d > NEGATIVE_TREND_MIN_APY && input.currentApy < input.apy30d * NEGATIVE_TREND_THRESHOLD) signals.push("negative-trend");
   if (input.apyReward != null && input.currentApy > 0 && input.apyReward / input.currentApy > REWARD_HEAVY_THRESHOLD) signals.push("reward-heavy");
   if (input.sourceTvlUsd != null && input.prevTvlUsd != null && input.prevTvlUsd > 0) {
     const change = (input.sourceTvlUsd - input.prevTvlUsd) / input.prevTvlUsd;
     if (change < TVL_OUTFLOW_THRESHOLD) signals.push("tvl-outflow");
   }
+  if (input.currentApy === 0 && input.apy30d > ZERO_YIELD_HISTORY_THRESHOLD) signals.push("zero-yield");
   return signals;
 }
 
@@ -121,7 +125,7 @@ export function matchAllDlPools(
   const variant = variantMap[stablecoinId];
   if (variant) {
     const sym = variant.variantSymbol.toLowerCase();
-    const candidates = dlPools.filter(p => p.exposure === "single" && p.symbol.toLowerCase().includes(sym));
+    const candidates = dlPools.filter(p => p.exposure === "single" && p.symbol.toLowerCase() === sym);
     if (candidates.length > 0) {
       const best = candidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
       if (!seenUuids.has(best.pool)) {

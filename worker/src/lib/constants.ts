@@ -102,7 +102,7 @@ export const DEPEG_SECONDARY_THRESHOLD_RATIO = 0.5;
 
 // --- Yield Intelligence ---
 
-export const RISK_FREE_RATE_FALLBACK = 4.25;
+export const RISK_FREE_RATE_FALLBACK = 3.75;
 /** FRED 3-month Treasury yield series (DGS3MO), used by fetch-tbill-rate cron. */
 export const FRED_TBILL_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO";
 export const FRED_FETCH_TIMEOUT_MS = 15_000;

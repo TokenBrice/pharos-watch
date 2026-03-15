@@ -10,6 +10,7 @@ import {
   matchAllDlPools,
   findBestLendingPool,
 } from "../yield-helpers";
+import { computeTvlWeightedMedianApy } from "../yield-sync/rankings";
 
 // computeTvlWeightedMedianApy is internal to sync-yield-data.ts - tested via integration
 describe("STALE_THRESHOLD_MS", () => {
@@ -100,9 +101,14 @@ describe("computeYieldStability", () => {
 });
 
 describe("computeApyVarianceScore", () => {
-  it("returns 0 for fewer than 2 samples", () => {
-    expect(computeApyVarianceScore([])).toBe(0);
-    expect(computeApyVarianceScore([5])).toBe(0);
+  it("returns null for fewer than 2 samples", () => {
+    expect(computeApyVarianceScore([])).toBeNull();
+    expect(computeApyVarianceScore([5])).toBeNull();
+  });
+
+  it("returns null for near-zero mean (insufficient signal)", () => {
+    expect(computeApyVarianceScore([0, 0, 0])).toBeNull();
+    expect(computeApyVarianceScore([1e-11, 0, 1e-11, 0])).toBeNull();
   });
 
   it("returns 0 for constant samples", () => {
@@ -110,8 +116,8 @@ describe("computeApyVarianceScore", () => {
   });
 
   it("returns higher score for more variance", () => {
-    const low = computeApyVarianceScore([5, 5.1, 4.9]);
-    const high = computeApyVarianceScore([1, 10, 1, 10]);
+    const low = computeApyVarianceScore([5, 5.1, 4.9])!;
+    const high = computeApyVarianceScore([1, 10, 1, 10])!;
     expect(high).toBeGreaterThan(low);
   });
 
@@ -165,6 +171,33 @@ describe("detectWarningSignals", () => {
     expect(signals).not.toContain("tvl-outflow");
   });
 
+  it("detects zero-yield when current is 0 but 30d average > 0.5%", () => {
+    const signals = detectWarningSignals({ ...base, currentApy: 0, apy30d: 2 });
+    expect(signals).toContain("zero-yield");
+  });
+
+  it("does not flag zero-yield when 30d average is also near zero", () => {
+    const signals = detectWarningSignals({ ...base, currentApy: 0, apy30d: 0.3 });
+    expect(signals).not.toContain("zero-yield");
+  });
+
+  it("does not flag yield-spike for low-APY coins below absolute floor", () => {
+    // 0.5% → 1.1% is a 2.2x ratio but too small to matter
+    const signals = detectWarningSignals({ ...base, currentApy: 1.1, apy30d: 0.5, medianApy: 5 });
+    expect(signals).not.toContain("yield-spike");
+  });
+
+  it("still flags yield-spike for meaningful APY levels above floor", () => {
+    const signals = detectWarningSignals({ ...base, currentApy: 11, apy30d: 5, medianApy: 5 });
+    expect(signals).toContain("yield-spike");
+  });
+
+  it("does not flag negative-trend for very low baseline APY", () => {
+    // 0.8% → 0.5% is a 37.5% drop but too small to matter
+    const signals = detectWarningSignals({ ...base, currentApy: 0.5, apy30d: 0.8, medianApy: 5 });
+    expect(signals).not.toContain("negative-trend");
+  });
+
   it("can return multiple signals simultaneously", () => {
     const signals = detectWarningSignals({
       currentApy: 50,
@@ -175,6 +208,38 @@ describe("detectWarningSignals", () => {
       prevTvlUsd: 100_000_000,
     });
     expect(signals.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("does not flag yield-spike at exact 2x threshold (requires exceeding)", () => {
+    const signals = detectWarningSignals({ ...base, currentApy: 10, apy30d: 5 });
+    expect(signals).not.toContain("yield-spike");
+  });
+
+  it("flags yield-spike just above 2x threshold", () => {
+    const signals = detectWarningSignals({ ...base, currentApy: 10.01, apy30d: 5 });
+    expect(signals).toContain("yield-spike");
+  });
+
+  it("handles negative currentApy without crashing", () => {
+    const signals = detectWarningSignals({ ...base, currentApy: -1, apy30d: 5 });
+    expect(signals).toContain("negative-trend");
+    expect(signals).not.toContain("yield-spike");
+  });
+
+  it("returns exact expected signals for all-trigger input", () => {
+    const signals = detectWarningSignals({
+      currentApy: 50,
+      apy30d: 5,
+      apyReward: 45,
+      medianApy: 5,
+      sourceTvlUsd: 50_000_000,
+      prevTvlUsd: 100_000_000,
+    });
+    expect(signals).toEqual(
+      expect.arrayContaining(["yield-spike", "yield-divergence", "reward-heavy", "tvl-outflow"]),
+    );
+    // negative-trend should NOT fire: 50 > 5*0.7
+    expect(signals).not.toContain("negative-trend");
   });
 });
 
@@ -279,6 +344,43 @@ describe("matchAllDlPools", () => {
 
     const result = matchAllDlPools("test-coin", "TEST", dlPools, poolMap, variantMap);
     expect(result).toHaveLength(1);
+  });
+
+  it("does not cross-contaminate variant symbols that are prefixes of other symbols", () => {
+    // sUSDa must NOT match sUSDai — that's a different token
+    const variantMap = { "usda-avalon": { variantSymbol: "sUSDa" } };
+    const dlPools = [
+      {
+        pool: "uuid-susdai",
+        symbol: "sUSDai",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 200_000_000,
+        apy: 6.77,
+        apyBase: 6.77,
+        apyReward: null,
+      },
+      {
+        pool: "uuid-susda",
+        symbol: "sUSDa",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 50_000_000,
+        apy: 4.5,
+        apyBase: 4.5,
+        apyReward: null,
+      },
+    ];
+
+    const result = matchAllDlPools("usda-avalon", "USDa", dlPools, {}, variantMap);
+    expect(result).toHaveLength(1);
+    expect(result[0].pool).toBe("uuid-susda");
+    expect(result[0].apy).toBe(4.5);
+  });
+
+  it("returns empty array when dlPools is empty", () => {
+    const result = matchAllDlPools("test-coin", "TEST", [], { "test-coin": "uuid-1" }, {});
+    expect(result).toHaveLength(0);
   });
 
   it("falls through to symbol match when static map UUID is missing from DL pools", () => {
@@ -402,5 +504,55 @@ describe("findBestLendingPool", () => {
   it("applies optional min APY and TVL quality gates", () => {
     const result = findBestLendingPool("USDT", pools, allowlist, { minApy: 3.1, minTvlUsd: 15_000_000 });
     expect(result).toBeNull();
+  });
+});
+
+describe("computeTvlWeightedMedianApy", () => {
+  it("returns 0 for empty input", () => {
+    expect(computeTvlWeightedMedianApy([])).toBe(0);
+  });
+
+  it("returns 0 when all rows have null TVL", () => {
+    expect(computeTvlWeightedMedianApy([
+      { apy_30d: 5, source_tvl_usd: null },
+      { apy_30d: 3, source_tvl_usd: null },
+    ])).toBe(0);
+  });
+
+  it("returns 0 when all rows have zero TVL", () => {
+    expect(computeTvlWeightedMedianApy([
+      { apy_30d: 5, source_tvl_usd: 0 },
+    ])).toBe(0);
+  });
+
+  it("returns the APY of a single valid row", () => {
+    expect(computeTvlWeightedMedianApy([
+      { apy_30d: 5, source_tvl_usd: 1_000_000 },
+    ])).toBe(5);
+  });
+
+  it("returns TVL-weighted median, not simple median", () => {
+    const result = computeTvlWeightedMedianApy([
+      { apy_30d: 10, source_tvl_usd: 100_000 },
+      { apy_30d: 3, source_tvl_usd: 10_000_000 },
+    ]);
+    expect(result).toBe(3);
+  });
+
+  it("filters out rows with zero or negative APY", () => {
+    const result = computeTvlWeightedMedianApy([
+      { apy_30d: 0, source_tvl_usd: 100_000_000 },
+      { apy_30d: 5, source_tvl_usd: 1_000_000 },
+    ]);
+    expect(result).toBe(5);
+  });
+
+  it("picks median from sorted valid rows for balanced TVL", () => {
+    const result = computeTvlWeightedMedianApy([
+      { apy_30d: 2, source_tvl_usd: 1_000_000 },
+      { apy_30d: 5, source_tvl_usd: 1_000_000 },
+      { apy_30d: 8, source_tvl_usd: 1_000_000 },
+    ]);
+    expect(result).toBe(5);
   });
 });

@@ -93,7 +93,7 @@ Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers)
 
 **Layer 1 — Static map:** `YIELD_POOL_MAP` maps Pharos ID to a DL pool UUID. Filters for `exposure === "single"`. Finds the native/primary yield source. If a mapped UUID is missing from the DL payload, the sync logs `[yield-sync] Pool UUID ... not found in DL response, falling through` and continues to Layer 2/3 fallback matching.
 
-**Layer 2 — Variant map:** `YIELD_VARIANT_MAP` maps to a wrapper/savings pool symbol. Filters for `exposure === "single"` only (stablecoin flag intentionally relaxed, since savings wrappers like fxSAVE are not flagged `stablecoin = true` in DeFiLlama). Picks highest TVL.
+**Layer 2 — Variant map:** `YIELD_VARIANT_MAP` maps to a wrapper/savings pool symbol. Uses exact symbol matching (case-insensitive `===`, not substring `.includes()`). Filters for `exposure === "single"` only (stablecoin flag intentionally relaxed, since savings wrappers like fxSAVE are not flagged `stablecoin = true` in DeFiLlama). Picks highest TVL.
 
 **Layer 3 — Base-symbol fallback:** Used only when both static maps miss. Searches DL pools by coin symbol. Filters for `exposure === "single"` and `stablecoin === true`. Picks highest TVL.
 
@@ -172,7 +172,7 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier   | Protocols                                                                |
 | ------ | ------------------------------------------------------------------------ |
 | Tier 1 | aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance |
-| Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
+| Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
 | Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending |
 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL.
@@ -204,7 +204,7 @@ PYS                 = min(100, round(yieldEfficiency * sustainabilityMult * scal
 | ------------------ | -------- | ------------------------------------------------------------------------------------------- | ---- | --------- |
 | `safetyScore`      | 0–100    | Report card overall score. `DEFAULT_SAFETY_SCORE` (40) for unrated coins                    |
 | `riskPenalty`      | 0.5–5.05 | Divisor derived from safety (A+ coin → 0.55, F → 4.55)                                      |
-| `apyVarianceScore` | 0–1      | Coefficient of variation of 30-day APY samples, clamped to [0, 1]. Returns 0 if mean ≈ 0 (` | mean | < 1e-10`) |
+| `apyVarianceScore` | 0–1 or null | Coefficient of variation of 30-day APY samples, clamped to [0, 1]. Returns null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`); PYS caller defaults null to 0 |
 | `scalingFactor`    | 5        | Global constant (`PYS_SCALING_FACTOR` in `constants.ts`)                                    |
 
 Returns 0 when `apy30d <= 0`.
@@ -215,7 +215,7 @@ Frontend components display PYS breakdown via `computePysBreakdown()` in `src/li
 
 | Metric           | Formula                               | Description                                                                   |
 | ---------------- | ------------------------------------- | ----------------------------------------------------------------------------- | ---- | --------- |
-| `yieldStability` | `1 - CV(30d samples)`                 | 0–1, higher = more consistent. Null if < 2 samples. Returns 1 if mean ≈ 0 (`  | mean | < 1e-10`) |
+| `yieldStability` | `1 - CV(30d samples)`                 | 0–1, higher = more consistent. Null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`) |
 | `yieldToRisk`    | `apy30d / (101 - safetyScore)`        | Raw yield per unit of risk                                                    |
 | `excessYield`    | `apy30d - riskFreeRate`               | Yield above the T-bill benchmark                                              |
 | `apy7d`          | Timestamp-filtered 7d average         | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing) |
@@ -236,7 +236,7 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 
 **Stored as:** `cache` table, key `"risk_free_rate"`.
 
-**Fallback:** `RISK_FREE_RATE_FALLBACK = 4.25%` — written when FRED is unreachable, circuit-broken, or returns invalid data.
+**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` — written when FRED is unreachable, circuit-broken, or returns invalid data.
 
 **Usage:** The 30-min yield sync reads the cached rate. The scatter plot renders it as a dashed reference line, and `excessYield` is computed against it.
 
@@ -246,14 +246,15 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 
 `yield-helpers.ts::detectWarningSignals()` runs in the sync cron and stores baseline results in the `warning_signals` column of `yield_data`. Rankings responses also add a read-time freshness signal. Frontend-visible warning keys are:
 
-| Signal             | Condition                        | Meaning                              |
-| ------------------ | -------------------------------- | ------------------------------------ |
-| `yield-spike`      | `currentApy / apy30d > 2.0`      | Sudden 2× jump vs. 30d average       |
-| `yield-divergence` | `currentApy > medianApy * 3`     | 3× the market median                 |
-| `negative-trend`   | `currentApy < apy30d * 0.7`      | 30% decline from average             |
-| `reward-heavy`     | `apyReward / apy > 0.8`          | 80%+ from incentives, not base yield |
-| `tvl-outflow`      | TVL dropped > 20% from prev week | Capital leaving the protocol         |
-| `data-stale`       | `updated_at` > 90 min old        | Yield data hasn't refreshed in 90+ min |
+| Signal             | Condition                                              | Meaning                              |
+| ------------------ | ------------------------------------------------------ | ------------------------------------ |
+| `yield-spike`      | `currentApy > 2% AND currentApy / apy30d > 2.0`       | Sudden 2× jump vs. 30d average (absolute floor: 2% APY) |
+| `yield-divergence` | `currentApy > medianApy * 3`                           | 3× the market median                 |
+| `negative-trend`   | `apy30d > 1% AND currentApy < apy30d * 0.7`           | 30% decline from average (absolute floor: 1% baseline) |
+| `reward-heavy`     | `apyReward / apy > 0.8`                                | 80%+ from incentives, not base yield |
+| `tvl-outflow`      | TVL dropped > 20% from prev week                       | Capital leaving the protocol         |
+| `zero-yield`       | `currentApy === 0 AND apy30d > 0.5%`                   | Yield dropped to zero but had recent activity |
+| `data-stale`       | `updated_at` > 90 min old                              | Yield data hasn't refreshed in 90+ min |
 
 All frontend surfaces (leaderboard, detail section, history chart) format warning signals via the shared `formatYieldWarningSignal()` function in `src/lib/yield-constants.ts`, which maps known signal keys to human-readable labels and falls back to hyphen-to-space conversion for unknown signals.
 
@@ -264,7 +265,8 @@ The sync also performs a confidence-aware cross-source arbitration pass before `
 - deterministic sources (`onchain`, `rate-derived`) outrank curated DeFiLlama rows
 - curated DeFiLlama rows outrank discovered lending opportunities and fallback-derived rows
 - non-positive APY rows cannot outrank positive rows
-- materially divergent discovered or fallback rows can be rejected when a higher-confidence canonical source disagrees by more than 50%
+- materially divergent discovered or fallback rows can be rejected when a higher-confidence canonical source disagrees by more than 35%
+- a `canonical-zero-vs-positive` anomaly is flagged when a high-confidence source reads 0% but a lower-confidence source reports > 1% APY
 
 This selection behavior is surfaced in row-level `provenance` metadata on `/api/yield-rankings`.
 
@@ -368,7 +370,7 @@ CREATE TABLE yield_history (
 13. Prune `yield_history` older than 365 days
 14. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation. Safety-degraded runs still publish fresh rankings but skip `report_card_cache`.
 
-**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio, the benchmark is on a true fallback path (`isFallback === true`) or the retained last-known-good benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"`. Fresh retained benchmark metadata still stays in rankings provenance via `provenance.benchmark.fallbackMode`, but it no longer degrades the 30-minute yield cron by itself because the daily `fetch-tbill-rate` job already surfaces the upstream fetch failure. Schema-invalid runs still skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
+**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating FRED fetch failure with last-known-good retention), the retained last-known-good benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"`. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`. Schema-invalid runs still skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 
 Implementation stages:
 - `yield-sync/sources.ts`: DL pool loading, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers
@@ -562,7 +564,7 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 **PYS tooltip:** Hovering a non-null PYS score opens a component breakdown tooltip with Yield Efficiency (`apy30d / riskPenalty`), the APY-to-risk line, Safety (grade + score with `40` fallback), and Consistency (`max(0.3, yieldStability)` shown as a percentage).
 
-**Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `data-stale`).
+**Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `zero-yield`, `data-stale`).
 
 **Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name, clickable source link, and current APY.
 
@@ -591,7 +593,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 | Constant                        | Value                                                       | Purpose                                          |
 | ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
-| `RISK_FREE_RATE_FALLBACK`       | 4.25                                                        | Fallback T-bill rate (%)                         |
+| `RISK_FREE_RATE_FALLBACK`       | 3.75                                                        | Fallback T-bill rate (%)                         |
 | `FRED_TBILL_CSV_URL`            | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series         |
 | `PYS_SCALING_FACTOR`            | 5                                                           | PYS distribution tuning parameter                |
 | `DEFAULT_SAFETY_SCORE`          | 40                                                          | Safety score for unrated coins (most NAV tokens) |
@@ -604,15 +606,17 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 **File:** `worker/src/cron/__tests__/yield-helpers.test.ts`
 
-Covers all pure functions in `yield-helpers.ts`:
+Covers all pure functions in `yield-helpers.ts` and `yield-sync/rankings.ts`:
 
 - `computeApyFromRate` — 7-day rate change, zero/negative inputs, decreasing rates
 - `computeApyFromPrice` — delegates to `computeApyFromRate`
 - `computePYS` — safe high-yield, safety penalty, variance penalty, 100 cap, negative APY
-- `computeYieldStability` — stable vs. volatile yields, empty/single samples, near-zero mean guard
-- `computeApyVarianceScore` — near-zero mean guard (no Infinity from floating-point)
-- `detectWarningSignals` — yield spike, reward-heavy, TVL outflow, healthy baseline
-- `matchAllDlPools` — Layer 1/2/3 source matching, dedup, relaxed Layer 2 stablecoin filter, highest-TVL selection
+- `computeYieldStability` — stable vs. volatile yields, empty/single samples, near-zero mean → null guard
+- `computeApyVarianceScore` — near-zero mean → null guard, insufficient samples → null
+- `detectWarningSignals` — yield spike (with absolute floor), negative trend (with absolute floor), reward-heavy, TVL outflow, zero-yield, healthy baseline, boundary conditions, negative APY input
+- `matchAllDlPools` — Layer 1/2/3 source matching, dedup, relaxed Layer 2 stablecoin filter, exact symbol match (no cross-contamination), highest-TVL selection, empty pools edge case
+- `findBestLendingPool` — allowlist filtering, symbol match, address fallback, quality gates
+- `computeTvlWeightedMedianApy` — empty input, null/zero TVL, single row, TVL-weighted vs simple median, zero APY filtering
 
 ---
 

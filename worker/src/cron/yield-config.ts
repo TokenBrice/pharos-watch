@@ -396,7 +396,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
  *   aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance
  *
  * Tier 2 (established, well-audited):
- *   fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle,
+ *   fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle,
  *   curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2
  *
  * Tier 3 (targeted additions to expand coverage):
@@ -418,6 +418,7 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "venus-core-pool",
   "kamino-lend",
   "morpho-v1",
+  "morpho-blue", // $1B+ TVL, modular lending with curated vaults
   "pendle",
   "curve-llamalend", // $59M TVL, crvUSD lending on ETH ($32.5M top pool)
   "exactly", // $32M TVL, USDC lending on Optimism (6 pools, $1.7M each)
@@ -450,6 +451,7 @@ export const LENDING_PROTOCOL_LABELS: Record<string, string> = {
   "venus-core-pool": "Venus",
   "kamino-lend": "Kamino",
   "morpho-v1": "Morpho",
+  "morpho-blue": "Morpho Blue",
   "pendle": "Pendle",
   "curve-llamalend": "Curve LlamaLend",
   "exactly": "Exactly",

@@ -30,6 +30,8 @@ const LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR = "0xb140384b";
 const LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR = "0x9bf2f1ac";
 const LIQUITY_LQTY_GECKO_ID = "liquity";
 
+const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX sync refresh)
+
 export async function loadDlStablecoinPools(
   db: D1Database,
   signal?: AbortSignal,
@@ -41,9 +43,17 @@ export async function loadDlStablecoinPools(
   if (cachedPools) {
     const parsed = parseDlStablecoinPoolsCache(cachedPools.value, cachedPools.updatedAt, nowSec);
     if (parsed) {
-      dlPools = parsed.pools;
-      console.log(`[sync-yield-data] Using ${dlPools.length} cached stablecoin pools from DEX sync`);
-      return parsed;
+      const cacheAgeSec = parsed.meta.ageSeconds ?? 0;
+      if (cacheAgeSec > MAX_DL_CACHE_AGE_SEC) {
+        console.warn(
+          `[sync-yield-data] DL pools cache too old (${Math.round(cacheAgeSec / 3600)}h), falling through to direct fetch`,
+        );
+        fallbackMode = "cache-too-old";
+      } else {
+        dlPools = parsed.pools;
+        console.log(`[sync-yield-data] Using ${dlPools.length} cached stablecoin pools from DEX sync`);
+        return parsed;
+      }
     } else {
       console.warn("[sync-yield-data] Failed to parse cached DL pools, falling back to direct fetch");
       fallbackMode = "cache-parse-failed";
@@ -116,7 +126,10 @@ export async function fetchOnChainRates(
         signal,
         timeoutMs: 10_000,
       });
-      if (raw == null) continue;
+      if (raw == null) {
+        console.warn(`[yield] On-chain rate returned null for ${config.stablecoinId} (${config.chain}:${config.contract})`);
+        continue;
+      }
       const rate = Number(raw) / 10 ** config.decimals;
       results.set(config.stablecoinId, { rate });
     } catch (error) {
