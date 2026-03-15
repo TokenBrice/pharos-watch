@@ -129,6 +129,14 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 }));
 
 import { generateDailyDigest, classifyRegime } from "../daily-digest";
+import {
+  collectPsiContributors,
+  collectYieldAnomalies,
+  collectLiquidityShifts,
+  collectCrossDayTrends,
+  collectDewsStress,
+  type CollectorContext,
+} from "../daily-digest/collectors";
 import type { DigestInputData } from "@shared/types";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
@@ -693,5 +701,483 @@ describe("classifyRegime", () => {
 
   it("returns WATCHFUL when 1 active depeg", () => {
     expect(classifyRegime({ ...baseData, activeDepegCount: 1 })).toBe("WATCHFUL");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Collector unit tests
+// ---------------------------------------------------------------------------
+
+function makeCollectorCtx(db: ReturnType<typeof mockD1>): CollectorContext {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const todayTs = nowSec - (nowSec % 86_400);
+  const yesterdayTs = todayTs - 86_400;
+
+  const trackedStablecoinAssets = [
+    makeAsset({
+      id: "usdt-tether",
+      symbol: "USDT",
+      circulating: { peggedUSD: 100_000_000_000 },
+      circulatingPrevWeek: { peggedUSD: 95_000_000_000 },
+    }),
+    makeAsset({
+      id: "usdc-circle",
+      symbol: "USDC",
+      circulating: { peggedUSD: 50_000_000_000 },
+      circulatingPrevWeek: { peggedUSD: 52_000_000_000 },
+    }),
+    makeAsset({
+      id: "dai-makerdao",
+      symbol: "DAI",
+      circulating: { peggedUSD: 5_000_000 },
+      circulatingPrevWeek: { peggedUSD: 5_000_000 },
+    }),
+  ];
+
+  const mcapById = new Map<string, number>([
+    ["usdt-tether", 100_000_000_000],
+    ["usdc-circle", 50_000_000_000],
+    ["dai-makerdao", 5_000_000],
+  ]);
+
+  return { db: db as unknown as D1Database, trackedStablecoinAssets, mcapById, nowSec, todayTs, yesterdayTs };
+}
+
+describe("collectPsiContributors", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns top 3 contributors sorted by marketImpact", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT input_snapshot FROM stability_index_samples",
+        first: {
+          input_snapshot: JSON.stringify({
+            contributors: [
+              { id: "usdt-tether", symbol: "USDT", bps: 10, mcapUsd: 100_000_000_000, ageDays: 1, factor: 1.5 },
+              { id: "usdc-circle", symbol: "USDC", bps: 20, mcapUsd: 50_000_000_000, ageDays: 2, factor: 1.2 },
+              { id: "dai-makerdao", symbol: "DAI", bps: 50, mcapUsd: 5_000_000, ageDays: 1, factor: 1.0 },
+              { id: "frax-finance", symbol: "FRAX", bps: 30, mcapUsd: 1_000_000_000, ageDays: 3, factor: 2.0 },
+            ],
+          }),
+        },
+        rows: [],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectPsiContributors(ctx);
+
+    expect(result).toBeDefined();
+    expect(result!.length).toBe(3);
+    // Should be sorted by marketImpact descending
+    expect(result![0].marketImpact).toBeGreaterThanOrEqual(result![1].marketImpact);
+    expect(result![1].marketImpact).toBeGreaterThanOrEqual(result![2].marketImpact);
+    // USDT should be first: |10| * 100B / 1e9 * 1.5 = 1500
+    expect(result![0].symbol).toBe("USDT");
+  });
+
+  it("returns undefined when no input_snapshot exists", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT input_snapshot FROM stability_index_samples",
+        first: null,
+        rows: [],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectPsiContributors(ctx);
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when contributors array is empty", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT input_snapshot FROM stability_index_samples",
+        first: { input_snapshot: JSON.stringify({ contributors: [] }) },
+        rows: [],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectPsiContributors(ctx);
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("collectYieldAnomalies", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns yield anomalies filtered by is_best and mcap", async () => {
+    const db = mockD1([
+      {
+        match: "FROM yield_data",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            current_apy: 8.5,
+            apy_7d: 4.2,
+            apy_30d: 3.8,
+            warning_signals: JSON.stringify(["spike", "divergence"]),
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            current_apy: 5.1,
+            apy_7d: 4.9,
+            apy_30d: 4.5,
+            warning_signals: JSON.stringify(["tvl-outflow"]),
+          },
+          {
+            stablecoin_id: "dai-makerdao",
+            symbol: "DAI",
+            current_apy: 12.0,
+            apy_7d: 3.0,
+            apy_30d: 2.5,
+            warning_signals: JSON.stringify(["spike"]),
+          },
+        ],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectYieldAnomalies(ctx);
+
+    expect(result).toBeDefined();
+    // DAI should be filtered out (mcap $5M < $10M threshold)
+    expect(result!.length).toBe(2);
+    expect(result!.every((r) => r.mcapUsd >= 10_000_000)).toBe(true);
+    // Should be sorted by mcap * warnings.length descending
+    expect(result![0].symbol).toBe("USDT");
+    expect(result![0].warnings).toEqual(["spike", "divergence"]);
+  });
+
+  it("returns undefined when no rows have warnings", async () => {
+    const db = mockD1([
+      {
+        match: "FROM yield_data",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            current_apy: 4.0,
+            apy_7d: 3.9,
+            apy_30d: 3.8,
+            warning_signals: "[]",
+          },
+        ],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectYieldAnomalies(ctx);
+    expect(result).toBeUndefined();
+  });
+
+  it("returns at most 5 results", async () => {
+    const rows = Array.from({ length: 8 }, (_, i) => ({
+      stablecoin_id: `coin-${i}`,
+      symbol: `C${i}`,
+      current_apy: 10 + i,
+      apy_7d: 5,
+      apy_30d: 4,
+      warning_signals: JSON.stringify(["spike"]),
+    }));
+
+    const mcapById = new Map<string, number>();
+    for (let i = 0; i < 8; i++) mcapById.set(`coin-${i}`, 20_000_000_000);
+
+    const db = mockD1([{ match: "FROM yield_data", rows }]);
+    const ctx = makeCollectorCtx(db);
+    // Override mcapById to include all coins
+    for (let i = 0; i < 8; i++) ctx.mcapById.set(`coin-${i}`, 20_000_000_000);
+
+    const result = await collectYieldAnomalies(ctx);
+    expect(result).toBeDefined();
+    expect(result!.length).toBe(5);
+  });
+});
+
+describe("collectLiquidityShifts", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns shifts with delta >= 8 sorted by |delta| * mcap", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    const yesterdayTs = todayTs - 86_400;
+    const dayBeforeTs = yesterdayTs - 86_400;
+
+    const db = mockD1([
+      {
+        match: "FROM dex_liquidity_history",
+        rows: [
+          { stablecoin_id: "usdt-tether", liquidity_score: 85, total_tvl_usd: 500_000_000, snapshot_date: yesterdayTs },
+          { stablecoin_id: "usdt-tether", liquidity_score: 75, total_tvl_usd: 480_000_000, snapshot_date: dayBeforeTs },
+          { stablecoin_id: "usdc-circle", liquidity_score: 70, total_tvl_usd: 300_000_000, snapshot_date: yesterdayTs },
+          { stablecoin_id: "usdc-circle", liquidity_score: 68, total_tvl_usd: 290_000_000, snapshot_date: dayBeforeTs },
+          { stablecoin_id: "dai-makerdao", liquidity_score: 50, total_tvl_usd: 1_000_000, snapshot_date: yesterdayTs },
+          { stablecoin_id: "dai-makerdao", liquidity_score: 30, total_tvl_usd: 800_000, snapshot_date: dayBeforeTs },
+        ],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectLiquidityShifts(ctx);
+
+    expect(result).toBeDefined();
+    // USDT: delta=10 (>=8, mcap $100B) -> included
+    // USDC: delta=2 (<8) -> excluded
+    // DAI: delta=20 (>=8, but mcap $5M < $10M) -> excluded
+    expect(result!.length).toBe(1);
+    expect(result![0].symbol).toBe("USDT");
+    expect(result![0].scoreDelta).toBe(10);
+    expect(result![0].currentScore).toBe(85);
+    expect(result![0].previousScore).toBe(75);
+  });
+
+  it("returns undefined when no shifts exceed threshold", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+    const yesterdayTs = todayTs - 86_400;
+    const dayBeforeTs = yesterdayTs - 86_400;
+
+    const db = mockD1([
+      {
+        match: "FROM dex_liquidity_history",
+        rows: [
+          { stablecoin_id: "usdt-tether", liquidity_score: 80, total_tvl_usd: 500_000_000, snapshot_date: yesterdayTs },
+          { stablecoin_id: "usdt-tether", liquidity_score: 78, total_tvl_usd: 480_000_000, snapshot_date: dayBeforeTs },
+        ],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectLiquidityShifts(ctx);
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("collectCrossDayTrends", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns PSI, mcap, and gauge trajectories from archived digests", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const makeDigestRow = (daysAgo: number, psiScore: number, band: string, mcap: number, gaugeScore?: number) => ({
+      generated_at: nowSec - daysAgo * 86_400,
+      input_data: JSON.stringify({
+        totalMcapUsd: mcap,
+        mcap7dDelta: 0,
+        activeDepegCount: 0,
+        topDepegs: [],
+        biggestSupplyChange: null,
+        stabilityIndex: { score: psiScore, band, components: { severity: 0, breadth: 0, trend: 0 } },
+        yesterdayIndex: null,
+        ...(gaugeScore != null
+          ? { mintBurnFlows: { gaugeScore, gaugeBand: "STABLE", flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 }, topPressure: [] } }
+          : {}),
+      }),
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM daily_digest",
+        rows: [
+          makeDigestRow(0, 92, "BEDROCK", 200e9, -5),
+          makeDigestRow(1, 91, "BEDROCK", 199e9, -3),
+          makeDigestRow(2, 90, "STEADY", 198e9, -1),
+          makeDigestRow(3, 89, "STEADY", 197e9),
+          makeDigestRow(4, 88, "STEADY", 196e9),
+        ],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectCrossDayTrends(ctx);
+
+    expect(result).toBeDefined();
+    // PSI trajectory should be reversed to chronological
+    expect(result!.psiTrajectory.length).toBe(5);
+    expect(result!.psiTrajectory[0].score).toBe(88); // oldest first
+    expect(result!.psiTrajectory[4].score).toBe(92); // newest last
+    // mcap trajectory
+    expect(result!.mcapTrajectory.length).toBe(5);
+    expect(result!.mcapTrajectory[0].mcapUsd).toBe(196e9);
+    // gauge trajectory: only 3 entries have gauge data, exactly 3 points
+    expect(result!.gaugeTrajectory).toBeDefined();
+    expect(result!.gaugeTrajectory!.length).toBe(3);
+  });
+
+  it("returns null gauge trajectory when fewer than 3 gauge points", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const makeRow = (daysAgo: number) => ({
+      generated_at: nowSec - daysAgo * 86_400,
+      input_data: JSON.stringify({
+        totalMcapUsd: 200e9,
+        mcap7dDelta: 0,
+        activeDepegCount: 0,
+        topDepegs: [],
+        biggestSupplyChange: null,
+        stabilityIndex: { score: 90, band: "BEDROCK", components: { severity: 0, breadth: 0, trend: 0 } },
+        yesterdayIndex: null,
+        mintBurnFlows: daysAgo === 0
+          ? { gaugeScore: -5, gaugeBand: "STABLE", flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 }, topPressure: [] }
+          : undefined,
+      }),
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM daily_digest",
+        rows: [makeRow(0), makeRow(1), makeRow(2), makeRow(3)],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectCrossDayTrends(ctx);
+
+    expect(result).toBeDefined();
+    expect(result!.psiTrajectory.length).toBe(4);
+    // Only 1 gauge point -> should be null
+    expect(result!.gaugeTrajectory).toBeNull();
+  });
+
+  it("returns undefined when fewer than 3 digest entries", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM daily_digest",
+        rows: [
+          {
+            generated_at: nowSec - 86_400,
+            input_data: JSON.stringify({
+              totalMcapUsd: 200e9, mcap7dDelta: 0, activeDepegCount: 0, topDepegs: [],
+              biggestSupplyChange: null, stabilityIndex: null, yesterdayIndex: null,
+            }),
+          },
+          {
+            generated_at: nowSec - 2 * 86_400,
+            input_data: JSON.stringify({
+              totalMcapUsd: 199e9, mcap7dDelta: 0, activeDepegCount: 0, topDepegs: [],
+              biggestSupplyChange: null, stabilityIndex: null, yesterdayIndex: null,
+            }),
+          },
+        ],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectCrossDayTrends(ctx);
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("collectDewsStress — topSignals enrichment", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns topSignals on elevated coins when signals_json is provided", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            score: 65,
+            band: "ALERT",
+            signals_json: JSON.stringify({
+              supply: { value: 30, available: true },
+              pool: { value: 80, available: true },
+              liq: { value: 45, available: true },
+              price: { value: 10, available: true },
+            }),
+          },
+        ],
+      },
+      {
+        match: "FROM stress_signal_history WHERE snapshot_date = ?",
+        rows: [
+          { stablecoin_id: "usdt-tether", score: 25, band: "WATCH" },
+        ],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectDewsStress(ctx);
+
+    expect(result).toBeDefined();
+    expect(result!.elevatedCoins.length).toBe(1);
+    const elevated = result!.elevatedCoins[0];
+    expect(elevated.symbol).toBe("USDT");
+    expect(elevated.topSignals).toBeDefined();
+    expect(elevated.topSignals!.length).toBe(3); // top 3
+    // Sorted descending by value
+    expect(elevated.topSignals![0].value).toBeGreaterThanOrEqual(elevated.topSignals![1].value);
+    expect(elevated.topSignals![1].value).toBeGreaterThanOrEqual(elevated.topSignals![2].value);
+    // Pool (80) should be first
+    expect(elevated.topSignals![0].name).toBe("pool balance drift");
+  });
+
+  it("returns empty topSignals when signals_json is missing", async () => {
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            score: 65,
+            band: "ALERT",
+            signals_json: "{}",
+          },
+        ],
+      },
+      {
+        match: "FROM stress_signal_history WHERE snapshot_date = ?",
+        rows: [],
+      },
+    ]);
+
+    const ctx = makeCollectorCtx(db);
+    const result = await collectDewsStress(ctx);
+
+    expect(result).toBeDefined();
+    expect(result!.elevatedCoins.length).toBe(1);
+    expect(result!.elevatedCoins[0].topSignals).toEqual([]);
   });
 });
