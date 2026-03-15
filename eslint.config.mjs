@@ -72,6 +72,21 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    files: ["shared/lib/**/*.ts"],
+    ignores: ["shared/lib/__tests__/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [{
+            group: ["@shared/*"],
+            message: "Within shared/lib/, use relative imports (./file) instead of @shared/* aliases.",
+          }],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
