@@ -60,6 +60,19 @@ vi.mock("@shared/lib/stablecoins", () => ({
         governance: "centralized",
       },
     },
+    {
+      id: "u-united-stables",
+      name: "United Stables",
+      symbol: "U",
+      geckoId: "united-stables",
+      flags: {
+        pegCurrency: "USD",
+        backing: "rwa-backed",
+        yieldBearing: false,
+        navToken: false,
+        governance: "centralized",
+      },
+    },
   ],
   TRACKED_META_BY_ID: new Map([
     [
@@ -118,6 +131,19 @@ vi.mock("@shared/lib/stablecoins", () => ({
         },
       },
     ],
+    ["u-united-stables", {
+      id: "u-united-stables",
+      name: "United Stables",
+      symbol: "U",
+      geckoId: "united-stables",
+      flags: {
+        pegCurrency: "USD",
+        backing: "rwa-backed",
+        yieldBearing: false,
+        navToken: false,
+        governance: "centralized",
+      },
+    }],
   ]),
 }));
 
@@ -168,16 +194,16 @@ vi.mock("../yield-config", () => ({
     "sdai-maker": "pool-sdai-native",
   },
   ON_CHAIN_RATE_CONFIGS: [],
-  LENDING_PROTOCOL_ALLOWLIST: new Set(["aave-v3"]),
-  LENDING_PROTOCOL_LABELS: { "aave-v3": "Aave V3" },
+  LENDING_PROTOCOL_ALLOWLIST: new Set(["aave-v3", "venus-core-pool"]),
+  LENDING_PROTOCOL_LABELS: { "aave-v3": "Aave V3", "venus-core-pool": "Venus Core Pool" },
   PRICE_DERIVED_FALLBACK_IDS: new Set(),
   RATE_DERIVED_CONFIGS: [] as Array<{
     stablecoinId: string;
     spreadBps: number;
     label: string;
   }>,
-  AUTO_LENDING_POOL_MAP: {},
-  AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(),
+  AUTO_LENDING_POOL_MAP: { "u-united-stables": "pool-u-venus" },
+  AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(["u-united-stables"]),
 }));
 
 vi.mock("@shared/lib/report-cards", () => ({
@@ -254,13 +280,14 @@ function setupDefaultMocks() {
     {
       kind: "ok",
       mode: "map",
-      coveredCount: 3,
-      trackedCount: 3,
+      coveredCount: 4,
+      trackedCount: 4,
       coverageRatio: 1,
       scores: new Map([
         ["sdai-maker", { score: 85, grade: "A-" }],
         ["usde-ethena", { score: 70, grade: "B" }],
         ["usdc-circle", { score: 90, grade: "A" }],
+        ["u-united-stables", { score: 75, grade: "B" }],
       ]),
     } as never,
   );
@@ -1006,5 +1033,88 @@ describe("Pharos Yield Score (PYS) computation through sync", () => {
     // PYS should be 0 for zero APY
     const pys = Number(sdaiRow?.boundValues?.[15]);
     expect(pys).toBe(0);
+  });
+});
+
+describe("price-derived and auto-discovery yield paths", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    setupDefaultMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("resolves price-derived APY for navToken coins from supply_history prices", async () => {
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      { match: "yield_history", rows: [] },
+      { match: "supply_history", rows: [], first: { price: 1.05 } },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: Math.floor(Date.now() / 1000) };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const priceDerivedRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "sdai-maker" && stmt.boundValues?.[12] === "price-derived",
+    );
+    expect(priceDerivedRow).toBeDefined();
+  });
+
+  it("resolves auto-discovery lending pool for non-yield-bearing coin", async () => {
+    const db = makeDb();
+    setupDefaultMocks();
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-u-venus",
+              symbol: "U",
+              project: "venus-core-pool",
+              tvlUsd: 5_000_000,
+              apy: 3.5,
+              apyBase: 3.5,
+              apyReward: null,
+              exposure: "single",
+              stablecoin: true,
+            },
+          ]),
+          updatedAt: nowSec - 300,
+        };
+      }
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: nowSec };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const autoRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "u-united-stables",
+    );
+    expect(autoRow).toBeDefined();
   });
 });
