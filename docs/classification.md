@@ -2,7 +2,7 @@
 
 ## Stablecoin Classification System
 
-Each stablecoin in `shared/lib/stablecoins.ts` has flags:
+Each stablecoin in `shared/lib/stablecoins/` (category files: `usd-major.ts`, `usd-minor.ts`, `non-usd.ts`, `commodity.ts`) has flags:
 
 ### Type (governance field internally)
 
@@ -56,6 +56,11 @@ Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interfa
 - `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
 - `reserves?: ReserveSlice[]` — reserve composition data
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
+- `pythFeedId?: string` — Pyth Network oracle feed ID (used for gold/commodity stablecoins)
+- `tradedContracts?: ContractDeployment[]` — traded contract addresses separate from `contracts`
+- `liveReservesConfig?: LiveReservesConfig` — live reserve sync configuration (see `docs/live-reserves.md`)
+- `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages
+- `tags?: string[]` — freeform tag array for filtering and categorization
 
 ### Bluechip Grade
 

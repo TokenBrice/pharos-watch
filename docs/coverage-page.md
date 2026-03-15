@@ -38,7 +38,6 @@ The matrix currently exposes these columns:
 - `Yield`
 - `Flows`
 - `Blacklist`
-- `Bluechip`
 - `Dependency Map`
 
 Status semantics are intentionally user-facing:
@@ -50,7 +49,6 @@ Status semantics are intentionally user-facing:
 - `Yield`: `Ranked` or `—`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.` , `Disabled`, or `—`
 - `Blacklist`: `Tracked` or `—`
-- `Bluechip`: grade (`A`, `B+`, etc.) or `—`
 - `Dependency Map`: `Node` or `—`
 
 ---
@@ -68,7 +66,6 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Yield` | `useYieldRankings().data.rankings[].id` | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility. |
 | `Flows` | `useMintBurnFlows().data.coins[].coverage.status` | Mirrors the Ethereum mint/burn coverage state exposed on `/flows`. |
 | `Blacklist` | `BLACKLIST_STABLECOINS` from `@shared/types` | Structural support flag, matching the allowlist used by the blacklist route and worker handlers. |
-| `Bluechip` | `useBluechipRatings().data[id].grade` | Coverage exists only when Bluechip currently publishes a grade for that asset. |
 | `Dependency Map` | `useReportCards().data.cards` filtered to live cards, then `deriveDependencies(meta)` from `@shared/lib/reserve-templates` | This mirrors the live dependency-edge derivation used by `src/app/dependency-map/client.tsx`. |
 
 Additional page-level sources:
@@ -97,8 +94,6 @@ Every row shows:
 
 For `Reserves`, the headline metric intentionally emphasizes `Live` reserve tracking. Curated and estimated reserve views still appear in the breakdown so the row distinguishes true live coverage from metadata-only reserve composition.
 
-For `Bluechip`, the snapshot intentionally skips the standalone coin-count callout because the external grade coverage is already expressed by market-cap reach plus the covered/uncovered breakdown chip set.
-
 Breakdowns are intentionally dense and should stay short:
 
 - DEX: `primary / mixed / fallback`
@@ -117,7 +112,7 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 
 - The feature snapshot comes first and answers the breadth question before the page shifts into per-coin inspection.
 - Search filters by name and ticker.
-- Quick filters narrow the table to one major feature slice (`Live reserves`, `Yield`, `Flows`, `Blacklist`, `Bluechip`).
+- Quick filters narrow the table to one major feature slice (`Live reserves`, `Yield`, `Flows`, `Blacklist`).
 - Default sort is descending live market cap.
 - On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.
 - From `md` upward, the full comparison table renders with the first column sticky.

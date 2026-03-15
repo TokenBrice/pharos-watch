@@ -80,15 +80,15 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 
 ## Module Initialization
 
-Three modules use a lazy-init pattern to receive API keys from the `Env` at runtime. Called at the top of both runtime entrypoints (`worker/src/handlers/http.ts` and `worker/src/handlers/scheduled.ts`):
+Three modules derive runtime configuration from `Env` bindings via pure functions. These are called in the scheduled context factory (`worker/src/handlers/scheduled/context.ts`) and in `worker/src/handlers/http.ts`, with results passed as parameters rather than stored in module-level state:
 
-| Initializer                                            | Called in             | Purpose                                              |
-| ------------------------------------------------------ | --------------------- | ---------------------------------------------------- |
-| `initCoinGecko(env.COINGECKO_API_KEY)`                 | `fetch` + `scheduled` | Switches CoinGecko base URL between free/pro tier    |
-| `initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
-| `initAlerts(env.ALERT_WEBHOOK_URL)`                    | `fetch` + `scheduled` | Configures webhook URL for error alerts              |
+| Function                                                | Called in             | Purpose                                              |
+| ------------------------------------------------------- | --------------------- | ---------------------------------------------------- |
+| `normalizeCgApiKey(env.COINGECKO_API_KEY)`               | `fetch` + `scheduled` | Returns normalized API key for CoinGecko requests    |
+| `buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
+| `normalizeWebhookUrl(env.ALERT_WEBHOOK_URL)`             | `fetch` + `scheduled` | Returns normalized webhook URL for error alerts      |
 
-This pattern exists because `Env` bindings are only available inside handler functions (not at module initialization time). Worker isolates may be reused, but env-aware setup must still happen inside request/scheduled handlers.
+These are pure functions (no module-level mutable state). `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory.
 
 ## Public API Rate Limiting
 
@@ -229,27 +229,17 @@ Current consumers:
 - `worker/src/api/backfill-supply-history.ts`
 - `worker/src/api/backfill-depegs.ts`
 
-### Module-Level State (Init Pattern)
+### Module-Level State
 
-Several worker modules use module-scoped `let` variables initialized via `init*()` functions:
+Most module-level mutable state was eliminated in the parameter-passing refactor. The remaining module-level state is:
 
-- `alerts.ts` → `initAlerts(webhookUrl)`
-- `coingecko.ts` → `initCoinGecko(apiKey)`
-- `chain-registry.ts` → `initChainRpcs(alchemyApiKey, drpcApiKey)`
-- `rate-limit.ts` → module-level `ipCounts` Map
-
-This pattern exists because `Env` bindings are unavailable at module initialization time
-in Workers. The `init*()` functions are called at the top of both `handleHttpRequest`
-and `handleScheduledEvent`.
-
-`coingecko-onchain.ts` also exports `initOnchainAvailability(apiKey)` for its module-scoped availability flag, but the current runtime entrypoints do not invoke it.
+- `rate-limit.ts` → module-level `ipCounts` Map (isolate-local fallback rate limiter)
 
 **Constraints:**
 
 - State persists within an isolate but resets on cold starts
 - State is NOT shared across isolates
 - The `ipCounts` rate limiter provides best-effort protection within a single isolate only
-- Always re-initialize in both HTTP and scheduled handlers
 
 ---
 
@@ -564,8 +554,8 @@ Primary-oracle implementation notes:
 **File:** `worker/src/lib/alerts.ts`
 
 ```typescript
-export function initAlerts(url: string | undefined): void;
-export async function sendAlert(title: string, message: string): Promise<boolean>;
+export function normalizeWebhookUrl(url: string | undefined): string | null;
+export async function sendAlert(webhookUrl: string | null | undefined, title: string, message: string): Promise<boolean>;
 ```
 
 Auto-detects webhook format from URL:

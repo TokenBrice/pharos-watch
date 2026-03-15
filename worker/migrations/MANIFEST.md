@@ -49,7 +49,7 @@
 | 0044 | `0044_block_timestamp_cache.sql` | Create block_timestamp_cache table |
 | 0045 | `0045_remove_mint_burn_coin_configs.sql` | Purge de-tracked mint/burn coins (batch 1) |
 | 0046 | `0046_mint_burn_bridge_classification.sql` | Add burn_type column for bridge-aware accounting |
-| 0047 | `0047_status_reliability.sql` | Create status_state and status_probe_results tables |
+| 0047 | `0047_status_reliability.sql` | Create status_state, status_transitions, status_probe_runs, and status_discrepancy_state tables |
 | 0048 | `0048_safety_grade_history.sql` | Create safety_grade_history table |
 | 0049 | `0049_audit_blacklist_index.sql` | Add composite index for blacklist pagination |
 | 0050 | `0050_audit_perf_indexes.sql` | Add composite covering index for mint_burn_events hot query |

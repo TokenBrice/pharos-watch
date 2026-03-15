@@ -88,7 +88,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      thresholds: { lines: 55 }, // Coverage gate — CI fails if lines < 55%
+      thresholds: { lines: 66 }, // Coverage gate — CI fails if lines < 66%
     },
   },
   resolve: { alias: { "@": path.resolve(__dirname, "src"), "@shared": path.resolve(__dirname, "shared") } },
@@ -105,7 +105,11 @@ export default defineConfig({
 - `worker/src/lib/__tests__/` — worker library tests (scoring, parsing)
 - `worker/src/api/__tests__/` — API handler contract tests
 - `worker/src/cron/__tests__/` — cron job tests (with degraded-mode scenarios)
-- Extracted DEX discovery/liquidity modules are still tested from `worker/src/cron/__tests__/` via module-prefixed files such as `discovery-scan.test.ts`, `dex-liquidity-scoring.test.ts`, and `dex-liquidity-persistence.test.ts`
+- `shared/lib/__tests__/` — shared library tests (format, classification invariants, peg rates, stablecoin registry)
+- `src/components/stablecoin-detail/__tests__/` — stablecoin detail component tests
+- `worker/src/cron/reserve-adapters/__tests__/` — reserve adapter tests (20+ adapters)
+- `worker/src/cron/dex-discovery/__tests__/` — DEX discovery module tests
+- `worker/src/cron/dex-liquidity/__tests__/` — DEX liquidity scoring module tests
 
 **Pattern:** `*.test.ts` / `*.test.tsx` — Vitest discovers files matching `**/*.{test,spec}.?(c|m)[jt]s?(x)`.
 
@@ -433,13 +437,13 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ## Coverage
 
-**Threshold:** 55% lines (enforced by `vitest.config.ts` thresholds)
+**Threshold:** 66% lines (enforced by `vitest.config.ts` thresholds)
 
 Run `npm test -- --coverage` to generate a detailed report. The V8 provider generates both text output and an `lcov` report for CI integration.
 
 ### Critical Coverage Gate
 
-In addition to the global 55% line threshold, CI enforces a critical-path gate via `npm run coverage:critical`:
+In addition to the global 66% line threshold, CI enforces a critical-path gate via `npm run coverage:critical`:
 
 - Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
 - Parses `coverage/lcov.info`
@@ -490,7 +494,7 @@ Current critical file set:
 - `worker/src/api/health.ts` _(explicit threshold: 60% lines)_
 - `worker/src/api/status.ts` _(explicit threshold: 40% lines)_
 - `worker/src/api/stablecoin-detail.ts` _(explicit threshold: 30% lines)_
-- `worker/src/cron/dex-liquidity/orchestrator.ts` _(explicit threshold: 55% lines)_
+- `worker/src/cron/dex-liquidity/orchestrator.ts` _(explicit threshold: 55% lines — below global, overridden per-file)_
 
 ### Critical Test Suites
 

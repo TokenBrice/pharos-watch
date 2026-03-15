@@ -33,7 +33,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 |---|---|---|---|
 | Worker CPU budget per invocation | `30000` ms | `worker/wrangler.toml` | Hard repo-configured CPU cap via `[limits].cpu_ms` |
 | Cron expressions / trigger slots | `10` | `worker/wrangler.toml`, `shared/lib/cron-jobs.ts` | Public status tooling groups around these trigger slots |
-| Status-tracked cron jobs | `23` | `shared/lib/cron-jobs.ts`, `worker/src/lib/cron-schedule.ts` | These are the jobs expected by `/api/status` |
+| Status-tracked cron jobs | `23` | `shared/lib/cron-jobs.ts` | These are the jobs expected by `/api/status` |
 | Runtime jobs actually scheduled | `24` | `shared/lib/cron-jobs.ts`, `worker/src/cron/announce-cemetery-additions.ts` | The extra runtime job is `announce-cemetery-additions`, intentionally excluded from shared status metadata |
 | Public API limiter | `300 requests / 60 seconds` per IP hash | `worker/src/handlers/http.ts`, `worker/src/lib/rate-limit.ts` | Enforced through D1-backed `public_api_rate_limit`; falls back to isolate-local memory if the distributed path fails |
 | Feedback limiter | `3 submissions / 10 minutes` per salted IP hash | `worker/src/api/feedback.ts`, `worker/src/lib/rate-limit.ts` | Separate from the general public API limiter |
@@ -54,7 +54,7 @@ Treat any new fetch-heavy work added to an existing trigger slot as competing fo
 
 | Area | Current repo budget | Source | Notes |
 |---|---|---|---|
-| DEX discovery overall deadline | `13 minutes` | `worker/src/cron/dex-discovery/orchestrator.ts` | Shared deadline for the discovery pass before persistence/cleanup tail work |
+| DEX discovery overall deadline | `20 minutes` | `worker/src/cron/dex-discovery/orchestrator.ts` | Shared deadline for the discovery pass before persistence/cleanup tail work |
 | Blacklist sync runtime budget | `7 minutes` | `worker/src/cron/sync-blacklist.ts` | Guardrail before the trigger wrapper times out |
 | Blacklist sync subrequest budget | `900` | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/evm-logs.ts` | Covers explorer/RPC calls for a single run |
 | Mint/burn global request budget | `200` | `worker/src/cron/sync-mint-burn.ts` | Shared per-run request ceiling |
@@ -93,7 +93,7 @@ Treat any new fetch-heavy work added to an existing trigger slot as competing fo
 |---|---|---|
 | CoinMarketCap price fallback | `10_000 ms` | `worker/src/cron/enrich-prices.ts` |
 | DexScreener search fallback | up to `5_000 ms` per request | `worker/src/cron/enrich-prices.ts` |
-| Blacklist explorer / RPC reads | `10_000 ms` | `worker/src/cron/sync-blacklist.ts` |
+| Blacklist explorer / RPC reads | `15_000 ms` | `worker/src/lib/fetch-retry.ts` (default timeout) |
 | Daily digest LLM call | `120_000 ms` | `worker/src/cron/daily-digest.ts` |
 
 ---

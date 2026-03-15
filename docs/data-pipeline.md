@@ -205,7 +205,7 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 | **Blacklist**         | Blacklist                                           | `CRON_20MIN`                                                       |
 | **Portfolio**         | Grades                                              | `CRON_15MIN`                                                       |
 
-Constants defined in `src/hooks/use-api-query.ts`: `CRON_15MIN` (15 min), `CRON_20MIN` (20 min), `CRON_30MIN` (30 min), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
+Constants defined in `src/lib/cron-intervals.ts`: `CRON_15MIN` (15 min), `CRON_20MIN` (20 min), `CRON_30MIN` (30 min), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
 
 The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. The banner triggers at 2x `staleTime` (i.e., 4x the cron interval), but hook-level freshness metadata can mark data degraded/stale sooner when the worker explicitly reports old cache age or stale-table warnings.
 

@@ -5,7 +5,7 @@ Two metadata entries are maintained outside the tracked public stablecoin set fo
 - `ust-terra`
 - `iron-iron-finance`
 
-They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from `shared/lib/stablecoins.ts`.
+They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from `shared/lib/stablecoins/` (the tracked stablecoin metadata modules).
 
 ---
 

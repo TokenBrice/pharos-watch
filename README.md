@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets for PSI) across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 157 stablecoins (plus 2 shadow assets for PSI) across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -18,7 +18,7 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 81 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 46 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 45 configured assets
 - **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
 - **Private operator status dashboard** — Access-gated cron health, cache freshness, and system monitoring on `ops.pharos.watch`
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
@@ -140,8 +140,9 @@ src/                              Frontend (Next.js static export)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
 
 functions/                        Cloudflare Pages Functions for ops-host gating and `/api/admin/*` proxying
-├── status/[[path]].ts            Host gate for `/status/` on `ops.pharos.watch`
-└── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
+├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
+├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
+└── lib/ops-origin.ts             Shared ops-origin resolution helper
 
 shared/                           Runtime-neutral shared boundary (`@shared/*`)
 ├── lib/                          Stablecoin metadata, supply/peg/classification/report-card logic, endpoint contract registry
@@ -202,8 +203,30 @@ Cloudflare D1 (SQLite database)
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
   ├── stability_index_samples → high-frequency PSI samples (sub-daily granularity)
   ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs
+  ├── stress_signals       → DEWS 15-min rolling stress signal samples
+  ├── stress_signal_history → historical stress signal snapshots
+  ├── mint_burn_events     → on-chain mint/burn event log (~1M rows)
+  ├── mint_burn_hourly     → hourly mint/burn aggregates (~630K rows)
+  ├── mint_burn_sync_state → per-config incremental sync progress
+  ├── mint_burn_run_state  → round-robin scheduling state
+  ├── yield_data           → per-source yield snapshots (multi-source keyed)
+  ├── yield_history        → per-source historical yield timeseries
+  ├── telegram_subscribers → Telegram bot subscriber registrations
+  ├── telegram_subscriptions → per-subscriber alert preferences
+  ├── telegram_pending_alerts → overflow alert queue
+  ├── safety_grade_history → daily safety grade change snapshots
+  ├── status_state         → cron/system status state machine
+  ├── status_transitions   → status transition log
+  ├── status_probe_runs    → external endpoint probe results
+  ├── status_discrepancy_state → data quality discrepancy tracking
+  ├── dex_pool_staging     → DEX discovery staging table
+  ├── discovery_candidates → candidate pools pending verification
+  ├── block_timestamp_cache → cached block-to-timestamp mappings
+  ├── cron_leases          → single-writer cron execution fencing
   ├── cron_runs            → cron execution log for health monitoring
+  ├── cron_run_progress    → per-job cron progress tracking
   ├── daily_digest         → AI-generated daily market summaries
+  ├── admin_idempotency_keys → idempotency keys for admin mutations
   ├── feedback_rate_limit  → IP-based rate limiting for feedback submissions
   └── public_api_rate_limit → Distributed per-minute buckets for non-admin public API traffic
 

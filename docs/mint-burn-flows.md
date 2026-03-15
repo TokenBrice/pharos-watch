@@ -57,7 +57,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 | `MIN_DATA_DAYS` | 7 | Days of history required before pressure shift returns a value |
 | `MIN_ACTIVITY_USD` | 50,000 | 24h absolute flow below this returns NR pressure shift |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
-| `ETHEREUM_SCAN_RANGE` | 50K (Ethereum) | Max block range per contract per cycle |
+| `MAX_SCAN_RANGE` | 50K | Max block range per contract per cycle |
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
 | Subrequest budget | 200 per cron run | Global Alchemy API call budget |
 | Per-config request cap | 60 critical / 25 extended | Prevents one hot config from consuming the full lane budget |
