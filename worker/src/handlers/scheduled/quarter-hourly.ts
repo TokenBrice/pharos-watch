@@ -1,3 +1,11 @@
+/**
+ * Quarter-hourly trigger (every 15 min):
+ *   sync-stablecoins (3) → snapshot-supply (0) → sync-fx-rates (2)
+ *   → stability-index (0) → compute-dews (0) → status-self-check (1)
+ *
+ * All jobs run sequentially in-slot to avoid cross-job connection spikes.
+ * Connection budget: 3/6 peak (sync-stablecoins phase)
+ */
 import { getCache } from "../../lib/db-cache";
 import { sendAlert } from "../../lib/alerts";
 

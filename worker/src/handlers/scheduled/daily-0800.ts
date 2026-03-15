@@ -1,3 +1,10 @@
+/**
+ * Daily 08:00 UTC trigger (0 8 * * *):
+ *   snapshot-supply (0) | snapshot-safety-grade-history (0) | snapshot-psi (0)  ← parallel, DB-only
+ *   fetch-tbill-rate (1) → sync-usds-status (1)  ← chained to avoid connection contention
+ *
+ * Connection budget: 1/6 peak (external-fetch jobs are chained)
+ */
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotSafetyGradeHistory } from "../../cron/snapshot-safety-grade-history";
 import { fetchTbillRate } from "../../cron/fetch-tbill-rate";

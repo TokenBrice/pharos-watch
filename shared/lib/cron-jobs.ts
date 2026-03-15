@@ -38,6 +38,8 @@ export interface CronJobDefinition {
   intervalSec: number;
   scheduleKey: CronScheduleKey;
   triggerMode: CronTriggerMode;
+  /** Maximum outbound fetch connections this job may use (of the 6-per-trigger pool). */
+  maxConnections?: number;
 }
 
 export interface CronJobMeta extends CronJobDefinition {
@@ -97,6 +99,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 900,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
+    maxConnections: 3, // DL stablecoins + supplemental tokens (DL coins + CG parallel) + enrich-prices
   },
   {
     job: "sync-stablecoin-charts",
@@ -105,6 +108,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 1800,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "shared",
+    maxConnections: 1, // Single DL stablecoincharts/all fetch
   },
   {
     job: "sync-fx-rates",
@@ -113,6 +117,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 900,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
+    maxConnections: 2, // Frankfurter/ExchangeRate sequential, then gold + silver in parallel
   },
   {
     job: "stability-index",
@@ -121,6 +126,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 900,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
+    maxConnections: 0, // DB-only computation
   },
   {
     job: "compute-dews",
@@ -129,6 +135,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 900,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
+    maxConnections: 0, // DB-only computation
   },
   {
     job: "status-self-check",
@@ -137,6 +144,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 900,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
+    maxConnections: 1, // Sequential self-URL probes (loopback or external)
   },
   {
     job: "dispatch-telegram-alerts",
@@ -145,6 +153,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 300,
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
+    maxConnections: 1, // Sequential Telegram sendMessage calls
   },
   {
     job: "sync-blacklist",
@@ -153,6 +162,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 1200,
     scheduleKey: "twentyMinuteOffset",
     triggerMode: "isolated",
+    maxConnections: 1, // Rate-limited sequential Etherscan/TronGrid/RPC calls
   },
   {
     job: "sync-mint-burn",
@@ -161,6 +171,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 1200,
     scheduleKey: "twentyMinuteMintBurn",
     triggerMode: "isolated",
+    maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
   },
   {
     job: "sync-mint-burn-extended",
@@ -169,6 +180,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 1200,
     scheduleKey: "twentyMinuteExtendedOffset",
     triggerMode: "isolated",
+    maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
   },
   {
     job: "sync-dex-discovery",
@@ -177,6 +189,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 1800,
     scheduleKey: "thirtyMinuteDexDiscovery",
     triggerMode: "isolated",
+    maxConnections: 1, // Rate-limited sequential GeckoTerminal/CoinGecko crawl
   },
   {
     job: "sync-dex-liquidity",
@@ -185,6 +198,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 1800,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "shared",
+    maxConnections: 4, // DL yields + protocols parallel (2), then Curve chains parallel (4 peak), then GT crawl (1)
   },
   {
     job: "sync-yield-data",
@@ -193,6 +207,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 1800,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "shared",
+    maxConnections: 2, // DL yields (1) + on-chain rates / CG price lookups (1)
   },
   {
     // Runs on the quarter-hourly trigger after a safe stablecoins cache write.
@@ -204,6 +219,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 86400,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
+    maxConnections: 0, // DB-only snapshot from cached stablecoins data
   },
   {
     job: "snapshot-safety-grade-history",
@@ -212,6 +228,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 86400,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
+    maxConnections: 0, // DB-only snapshot
   },
   {
     job: "fetch-tbill-rate",
@@ -220,6 +237,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 86400,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
+    maxConnections: 1, // FRED CSV then Treasury XML fallback (sequential)
   },
   {
     job: "snapshot-psi",
@@ -228,6 +246,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 86400,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
+    maxConnections: 0, // DB-only snapshot
   },
   {
     job: "sync-usds-status",
@@ -236,6 +255,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 86400,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
+    maxConnections: 1, // Sequential Etherscan eth_getStorageAt + eth_call probes
   },
   {
     job: "sync-live-reserves",
@@ -244,6 +264,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 3600,
     scheduleKey: "hourlyReserveSync",
     triggerMode: "shared",
+    maxConnections: 1, // Sequential per-adapter reserve fetches
   },
   {
     job: "sync-redemption-backstops",
@@ -252,6 +273,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 3600,
     scheduleKey: "hourlyReserveSync",
     triggerMode: "shared",
+    maxConnections: 0, // DB-only computation from cached stablecoins + liquidity data
   },
   {
     job: "sync-bluechip",
@@ -260,6 +282,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 86400,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
+    maxConnections: 1, // Sequential batched bluechip API fetches
   },
   {
     job: "daily-digest",
@@ -268,6 +291,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 86400,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
+    maxConnections: 1, // Anthropic LLM call, then Twitter + Telegram posts (sequential)
   },
   {
     job: "weekly-digest",
@@ -276,6 +300,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 604800,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
+    maxConnections: 1, // Anthropic LLM call, then Telegram post (sequential)
   },
   {
     job: "discovery-scan",
@@ -284,6 +309,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 86400,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
+    maxConnections: 1, // CoinGecko stablecoins market list fetch
   },
 ] as const;
 
