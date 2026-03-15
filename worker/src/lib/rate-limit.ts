@@ -24,6 +24,8 @@ const PUBLIC_API_RATE_LIMIT_SALT_FALLBACK = "pharos-public-api-rate-limit";
 const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
 let requestCount = 0;
 let lastPublicApiPruneBucket: number | null = null;
+let publicApiPruneFailures = 0;
+let feedbackPruneFailures = 0;
 
 function pruneExpired(now: number): void {
   for (const [ip, entry] of ipCounts.entries()) {
@@ -140,7 +142,11 @@ export async function checkPublicApiRateLimit(
       db.prepare("DELETE FROM public_api_rate_limit WHERE bucket_start < ?")
         .bind(bucketStart - windowSec * PUBLIC_API_PRUNE_WINDOW_MULTIPLIER)
         .run()
-        .catch((e) => console.warn("[public-api] rate-limit prune failed:", e));
+        .then(() => { publicApiPruneFailures = 0; })
+        .catch((e) => {
+          publicApiPruneFailures++;
+          console.warn(`[public-api] rate-limit prune failed (${publicApiPruneFailures} consecutive):`, e);
+        });
     }
 
     const count = row?.count ?? 0;
@@ -192,7 +198,11 @@ export async function checkFeedbackRateLimit(
   db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
     .bind(now - 3600)
     .run()
-    .catch((e) => console.warn("[feedback] rate-limit prune failed:", e));
+    .then(() => { feedbackPruneFailures = 0; })
+    .catch((e) => {
+      feedbackPruneFailures++;
+      console.warn(`[feedback] rate-limit prune failed (${feedbackPruneFailures} consecutive):`, e);
+    });
 
   return true;
 }
