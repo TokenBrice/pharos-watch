@@ -55,6 +55,15 @@ describe("mento adapter", () => {
     expect(result.warnings!.some((w) => w.code === "mento-low-total-pct")).toBe(true);
   });
 
+  it("throws on missing reserveComposition marker", () => {
+    expect(() => parseMentoReserveComposition("no data here")).toThrow("missing reserveComposition");
+  });
+
+  it("throws on missing reserveHoldings delimiter", () => {
+    const broken = `\\"reserveComposition\\":[{"symbol":"USDC","percent":40}]`;
+    expect(() => parseMentoReserveComposition(broken)).toThrow("missing reserveHoldings delimiter");
+  });
+
   it("emits an unknown-asset warning for symbols not in TOKEN_CONFIG", () => {
     const unknownTokenHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":50},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"NEW_TOKEN\\",\\"percent\\":10},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{}..."]);
 </script></body></html>`;
