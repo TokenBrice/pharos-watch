@@ -54,6 +54,7 @@ export async function confirmPendingDepegs(
   assets: PegAssetBase[],
   fxFallbackRates?: Record<string, number>,
   signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
 ): Promise<void> {
   throwIfAborted(signal);
   const pending = await db
@@ -147,11 +148,11 @@ export async function confirmPendingDepegs(
         const offchainRes = await fetchWithRetry(
           useDefiLlamaSecondary
             ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
-            : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`),
+            : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`, coingeckoApiKey ?? null),
           useDefiLlamaSecondary
             ? { headers: { "User-Agent": USER_AGENT }, signal }
             : {
-                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
                 signal,
               },
           1, // single retry

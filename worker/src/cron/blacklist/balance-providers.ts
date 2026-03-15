@@ -6,7 +6,7 @@ import {
   budgetExhausted,
 } from "../../lib/evm-logs";
 import { fetchEtherscanProxyHex, fetchJsonRpcHexAtUrl } from "../../lib/evm-rpc";
-import { getChainRpc } from "../../lib/chain-registry";
+import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 
 // dRPC network names for L2 chains (used to build RPC URL)
 const DRPC_NETWORK: Record<string, string> = {
@@ -108,10 +108,12 @@ async function fetchBalanceViaChainRpc(
   decimals: number,
   budget: SubrequestBudget,
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<number | null> {
   if (budgetExhausted(budget)) return null;
+  if (!chainRpcs) return null;
 
-  const rpc = getChainRpc(chainId);
+  const rpc = getChainRpc(chainRpcs, chainId);
   if (!rpc) return null;
 
   const addr = (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
@@ -151,6 +153,7 @@ export async function fetchEvmTokenBalance(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<number | null> {
   // Non-mainnet EVM chains prefer dRPC archive reads, but keep falling back through the
   // shared chain registry (Alchemy/public RPC) and Etherscan best-effort paths so one
@@ -178,6 +181,7 @@ export async function fetchEvmTokenBalance(
       config.decimals,
       budget,
       signal,
+      chainRpcs,
     );
     if (rpcAmount != null) return rpcAmount;
   }

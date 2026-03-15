@@ -20,6 +20,7 @@ export async function syncDexLiquidity(
   db: D1Database,
   graphApiKey: string | null,
   signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const failedSources: string[] = [];
@@ -138,7 +139,7 @@ export async function syncDexLiquidity(
 
   try {
     const cgFallback = await fetchCgTickersFallback(
-      metrics, priceObservations, signal, fallbackDeadlineMs, validationReferences,
+      metrics, priceObservations, signal, fallbackDeadlineMs, validationReferences, coingeckoApiKey,
     );
     cgTickerFallbackCoins = cgFallback.newPools.size;
     if (cgFallback.newPools.size > 0) mergeGtPools(metrics, cgFallback.newPools);

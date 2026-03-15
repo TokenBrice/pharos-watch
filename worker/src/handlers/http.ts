@@ -1,8 +1,7 @@
 import { route } from "../router";
 import type { RouteContext } from "../route-registry";
-import { initAlerts } from "../lib/alerts";
-import { initChainRpcs } from "../lib/chain-registry";
-import { initCoinGecko } from "../lib/coingecko";
+import { normalizeCgApiKey } from "../lib/coingecko";
+import { buildChainRpcs } from "../lib/chain-registry";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { checkPublicApiRateLimit } from "../lib/rate-limit";
 import { errorResponse } from "../lib/api-utils";
@@ -68,9 +67,6 @@ export async function handleHttpRequest(
   env: Env,
   ctx: ExecutionContext,
 ): Promise<Response> {
-  initCoinGecko(env.COINGECKO_API_KEY);
-  initAlerts(env.ALERT_WEBHOOK_URL);
-  initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
   const origin = resolveCorsOrigin(request, env.CORS_ORIGIN);
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
   const feedbackEnv = {
@@ -133,6 +129,8 @@ export async function handleHttpRequest(
     request,
     trustedAdmin: isAdmin,
     alchemyApiKey: env.ALCHEMY_API_KEY ?? null,
+    coingeckoApiKey: normalizeCgApiKey(env.COINGECKO_API_KEY),
+    chainRpcs: buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY),
     mintBurnFreshnessConfig,
     feedbackEnv,
     anthropicApiKey: env.ANTHROPIC_API_KEY ?? null,

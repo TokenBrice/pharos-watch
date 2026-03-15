@@ -171,6 +171,7 @@ export async function fetchCgTickersFallback(
   signal?: AbortSignal,
   deadlineMs?: number,
   references?: PriceValidationReferences,
+  coingeckoApiKey?: string | null,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -191,10 +192,10 @@ export async function fetchCgTickersFallback(
       return { newPools, priceObs };
     }
     try {
-      const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`);
+      const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`, coingeckoApiKey ?? null);
       const timeout = AbortSignal.timeout(10_000);
       const res = await fetchWithRetry(url, {
-        headers: cgHeaders({ "User-Agent": USER_AGENT }),
+        headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
       if (!res?.ok) {

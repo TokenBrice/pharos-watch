@@ -97,7 +97,6 @@ vi.mock("../lib/alerts", async (importOriginal) => {
   return {
     ...original,
     sendAlert: cronMocks.sendAlert,
-    initAlerts: vi.fn(),
   };
 });
 
@@ -110,10 +109,17 @@ vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/chain-registry", () => ({ initChainRpcs: vi.fn() }));
+vi.mock("../lib/chain-registry", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/chain-registry")>();
+  return {
+    ...original,
+    buildChainRpcs: vi.fn(() => new Map()),
+    getChainRpc: vi.fn(() => undefined),
+  };
+});
 vi.mock("../lib/coingecko", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/coingecko")>();
-  return { ...original, initCoinGecko: vi.fn() };
+  return { ...original };
 });
 
 import worker from "../index";

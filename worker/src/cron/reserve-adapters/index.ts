@@ -23,11 +23,13 @@ import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchTetherReserves } from "./tether";
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
 export interface AdapterContext {
   etherscanApiKey?: string;
   alchemyApiKey?: string;
+  chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
 export interface AdapterResult {

@@ -46,7 +46,7 @@ function resolveSupplementalPrice(
   return null;
 }
 
-async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal): Promise<PeggedAsset[]> {
+async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal, coingeckoApiKey?: string | null): Promise<PeggedAsset[]> {
   if (SILVER_METAS.length === 0) return [];
   throwIfAborted(signal);
 
@@ -58,9 +58,9 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
       fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined),
       cgIds
         ? fetchWithRetry(
-            cgUrl(`/coins/markets?vs_currency=usd&ids=${cgIds}`),
+            cgUrl(`/coins/markets?vs_currency=usd&ids=${cgIds}`, coingeckoApiKey ?? null),
             {
-              headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+              headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
               signal,
             },
           )
@@ -344,7 +344,7 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: Abor
   }
 }
 
-export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSignal): Promise<CoinGeckoMcapData> {
+export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSignal, coingeckoApiKey?: string | null): Promise<CoinGeckoMcapData> {
   const ids = [
     ...COMMODITY_TOKENS.filter((token) => !token.protocolSlug).map((token) => token.geckoId).filter(Boolean),
     ...FIAT_CG_METAS.map((token) => token.geckoId).filter(Boolean),
@@ -360,9 +360,9 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
   }
 
   const res = await fetchWithRetry(
-    cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`),
+    cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`, coingeckoApiKey ?? null),
     {
-      headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+      headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
       signal,
     },
   );
@@ -388,6 +388,7 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
 export async function fetchSupplementalTrackedTokens(
   cgData: CoinGeckoMcapData,
   signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
 ): Promise<{
   goldTokens: PeggedAsset[];
   silverTokens: PeggedAsset[];
@@ -396,7 +397,7 @@ export async function fetchSupplementalTrackedTokens(
   throwIfAborted(signal);
   const [goldTokens, silverTokens, fiatCgTokens] = await Promise.all([
     fetchGoldTokens(cgData, signal),
-    fetchSilverTokens(cgData, signal),
+    fetchSilverTokens(cgData, signal, coingeckoApiKey),
     fetchFiatCoinGeckoTokens(cgData, signal),
   ]);
 

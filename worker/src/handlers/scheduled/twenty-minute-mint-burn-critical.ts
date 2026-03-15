@@ -65,6 +65,7 @@ export async function runTwentyMinuteMintBurnCriticalSlot(runtime: ScheduledRunt
           ? runtime.mintBurnFreshnessConfig.staleCritSec
           : runtime.mintBurnFreshnessConfig.staleWarnSec;
         await sendAlert(
+          runtime.alertWebhookUrl,
           `Mint/burn staleness (${severity.toUpperCase()})`,
           `Threshold=${Math.round(threshold / 3600)}h, symbols=${details.join(", ")}`,
         );

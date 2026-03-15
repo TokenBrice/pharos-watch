@@ -39,6 +39,7 @@ export async function fetchCgPools(
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
   deadlineMs?: number,
+  coingeckoApiKey?: string | null,
 ): Promise<{ newPools: Map<string, CgNewPool[]>; priceObs: Map<string, DexPriceObs[]>; stats: GtCrawlResult["stats"] }> {
   const newPools = new Map<string, CgNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -72,7 +73,7 @@ export async function fetchCgPools(
       await onchainRateLimit(requestCount, abortSignal);
       return true;
     },
-    fetchPools: (tokenAddress, cgChain, abortSignal) => fetchCgTokenPools(cgChain, tokenAddress, abortSignal),
+    fetchPools: (tokenAddress, cgChain, abortSignal) => fetchCgTokenPools(cgChain, tokenAddress, abortSignal, coingeckoApiKey ?? null),
     parsePool: (pool) => {
       const a = pool.attributes;
       return {

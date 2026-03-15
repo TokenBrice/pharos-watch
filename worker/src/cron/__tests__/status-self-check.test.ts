@@ -235,6 +235,7 @@ describe("runStatusSelfCheck", () => {
 
     expect(sendAlertMock).toHaveBeenCalledTimes(1);
     expect(sendAlertMock).toHaveBeenCalledWith(
+      null,
       "Status probe failures detected",
       expect.stringContaining("streak=3"),
     );

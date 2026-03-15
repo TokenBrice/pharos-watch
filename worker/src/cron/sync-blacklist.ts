@@ -20,7 +20,7 @@ import {
   resolveBlockTimestamps,
   type AlchemyLogEntry,
 } from "../lib/alchemy-logs";
-import { getChainRpc } from "../lib/chain-registry";
+import { getChainRpc, type ChainRpcConfig } from "../lib/chain-registry";
 import { fetchEvmTokenBalance } from "./blacklist/balance-providers";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -174,8 +174,10 @@ async function resolveRpcLogTarget(
   chainId: string,
   budget: SubrequestBudget,
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<{ rpcUrl: string; chainHead: number; scanWindowBlocks: number | null } | null> {
-  const rpc = getChainRpc(chainId);
+  if (!chainRpcs) return null;
+  const rpc = getChainRpc(chainRpcs, chainId);
   if (!rpc || rpc.type !== "evm") return null;
 
   const rpcTargets = [
@@ -211,6 +213,7 @@ async function fetchEvmEventsIncremental(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<{
   rows: BlacklistRow[];
   maxBlock: number;
@@ -242,7 +245,7 @@ async function fetchEvmEventsIncremental(
   let incomplete = false;
   let rpcTargetPromise: Promise<{ rpcUrl: string; chainHead: number; scanWindowBlocks: number | null } | null> | null = null;
   const getRpcTarget = (): Promise<{ rpcUrl: string; chainHead: number; scanWindowBlocks: number | null } | null> => {
-    rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, budget, signal);
+    rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, budget, signal, chainRpcs);
     return rpcTargetPromise;
   };
 
@@ -496,6 +499,7 @@ async function enrichRowBalances(
   budget: SubrequestBudget,
   deadlineMs: number,
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<{ attempted: number; succeeded: number; failed: number }> {
   const counters = { attempted: 0, succeeded: 0, failed: 0 };
   for (const row of rows) {
@@ -527,6 +531,7 @@ async function enrichRowBalances(
           etherscanLimiter,
           budget,
           signal,
+          chainRpcs,
         );
         row.amount = amount;
         if (amount != null) {
@@ -607,6 +612,7 @@ async function backfillAmounts(
   budget: SubrequestBudget,
   deadlineMs: number,
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<{ runtimeBudgetReached: boolean }> {
   if (runtimeBudgetReached(deadlineMs)) {
     return { runtimeBudgetReached: true };
@@ -674,6 +680,7 @@ async function backfillAmounts(
           etherscanLimiter,
           budget,
           signal,
+          chainRpcs,
         );
       }
     } else if (config.chain.type === "tron") {
@@ -690,6 +697,7 @@ async function backfillAmounts(
         etherscanLimiter,
         budget,
         signal,
+        chainRpcs,
       );
     }
 
@@ -745,6 +753,7 @@ export async function syncBlacklist(
   externalEtherscanRL?: RateLimitedFetch,
   signal?: AbortSignal,
   onProgress?: CronProgressReporter,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<SyncBlacklistResult> {
   const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);
@@ -798,6 +807,7 @@ export async function syncBlacklist(
       budget,
       deadlineMs,
       signal,
+      chainRpcs,
     );
     runtimeBudgetHit ||= backfill.runtimeBudgetReached;
   } catch (err) {
@@ -876,6 +886,7 @@ export async function syncBlacklist(
           budget,
           deadlineMs,
           signal,
+          chainRpcs,
         );
         enrichCounters.attempted += tronEnrichCounters.attempted;
         enrichCounters.succeeded += tronEnrichCounters.succeeded;
@@ -921,6 +932,7 @@ export async function syncBlacklist(
           etherscanLimiter,
           budget,
           signal,
+          chainRpcs,
         );
         if (result.usedRpcLogs) {
           rpcLogConfigs++;
@@ -935,6 +947,7 @@ export async function syncBlacklist(
           budget,
           deadlineMs,
           signal,
+          chainRpcs,
         );
         enrichCounters.attempted += evmEnrichCounters.attempted;
         enrichCounters.succeeded += evmEnrichCounters.succeeded;

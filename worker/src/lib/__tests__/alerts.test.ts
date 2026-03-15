@@ -1,15 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { initAlerts, sendAlert } from "../alerts";
+import { sendAlert } from "../alerts";
+
+const TEST_WEBHOOK = "https://hooks.slack.com/services/test";
 
 describe("sendAlert", () => {
-  beforeEach(() => {
-    initAlerts("https://hooks.slack.com/services/test");
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
-    initAlerts(undefined);
   });
 
   it("returns false and logs when webhook responds with non-2xx", async () => {
@@ -17,7 +14,7 @@ describe("sendAlert", () => {
     vi.stubGlobal("fetch", fetchMock);
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const ok = await sendAlert("Cron failure", "Something failed");
+    const ok = await sendAlert(TEST_WEBHOOK, "Cron failure", "Something failed");
 
     expect(ok).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -30,7 +27,7 @@ describe("sendAlert", () => {
     const fetchMock = vi.fn(async () => new Response("", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const ok = await sendAlert("Circuit closed", "Recovered");
+    const ok = await sendAlert(TEST_WEBHOOK, "Circuit closed", "Recovered");
 
     expect(ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -43,9 +40,19 @@ describe("sendAlert", () => {
     vi.stubGlobal("fetch", fetchMock);
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const ok = await sendAlert("Data stale", "Cache too old");
+    const ok = await sendAlert(TEST_WEBHOOK, "Data stale", "Cache too old");
 
     expect(ok).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith("[alerts] Failed to send webhook:", expect.any(Error));
+  });
+
+  it("returns false when webhook URL is null", async () => {
+    const ok = await sendAlert(null, "Title", "Message");
+    expect(ok).toBe(false);
+  });
+
+  it("returns false when webhook URL is undefined", async () => {
+    const ok = await sendAlert(undefined, "Title", "Message");
+    expect(ok).toBe(false);
   });
 });

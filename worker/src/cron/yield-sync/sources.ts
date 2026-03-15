@@ -1,4 +1,4 @@
-import { getChainRpc } from "../../lib/chain-registry";
+import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import {
   CIRCUIT_SOURCE,
@@ -107,12 +107,17 @@ export async function loadDlStablecoinPools(
 
 export async function fetchOnChainRates(
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<Map<string, { rate: number }>> {
   const results = new Map<string, { rate: number }>();
 
   for (const config of ON_CHAIN_RATE_CONFIGS) {
     try {
-      const rpc = getChainRpc(config.chain);
+      if (!chainRpcs) {
+        console.warn(`[yield] No chain RPCs configured for on-chain rate ${config.stablecoinId}`);
+        continue;
+      }
+      const rpc = getChainRpc(chainRpcs, config.chain);
       if (!rpc) {
         console.warn(`[yield] No RPC for chain ${config.chain}`);
         continue;
@@ -125,6 +130,7 @@ export async function fetchOnChainRates(
         ),
         signal,
         timeoutMs: 10_000,
+        chainRpcs,
       });
       if (raw == null) {
         console.warn(`[yield] On-chain rate returned null for ${config.stablecoinId} (${config.chain}:${config.contract})`);
@@ -162,12 +168,13 @@ async function fetchEthCallUint256(
 async function fetchCoinGeckoUsdPrice(
   geckoId: string,
   signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
 ): Promise<number | null> {
   try {
     const res = await fetchWithRetry(
-      cgUrl(`/simple/price?ids=${encodeURIComponent(geckoId)}&vs_currencies=usd`),
+      cgUrl(`/simple/price?ids=${encodeURIComponent(geckoId)}&vs_currencies=usd`, coingeckoApiKey ?? null),
       {
-        headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+        headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
         signal,
       },
       1,
@@ -185,15 +192,21 @@ async function fetchCoinGeckoUsdPrice(
 
 export async function fetchBprotocolLqtyOnlySource(
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  coingeckoApiKey?: string | null,
 ): Promise<ResolvedYield | null> {
-  const rpc = getChainRpc("ethereum");
+  if (!chainRpcs) {
+    console.warn("[yield] No chain RPCs provided for B.Protocol LQTY-only source");
+    return null;
+  }
+  const rpc = getChainRpc(chainRpcs, "ethereum");
   if (!rpc) {
     console.warn("[yield] No Ethereum RPC configured for B.Protocol LQTY-only source");
     return null;
   }
 
   try {
-    const lqtyPriceUsd = await fetchCoinGeckoUsdPrice(LIQUITY_LQTY_GECKO_ID, signal);
+    const lqtyPriceUsd = await fetchCoinGeckoUsdPrice(LIQUITY_LQTY_GECKO_ID, signal, coingeckoApiKey);
     if (lqtyPriceUsd == null) return null;
 
     let totalLusdDepositsRaw: bigint | null = null;

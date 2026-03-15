@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import type { ChainRpcConfig } from "../../../lib/chain-registry";
 
 const getChainRpcMock = vi.fn();
 const fetchWithRetryMock = vi.fn();
@@ -19,16 +20,22 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
+const testChainRpcs = new Map<string, ChainRpcConfig>([
+  ["ethereum", {
+    chainId: "ethereum",
+    chainName: "Ethereum",
+    type: "evm",
+    rpcUrl: "https://rpc.example",
+    explorerUrl: "https://etherscan.io",
+  }],
+]);
+
 describe("fetchErc4626SingleAssetReserves", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getChainRpcMock.mockReturnValue({
-      chainId: "ethereum",
-      chainName: "Ethereum",
-      type: "evm",
-      rpcUrl: "https://rpc.example",
-      explorerUrl: "https://etherscan.io",
-    });
+    getChainRpcMock.mockImplementation((_chainRpcs: Map<string, unknown>, chainId: string) =>
+      testChainRpcs.get(chainId),
+    );
   });
 
   it("returns a 100% single-asset slice after probing ERC-4626 state", async () => {
@@ -53,6 +60,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       coin!,
       coin!.liveReservesConfig!,
       new AbortController().signal,
+      { chainRpcs: testChainRpcs },
     );
 
     expect(result.slices).toEqual([
@@ -95,6 +103,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       coin!,
       coin!.liveReservesConfig!,
       new AbortController().signal,
+      { chainRpcs: testChainRpcs },
     );
 
     expect(result.warnings).toEqual([

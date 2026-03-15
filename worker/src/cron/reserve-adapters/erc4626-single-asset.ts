@@ -68,8 +68,8 @@ export async function fetchErc4626SingleAssetReserves(
   }
 
   const [assetResult, totalAssetsResult] = await Promise.all([
-    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_ASSET_SELECTOR, signal),
-    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_TOTAL_ASSETS_SELECTOR, signal),
+    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_ASSET_SELECTOR, signal, _ctx?.chainRpcs),
+    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_TOTAL_ASSETS_SELECTOR, signal, _ctx?.chainRpcs),
   ]);
 
   if (!totalAssetsResult) {

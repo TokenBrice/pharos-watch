@@ -57,7 +57,7 @@ const PUBLIC_RPCS: Record<string, string> = {
   celo: "https://forno.celo.org",
 };
 
-function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): ChainRpcConfig[] {
+export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map<string, ChainRpcConfig> {
   const configs: ChainRpcConfig[] = [];
 
   for (const [chainId, slug] of Object.entries(ALCHEMY_CHAINS)) {
@@ -125,18 +125,14 @@ function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): ChainRpcCo
     });
   }
 
-  return configs;
+  const map = new Map<string, ChainRpcConfig>();
+  for (const config of configs) {
+    map.set(config.chainId, config);
+  }
+  return map;
 }
 
-/** Cached configs — call initChainRpcs() once at startup, then use getChainRpc() */
-let chainRpcs: ChainRpcConfig[] = [];
-
-/** Initialize chain RPC configs with API keys from environment */
-export function initChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): void {
-  chainRpcs = buildChainRpcs(alchemyApiKey, drpcApiKey);
-}
-
-/** Look up RPC config by chain ID */
-export function getChainRpc(chainId: string): ChainRpcConfig | undefined {
-  return chainRpcs.find((c) => c.chainId === chainId);
+/** Look up RPC config by chain ID from a pre-built map */
+export function getChainRpc(chainRpcs: Map<string, ChainRpcConfig>, chainId: string): ChainRpcConfig | undefined {
+  return chainRpcs.get(chainId);
 }

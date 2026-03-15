@@ -25,6 +25,7 @@ import {
   detectWarningSignals,
 } from "./yield-helpers";
 import { LENDING_PROTOCOL_LABELS } from "./yield-config";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 import {
   fetchOnChainRates,
   loadDlStablecoinPools,
@@ -364,7 +365,7 @@ function buildSelectionReason(source: EvaluatedYieldSource, rejectedPeers: numbe
 
 // -- Main sync function ------------------------------------------------------
 
-export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainRpcs?: Map<string, ChainRpcConfig>, coingeckoApiKey?: string | null): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
   const sevenDaysAgoSec = startSec - 7 * 86400;
   const yieldCoins = YIELD_BEARING_STABLECOINS;
@@ -374,7 +375,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   }
 
   const { pools: dlPools, meta: dlPoolsMeta } = await loadDlStablecoinPools(db, signal);
-  const onChainRates = await fetchOnChainRates(signal);
+  const onChainRates = await fetchOnChainRates(signal, chainRpcs);
   const riskFreeRateMeta = await loadRiskFreeRateSnapshot(db);
   const riskFreeRate = riskFreeRateMeta.rate;
 
@@ -420,6 +421,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     safetyScores,
     riskFreeRate,
     signal,
+    chainRpcs,
+    coingeckoApiKey,
   });
 
   const resolvedWithYield = resolved.filter((entry) => entry.yield != null);

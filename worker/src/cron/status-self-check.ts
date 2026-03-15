@@ -1,5 +1,6 @@
 import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
+
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { evaluateStatusAndPersist } from "../api/status";
 import { route } from "../router";
@@ -315,6 +316,7 @@ export async function runStatusSelfCheck(
   signal?: AbortSignal,
   ctx?: ExecutionContext,
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
+  alertWebhookUrl?: string | null,
 ): Promise<CronResult> {
   const probeBaseUrl = resolveProbeBaseUrl(selfUrl);
   const probeMode = shouldUseInternalProbe(probeBaseUrl, ctx) ? "internal-router" : "external-http";
@@ -427,6 +429,7 @@ export async function runStatusSelfCheck(
   let discrepancyAlertSent = false;
   if (shouldDiscrepancyAlert) {
     discrepancyAlertSent = await sendAlert(
+      alertWebhookUrl ?? null,
       "Status divergence detected",
       `effective=${effectiveStatus}, raw=${raw.rawOverallStatus}, probe=${probeStatus}, ` +
       `delta=${discrepancy.severityDelta}, streak=${discrepancyState.consecutiveDivergent}`,
@@ -439,6 +442,7 @@ export async function runStatusSelfCheck(
   let probeFailureAlertSent = false;
   if (shouldProbeFailureAlert) {
     probeFailureAlertSent = await sendAlert(
+      alertWebhookUrl ?? null,
       "Status probe failures detected",
       `probe=${probeStatus}, failures=${failCount}/${sampleCount}, streak=${discrepancyState.consecutiveProbeFailures}`,
     );

@@ -1,6 +1,8 @@
 import { createLeaseOwner, runCronWithLease } from "../../lib/cron-lease";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
-import { sendAlert } from "../../lib/alerts";
+import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
+import { normalizeCgApiKey } from "../../lib/coingecko";
+import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { parseCsvEnv, type Env } from "../../lib/env";
 import {
   resolveMintBurnFreshnessConfig,
@@ -14,6 +16,9 @@ export interface ScheduledRuntimeContext {
   mintBurnDisabledIds: string[];
   mintBurnDisabledSymbols: string[];
   mintBurnFreshnessConfig: MintBurnFreshnessConfig;
+  coingeckoApiKey: string | null;
+  alertWebhookUrl: string | null;
+  chainRpcs: Map<string, ChainRpcConfig>;
   runLeasedCron: (
     job: string,
     fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
@@ -81,6 +86,9 @@ export function createScheduledRuntimeContext(
   const mintBurnDisabledIds = parseCsvEnv(env.MINT_BURN_DISABLED_IDS);
   const mintBurnDisabledSymbols = parseCsvEnv(env.MINT_BURN_DISABLED_SYMBOLS);
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
+  const coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
+  const alertWebhookUrl = normalizeWebhookUrl(env.ALERT_WEBHOOK_URL);
+  const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
 
   return {
     db,
@@ -89,6 +97,9 @@ export function createScheduledRuntimeContext(
     mintBurnDisabledIds,
     mintBurnDisabledSymbols,
     mintBurnFreshnessConfig,
+    coingeckoApiKey,
+    alertWebhookUrl,
+    chainRpcs,
     runLeasedCron: (job, fn) =>
       logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
         const leaseOwner = createLeaseOwner(job);
@@ -144,6 +155,6 @@ export function createScheduledRuntimeContext(
         }
 
         return { ...result, metadata };
-      }, sendAlert),
+      }, (title, message) => sendAlert(alertWebhookUrl, title, message)),
   };
 }

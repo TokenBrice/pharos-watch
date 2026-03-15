@@ -282,10 +282,10 @@ describe("syncStablecoins", () => {
     );
     expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
     expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "defillama-stablecoins");
-    expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined);
+    expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined, undefined);
     expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
-    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
     const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
     expect(primaryPriceAssets).toHaveLength(60);
     const enrichmentAssets = vi.mocked(enrichMissingPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
@@ -509,6 +509,7 @@ describe("syncStablecoins", () => {
     expect(metadata.cacheWriteMode).toBe("blocked-invalid-payload");
     expect(metadata.downstreamSafe).toBe(false);
     expect(sendAlert).toHaveBeenCalledWith(
+      null,
       "Stablecoins schema validation warning",
       expect.stringContaining("forced-test-validation-failure"),
     );
@@ -542,6 +543,7 @@ describe("syncStablecoins", () => {
     expect(metadata.validationFailures).toBe(1);
     expect(metadata.validationContext).toBe("fallback");
     expect(sendAlert).toHaveBeenCalledWith(
+      null,
       "Stablecoins schema validation warning",
       expect.stringContaining("context=fallback"),
     );
@@ -925,7 +927,7 @@ describe("syncStablecoins", () => {
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(60);
-    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), { peggedUSD: 1 }, undefined);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), { peggedUSD: 1 }, undefined, undefined);
 
     const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
     expect(stablecoinsWrite).toBeDefined();

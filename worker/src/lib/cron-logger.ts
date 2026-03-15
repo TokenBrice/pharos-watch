@@ -1,5 +1,4 @@
 import { SECONDS } from "./time-constants";
-import { sendAlert } from "./alerts";
 import { CRON_TIMEOUT_MS, CronTimeoutError, DEFAULT_CRON_TIMEOUT_MS, runWithOverloadRetry } from "./cron-lease";
 
 // --- Cron run logging types ---
@@ -157,8 +156,9 @@ export async function logCronRun(
       console.error(`[db] Failed to log cron error for ${job}:`, logErr);
     }
     // Alert on cron failure (non-blocking)
-    const emitFailureAlert = alertFn ? alertFn : sendAlert;
-    void Promise.resolve(emitFailureAlert(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`)).catch(() => {});
+    if (alertFn) {
+      void Promise.resolve(alertFn(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`)).catch(() => {});
+    }
     throw e;
   } finally {
     if (timeoutHandle) clearTimeout(timeoutHandle);

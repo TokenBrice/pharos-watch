@@ -1,14 +1,14 @@
 /**
  * Simple webhook alerting for cron failures and health degradation.
  * Supports Discord and Slack webhook URLs (auto-detected by format).
- * No-op if ALERT_WEBHOOK_URL is not configured.
+ * No-op if no webhook URL is provided.
  */
 
-let webhookUrl: string | null = null;
 const MAX_FAILURE_BODY_CHARS = 300;
 
-export function initAlerts(url: string | undefined): void {
-  webhookUrl = url?.trim() || null;
+/** Normalize a raw env URL to a trimmed string or null. */
+export function normalizeWebhookUrl(url: string | undefined): string | null {
+  return url?.trim() || null;
 }
 
 function truncateFailureBody(body: string): string {
@@ -16,7 +16,7 @@ function truncateFailureBody(body: string): string {
   return `${body.slice(0, MAX_FAILURE_BODY_CHARS)}...`;
 }
 
-export async function sendAlert(title: string, message: string): Promise<boolean> {
+export async function sendAlert(webhookUrl: string | null | undefined, title: string, message: string): Promise<boolean> {
   if (!webhookUrl) return false;
 
   try {

@@ -77,7 +77,7 @@ export async function crawlCoin(
       cgQueriedChains.add(chain);
 
       try {
-        const rawPools = await fetchCgTokenPools(cgNetwork, address.toLowerCase(), signal);
+        const rawPools = await fetchCgTokenPools(cgNetwork, address.toLowerCase(), signal, cgApiKey);
         for (const pool of rawPools) {
           const attrs = pool.attributes;
           const poolAddress = attrs.address?.toLowerCase();
@@ -438,10 +438,10 @@ export async function crawlCoin(
     const geckoId = stablecoinMeta?.geckoId;
     if (geckoId) {
       try {
-        const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`);
+        const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`, cgApiKey);
         const timeout = AbortSignal.timeout(10_000);
         const res = await fetchWithRetry(url, {
-          headers: cgHeaders({ "User-Agent": USER_AGENT }),
+          headers: cgHeaders({ "User-Agent": USER_AGENT }, cgApiKey),
           signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
         });
         if (res?.ok) {

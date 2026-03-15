@@ -146,6 +146,7 @@ export async function fetchPrimaryPrices(
   db: D1Database,
   signal?: AbortSignal,
   references?: PriceValidationReferences,
+  coingeckoApiKey?: string | null,
 ): Promise<{ results: Map<string, PrimaryPriceResult>; stats: PriceValidationStats; cgPrices: Map<string, number> }> {
   throwIfAborted(signal);
   const results = new Map<string, PrimaryPriceResult>();
@@ -248,9 +249,9 @@ export async function fetchPrimaryPrices(
             const batch = geckoIds.slice(i, i + BATCH_SIZE);
             const ids = batch.join(",");
             const res = await fetchWithRetry(
-              cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd`),
+              cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd`, coingeckoApiKey ?? null),
               {
-                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
                 signal,
               },
             );

@@ -135,6 +135,7 @@ async function cleanupOldDismissed(db: D1Database): Promise<number> {
 export async function runDiscoveryScan(
   db: D1Database,
   signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
 ): Promise<CronResult> {
   const trackedGeckoIds = new Set(
     TRACKED_STABLECOINS.map((s) => s.geckoId).filter(Boolean) as string[],
@@ -147,9 +148,9 @@ export async function runDiscoveryScan(
   if (cgAllowed) {
     try {
       const res = await fetchWithRetry(
-        cgUrl("/coins/markets?category=stablecoins&vs_currency=usd&per_page=250&order=market_cap_desc"),
+        cgUrl("/coins/markets?category=stablecoins&vs_currency=usd&per_page=250&order=market_cap_desc", coingeckoApiKey ?? null),
         {
-          headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+          headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
           signal,
         },
       );

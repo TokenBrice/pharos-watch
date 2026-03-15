@@ -13,12 +13,8 @@ import { sleepWithSignal } from "./abort";
 export { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "@shared/lib/chain-provider-registry";
 
 /** Check if CoinGecko onchain API is available (API key configured) */
-let onchainAvailable = false;
-export function initOnchainAvailability(apiKey: string | undefined): void {
-  onchainAvailable = !!apiKey?.trim();
-}
-export function isOnchainAvailable(): boolean {
-  return onchainAvailable;
+export function isOnchainAvailable(apiKey: string | null): boolean {
+  return !!apiKey;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,10 +84,11 @@ export async function fetchCgTokenPools(
   network: string,
   address: string,
   signal?: AbortSignal,
+  apiKey: string | null = null,
 ): Promise<CgPool[]> {
-  const url = cgUrl(`/onchain/networks/${network}/tokens/${address}/pools?include=base_token,quote_token&page=1`);
+  const url = cgUrl(`/onchain/networks/${network}/tokens/${address}/pools?include=base_token,quote_token&page=1`, apiKey);
   const res = await fetchWithRetry(url, {
-    headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }),
+    headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
     signal,
   }, 1); // 1 retry max to keep wall time bounded
   if (!res?.ok) return [];
@@ -108,12 +105,13 @@ export async function fetchCgTokensBatch(
   network: string,
   addresses: string[],
   signal?: AbortSignal,
+  apiKey: string | null = null,
 ): Promise<CgToken[]> {
   if (addresses.length === 0) return [];
   const joined = addresses.join(",");
-  const url = cgUrl(`/onchain/networks/${network}/tokens/multi/${joined}`);
+  const url = cgUrl(`/onchain/networks/${network}/tokens/multi/${joined}`, apiKey);
   const res = await fetchWithRetry(url, {
-    headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }),
+    headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
     signal,
   }, 1);
   if (!res?.ok) return [];

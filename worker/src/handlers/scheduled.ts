@@ -1,6 +1,3 @@
-import { initChainRpcs } from "../lib/chain-registry";
-import { initAlerts } from "../lib/alerts";
-import { initCoinGecko } from "../lib/coingecko";
 import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
 import type { Env } from "../lib/env";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
@@ -35,10 +32,6 @@ export async function handleScheduledEvent(
   env: Env,
   ctx: ExecutionContext,
 ): Promise<void> {
-  initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
-  initAlerts(env.ALERT_WEBHOOK_URL);
-  initCoinGecko(env.COINGECKO_API_KEY);
-
   const runtime = createScheduledRuntimeContext(env, ctx);
   const runner = SLOT_RUNNER_BY_SCHEDULE[event.cron];
   if (!runner) {

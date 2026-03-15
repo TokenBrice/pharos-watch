@@ -135,6 +135,7 @@ describe("circuit-breaker", () => {
       const db = mockDbWithCircuit("src", stored);
       await recordOutcome(db, "src", true);
       expect(mockedAlert).toHaveBeenCalledWith(
+        null,
         "Circuit closed: src",
         expect.stringContaining("recovered"),
       );
@@ -146,6 +147,7 @@ describe("circuit-breaker", () => {
       const db = mockDbWithCircuit("src", stored);
       await recordOutcome(db, "src", true);
       expect(mockedAlert).toHaveBeenCalledWith(
+        null,
         "Circuit closed: src",
         expect.stringContaining("recovered"),
       );
@@ -175,6 +177,7 @@ describe("circuit-breaker", () => {
       const db = mockDbWithCircuit("src", stored);
       await recordOutcome(db, "src", false);
       expect(mockedAlert).toHaveBeenCalledWith(
+        null,
         "Circuit OPEN: src",
         expect.stringContaining("3 consecutive"),
       );

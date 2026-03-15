@@ -22,6 +22,7 @@ export async function runTwentyMinuteBlacklistSlot(runtime: ScheduledRuntimeCont
       etherscanRL,
       signal,
       reportProgress,
+      runtime.chainRpcs,
     ),
   );
   runtime.ctx.waitUntil(blacklistJob);

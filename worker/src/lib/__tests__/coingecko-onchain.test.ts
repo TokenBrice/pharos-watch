@@ -14,7 +14,6 @@ import { fetchWithRetry } from "../fetch-retry";
 import {
   fetchCgTokenPools,
   fetchCgTokensBatch,
-  initOnchainAvailability,
   isOnchainAvailable,
   onchainRateLimit,
   parseCgPoolVolume,
@@ -22,16 +21,13 @@ import {
 
 describe("coingecko-onchain", () => {
   afterEach(() => {
-    initOnchainAvailability(undefined);
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
   it("tracks API-key availability and rate-limit only after the first request", async () => {
-    initOnchainAvailability("cg-key");
-    expect(isOnchainAvailable()).toBe(true);
-    initOnchainAvailability(undefined);
-    expect(isOnchainAvailable()).toBe(false);
+    expect(isOnchainAvailable("cg-key")).toBe(true);
+    expect(isOnchainAvailable(null)).toBe(false);
 
     const signal = new AbortController().signal;
     await onchainRateLimit(0, signal);

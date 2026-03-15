@@ -242,7 +242,7 @@ import { syncYieldData } from "../sync-yield-data";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCache } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
-import { getChainRpc } from "../../lib/chain-registry";
+import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import * as safetyScoresModule from "../../lib/safety-scores";
@@ -713,7 +713,16 @@ describe("syncYieldData", () => {
       }),
     );
 
-    const result = await syncYieldData(db);
+    const testChainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example/eth",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+    const result = await syncYieldData(db, undefined, testChainRpcs);
 
     expect(result.itemCount).toBe(2);
 

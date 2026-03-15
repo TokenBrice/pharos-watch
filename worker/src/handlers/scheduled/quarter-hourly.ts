@@ -1,5 +1,6 @@
 import { getCache } from "../../lib/db-cache";
 import { sendAlert } from "../../lib/alerts";
+
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
@@ -26,7 +27,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
     // Run sequentially in-slot to avoid cross-job connection spikes.
     const stablecoinsResult = await runQuarterHourlyJob(
       "sync-stablecoins",
-      (signal) => syncStablecoins(runtime.db, runtime.env.CMC_API_KEY, signal),
+      (signal) => syncStablecoins(runtime.db, runtime.env.CMC_API_KEY, signal, runtime.alertWebhookUrl, runtime.coingeckoApiKey),
     );
     const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
     const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;
@@ -61,6 +62,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
         signal,
         runtime.ctx,
         runtime.mintBurnFreshnessConfig,
+        runtime.alertWebhookUrl,
       ),
     );
 
@@ -69,7 +71,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
       if (cached) {
         const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
         if (age > 1800) {
-          await sendAlert("Data stale", `Stablecoins cache is ${Math.round(age / 60)}min old (expected <20min)`);
+          await sendAlert(runtime.alertWebhookUrl, "Data stale", `Stablecoins cache is ${Math.round(age / 60)}min old (expected <20min)`);
         }
       }
     } catch {

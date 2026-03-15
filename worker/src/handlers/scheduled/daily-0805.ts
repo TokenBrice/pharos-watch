@@ -16,5 +16,5 @@ export function runDaily0805Slot(runtime: ScheduledRuntimeContext): void {
       signal,
     );
   }));
-  runtime.ctx.waitUntil(runtime.runLeasedCron("discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal)));
+  runtime.ctx.waitUntil(runtime.runLeasedCron("discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey)));
 }

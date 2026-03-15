@@ -97,7 +97,7 @@ export async function shouldAttemptFetch(db: D1Database, source: string): Promis
  * D1 lacks the CAS primitives needed for strict single-probe semantics
  * without adding a separate coordination mechanism.
  */
-export async function recordOutcome(db: D1Database, source: string, success: boolean): Promise<void> {
+export async function recordOutcome(db: D1Database, source: string, success: boolean, webhookUrl?: string | null): Promise<void> {
   const record = await getCircuitRecord(db, source);
   const now = Math.floor(Date.now() / 1000);
 
@@ -111,6 +111,7 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
     if (wasOpen) {
       console.log(`[circuit-breaker] ${source}: CLOSED (recovered)`);
       sendAlert(
+        webhookUrl ?? null,
         `Circuit closed: ${source}`,
         `Source "${source}" has recovered after being open.`,
       ).catch(() => {});
@@ -132,6 +133,7 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
     record.openedAt = now;
     console.log(`[circuit-breaker] ${source}: closed -> OPEN (${record.consecutiveFailures} consecutive failures)`);
     sendAlert(
+      webhookUrl ?? null,
       `Circuit OPEN: ${source}`,
       `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
     ).catch(() => {});
@@ -141,9 +143,9 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
 }
 
 /** Non-blocking circuit telemetry write for best-effort callers. */
-export async function recordOutcomeSafe(db: D1Database, source: string, success: boolean): Promise<void> {
+export async function recordOutcomeSafe(db: D1Database, source: string, success: boolean, webhookUrl?: string | null): Promise<void> {
   try {
-    await recordOutcome(db, source, success);
+    await recordOutcome(db, source, success, webhookUrl);
   } catch (err) {
     console.warn(`[circuit-breaker] Failed to record outcome (${source}):`, err);
   }

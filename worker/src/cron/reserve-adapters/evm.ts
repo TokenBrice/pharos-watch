@@ -1,4 +1,5 @@
 import type { StablecoinMeta } from "@shared/types";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 
 function isHexResult(value: string | undefined): value is `0x${string}` {
@@ -10,8 +11,9 @@ export async function fetchEvmCallHex(
   to: string,
   data: string,
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<`0x${string}` | null> {
-  const result = await fetchEvmCallHexAtBlock(chainId, to, data, "latest", { signal });
+  const result = await fetchEvmCallHexAtBlock(chainId, to, data, "latest", { signal, chainRpcs });
   return isHexResult(result ?? undefined) ? result : null;
 }
 

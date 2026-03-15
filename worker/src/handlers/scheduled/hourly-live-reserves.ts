@@ -10,6 +10,7 @@ export function runHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): void
           syncLiveReserves(runtime.db, signal, {
             etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
             alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
+            chainRpcs: runtime.chainRpcs,
           }),
         );
       } finally {

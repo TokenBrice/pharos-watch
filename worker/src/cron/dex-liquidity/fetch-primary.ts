@@ -671,6 +671,7 @@ export async function fetchCgTokenBatchPrices(
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
   deadlineMs?: number,
   references?: PriceValidationReferences,
+  coingeckoApiKey?: string | null,
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
   let requestCount = 0;
@@ -691,7 +692,7 @@ export async function fetchCgTokenBatchPrices(
       requestCount++;
 
       try {
-        const cgTokens = await fetchCgTokensBatch(cgChain, addresses, signal);
+        const cgTokens = await fetchCgTokensBatch(cgChain, addresses, signal, coingeckoApiKey ?? null);
         for (const token of cgTokens) {
           const a = token.attributes;
           const addr = a.address.toLowerCase();

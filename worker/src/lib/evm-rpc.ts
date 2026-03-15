@@ -1,4 +1,4 @@
-import { getChainRpc } from "./chain-registry";
+import { getChainRpc, type ChainRpcConfig } from "./chain-registry";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 
@@ -13,6 +13,8 @@ export interface EvmRpcOptions {
   timeoutMs?: number;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
   gas?: string;
+  /** Chain RPC config map (built via buildChainRpcs). Required for RPC URL resolution. */
+  chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
 export interface EtherscanProxyRequest {
@@ -38,10 +40,10 @@ interface EvmBlockResult {
   timestamp: string;
 }
 
-function buildRpcUrls(chainId?: string, extraRpcUrls?: string[]): string[] {
+function buildRpcUrls(chainId?: string, extraRpcUrls?: string[], chainRpcs?: Map<string, ChainRpcConfig>): string[] {
   const urls: string[] = [];
-  if (chainId) {
-    const chainRpc = getChainRpc(chainId);
+  if (chainId && chainRpcs) {
+    const chainRpc = getChainRpc(chainRpcs, chainId);
     if (chainRpc) {
       urls.push(chainRpc.rpcUrl);
       if (chainRpc.fallbackRpcUrl) urls.push(chainRpc.fallbackRpcUrl);
@@ -138,7 +140,7 @@ export async function fetchEvmCallHexAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<`0x${string}` | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls);
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
   if (urls.length === 0) return null;
 
   const callObj: Record<string, string> = { to, data };
@@ -247,7 +249,7 @@ export async function fetchEvmBlockNumber(
   chainId: string,
   options?: EvmRpcOptions,
 ): Promise<number | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls);
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
   if (urls.length === 0) return null;
 
   const result = await fetchJsonRpcResult<string>(urls, "eth_blockNumber", [], options);
@@ -259,7 +261,7 @@ export async function fetchEvmBlockTimestamp(
   blockNumber: number,
   options?: EvmRpcOptions,
 ): Promise<number | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls);
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
   if (urls.length === 0) return null;
 
   const block = await fetchJsonRpcResult<EvmBlockResult>(

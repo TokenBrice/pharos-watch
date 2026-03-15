@@ -21,6 +21,7 @@ import {
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
 } from "../yield-config";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchBprotocolLqtyOnlySource,
   getPriceDerivedApy,
@@ -52,6 +53,8 @@ interface ResolveYieldSourcesParams {
   safetyScores: Map<string, SafetyScoreSnapshot>;
   riskFreeRate: number;
   signal?: AbortSignal;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  coingeckoApiKey?: string | null;
 }
 
 export async function resolveYieldSources({
@@ -63,6 +66,8 @@ export async function resolveYieldSources({
   safetyScores,
   riskFreeRate,
   signal,
+  chainRpcs,
+  coingeckoApiKey,
 }: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
   const resolved: ResolvedYieldEntry[] = [];
   const tier1PrevRates = new Map<string, number | null>();
@@ -245,7 +250,7 @@ export async function resolveYieldSources({
         && entry.yield?.sourceKey === BPROTOCOL_LQTY_ONLY_SOURCE_KEY,
     )
   ) {
-    const bprotocolYield = await fetchBprotocolLqtyOnlySource(signal);
+    const bprotocolYield = await fetchBprotocolLqtyOnlySource(signal, chainRpcs, coingeckoApiKey);
     if (bprotocolYield) {
       resolved.push({
         id: lusdMeta.id,

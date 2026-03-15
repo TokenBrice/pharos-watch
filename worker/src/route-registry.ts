@@ -56,6 +56,7 @@ import {
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
+import type { ChainRpcConfig } from "./lib/chain-registry";
 
 export interface RouteContext {
   url: URL;
@@ -64,6 +65,8 @@ export interface RouteContext {
   request?: Request;
   trustedAdmin?: boolean;
   alchemyApiKey?: string | null;
+  coingeckoApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
   feedbackEnv?: FeedbackEnv;
   anthropicApiKey?: string | null;

@@ -11,11 +11,11 @@ export function runHalfHourlySlot(runtime: ScheduledRuntimeContext): void {
 
   const dexSync = chartsSync.then(() =>
     runtime.runLeasedCron("sync-dex-liquidity", (signal) =>
-      syncDexLiquidity(runtime.db, runtime.env.GRAPH_API_KEY ?? null, signal),
+      syncDexLiquidity(runtime.db, runtime.env.GRAPH_API_KEY ?? null, signal, runtime.coingeckoApiKey),
     ),
   );
   runtime.ctx.waitUntil(dexSync);
   runtime.ctx.waitUntil(dexSync.then(() =>
-    runtime.runLeasedCron("sync-yield-data", (signal) => syncYieldData(runtime.db, signal)),
+    runtime.runLeasedCron("sync-yield-data", (signal) => syncYieldData(runtime.db, signal, runtime.chainRpcs, runtime.coingeckoApiKey)),
   ));
 }
