@@ -1,9 +1,10 @@
-import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOURCE } from "../lib/constants";
+import { DEFILLAMA_COINS, USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
-import { shouldAttemptFetch, recordOutcome, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { getCache, setCache } from "../lib/db-cache";
-import { sleepWithSignal, throwIfAborted } from "../lib/abort";
+import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
+import { getCache } from "../lib/db-cache";
+import { throwIfAborted } from "../lib/abort";
+import { runDlContractPasses, runCmcPass, runDexScreenerPass } from "./enrich-prices-passes";
 import type { PriceConfidence } from "@shared/types";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
@@ -81,42 +82,14 @@ export function applyResolvedPrice(
   asset.consensusSources = [source];
 }
 
-/** Map DL stablecoins API chain names → DL coins API prefixes */
-const CHAIN_PREFIX_MAP: Record<string, string> = {
-  "Ethereum": "ethereum",
-  "Arbitrum": "arbitrum",
-  "Polygon": "polygon",
-  "BSC": "bsc",
-  "Base": "base",
-  "Optimism": "optimism",
-  "Avalanche": "avax",
-};
-
-/** Build the DL coins API identifier from an asset address */
-function addressToCoinId(address: string): string {
-  if (address.includes(":")) {
-    return address; // already prefixed: "megaeth:0x...", "algorand:..."
-  } else if (address.startsWith("0x")) {
-    return `ethereum:${address}`;
-  } else {
-    return `solana:${address}`;
-  }
-}
-
-interface DexScreenerPair {
-  baseToken: { symbol: string };
-  quoteToken: { symbol: string };
-  priceUsd: string;
-  liquidity: { usd: number };
-  chainId: string;
-}
-
 /**
  * Enrich assets that are missing prices via a 4-pass pipeline:
  *   1. Contract addresses via DefiLlama coins API
  *   1b. Multi-chain contract fallback
  *   2. CoinMarketCap API (rate-limited)
  *   3. DexScreener search API (best-effort)
+ *
+ * Individual pass logic lives in ./enrich-prices-passes.ts.
  */
 export interface PrimaryPriceResult {
   price: number;
@@ -497,59 +470,6 @@ export interface EnrichmentStats {
   failedPasses: string[];
 }
 
-const CMC_REQUEST_TIMEOUT_MS = 10_000;
-const CMC_MAX_RETRIES = 0;
-const DEXSCREENER_MAX_SEARCHES = 10;
-const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
-const DEXSCREENER_MAX_RETRIES = 0;
-const DEXSCREENER_PASS_BUDGET_MS = 45_000;
-
-interface FetchPriceMapByIdsConfig {
-  source: string;
-  ids: string[];
-  buildUrl: (ids: string[]) => string;
-  parseResponse: (json: unknown) => Map<string, number>;
-  signal?: AbortSignal;
-  requestInit?: RequestInit;
-  onFetchFailure?: (status: number | null) => void;
-}
-
-function parseDefiLlamaPriceMap(json: unknown): Map<string, number> {
-  const prices = new Map<string, number>();
-  const { coins } = DLPriceResponseSchema.parse(json);
-  for (const [id, info] of Object.entries(coins)) {
-    if (info.price > 0) {
-      prices.set(id, info.price);
-    }
-  }
-  return prices;
-}
-
-async function fetchPriceMapByIds(config: FetchPriceMapByIdsConfig): Promise<Map<string, number> | null> {
-  if (config.ids.length === 0) return new Map();
-
-  const requestInit: RequestInit = {
-    ...(config.requestInit ?? {}),
-    ...(config.signal ? { signal: config.signal } : {}),
-  };
-  const res = await fetchWithRetry(
-    config.buildUrl(config.ids),
-    Object.keys(requestInit).length > 0 ? requestInit : undefined,
-  );
-  if (!res?.ok) {
-    config.onFetchFailure?.(res?.status ?? null);
-    return null;
-  }
-
-  try {
-    const json = await res.json();
-    return config.parseResponse(json);
-  } catch {
-    console.error(`[enrich-prices] Failed to parse JSON from ${config.source}: ${res.status}`);
-    return new Map();
-  }
-}
-
 export async function enrichMissingPrices(
   assets: PeggedAsset[],
   cmcApiKey?: string,
@@ -560,7 +480,7 @@ export async function enrichMissingPrices(
   const totalMissing = assets.filter(hasMissingPrice).length;
   if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0, failedPasses: [] };
 
-  // Load FX rates for dynamic price bounds
+  // Load FX rates once — shared across all passes for dynamic price bounds
   let fxRates: Record<string, number> | undefined;
   if (db) {
     try {
@@ -571,285 +491,26 @@ export async function enrichMissingPrices(
     }
   }
 
-  let pass1Count = 0;
-  let pass1bCount = 0;
-  let passCmcCount = 0;
-  let passDexCount = 0;
   const failedPasses: string[] = [];
 
   // ── Pass 1/1b: Contract addresses via DefiLlama coins API ──
   // Wrapped separately so DL failure does not abort CMC/DexScreener passes.
-  try {
-    const withAddress: { index: number; coinId: string }[] = [];
-    for (let i = 0; i < assets.length; i++) {
-      const a = assets[i];
-      if (!hasMissingPrice(a) || !a.address) continue;
-      withAddress.push({ index: i, coinId: addressToCoinId(a.address) });
-    }
+  const dlResult = await runDlContractPasses(assets, signal);
+  const pass1Count = dlResult.pass1;
+  const pass1bCount = dlResult.pass1b;
+  failedPasses.push(...dlResult.failures);
 
-    if (withAddress.length > 0) {
-      throwIfAborted(signal);
-      const pass1Prices = await fetchPriceMapByIds({
-        source: "DefiLlama coins API (pass 1)",
-        ids: withAddress.map((m) => m.coinId),
-        buildUrl: (ids) => `${DEFILLAMA_COINS}/prices/current/${ids.join(",")}`,
-        parseResponse: parseDefiLlamaPriceMap,
-        signal,
-      });
-      if (pass1Prices) {
-        for (const m of withAddress) {
-          const price = pass1Prices.get(m.coinId);
-          if (price != null) {
-            applyResolvedPrice(assets[m.index], price, "defillama-contract", "single-source");
-            pass1Count++;
-          }
-        }
-      }
-    }
-
-    // ── Pass 1b: Multi-chain fallback for 0x addresses still missing ──
-    const stillMissingAddr = withAddress.filter(
-      (m) => hasMissingPrice(assets[m.index]) && m.coinId.startsWith("ethereum:")
-    );
-    if (stillMissingAddr.length > 0) {
-      // Build alternate chain coinIds from the asset's chains field
-      const altLookups: { index: number; coinId: string }[] = [];
-      for (const m of stillMissingAddr) {
-        const a = assets[m.index];
-        const chains = a.chains as string[] | undefined;
-        if (!chains || !a.address) continue;
-        const addr = a.address;
-        for (const chain of chains) {
-          if (chain === "Ethereum") continue; // already tried
-          const prefix = CHAIN_PREFIX_MAP[chain];
-          if (prefix) {
-            altLookups.push({ index: m.index, coinId: `${prefix}:${addr}` });
-          }
-        }
-      }
-
-      if (altLookups.length > 0) {
-        throwIfAborted(signal);
-        const pass1bPrices = await fetchPriceMapByIds({
-          source: "DefiLlama coins API (pass 1b)",
-          ids: altLookups.map((m) => m.coinId),
-          buildUrl: (ids) => `${DEFILLAMA_COINS}/prices/current/${ids.join(",")}`,
-          parseResponse: parseDefiLlamaPriceMap,
-          signal,
-        });
-        if (pass1bPrices) {
-          const resolved = new Set<number>(); // avoid double-count
-          for (const m of altLookups) {
-            if (resolved.has(m.index)) continue;
-            const price = pass1bPrices.get(m.coinId);
-            if (price != null) {
-              applyResolvedPrice(assets[m.index], price, "defillama-contract", "single-source");
-              pass1bCount++;
-              resolved.add(m.index);
-            }
-          }
-        }
-      }
-    }
-  } catch (err) {
-    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[enrich-prices] Pass 1/1b (DefiLlama contracts) failed — continuing with CMC/DexScreener:", err);
-    failedPasses.push("dl-contracts");
-  }
+  let passCmcCount = 0;
+  let passDexCount = 0;
 
   try {
-    // ── Pass 2: CoinMarketCap listings batch (covers all CMC-listed stablecoins) ──
-    const missingAfterPass1b = assets
-      .map((a, i) => ({ asset: a, index: i }))
-      .filter((m) => hasMissingPrice(m.asset));
-
-    const cmcAllowed =
-      cmcApiKey != null && db != null
-        ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.CMC_PRICES)
-        : true;
-    if (cmcApiKey && cmcAllowed && missingAfterPass1b.length > 0) {
-      // Rate limit: max 1 CMC call per hour, tracked via cache table
-      let shouldCall = true;
-      if (db) {
-        try {
-          const row = await getCache(db, "cmc_last_fetch");
-          if (row && (Math.floor(Date.now() / 1000) - row.updatedAt) < 3600) {
-            shouldCall = false;
-          }
-        } catch (e) {
-          console.warn("[enrich-prices] CMC rate-limit check failed, proceeding with call:", e);
-        }
-      }
-
-      if (shouldCall) {
-        try {
-          const cmcTimeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
-          const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
-          const cmcRes = await fetchWithRetry(
-            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD",
-            {
-              headers: {
-                "X-CMC_PRO_API_KEY": cmcApiKey,
-                Accept: "application/json",
-                "User-Agent": USER_AGENT,
-              },
-              signal: cmcSignal,
-            },
-            CMC_MAX_RETRIES,
-            { timeoutMs: CMC_REQUEST_TIMEOUT_MS },
-          );
-
-          if (cmcRes && cmcRes.ok) {
-            const cmcData = (await cmcRes.json()) as {
-              data: { coins: Array<{ slug?: string; symbol: string; quote: { USD: { price: number } } }> };
-            };
-
-            const cmcBySymbol = new Map<string, number>();
-            const cmcBySlug = new Map<string, number>();
-            for (const entry of cmcData.data.coins) {
-              const price = entry.quote?.USD?.price;
-              if (price != null && price > 0) {
-                const sym = entry.symbol.toUpperCase();
-                if (cmcBySymbol.has(sym)) {
-                  console.warn(`[enrich] CMC symbol collision: ${sym} (existing=$${cmcBySymbol.get(sym)}, new=$${price})`);
-                }
-                cmcBySymbol.set(sym, price);
-                if (entry.slug) {
-                  cmcBySlug.set(entry.slug.toLowerCase(), price);
-                }
-              }
-            }
-
-            for (const m of missingAfterPass1b) {
-              // Prefer slug-based matching to avoid symbol collisions
-              const slug = m.asset.cmcSlug;
-              const cmcPrice = slug
-                ? cmcBySlug.get(slug.toLowerCase()) ?? cmcBySymbol.get(m.asset.symbol.toUpperCase())
-                : cmcBySymbol.get(m.asset.symbol.toUpperCase());
-              if (cmcPrice != null && isReasonablePrice(
-                cmcPrice,
-                m.asset.pegType as string | undefined,
-                fxRates,
-                buildPriceReasonablenessOptions(m.asset),
-              )) {
-                applyResolvedPrice(assets[m.index], cmcPrice, "coinmarketcap", "fallback");
-                passCmcCount++;
-              }
-            }
-
-            // Update rate-limit timestamp
-            if (db) {
-              try {
-                await setCache(db, "cmc_last_fetch", "1");
-              } catch (e) {
-                console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", e);
-              }
-            }
-            if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
-          } else {
-            console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
-            if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
-          }
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[enrich] CMC API call failed:", err);
-          if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
-        }
-      }
-    } else if (cmcApiKey && !cmcAllowed) {
-      console.warn("[enrich] CoinMarketCap circuit open — skipping pass 2");
-    }
+    // ── Pass 2: CoinMarketCap listings batch ──
+    const cmcResult = await runCmcPass(assets, cmcApiKey, fxRates, db, signal);
+    passCmcCount = cmcResult.resolved;
 
     // ── Pass 3: DexScreener search API (best-effort fallback) ──
-    const stillMissing = assets
-      .map((a, i) => ({ asset: a, index: i }))
-      .filter((m) => hasMissingPrice(m.asset));
-
-    if (stillMissing.length > DEXSCREENER_MAX_SEARCHES) {
-      console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_SEARCHES}`);
-    }
-
-    const dexscreenerAllowed =
-      db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES) : true;
-    let dexAttempts = 0;
-    let dexSuccessfulCalls = 0;
-    if (dexscreenerAllowed) {
-      const dexCandidates = stillMissing.slice(0, DEXSCREENER_MAX_SEARCHES);
-      const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
-      for (const [idx, m] of dexCandidates.entries()) {
-        try {
-          // DexScreener is the last, best-effort fallback. Keep the whole pass
-          // time-bounded so a wave of missing prices cannot exhaust the cron slot.
-          const remainingBudgetMs = dexBudgetDeadlineMs - Date.now();
-          if (remainingBudgetMs <= 0) {
-            console.warn(
-              `[enrich] DexScreener pass budget exhausted after ${dexAttempts}/${dexCandidates.length} searches`,
-            );
-            break;
-          }
-
-          if (idx > 0) {
-            await sleepWithSignal(200, signal);
-          }
-
-          dexAttempts++;
-          const timeoutMs = Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, remainingBudgetMs);
-          const res = await fetchWithRetry(
-            `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
-            { headers: { "User-Agent": USER_AGENT }, signal },
-            DEXSCREENER_MAX_RETRIES,
-            { timeoutMs },
-          );
-          if (!res) {
-            console.warn(`[enrich] DexScreener returned no response for ${m.asset.symbol}`);
-            continue;
-          }
-          if (!res.ok) {
-            console.warn(`[enrich] DexScreener returned ${res.status} for ${m.asset.symbol}`);
-            continue;
-          }
-          dexSuccessfulCalls++;
-          const data = (await res.json()) as { pairs?: DexScreenerPair[] };
-          if (!data.pairs || data.pairs.length === 0) continue;
-
-          // Filter: matching symbol, has USD price, >$50K liquidity
-          const candidates = data.pairs.filter((p) => {
-            if (p.baseToken.symbol.toUpperCase() !== m.asset.symbol.toUpperCase()) return false;
-            if (!p.priceUsd || !p.liquidity?.usd) return false;
-            if (p.liquidity.usd < DEXSCREENER_MIN_LIQUIDITY_USD) return false;
-            return true;
-          });
-
-          if (candidates.length === 0) continue;
-
-          // Take median price across qualifying pools (more robust than single max-liquidity pool)
-          const candidatePrices = candidates
-            .map((c) => parseFloat(c.priceUsd))
-            .filter((p) => !isNaN(p) && isFinite(p) && p > 0)
-            .sort((a, b) => a - b);
-          if (candidatePrices.length === 0) continue;
-          const price = candidatePrices[Math.floor(candidatePrices.length / 2)];
-          // Sanity check: peg-type-aware range
-          if (isReasonablePrice(
-            price,
-            m.asset.pegType as string | undefined,
-            fxRates,
-            buildPriceReasonablenessOptions(m.asset),
-          )) {
-            applyResolvedPrice(assets[m.index], price, "dexscreener", "fallback");
-            passDexCount++;
-          }
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn(`[enrich] DexScreener failed for ${m.asset.symbol}:`, err);
-        }
-      }
-      if (dexAttempts > 0) {
-        if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexSuccessfulCalls > 0);
-      }
-    } else if (stillMissing.length > 0) {
-      console.warn("[enrich] DexScreener circuit open — skipping pass 3");
-    }
+    const dexResult = await runDexScreenerPass(assets, fxRates, db, signal);
+    passDexCount = dexResult.resolved;
 
     // ── Summary log ──
     const finalMissing = assets.filter(hasMissingPrice).length;
