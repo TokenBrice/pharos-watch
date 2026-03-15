@@ -45,8 +45,8 @@ describe("parseDlStablecoinPoolsCache", () => {
   const nowSec = 1710500000;
 
   it("parses structured payload with data array", () => {
-    const pools = [{ pool: "abc", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null }];
-    const raw = buildDlStablecoinPoolsCache(pools as any, nowSec - 1800);
+    const pools = [{ pool: "abc", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null }];
+    const raw = buildDlStablecoinPoolsCache(pools, nowSec - 1800);
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 1800, nowSec);
     expect(result).not.toBeNull();
     expect(result!.pools).toHaveLength(1);
@@ -54,7 +54,7 @@ describe("parseDlStablecoinPoolsCache", () => {
   });
 
   it("parses legacy array format", () => {
-    const pools = [{ pool: "abc", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null }];
+    const pools = [{ pool: "abc", chain: "Ethereum", symbol: "sDAI", apy: 5.0, tvlUsd: 1e8, stablecoin: true, exposure: "single", project: "sdai", apyBase: 5.0, apyReward: null, apyMean30d: 5.0, underlyingTokens: null }];
     const raw = JSON.stringify(pools);
     const result = parseDlStablecoinPoolsCache(raw, nowSec - 3600, nowSec);
     expect(result).not.toBeNull();
