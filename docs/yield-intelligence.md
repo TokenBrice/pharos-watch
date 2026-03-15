@@ -460,6 +460,8 @@ Each best-source row and alt-source row can also include `yieldSourceUrl`. The w
 
 `medianApy` type: `number`.
 
+The response includes a `_meta` freshness object (see [Response Body Freshness](api-reference.md#response-body-freshness-_meta)) indicating data age and staleness status. The frontend uses this to power the `StaleDataBanner` on the yield page.
+
 ### `GET /api/yield-history`
 
 Historical APY data points for a single coin. Reads from `yield_history` directly.

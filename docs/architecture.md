@@ -197,10 +197,32 @@ src/                              # Next.js frontend (static export)
 │   ├── yield-table-logic.ts      # Yield leaderboard sorting helpers
 │   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
 │   ├── status/                   # Status dashboard component decomposition
-│   │   ├── cron-metadata-summary.ts # Per-job cron metadata summarizer registry for cron-card
 │   │   ├── page-primitives.tsx   # Status-page-only shell pieces (summary badge, section shell, notice rail, lane links)
+│   │   ├── top-fold-copy.ts      # Status top-fold tone/copy config
 │   │   ├── recommended-action-strip.tsx # Status hero intervention strip
-│   │   └── top-fold-copy.ts      # Status top-fold tone/copy config
+│   │   ├── cron-metadata-summary.ts # Per-job cron metadata summarizer registry for cron-card
+│   │   ├── cron-card.tsx         # Individual cron job health card
+│   │   ├── cron-config.ts        # Cron display configuration
+│   │   ├── status-banner.tsx     # Top-level status banner
+│   │   ├── status-facts.tsx      # Status fact summaries
+│   │   ├── format.ts             # Status-specific formatting helpers
+│   │   ├── refresh-countdown.tsx # Auto-refresh countdown timer
+│   │   ├── cache-freshness-table.tsx   # Cache key freshness matrix
+│   │   ├── dataset-freshness-table.tsx # Dataset-level freshness table
+│   │   ├── endpoint-health-grid.tsx    # Endpoint probe result grid
+│   │   ├── data-quality-cards.tsx      # Data quality signal cards
+│   │   ├── circuit-breaker-table.tsx   # Circuit breaker state table
+│   │   ├── system-diagnostics.tsx      # System-level diagnostic panel
+│   │   ├── action-recommendations.ts   # Action recommendation engine
+│   │   ├── admin-action-button.tsx     # Admin action trigger button
+│   │   ├── admin-actions-panel.tsx     # Admin action shelf panel
+│   │   ├── discovery-candidates.tsx    # Discovery candidate listing
+│   │   ├── liquidity-health.tsx        # Liquidity sync health view
+│   │   ├── price-source-health.tsx     # Price source health view
+│   │   ├── reserve-sync-health.tsx     # Reserve sync health view
+│   │   ├── mint-burn-reconciliation.tsx # Mint/burn reconciliation view
+│   │   ├── telegram-bot-stats.tsx      # Telegram bot statistics
+│   │   └── transition-timeline.tsx     # Status state transition timeline
 │   ├── flow-brrr-overview.tsx    # Shared Bank Run Gauge + Minting Pressure overview shell
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
 │   ├── flow-table.tsx            # Per-coin flow table with pressure-shift states, volumes, and net flows
@@ -346,8 +368,9 @@ src/                              # Next.js frontend (static export)
     └── utils.ts                  # cn() helper for Tailwind class merging
 
 functions/                        # Cloudflare Pages Functions for operator-host gating and admin proxying
-├── status/[[path]].ts            # Host gate for /status; serves asset on ops host, hard-404s elsewhere
-└── api/admin/[[path]].ts         # Catch-all proxy for ops-only admin routes (`/api/admin/*` -> `ops-api`)
+├── admin/[[path]].ts             # Host gate for /admin/; serves on ops host, hard-404s elsewhere
+├── api/admin/[[path]].ts         # Catch-all proxy for ops-only admin routes (`/api/admin/*` -> `ops-api`)
+└── lib/ops-origin.ts             # Shared ops-origin resolution helper
 
 shared/                           # Runtime-neutral boundary (import via `@shared/*`)
 ├── types/

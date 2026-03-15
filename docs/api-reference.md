@@ -37,6 +37,44 @@ Endpoints backed by the cron cache include these additional headers:
 
 ---
 
+## Response Body Freshness (`_meta`)
+
+Endpoints backed by `createCacheHandler()` inject a `_meta` object into plain-object (non-array) response bodies alongside the HTTP freshness headers above. This provides inline freshness metadata for consumers that prefer not to parse response headers.
+
+**Shape:**
+
+```json
+{
+  "_meta": {
+    "updatedAt": 1710500000,
+    "ageSeconds": 42,
+    "status": "fresh"
+  }
+}
+```
+
+| Field        | Type     | Description                                                                                     |
+| ------------ | -------- | ----------------------------------------------------------------------------------------------- |
+| `updatedAt`  | `number` | Unix epoch seconds when the cron last wrote this data to D1                                     |
+| `ageSeconds` | `number` | `floor(now / 1000) - updatedAt`                                                                 |
+| `status`     | `string` | `"fresh"` (age/max <= 1.0), `"degraded"` (1.0 < ratio <= 1.5), or `"stale"` (ratio > 1.5) |
+
+**Endpoints with `_meta`:**
+
+| Endpoint | Max Age (sec) | Source |
+|---|---|---|
+| `GET /api/stablecoins` | 600 | `createCacheHandler` |
+| `GET /api/stablecoin-charts` | 3600 | `createCacheHandler` |
+| `GET /api/bluechip-ratings` | 43200 | `createCacheHandler` |
+| `GET /api/usds-status` | 86400 | `createCacheHandler` |
+| `GET /api/yield-rankings` | 1800 | Manual injection after live safety hydration |
+
+Array-typed responses (e.g., endpoints returning a JSON array at the top level) receive only the HTTP headers (`X-Data-Age`, `Warning`) and do not include `_meta`.
+
+The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` from the response body when present, falling back to the `X-Data-Age` header for endpoints that do not include it.
+
+---
+
 ## Cache-Control Profiles
 
 | Profile  | `Cache-Control`                      | Used by                                                                                                                                                                           |
@@ -45,7 +83,7 @@ Endpoints backed by the cron cache include these additional headers:
 | standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, dex-liquidity, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                        |
 | slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot                                                                     |
-| no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`)  |
+| no-store | `no-store`                           | health, feedback, telegram-webhook, plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`). All admin POST endpoints also bypass cache by virtue of being non-GET |
 
 ---
 
@@ -288,10 +326,10 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `mode`         | `string`         | One of `live`, `live-stale`, `curated-fallback`, `template-fallback`, `unavailable`                         |
 | `reserves`     | `ReserveSlice[]` | Reserve slices currently being shown to the user                                                            |
 | `estimated`    | `boolean`        | `true` only when using the classification template fallback                                                 |
-| `liveAt`       | `number`         | Unix seconds of the last successful live snapshot, when present                                             |
-| `source`       | `string`         | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`) when live data exists |
-| `displayUrl`   | `string`         | Human-readable source link shown in the UI                                                                  |
-| `sync`         | `object`         | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`)            |
+| `liveAt`       | `number?`        | Unix seconds of the last successful live snapshot. Present only when live data exists                       |
+| `source`       | `string?`        | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`). Present only when live data exists |
+| `displayUrl`   | `string?`        | Human-readable source link shown in the UI. Present only when configured                                    |
+| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`). Present only when live-enabled |
 
 **Response (404):** `{ "error": "Not found" }`
 
@@ -1396,7 +1434,9 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
     "flightToQuality": false,
     "flightIntensity": 0,
     "trackedCoins": 8,
-    "trackedMcapUsd": 215000000000
+    "trackedMcapUsd": 215000000000,
+    "intensitySemantics": "signed-v2",
+    "classificationSource": "report-card-cache"
   },
   "coins": [CoinFlow, ...],
   "hourly": [HourlyFlow, ...],
@@ -1417,6 +1457,8 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `flightIntensity` | `number`         | Flight-to-quality intensity (0–100). 0 when not active                                               |
 | `trackedCoins`    | `number`         | Number of stablecoins tracked for mint/burn flows                                                    |
 | `trackedMcapUsd`  | `number`         | Combined market cap of tracked coins (USD)                                                           |
+| `intensitySemantics` | `string`      | Scoring semantics version identifier (currently `"signed-v2"`)                                       |
+| `classificationSource` | `string`    | Source of flight-to-quality classification (`"report-card-cache"` or `"unavailable"`)                |
 
 **Top-level metadata**
 
@@ -1424,7 +1466,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | ------------- | -------- | --------------------------------------------------------------------------------------- |
 | `windowHours` | `number` | Requested chart window for `hourly[]`                                                   |
 | `scope`       | `object` | Current ingestion scope, currently `{ chainIds: ["ethereum"], label: "Ethereum-only" }` |
-| `sync`        | `object` | Latest critical-lane freshness metadata and warning state                               |
+| `sync`        | `object` | Latest critical-lane freshness metadata, warning state, and optional `classificationWarning` |
 
 **`CoinFlow`**
 

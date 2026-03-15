@@ -347,6 +347,20 @@ Source: `src/hooks/use-endpoint-probes.ts`
 - Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest.
 - Returned result shape: `{ path, status, latencyMs, error? }`
 
+### Canary Endpoint Aliases
+
+Three internal health-check registrations in `shared/lib/api-endpoints.ts` use hardcoded stablecoin IDs to probe parameterized routes without requiring dynamic URL construction:
+
+| Endpoint Key | Registered Path | Probe Path | Rationale |
+|---|---|---|---|
+| `stablecoin-detail-canary` | `/api/stablecoin/usdt-tether` | `/api/stablecoin/pyusd-paypal` | Lighter payload than USDT avoids timeout false negatives |
+| `stablecoin-summary-canary` | `/api/stablecoin-summary/usdt-tether` | (same as path) | Snapshot route health check |
+| `stablecoin-reserves-canary` | `/api/stablecoin-reserves/iusd-infinifi` | (same as path) | Live reserves route health check |
+
+Handler bindings are in `worker/src/route-registry.ts`. Each delegates to the same handler as the corresponding dynamic `GET /api/stablecoin/:id` route but with a pre-selected ID.
+
+These are **not part of the public API contract**. Canary IDs may change without notice if the underlying coins are removed from tracking. External integrators should use the parameterized routes documented in the API reference.
+
 Manual actions are rendered from `getStatusPageActions()` and executed only on user confirmation.
 
 ---
