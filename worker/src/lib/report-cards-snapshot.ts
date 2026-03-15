@@ -43,6 +43,13 @@ import type {
   ReserveSlice,
 } from "@shared/types";
 
+export interface CollateralDriftEntry {
+  id: string;
+  liveScore: number;
+  curatedScore: number;
+  delta: number;
+}
+
 export interface ReportCardsSnapshot {
   cards: ReportCard[];
   methodology: {
@@ -56,6 +63,10 @@ export interface ReportCardsSnapshot {
   };
   updatedAt: number;
   liquidityStale: boolean;
+  /** Coins where live vs curated collateral score diverges by >15 points */
+  collateralDriftCoins?: CollateralDriftEntry[];
+  /** Coins that fell back from live to curated scoring */
+  liveToFallbackCoins?: string[];
 }
 
 export class ReportCardsSnapshotUnavailableError extends Error {
@@ -122,6 +133,8 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   const sortedMetas = topologicalOrder([...TRACKED_STABLECOINS]);
   const overallScores = new Map<string, number>();
   const liveCards: ReportCard[] = [];
+  const collateralDriftCoins: CollateralDriftEntry[] = [];
+  const liveToFallbackCoins: string[] = [];
 
   for (const meta of sortedMetas) {
     const card = computeCard(
@@ -137,6 +150,20 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     liveCards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
+    }
+
+    // Track drift for snapshot metadata
+    const liveSlices = liveReserveMap.get(meta.id);
+    if (liveSlices && meta.reserves && meta.reserves.length > 0) {
+      const liveScore = computeCollateralQualityFromReserves(liveSlices);
+      const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
+      const delta = Math.abs(liveScore - curatedScore);
+      if (delta > 15) {
+        collateralDriftCoins.push({ id: meta.id, liveScore, curatedScore, delta });
+      }
+    }
+    if (meta.liveReservesConfig && !liveReserveMap.has(meta.id)) {
+      liveToFallbackCoins.push(meta.id);
     }
   }
 
@@ -212,6 +239,8 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     dependencyGraph: { edges },
     updatedAt: stablecoinsCached.updatedAt,
     liquidityStale,
+    ...(collateralDriftCoins.length > 0 ? { collateralDriftCoins } : {}),
+    ...(liveToFallbackCoins.length > 0 ? { liveToFallbackCoins } : {}),
   };
 }
 
@@ -241,19 +270,6 @@ function computeCard(
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
-
-  // Delta alerting: warn when live and curated collateral scores diverge significantly
-  if (liveSlices && meta.reserves && meta.reserves.length > 0) {
-    const liveScore = computeCollateralQualityFromReserves(liveSlices);
-    const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
-    const delta = Math.abs(liveScore - curatedScore);
-    if (delta > 15) {
-      console.warn(
-        `[report-cards] Collateral score drift for ${meta.id}: ` +
-        `live=${liveScore}, curated=${curatedScore}, delta=${delta}`,
-      );
-    }
-  }
 
   const navToken = !!meta.flags.navToken;
   const overall = computeOverallGrade(dimensions, { navToken });
