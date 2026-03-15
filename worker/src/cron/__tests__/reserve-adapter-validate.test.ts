@@ -26,6 +26,7 @@ describe("validateAdapterOutput", () => {
     const result = validateAdapterOutput({
       slices: [
         { name: "A", pct: 50, risk: "low" },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { name: "B", pct: 50, risk: "bogus" as any },
       ],
     });
