@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { AreaChart, Area } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { useStressSignalDetail } from "@/hooks/use-stress-signals";
+import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { THREAT_BAND_COLORS, THREAT_BAND_LABELS, THREAT_BAND_HEX } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";

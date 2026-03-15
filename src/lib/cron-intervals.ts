@@ -1,7 +1,9 @@
-/** Shared cron interval constants in milliseconds. */
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+
+/** Shared cron interval constants in milliseconds, derived from shared cron job definitions. */
 export const CRON_1MIN = 60_000;
-export const CRON_15MIN = 15 * CRON_1MIN;
-export const CRON_20MIN = 20 * CRON_1MIN;
-export const CRON_30MIN = 30 * CRON_1MIN;
-export const CRON_1H = 60 * CRON_1MIN;
-export const CRON_24H = 24 * CRON_1H;
+export const CRON_15MIN = CRON_INTERVALS["sync-stablecoins"] * 1000;
+export const CRON_20MIN = CRON_INTERVALS["sync-blacklist"] * 1000;
+export const CRON_30MIN = CRON_INTERVALS["sync-dex-liquidity"] * 1000;
+export const CRON_1H = CRON_INTERVALS["sync-live-reserves"] * 1000;
+export const CRON_24H = CRON_INTERVALS["sync-bluechip"] * 1000;

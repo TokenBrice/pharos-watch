@@ -6,12 +6,12 @@ import {
   useDexLiquidity,
   usePegSummary,
   useStabilityIndex,
+  useStressSignals,
 } from "@/hooks/api-hooks";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { useStressSignals } from "@/hooks/use-stress-signals";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";

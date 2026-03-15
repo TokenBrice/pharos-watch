@@ -10,6 +10,8 @@ import {
   RedemptionBackstopsResponseSchema,
   SafetyScoreHistoryResponseSchema,
   StabilityIndexResponseSchema,
+  StressSignalsAllResponseSchema,
+  StressSignalDetailResponseSchema,
   YieldRankingsResponseSchema,
   type BluechipRatingsMap,
   type DailyDigestResponse,
@@ -25,6 +27,8 @@ import {
   type StabilityContributor,
   type StabilityIndexResponse,
   type StablecoinChartPoint,
+  type StressSignalsAllResponse,
+  type StressSignalDetailResponse,
   type UsdsStatusResponse,
   type YieldHistoryPoint,
   type YieldRankingsResponse,
@@ -167,5 +171,23 @@ export function useYieldRankings() {
     API_PATHS.yieldRankings(),
     CRON_30MIN,
     { metaMaxAgeSec: 1800, schema: YieldRankingsResponseSchema },
+  );
+}
+
+export function useStressSignals() {
+  return useApiQueryWithMeta<StressSignalsAllResponse>(
+    ["stress-signals"],
+    API_PATHS.stressSignals(),
+    CRON_15MIN,
+    { schema: StressSignalsAllResponseSchema },
+  );
+}
+
+export function useStressSignalDetail(stablecoinId: string, days = 30) {
+  return useApiQueryWithMeta<StressSignalDetailResponse>(
+    ["stress-signals", stablecoinId, days],
+    API_PATHS.stressSignals(stablecoinId, days),
+    CRON_15MIN,
+    { enabled: !!stablecoinId, schema: StressSignalDetailResponseSchema },
   );
 }
