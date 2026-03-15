@@ -17,7 +17,12 @@ export function SummaryBadge({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-full border border-border/60 bg-background/45 px-3 py-1.5 text-xs", className)}>
+    <div
+      className={cn(
+        "rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs shadow-[inset_0_1px_0_oklch(1_0_0_/0.55)] dark:bg-background/45 dark:shadow-none",
+        className,
+      )}
+    >
       <span className="text-muted-foreground">{label}</span>
       <span className="ml-1.5 font-mono tabular-nums text-foreground">{value}</span>
     </div>
@@ -45,7 +50,7 @@ export function StatusSection({
     <section
       id={id}
       className={cn(
-        "scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] bg-card/82 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28 sm:px-5 lg:px-6",
+        "scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] bg-card/82 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28 sm:px-5 lg:px-6",
         accentClassName,
       )}
     >

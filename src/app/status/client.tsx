@@ -52,7 +52,7 @@ function PublicSignalCard({
   children: ReactNode;
 }) {
   return (
-    <article className="rounded-[1.35rem] border border-border/70 bg-background/45 p-5 shadow-[0_16px_36px_oklch(0_0_0_/0.12)]">
+    <article className="rounded-[1.35rem] border border-black/7 bg-[linear-gradient(180deg,oklch(0.995_0.004_248_/_0.96),oklch(0.972_0.01_248_/_0.99))] p-5 shadow-[inset_0_1px_0_oklch(1_0_0_/0.72),0_16px_36px_oklch(0_0_0_/0.08)] dark:border-white/10 dark:bg-[linear-gradient(180deg,oklch(0.16_0.014_248_/_0.78),oklch(0.12_0.01_248_/_0.9))] dark:shadow-[0_16px_36px_oklch(0_0_0_/0.12)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="pharos-kicker">{kicker}</p>
@@ -215,7 +215,7 @@ export default function StatusClient() {
           kicker="Current Picture"
           title="Public service summary"
           description="The public read path reduced to the signals most likely to affect downstream trust."
-          accentClassName="border-l-frost-blue bg-[linear-gradient(180deg,rgba(11,18,32,0.88),rgba(4,10,20,0.94))]"
+          accentClassName="border-l-frost-blue bg-[linear-gradient(180deg,oklch(0.988_0.008_248_/_0.98),oklch(0.956_0.012_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(11,18,32,0.88),rgba(4,10,20,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
           summary={
             <>
               <SummaryBadge label="Status" value={statusTone.label} className={statusTone.badgeClassName} />
@@ -244,13 +244,13 @@ export default function StatusClient() {
                 {healthData.mintBurn.sync.warning ?? "Critical mint/burn lanes are within their expected freshness window."}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1rem] border border-border/60 bg-background/35 p-3">
+                <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
                   <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Successful Sync</div>
                   <div className="mt-2 font-mono text-sm text-foreground">
                     {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
                   </div>
                 </div>
-                <div className="rounded-[1rem] border border-border/60 bg-background/35 p-3">
+                <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
                   <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Latest Hourly Sample</div>
                   <div className="mt-2 font-mono text-sm text-foreground">
                     {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
@@ -282,7 +282,7 @@ export default function StatusClient() {
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Missing blacklist amounts surface here because they directly affect public data quality and downstream risk calculations.
               </p>
-              <div className="rounded-[1rem] border border-border/60 bg-background/35 p-3">
+              <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Public Health Interpretation</div>
                 <div className="mt-2 leading-relaxed text-foreground">
                   {healthData.blacklist.missingAmounts > 0
@@ -299,7 +299,7 @@ export default function StatusClient() {
           kicker="Reliability"
           title="Route probes, breakers, and cache pressure"
           description="Browser canary reachability, worker cache pressure, and breaker posture for the public edge."
-          accentClassName="border-l-amber-500 bg-[linear-gradient(180deg,rgba(24,18,10,0.42),rgba(7,10,18,0.94))]"
+          accentClassName="border-l-amber-500 bg-[linear-gradient(180deg,oklch(0.99_0.006_80_/_0.98),oklch(0.968_0.012_80_/_0.98)_46%,oklch(0.952_0.014_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(24,18,10,0.42),rgba(7,10,18,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
           summary={
             <>
               <SummaryBadge

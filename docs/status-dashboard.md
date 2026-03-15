@@ -58,6 +58,7 @@ The active frontend operator mode is now:
     - a lead-signal panel for the first public warning or steady-state watch note
     - a live-watch side panel for health sample time, client sync time, browser probe summary, circuit-breaker posture, refresh control, and operator-handoff note
 - The public `Overview` lane now uses flatter signal cards for mint/burn sync and blacklist ingestion rather than nesting generic `Card` shells inside the section wrapper
+- Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
 
 ### Data hooks
 
