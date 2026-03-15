@@ -1,4 +1,3 @@
-import { setCacheIfNewer, getPriceCache, savePriceCache } from "../lib/db-cache";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
@@ -8,8 +7,6 @@ import {
   fetchPrimaryPrices,
 } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices";
-import { detectDepegEvents } from "./detect-depegs";
-import { confirmPendingDepegs } from "./confirm-pending-depegs";
 import {
   applyTrackedAssetOverrides,
   dedupeCanonicalAssets,
@@ -24,34 +21,31 @@ import {
   type CoinGeckoMcapData,
 } from "./sync-stablecoins/supplemental-assets";
 import {
-  StablecoinListResponseSchema,
   buildSyncMetadata,
-  getStablecoinsCacheAgeSec,
   hydrateGeckoIdAliases,
   loadFreshFxRates,
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
-  normalizeStablecoinsPayload,
   stampPriceMetadata,
-  summarizeValidationIssues,
-  writeInvalidStablecoinsDiagnostic,
-  type StablecoinsPayload,
   type CronResult,
   type PriceSourceHealth,
 } from "./sync-stablecoins/shared";
+import {
+  runPostEnrichmentPricePipeline,
+  validateAndWriteStablecoinsCache,
+  runDepegPipeline,
+  isAbortResult,
+} from "./sync-stablecoins/post-enrichment";
 
 import { upsertDiscoveryCandidates } from "./discovery-scan";
 import { DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { validatePayloadWithSchema } from "../lib/api-utils";
-import { sendAlert } from "../lib/alerts";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
 import {
   buildPriceValidationContext,
   validatePriceCandidate,
   type PriceValidationContext,
 } from "../lib/price-validation";
-const PRICE_CACHE_TTL = 24 * 60 * 60;
 
 function priceValidationModeForAsset(asset: PeggedAsset): "primary_authoritative" | "fallback_enrichment" {
   return asset.priceConfidence === "fallback" ||
@@ -106,8 +100,10 @@ function returnIfAborted(signal: AbortSignal | undefined, stage: string): CronRe
 /**
  * CoinGecko supply fallback: when DefiLlama stablecoins API is down,
  * use CG market cap as a proxy for circulating supply.
+ * Renamed from fallbackToCgSupply (Q-009) — this is a full sync path,
+ * not just a supply fallback.
  */
-async function fallbackToCgSupply(
+async function syncViaCoingeckoFallback(
   db: D1Database,
   cgData: CoinGeckoMcapData,
   cmcApiKey: string | undefined,
@@ -245,129 +241,63 @@ async function fallbackToCgSupply(
     }
   }
 
-  let rejectedCount = 0;
-  for (const asset of assets) {
-    if (asset.price == null || typeof asset.price !== "number") continue;
-    const decision = validatePriceCandidate(
-      asset.price,
-      validationContexts.get(asset),
-      priceValidationModeForAsset(asset),
-      validationReferences,
-    );
-    if (!decision.accepted) {
-      console.warn(`[sync-stablecoins] Rejected unreasonable fallback price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
-      asset.price = null;
-      asset.priceUpdatedAt = null;
-      rejectedCount++;
-    }
-  }
+  // --- Shared post-enrichment pipeline ---
+  const priceResult = await runPostEnrichmentPricePipeline({
+    assets,
+    missingBefore,
+    db,
+    syncStartSec,
+    signal,
+    fxFallbackRates,
+    validationReferences,
+    validationContexts,
+    priceValidationModeForAsset,
+    returnIfAborted,
+    abortResult,
+  }, "fallback-");
+  if (isAbortResult(priceResult)) return priceResult;
+  const { rejectedCount, cachedFallbackCount } = priceResult;
 
-  const withValidPrices = assets.filter(
-    (asset) => asset.price != null && typeof asset.price === "number" && asset.price > 0,
-  );
-  if (withValidPrices.length > 0) {
-    const priceCacheWriteAbort = returnIfAborted(signal, "fallback-save-price-cache");
-    if (priceCacheWriteAbort) return priceCacheWriteAbort;
-    await savePriceCache(db, withValidPrices.map((asset) => ({ id: asset.id, price: asset.price! as number })));
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const stillMissing = assets.filter(
-    (asset) => missingBefore.has(asset.id) && hasMissingPrice(asset),
-  );
-  let cachedFallbackCount = 0;
-  if (stillMissing.length > 0) {
-    const priceCacheReadAbort = returnIfAborted(signal, "fallback-read-price-cache");
-    if (priceCacheReadAbort) return priceCacheReadAbort;
-    const priceCache = await getPriceCache(db);
-    for (const asset of stillMissing) {
-      const cached = priceCache.get(asset.id);
-      if (!cached || (now - cached.updatedAt) >= PRICE_CACHE_TTL) continue;
-      const decision = validatePriceCandidate(
-        cached.price,
-        validationContexts.get(asset),
-        "fallback_enrichment",
-        validationReferences,
-      );
-      if (!decision.accepted) continue;
-
-      asset.price = cached.price;
-      stampPriceMetadata(asset, "cached", "fallback", cached.updatedAt);
-      cachedFallbackCount++;
-    }
-  }
-
-  const llamaData: StablecoinsPayload = { peggedAssets: assets, fxFallbackRates };
-  const normalizedPayload = normalizeStablecoinsPayload(llamaData);
-  const validation = validatePayloadWithSchema(
-    StablecoinListResponseSchema,
-    normalizedPayload,
-    "sync-stablecoins:stablecoins:fallback",
-  );
-  if (!validation.ok) {
-    const issueSummary = summarizeValidationIssues(validation.issues);
-    const stablecoinsCacheAgeSec = await getStablecoinsCacheAgeSec(db);
-    console.error("[sync-stablecoins] Schema validation failed in CG fallback; blocking stablecoins cache write:", issueSummary);
-    await sendAlert(
-      alertWebhookUrl ?? null,
-      "Stablecoins schema validation warning",
-      `context=fallback; blocked stablecoins cache write; issues=${issueSummary}; stablecoinsCacheAgeSec=${stablecoinsCacheAgeSec ?? "missing"}`,
-    );
-    await writeInvalidStablecoinsDiagnostic(
-      db,
-      syncStartSec,
-      "fallback",
-      normalizedPayload,
-      validation.issues,
+  const cacheResult = await validateAndWriteStablecoinsCache({
+    assets,
+    fxFallbackRates,
+    db,
+    syncStartSec,
+    signal,
+    alertWebhookUrl,
+    validationContext: "fallback",
+    returnIfAborted,
+    abortResult,
+  }, (stablecoinsCacheAgeSec) => ({
+    status: "degraded",
+    itemCount: assets.length,
+    metadata: buildSyncMetadata({
+      rowsRead: assets.length,
+      rowsWritten: 0,
+      rowsDropped: 0,
+      sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
+      fallbackMode: "coingecko-supply-fallback",
+      validationFailures: 1,
+      validationContext: "fallback",
       stablecoinsCacheAgeSec,
-    );
-    return {
-      status: "degraded",
-      itemCount: assets.length,
-      metadata: buildSyncMetadata({
-        rowsRead: assets.length,
-        rowsWritten: 0,
-        rowsDropped: 0,
-        sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
-        fallbackMode: "coingecko-supply-fallback",
-        validationFailures: 1,
-        validationContext: "fallback",
-        stablecoinsCacheAgeSec,
-        cacheWriteMode: "blocked-invalid-payload",
-      }, {
-        cacheWriteMode: "blocked-invalid-payload",
-        capabilities: {
-          stablecoinsCache: false,
-          depegPipeline: false,
-        },
-      }),
-    };
-  }
-  const cacheWriteAbort = returnIfAborted(signal, "fallback-cache-write");
-  if (cacheWriteAbort) return cacheWriteAbort;
-  await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
-  console.log(`[sync-stablecoins] CG fallback: cached ${assets.length} assets`);
+      cacheWriteMode: "blocked-invalid-payload",
+    }, {
+      cacheWriteMode: "blocked-invalid-payload",
+      capabilities: {
+        stablecoinsCache: false,
+        depegPipeline: false,
+      },
+    }),
+  }));
+  if (isAbortResult(cacheResult)) return cacheResult;
+  if (!cacheResult.written) return cacheResult.blockedResult!;
 
-  let depegErrorCount = 0;
-  try {
-    const depegAbort = returnIfAborted(signal, "fallback-depeg-detection");
-    if (depegAbort) return depegAbort;
-    await detectDepegEvents(db, assets, fxFallbackRates, signal);
-  } catch (err) {
-    if (signal?.aborted) return abortResult(signal, "fallback-depeg-detection");
-    console.error("[sync-stablecoins] Depeg detection failed (CG fallback):", err);
-    depegErrorCount++;
-  }
-
-  try {
-    const confirmAbort = returnIfAborted(signal, "fallback-depeg-confirmation");
-    if (confirmAbort) return confirmAbort;
-    await confirmPendingDepegs(db, assets, fxFallbackRates, signal, coingeckoApiKey);
-  } catch (err) {
-    if (signal?.aborted) return abortResult(signal, "fallback-depeg-confirmation");
-    console.error("[sync-stablecoins] Pending depeg confirmation failed (CG fallback):", err);
-    depegErrorCount++;
-  }
+  const depegResult = await runDepegPipeline(
+    db, assets, fxFallbackRates, signal, coingeckoApiKey,
+    returnIfAborted, abortResult, "fallback-", " (CG fallback)",
+  );
+  if (isAbortResult(depegResult)) return depegResult;
+  const { depegErrorCount } = depegResult;
 
   return {
     status: depegErrorCount > 0 ? "degraded" : "ok",
@@ -419,13 +349,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     if (!llamaRes?.ok) {
       console.error(`[sync-stablecoins] DefiLlama API error: ${llamaRes?.status ?? "no response"}`);
       await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-      const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
+      const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
       if (fallback.itemCount && fallback.itemCount > 0) return fallback;
       throw new Error("DefiLlama stablecoins API failed and CoinGecko fallback was insufficient");
     }
   } else {
     console.warn("[sync-stablecoins] DL stablecoins circuit open — using CG supply fallback");
-    const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
+    const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
     if (fallback.itemCount && fallback.itemCount > 0) return fallback;
     throw new Error("DefiLlama stablecoins circuit open and CoinGecko fallback was insufficient");
   }
@@ -439,7 +369,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   if (!llamaData.peggedAssets || llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Unexpected asset count (${llamaData.peggedAssets?.length}), need ${MIN_VALID_ASSET_COUNT}+, skipping cache write`);
     await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-    const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
+    const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
     if (fallback.itemCount && fallback.itemCount > 0) return fallback;
     throw new Error(
       `DefiLlama payload was structurally invalid (asset count=${llamaData.peggedAssets?.length ?? 0}) and fallback failed`,
@@ -451,7 +381,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   if (validAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
     await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-    const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
+    const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
     if (fallback.itemCount && fallback.itemCount > 0) return fallback;
     throw new Error(
       `DefiLlama payload had too many malformed assets (valid=${validAssets.length}) and fallback failed`,
@@ -520,7 +450,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       `(need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
     );
     await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-    const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
+    const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
     if (fallback.itemCount && fallback.itemCount > 0) return fallback;
     throw new Error(
       `DefiLlama payload collapsed to ${llamaData.peggedAssets.length} unique canonical IDs and fallback failed`,
@@ -645,71 +575,27 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     }
   }
 
-  // --- Reject unreasonable prices BEFORE caching ---
-  // Must run before savePriceCache so bad prices don't persist for 24h
-  let rejectedCount = 0;
-  for (const asset of llamaData.peggedAssets) {
-    if (asset.price != null && typeof asset.price === "number") {
-      const decision = validatePriceCandidate(
-        asset.price,
-        validationContexts.get(asset),
-        priceValidationModeForAsset(asset),
-        validationReferences,
-      );
-      if (!decision.accepted) {
-        console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
-        asset.price = null;
-        asset.priceUpdatedAt = null;
-        rejectedCount++;
-      }
-    }
-  }
+  // --- Shared post-enrichment price pipeline ---
+  const priceResult = await runPostEnrichmentPricePipeline({
+    assets: llamaData.peggedAssets,
+    missingBefore,
+    db,
+    syncStartSec,
+    signal,
+    fxFallbackRates: fxRates,
+    validationReferences,
+    validationContexts,
+    priceValidationModeForAsset,
+    returnIfAborted,
+    abortResult,
+  }, "");
+  if (isAbortResult(priceResult)) return priceResult;
+  const { rejectedCount, cachedFallbackCount } = priceResult;
   if (rejectedCount > 0) {
     console.log(`[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
   }
-
-  // --- Price cache: save successes, apply fallbacks ---
-  const now = Math.floor(Date.now() / 1000);
-
-  // Save ALL assets with valid prices so other crons (mint-burn sync) can look them up.
-  // Previously only enriched assets were cached, starving mint-burn of price data.
-  const withValidPrices = llamaData.peggedAssets.filter(
-    (a) => a.price != null && typeof a.price === "number" && a.price > 0
-  );
-  if (withValidPrices.length > 0) {
-    const priceCacheWriteAbort = returnIfAborted(signal, "save-price-cache");
-    if (priceCacheWriteAbort) return priceCacheWriteAbort;
-    await savePriceCache(db, withValidPrices.map((a) => ({ id: a.id, price: a.price! as number })));
-  }
-
-  // Fallback: coins still missing — apply cached price if within TTL
-  const stillMissing = llamaData.peggedAssets.filter(
-    (a) => missingBefore.has(a.id) && hasMissingPrice(a)
-  );
-  if (stillMissing.length > 0) {
-    const priceCacheReadAbort = returnIfAborted(signal, "read-price-cache");
-    if (priceCacheReadAbort) return priceCacheReadAbort;
-    const priceCache = await getPriceCache(db);
-    let fallbackCount = 0;
-    for (const asset of stillMissing) {
-      const cached = priceCache.get(asset.id);
-      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL) {
-        const decision = validatePriceCandidate(
-          cached.price,
-          validationContexts.get(asset),
-          "fallback_enrichment",
-          validationReferences,
-        );
-        if (decision.accepted) {
-          asset.price = cached.price;
-          stampPriceMetadata(asset, "cached", "fallback", cached.updatedAt);
-          fallbackCount++;
-        }
-      }
-    }
-    if (fallbackCount > 0) {
-      console.log(`[sync-stablecoins] Applied ${fallbackCount} cached fallback prices`);
-    }
+  if (cachedFallbackCount > 0) {
+    console.log(`[sync-stablecoins] Applied ${cachedFallbackCount} cached fallback prices`);
   }
 
   // --- Fill missing circulatingPrev* from supply_history snapshots ---
@@ -750,84 +636,50 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
   const validationAbort = returnIfAborted(signal, "validate-stablecoins-payload");
   if (validationAbort) return validationAbort;
-  const normalizedPayload = normalizeStablecoinsPayload(llamaData);
-  const validation = validatePayloadWithSchema(
-    StablecoinListResponseSchema,
-    normalizedPayload,
-    "sync-stablecoins:stablecoins",
-  );
-  if (!validation.ok) {
-    const issueSummary = summarizeValidationIssues(validation.issues);
-    const stablecoinsCacheAgeSec = await getStablecoinsCacheAgeSec(db);
-    console.error("[sync-stablecoins] Schema validation failed; blocking stablecoins cache write:", issueSummary);
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-    await sendAlert(
-      alertWebhookUrl ?? null,
-      "Stablecoins schema validation warning",
-      `context=main; blocked stablecoins cache write; issues=${issueSummary}; stablecoinsCacheAgeSec=${stablecoinsCacheAgeSec ?? "missing"}`,
-    );
-    await writeInvalidStablecoinsDiagnostic(
-      db,
-      syncStartSec,
-      "main",
-      normalizedPayload,
-      validation.issues,
+  const cacheResult = await validateAndWriteStablecoinsCache({
+    assets: llamaData.peggedAssets,
+    fxFallbackRates: llamaData.fxFallbackRates,
+    db,
+    syncStartSec,
+    signal,
+    alertWebhookUrl,
+    validationContext: "main",
+    returnIfAborted,
+    abortResult,
+  }, (stablecoinsCacheAgeSec) => ({
+    status: "degraded",
+    itemCount: llamaData.peggedAssets.length,
+    metadata: buildSyncMetadata({
+      rowsRead: rawAssetCount,
+      rowsWritten: 0,
+      rowsDropped: droppedMalformedAssets,
+      sourceCoverage: { defillama: true },
+      fallbackMode: null,
+      validationFailures: 1,
+      validationContext: "main",
       stablecoinsCacheAgeSec,
-    );
-    return {
-      status: "degraded",
-      itemCount: llamaData.peggedAssets.length,
-      metadata: buildSyncMetadata({
-        rowsRead: rawAssetCount,
-        rowsWritten: 0,
-        rowsDropped: droppedMalformedAssets,
-        sourceCoverage: { defillama: true },
-        fallbackMode: null,
-        validationFailures: 1,
-        validationContext: "main",
-        stablecoinsCacheAgeSec,
-        cacheWriteMode: "blocked-invalid-payload",
-      }, {
-        cacheWriteMode: "blocked-invalid-payload",
-        capabilities: {
-          stablecoinsCache: false,
-          depegPipeline: false,
-        },
-      }),
-    };
+      cacheWriteMode: "blocked-invalid-payload",
+    }, {
+      cacheWriteMode: "blocked-invalid-payload",
+      capabilities: {
+        stablecoinsCache: false,
+        depegPipeline: false,
+      },
+    }),
+  }));
+  if (isAbortResult(cacheResult)) return cacheResult;
+  if (!cacheResult.written) {
+    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
+    return cacheResult.blockedResult!;
   }
-
-  const cachePersistAbort = returnIfAborted(signal, "persist-main-cache");
-  if (cachePersistAbort) return cachePersistAbort;
-  await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
   await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
-  console.log(`[sync-stablecoins] Cached ${llamaData.peggedAssets.length} assets`);
 
-  // Detect depeg events from current price data
-  let depegErrorCount = 0;
-  const depegErrors: string[] = [];
-  try {
-    const depegDetectAbort = returnIfAborted(signal, "depeg-detection");
-    if (depegDetectAbort) return depegDetectAbort;
-    await detectDepegEvents(db, llamaData.peggedAssets, llamaData.fxFallbackRates, signal);
-  } catch (err) {
-    if (signal?.aborted) return abortResult(signal, "depeg-detection");
-    console.error("[sync-stablecoins] Depeg detection failed:", err);
-    depegErrorCount += 1;
-    depegErrors.push(`detection: ${String(err).slice(0, 200)}`);
-  }
-
-  // Confirm or expire pending depeg events for >$1B coins
-  try {
-    const depegConfirmAbort = returnIfAborted(signal, "depeg-confirmation");
-    if (depegConfirmAbort) return depegConfirmAbort;
-    await confirmPendingDepegs(db, llamaData.peggedAssets, llamaData.fxFallbackRates, signal, coingeckoApiKey);
-  } catch (err) {
-    if (signal?.aborted) return abortResult(signal, "depeg-confirmation");
-    console.error("[sync-stablecoins] Pending depeg confirmation failed:", err);
-    depegErrorCount += 1;
-    depegErrors.push(`confirmation: ${String(err).slice(0, 200)}`);
-  }
+  const depegResult = await runDepegPipeline(
+    db, llamaData.peggedAssets, llamaData.fxFallbackRates, signal, coingeckoApiKey,
+    returnIfAborted, abortResult, "", "",
+  );
+  if (isAbortResult(depegResult)) return depegResult;
+  const { depegErrorCount, depegErrors } = depegResult;
 
   // Build metadata for cron_runs observability
   let status: CronResult["status"] = "ok";
