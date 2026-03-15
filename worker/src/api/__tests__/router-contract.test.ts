@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { route, ROUTER_STATIC_PATHS } from "../../router";
-import type { RouteContext } from "../../route-registry";
+import type { FullRouteContext } from "../../route-registry";
 import { mockD1 } from "./helpers/mock-d1";
 
 vi.stubGlobal("fetch", vi.fn(async () => (
@@ -23,8 +23,9 @@ const execCtx = {
   passThroughOnException: () => {},
 } as unknown as ExecutionContext;
 
-function makeRouteCtx(overrides: Partial<RouteContext> & { url: URL }): RouteContext {
-  return { db, execCtx, ...overrides };
+function makeRouteCtx(overrides: Partial<FullRouteContext> & { url: URL }): FullRouteContext {
+  const defaultRequest = new Request(overrides.url.toString());
+  return { db, execCtx, request: defaultRequest, trustedAdmin: false, ...overrides };
 }
 
 describe("router contract: strict frontend paths are routable", () => {

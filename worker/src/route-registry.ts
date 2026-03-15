@@ -49,7 +49,6 @@ import { generateDailyDigest } from "./cron/daily-digest";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { requireAdmin, withAdmin } from "./lib/auth";
 import {
-  errorResponse,
   jsonResponse,
   withErrorHandler,
 } from "./lib/api-utils";
@@ -58,25 +57,55 @@ import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
 import type { ChainRpcConfig } from "./lib/chain-registry";
 
+/** Core context available to every route handler. */
 export interface RouteContext {
   url: URL;
   db: D1Database;
   execCtx: ExecutionContext;
-  request?: Request;
-  trustedAdmin?: boolean;
-  alchemyApiKey?: string | null;
-  coingeckoApiKey?: string | null;
-  chainRpcs?: Map<string, ChainRpcConfig>;
-  mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
-  feedbackEnv?: FeedbackEnv;
+  request: Request;
+  trustedAdmin: boolean;
+}
+
+/** Domain-specific fields for telegram webhook handlers. */
+export interface TelegramRouteFields {
+  telegramWebhookSecret?: string;
+  telegramBotToken?: string;
+  telegramCreds?: TelegramCreds | null;
+}
+
+/** Domain-specific fields for digest generation/trigger. */
+export interface DigestRouteFields {
   anthropicApiKey?: string | null;
   twitterCreds?: TwitterCreds | null;
   telegramCreds?: TelegramCreds | null;
-  telegramWebhookSecret?: string;
-  telegramBotToken?: string;
 }
 
-export type StaticRouteHandler = (context: RouteContext) => Promise<Response>;
+/** Domain-specific fields for the feedback handler. */
+export interface FeedbackRouteFields {
+  feedbackEnv?: FeedbackEnv;
+}
+
+/** Domain-specific fields for mint-burn / health handlers. */
+export interface MintBurnRouteFields {
+  alchemyApiKey?: string | null;
+  mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
+}
+
+/** Domain-specific fields for chain RPC access. */
+export interface ChainRpcRouteFields {
+  coingeckoApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+}
+
+/** Full context built by handleHttpRequest — union of core + all domain bags. */
+export type FullRouteContext = RouteContext &
+  TelegramRouteFields &
+  DigestRouteFields &
+  FeedbackRouteFields &
+  MintBurnRouteFields &
+  ChainRpcRouteFields;
+
+export type StaticRouteHandler = (context: FullRouteContext) => Promise<Response>;
 
 type StaticRouteHandlerMap = Partial<Record<EndpointKey, StaticRouteHandler>>;
 
@@ -128,7 +157,7 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
     ),
   ),
   "audit-depeg-history": withErrorHandler("audit-depeg-history", ({ db, url, trustedAdmin, request }) => {
-    if (request?.method === "POST") {
+    if (request.method === "POST") {
       return runIdempotentAdminAction(
         db,
         "audit-depeg-history",
@@ -179,25 +208,19 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   ),
   "stress-signals": withErrorHandler("stress-signals", ({ db, url }) => handleStressSignals(db, url)),
   "backfill-dews": withErrorHandler("backfill-dews", ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request)),
-  feedback: withErrorHandler("feedback", ({ db, request, feedbackEnv }) => {
-    if (!request) {
-      return Promise.resolve(errorResponse(400, "Bad request"));
-    }
-    return handleFeedback(db, request, feedbackEnv ?? {});
-  }),
+  feedback: withErrorHandler("feedback", ({ db, request, feedbackEnv }) =>
+    handleFeedback(db, request, feedbackEnv ?? {}),
+  ),
   "telegram-webhook": withErrorHandler(
     "telegram-webhook",
     ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
-      handleTelegramWebhook(db, request!, telegramWebhookSecret, telegramBotToken),
+      handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken),
   ),
   "trigger-digest": withErrorHandler(
     "route-trigger-digest",
     async ({ db, request, trustedAdmin, anthropicApiKey, twitterCreds, telegramCreds }) => {
       const authError = await requireAdmin(request, trustedAdmin);
       if (authError) return authError;
-      if (!request) {
-        return errorResponse(400, "Bad request");
-      }
 
       return runIdempotentAdminAction(
         db,
@@ -221,9 +244,6 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
     async ({ db, request, trustedAdmin }) => {
       const authError = await requireAdmin(request, trustedAdmin);
       if (authError) return authError;
-      if (!request) {
-        return errorResponse(400, "Bad request");
-      }
 
       return runIdempotentAdminAction(
         db,

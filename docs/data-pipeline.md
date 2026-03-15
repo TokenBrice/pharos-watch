@@ -5,7 +5,7 @@
 Supply data uses a two-source model with automatic fallback:
 
 - **DefiLlama** — primary source for all stablecoins tracked by DefiLlama's stablecoin API
-- **CoinGecko market cap** — used for gold/silver/fiat tokens that DefiLlama doesn't track (e.g. XAUT, PAXG, KAU), and as a **full supply fallback** when the DefiLlama stablecoins API is down (circuit breaker triggers `fallbackToCgSupply()`)
+- **CoinGecko market cap** — used for gold/silver/fiat tokens that DefiLlama doesn't track (e.g. XAUT, PAXG, KAU), and as a **full supply fallback** when the DefiLlama stablecoins API is down (circuit breaker triggers `syncViaCoingeckoFallback()`)
 
 No on-chain overrides, no CMC supply patches, no manual supply corrections.
 

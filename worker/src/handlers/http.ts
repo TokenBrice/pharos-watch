@@ -1,5 +1,5 @@
 import { route } from "../router";
-import type { RouteContext } from "../route-registry";
+import type { FullRouteContext } from "../route-registry";
 import { normalizeCgApiKey } from "../lib/coingecko";
 import { buildChainRpcs } from "../lib/chain-registry";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
@@ -122,7 +122,7 @@ export async function handleHttpRequest(
     }
   }
 
-  const routeCtx: RouteContext = {
+  const routeCtx: FullRouteContext = {
     url,
     db: env.DB,
     execCtx: ctx,

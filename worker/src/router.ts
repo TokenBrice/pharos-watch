@@ -12,7 +12,7 @@ import { handleDismissCandidate } from "./api/discovery";
 import { withAdmin } from "./lib/auth";
 import {
   STATIC_ROUTE_HANDLERS,
-  type RouteContext,
+  type FullRouteContext,
 } from "./route-registry";
 
 function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
@@ -46,9 +46,9 @@ function matchDynamicRoute(
   return handler(db, resolved.canonicalId, execCtx);
 }
 
-export function route(routeCtx: RouteContext): Promise<Response> | null {
+export function route(routeCtx: FullRouteContext): Promise<Response> | null {
   const path = routeCtx.url.pathname;
-  const methodValidation = validateEndpointMethod(routeCtx.url, routeCtx.request?.method ?? "GET");
+  const methodValidation = validateEndpointMethod(routeCtx.url, routeCtx.request.method);
   if (methodValidation) {
     const resp = errorResponse(405, methodValidation.message);
     resp.headers.set("Allow", methodValidation.allowedMethods.join(", "));
@@ -90,7 +90,7 @@ export function route(routeCtx: RouteContext): Promise<Response> | null {
 
   // Discovery candidate dismiss (dynamic :id route with admin auth)
   const dismissMatch = path.match(/^\/api\/discovery-candidates\/(\d+)\/dismiss$/);
-  if (dismissMatch && routeCtx.request?.method === "POST") {
+  if (dismissMatch && routeCtx.request.method === "POST") {
     const candidateId = parseInt(dismissMatch[1], 10);
     return withAdmin(routeCtx.request, () => handleDismissCandidate(routeCtx.db, candidateId), routeCtx.trustedAdmin);
   }
