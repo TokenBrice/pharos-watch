@@ -27,7 +27,7 @@ describe("hasValidAdminCredential", () => {
     const req = new Request("https://api.pharos.watch/api/test");
     expect(await hasValidAdminCredential(req)).toBe(false);
   });
-  it("rejects ops-api request with service token when secrets not configured", async () => {
+  it("rejects ops-api request when no env configured", async () => {
     const req = new Request("https://ops-api.pharos.watch/api/test", {
       headers: { "CF-Access-Client-Id": "id", "CF-Access-Client-Secret": "secret" },
     });

@@ -1,9 +1,12 @@
 import { errorResponse } from "./api-utils";
+import { verifyAccessJwt } from "./jwt-verify";
 
 const DEFAULT_OPS_API_HOST = "ops-api.pharos.watch";
 
 /** Env fields relevant to admin auth — avoids importing the full Env type. */
 export interface AdminAuthEnv {
+  CF_ACCESS_OPS_API_AUD?: string;
+  CF_ACCESS_TEAM_DOMAIN?: string;
   OPS_API_SERVICE_TOKEN_ID?: string;
   OPS_API_SERVICE_TOKEN_SECRET?: string;
 }
@@ -18,12 +21,13 @@ function isOpsApiRequest(request: Request | undefined): boolean {
 }
 
 /**
- * Validates ops-api admin requests by comparing CF Access service token
- * headers against stored secrets using timing-safe comparison.
+ * Validates ops-api admin requests via two mechanisms (either succeeding grants access):
  *
- * ops-api.pharos.watch is a Worker custom domain (not behind CF Access proxy),
- * so Cf-Access-Jwt-Assertion is NOT injected. The smoke test and ops UI send
- * CF-Access-Client-Id / CF-Access-Client-Secret directly.
+ * 1. JWT verification — when CF Access is in the request path, it injects
+ *    Cf-Access-Jwt-Assertion which is verified against CF_ACCESS_OPS_API_AUD.
+ *
+ * 2. Service token comparison — timing-safe comparison of CF-Access-Client-Id/Secret
+ *    headers against OPS_API_SERVICE_TOKEN_ID/SECRET worker secrets.
  */
 async function hasOpsApiAccessSignal(
   request: Request | undefined,
@@ -31,22 +35,29 @@ async function hasOpsApiAccessSignal(
 ): Promise<boolean> {
   if (!isOpsApiRequest(request)) return false;
 
-  if (!env?.OPS_API_SERVICE_TOKEN_ID || !env?.OPS_API_SERVICE_TOKEN_SECRET) {
-    console.warn("[auth] OPS_API_SERVICE_TOKEN_ID/SECRET not configured — rejecting ops-api admin request");
-    return false;
+  // Path 1: JWT verification (CF Access proxied requests)
+  const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
+  if (accessJwt && env?.CF_ACCESS_OPS_API_AUD) {
+    const jwtValid = await verifyAccessJwt({
+      token: accessJwt,
+      aud: env.CF_ACCESS_OPS_API_AUD,
+      teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
+    });
+    if (jwtValid) return true;
   }
 
+  // Path 2: Service token comparison (direct Worker access)
   const clientId = request?.headers.get("CF-Access-Client-Id")?.trim();
   const clientSecret = request?.headers.get("CF-Access-Client-Secret")?.trim();
+  if (clientId && clientSecret && env?.OPS_API_SERVICE_TOKEN_ID && env?.OPS_API_SERVICE_TOKEN_SECRET) {
+    const [idMatch, secretMatch] = await Promise.all([
+      timingSafeCompare(clientId, env.OPS_API_SERVICE_TOKEN_ID),
+      timingSafeCompare(clientSecret, env.OPS_API_SERVICE_TOKEN_SECRET),
+    ]);
+    if (idMatch && secretMatch) return true;
+  }
 
-  if (!clientId || !clientSecret) return false;
-
-  const [idMatch, secretMatch] = await Promise.all([
-    timingSafeCompare(clientId, env.OPS_API_SERVICE_TOKEN_ID),
-    timingSafeCompare(clientSecret, env.OPS_API_SERVICE_TOKEN_SECRET),
-  ]);
-
-  return idMatch && secretMatch;
+  return false;
 }
 
 export async function hasValidAdminCredential(
