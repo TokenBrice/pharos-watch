@@ -77,7 +77,7 @@ export async function syncLiveReserves(
   const coinsWithWarnings: string[] = [];
   const breakerKeys = new Set<string>();
   const sharedSourceResults = new Map<string, Promise<AdapterResult>>();
-  const recordedBreakerOutcomes = new Set<string>();
+  const breakerOutcomes = new Map<string, boolean>();
 
   const runAdapter = (
     coin: ConfiguredCoin,
@@ -135,10 +135,7 @@ export async function syncLiveReserves(
         lastError: `Unknown adapter: ${config.adapter}`,
         metadata: { reason: "unknown-adapter" },
       }));
-      if (!recordedBreakerOutcomes.has(breakerKey)) {
-        await recordOutcomeSafe(db, breakerKey, false);
-        recordedBreakerOutcomes.add(breakerKey);
-      }
+      breakerOutcomes.set(breakerKey, false);
       continue;
     }
 
@@ -160,10 +157,7 @@ export async function syncLiveReserves(
           lastError: `Validation failed: ${validation.warnings.map(w => w.message).join("; ")}`,
           metadata: { reason: "validation-failed" },
         }));
-        if (!recordedBreakerOutcomes.has(breakerKey)) {
-          await recordOutcomeSafe(db, breakerKey, false);
-          recordedBreakerOutcomes.add(breakerKey);
-        }
+        breakerOutcomes.set(breakerKey, false);
         continue;
       }
 
@@ -186,10 +180,7 @@ export async function syncLiveReserves(
           lastError: "Adapter returned zero reserve slices",
           metadata: { reason: "empty-slices" },
         }));
-        if (!recordedBreakerOutcomes.has(breakerKey)) {
-          await recordOutcomeSafe(db, breakerKey, false);
-          recordedBreakerOutcomes.add(breakerKey);
-        }
+        breakerOutcomes.set(breakerKey, false);
         continue;
       }
 
@@ -219,9 +210,8 @@ export async function syncLiveReserves(
           lastSuccessAt: now,
         }),
       );
-      if (!recordedBreakerOutcomes.has(breakerKey)) {
-        await recordOutcomeSafe(db, breakerKey, true);
-        recordedBreakerOutcomes.add(breakerKey);
+      if (breakerOutcomes.get(breakerKey) !== false) {
+        breakerOutcomes.set(breakerKey, true);
       }
       synced++;
     } catch (e) {
@@ -238,11 +228,13 @@ export async function syncLiveReserves(
         lastError: e instanceof Error ? e.message : String(e),
         metadata: { reason: "adapter-exception" },
       }));
-      if (!recordedBreakerOutcomes.has(breakerKey)) {
-        await recordOutcomeSafe(db, breakerKey, false);
-        recordedBreakerOutcomes.add(breakerKey);
-      }
+      breakerOutcomes.set(breakerKey, false);
     }
+  }
+
+  // Deferred breaker outcome recording: worst outcome per key wins
+  for (const [key, success] of breakerOutcomes) {
+    await recordOutcomeSafe(db, key, success);
   }
 
   const total = CONFIGURED_COINS.length;
