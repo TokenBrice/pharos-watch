@@ -34,6 +34,13 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "Stables Labs": "https://stables.money/",
   Venus: "https://app.venus.io/",
   Yearn: "https://app.yearn.fi/",
+  "Radiant v2": "https://app.radiant.capital/",
+  Fraxlend: "https://app.frax.finance/fraxlend",
+  Clearpool: "https://app.clearpool.finance/",
+  Centrifuge: "https://app.centrifuge.io/",
+  "Sturdy v2": "https://v2.sturdy.finance/",
+  Goldfinch: "https://app.goldfinch.finance/",
+  TrueFi: "https://app.truefi.io/",
 };
 
 function pickMetaYieldUrl(stablecoinId: string): string | null {
