@@ -38,6 +38,7 @@ import {
 } from "./sync-stablecoins/post-enrichment";
 
 import { upsertDiscoveryCandidates } from "./discovery-scan";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 import { DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
@@ -323,7 +324,7 @@ async function syncViaCoingeckoFallback(
   };
 }
 
-export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal?: AbortSignal, alertWebhookUrl?: string | null, coingeckoApiKey?: string | null): Promise<CronResult> {
+export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal?: AbortSignal, alertWebhookUrl?: string | null, coingeckoApiKey?: string | null, chainRpcs?: Map<string, ChainRpcConfig>): Promise<CronResult> {
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);
@@ -484,7 +485,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const primaryPricesAbort = returnIfAborted(signal, "primary-prices");
   if (primaryPricesAbort) return primaryPricesAbort;
   const { results: primaryPriceResults, stats: priceValidationStats } = await fetchPrimaryPrices(
-    llamaData.peggedAssets, db, signal, validationReferences, coingeckoApiKey,
+    llamaData.peggedAssets, db, signal, validationReferences, coingeckoApiKey, chainRpcs,
   );
   const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(llamaData.peggedAssets, signal);
   const protocolOverrideCount = protocolPriceOverrides.size;
@@ -687,6 +688,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     status = "degraded";
   }
 
+  const INDIVIDUAL_SOURCE_KEYS = new Set<string>([
+    "coingecko", "defillama", "protocol-redeem", "defillama-contract",
+    "coinmarketcap", "dexscreener", "pyth", "binance", "coinbase",
+    "redstone", "curve-onchain", "dex-promoted", "cached",
+  ]);
+
   function mapSourceToBucket(
     source: string,
     dist: PriceSourceHealth["sourceDistribution"],
@@ -728,10 +735,27 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       continue;
     }
 
-    const source = asset.priceSource;
-    const bucket = source ? mapSourceToBucket(source, finalSourceDistribution) : null;
-    if (bucket) {
-      finalSourceDistribution[bucket]++;
+    // Participation-based counting: credit EACH source that contributed to
+    // consensus, so oracle/CEX sources (Pyth, RedStone, Binance, Coinbase)
+    // are visible even when they're not first alphabetically in the label.
+    if (asset.agreeSources && asset.agreeSources.length > 0) {
+      const agreeSet = new Set(asset.agreeSources);
+      if (agreeSet.has("coingecko") && agreeSet.has("defillama")) {
+        finalSourceDistribution["coingecko+defillama"]++;
+      }
+      for (const src of asset.agreeSources) {
+        if (INDIVIDUAL_SOURCE_KEYS.has(src)) {
+          finalSourceDistribution[src as keyof typeof finalSourceDistribution]++;
+        }
+      }
+    } else {
+      // Fallback path for enrichment sources (CMC, DexScreener, cached, etc.)
+      // that don't go through multi-source consensus.
+      const source = asset.priceSource;
+      const bucket = source ? mapSourceToBucket(source, finalSourceDistribution) : null;
+      if (bucket) {
+        finalSourceDistribution[bucket]++;
+      }
     }
 
     const confidence = asset.priceConfidence;

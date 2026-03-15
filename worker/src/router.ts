@@ -82,7 +82,7 @@ export function route(routeCtx: FullRouteContext): Promise<Response> | null {
   const detailResult = matchDynamicRoute(
     path,
     /^\/api\/stablecoin\/(.+)$/,
-    (db, id, execCtx) => handleStablecoinDetail(db, id, execCtx),
+    (db, id, execCtx) => handleStablecoinDetail(db, id, execCtx, routeCtx.coingeckoApiKey),
     routeCtx.db,
     routeCtx.execCtx,
   );

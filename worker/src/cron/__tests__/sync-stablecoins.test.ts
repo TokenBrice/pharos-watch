@@ -282,7 +282,7 @@ describe("syncStablecoins", () => {
     );
     expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
     expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "defillama-stablecoins");
-    expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined, undefined);
+    expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined, undefined, undefined);
     expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
     expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);

@@ -22,6 +22,7 @@ import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
 import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../lib/authoritative-price-sources";
 import { fetchEvmCallHexAtBlock } from "../lib/evm-rpc";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
 import { DLPriceResponseSchema } from "../lib/schemas";
 
@@ -147,6 +148,7 @@ export async function fetchPrimaryPrices(
   signal?: AbortSignal,
   references?: PriceValidationReferences,
   coingeckoApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<{ results: Map<string, PrimaryPriceResult>; stats: PriceValidationStats; cgPrices: Map<string, number> }> {
   throwIfAborted(signal);
   const results = new Map<string, PrimaryPriceResult>();
@@ -353,7 +355,7 @@ export async function fetchPrimaryPrices(
     fetches.push(
       (async () => {
         try {
-          const prices = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal);
+          const prices = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
           for (const [id, price] of prices) curvePrices.set(id, price);
           await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, prices.size > 0);
         } catch (err) {
@@ -368,7 +370,7 @@ export async function fetchPrimaryPrices(
       (async () => {
         try {
           const hex = await fetchEvmCallHexAtBlock(
-            "ethereum", CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR, "latest", { signal },
+            "ethereum", CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR, "latest", { signal, chainRpcs },
           );
           if (hex) {
             const price = Number(BigInt(hex)) / 1e18;

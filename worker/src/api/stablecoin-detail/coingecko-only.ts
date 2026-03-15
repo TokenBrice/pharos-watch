@@ -13,10 +13,12 @@ export async function fetchCoinGeckoOnlyTokens(config: {
   stablecoinId: string;
   geckoId: string;
   pegType: string;
+  coingeckoApiKey?: string | null;
 }): Promise<Record<string, unknown>[]> {
+  const apiKey = config.coingeckoApiKey ?? null;
   const cgRes = await fetchWithRetry(
-    cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
-    { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+    cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`, apiKey),
+    { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey) },
     DETAIL_UPSTREAM_MAX_RETRIES,
     { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
   );

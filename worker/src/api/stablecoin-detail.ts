@@ -23,7 +23,7 @@ import {
 
 export const handleStablecoinDetail = withErrorHandler(
   "stablecoin-detail",
-  async (db: D1Database, id: string, ctx: ExecutionContext): Promise<Response> => {
+  async (db: D1Database, id: string, ctx: ExecutionContext, coingeckoApiKey?: string | null): Promise<Response> => {
     const cacheKey = `detail:${id}`;
     const cached = await getCache(db, cacheKey);
     const meta = TRACKED_META_BY_ID.get(id);
@@ -132,6 +132,7 @@ export const handleStablecoinDetail = withErrorHandler(
           stablecoinId: id,
           geckoId: meta.geckoId!,
           pegType,
+          coingeckoApiKey,
         });
         const historyFresh = isDetailHistoryFresh(tokens);
         await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, tokens.length > 0 && historyFresh);

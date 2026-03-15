@@ -27,7 +27,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
     // Run sequentially in-slot to avoid cross-job connection spikes.
     const stablecoinsResult = await runQuarterHourlyJob(
       "sync-stablecoins",
-      (signal) => syncStablecoins(runtime.db, runtime.env.CMC_API_KEY, signal, runtime.alertWebhookUrl, runtime.coingeckoApiKey),
+      (signal) => syncStablecoins(runtime.db, runtime.env.CMC_API_KEY, signal, runtime.alertWebhookUrl, runtime.coingeckoApiKey, runtime.chainRpcs),
     );
     const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
     const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;

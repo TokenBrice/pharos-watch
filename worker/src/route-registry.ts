@@ -111,7 +111,7 @@ type StaticRouteHandlerMap = Partial<Record<EndpointKey, StaticRouteHandler>>;
 
 const STATIC_ROUTE_HANDLERS_BY_KEY = {
   stablecoins: withErrorHandler("stablecoins", ({ db }) => handleStablecoins(db)),
-  "stablecoin-detail-canary": withErrorHandler("stablecoin-detail-canary", ({ db, execCtx }) => handleStablecoinDetail(db, "usdt-tether", execCtx)),
+  "stablecoin-detail-canary": withErrorHandler("stablecoin-detail-canary", ({ db, execCtx, coingeckoApiKey }) => handleStablecoinDetail(db, "usdt-tether", execCtx, coingeckoApiKey)),
   "stablecoin-summary-canary": withErrorHandler("stablecoin-summary-canary", ({ db }) => handleStablecoinSummary(db, "usdt-tether")),
   "stablecoin-reserves-canary": withErrorHandler("stablecoin-reserves-canary", ({ db }) => handleStablecoinReserves(db, "iusd-infinifi")),
   "stablecoin-charts": withErrorHandler("stablecoin-charts", ({ db }) => handleStablecoinCharts(db)),

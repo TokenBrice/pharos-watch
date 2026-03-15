@@ -12,6 +12,7 @@
  */
 
 import { fetchEvmCallHexAtBlock } from "./evm-rpc";
+import type { ChainRpcConfig } from "./chain-registry";
 
 export interface CurvePoolConfig {
   stablecoinId: string;
@@ -43,6 +44,7 @@ const GET_DY_UNDERLYING_SELECTOR = "0x07211ef7";
 export async function fetchCurveOnchainPrices(
   configs: CurvePoolConfig[],
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<Map<string, number>> {
   // Validate: no chained hops (hop referencing another hop)
   const hopIds = new Set(configs.filter((c) => c.hop).map((c) => c.stablecoinId));
@@ -66,7 +68,7 @@ export async function fetchCurveOnchainPrices(
       // Metapool get_dy_underlying makes cross-pool calls requiring more gas
       const gas = config.useUnderlying ? "0x7A120" : undefined; // 500K gas
       const resultHex = await fetchEvmCallHexAtBlock(
-        config.chain, config.poolAddress, calldata, "latest", { signal, gas },
+        config.chain, config.poolAddress, calldata, "latest", { signal, gas, chainRpcs },
       );
       if (!resultHex) continue;
 
