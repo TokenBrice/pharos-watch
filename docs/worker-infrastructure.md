@@ -86,7 +86,7 @@ Three modules derive runtime configuration from `Env` bindings via pure function
 | ------------------------------------------------------- | --------------------- | ---------------------------------------------------- |
 | `normalizeCgApiKey(env.COINGECKO_API_KEY)`               | `fetch` + `scheduled` | Returns normalized API key for CoinGecko requests    |
 | `buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
-| `normalizeWebhookUrl(env.ALERT_WEBHOOK_URL)`             | `fetch` + `scheduled` | Returns normalized webhook URL for error alerts      |
+| `normalizeWebhookUrl(env.ALERT_WEBHOOK_URL)`             | `scheduled`           | Returns normalized webhook URL for error alerts      |
 
 These are pure functions (no module-level mutable state). `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory.
 
@@ -765,6 +765,13 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 | `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro`                                        | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints                                                                                                                                                                                                                                                                                             |
 | `crvusd`                   | `crvusd-curve`                                                           | `inputs.primary.kind = "http-json"` -> `https://prices.curve.finance/v1/crvusd/markets`                                                                                                                                                                                                                                                                                                                           |
 | `ethena`                   | `usde-ethena`                                                            | `inputs.primary.kind = "http-json"` -> `https://app.ethena.fi/api/positions/current/collateral`                                                                                                                                                                                                                                                                                                                   |
+| `chainlink-nav`            | `usdy-ondo-finance`, `ustb-superstate`, `mtbill-midas`                   | `inputs.primary.kind = "onchain-evm"` -> Chainlink NAV feed oracle `latestRoundData()` via Etherscan proxy RPC                                                                                                                                                                                                                                                                                                   |
+| `chainlink-por`            | `fdusd-first-digital`                                                    | `inputs.primary.kind = "onchain-evm"` -> Chainlink Proof-of-Reserve feed `latestRoundData()` via Etherscan proxy RPC                                                                                                                                                                                                                                                                                             |
+| `circle-transparency`      | `usdc-circle`, `eurc-circle`                                             | `inputs.primary.kind = "http-html"` -> `https://www.circle.com/transparency` (server-rendered HTML reserve data)                                                                                                                                                                                                                                                                                                 |
+| `frax`                     | `frax-frax`                                                              | `inputs.primary.kind = "http-json"` -> `https://api.frax.finance/combineddata/`                                                                                                                                                                                                                                                                                                                                  |
+| `gho`                      | `gho-aave`                                                               | `inputs.primary.kind = "onchain-evm"` -> Ethereum facilitator bucket `eth_call` reads (capacity, minted amounts) via Etherscan proxy RPC                                                                                                                                                                                                                                                                         |
+| `sky-makercore`            | `usds-sky`, `dai-makerdao`                                               | `inputs.primary.kind = "http-json"` -> `https://api.llama.fi/protocol/makerdao` (DefiLlama protocol TVL breakdown)                                                                                                                                                                                                                                                                                               |
+| `tether`                   | `usdt-tether`                                                            | `inputs.primary.kind = "http-json"` -> `https://app.tether.to/transparency.json`                                                                                                                                                                                                                                                                                                                                 |
 
 ### sync-redemption-backstops
 
@@ -805,7 +812,7 @@ Current dynamic reserve-metadata support is used for `iusd-infinifi`, whose imme
 **Schedule:** `5 8 * * *` (daily at 08:05 UTC)
 **Data source:** `https://backend.bluechip.org/coin-data/{slug}`
 
-**Purpose:** Fetches safety ratings from bluechip.org for 17 tracked stablecoins.
+**Purpose:** Fetches safety ratings from bluechip.org for 19 tracked stablecoins.
 
 **Constants:**
 
@@ -820,7 +827,7 @@ Current dynamic reserve-metadata support is used for `iusd-infinifi`, whose imme
 **Algorithm:**
 
 1. Check cache freshness: if `bluechip-ratings` cache is <6 hours old, skip
-2. Fetch ratings for all 17 slugs in `BLUECHIP_SLUG_MAP` (file: `worker/src/lib/bluechip-slugs.ts`)
+2. Fetch ratings for all 19 slugs in `BLUECHIP_SLUG_MAP` (file: `worker/src/lib/bluechip-slugs.ts`)
    - Processed in batches of 3, with 500ms delay between batches
    - Each request uses `fetchWithRetry()` with `maxRetries: 2`
 3. For each response, extract:
@@ -832,7 +839,7 @@ Current dynamic reserve-metadata support is used for `iusd-infinifi`, whose imme
 4. If zero ratings fetched: preserve existing cache, don't overwrite
 5. Store `Record<string, BluechipRating>` (keyed by canonical Pharos ID) via `setCacheIfNewer()`
 
-**Tracked coins:** USDC, USDT, DAI, LUSD, BOLD, PYUSD, PAXG, XAUT, GUSD, USDP, EURC, FDUSD, FRAX, GHO, TUSD, RLUSD, XSGD.
+**Tracked coins:** USDC, USDT, DAI, LUSD, BOLD, PYUSD, PAXG, XAUT, GUSD, USDP, EURC, FDUSD, FRAX, GHO, TUSD, RLUSD, XSGD, OUSD, CETES.
 
 ---
 
@@ -936,7 +943,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/blacklist-gaps.ts`                 | Shared blacklist gap query helper (Tron null-amount exclusion + recent window)                                                                                      |
 | `worker/src/lib/chain-registry.ts`                 | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains                                                                              |
 | `worker/src/lib/coingecko.ts`                      | CoinGecko init: free/pro URL switching, auth headers                                                                                                                |
-| `worker/src/lib/bluechip-slugs.ts`                 | Bluechip slug → canonical Pharos ID mapping (17 coins)                                                                                                              |
+| `worker/src/lib/bluechip-slugs.ts`                 | Bluechip slug → canonical Pharos ID mapping (19 coins)                                                                                                              |
 | `worker/src/lib/mint-burn-health-config.ts`        | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator                                                                                  |
 | `worker/src/lib/dex-liquidity.ts`                  | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`)                                                                                                         |
 | `worker/src/lib/redemption-backstop-sources.ts`    | Redemption-route resolver: capacity models, docs, costs, and effective-exit scoring inputs                                                                          |

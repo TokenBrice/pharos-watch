@@ -7,7 +7,7 @@ Public-facing analytics dashboard tracking 157 stablecoins (plus 2 shadow assets
 ## Features
 
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
-- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
+- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
@@ -18,7 +18,7 @@ Public-facing analytics dashboard tracking 157 stablecoins (plus 2 shadow assets
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 81 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 45 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 46 configured assets
 - **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
 - **Private operator status dashboard** — Access-gated cron health, cache freshness, and system monitoring on `ops.pharos.watch`
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
@@ -131,6 +131,7 @@ src/                              Frontend (Next.js static export)
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
 │   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
 │   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
+│   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
 │   ├── status/                   Access-gated operator status panel
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
@@ -285,4 +286,4 @@ Optional mint/burn freshness env overrides (secret or plain env): `MINT_BURN_DIS
 
 ## License
 
-MIT
+All rights reserved.

@@ -57,11 +57,14 @@ Actively used by the current Pages Functions host gate / admin proxy:
 - `OPS_UI_ORIGIN`
 - `OPS_API_ORIGIN`
 
-Reserved in the Worker env interface for later Access-aware enforcement work, but not consumed by the current Worker code paths:
+Consumed by the Worker's admin auth layer (`worker/src/lib/auth.ts`) for Access JWT verification:
 
-- `CF_ACCESS_TEAM_DOMAIN`
+- `CF_ACCESS_TEAM_DOMAIN` — used to construct the JWKS URL for JWT signature verification
+- `CF_ACCESS_OPS_API_AUD` — verified against the JWT `aud` claim to confirm the token was issued for the ops-api Access application
+
+Reserved but not yet consumed:
+
 - `CF_ACCESS_OPS_UI_AUD`
-- `CF_ACCESS_OPS_API_AUD`
 
 ---
 

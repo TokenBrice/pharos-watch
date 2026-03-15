@@ -166,7 +166,7 @@ Uses the structured `risk_free_rate` cache already refreshed daily by `fetch-tbi
 | Token | Spread (bps) | Rationale |
 | ----- | ------------ | --------- |
 | BUIDL | 20 | BlackRock fund, 0.20% management fee |
-| YLDS  | 50 | Figure Markets, SOFR - 50 bps formula |
+| YLDS  | 50 | Figure Markets, T-bill rate - 50 bps formula |
 | USTB  | 15 | Superstate, 0.15% management fee |
 | mTBILL | 0 | Midas, tracks T-bill rate directly |
 | OUSG  | 50 | Ondo US Government Bond fund, 0.50% management fee |

@@ -155,6 +155,10 @@ src/                              # Next.js frontend (static export)
 │   ├── about/                    # About / product overview
 │   │   ├── page.tsx
 │   │   └── error.tsx
+│   ├── admin/                    # Access-gated operator admin panel (ops.pharos.watch only)
+│   │   ├── page.tsx
+│   │   ├── client.tsx
+│   │   └── error.tsx
 │   ├── status/                   # Operator status shell; interactive only on the Access-protected ops host
 │   │   ├── page.tsx
 │   │   ├── client.tsx
@@ -412,18 +416,21 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-stablecoins/
     │   │   ├── stages.ts         # Extracted sync-stablecoins stage helpers (normalize/filter/staleness/supply-history fill)
     │   │   └── supplemental-assets.ts # Extracted supplemental token fetch helpers (gold/silver/CG-only fiat overlays)
-    │   ├── enrich-prices.ts      # Dual-primary price validation + 6-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
+    │   ├── enrich-prices.ts      # Dual-primary price validation + 4-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
-    │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)
+    │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (runs on */15, writes once daily via dedup guard; primary daily run at 8AM UTC)
     │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
     │   ├── sync-live-reserves.ts # Live reserve composition sync → D1 (hourly, reserve lane)
+    │   ├── reserve-adapters/    # Per-protocol live reserve adapters (23 adapters)
+    │   │   ├── index.ts         # Adapter registry + dispatch
+    │   │   └── ...              # Individual adapters (accountable, tether, circle-transparency, gho, etc.)
     │   ├── sync-redemption-backstops.ts # Redemption backstop + effective-exit snapshot sync → D1 (hourly, reserve lane)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 08:05 UTC)
-    │   ├── dex-discovery/        # Independent 20-min staged-pool discovery pipeline
+    │   ├── dex-discovery/        # Independent 30-min staged-pool discovery pipeline
     │   │   ├── index.ts          # Barrel export
     │   │   ├── types.ts          # Discovery tiers, staged-pool rows, confidence defaults
     │   │   ├── crawl-sources.ts  # Chain-aware CG Onchain/GT/DexScreener/tickers pool crawl
@@ -575,6 +582,7 @@ data/
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
+- Private operator routes marked `noindex,nofollow`:
   - `/status/`
   - `/admin/`
 - Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.

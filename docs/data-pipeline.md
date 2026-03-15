@@ -100,7 +100,7 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 
 1. **Pass 1:** Contract address -> DefiLlama coins API
 2. **Pass 1b:** Multi-chain contract address fallback (tries alternate chain addresses via DefiLlama coins API)
-3. **Pass 2:** CoinMarketCap listings batch (`listings/latest?cryptocurrency_type=stablecoin&limit=200`) — matches by symbol instead of per-slug, covering all CMC-listed stablecoins in one call (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt)
+3. **Pass 2:** CoinMarketCap category batch (`cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — matches by symbol instead of per-slug, covering all CMC-listed stablecoins in one call (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt)
 4. **Pass 3:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-aware fallback validation. Primary sync paths now allow deep downside failures for fixed pegs when the move is being evaluated as an authoritative price, while fallback enrichment still rejects isolated bad prints below the lower bound. Commodity tokens still scale gold/silver references by `commodityOunces` for gram- and 1/1000-ounce assets; capped at 10 searches per run, no retries, 5s per-request timeout, 45s total pass budget)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
@@ -124,7 +124,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 11. **Backfill batch safety**: `backfill-depegs.ts` chunks depeg INSERT statements into groups of 100 and executes them sequentially after the per-coin DELETE to stay within D1 batch limits
 12. **OFFSET/LIMIT safety**: SQL queries use `LIMIT -1` when offset > 0 but no limit is set (bare OFFSET is invalid SQLite). Values are parameterized, not interpolated
 13. **Freshness header**: `/api/stablecoins` returns `X-Data-Age` (seconds since last cache write)
-14. **Timing-safe admin auth**: Admin endpoints (`/api/status`, `/api/backfill-depegs`) hash both keys with SHA-256 before `crypto.subtle.timingSafeEqual()`, preventing both timing side-channel attacks and length-leak attacks
+14. **Cloudflare Access admin auth**: Admin endpoints are gated by the `ops-api.pharos.watch` origin lane. When `CF_ACCESS_OPS_API_AUD` is configured, the worker cryptographically verifies the Cloudflare Access JWT (`worker/src/lib/auth.ts`). Timing-safe HMAC comparison (`timingSafeCompare`) is used for the Telegram webhook secret, not for admin endpoints.
 15. **Pagination defaults**: `/api/depeg-events` defaults `limit` to 100 and caps at 1000; `/api/blacklist` defaults `limit` to 1000, caps at 1000, and treats `limit=0` as "use default". The blacklist frontend hook (`src/lib/blacklist-api.ts`) hydrates additional pages in 3-request batches with retry/backoff when it needs the full history for charting and summary stats.
 16. **Unbounded query guard**: `/api/peg-summary` bounds via the 4-year `started_at >` filter on the depeg_events query
 17. **Cache-empty 503**: `/api/peg-summary` returns HTTP 503 (not 200) when cache is empty, signaling data unavailability

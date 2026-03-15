@@ -197,7 +197,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor:
   - any critical data-quality subquery failed (`dataQuality.sourceFailures.length > 0`)
   - `missingPriceRatio > 0.15`
   - `blacklistRecentMissingAmounts > 0` (last 24h)
-  - `blacklistMissingRatio >= 0.005` (0.5%)
+  - `blacklistMissingRatio >= 0.01` (1%)
   - `onchainStaleRatio >= 0.1`
   - `onchainDivergenceRatio >= 0.1`
 - else `healthy`

@@ -14,7 +14,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 | `DEPEG_SECONDARY_THRESHOLD_RATIO` | 0.5 | Secondary source agreement bar (50% of primary threshold) |
 | `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` | 1800 (30 min) | Primary prices older than this require confirmation |
 | `DEPEG_EXTREME_MOVE_BPS` | 5000 (50%) | Severe move threshold routed through dedicated confirmation lane |
-| `DEX_FRESHNESS_SEC` | 1200 (20 min) | DEX prices older than this are ignored |
+| `DEX_FRESHNESS_SEC` | 2100 (35 min) | DEX prices older than this are ignored |
 | `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | 1,000,000 | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
@@ -96,7 +96,7 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 3. Load DEX prices from `dex_prices` table (silently skip if table missing)
 4. Merge duplicate open events: for each coin with multiple open events, keep earliest, absorb worst peak, delete rest
 
-`dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 20 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress, confirm, or auto-close events.
+`dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 35 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress, confirm, or auto-close events.
 
 ### Per-Asset Processing
 
@@ -184,7 +184,7 @@ Age checks:
 **DEX check:**
 
 - Read from `dex_prices` table (same data as Stage 1)
-- Must be within 20-minute freshness window and have aggregate source TVL >= $1M
+- Must be within 35-minute freshness window and have aggregate source TVL >= $1M
 - Agrees if deviation >= `secondaryBar`
 
 ### Decision Matrix
@@ -374,7 +374,7 @@ Returns `null` if < 30 days tracking.
 | Supply < $1M | Skipped (prevents micro-cap noise) |
 | Missing/invalid prices | Multiple null/NaN/<= 0 checks |
 | Peg reference validation | Must be finite and > 0 |
-| DEX freshness | Prices > 20 min old ignored |
+| DEX freshness | Prices > 35 min old ignored |
 | Orphaned events | Closed with `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
 

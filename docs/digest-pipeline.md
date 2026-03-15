@@ -50,7 +50,7 @@ The cron assembles a `DigestInputData` object from 12 sources before calling the
 | Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>10 simultaneous changes excluded) |
 | Recent digests | last 5 rows from `daily_digest` | Passed to LLM to enforce variety |
 
-`DigestInputData` is defined once in `shared/types/index.ts` and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
+`DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
 
 Four additional optional fields were added to `DigestInputData` in the v2 refinement: `mintBurnFlows`, `dewsStress`, `historicalContext`, and `gradeTransitions`. All are populated only when their source data exists — the LLM writes from what's available.
 
