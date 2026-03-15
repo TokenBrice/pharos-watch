@@ -6,7 +6,6 @@ import {
   getPrevDayRawOrNull,
   getPrevWeekRaw,
   getPrevWeekRawOrNull,
-  getPrevMonthRaw,
   getPrevMonthRawOrNull,
   computeGovernanceBreakdown,
 } from "@shared/lib/supply";
@@ -174,23 +173,6 @@ describe("getPrevWeekRawOrNull", () => {
       circulatingPrevWeek: { peggedUSD: 800_000, peggedEUR: 100_000 },
     });
     expect(getPrevWeekRawOrNull(coin)).toBe(900_000);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getPrevMonthRaw
-// ---------------------------------------------------------------------------
-describe("getPrevMonthRaw", () => {
-  it("sums circulatingPrevMonth peg buckets", () => {
-    const coin = mockCoin({
-      circulatingPrevMonth: { peggedUSD: 700_000 },
-    });
-    expect(getPrevMonthRaw(coin)).toBe(700_000);
-  });
-
-  it("returns 0 when circulatingPrevMonth is undefined", () => {
-    const coin = mockCoin();
-    expect(getPrevMonthRaw(coin)).toBe(0);
   });
 });
 

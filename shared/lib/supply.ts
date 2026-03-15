@@ -44,10 +44,6 @@ export function getPrevWeekRawOrNull(c: StablecoinData): number | null {
   return val === 0 && !hasAnyBucket(c.circulatingPrevWeek) ? null : val;
 }
 
-export function getPrevMonthRaw(c: StablecoinData): number {
-  return sumPegBuckets(c.circulatingPrevMonth);
-}
-
 export function getPrevMonthRawOrNull(c: StablecoinData): number | null {
   const val = sumPegBuckets(c.circulatingPrevMonth);
   return val === 0 && !hasAnyBucket(c.circulatingPrevMonth) ? null : val;

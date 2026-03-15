@@ -1,7 +1,7 @@
 export const SECONDS_PER_MINUTE = 60;
-export const MINUTES_PER_HOUR = 60;
+const MINUTES_PER_HOUR = 60;
 export const HOURS_PER_DAY = 24;
-export const MS_PER_SECOND = 1000;
+const MS_PER_SECOND = 1000;
 
 export const HOUR_SECONDS = MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
 export const DAY_SECONDS = HOURS_PER_DAY * HOUR_SECONDS;

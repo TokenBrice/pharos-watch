@@ -8,19 +8,19 @@ interface DexLiquidityRow {
   chain_count: number;
 }
 
-export type DexLiquiditySnapshot = Pick<
+type DexLiquiditySnapshot = Pick<
   DexLiquidityData,
   "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"
 >;
 
-export type DexLiquidityMap = Record<string, DexLiquiditySnapshot>;
+export type DexLiquidityDbMap = Record<string, DexLiquiditySnapshot>;
 
-export async function loadDexLiquidityMap(db: D1Database): Promise<DexLiquidityMap> {
+export async function loadDexLiquidityMap(db: D1Database): Promise<DexLiquidityDbMap> {
   const rows = await db
     .prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity")
     .all<DexLiquidityRow>();
 
-  const map: DexLiquidityMap = {};
+  const map: DexLiquidityDbMap = {};
   for (const row of rows.results ?? []) {
     map[row.stablecoin_id] = {
       liquidityScore: row.liquidity_score,
