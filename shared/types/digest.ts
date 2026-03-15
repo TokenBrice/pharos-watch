@@ -151,6 +151,7 @@ export interface DigestArchiveEntry {
   psiScore: number | null;
   psiBand: string | null;
   totalMcapUsd: number | null;
+  digestType?: "daily" | "weekly";
 }
 
 export interface DigestArchiveResponse {

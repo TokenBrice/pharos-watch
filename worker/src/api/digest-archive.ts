@@ -3,8 +3,8 @@ import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleDigestArchive = withErrorHandler("digest-archive", async (db: D1Database): Promise<Response> => {
   const rows = await db.prepare(
-    "SELECT digest_text, digest_title, generated_at, digest_extended, input_data FROM daily_digest ORDER BY generated_at DESC LIMIT 365"
-  ).all<{ digest_text: string; digest_title: string | null; generated_at: number; digest_extended: string | null; input_data: string | null }>();
+    "SELECT digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 365"
+  ).all<{ digest_text: string; digest_title: string | null; generated_at: number; digest_extended: string | null; input_data: string | null; digest_meta: string | null }>();
 
   const digests = (rows.results ?? []).map((r) => {
     let psiScore: number | null = null;
@@ -21,6 +21,13 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
         totalMcapUsd = input.totalMcapUsd ?? null;
       } catch { /* malformed input_data, skip */ }
     }
+    let digestType: "daily" | "weekly" = "daily";
+    if (r.digest_meta) {
+      try {
+        const meta = JSON.parse(r.digest_meta);
+        if (meta.type === "weekly") digestType = "weekly";
+      } catch { /* ignore */ }
+    }
     return {
       digestText: r.digest_text,
       digestTitle: r.digest_title ?? null,
@@ -29,6 +36,7 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
       psiScore,
       psiBand,
       totalMcapUsd,
+      digestType,
     };
   });
 
