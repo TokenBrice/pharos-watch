@@ -75,8 +75,7 @@ export function parseRiskFreeRateCache(
         };
       }
     }
-  } catch {
-    // Fall through to legacy scalar parsing.
+  } catch { /* expected: legacy scalar format — fall through to numeric parsing */
   }
 
   const legacyRate = toFiniteNumber(raw);
@@ -138,7 +137,7 @@ export function parseDlStablecoinPoolsCache(
         },
       };
     }
-  } catch {
+  } catch { /* expected: corrupted or unrecognised cache format */
     return null;
   }
 

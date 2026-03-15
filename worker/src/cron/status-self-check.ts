@@ -70,7 +70,7 @@ export async function isBootstrapCacheMiss(
       .bind(producerJob)
       .first<{ cnt: number | null }>();
     return (row?.cnt ?? 0) === 0;
-  } catch {
+  } catch { /* non-blocking: observability only */
     return false;
   }
 }
@@ -137,7 +137,7 @@ function resolveProbeBaseUrl(selfUrl?: string): URL {
   const withScheme = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
   try {
     return new URL(withScheme);
-  } catch {
+  } catch { /* expected: malformed SELF_URL env var */
     return new URL(DEFAULT_SELF_URL);
   }
 }
@@ -183,7 +183,7 @@ async function evaluateProbeResponse(
       ok: false,
       error: "invalid-health-status",
     };
-  } catch {
+  } catch { /* degraded: health endpoint returned unparseable JSON */
     return {
       ok: false,
       error: "invalid-health-payload",

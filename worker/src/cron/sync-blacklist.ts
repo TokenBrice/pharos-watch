@@ -548,7 +548,7 @@ async function enrichRowBalances(
         } else {
           counters.failed++;
         }
-      } catch {
+      } catch { /* retryable: transient RPC / balance-provider failure */
         counters.failed++;
       }
     }

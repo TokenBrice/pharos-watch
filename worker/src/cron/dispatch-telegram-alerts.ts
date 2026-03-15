@@ -209,7 +209,7 @@ function parseSnapshotMap<T extends Record<string, unknown>>(
       return null;
     }
     return parsed as T;
-  } catch {
+  } catch { /* expected: corrupted or legacy cache format */
     return null;
   }
 }
@@ -297,7 +297,7 @@ function extractTopSignals(signalsJson: string | null): Array<{ name: string; va
       })
       .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
       .slice(0, 2);
-  } catch {
+  } catch { /* expected: malformed signals_json from upstream */
     return [];
   }
 }

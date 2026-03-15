@@ -274,7 +274,7 @@ export async function computeAndStoreDEWS(
     for (const row of prevRows.results) {
       try {
         prevSignals.set(row.stablecoin_id, JSON.parse(row.signals_json));
-      } catch {
+      } catch { /* expected: malformed signals_json from previous cycle */
         validationFailures++;
       }
     }
@@ -357,7 +357,7 @@ export async function computeAndStoreDEWS(
       try {
         const parsed = JSON.parse(row.warning_signals);
         if (Array.isArray(parsed)) yieldWarnings.set(row.stablecoin_id, parsed);
-      } catch {
+      } catch { /* expected: malformed warning_signals JSON */
         validationFailures++;
       }
     }
@@ -424,7 +424,7 @@ export async function computeAndStoreDEWS(
           tvlUsd: (p.tvlUsd as number) ?? 0,
           balanceRatio: ((p.extra as Record<string, unknown>)?.balanceRatio as number) ?? 1.0,
         }));
-      } catch {
+      } catch { /* expected: malformed top_pools_json */
         validationFailures++;
       }
     }

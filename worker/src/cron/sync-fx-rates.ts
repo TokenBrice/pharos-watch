@@ -112,7 +112,7 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal, openExch
     let prevRates: Record<string, number> = {};
     const prevCache = await getCache(db, "fx-rates");
     if (prevCache) {
-      try { prevRates = JSON.parse(prevCache.value) as Record<string, number>; } catch { /* ignore */ }
+      try { prevRates = JSON.parse(prevCache.value) as Record<string, number>; } catch { /* expected: corrupted cache — proceed with empty prev rates */ }
     }
 
     const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
