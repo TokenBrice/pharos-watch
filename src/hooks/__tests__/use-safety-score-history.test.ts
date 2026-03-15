@@ -14,7 +14,7 @@ vi.mock("@/lib/api", () => ({
   apiFetchWithMeta: vi.fn(),
 }));
 
-import { CRON_24H } from "../use-api-query";
+import { CRON_24H } from "@/lib/cron-intervals";
 import { useSafetyScoreHistory } from "../api-hooks";
 
 describe("useSafetyScoreHistory", () => {

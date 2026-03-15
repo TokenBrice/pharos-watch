@@ -4,7 +4,8 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { StatusHistoryResponse } from "@shared/types";
 import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, type AdminAccess } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
-import { CRON_1MIN, usePollingQuery } from "./use-api-query";
+import { usePollingQuery } from "./use-api-query";
+import { CRON_1MIN } from "@/lib/cron-intervals";
 
 export type StatusHistoryWindow = "6h" | "24h" | "7d" | "30d";
 

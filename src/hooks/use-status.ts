@@ -4,7 +4,8 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { StatusResponse } from "@shared/types";
 import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, type AdminAccess } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
-import { CRON_1MIN, usePollingQuery } from "./use-api-query";
+import { usePollingQuery } from "./use-api-query";
+import { CRON_1MIN } from "@/lib/cron-intervals";
 
 /**
  * Fetches /api/status through the ops-host admin proxy.

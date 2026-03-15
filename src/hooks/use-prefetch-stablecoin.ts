@@ -3,12 +3,8 @@
 import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import {
-  createApiQueryFn,
-  CRON_15MIN,
-  CRON_1H,
-  CRON_24H,
-} from "@/hooks/use-api-query";
+import { createApiQueryFn } from "@/hooks/use-api-query";
+import { CRON_15MIN, CRON_1H, CRON_24H } from "@/lib/cron-intervals";
 
 const DEBOUNCE_MS = 100;
 

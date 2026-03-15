@@ -1,7 +1,8 @@
 "use client";
 
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { useApiQueryWithMeta, CRON_15MIN } from "./use-api-query";
+import { useApiQueryWithMeta } from "./use-api-query";
+import { CRON_15MIN } from "@/lib/cron-intervals";
 import type {
   StressSignalsAllResponse,
   StressSignalDetailResponse,

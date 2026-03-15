@@ -5,7 +5,8 @@ import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, type AdminA
 import { buildRequestUrl } from "@/lib/api";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import type { EndpointProbeResult } from "@shared/types";
-import { CRON_1MIN, usePollingQuery } from "./use-api-query";
+import { usePollingQuery } from "./use-api-query";
+import { CRON_1MIN } from "@/lib/cron-intervals";
 
 /** Endpoint definitions grouped by status-page probe group. */
 export const ENDPOINT_GROUPS = {

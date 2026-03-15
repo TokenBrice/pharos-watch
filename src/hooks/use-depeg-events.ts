@@ -5,7 +5,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { DepegEventsResponseSchema, type DepegEventsResponse } from "@shared/types";
 import { apiFetchWithMeta } from "@/lib/api";
-import { CRON_15MIN } from "./use-api-query";
+import { CRON_15MIN } from "@/lib/cron-intervals";
 
 const DEPEG_EVENTS_PAGE_SIZE = 100;
 

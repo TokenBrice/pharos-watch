@@ -7,7 +7,8 @@ import {
   type StablecoinListResponse,
   type SupplyHistoryPoint,
 } from "@shared/types";
-import { useApiQuery, CRON_15MIN, CRON_1H } from "./use-api-query";
+import { useApiQuery } from "./use-api-query";
+import { CRON_15MIN, CRON_1H } from "@/lib/cron-intervals";
 
 export type { SupplyHistoryPoint } from "@shared/types";
 

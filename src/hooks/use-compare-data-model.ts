@@ -12,7 +12,7 @@ import {
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { apiFetch } from "@/lib/api";
-import { CRON_1H, CRON_20MIN } from "@/hooks/use-api-query";
+import { CRON_1H, CRON_20MIN } from "@/lib/cron-intervals";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";

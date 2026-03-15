@@ -21,7 +21,8 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
   };
 });
 
-import { CRON_1MIN, createPollingQueryOptions } from "../use-api-query";
+import { createPollingQueryOptions } from "../use-api-query";
+import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useHealth } from "../api-hooks";
 import { useStatus } from "../use-status";
 import { useEndpointProbes } from "../use-endpoint-probes";

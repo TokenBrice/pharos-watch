@@ -30,16 +30,12 @@ import {
   type YieldRankingsResponse,
 } from "@shared/types";
 import {
-  CRON_1H,
-  CRON_1MIN,
-  CRON_15MIN,
-  CRON_24H,
-  CRON_30MIN,
   createApiQueryFn,
   createStaticQueryOptions,
   useApiQuery,
   useApiQueryWithMeta,
 } from "./use-api-query";
+import { CRON_1H, CRON_1MIN, CRON_15MIN, CRON_24H, CRON_30MIN } from "@/lib/cron-intervals";
 
 export type { StabilityContributor };
 

@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { useApiQueryWithMeta, CRON_20MIN } from "./use-api-query";
+import { useApiQueryWithMeta } from "./use-api-query";
+import { CRON_20MIN } from "@/lib/cron-intervals";
 import {
   MintBurnFlowsResponseSchema,
   MintBurnPerCoinResponseSchema,
