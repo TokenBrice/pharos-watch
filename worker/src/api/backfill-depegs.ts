@@ -21,6 +21,7 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../lib/authoritative-price-sources";
+import { CoinGeckoMarketChartSchema, FrankfurterTimeSeriesSchema } from "../lib/external-api-schemas";
 const BATCH_SIZE = 3;
 const BATCH_CHUNK_SIZE = 100;
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
@@ -77,13 +78,6 @@ interface FxTimeSeries {
   rate: number;      // USD per unit
 }
 
-interface FrankfurterTimeSeriesResponse {
-  base: string;
-  start_date: string;
-  end_date: string;
-  rates: Record<string, Record<string, number>>; // date → { currency: unitsPerUSD }
-}
-
 interface SecondaryFxResponse {
   date?: string;
   usd?: Record<string, number>;
@@ -109,7 +103,13 @@ async function fetchHistoricalFxRates(
       console.error(`[backfill-depegs] frankfurter.app returned ${res.status}`);
       return {};
     }
-    const data: FrankfurterTimeSeriesResponse = await res.json();
+    const raw = await res.json();
+    const parsed = FrankfurterTimeSeriesSchema.safeParse(raw);
+    if (!parsed.success) {
+      console.warn("[backfill-depegs] Frankfurter validation failed:", parsed.error.message);
+      return {};
+    }
+    const data = parsed.data;
 
     const result: Record<string, FxTimeSeries[]> = {};
     for (const currency of currencies) {
@@ -756,8 +756,14 @@ async function fetchCgPriceHistoryDaily(geckoId: string): Promise<PricePoint[]> 
       { timeoutMs: 30_000 },
     );
     if (!res) return [];
-    const data = await res.json() as { prices: [number, number][] };
-    return (data.prices ?? [])
+    const raw = await res.json();
+    const parsed = CoinGeckoMarketChartSchema.safeParse(raw);
+    if (!parsed.success) {
+      console.warn("[backfill-depegs] CG market chart validation failed:", parsed.error.message);
+      return [];
+    }
+    const data = parsed.data;
+    return data.prices
       .filter(([, p]) => p > 0)
       .map(([ts, price]) => ({ timestamp: Math.floor(ts / 1000), price }));
   } catch (err) {
@@ -791,9 +797,14 @@ async function fetchCgPriceHistoryHourly(geckoId: string): Promise<PricePoint[]>
       { timeoutMs: 30_000 },
     );
     if (res) {
-      const data = await res.json() as { prices: [number, number][] };
-      for (const [tsMs, p] of data.prices ?? []) {
-        if (p > 0) seen.set(Math.floor(tsMs / 1000), p);
+      const raw = await res.json();
+      const parsed = CoinGeckoMarketChartSchema.safeParse(raw);
+      if (parsed.success) {
+        for (const [tsMs, p] of parsed.data.prices) {
+          if (p > 0) seen.set(Math.floor(tsMs / 1000), p);
+        }
+      } else {
+        console.warn("[backfill-depegs] CG hourly phase-1 validation failed:", parsed.error.message);
       }
     }
   } catch (err) {
@@ -814,9 +825,14 @@ async function fetchCgPriceHistoryHourly(geckoId: string): Promise<PricePoint[]>
         { timeoutMs: 30_000 },
       );
       if (res) {
-        const data = await res.json() as { prices: [number, number][] };
-        for (const [tsMs, p] of data.prices ?? []) {
-          if (p > 0) seen.set(Math.floor(tsMs / 1000), p);
+        const raw = await res.json();
+        const parsed = CoinGeckoMarketChartSchema.safeParse(raw);
+        if (parsed.success) {
+          for (const [tsMs, p] of parsed.data.prices) {
+            if (p > 0) seen.set(Math.floor(tsMs / 1000), p);
+          }
+        } else {
+          console.warn("[backfill-depegs] CG hourly phase-2 validation failed:", parsed.error.message);
         }
       }
     } catch (err) {

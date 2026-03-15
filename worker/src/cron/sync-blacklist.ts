@@ -24,6 +24,7 @@ import { getChainRpc, type ChainRpcConfig } from "../lib/chain-registry";
 import { fetchEvmTokenBalance } from "./blacklist/balance-providers";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { TronEventsResponseSchema } from "../lib/external-api-schemas";
 import { throwIfAborted } from "../lib/abort";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
@@ -443,7 +444,13 @@ async function fetchTronEventsIncremental(
       const json: TronEventsResponse | null = await rateLimit(async () => {
         const res = await fetchWithRetry(url!, { headers, signal });
         if (!res) return null;
-        return res.json() as Promise<TronEventsResponse>;
+        const raw = await res.json();
+        const parsed = TronEventsResponseSchema.safeParse(raw);
+        if (!parsed.success) {
+          console.warn("[blacklist] TronGrid response validation failed:", parsed.error.message);
+          return null;
+        }
+        return parsed.data as TronEventsResponse;
       });
 
       if (!json?.success || !Array.isArray(json.data)) break;
