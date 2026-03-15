@@ -17,7 +17,7 @@ Identify stablecoins where the default inference (from backing + governance) is 
 
 ### Step 1 — Identify candidates
 
-Read all coins from `shared/lib/stablecoins.ts`. For each, apply the default inference rules (see `inferResilienceDefaults()` in `src/lib/report-cards.ts`). Flag coins where the default is likely wrong based on:
+Read all coins from `shared/lib/stablecoins.ts`. For each, apply the default inference rules (see `inferResilienceDefaults()` in `shared/lib/report-cards.ts`). Flag coins where the default is likely wrong based on:
 
 - `collateral` text containing keywords: "Solana", "tBTC", "WBTC", "delta-neutral", "perpetual", "CEX", "off-exchange", "Copper", "Ceffu", "Fireblocks", "bridged"
 - `pegMechanism` text containing: "Solana", "Bitcoin L2", "not Ethereum", "Tron"

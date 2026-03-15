@@ -41,19 +41,22 @@ Run these research tasks in parallel:
 
 ### Step 3: Classify Risk Tiers
 
-Apply these rules consistently:
+The `ReserveRisk` type has 5 tiers. Apply these rules consistently:
 
-| Risk | Criteria |
-|------|----------|
-| `low` | U.S. Treasuries (any duration ≤1yr), overnight repos, FDIC-insured deposits, regulated government MMFs, cash/cash equivalents, Chainlink-verified PoR |
-| `medium` | ETH, BTC, wstETH, WBTC, investment-grade corporate bonds, regulated stablecoins used as collateral (USDC, USDT), T-bills >1yr duration, tokenized treasuries (BUIDL, USYC) |
-| `high` | Altcoins (SOL, TRX, AVAX, etc.), perpetual futures positions, unsecured/undercollateralized loans, exotic DeFi (LP tokens, recursive strategies), anything with <1yr track record |
+| Risk | Score | Criteria |
+|------|-------|----------|
+| `very-low` | 100 | U.S. Treasury Bills (≤1yr), overnight reverse repos, FDIC-insured cash deposits, regulated government MMFs, cash/cash equivalents |
+| `low` | 75 | Investment-grade corporate bonds, FDIC deposits with concentration risk, Chainlink-verified PoR with transparent composition, T-bills >1yr duration |
+| `medium` | 50 | ETH, BTC, wstETH, WBTC, regulated stablecoins used as collateral (USDC, USDT), tokenized treasuries (BUIDL, USYC, USTB) |
+| `high` | 25 | Altcoins (SOL, TRX, AVAX, etc.), perpetual futures positions, unsecured/undercollateralized loans |
+| `very-high` | 5 | Recursive DeFi strategies (LP tokens, leveraged loops), zero-audit exotic protocols, anything with <6mo track record and opaque backing |
 
 Edge cases:
 - **Delta-neutral positions** (spot + short perp): The spot side is `medium` (crypto), but the combined position is `high` (counterparty risk on CEX)
 - **Stablecoin collateral** (USDC/USDT as backing): `medium` (not low — introduces dependency risk)
 - **LSTs (wstETH, rETH)**: `medium` (smart contract + slashing risk on top of ETH)
-- **Tokenized T-bills (BUIDL, USYC, USTB)**: `medium` (the underlying is low-risk but the tokenization layer adds smart contract/custodian risk)
+- **Tokenized T-bills (BUIDL, USYC, USTB)**: `medium` (the underlying is very-low but the tokenization layer adds smart contract/custodian risk)
+- **Segregated non-rehypothecated T-bill accounts**: `very-low` (bankruptcy-remote, no counterparty layering)
 
 ### Step 4: Present Findings
 
