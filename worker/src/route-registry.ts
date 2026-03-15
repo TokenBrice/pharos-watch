@@ -268,3 +268,13 @@ for (const key of Object.keys(STATIC_ROUTE_HANDLERS_BY_KEY) as Array<keyof typeo
     throw new Error(`Router endpoint key "${key}" must be declared in ENDPOINT_DEFINITIONS`);
   }
 }
+
+// Reverse check: verify all non-dynamic endpoints have handlers
+for (const ep of ENDPOINT_DEFINITIONS) {
+  if (!ep.path.includes(":") && !ep.path.includes("*")) {
+    const key = ep.key as keyof typeof STATIC_ROUTE_HANDLERS_BY_KEY;
+    if (!(key in STATIC_ROUTE_HANDLERS_BY_KEY)) {
+      throw new Error(`Endpoint "${ep.key}" is defined but has no handler in STATIC_ROUTE_HANDLERS_BY_KEY`);
+    }
+  }
+}

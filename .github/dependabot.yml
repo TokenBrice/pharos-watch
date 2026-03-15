@@ -19,6 +19,7 @@ updates:
     open-pull-requests-limit: 3
     labels:
       - "dependencies"
+      - "worker"
     groups:
       minor-and-patch:
         update-types:
