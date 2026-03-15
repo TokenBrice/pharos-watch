@@ -809,6 +809,7 @@ export function computeStressedGrades(
       const meta = {
         flags: { governance: card.rawInputs.governanceTier },
         dependencies: card.rawInputs.dependencies,
+        reserves: undefined,
       };
       const newDepRisk = scoreDependencyRisk(meta, overallScores);
       const newDimensions = { ...card.dimensions, dependencyRisk: newDepRisk };
