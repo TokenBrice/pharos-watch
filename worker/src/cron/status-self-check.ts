@@ -119,8 +119,8 @@ function getSlowestProbes(probes: ProbeResult[], limit = 3): Array<{
 
 function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusLevel {
   if (sampleCount === 0) return "stale";
-  if (failCount === 0 && p95LatencyMs <= 3000) return "healthy";
-  if (failCount <= Math.max(1, Math.floor(sampleCount * 0.1)) && p95LatencyMs <= 6000) return "degraded";
+  if (failCount === 0 && p95LatencyMs <= 5000) return "healthy";
+  if (failCount <= Math.max(1, Math.floor(sampleCount * 0.1)) && p95LatencyMs <= 8000) return "degraded";
   return "stale";
 }
 
