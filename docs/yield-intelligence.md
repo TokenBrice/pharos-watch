@@ -50,14 +50,23 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for:
+Currently configured for 13 vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
-- `usde-ethena` via the `sUSDe` vault (`0x9D39...7497`) on Ethereum
-- `dusd-dtrinity` via the `sdUSD` vault (`0x4aCB...F6Fe`) on Ethereum
-- `iusd-infinifi` via the `siUSD` vault (`0xDBDC...bCB`) on Ethereum
-- `usdp-parallel` via the `sUSDp` vault (`0x472e...7e7`) on Base
-
-All entries use selector `0x07a2d13a` (`convertToAssets(uint256)`).
+| Coin ID | Wrapper | Contract | Chain |
+|---------|---------|----------|-------|
+| `usde-ethena` | sUSDe | `0x9D39...7497` | Ethereum |
+| `dusd-dtrinity` | sdUSD | `0x4aCB...F6Fe` | Ethereum |
+| `iusd-infinifi` | siUSD | `0xDBDC...bCB` | Ethereum |
+| `usdp-parallel` | sUSDp | `0x472e...7e7` | Base |
+| `reusd-re-protocol` | stUSR | `0x1202...d51` | Ethereum |
+| `usds-sky` | sUSDS | `0xa393...fbD` | Ethereum |
+| `dai-makerdao` | sDAI | `0x83F2...BEeA` | Ethereum |
+| `crvusd-curve` | scrvUSD | `0x0655...0367` | Ethereum |
+| `frxusd-frax` | sfrxUSD | `0xcf62...5b6` | Ethereum |
+| `dola-inverse-finance` | sDOLA | `0xb45a...7305` | Ethereum |
+| `bold-liquity` | yBOLD | `0x9F43...a3d8` | Ethereum |
+| `usdf-falcon` | sUSDf | `0xc8cf...4b0` | Ethereum |
+| `usn-noon` | sUSN | `0xE24a...B91D` | Ethereum |
 
 **APY formula:**
 
@@ -95,7 +104,7 @@ Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers)
 
 **Layer 2 — Variant map:** `YIELD_VARIANT_MAP` maps to a wrapper/savings pool symbol. Uses exact symbol matching (case-insensitive `===`, not substring `.includes()`). Filters for `exposure === "single"` only (stablecoin flag intentionally relaxed, since savings wrappers like fxSAVE are not flagged `stablecoin = true` in DeFiLlama). Picks highest TVL.
 
-**Layer 3 — Base-symbol fallback:** Used only when both static maps miss. Searches DL pools by coin symbol. Filters for `exposure === "single"` and `stablecoin === true`. Picks highest TVL.
+**Layer 3 — Base-symbol fallback:** Used only when both static maps miss. Searches DL pools by coin symbol using `.includes()` (intentionally looser than Layers 1/2 to catch prefixed/suffixed symbols like "FEUSDH" for USDH). Symbols shorter than 4 characters are excluded from `.includes()` matching to prevent false positives (e.g., "USD" matching everything). Filters for `exposure === "single"` and `stablecoin === true`. Picks highest TVL.
 
 **Variant mapping:** `YIELD_VARIANT_MAP` entries supply labels and pool matching for wrapper/savings tokens:
 
@@ -160,6 +169,7 @@ Uses the structured `risk_free_rate` cache already refreshed daily by `fetch-tbi
 | YLDS  | 50 | Figure Markets, SOFR - 50 bps formula |
 | USTB  | 15 | Superstate, 0.15% management fee |
 | mTBILL | 0 | Midas, tracks T-bill rate directly |
+| OUSG  | 50 | Ondo US Government Bond fund, 0.50% management fee |
 
 Rate-derived runs after Tier 3 in the resolution loop and participates in the `is_best` selection like any other source. For tokens that also have price-derived or DL sources, the highest-APY source wins.
 
@@ -174,6 +184,7 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier 1 | aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance |
 | Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
 | Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending |
+| Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi |
 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL.
 
@@ -606,9 +617,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 ## Testing
 
-**File:** `worker/src/cron/__tests__/yield-helpers.test.ts`
-
-Covers all pure functions in `yield-helpers.ts` and `yield-sync/rankings.ts`:
+**Pure function tests:** `worker/src/cron/__tests__/yield-helpers.test.ts`
 
 - `computeApyFromRate` — 7-day rate change, zero/negative inputs, decreasing rates
 - `computeApyFromPrice` — delegates to `computeApyFromRate`
@@ -616,9 +625,32 @@ Covers all pure functions in `yield-helpers.ts` and `yield-sync/rankings.ts`:
 - `computeYieldStability` — stable vs. volatile yields, empty/single samples, near-zero mean → null guard
 - `computeApyVarianceScore` — near-zero mean → null guard, insufficient samples → null
 - `detectWarningSignals` — yield spike (with absolute floor), negative trend (with absolute floor), reward-heavy, TVL outflow, zero-yield, healthy baseline, boundary conditions, negative APY input
-- `matchAllDlPools` — Layer 1/2/3 source matching, dedup, relaxed Layer 2 stablecoin filter, exact symbol match (no cross-contamination), highest-TVL selection, empty pools edge case
+- `matchAllDlPools` — Layer 1/2/3 source matching, dedup, relaxed Layer 2 stablecoin filter, exact symbol match (no cross-contamination), highest-TVL selection, empty pools edge case, Layer 3 minimum symbol length guard (4-char cutoff)
 - `findBestLendingPool` — allowlist filtering, symbol match, address fallback, quality gates
 - `computeTvlWeightedMedianApy` — empty input, null/zero TVL, single row, TVL-weighted vs simple median, zero APY filtering
+
+**Integration tests:** `worker/src/cron/__tests__/sync-yield-data.test.ts`
+
+- Happy path, stale/orphan cleanup, D1 chunking, cached DL pools, deterministic auto-discovery override, B.Protocol LUSD, DL API failure, circuit breaker open, schema validation, price-derived fallback, source-specific history, legacy history carry-forward, rate-derived, degraded safety coverage
+- On-chain rate expansion: verifies expanded `ON_CHAIN_RATE_CONFIGS` produce valid APY entries
+- OUSG rate-derived: verifies the OUSG rate-derived config participates in arbitration with correct spread
+
+**Resolve/arbitration tests:** `worker/src/cron/__tests__/yield-resolve.test.ts`
+
+- DL curated source selection, deterministic rate-derived preference, cross-source divergence rejection, T-bill excess yield, negative excess yield, hardcoded fallback rate, rate-derived from T-bill, rate floor at zero, yield-spike warning, TVL-outflow warning, stable conditions, PYS computation, PYS=0 for zero APY
+- Price-derived as explicit source (Tier 3 path through resolve for navToken coins)
+- Auto-discovery path (non-yield-bearing coin matches a lending pool via `AUTO_LENDING_POOL_MAP`)
+
+**Cache parsing tests:** `worker/src/cron/__tests__/yield-cache.test.ts`
+
+- `parseRiskFreeRateCache` — valid JSON, malformed JSON, missing fields
+- `parseDlStablecoinPoolsCache` — valid JSON, malformed JSON, legacy format, missing fields, cache age computation, stale cache rejection
+
+**Source link tests:** `worker/src/lib/__tests__/yield-source-links.test.ts`
+
+- Curated protocol link for discovered source, source-specific override, metadata app link fallback, website fallback
+- No-match case: returns null when no curated link, no protocol match, and no metadata link
+- New lending protocols: verifies newly added protocol (Radiant v2) resolves a URL
 
 ---
 
@@ -661,3 +693,7 @@ Covers all pure functions in `yield-helpers.ts` and `yield-sync/rankings.ts`:
 | `src/components/yield-history-chart.tsx`             | Shared APY history chart with T-bill / peer-median reference lines, optional base-reward split, and warning markers                          |
 | `src/components/yield-scatter-plot.tsx`              | Risk-adjusted scatter visualization                                                                                                          |
 | `worker/src/cron/__tests__/yield-helpers.test.ts`    | Unit tests for all pure yield functions                                                                                                      |
+| `worker/src/cron/__tests__/sync-yield-data.test.ts`  | Integration tests for sync-yield-data orchestration (on-chain, rate-derived, DL, auto-discovery)                                             |
+| `worker/src/cron/__tests__/yield-resolve.test.ts`    | Resolve/arbitration tests (price-derived, auto-discovery, DL source selection, warnings)                                                     |
+| `worker/src/cron/__tests__/yield-cache.test.ts`      | Cache parsing tests for DL pools and risk-free rate cache                                                                                    |
+| `worker/src/lib/__tests__/yield-source-links.test.ts` | Yield source link resolution tests (curated, protocol, metadata fallback)                                                                   |
