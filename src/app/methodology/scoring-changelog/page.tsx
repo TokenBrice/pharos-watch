@@ -124,9 +124,36 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
+      {/* ──────────── v5.8 ──────────── */}
+      <VersionCard
+        version="v5.8"
+        title="Live reserve passthrough for collateral quality"
+        date="Mar 14, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Collateral quality scoring now consumes{" "}
+          <span className="text-foreground font-medium">live reserve snapshots</span> when
+          available, using hourly data from <code className="text-xs bg-muted px-1 py-0.5 rounded">reserve_composition</code>{" "}
+          instead of curated metadata.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Coins with <code className="text-xs bg-muted px-1 py-0.5 rounded">liveReservesConfig</code> use
+            fresh (&lt;48h) live snapshots for collateral quality when &ge;&nbsp;2 slices exist.
+          </li>
+          <li>
+            Delta alert fires when live-derived score diverges from curated by &gt;15 points.
+          </li>
+          <li>
+            Dependency inference remains on curated data (live slices lack coinId links).
+          </li>
+        </ul>
+      </VersionCard>
+
       {/* ──────────── v5.7 ──────────── */}
       <VersionCard
-        version={SAFETY_SCORE_VERSION_LABEL}
+        version="v5.7"
         title="Canonical ETH wrapper reserve alignment"
         date="Mar 13, 2026"
         accent="border-l-amber-500"
