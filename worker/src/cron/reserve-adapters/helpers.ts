@@ -86,7 +86,7 @@ export async function fetchJsonWithRetry<T>(
   signal: AbortSignal,
   timeoutMs = 10_000,
 ): Promise<T> {
-  const res = await fetchWithRetry(url, { signal }, 2, { timeoutMs });
+  const res = await fetchWithRetry(url, { signal, headers: { "User-Agent": "Mozilla/5.0" } }, 2, { timeoutMs });
   if (!res) {
     throw new Error(`Fetch failed for ${url}`);
   }
