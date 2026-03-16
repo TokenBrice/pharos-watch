@@ -107,6 +107,13 @@ export const CHAIN_META: Record<string, ChainMeta> = {
 /** Alias chains that share a display name. Map alias -> canonical key. */
 export const CHAIN_ALIASES: Record<string, string> = {
   "hyperliquid-l1": "hyperliquid",
+  // DL display names that differ from our CHAIN_META names
+  "OP Mainnet": "optimism",
+  "Plume Mainnet": "plume",
+  "zkSync Era": "zksync",
+  "XRPL": "xrpl",
+  "Bsquared": "bsquared",
+  "Kaia": "klaytn",  // Klaytn rebranded to Kaia
 };
 
 /**
