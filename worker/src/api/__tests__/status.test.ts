@@ -79,6 +79,7 @@ describe("handleStatus", () => {
                   "curve-onchain": 0,
                   "dex-promoted": 0,
                   geckoterminal: 0,
+                  "pool-tvl-weighted": 0,
                   cached: 4,
                   missing: 3,
                 },

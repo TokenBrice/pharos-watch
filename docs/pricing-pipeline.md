@@ -67,9 +67,12 @@ Source labels are compressed for agreeing clusters:
 
 ### Pool Challenge (Soft-Source Guard)
 
-After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against the highest-TVL individual DEX pool from `dex_prices.price_sources_json`. If the highest-TVL pool (≥$100K TVL, fresh within `DEX_FRESHNESS_SEC`) diverges from consensus by ≥500 bps, confidence is downgraded to `low`.
+After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against ALL individual DEX pools from `dex_prices.price_sources_json` that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. If ANY qualifying pool diverges from consensus by ≥500 bps:
 
-This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. Hard sources (Pyth, Binance, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
+1. Confidence is downgraded to `low`.
+2. The consensus price is **replaced** with the TVL-weighted mean of all qualifying individual pool prices (`source = "pool-tvl-weighted"`).
+
+This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus — large pools carry proportional weight. Hard sources (Pyth, Binance, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
 
 ---
 

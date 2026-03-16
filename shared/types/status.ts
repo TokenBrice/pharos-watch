@@ -218,6 +218,7 @@ export interface PriceSourceHealth {
     "curve-onchain": number;
     "dex-promoted": number;
     geckoterminal: number;
+    "pool-tvl-weighted": number;
     cached: number;
     missing: number;
   };

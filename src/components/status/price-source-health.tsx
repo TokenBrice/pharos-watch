@@ -93,7 +93,7 @@ export function PriceSourceHealthCard({
 
         <div className="text-xs text-muted-foreground">
           <span className="font-medium">Sources:</span>{" "}
-          CG+DL-list {sd["coingecko+defillama-list"]} · CG {sd.coingecko} · DL {sd.defillama} · DL-list {sd["defillama-list"]} · Protocol {sd["protocol-redeem"]} · Contract {sd["defillama-contract"]} · CMC {sd.coinmarketcap} · DexScreener {sd.dexscreener} · Pyth {sd.pyth} · Binance {sd.binance} · Coinbase {sd.coinbase} · RedStone {sd.redstone} · Curve {sd["curve-onchain"]} · DEX {sd["dex-promoted"]} · GT {sd.geckoterminal} · Cached {sd.cached}
+          CG+DL-list {sd["coingecko+defillama-list"]} · CG {sd.coingecko} · DL {sd.defillama} · DL-list {sd["defillama-list"]} · Protocol {sd["protocol-redeem"]} · Contract {sd["defillama-contract"]} · CMC {sd.coinmarketcap} · DexScreener {sd.dexscreener} · Pyth {sd.pyth} · Binance {sd.binance} · Coinbase {sd.coinbase} · RedStone {sd.redstone} · Curve {sd["curve-onchain"]} · DEX {sd["dex-promoted"]} · GT {sd.geckoterminal} · Pool {sd["pool-tvl-weighted"]} · Cached {sd.cached}
         </div>
       </CardContent>
     </Card>

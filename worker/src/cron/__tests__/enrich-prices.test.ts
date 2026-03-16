@@ -903,6 +903,11 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     expect(result.confidence).toBe("low");
     expect(stats.low).toBe(1);
     expect(stats.high).toBe(0);
+
+    // Price should be TVL-weighted mean of individual pools, not soft consensus
+    // (1.00*1480000 + 0.999*967000 + 0.80*849000) / (1480000 + 967000 + 849000) ≈ 0.9482
+    expect(result.price).toBeCloseTo(0.9482, 3);
+    expect(result.source).toBe("pool-tvl-weighted");
   });
 
   it("does NOT downgrade when consensus includes a hard source", async () => {

@@ -422,16 +422,34 @@ export async function fetchPrimaryPrices(
     if (!pools?.length) continue;
 
     // Check if ANY qualifying pool diverges from consensus
+    let challenged = false;
     for (const pool of pools) {
       const mid = (result.price + pool.price) / 2;
       if (mid <= 0) continue;
       const bps = Math.abs(result.price - pool.price) / mid * 10_000;
       if (bps >= POOL_CHALLENGE_BPS) {
-        result.confidence = "low";
-        stats.high--;
-        stats.low++;
-        poolChallengeDowngrades++;
+        challenged = true;
         break; // one divergent pool is enough
+      }
+    }
+    if (challenged) {
+      result.confidence = "low";
+      stats.high--;
+      stats.low++;
+      poolChallengeDowngrades++;
+
+      // Replace soft-only consensus price with TVL-weighted mean of individual pools.
+      // When aggregators agree on a misleading price, on-chain pool liquidity is
+      // a more honest signal — large pools carry proportional weight.
+      let tvlWeightedSum = 0;
+      let tvlSum = 0;
+      for (const pool of pools) {
+        tvlWeightedSum += pool.price * pool.tvlUsd;
+        tvlSum += pool.tvlUsd;
+      }
+      if (tvlSum > 0) {
+        result.price = tvlWeightedSum / tvlSum;
+        result.source = "pool-tvl-weighted";
       }
     }
   }

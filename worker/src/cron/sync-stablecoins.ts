@@ -735,7 +735,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const INDIVIDUAL_SOURCE_KEYS = new Set<string>([
     "coingecko", "defillama", "defillama-list", "protocol-redeem", "defillama-contract",
     "coinmarketcap", "dexscreener", "pyth", "binance", "coinbase",
-    "redstone", "curve-onchain", "dex-promoted", "geckoterminal", "cached",
+    "redstone", "curve-onchain", "dex-promoted", "geckoterminal", "pool-tvl-weighted", "cached",
   ]);
 
   function mapSourceToBucket(
@@ -765,6 +765,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     "curve-onchain": 0,
     "dex-promoted": 0,
     geckoterminal: 0,
+    "pool-tvl-weighted": 0,
     cached: 0,
     missing: 0,
   };
