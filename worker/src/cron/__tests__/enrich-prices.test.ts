@@ -856,3 +856,117 @@ describe("applyResolvedPrice", () => {
     expect(result!.disagreeSources).toContain("outlier");
   });
 });
+
+describe("pool challenge — soft-only high confidence downgrade", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function makePoolChallengeDb(poolSources: Array<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>) {
+    return mockD1([
+      { match: "circuit", rows: [] },
+      { match: "price_sources_json", rows: poolSources },
+    ]);
+  }
+
+  it("downgrades soft-only high confidence when highest-TVL pool diverges >500bps", async () => {
+    // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
+    // But highest-TVL DEX pool shows $0.80 → >500bps divergence → downgrade to low
+    const assets: PeggedAsset[] = [
+      { id: "dusd-dtrinity", name: "dUSD", symbol: "dUSD", geckoId: "dtrinity-usd", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makePoolChallengeDb([{
+      stablecoin_id: "dusd-dtrinity",
+      price_sources_json: JSON.stringify([
+        { protocol: "curve", chain: "ethereum", price: 0.80, tvl: 849_000 },
+        { protocol: "curve", chain: "fraxtal", price: 0.99, tvl: 11_000 },
+      ]),
+      updated_at: nowSec - 60,
+    }]);
+
+    const dlListPrices = new Map([["dusd-dtrinity", 0.994]]);
+    const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
+
+    expect(results.size).toBe(1);
+    const result = results.get("dusd-dtrinity")!;
+    expect(result.confidence).toBe("low");
+    expect(stats.low).toBe(1);
+    expect(stats.high).toBe(0);
+  });
+
+  it("does NOT downgrade when consensus includes a hard source", async () => {
+    // CG + Pyth agree → hard source present → no pool challenge
+    const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
+    const assets: PeggedAsset[] = [
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({ tether: { usd: 1.0001 } }), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("hermes.pyth.network")) {
+        return new Response(JSON.stringify({
+          parsed: [{
+            id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+            price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
+          }],
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makePoolChallengeDb([{
+      stablecoin_id: "usdt-tether",
+      price_sources_json: JSON.stringify([
+        { protocol: "uniswap-v3", chain: "ethereum", price: 0.80, tvl: 5_000_000 },
+      ]),
+      updated_at: nowSec - 60,
+    }]);
+
+    const { results } = await fetchPrimaryPrices(assets, db);
+
+    expect(results.size).toBe(1);
+    const result = results.get("usdt-tether")!;
+    // Pyth is a hard source, so pool challenge doesn't apply
+    expect(result.confidence).toBe("high");
+  });
+
+  it("does NOT downgrade when pool divergence is <500bps", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "dusd-dtrinity", name: "dUSD", symbol: "dUSD", geckoId: "dtrinity-usd", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makePoolChallengeDb([{
+      stablecoin_id: "dusd-dtrinity",
+      price_sources_json: JSON.stringify([
+        { protocol: "curve", chain: "ethereum", price: 0.97, tvl: 500_000 }, // ~2.5% divergence = 254bps, below 500
+      ]),
+      updated_at: nowSec - 60,
+    }]);
+
+    const dlListPrices = new Map([["dusd-dtrinity", 0.994]]);
+    const { results } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
+
+    expect(results.size).toBe(1);
+    expect(results.get("dusd-dtrinity")!.confidence).toBe("high");
+  });
+});

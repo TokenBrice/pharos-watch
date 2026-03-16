@@ -59,6 +59,65 @@ export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexP
   }
 }
 
+/** Per-pool price source stored in dex_prices.price_sources_json */
+export interface DexPoolSource {
+  protocol: string;
+  chain: string;
+  price: number;
+  tvl: number;
+}
+
+/**
+ * Load the highest-TVL individual pool price per asset from dex_prices.price_sources_json.
+ * Used as a "pool challenger" — if the highest-TVL pool diverges from consensus,
+ * it signals that aggregators may be picking up small misleading pools.
+ */
+export async function loadDexPoolChallengers(
+  db: D1Database,
+  minPoolTvlUsd: number,
+  maxAgeSec: number,
+  nowSec: number,
+): Promise<Map<string, { price: number; tvlUsd: number; protocol: string; chain: string }>> {
+  const result = new Map<string, { price: number; tvlUsd: number; protocol: string; chain: string }>();
+  try {
+    const rows = await db
+      .prepare("SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL")
+      .all<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>();
+
+    for (const row of rows.results ?? []) {
+      if (nowSec - row.updated_at > maxAgeSec) continue;
+      let sources: DexPoolSource[];
+      try {
+        sources = JSON.parse(row.price_sources_json);
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(sources) || sources.length === 0) continue;
+
+      // Find highest-TVL pool above threshold
+      let best: DexPoolSource | null = null;
+      for (const s of sources) {
+        if (s.tvl < minPoolTvlUsd || !Number.isFinite(s.price) || s.price <= 0) continue;
+        if (best == null || s.tvl > best.tvl) best = s;
+      }
+      if (best) {
+        result.set(row.stablecoin_id, {
+          price: best.price,
+          tvlUsd: best.tvl,
+          protocol: best.protocol,
+          chain: best.chain,
+        });
+      }
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("no such table")) {
+      console.error("[depeg-helpers] Unexpected error loading dex pool challengers:", msg);
+    }
+  }
+  return result;
+}
+
 export function isTrustedDexPriceRow(
   row: Pick<DexPriceRow, "updated_at" | "source_total_tvl">,
   nowSec: number,

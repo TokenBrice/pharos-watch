@@ -65,6 +65,12 @@ Source labels are compressed for agreeing clusters:
 - 2 sources: `sourceA+sourceB`
 - 3+ sources: `firstSource+Nmore`
 
+### Pool Challenge (Soft-Source Guard)
+
+After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against the highest-TVL individual DEX pool from `dex_prices.price_sources_json`. If the highest-TVL pool (≥$100K TVL, fresh within `DEX_FRESHNESS_SEC`) diverges from consensus by ≥500 bps, confidence is downgraded to `low`.
+
+This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. Hard sources (Pyth, Binance, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
+
 ---
 
 ## Provider-Specific Normalization

@@ -1,4 +1,4 @@
-import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
+import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -18,7 +18,7 @@ import {
 import { fetchPythPrices } from "../lib/pyth";
 import { fetchBinancePrices, fetchCoinbasePrices, COINBASE_KNOWN_SYMBOLS } from "../lib/cex-tickers";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../lib/redstone";
-import { loadDexPriceRows, isTrustedDexPriceRow } from "../lib/depeg-helpers";
+import { loadDexPriceRows, isTrustedDexPriceRow, loadDexPoolChallengers } from "../lib/depeg-helpers";
 import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
 import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../lib/authoritative-price-sources";
@@ -404,11 +404,52 @@ export async function fetchPrimaryPrices(
     }
   }
 
+  // --- Pool challenge pass ---
+  // For high-confidence results built entirely from soft aggregator sources,
+  // check if the highest-TVL DEX pool diverges significantly. If so, the
+  // aggregators may all be pricing from the same small misleading pool while
+  // ignoring larger pools that show a different price.
+  const POOL_CHALLENGE_BPS = 500; // 5% divergence threshold
+  const POOL_CHALLENGE_MIN_TVL = 100_000; // $100K minimum pool TVL for challenger
+  const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, nowSec);
+
+  let poolChallengeDowngrades = 0;
+  for (const [assetId, result] of results) {
+    if (result.confidence !== "high") continue;
+    if (!isAllSoftSources(result.agreeSources)) continue;
+
+    const challenger = poolChallengers.get(assetId);
+    if (!challenger) continue;
+
+    const mid = (result.price + challenger.price) / 2;
+    if (mid <= 0) continue;
+    const bps = Math.abs(result.price - challenger.price) / mid * 10_000;
+    if (bps >= POOL_CHALLENGE_BPS) {
+      result.confidence = "low";
+      stats.high--;
+      stats.low++;
+      poolChallengeDowngrades++;
+    }
+  }
+  if (poolChallengeDowngrades > 0) {
+    console.log(`[primary-prices] Pool challenge downgraded ${poolChallengeDowngrades} soft-only results to low confidence`);
+  }
+
   console.log(
     `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
   );
 
   return { results, stats, cgPrices };
+}
+
+/** Sources that are independent exchanges/oracles — NOT aggregators that may share upstream data */
+const HARD_SOURCES = new Set([
+  "pyth", "binance", "coinbase", "curve-onchain", "curve-oracle", "redstone", "protocol-redeem",
+]);
+
+/** Returns true if all sources are soft aggregators (CG, DL, DEX average, etc.) */
+function isAllSoftSources(sources: string[]): boolean {
+  return sources.length > 0 && sources.every((s) => !HARD_SOURCES.has(s));
 }
 
 /**
