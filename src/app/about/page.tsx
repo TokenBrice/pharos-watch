@@ -274,7 +274,7 @@ export default function AboutPage() {
     {
       title: "Chain Analytics",
       description:
-        "Per-chain stablecoin supply totals, 24h/7d/30d trends, composition breakdowns, and a Chain Health Score across concentration, quality, peg stability, and backing diversity.",
+        "Per-chain stablecoin supply totals, 24h/7d/30d trends, composition breakdowns, and a Chain Health Score across quality, chain environment, concentration, peg stability, and backing diversity.",
       icon: Globe,
       href: "/chains/",
       linkLabel: "Open chain leaderboard",

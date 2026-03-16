@@ -130,7 +130,8 @@ src/                              # Next.js frontend (static export)
 │   │   ├── stability-index-changelog/page.tsx # PSI methodology changelog
 │   │   ├── blacklist-tracker-changelog/page.tsx # Blacklist tracker changelog
 │   │   ├── mint-burn-flow-changelog/page.tsx # Mint/Burn flow changelog
-│   │   └── yield-changelog/page.tsx # Yield intelligence methodology changelog
+│   │   ├── yield-changelog/page.tsx # Yield intelligence methodology changelog
+│   │   └── chain-health-changelog/page.tsx # Chain Health Score methodology changelog
 │   ├── portfolio/                # Portfolio stress testing & upstream exposure (noindex)
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -400,7 +401,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 └── lib/
     ├── api-endpoints.ts          # Authoritative endpoint metadata + status/smoke/strict-contract helpers (incl. STRICT_CONTRACT_PATHS_LIST)
     ├── chain-aggregator.ts       # aggregateChains() — builds ChainSummary list from stablecoins cache + report-card snapshot
-    ├── chain-health.ts           # Pure Chain Health Score computation (quality 35%, concentration 25%, peg stability 25%, backing diversity 15%)
+    ├── chain-health.ts           # Pure Chain Health Score computation (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%)
     ├── chain-provider-registry.ts # Runtime-neutral CoinGecko/DexScreener/GeckoTerminal chain slug registry
     ├── stablecoins.ts            # Tracked stablecoin metadata list
     ├── stablecoin-id-registry.ts # Canonical/external ID lookup maps + resolution helpers

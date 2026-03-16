@@ -327,7 +327,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
   "chains": [ChainSummary, ...],
   "globalTotalUsd": 230000000000,
   "updatedAt": 1710500000,
-  "healthMethodologyVersion": "1.0"
+  "healthMethodologyVersion": "1.1"
 }
 ```
 
@@ -336,7 +336,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `chains` | `ChainSummary[]` | Chains sorted by `totalUsd` descending |
 | `globalTotalUsd` | `number` | Sum of all chain supply in USD |
 | `updatedAt` | `number` | Unix epoch seconds of the underlying stablecoins snapshot |
-| `healthMethodologyVersion` | `string` | Chain Health Score methodology version (currently `"1.0"`) |
+| `healthMethodologyVersion` | `string` | Chain Health Score methodology version (currently `"1.1"`) |
 
 **`ChainSummary` fields:**
 
@@ -345,27 +345,28 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `id` | `string` | Canonical chain identifier (DefiLlama chain name) |
 | `name` | `string` | Human-readable chain name |
 | `logoPath` | `string \| null` | Path to chain logo asset |
-| `type` | `string` | Chain type classification (e.g. `"L1"`, `"L2"`) |
+| `type` | `"evm" \| "tron" \| "other"` | Chain runtime family from `CHAIN_META` |
 | `totalUsd` | `number` | Total stablecoin supply on this chain in USD |
 | `change24h` | `number` | Absolute 24h supply change in USD |
-| `change24hPct` | `number \| null` | 24h supply change as a percentage |
+| `change24hPct` | `number` | 24h supply change as a percentage |
 | `change7d` | `number` | Absolute 7d supply change in USD |
-| `change7dPct` | `number \| null` | 7d supply change as a percentage |
+| `change7dPct` | `number` | 7d supply change as a percentage |
 | `change30d` | `number` | Absolute 30d supply change in USD |
-| `change30dPct` | `number \| null` | 30d supply change as a percentage |
+| `change30dPct` | `number` | 30d supply change as a percentage |
 | `stablecoinCount` | `number` | Number of distinct stablecoins on this chain |
-| `dominantStablecoin` | `{ id, symbol, share } \| null` | Largest stablecoin by supply on the chain |
-| `dominanceShare` | `number \| null` | Dominant stablecoin's share of the chain total (0–1) |
+| `dominantStablecoin` | `{ id, symbol, share }` | Largest stablecoin by supply on the chain |
+| `dominanceShare` | `number` | Chain share of the global tracked stablecoin supply (0–1) |
 | `healthScore` | `number \| null` | Chain Health Score 0–100, or `null` if insufficient data |
 | `healthBand` | `string \| null` | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
-| `healthFactors` | `ChainHealthFactors \| null` | Raw sub-factor scores (0–100 each) |
+| `healthFactors` | `ChainHealthFactors` | Raw sub-factor scores (0–100 each; `quality` may still be `null`) |
 
 **`ChainHealthFactors` fields:**
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `concentration` | `number` | HHI-based supply concentration score (higher = more diverse) |
-| `quality` | `number` | Supply-weighted average stablecoin quality from report-card grades |
+| `quality` | `number \| null` | Supply-weighted average stablecoin quality from report-card grades; `null` when rated supply coverage is below 50% by value |
+| `chainEnvironment` | `number` | Resilience-tier score for the chain itself (`100` tier 1, `60` tier 2, `20` tier 3) |
 | `pegStability` | `number` | Supply-weighted average peg deviation score |
 | `backingDiversity` | `number` | Shannon entropy of backing types across the chain |
 

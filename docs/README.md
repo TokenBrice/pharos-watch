@@ -33,6 +33,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
+- [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
 - [dependency-map.md](./dependency-map.md) - dependency-graph construction, rendering, and interaction model
 - [coverage-page.md](./coverage-page.md) - `/coverage/` matrix contract, source mapping, and update rules
@@ -47,6 +48,8 @@ Some public routes are documented by feature docs or the architecture doc rather
 | Route | Primary doc(s) |
 |-------|-----------------|
 | `/blacklist/` | [blacklist-tracker.md](./blacklist-tracker.md) |
+| `/chains/` | [chains-page.md](./chains-page.md), [api-reference.md](./api-reference.md) |
+| `/chains/[chain]/` | [chains-page.md](./chains-page.md), [api-reference.md](./api-reference.md) |
 | `/compare/[slug]/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
 | `/depeg/` | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md) |
 | `/digest/` | [digest-pipeline.md](./digest-pipeline.md) |

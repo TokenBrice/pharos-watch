@@ -15,7 +15,7 @@
 - **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps both the top-right reader-guide hero card and the dedicated "How to Read This Page" overview card
 - **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`
 - **Version metadata:** per-system version modules in `shared/lib/*-version.ts`, mostly built on top of `shared/lib/methodology-version.ts`
-- **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, and blacklist tracker all live under `src/app/methodology/*-changelog/page.tsx`
+- **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`
 - **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory for metadata + shell wiring while still authoring its nav entries and version cards locally
 - **Cross-app methodology links:** `src/lib/methodology-context.ts` and `src/components/methodology-hint.tsx` hard-code the anchors and changelog paths used by cards/tooltips across the app
@@ -35,7 +35,7 @@
 | PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-dews-version.ts`                                                                                                                                              |
 | Contagion Stress Test | `shared/lib/report-cards.ts` (`computeStressedGrades`)                                                                                                                                                                               |
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/blacklist-tracker-version.ts`                                                                                                              |
-| Chain Health Score    | `shared/lib/chain-health.ts` — weighted composite (quality 35%, concentration 25%, peg stability 25%, backing diversity 15%). Sub-factors: HHI-based concentration, supply-weighted quality (report-card grades), supply-weighted peg deviation, Shannon entropy backing diversity. Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
+| Chain Health Score    | `shared/lib/chain-health.ts`, `shared/lib/chains.ts`, `shared/lib/chain-health-version.ts` — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (report-card grades with a 40-point fallback for unrated coins once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and resilience-tier-based chain environment (tier 1 = 100, tier 2 = 60, tier 3 = 20). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
 
 ---
 
@@ -58,6 +58,12 @@ If you add a new methodology changelog route, follow the existing pattern:
 1. Add or update the version source in `shared/lib/*-version.ts`.
 2. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createMethodologyChangelogRoute(...)`.
 3. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
+
+If the Chain Health methodology changes, also update:
+
+1. `docs/chains-page.md`
+2. `docs/api-reference.md` (`GET /api/chains`)
+3. `src/app/chains/page.tsx` and `src/app/chains/[chain]/client.tsx` if any user-facing factor labels or weights change
 
 If the pricing pipeline's source roster or live-price selection semantics change, also update:
 
@@ -84,6 +90,7 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.7** (2026-03-16): Corrected the Chain Health source mapping to the live v1.1 implementation, added the missing `chain-health-changelog` route to the methodology route inventory, and linked the chain analytics docs update contract.
 - **v3.6** (2026-03-14): Documented the remaining route-shell contract in `page.tsx` (FAQ/metadata/reader-guide copy), the persisted Reader/Analyst mode toggle behavior, the shared changelog factory, and the cross-app anchor/path dependency in `src/lib/methodology-context.ts`.
 - **v3.5** (2026-03-14): Added Pricing Pipeline section (first position) with 8-source consensus diagram, source weights table, enrichment pipeline, confidence levels, and validation modes. Created `shared/lib/pricing-pipeline-version.ts` and `src/app/methodology/pricing-pipeline-changelog/page.tsx`.
 - **v3.4** (2026-03-12): Corrected the update contract so methodology-copy edits point to `methodology-sections.tsx`, which is where the authored long-form content and worked examples now live.

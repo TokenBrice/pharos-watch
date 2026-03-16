@@ -13,6 +13,7 @@ Public-facing analytics dashboard tracking 158 stablecoins (plus 2 shadow assets
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, and DexScreener pools used to suppress false depeg alerts
 - **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
+- **Chains** — per-chain stablecoin leaderboard and profile pages with Chain Health Score breakdowns
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
@@ -114,6 +115,7 @@ src/                              Frontend (Next.js static export)
 │   ├── page.tsx                  Homepage: stats, charts, filters, peg tracker, table
 │   ├── blacklist/                Freeze & blacklist event tracker
 │   ├── cemetery/                 Dead stablecoin graveyard
+│   ├── chains/                   Chain analytics leaderboard + per-chain profiles
 │   ├── compare/                  Side-by-side comparison tool + static comparison landing pages
 │   ├── coverage/                 Per-coin feature coverage matrix
 │   ├── depeg/                    Live peg monitoring + event feed
@@ -166,6 +168,7 @@ Current source-of-truth product docs live in `/docs/` and this README. `/agents/
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
 - [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior
 - [docs/stablecoin-detail-page.md](./docs/stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, section composition, and fallback/staleness rules
+- [docs/chains-page.md](./docs/chains-page.md) - `/chains/` and `/chains/[chain]/` route contracts plus Chain Health Score wiring
 - [docs/live-reserves.md](./docs/live-reserves.md) - live reserve-sync config, adapter registry, API modes, and status/detail consumers
 - [docs/redemption-backstops.md](./docs/redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers
 - [docs/deployment-process.md](./docs/deployment-process.md) - local merge gate and CI deploy sequence

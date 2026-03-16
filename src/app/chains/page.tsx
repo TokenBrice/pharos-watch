@@ -35,7 +35,7 @@ export default function ChainsPage() {
       statusBadge={{ status: "experimental" }}
       methodology={{ version: CHAIN_HEALTH_METHODOLOGY_VERSION, changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH }}
       leadParagraphs={[
-        "Blockchain networks ranked by stablecoin supply and health. The Chain Health Score rates each chain's stablecoin ecosystem on quality, concentration, peg stability, and backing diversity.",
+        "Blockchain networks ranked by stablecoin supply and health. The Chain Health Score rates each chain's stablecoin ecosystem on quality, chain environment, concentration, peg stability, and backing diversity.",
       ]}
     >
       <ChainsLeaderboardClient />
