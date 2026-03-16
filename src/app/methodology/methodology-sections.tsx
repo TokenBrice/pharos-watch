@@ -23,7 +23,10 @@ import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
-import { HEALTH_METHODOLOGY_VERSION } from "@shared/lib/chain-health";
+import {
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/chain-health-version";
 import { MethodologyDetails, MethodologyFacts, WorkedExample } from "./methodology-shared";
 
 export function MethodologySections() {
@@ -2570,8 +2573,14 @@ export function MethodologySections() {
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Chain Health Score</CardTitle>
             <span className="inline-flex items-center rounded-md border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-teal-700 dark:text-teal-400">
-              v{HEALTH_METHODOLOGY_VERSION}
+              {CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL}
             </span>
+            <Link
+              href={CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH}
+              className="text-xs text-foreground underline underline-offset-4 hover:text-teal-700 dark:hover:text-teal-400 transition-colors"
+            >
+              Version history &rarr;
+            </Link>
           </div>
           <p className="text-xs text-muted-foreground">
             Version increments when factor weights, tier assignments, or sub-factor formulas change.

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/chain-health-version";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ChainsLeaderboardClient } from "./client";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -32,7 +33,7 @@ export default function ChainsPage() {
       path="/chains/"
       title="Chains"
       statusBadge={{ status: "experimental" }}
-      methodology={{ version: "1.1", changelogPath: "/methodology#chain-health-score" }}
+      methodology={{ version: CHAIN_HEALTH_METHODOLOGY_VERSION, changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH }}
       leadParagraphs={[
         "Blockchain networks ranked by stablecoin supply and health. The Chain Health Score rates each chain's stablecoin ecosystem on quality, concentration, peg stability, and backing diversity.",
       ]}
