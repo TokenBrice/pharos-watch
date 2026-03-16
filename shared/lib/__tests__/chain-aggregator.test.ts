@@ -99,6 +99,27 @@ describe("aggregateChains", () => {
     expect(eth.healthBand).toBeTruthy();
   });
 
+  it("resolves DL chain names to CHAIN_META IDs", () => {
+    const input = makeInput({
+      peggedAssets: [{
+        id: "usdt-tether", symbol: "USDT", price: 1.0,
+        pegType: "peggedUSD",
+        chainCirculating: {
+          BSC: { current: 100, circulatingPrevDay: 90, circulatingPrevWeek: 80, circulatingPrevMonth: 70 },
+          Ethereum: { current: 200, circulatingPrevDay: 190, circulatingPrevWeek: 180, circulatingPrevMonth: 170 },
+        },
+      }],
+    });
+    const result = aggregateChains(input);
+    expect(result.chains).toHaveLength(2);
+    const bsc = result.chains.find((c) => c.id === "bsc");
+    const eth = result.chains.find((c) => c.id === "ethereum");
+    expect(bsc).toBeDefined();
+    expect(bsc!.totalUsd).toBe(100);
+    expect(eth).toBeDefined();
+    expect(eth!.totalUsd).toBe(200);
+  });
+
   it("deduplicates alias chains (hyperliquid)", () => {
     const input = makeInput({
       peggedAssets: [{

@@ -49,9 +49,25 @@ interface ChainAccumulator {
   }>;
 }
 
+/** Reverse lookup: DL chain name → CHAIN_META id (e.g. "BSC" → "bsc"). */
+const CHAIN_NAME_TO_ID = new Map<string, string>();
+for (const [id, meta] of Object.entries(CHAIN_META)) {
+  CHAIN_NAME_TO_ID.set(meta.name.toLowerCase(), id);
+}
+
 function resolveCanonicalChainId(raw: string): string | null {
-  const canonical = CHAIN_ALIASES[raw] ?? raw;
-  return CHAIN_META[canonical] ? canonical : null;
+  // Try as-is first (exact ID match)
+  const aliased = CHAIN_ALIASES[raw] ?? raw;
+  if (CHAIN_META[aliased]) return aliased;
+
+  // Try case-insensitive name lookup (DL uses chain names like "BSC", "Ethereum")
+  const byName = CHAIN_NAME_TO_ID.get(raw.toLowerCase());
+  if (byName) {
+    const canonical = CHAIN_ALIASES[byName] ?? byName;
+    return CHAIN_META[canonical] ? canonical : null;
+  }
+
+  return null;
 }
 
 export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
