@@ -19,6 +19,11 @@ function tsToDateSlug(ts: number): string {
   return new Date(ts * 1000).toISOString().slice(0, 10);
 }
 
+function toDigestSlug(ts: number, digestType: "daily" | "weekly"): string {
+  const date = tsToDateSlug(ts);
+  return digestType === "weekly" ? `${date}-weekly` : date;
+}
+
 function tsToMonthKey(ts: number): string {
   return new Date(ts * 1000).toISOString().slice(0, 7);
 }
@@ -71,7 +76,7 @@ function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestEx
         {teaser}
       </p>
       <Link
-        href={`/digest/${tsToDateSlug(entry.generatedAt)}/`}
+        href={`/digest/${toDigestSlug(entry.generatedAt, "weekly")}/`}
         className="inline-block mt-3 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
       >
         Read the full recap &rarr;
@@ -212,7 +217,7 @@ export function DigestArchiveClient() {
           return (
             <Link
               key={d.generatedAt}
-              href={`/digest/${tsToDateSlug(d.generatedAt)}/`}
+              href={`/digest/${toDigestSlug(d.generatedAt, d.digestType ?? "daily")}/`}
               className={cn(
                 "flex items-start sm:items-center gap-3 sm:gap-4 border-b transition-colors -mx-2 px-2 rounded",
                 isWeekly

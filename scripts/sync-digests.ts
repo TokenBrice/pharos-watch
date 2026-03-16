@@ -38,7 +38,7 @@ async function main() {
 
   const entries: DigestEntry[] = digests
     .map((d) => ({
-      date: tsToDate(d.generatedAt),
+      date: tsToDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
       title: d.digestTitle || "Signal & Noise",
       text: d.digestText,
       extended: d.digestExtended || "",
