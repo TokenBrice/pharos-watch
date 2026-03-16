@@ -5,18 +5,13 @@ import { buildChainRpcs } from "../lib/chain-registry";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { checkPublicApiRateLimit } from "../lib/rate-limit";
 import { errorResponse } from "../lib/api-utils";
-import { hasValidAdminCredential, _getAuthDiag } from "../lib/auth";
+import { hasValidAdminCredential } from "../lib/auth";
 import { parseCsvEnv } from "../lib/env";
 import { buildTelegramCreds, buildTwitterCreds } from "../lib/runtime-credentials";
 import { isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
 
 const DEFAULT_CORS_ORIGIN = "https://pharos.watch";
-
-// TODO: remove after auth diagnostic is no longer needed
-function isOpsApiHost(url: URL): boolean {
-  return url.hostname === "ops-api.pharos.watch";
-}
 
 function resolveAllowedCorsOrigins(configured: string): string[] {
   const parsed = parseCsvEnv(configured);
@@ -150,16 +145,6 @@ export async function handleHttpRequest(
     return addCorsHeaders(
       errorResponse(404, "Not found"),
       origin
-    );
-  }
-
-  // TODO: remove auth diagnostic response injection after auth is confirmed working
-  const authDiag = _getAuthDiag();
-  if (response.status === 401 && authDiag && isOpsApiHost(url)) {
-    const diagBody = JSON.stringify({ error: "Unauthorized", _authDiag: authDiag });
-    return addCorsHeaders(
-      new Response(diagBody, { status: 401, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }),
-      origin,
     );
   }
 

@@ -7,8 +7,6 @@ const DEFAULT_OPS_API_HOST = "ops-api.pharos.watch";
 export interface AdminAuthEnv {
   CF_ACCESS_OPS_API_AUD?: string;
   CF_ACCESS_TEAM_DOMAIN?: string;
-  OPS_API_SERVICE_TOKEN_ID?: string;
-  OPS_API_SERVICE_TOKEN_SECRET?: string;
 }
 
 function isOpsApiRequest(request: Request | undefined): boolean {
@@ -21,64 +19,30 @@ function isOpsApiRequest(request: Request | undefined): boolean {
 }
 
 /**
- * Validates ops-api admin requests via two mechanisms (either succeeding grants access):
+ * Validates ops-api admin requests via CF Access JWT verification.
  *
- * 1. JWT verification — when CF Access is in the request path, it injects
- *    Cf-Access-Jwt-Assertion which is verified against CF_ACCESS_OPS_API_AUD.
+ * When CF Access is in the request path, it authenticates the caller
+ * (human login or service token) and injects a Cf-Access-Jwt-Assertion
+ * header. This function verifies that JWT against CF_ACCESS_OPS_API_AUD.
  *
- * 2. Service token comparison — timing-safe comparison of CF-Access-Client-Id/Secret
- *    headers against OPS_API_SERVICE_TOKEN_ID/SECRET worker secrets.
+ * Note: CF Access strips the original CF-Access-Client-Id/Secret headers
+ * after authentication, so direct service-token comparison is not possible
+ * for CF Access-proxied requests.
  */
-// TODO: remove _authDiag after auth is confirmed working
-let _authDiag: Record<string, unknown> | null = null;
-
-/** Visible for diagnostics only — returns last auth failure info. Remove after debug. */
-export function _getAuthDiag(): Record<string, unknown> | null { return _authDiag; }
-
 async function hasOpsApiAccessSignal(
   request: Request | undefined,
   env?: AdminAuthEnv,
 ): Promise<boolean> {
-  _authDiag = null;
   if (!isOpsApiRequest(request)) return false;
 
-  const diag: Record<string, unknown> = {};
-
-  // Path 1: JWT verification (CF Access proxied requests)
   const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
-  if (accessJwt && env?.CF_ACCESS_OPS_API_AUD) {
-    diag.jwtPresent = true;
-    diag.audConfigured = true;
-    diag.teamDomain = env.CF_ACCESS_TEAM_DOMAIN ?? "(default: pharos)";
-    const jwtValid = await verifyAccessJwt({
-      token: accessJwt,
-      aud: env.CF_ACCESS_OPS_API_AUD,
-      teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
-    });
-    diag.jwtValid = jwtValid;
-    if (jwtValid) return true;
-  } else {
-    diag.jwtPresent = !!accessJwt;
-    diag.audConfigured = !!env?.CF_ACCESS_OPS_API_AUD;
-  }
+  if (!accessJwt || !env?.CF_ACCESS_OPS_API_AUD) return false;
 
-  // Path 2: Service token comparison (direct Worker access)
-  const clientId = request?.headers.get("CF-Access-Client-Id")?.trim();
-  const clientSecret = request?.headers.get("CF-Access-Client-Secret")?.trim();
-  diag.serviceTokenHeadersPresent = !!(clientId && clientSecret);
-  diag.serviceTokenEnvConfigured = !!(env?.OPS_API_SERVICE_TOKEN_ID && env?.OPS_API_SERVICE_TOKEN_SECRET);
-  if (clientId && clientSecret && env?.OPS_API_SERVICE_TOKEN_ID && env?.OPS_API_SERVICE_TOKEN_SECRET) {
-    const [idMatch, secretMatch] = await Promise.all([
-      timingSafeCompare(clientId, env.OPS_API_SERVICE_TOKEN_ID),
-      timingSafeCompare(clientSecret, env.OPS_API_SERVICE_TOKEN_SECRET),
-    ]);
-    diag.idMatch = idMatch;
-    diag.secretMatch = secretMatch;
-    if (idMatch && secretMatch) return true;
-  }
-
-  _authDiag = diag;
-  return false;
+  return verifyAccessJwt({
+    token: accessJwt,
+    aud: env.CF_ACCESS_OPS_API_AUD,
+    teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos-watch",
+  });
 }
 
 export async function hasValidAdminCredential(

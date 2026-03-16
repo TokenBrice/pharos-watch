@@ -51,3 +51,5 @@ database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
 [vars]
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"
+CF_ACCESS_TEAM_DOMAIN = "pharos-watch"
+CF_ACCESS_OPS_API_AUD = "72e74ead7cedf76e5c79f2bd0dd999aecd7d5b4e05fa1f9d696aed6a2cd31869"

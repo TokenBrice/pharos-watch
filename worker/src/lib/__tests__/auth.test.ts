@@ -5,12 +5,9 @@ vi.mock("../jwt-verify", () => ({
   verifyAccessJwt: vi.fn().mockResolvedValue(true),
 }));
 
-const TEST_TOKEN_ID = "test-service-token-id";
-const TEST_TOKEN_SECRET = "test-service-token-secret";
 const TEST_ENV = {
   CF_ACCESS_OPS_API_AUD: "test-aud",
-  OPS_API_SERVICE_TOKEN_ID: TEST_TOKEN_ID,
-  OPS_API_SERVICE_TOKEN_SECRET: TEST_TOKEN_SECRET,
+  CF_ACCESS_TEAM_DOMAIN: "pharos-watch",
 };
 
 describe("auth helpers", () => {
@@ -26,35 +23,16 @@ describe("auth helpers", () => {
 
   it("rejects ops-api requests when no env configured", async () => {
     const request = new Request("https://ops-api.pharos.watch/api/status", {
-      headers: {
-        "CF-Access-Client-Id": TEST_TOKEN_ID,
-        "CF-Access-Client-Secret": TEST_TOKEN_SECRET,
-      },
+      headers: { "Cf-Access-Jwt-Assertion": "some-jwt" },
     });
     const result = await hasValidAdminCredential(request, false, {});
     expect(result).toBe(false);
   });
 
-  it("rejects ops-api requests with wrong service token", async () => {
-    const request = new Request("https://ops-api.pharos.watch/api/status", {
-      headers: {
-        "CF-Access-Client-Id": "wrong-id",
-        "CF-Access-Client-Secret": "wrong-secret",
-      },
-    });
+  it("rejects ops-api requests without JWT header", async () => {
+    const request = new Request("https://ops-api.pharos.watch/api/status");
     const result = await hasValidAdminCredential(request, false, TEST_ENV);
     expect(result).toBe(false);
-  });
-
-  it("accepts ops-api request with valid service token", async () => {
-    const request = new Request("https://ops-api.pharos.watch/api/status", {
-      headers: {
-        "CF-Access-Client-Id": TEST_TOKEN_ID,
-        "CF-Access-Client-Secret": TEST_TOKEN_SECRET,
-      },
-    });
-    const result = await hasValidAdminCredential(request, false, TEST_ENV);
-    expect(result).toBe(true);
   });
 
   it("accepts ops-api request with valid JWT", async () => {
