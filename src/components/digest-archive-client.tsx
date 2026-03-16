@@ -48,6 +48,7 @@ function formatWeeklyMasthead(ts: number): string {
 }
 
 const SERIF = { fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" };
+const MONO_UPRIGHT = { fontFamily: "'Courier New', Courier, monospace" };
 
 function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number; editionNumber?: number } }) {
   const paragraphs = splitDigestParagraphs(entry.digestExtended);
@@ -229,7 +230,7 @@ export function DigestArchiveClient() {
                 {formatWireDate(d.generatedAt)}
               </span>
               <div className="flex-1 min-w-0">
-                <span className={cn("truncate flex items-center gap-1.5", isWeekly ? "text-sm font-semibold" : "text-sm font-medium")}>
+                <span className={cn("truncate flex items-center gap-1.5", isWeekly ? "text-sm font-semibold" : "text-sm font-medium")} style={MONO_UPRIGHT}>
                   {d.digestTitle || (isWeekly ? "The Week in Review" : "Signal & Noise")}
                   {isWeekly && (
                     <span className="rounded border border-border/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
