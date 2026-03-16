@@ -44,6 +44,11 @@ async function hasOpsApiAccessSignal(
       teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
     });
     if (jwtValid) return true;
+    // TODO: remove diagnostic logging after auth is confirmed working
+    console.warn("[auth] JWT path failed", { teamDomain: env.CF_ACCESS_TEAM_DOMAIN, audPrefix: env.CF_ACCESS_OPS_API_AUD.slice(0, 8) });
+  } else {
+    // TODO: remove diagnostic logging after auth is confirmed working
+    console.warn("[auth] JWT path skipped", { hasJwt: !!accessJwt, hasAud: !!env?.CF_ACCESS_OPS_API_AUD });
   }
 
   // Path 2: Service token comparison (direct Worker access)
@@ -55,6 +60,16 @@ async function hasOpsApiAccessSignal(
       timingSafeCompare(clientSecret, env.OPS_API_SERVICE_TOKEN_SECRET),
     ]);
     if (idMatch && secretMatch) return true;
+    // TODO: remove diagnostic logging after auth is confirmed working
+    console.warn("[auth] Service token path failed", { idMatch, secretMatch });
+  } else {
+    // TODO: remove diagnostic logging after auth is confirmed working
+    console.warn("[auth] Service token path skipped", {
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret,
+      hasEnvId: !!env?.OPS_API_SERVICE_TOKEN_ID,
+      hasEnvSecret: !!env?.OPS_API_SERVICE_TOKEN_SECRET,
+    });
   }
 
   return false;

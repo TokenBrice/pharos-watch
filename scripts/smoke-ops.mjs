@@ -76,6 +76,10 @@ async function run() {
   }
 
   const status = await fetchJson(new URL("/api/status", opsApiBase).toString(), headers);
+  if (status.response.status !== 200) {
+    console.error(`[smoke-ops] /api/status returned ${status.response.status}, body: ${status.bodyText?.slice(0, 500)}`);
+    console.error(`[smoke-ops] Response headers:`, Object.fromEntries(status.response.headers.entries()));
+  }
   assert(status.response.status === 200, `Expected ops API /api/status 200, got ${status.response.status}`);
   assert(status.body && typeof status.body === "object", "Ops API /api/status did not return JSON");
   assert(typeof status.body.overallStatus === "string", "Ops API /api/status missing overallStatus");
