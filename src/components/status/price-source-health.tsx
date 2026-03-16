@@ -3,7 +3,6 @@
 import { STATUS_PRICE_CONFIDENCE_BANDS } from "@shared/lib/status-thresholds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PriceSourceHealth } from "@shared/types";
-import { useState } from "react";
 import { formatElapsedSeconds } from "@shared/lib/format";
 
 function MetricCard({ label, value, pct, severity }: { label: string; value: number; pct: string; severity: string }) {
@@ -39,8 +38,6 @@ export function PriceSourceHealthCard({
   health: PriceSourceHealth | null;
   nowSeconds: number;
 }) {
-  const [showDivergences, setShowDivergences] = useState(false);
-
   if (!health) {
     return (
       <Card>
@@ -54,7 +51,7 @@ export function PriceSourceHealthCard({
     );
   }
 
-  const { confidenceDistribution: cd, sourceDistribution: sd, divergences, totalAssets } = health;
+  const { confidenceDistribution: cd, sourceDistribution: sd, totalAssets } = health;
   const pct = (n: number) => totalAssets > 0 ? `${((n / totalAssets) * 100).toFixed(1)}%` : "—";
   const lastSyncAgeSeconds = Math.max(0, nowSeconds - health.lastSync);
 
@@ -96,28 +93,8 @@ export function PriceSourceHealthCard({
 
         <div className="text-xs text-muted-foreground">
           <span className="font-medium">Sources:</span>{" "}
-          CG∩DL {sd["coingecko+defillama"]} · CG {sd.coingecko} · DL {sd.defillama} · Protocol {sd["protocol-redeem"]} · Contract {sd["defillama-contract"]} · CMC {sd.coinmarketcap} · DexScreener {sd.dexscreener} · Pyth {sd.pyth} · Binance {sd.binance} · Coinbase {sd.coinbase} · RedStone {sd.redstone} · Curve {sd["curve-onchain"]} · DEX {sd["dex-promoted"]} · Cached {sd.cached}
+          CG+DL-list {sd["coingecko+defillama-list"]} · CG {sd.coingecko} · DL {sd.defillama} · DL-list {sd["defillama-list"]} · Protocol {sd["protocol-redeem"]} · Contract {sd["defillama-contract"]} · CMC {sd.coinmarketcap} · DexScreener {sd.dexscreener} · Pyth {sd.pyth} · Binance {sd.binance} · Coinbase {sd.coinbase} · RedStone {sd.redstone} · Curve {sd["curve-onchain"]} · DEX {sd["dex-promoted"]} · GT {sd.geckoterminal} · Cached {sd.cached}
         </div>
-
-        {divergences.length > 0 && (
-          <div>
-            <button
-              onClick={() => setShowDivergences(!showDivergences)}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              {showDivergences ? "▾" : "▸"} {divergences.length} divergence{divergences.length !== 1 ? "s" : ""}
-            </button>
-            {showDivergences && (
-              <div className="mt-1 space-y-1">
-                {divergences.map((d) => (
-                  <div key={d.id} className="font-mono text-xs text-muted-foreground">
-                    {d.symbol}: CG ${d.cgPrice.toFixed(4)} vs DL ${d.dlPrice.toFixed(4)} ({d.bps} bps)
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );

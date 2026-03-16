@@ -145,4 +145,11 @@ export const CIRCUIT_SOURCE = {
   CURVE_ONCHAIN: "curve-onchain",
   CURVE_LIQUIDITY_API: "curve-liquidity-api",
   FX_REALTIME: "fx-realtime",
+  GECKO_TERMINAL_PROBE: "geckoterminal-probe",
 } as const;
+
+/** Minimum TVL for a GeckoTerminal pool to be used as a price cross-check */
+export const GT_PROBE_MIN_TVL_USD = 10_000;
+
+/** Maximum time (ms) for a single GT probe request */
+export const GT_PROBE_TIMEOUT_MS = 5_000;

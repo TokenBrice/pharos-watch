@@ -204,8 +204,9 @@ export interface DiscoveryCandidatesResponse {
 export interface PriceSourceHealth {
   sourceDistribution: {
     coingecko: number;
-    "coingecko+defillama": number;
+    "coingecko+defillama-list": number;
     defillama: number;
+    "defillama-list": number;
     "protocol-redeem": number;
     "defillama-contract": number;
     coinmarketcap: number;
@@ -216,6 +217,7 @@ export interface PriceSourceHealth {
     redstone: number;
     "curve-onchain": number;
     "dex-promoted": number;
+    geckoterminal: number;
     cached: number;
     missing: number;
   };
@@ -225,13 +227,6 @@ export interface PriceSourceHealth {
     low: number;
     fallback: number;
   };
-  divergences: {
-    id: string;
-    symbol: string;
-    cgPrice: number;
-    dlPrice: number;
-    bps: number;
-  }[];
   totalAssets: number;
   lastSync: number;
 }

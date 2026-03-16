@@ -90,7 +90,7 @@ export function MethodologySections() {
           </div>
           <WorkedExample summary="Worked example: USDC price consensus across 6 sources">
             <p className="font-mono">
-              Sources: CoinGecko=1.0001 (w2), DefiLlama=0.9999 (w1), Pyth=1.0002 (w2), Binance=1.0001 (w2),
+              Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Pyth=1.0002 (w2), Binance=1.0001 (w2),
               Coinbase=0.9998 (w2), Curve=1.0003 (w3)
             </p>
             <p className="font-mono">
@@ -2327,7 +2327,7 @@ export function MethodologySections() {
                 </li>
                 <li>
                   <span className="text-foreground">Price Confidence (0.15)</span> &mdash; N-source consensus failures
-                  across CoinGecko, DefiLlama, Pyth, Binance, Coinbase, RedStone, Curve on-chain, and DEX prices;
+                  across CoinGecko, DefiLlama list, GeckoTerminal, Pyth, Binance, Coinbase, RedStone, Curve on-chain, and DEX prices;
                   maps confidence levels (high/single-source/low/fallback) to stress values
                 </li>
                 <li>

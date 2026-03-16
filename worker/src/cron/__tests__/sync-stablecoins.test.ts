@@ -113,8 +113,12 @@ vi.mock("../enrich-prices", () => ({
   hasMissingPrice: vi.fn((a: { price?: number | null }) => a.price == null || typeof a.price !== "number" || a.price === 0),
   fetchPrimaryPrices: vi.fn(async () => ({
     results: new Map(),
-    stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
+    stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 },
     cgPrices: new Map(),
+  })),
+  runGtProbePass: vi.fn(async () => ({
+    updatedCount: 0,
+    stats: { probed: 0, pricesObtained: 0, divergences500bps: 0, skippedLowTvl: 0 },
   })),
 }));
 
@@ -237,7 +241,7 @@ describe("syncStablecoins", () => {
     });
     vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({
       results: new Map(),
-      stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] },
+      stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 },
       cgPrices: new Map(),
     });
     vi.mocked(fetchAuthoritativeLivePriceOverrides).mockReset().mockResolvedValue(new Map());
@@ -282,7 +286,7 @@ describe("syncStablecoins", () => {
     );
     expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
     expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "defillama-stablecoins");
-    expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined, undefined, undefined);
+    expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined, undefined, undefined, expect.any(Map));
     expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
     expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
@@ -1067,12 +1071,12 @@ describe("stampPriceMetadata", () => {
   it("stamps consensusSources when provided", () => {
     const asset = { id: "test", name: "Test", symbol: "T", circulating: {}, chains: [] } as PeggedAsset;
 
-    stampPriceMetadata(asset, "coingecko+defillama", "high", 1234, ["coingecko", "defillama"]);
+    stampPriceMetadata(asset, "coingecko+defillama-list", "high", 1234, ["coingecko", "defillama-list"]);
 
-    expect(asset.priceSource).toBe("coingecko+defillama");
+    expect(asset.priceSource).toBe("coingecko+defillama-list");
     expect(asset.priceConfidence).toBe("high");
     expect(asset.priceUpdatedAt).toBe(1234);
-    expect(asset.consensusSources).toEqual(["coingecko", "defillama"]);
+    expect(asset.consensusSources).toEqual(["coingecko", "defillama-list"]);
   });
 
   it("leaves consensusSources unchanged when not provided", () => {
@@ -1088,8 +1092,8 @@ describe("stampPriceMetadata", () => {
 
   it("stamps agreeSources when provided", () => {
     const asset = { id: "test", name: "Test", symbol: "T", circulating: {}, chains: [] } as PeggedAsset;
-    stampPriceMetadata(asset, "coingecko+defillama", "high", 100, ["coingecko", "defillama"], ["coingecko", "defillama"]);
-    expect(asset.agreeSources).toEqual(["coingecko", "defillama"]);
+    stampPriceMetadata(asset, "coingecko+defillama-list", "high", 100, ["coingecko", "defillama-list"], ["coingecko", "defillama-list"]);
+    expect(asset.agreeSources).toEqual(["coingecko", "defillama-list"]);
   });
 
   it("leaves agreeSources unchanged when not provided", () => {

@@ -141,8 +141,7 @@ export async function confirmPendingDepegs(
     if (geckoId) {
       const primarySource = asset?.priceSource ?? null;
       const useDefiLlamaSecondary =
-        primarySource === "coingecko" ||
-        primarySource === "coingecko+defillama";
+        primarySource != null && primarySource.startsWith("coingecko");
       const offchainLabel = useDefiLlamaSecondary ? "DefiLlama" : "CoinGecko";
       try {
         const offchainRes = await fetchWithRetry(
@@ -256,7 +255,7 @@ export async function confirmPendingDepegs(
       );
 
       const confirmedBy = [
-        offchainAgrees ? (asset?.priceSource === "coingecko" || asset?.priceSource === "coingecko+defillama" ? "DefiLlama" : "CoinGecko") : null,
+        offchainAgrees ? (asset?.priceSource?.startsWith("coingecko") ? "DefiLlama" : "CoinGecko") : null,
         dexAgrees ? "DEX" : null,
         cexAgrees ? "CEX" : null,
       ].filter(Boolean).join("+");
