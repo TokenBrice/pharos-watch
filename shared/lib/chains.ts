@@ -103,3 +103,8 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   stacks:         { name: "Stacks",          explorerUrl: "https://explorer.hiro.so",                     evmChainId: null,     type: "other", logoPath: "/chains/stacks.png"         },
   rootstock:      { name: "Rootstock",       explorerUrl: "https://rootstock.blockscout.com",              evmChainId: 30,       type: "evm",   logoPath: "/chains/rootstock.png"      },
 };
+
+/** Alias chains that share a display name. Map alias -> canonical key. */
+export const CHAIN_ALIASES: Record<string, string> = {
+  "hyperliquid-l1": "hyperliquid",
+};
