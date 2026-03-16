@@ -29,49 +29,55 @@ function isOpsApiRequest(request: Request | undefined): boolean {
  * 2. Service token comparison — timing-safe comparison of CF-Access-Client-Id/Secret
  *    headers against OPS_API_SERVICE_TOKEN_ID/SECRET worker secrets.
  */
+// TODO: remove _authDiag after auth is confirmed working
+let _authDiag: Record<string, unknown> | null = null;
+
+/** Visible for diagnostics only — returns last auth failure info. Remove after debug. */
+export function _getAuthDiag(): Record<string, unknown> | null { return _authDiag; }
+
 async function hasOpsApiAccessSignal(
   request: Request | undefined,
   env?: AdminAuthEnv,
 ): Promise<boolean> {
+  _authDiag = null;
   if (!isOpsApiRequest(request)) return false;
+
+  const diag: Record<string, unknown> = {};
 
   // Path 1: JWT verification (CF Access proxied requests)
   const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
   if (accessJwt && env?.CF_ACCESS_OPS_API_AUD) {
+    diag.jwtPresent = true;
+    diag.audConfigured = true;
+    diag.teamDomain = env.CF_ACCESS_TEAM_DOMAIN ?? "(default: pharos)";
     const jwtValid = await verifyAccessJwt({
       token: accessJwt,
       aud: env.CF_ACCESS_OPS_API_AUD,
       teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
     });
+    diag.jwtValid = jwtValid;
     if (jwtValid) return true;
-    // TODO: remove diagnostic logging after auth is confirmed working
-    console.warn("[auth] JWT path failed", { teamDomain: env.CF_ACCESS_TEAM_DOMAIN, audPrefix: env.CF_ACCESS_OPS_API_AUD.slice(0, 8) });
   } else {
-    // TODO: remove diagnostic logging after auth is confirmed working
-    console.warn("[auth] JWT path skipped", { hasJwt: !!accessJwt, hasAud: !!env?.CF_ACCESS_OPS_API_AUD });
+    diag.jwtPresent = !!accessJwt;
+    diag.audConfigured = !!env?.CF_ACCESS_OPS_API_AUD;
   }
 
   // Path 2: Service token comparison (direct Worker access)
   const clientId = request?.headers.get("CF-Access-Client-Id")?.trim();
   const clientSecret = request?.headers.get("CF-Access-Client-Secret")?.trim();
+  diag.serviceTokenHeadersPresent = !!(clientId && clientSecret);
+  diag.serviceTokenEnvConfigured = !!(env?.OPS_API_SERVICE_TOKEN_ID && env?.OPS_API_SERVICE_TOKEN_SECRET);
   if (clientId && clientSecret && env?.OPS_API_SERVICE_TOKEN_ID && env?.OPS_API_SERVICE_TOKEN_SECRET) {
     const [idMatch, secretMatch] = await Promise.all([
       timingSafeCompare(clientId, env.OPS_API_SERVICE_TOKEN_ID),
       timingSafeCompare(clientSecret, env.OPS_API_SERVICE_TOKEN_SECRET),
     ]);
+    diag.idMatch = idMatch;
+    diag.secretMatch = secretMatch;
     if (idMatch && secretMatch) return true;
-    // TODO: remove diagnostic logging after auth is confirmed working
-    console.warn("[auth] Service token path failed", { idMatch, secretMatch });
-  } else {
-    // TODO: remove diagnostic logging after auth is confirmed working
-    console.warn("[auth] Service token path skipped", {
-      hasClientId: !!clientId,
-      hasClientSecret: !!clientSecret,
-      hasEnvId: !!env?.OPS_API_SERVICE_TOKEN_ID,
-      hasEnvSecret: !!env?.OPS_API_SERVICE_TOKEN_SECRET,
-    });
   }
 
+  _authDiag = diag;
   return false;
 }
 
