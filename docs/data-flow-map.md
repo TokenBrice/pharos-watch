@@ -26,12 +26,13 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Report cards + dependency graph | Peg summary + DEX liquidity + redemption backstops + bluechip + stablecoin metadata/dependencies | `worker/src/api/report-cards.ts` compute on read | cache-driven upstream + in-memory compute | `GET /api/report-cards` | `useReportCards` | Safety Scores, Portfolio, Dependency Map, homepage safety snapshot |
 | Status reliability | Real-HTTP self probes + status synthesis | `worker/src/cron/status-self-check.ts`, `worker/src/api/status.ts` | `status_state`, `status_transitions`, `status_probe_runs`, `status_discrepancy_state` | `GET /api/status`, `GET /api/status-history` | `useStatus`, `useEndpointProbes`, `useHealth` | `/status` admin dashboard |
 | Coverage discovery | CoinGecko category API, DL stablecoins residuals | `worker/src/cron/discovery-scan.ts`, `worker/src/cron/sync-stablecoins.ts` (Source A) | `discovery_candidates` | `GET /api/discovery-candidates`, `POST /api/discovery-candidates/:id/dismiss` | — (admin only) | `/status` admin page |
+| Chain analytics | Stablecoins cache `chainCirculating` (already aggregated by DefiLlama), report card cache (safety scores for quality sub-factor) | `worker/src/api/chains.ts` (compute on read from stablecoins + report-card D1 caches); `worker/src/cron/snapshot-chain-supply.ts` writes daily totals to D1 | Live leaderboard: computed on-the-fly from D1 caches; history: `chain_supply_history` | `GET /api/chains` | `useChains`, `useChainStablecoins` | `/chains/` leaderboard, `/chains/[chain]/` profile pages |
 
 ## Scheduling Backbone
 
 Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worker/src/handlers/scheduled.ts`:
 
-- `*/15 * * * *`: sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / FX / PSI / DEWS / status self-check
+- `*/15 * * * *`: sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / FX / PSI / DEWS / status self-check
 - `3,23,43 * * * *`: blacklist sync
 - `4,24,44 * * * *`: mint/burn critical lane
 - `6,36 * * * *`: DEX discovery staging (every 30 minutes)

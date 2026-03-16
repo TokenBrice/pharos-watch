@@ -12,6 +12,7 @@ import {
   FlaskConical,
   Gauge,
   Github,
+  Globe,
   Layers,
   Network,
   Newspaper,
@@ -269,6 +270,14 @@ export default function AboutPage() {
       icon: Droplets,
       href: "/liquidity/",
       linkLabel: "Open liquidity tracker",
+    },
+    {
+      title: "Chain Analytics",
+      description:
+        "Per-chain stablecoin supply totals, 24h/7d/30d trends, composition breakdowns, and a Chain Health Score across concentration, quality, peg stability, and backing diversity.",
+      icon: Globe,
+      href: "/chains/",
+      linkLabel: "Open chain leaderboard",
     },
     {
       title: "Mint and burn flows",

@@ -79,7 +79,7 @@ The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` fro
 
 | Profile  | `Cache-Control`                      | Used by                                                                                                                                                                           |
 | -------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                                           |
+| realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events, chains                                                                                   |
 | standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity (browser-side max-age extended to match CDN TTL) |
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                        |
@@ -302,6 +302,72 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
 | `supplyUsd`       | `object`                 | Aggregate USD supply values and deltas (`current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d`) |
 | `chainCount`      | `number`                 | Number of chains where the asset is deployed                                                                                |
 | `updatedAt`       | `number`                 | Unix seconds of the stablecoins snapshot used for this response                                                             |
+
+---
+
+### `GET /api/chains`
+
+Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-the-fly from the stablecoins cache and report-card cache (two D1 reads) — no dedicated chain table is required for the live leaderboard.
+
+**Cache:** realtime — `public, s-maxage=60, max-age=10`
+
+**Freshness threshold:** 600 seconds. Returns `503` when the stablecoins cache is unavailable.
+
+**Status codes:**
+
+| Status | Meaning |
+| ------ | ------- |
+| 200 | Chain aggregates computed successfully |
+| 503 | Stablecoins cache unavailable (missing or structurally corrupt) |
+
+**Response (`ChainsResponse`):**
+
+```json
+{
+  "chains": [ChainSummary, ...],
+  "globalTotalUsd": 230000000000,
+  "updatedAt": 1710500000,
+  "healthMethodologyVersion": "1.0"
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `chains` | `ChainSummary[]` | Chains sorted by `totalUsd` descending |
+| `globalTotalUsd` | `number` | Sum of all chain supply in USD |
+| `updatedAt` | `number` | Unix epoch seconds of the underlying stablecoins snapshot |
+| `healthMethodologyVersion` | `string` | Chain Health Score methodology version (currently `"1.0"`) |
+
+**`ChainSummary` fields:**
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | `string` | Canonical chain identifier (DefiLlama chain name) |
+| `name` | `string` | Human-readable chain name |
+| `logoPath` | `string \| null` | Path to chain logo asset |
+| `type` | `string` | Chain type classification (e.g. `"L1"`, `"L2"`) |
+| `totalUsd` | `number` | Total stablecoin supply on this chain in USD |
+| `change24h` | `number` | Absolute 24h supply change in USD |
+| `change24hPct` | `number \| null` | 24h supply change as a percentage |
+| `change7d` | `number` | Absolute 7d supply change in USD |
+| `change7dPct` | `number \| null` | 7d supply change as a percentage |
+| `change30d` | `number` | Absolute 30d supply change in USD |
+| `change30dPct` | `number \| null` | 30d supply change as a percentage |
+| `stablecoinCount` | `number` | Number of distinct stablecoins on this chain |
+| `dominantStablecoin` | `{ id, symbol, share } \| null` | Largest stablecoin by supply on the chain |
+| `dominanceShare` | `number \| null` | Dominant stablecoin's share of the chain total (0–1) |
+| `healthScore` | `number \| null` | Chain Health Score 0–100, or `null` if insufficient data |
+| `healthBand` | `string \| null` | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19) |
+| `healthFactors` | `ChainHealthFactors \| null` | Raw sub-factor scores (0–100 each) |
+
+**`ChainHealthFactors` fields:**
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `concentration` | `number` | HHI-based supply concentration score (higher = more diverse) |
+| `quality` | `number` | Supply-weighted average stablecoin quality from report-card grades |
+| `pegStability` | `number` | Supply-weighted average peg deviation score |
+| `backingDiversity` | `number` | Shannon entropy of backing types across the chain |
 
 ---
 

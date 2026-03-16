@@ -19,6 +19,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/bluechip-ratings` | Bluechip safety ratings (keyed by Pharos ID) |
 | `GET /api/dex-liquidity` | DEX liquidity scores, pool data, protocol/chain breakdowns, HHI, trends (keyed by Pharos ID) |
 | `GET /api/dex-liquidity-history` | Per-coin historical liquidity data (`?stablecoin=ID&days=90`) |
+| `GET /api/chains` | Chain-level stablecoin aggregates with Chain Health Scores, computed on-the-fly from stablecoins + report-card caches |
 | `GET /api/supply-history` | Per-coin supply history (`?stablecoin=ID&days=N`) |
 | `GET /api/daily-digest` | AI-generated daily market summary (latest) |
 | `GET /api/digest-archive` | All daily digests, newest-first |
@@ -84,6 +85,12 @@ src/                              # Next.js frontend (static export)
 │   ├── cemetery/                 # Dead stablecoin graveyard
 │   │   ├── page.tsx
 │   │   └── error.tsx
+│   ├── chains/                   # Chain analytics leaderboard (sortable by supply, Chain Health Score)
+│   │   ├── page.tsx
+│   │   └── client.tsx
+│   ├── chains/[chain]/           # Per-chain profile (hero stats, health breakdown, composition treemap, stablecoin table)
+│   │   ├── page.tsx
+│   │   └── client.tsx
 │   ├── compare/                  # Live compare tool root (noindex) + static comparison landing pages
 │   │   ├── [slug]/page.tsx       # Static "A vs B" comparison landing pages
 │   │   ├── page.tsx
@@ -306,6 +313,7 @@ src/                              # Next.js frontend (static export)
 │   └── theme-toggle.tsx          # Dark/light mode toggle
 ├── hooks/
 │   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (`/api/supply-history`)
+│   ├── use-chains.ts             # GET /api/chains → useChains() + useChainStablecoins()
 │   ├── api-hooks.ts              # Consolidated low-friction GET hooks wired to shared API path builders
 │   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
 │   ├── use-logos.ts              # Static logos from data/logos.json
@@ -387,9 +395,12 @@ shared/                           # Runtime-neutral boundary (import via `@share
 │   ├── stability.ts              # Stability Index response contracts
 │   ├── status.ts                 # Status / health / discovery / reconciliation contracts
 │   ├── yield.ts                  # Yield rankings/history contracts
-│   └── mint-burn.ts              # Mint/burn flow, event, and sync contracts
+│   ├── mint-burn.ts              # Mint/burn flow, event, and sync contracts
+│   └── chains.ts                 # ChainSummary, ChainsResponse, ChainHealthFactors, HealthBand
 └── lib/
     ├── api-endpoints.ts          # Authoritative endpoint metadata + status/smoke/strict-contract helpers (incl. STRICT_CONTRACT_PATHS_LIST)
+    ├── chain-aggregator.ts       # aggregateChains() — builds ChainSummary list from stablecoins cache + report-card snapshot
+    ├── chain-health.ts           # Pure Chain Health Score computation (quality 35%, concentration 25%, peg stability 25%, backing diversity 15%)
     ├── chain-provider-registry.ts # Runtime-neutral CoinGecko/DexScreener/GeckoTerminal chain slug registry
     ├── stablecoins.ts            # Tracked stablecoin metadata list
     ├── stablecoin-id-registry.ts # Canonical/external ID lookup maps + resolution helpers
@@ -420,6 +431,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (runs on */15, writes once daily via dedup guard; primary daily run at 8AM UTC)
+    │   ├── snapshot-chain-supply.ts # Daily chain-level supply snapshots → chain_supply_history (quarter-hourly slot, DB-only)
     │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
     │   ├── sync-live-reserves.ts # Live reserve composition sync → D1 (hourly, reserve lane)
     │   ├── reserve-adapters/    # Per-protocol live reserve adapters (23 adapters)
@@ -474,6 +486,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   ├── commodity.ts      # Commodity token upstream assembly (DL + CG fallback)
     │   │   ├── coingecko-only.ts # CoinGecko-only token branch assembly
     │   │   └── defillama.ts      # DefiLlama detail normalization (non-USD USD-conversion)
+    │   ├── chains.ts             # GET /api/chains
     │   ├── supply-history.ts     # GET /api/supply-history
     │   ├── blacklist.ts          # GET /api/blacklist
     │   ├── depeg-events.ts       # GET /api/depeg-events

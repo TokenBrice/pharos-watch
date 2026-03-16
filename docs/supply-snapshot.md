@@ -81,6 +81,30 @@ CREATE TABLE IF NOT EXISTS onchain_supply (
 
 Per-chain supply cache. Not actively used by the current snapshot pipeline.
 
+### chain_supply_history (migration 0069)
+
+```sql
+CREATE TABLE IF NOT EXISTS chain_supply_history (
+  chain_id TEXT NOT NULL,
+  snapshot_date INTEGER NOT NULL,  -- UTC midnight epoch seconds
+  total_usd REAL NOT NULL,
+  stablecoin_count INTEGER NOT NULL,
+  PRIMARY KEY (chain_id, snapshot_date)
+);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `chain_id` | TEXT | Canonical chain identifier (DefiLlama chain name, e.g. `"Ethereum"`) |
+| `snapshot_date` | INTEGER | Unix seconds floored to UTC midnight |
+| `total_usd` | REAL | Total stablecoin supply on this chain in USD |
+| `stablecoin_count` | INTEGER | Number of distinct stablecoins contributing supply on this chain |
+
+- **Populated by:** `snapshot-chain-supply` cron stage (`worker/src/cron/snapshot-chain-supply.ts`) running in the `*/15 * * * *` quarter-hourly slot, chained after `snapshot-supply`.
+- **Write pattern:** `INSERT OR REPLACE` — idempotent, re-runs on the same day refresh the row.
+- **Volume:** ~50 rows/day (one row per active chain per UTC day).
+- **Primary use:** future trend charts on chain profile pages (`/chains/[chain]/`). The live `/api/chains` leaderboard does not read this table — it computes aggregates on-the-fly from the stablecoins cache.
+
 ---
 
 ## Supply Data Source
@@ -235,6 +259,8 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 | File | Role |
 |------|------|
 | `worker/src/cron/snapshot-supply.ts` | Snapshot cron: reads cache, builds `INSERT OR REPLACE` statements, batch executes |
+| `worker/src/cron/snapshot-chain-supply.ts` | Chain-level snapshot cron: aggregates per-chain totals from stablecoins cache → `chain_supply_history` |
+| `worker/migrations/0069_chain_supply_history.sql` | `chain_supply_history` table |
 | `worker/src/api/supply-history.ts` | `GET /api/supply-history` handler |
 | `worker/src/api/stablecoin-detail.ts` | Detail API with `supply_history` fallback for CG-only/commodity coins |
 | `worker/src/api/backfill-supply-history.ts` | Admin backfill endpoint |

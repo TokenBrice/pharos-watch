@@ -35,6 +35,7 @@
 | PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-dews-version.ts`                                                                                                                                              |
 | Contagion Stress Test | `shared/lib/report-cards.ts` (`computeStressedGrades`)                                                                                                                                                                               |
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/blacklist-tracker-version.ts`                                                                                                              |
+| Chain Health Score    | `shared/lib/chain-health.ts` — weighted composite (quality 35%, concentration 25%, peg stability 25%, backing diversity 15%). Sub-factors: HHI-based concentration, supply-weighted quality (report-card grades), supply-weighted peg deviation, Shannon entropy backing diversity. Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
 
 ---
 

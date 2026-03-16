@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 25 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track 24 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally excluded from the shared status metadata set.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 26 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track 25 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally excluded from the shared status metadata set.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -271,6 +271,7 @@ crons = [
 | -------------------------------- | ----------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `sync-stablecoins`               | `syncStablecoins()`                                   | `worker/src/cron/sync-stablecoins.ts`             | [Data Pipeline](./data-pipeline.md), [Depeg Detection](./depeg-detection.md) |
 | `snapshot-supply` _(retry path)_ | `snapshotSupply()` (chained after `sync-stablecoins`) | `worker/src/cron/snapshot-supply.ts`              | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
+| `snapshot-chain-supply`          | `snapshotChainSupply()` (chained after `snapshot-supply`, DB-only, 0 external connections) | `worker/src/cron/snapshot-chain-supply.ts` | [Supply Snapshot Pipeline](./supply-snapshot.md) |
 | `sync-fx-rates`                  | `syncFxRates()`                                       | `worker/src/cron/sync-fx-rates.ts`                | [Data Pipeline](./data-pipeline.md), [Classification](./classification.md)   |
 | `stability-index`                | `computeAndStoreStabilityIndex()`                     | `worker/src/cron/stability-index.ts`              | [Pharos Stability Index](./stability-index.md)                               |
 | `compute-dews`                   | `computeAndStoreDEWS()`                               | `worker/src/cron/compute-dews.ts`                 | [DEWS](./dews.md)                                                            |
