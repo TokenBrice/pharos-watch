@@ -76,10 +76,28 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
     return errorResponse(404, "No digest found for this date");
   }
 
-  const inputData = safeJsonParse<DigestInputData | null>(targetRow.input_data, null);
-  const prevInputData = prevRow
-    ? safeJsonParse<DigestInputData | null>(prevRow.input_data, null)
-    : null;
+  // Weekly recaps store WeeklyInputData (with a dailyDigests[] array) instead of
+  // DigestInputData.  Detect that shape and extract the last daily's inputData as
+  // the end-of-week snapshot, with the first daily as prevInputData for deltas.
+  const rawInputData = safeJsonParse<Record<string, unknown> | null>(targetRow.input_data, null);
+
+  let inputData: DigestInputData | null = null;
+  let prevInputData: DigestInputData | null = null;
+
+  if (rawInputData && Array.isArray(rawInputData.dailyDigests)) {
+    const dailyDigests = rawInputData.dailyDigests as { inputData?: DigestInputData }[];
+    if (dailyDigests.length > 0) {
+      inputData = dailyDigests[dailyDigests.length - 1]?.inputData ?? null;
+      prevInputData = dailyDigests.length > 1
+        ? (dailyDigests[0]?.inputData ?? null)
+        : null;
+    }
+  } else {
+    inputData = rawInputData as DigestInputData | null;
+    prevInputData = prevRow
+      ? safeJsonParse<DigestInputData | null>(prevRow.input_data, null)
+      : null;
+  }
 
   // Depeg episodes active on that date
   const depegResult = await db
