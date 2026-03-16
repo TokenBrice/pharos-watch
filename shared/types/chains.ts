@@ -3,6 +3,7 @@ export interface ChainHealthFactors {
   quality: number | null;
   pegStability: number;
   backingDiversity: number;
+  chainEnvironment: number;
 }
 
 export type HealthBand = "robust" | "healthy" | "mixed" | "fragile" | "concentrated";

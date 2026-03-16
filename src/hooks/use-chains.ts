@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import type { ChainsResponse } from "@shared/types/chains";
+import { resolveChainId } from "@shared/lib/chains";
 import { useApiQuery } from "./use-api-query";
 import { useStablecoins } from "./use-stablecoins";
 import { CRON_15MIN } from "@/lib/cron-intervals";
@@ -33,6 +34,35 @@ export interface ChainStablecoin {
   backing: string | undefined;
 }
 
+/**
+ * Find all chainCirculating entries that resolve to the target chain ID.
+ * Handles DL display names ("Ethereum", "BSC") and aliases ("hyperliquid-l1").
+ * Returns the summed data across all matching keys.
+ */
+function findChainData(
+  cc: Record<string, { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>,
+  targetChainId: string,
+): { current: number; circulatingPrevDay: number; circulatingPrevWeek: number; circulatingPrevMonth: number } | null {
+  let current = 0;
+  let prevDay = 0;
+  let prevWeek = 0;
+  let prevMonth = 0;
+  let found = false;
+
+  for (const [rawKey, data] of Object.entries(cc)) {
+    if (!data || typeof data !== "object") continue;
+    const resolved = resolveChainId(rawKey);
+    if (resolved !== targetChainId) continue;
+    found = true;
+    current += data.current ?? 0;
+    prevDay += data.circulatingPrevDay ?? 0;
+    prevWeek += data.circulatingPrevWeek ?? 0;
+    prevMonth += data.circulatingPrevMonth ?? 0;
+  }
+
+  return found ? { current, circulatingPrevDay: prevDay, circulatingPrevWeek: prevWeek, circulatingPrevMonth: prevMonth } : null;
+}
+
 export function useChainStablecoins(chainId: string) {
   const { data, isLoading, isError } = useStablecoins();
 
@@ -47,15 +77,19 @@ export function useChainStablecoins(chainId: string) {
     for (const asset of data.peggedAssets) {
       const cc = asset.chainCirculating;
       if (!cc || typeof cc !== "object") continue;
-      const chainData = cc[chainId] as { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number } | undefined;
-      if (!chainData?.current || chainData.current <= 0) continue;
+
+      const chainData = findChainData(
+        cc as Record<string, { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>,
+        chainId,
+      );
+      if (!chainData || chainData.current <= 0) continue;
 
       const supplyOnChain = chainData.current;
       totalUsd += supplyOnChain;
 
-      const prev24h = chainData.circulatingPrevDay ?? 0;
-      const prev7d = chainData.circulatingPrevWeek ?? 0;
-      const prev30d = chainData.circulatingPrevMonth ?? 0;
+      const prev24h = chainData.circulatingPrevDay;
+      const prev7d = chainData.circulatingPrevWeek;
+      const prev30d = chainData.circulatingPrevMonth;
       const meta = TRACKED_META_BY_ID.get(asset.id);
 
       coins.push({

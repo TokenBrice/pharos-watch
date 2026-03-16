@@ -95,8 +95,15 @@ describe("aggregateChains", () => {
     expect(eth.healthFactors.concentration).toBeGreaterThan(0);
     expect(eth.healthFactors.quality).toBeGreaterThan(0);
     expect(eth.healthFactors.pegStability).toBeGreaterThan(0);
+    expect(eth.healthFactors.chainEnvironment).toBeGreaterThan(0);
     expect(eth.healthScore).toBeGreaterThan(0);
     expect(eth.healthBand).toBeTruthy();
+  });
+
+  it("assigns tier 1 chain environment to ethereum", () => {
+    const result = aggregateChains(makeInput());
+    const eth = result.chains.find((c) => c.id === "ethereum")!;
+    expect(eth.healthFactors.chainEnvironment).toBe(100); // tier 1
   });
 
   it("resolves DL chain names to CHAIN_META IDs", () => {

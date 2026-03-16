@@ -1,14 +1,23 @@
+import type { ChainResilienceTier } from "./chains";
 import type { ChainHealthFactors, HealthBand } from "../types/chains";
 
-export const HEALTH_METHODOLOGY_VERSION = "1.0";
+export const HEALTH_METHODOLOGY_VERSION = "1.1";
 
-const QUALITY_WEIGHT = 0.35;
-const CONCENTRATION_WEIGHT = 0.25;
-const PEG_STABILITY_WEIGHT = 0.25;
-const BACKING_DIVERSITY_WEIGHT = 0.15;
+const QUALITY_WEIGHT = 0.30;
+const CHAIN_ENVIRONMENT_WEIGHT = 0.20;
+const CONCENTRATION_WEIGHT = 0.20;
+const PEG_STABILITY_WEIGHT = 0.20;
+const BACKING_DIVERSITY_WEIGHT = 0.10;
 
 const DEFAULT_UNRATED_SAFETY_SCORE = 40;
 const QUALITY_COVERAGE_THRESHOLD = 0.5;
+
+/** Chain environment scores by resilience tier. */
+export const CHAIN_ENVIRONMENT_SCORES: Record<ChainResilienceTier, number> = {
+  1: 100,  // Battle-tested, highly decentralized (Ethereum)
+  2: 60,   // Established chains with some centralization
+  3: 20,   // Unproven or problematic chains
+};
 
 // --- Sub-factor computations ---
 
@@ -83,12 +92,18 @@ export function computeQualityScore(
   return Math.round(weightedSum / totalSupply);
 }
 
+/** Chain environment: maps resilience tier to a 0-100 score. */
+export function computeChainEnvironmentScore(tier: ChainResilienceTier): number {
+  return CHAIN_ENVIRONMENT_SCORES[tier];
+}
+
 // --- Composite ---
 
 export function computeHealthScore(factors: ChainHealthFactors): number | null {
   if (factors.quality == null) return null;
   const raw =
     QUALITY_WEIGHT * factors.quality +
+    CHAIN_ENVIRONMENT_WEIGHT * factors.chainEnvironment +
     CONCENTRATION_WEIGHT * factors.concentration +
     PEG_STABILITY_WEIGHT * factors.pegStability +
     BACKING_DIVERSITY_WEIGHT * factors.backingDiversity;

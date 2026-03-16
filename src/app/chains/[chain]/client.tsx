@@ -118,10 +118,11 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
           <p className="text-sm text-muted-foreground">Insufficient safety score coverage for a composite health score. Sub-factors shown below.</p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
-          <FactorGauge label="Quality (35%)" score={healthFactors.quality} />
-          <FactorGauge label="Concentration (25%)" score={healthFactors.concentration} />
-          <FactorGauge label="Peg Stability (25%)" score={healthFactors.pegStability} />
-          <FactorGauge label="Backing Diversity (15%)" score={healthFactors.backingDiversity} />
+          <FactorGauge label="Quality (30%)" score={healthFactors.quality} />
+          <FactorGauge label="Chain Environment (20%)" score={healthFactors.chainEnvironment} />
+          <FactorGauge label="Concentration (20%)" score={healthFactors.concentration} />
+          <FactorGauge label="Peg Stability (20%)" score={healthFactors.pegStability} />
+          <FactorGauge label="Backing Diversity (10%)" score={healthFactors.backingDiversity} />
         </div>
       </CardContent>
     </Card>

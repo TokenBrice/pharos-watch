@@ -1,4 +1,4 @@
-import { CHAIN_META, CHAIN_ALIASES } from "./chains";
+import { CHAIN_META, resolveChainId, getChainResilienceTier } from "./chains";
 import { TRACKED_META_BY_ID } from "./stablecoins";
 import { getPegReference } from "./peg-rates";
 import {
@@ -6,6 +6,7 @@ import {
   computeBackingDiversityScore,
   computePegStabilityScore,
   computeQualityScore,
+  computeChainEnvironmentScore,
   computeHealthScore,
   getHealthBand,
   HEALTH_METHODOLOGY_VERSION,
@@ -49,27 +50,6 @@ interface ChainAccumulator {
   }>;
 }
 
-/** Reverse lookup: DL chain name → CHAIN_META id (e.g. "BSC" → "bsc"). */
-const CHAIN_NAME_TO_ID = new Map<string, string>();
-for (const [id, meta] of Object.entries(CHAIN_META)) {
-  CHAIN_NAME_TO_ID.set(meta.name.toLowerCase(), id);
-}
-
-function resolveCanonicalChainId(raw: string): string | null {
-  // Try as-is first (exact ID match)
-  const aliased = CHAIN_ALIASES[raw] ?? raw;
-  if (CHAIN_META[aliased]) return aliased;
-
-  // Try case-insensitive name lookup (DL uses chain names like "BSC", "Ethereum")
-  const byName = CHAIN_NAME_TO_ID.get(raw.toLowerCase());
-  if (byName) {
-    const canonical = CHAIN_ALIASES[byName] ?? byName;
-    return CHAIN_META[canonical] ? canonical : null;
-  }
-
-  return null;
-}
-
 export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   const { peggedAssets, safetyScores, pegRates } = input;
 
@@ -86,7 +66,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       const current = d.current ?? 0;
       if (current <= 0) continue;
 
-      const chainId = resolveCanonicalChainId(rawChainId);
+      const chainId = resolveChainId(rawChainId);
       if (!chainId) continue;
 
       let acc = accumulators.get(chainId);
@@ -159,11 +139,15 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       supplyUsd: c.supplyUsd,
     }));
 
+    // Chain environment
+    const resilienceTier = getChainResilienceTier(chainId);
+
     const healthFactors: ChainHealthFactors = {
       concentration: computeConcentrationScore(shares),
       quality: computeQualityScore(qualityCoins),
       pegStability: computePegStabilityScore(pegCoins),
       backingDiversity: computeBackingDiversityScore(backingDist),
+      chainEnvironment: computeChainEnvironmentScore(resilienceTier),
     };
 
     const healthScore = computeHealthScore(healthFactors);

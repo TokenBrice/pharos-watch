@@ -4,9 +4,11 @@ import {
   computeBackingDiversityScore,
   computePegStabilityScore,
   computeQualityScore,
+  computeChainEnvironmentScore,
   computeHealthScore,
   getHealthBand,
   HEALTH_METHODOLOGY_VERSION,
+  CHAIN_ENVIRONMENT_SCORES,
 } from "../chain-health";
 
 describe("computeConcentrationScore", () => {
@@ -103,25 +105,50 @@ describe("computeQualityScore", () => {
   });
 });
 
+describe("computeChainEnvironmentScore", () => {
+  it("returns 100 for tier 1", () => {
+    expect(computeChainEnvironmentScore(1)).toBe(100);
+  });
+
+  it("returns 60 for tier 2", () => {
+    expect(computeChainEnvironmentScore(2)).toBe(60);
+  });
+
+  it("returns 20 for tier 3", () => {
+    expect(computeChainEnvironmentScore(3)).toBe(20);
+  });
+});
+
 describe("computeHealthScore", () => {
   it("computes weighted composite", () => {
     const score = computeHealthScore({
       quality: 80,
+      chainEnvironment: 60,
       concentration: 60,
       pegStability: 90,
       backingDiversity: 40,
     });
-    // 0.35*80 + 0.25*60 + 0.25*90 + 0.15*40 = 28+15+22.5+6 = 71.5 => 72
-    expect(score).toBe(72);
+    // 0.30*80 + 0.20*60 + 0.20*60 + 0.20*90 + 0.10*40 = 24+12+12+18+4 = 70
+    expect(score).toBe(70);
   });
 
   it("returns null when quality is null", () => {
     expect(computeHealthScore({
       quality: null,
+      chainEnvironment: 60,
       concentration: 60,
       pegStability: 90,
       backingDiversity: 40,
     })).toBeNull();
+  });
+
+  it("tier 1 chains score higher than tier 3", () => {
+    const base = { quality: 70, concentration: 50, pegStability: 90, backingDiversity: 30 };
+    const tier1Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[1] })!;
+    const tier3Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[3] })!;
+    expect(tier1Score).toBeGreaterThan(tier3Score);
+    // 20% weight * (100 - 20) = 16 point difference
+    expect(tier1Score - tier3Score).toBe(16);
   });
 });
 

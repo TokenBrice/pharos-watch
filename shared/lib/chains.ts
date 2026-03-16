@@ -108,3 +108,63 @@ export const CHAIN_META: Record<string, ChainMeta> = {
 export const CHAIN_ALIASES: Record<string, string> = {
   "hyperliquid-l1": "hyperliquid",
 };
+
+/**
+ * Chain resilience tier — measures the chain's own infrastructure quality,
+ * decentralization, and censorship resistance.
+ *
+ * Tier 1: Highly decentralized, battle-tested, censorship-resistant L1s.
+ * Tier 2: Established chains with moderate centralization (default for unlisted).
+ * Tier 3: Newer/unproven chains, or chains with known centralization or reputation issues.
+ */
+export type ChainResilienceTier = 1 | 2 | 3;
+
+export const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
+  // Tier 1 — gold standard for decentralization & censorship resistance
+  ethereum: 1,
+
+  // Tier 3 — known issues, high centralization, or unproven security
+  pulsechain: 3,
+  harmony: 3,       // compromised bridge, degraded security
+  bittorrent: 3,    // highly centralized
+  songbird: 3,      // canary network
+  moonriver: 3,     // canary network
+  plasma: 3,        // very new, minimal validation
+  viction: 3,       // low activity, centralized
+
+  // Everything else defaults to tier 2 via getChainResilienceTier()
+};
+
+/** Get the resilience tier for a chain (defaults to 2). */
+export function getChainResilienceTier(chainId: string): ChainResilienceTier {
+  return CHAIN_RESILIENCE_TIER[chainId] ?? 2;
+}
+
+/* ─── DL Chain Name Resolution ─────────────────────────────── */
+
+/** Reverse lookup: DL display name (lowercase) → canonical chain ID. */
+const CHAIN_NAME_TO_ID = new Map<string, string>();
+for (const [id, meta] of Object.entries(CHAIN_META)) {
+  CHAIN_NAME_TO_ID.set(meta.name.toLowerCase(), id);
+}
+
+/**
+ * Resolve a raw chain key (as it appears in DefiLlama data) to its
+ * canonical CHAIN_META id, or null if unknown.
+ *
+ * Handles: exact ID match, alias resolution, and case-insensitive display-name lookup.
+ */
+export function resolveChainId(raw: string): string | null {
+  // Try as-is first (exact ID match or alias)
+  const aliased = CHAIN_ALIASES[raw] ?? raw;
+  if (CHAIN_META[aliased]) return aliased;
+
+  // Try case-insensitive name lookup (DL uses "BSC", "Ethereum", etc.)
+  const byName = CHAIN_NAME_TO_ID.get(raw.toLowerCase());
+  if (byName) {
+    const canonical = CHAIN_ALIASES[byName] ?? byName;
+    return CHAIN_META[canonical] ? canonical : null;
+  }
+
+  return null;
+}

@@ -1,37 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useMemo } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
+import { useSort } from "@/hooks/use-sort";
 import { Card, CardContent } from "@/components/ui/card";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SortableTableHead } from "@/components/sortable-table-head";
 import { cn } from "@/lib/utils";
-import type { HealthBand } from "@shared/types/chains";
+import type { HealthBand, ChainSummary } from "@shared/types/chains";
 
-type SortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
-type SortDir = "asc" | "desc";
-
-type ColumnId = "health" | "supply" | "change24hPct" | "change7dPct" | "change30dPct" | "dominanceShare" | "stablecoinCount" | "dominantStablecoin";
-
-const DEFAULT_COLUMNS: ColumnId[] = ["health", "supply", "change7dPct", "dominanceShare"];
-const ALL_COLUMNS: { id: ColumnId; label: string }[] = [
-  { id: "health", label: "Health" },
-  { id: "supply", label: "Supply" },
-  { id: "change24hPct", label: "24h %" },
-  { id: "change7dPct", label: "7d %" },
-  { id: "change30dPct", label: "30d %" },
-  { id: "dominanceShare", label: "Global Share" },
-  { id: "stablecoinCount", label: "Stablecoins" },
-  { id: "dominantStablecoin", label: "Dominant" },
-];
-
-const HEALTH_BAND_COLORS: Record<HealthBand, string> = {
-  robust: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  healthy: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
-  mixed: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  fragile: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
-  concentrated: "bg-red-500/15 text-red-700 dark:text-red-400",
-};
+type ChainSortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
 
 function formatUsd(value: number): string {
   if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
@@ -46,6 +26,14 @@ function formatPct(value: number): string {
   const sign = pct >= 0 ? "+" : "";
   return `${sign}${pct.toFixed(2)}%`;
 }
+
+const HEALTH_BAND_COLORS: Record<HealthBand, string> = {
+  robust: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  healthy: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+  mixed: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  fragile: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
+  concentrated: "bg-red-500/15 text-red-700 dark:text-red-400",
+};
 
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
@@ -70,40 +58,23 @@ function HealthBadge({ score, band }: { score: number | null; band: HealthBand |
   );
 }
 
+function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "desc"): ChainSummary[] {
+  return [...chains].sort((a, b) => {
+    const av = a[key] ?? -Infinity;
+    const bv = b[key] ?? -Infinity;
+    return dir === "desc" ? (bv as number) - (av as number) : (av as number) - (bv as number);
+  });
+}
+
 export function ChainsLeaderboardClient() {
   const { data, isLoading, isError } = useChains();
-  const [sortKey, setSortKey] = useState<SortKey>("totalUsd");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(new Set(DEFAULT_COLUMNS));
-
-  function toggleColumn(col: ColumnId) {
-    setVisibleColumns((prev) => {
-      const next = new Set(prev);
-      if (next.has(col)) next.delete(col);
-      else next.add(col);
-      return next;
-    });
-  }
-
-  const isVisible = (col: ColumnId) => visibleColumns.has(col);
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<ChainSortKey>("totalUsd", "desc");
+  const router = useRouter();
 
   const sorted = useMemo(() => {
     if (!data?.chains) return [];
-    return [...data.chains].sort((a, b) => {
-      const av = a[sortKey] ?? -Infinity;
-      const bv = b[sortKey] ?? -Infinity;
-      return sortDir === "desc" ? (bv as number) - (av as number) : (av as number) - (bv as number);
-    });
-  }, [data, sortKey, sortDir]);
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
-  }
+    return sortChains(data.chains, sortKey, sortDirection);
+  }, [data, sortKey, sortDirection]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-20 text-muted-foreground">Loading chain data...</div>;
@@ -124,96 +95,111 @@ export function ChainsLeaderboardClient() {
         <KpiCard label="Healthiest Chain" value={topHealthChain?.healthScore != null ? `${topHealthChain.name} (${topHealthChain.healthScore})` : "--"} />
       </div>
 
-      {/* Column toggle */}
-      <div className="flex justify-end">
-        <div className="flex flex-wrap gap-1.5">
-          {ALL_COLUMNS.map((col) => (
-            <button
-              key={col.id}
-              onClick={() => toggleColumn(col.id)}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                isVisible(col.id)
-                  ? "border-primary/30 bg-primary/10 text-foreground"
-                  : "border-border/60 bg-background text-muted-foreground hover:bg-muted/40",
-              )}
-            >
-              {col.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/40 text-left text-xs font-medium text-muted-foreground">
-              <th className="px-3 py-2 w-10">#</th>
-              <th className="px-3 py-2">Chain</th>
-              {isVisible("health") && <th className="px-3 py-2 cursor-pointer select-none" onClick={() => handleSort("healthScore")}>Health</th>}
-              {isVisible("supply") && <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => handleSort("totalUsd")}>Supply</th>}
-              {isVisible("change24hPct") && <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => handleSort("change24hPct")}>24h</th>}
-              {isVisible("change7dPct") && <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => handleSort("change7dPct")}>7d</th>}
-              {isVisible("change30dPct") && <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => handleSort("change30dPct")}>30d</th>}
-              {isVisible("dominanceShare") && <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => handleSort("dominanceShare")}>Global Share</th>}
-              {isVisible("stablecoinCount") && <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => handleSort("stablecoinCount")}>Stablecoins</th>}
-              {isVisible("dominantStablecoin") && <th className="px-3 py-2">Dominant</th>}
-            </tr>
-          </thead>
-          <tbody>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead className="w-[50px] text-right">#</TableHead>
+              <TableHead>Chain</TableHead>
+              <SortableTableHead<ChainSortKey>
+                sortKey="healthScore"
+                currentSortKey={sortKey}
+                sortDirection={sortDirection}
+                label="Health"
+                toggleSort={toggleSort}
+                getAriaSortValue={getAriaSortValue}
+                handleSortKeyDown={handleSortKeyDown}
+                title="Composite chain health score"
+              />
+              <SortableTableHead<ChainSortKey>
+                sortKey="totalUsd"
+                currentSortKey={sortKey}
+                sortDirection={sortDirection}
+                label="Supply"
+                toggleSort={toggleSort}
+                getAriaSortValue={getAriaSortValue}
+                handleSortKeyDown={handleSortKeyDown}
+                className="text-right"
+              />
+              <SortableTableHead<ChainSortKey>
+                sortKey="change7dPct"
+                currentSortKey={sortKey}
+                sortDirection={sortDirection}
+                label="7d"
+                toggleSort={toggleSort}
+                getAriaSortValue={getAriaSortValue}
+                handleSortKeyDown={handleSortKeyDown}
+                className="text-right"
+                title="7-day supply change"
+              />
+              <SortableTableHead<ChainSortKey>
+                sortKey="dominanceShare"
+                currentSortKey={sortKey}
+                sortDirection={sortDirection}
+                label="Global Share"
+                toggleSort={toggleSort}
+                getAriaSortValue={getAriaSortValue}
+                handleSortKeyDown={handleSortKeyDown}
+                className="text-right"
+              />
+              <SortableTableHead<ChainSortKey>
+                sortKey="stablecoinCount"
+                currentSortKey={sortKey}
+                sortDirection={sortDirection}
+                label="Stablecoins"
+                toggleSort={toggleSort}
+                getAriaSortValue={getAriaSortValue}
+                handleSortKeyDown={handleSortKeyDown}
+                className="text-right"
+              />
+              <TableHead className="hidden lg:table-cell">Dominant</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {sorted.map((chain, i) => (
-              <tr key={chain.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                <td className="px-3 py-2.5 text-muted-foreground">{i + 1}</td>
-                <td className="px-3 py-2.5">
-                  <Link href={`/chains/${chain.id}/`} className="flex items-center gap-2 hover:underline">
+              <TableRow
+                key={chain.id}
+                className="group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                onClick={() => router.push(`/chains/${chain.id}/`)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/chains/${chain.id}/`);
+                  }
+                }}
+              >
+                <TableCell className="text-right text-muted-foreground tabular-nums">{i + 1}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
                     <Image src={chain.logoPath} alt="" width={20} height={20} className="rounded-full" />
                     <span className="font-medium">{chain.name}</span>
                     <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">{chain.type}</span>
-                  </Link>
-                </td>
-                {isVisible("health") && (
-                  <td className="px-3 py-2.5"><HealthBadge score={chain.healthScore} band={chain.healthBand} /></td>
-                )}
-                {isVisible("supply") && (
-                  <td className="px-3 py-2.5 text-right font-mono">{formatUsd(chain.totalUsd)}</td>
-                )}
-                {isVisible("change24hPct") && (
-                  <td className={cn("px-3 py-2.5 text-right font-mono", chain.change24hPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                    {formatPct(chain.change24hPct)}
-                  </td>
-                )}
-                {isVisible("change7dPct") && (
-                  <td className={cn("px-3 py-2.5 text-right font-mono", chain.change7dPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                    {formatPct(chain.change7dPct)}
-                  </td>
-                )}
-                {isVisible("change30dPct") && (
-                  <td className={cn("px-3 py-2.5 text-right font-mono", chain.change30dPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                    {formatPct(chain.change30dPct)}
-                  </td>
-                )}
-                {isVisible("dominanceShare") && (
-                  <td className="px-3 py-2.5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-primary/60" style={{ width: `${Math.min(100, chain.dominanceShare * 100)}%` }} />
-                      </div>
-                      <span className="text-xs font-mono text-muted-foreground w-10 text-right">{(chain.dominanceShare * 100).toFixed(1)}%</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <HealthBadge score={chain.healthScore} band={chain.healthBand} />
+                </TableCell>
+                <TableCell className="text-right font-mono tabular-nums">{formatUsd(chain.totalUsd)}</TableCell>
+                <TableCell className={cn("text-right font-mono tabular-nums", chain.change7dPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                  {formatPct(chain.change7dPct)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-primary/60" style={{ width: `${Math.min(100, chain.dominanceShare * 100)}%` }} />
                     </div>
-                  </td>
-                )}
-                {isVisible("stablecoinCount") && (
-                  <td className="px-3 py-2.5 text-right font-mono">{chain.stablecoinCount}</td>
-                )}
-                {isVisible("dominantStablecoin") && (
-                  <td className="px-3 py-2.5 text-sm">
-                    {chain.dominantStablecoin.symbol} ({(chain.dominantStablecoin.share * 100).toFixed(0)}%)
-                  </td>
-                )}
-              </tr>
+                    <span className="text-xs font-mono tabular-nums text-muted-foreground w-10 text-right">{(chain.dominanceShare * 100).toFixed(1)}%</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-mono tabular-nums">{chain.stablecoinCount}</TableCell>
+                <TableCell className="hidden lg:table-cell text-sm">
+                  {chain.dominantStablecoin.symbol} ({(chain.dominantStablecoin.share * 100).toFixed(0)}%)
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
+          </TableBody>
         </table>
       </div>
     </div>
