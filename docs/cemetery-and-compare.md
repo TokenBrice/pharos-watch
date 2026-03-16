@@ -27,6 +27,7 @@ Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such a
 - context (`pegCurrency`, `causeOfDeath`, `deathDate`)
 - narrative (`epitaph`, `obituary`, `sourceUrl`, `sourceLabel`)
 - optional `peakMcap`
+- optional `contracts` — array of `{ chain, address }` for block-explorer links in the autopsy view
 
 Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`.
 

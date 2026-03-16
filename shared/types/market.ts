@@ -90,6 +90,7 @@ export interface DeadStablecoin {
   obituary: string;
   sourceUrl: string;
   sourceLabel: string;
+  contracts?: { chain: string; address: string }[];
 }
 
 export interface BluechipSmidge {

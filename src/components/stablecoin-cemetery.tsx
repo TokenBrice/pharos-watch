@@ -3,8 +3,23 @@
 import Image from "next/image";
 import { ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { CAUSE_META } from "@shared/lib/dead-stablecoins";
+import { CHAIN_META } from "@shared/lib/chains";
 import { formatCurrency, formatDeathDate } from "@shared/lib/format";
 import type { DeadStablecoin } from "@shared/types";
+
+function getExplorerUrl(chainKey: string, address: string): string | null {
+  const chain = CHAIN_META[chainKey];
+  if (!chain?.explorerUrl) return null;
+  if (chainKey === "tron") return `${chain.explorerUrl}/#/contract/${address}`;
+  if (chainKey === "solana") return `${chain.explorerUrl}/account/${address}`;
+  if (chainKey === "starknet") return `${chain.explorerUrl}/contract/${address}`;
+  if (chainKey === "aptos") return `${chain.explorerUrl}/account/${address}`;
+  return `${chain.explorerUrl}/address/${address}`;
+}
+
+function truncateAddress(address: string): string {
+  return address.length > 14 ? `${address.slice(0, 6)}...${address.slice(-4)}` : address;
+}
 
 interface StablecoinCemeteryProps {
   coins: DeadStablecoin[];
@@ -119,6 +134,42 @@ export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCeme
                     <span className="font-mono tabular-nums">{formatDeathDate(coin.deathDate)}</span>
                   </div>
                 </div>
+
+                {/* Contract addresses */}
+                {coin.contracts && coin.contracts.length > 0 && (
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
+                    {coin.contracts.map((c) => {
+                      const chain = CHAIN_META[c.chain];
+                      const url = getExplorerUrl(c.chain, c.address);
+                      return (
+                        <div key={`${c.chain}-${c.address}`} className="flex items-center gap-1.5">
+                          {chain?.logoPath && (
+                            <Image
+                              src={chain.logoPath}
+                              alt={chain?.name ?? c.chain}
+                              width={14}
+                              height={14}
+                              className="rounded-full"
+                              unoptimized
+                            />
+                          )}
+                          {url ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {truncateAddress(c.address)}
+                            </a>
+                          ) : (
+                            <span className="font-mono text-muted-foreground">{truncateAddress(c.address)}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Obituary */}
                 <p className="text-sm text-muted-foreground leading-relaxed">
