@@ -75,9 +75,14 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Dead stablecoins" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily market digest" },
-      { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Per-coin feature coverage matrix" },
-      { href: "/methodology", label: "Methodology", icon: BookOpen, description: "How Pharos grades stablecoins" },
+    ],
+  },
+  {
+    label: "About Pharos",
+    items: [
       { href: "/about", label: "About", icon: Info, description: "About Pharos" },
+      { href: "/methodology", label: "Methodology", icon: BookOpen, description: "How Pharos grades stablecoins" },
+      { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Per-coin feature coverage matrix" },
     ],
   },
 ];
