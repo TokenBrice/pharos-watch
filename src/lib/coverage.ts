@@ -48,6 +48,7 @@ export interface CoverageFeatureDefinition {
   shortLabel: string;
   description: string;
   headlineKinds?: readonly string[];
+  headlineFilter?: (row: CoverageRow) => boolean;
   headlineCountLabel?: string;
   headlineCoverageLabel?: (coveragePct: number) => string;
   headlineShareLabel?: string;
@@ -101,6 +102,9 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     label: "Price & Depeg",
     shortLabel: "Price",
     description: "Live price monitoring, peg summary coverage, and depeg event detection.",
+    headlineCountLabel: "≥3 sources",
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with ≥3 price sources`,
+    headlineFilter: (row) => (row.statuses.price.sourceCount ?? 0) >= 3,
     href: "/depeg/",
   },
   {
@@ -556,9 +560,11 @@ export function buildCoverageFeatureSummary(
   totalMcapUsd: number,
 ): CoverageFeatureSummary {
   const availableRows = rows.filter((row) => row.statuses[feature.key].available);
-  const primaryRows = feature.headlineKinds?.length
-    ? rows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
-    : availableRows;
+  const primaryRows = feature.headlineFilter
+    ? rows.filter((row) => feature.headlineFilter!(row))
+    : feature.headlineKinds?.length
+      ? rows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
+      : availableRows;
   const coveredMcapUsd = primaryRows.reduce((sum, row) => sum + row.marketCapUsd, 0);
   const breakdownMap = new Map<string, number>();
   const coveragePct = rows.length > 0 ? (primaryRows.length / rows.length) * 100 : 0;
