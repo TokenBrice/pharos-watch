@@ -187,7 +187,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `geckoId`              | `string \| null`                   | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)                                                                       |
 | `pegType`              | `string`                           | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`)                                                                                         |
 | `pegMechanism`         | `string`                           | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc.                                                                                           |
-| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"coingecko+defillama"`, `"protocol-redeem"`, `"dexscreener"`)                      |
+| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"coingecko+defillama-list"`, `"geckoterminal"`, `"protocol-redeem"`, `"dexscreener"`) |
 | `priceConfidence`      | `string \| null`                   | Price confidence level: `"high"` (cross-validated agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline) |
 | `supplySource`         | `string \| undefined`              | Supply data source: `"defillama"` or `"coingecko-fallback"`                                                                                    |
 | `price`                | `number \| null`                   | Current price in USD                                                                                                                           |
@@ -269,7 +269,7 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
   "pegType": "peggedUSD",
   "pegMechanism": "fiat-backed",
   "priceUsd": 1.0001,
-  "priceSource": "coingecko+defillama",
+  "priceSource": "coingecko+defillama-list",
   "priceConfidence": "high",
   "supplySource": "defillama",
   "supplyByPegUsd": { "peggedUSD": 183883564940.52 },
@@ -1967,12 +1967,14 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
   "priceSourceHealth": {
     "sourceDistribution": {
       "coingecko": 14,
-      "coingecko+defillama": 118,
+      "coingecko+defillama-list": 118,
       "defillama": 10,
+      "defillama-list": 0,
       "protocol-redeem": 1,
       "defillama-contract": 4,
       "coinmarketcap": 2,
       "dexscreener": 1,
+      "geckoterminal": 0,
       "cached": 4,
       "missing": 3
     },
@@ -1982,15 +1984,6 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
       "low": 8,
       "fallback": 6
     },
-    "divergences": [
-      {
-        "id": "fdusd-first-digital-usd",
-        "symbol": "FDUSD",
-        "cgPrice": 0.9994,
-        "dlPrice": 1.0012,
-        "bps": 18
-      }
-    ],
     "totalAssets": 156,
     "lastSync": 1771856400
   },

@@ -169,7 +169,7 @@ Age checks:
 **Off-chain check:**
 
 - Default path: fetch CoinGecko `/simple/price` for the coin's `geckoId`
-- If the current primary price already comes from CoinGecko (`priceSource = "coingecko"` or `"coingecko+defillama"`), switch the confirmer to DefiLlama `coins.llama.fi/prices/current/coingecko:{geckoId}` instead of querying CoinGecko again
+- If the current primary price already comes from CoinGecko (`priceSource.startsWith("coingecko")`), switch the confirmer to DefiLlama `coins.llama.fi/prices/current/coingecko:{geckoId}` instead of querying CoinGecko again
 - Calculate deviation against `peg_reference`
 - Agrees if deviation >= `secondaryBar` (50% of primary threshold)
 - Non-fatal: if fetch fails, the off-chain agreement remains `null`
