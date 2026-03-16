@@ -44,23 +44,17 @@ async function hasOpsApiAccessSignal(
       teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos",
     });
     if (jwtValid) return true;
-    console.warn("[auth] JWT verification failed for ops-api request");
   }
 
   // Path 2: Service token comparison (direct Worker access)
   const clientId = request?.headers.get("CF-Access-Client-Id")?.trim();
   const clientSecret = request?.headers.get("CF-Access-Client-Secret")?.trim();
-  const hasHeaders = !!(clientId && clientSecret);
-  const hasEnv = !!(env?.OPS_API_SERVICE_TOKEN_ID && env?.OPS_API_SERVICE_TOKEN_SECRET);
-  if (hasHeaders && hasEnv) {
+  if (clientId && clientSecret && env?.OPS_API_SERVICE_TOKEN_ID && env?.OPS_API_SERVICE_TOKEN_SECRET) {
     const [idMatch, secretMatch] = await Promise.all([
-      timingSafeCompare(clientId!, env!.OPS_API_SERVICE_TOKEN_ID!),
-      timingSafeCompare(clientSecret!, env!.OPS_API_SERVICE_TOKEN_SECRET!),
+      timingSafeCompare(clientId, env.OPS_API_SERVICE_TOKEN_ID),
+      timingSafeCompare(clientSecret, env.OPS_API_SERVICE_TOKEN_SECRET),
     ]);
     if (idMatch && secretMatch) return true;
-    console.warn("[auth] Service token mismatch for ops-api request");
-  } else {
-    console.warn(`[auth] ops-api auth skipped: hasHeaders=${hasHeaders}, hasEnv=${hasEnv}, hasJwt=${!!accessJwt}, hasAud=${!!env?.CF_ACCESS_OPS_API_AUD}`);
   }
 
   return false;
