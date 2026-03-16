@@ -13,7 +13,9 @@ export function escapeHtml(text: string): string {
 
 /** Build the full Telegram message for a digest. */
 function buildTelegramMessage(title: string, extended: string, date: string): string {
-  return `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(extended)}\n\n<a href="https://pharos.watch/digest/${date}">Read on Pharos →</a>`;
+  // Escape HTML first, then convert markdown bold **text** to <b>text</b>
+  const body = escapeHtml(extended).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  return `<b>${escapeHtml(title)}</b>\n\n${body}\n\n<a href="https://pharos.watch/digest/${date}">Read on Pharos →</a>`;
 }
 
 /** Post a raw text message to a Telegram channel. Throws on API error. */

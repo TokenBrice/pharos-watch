@@ -134,15 +134,25 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
         </div>
 
         <div className="mx-auto max-w-[68ch] space-y-4">
-          {extendedParagraphs.map((para, i) => (
-            <p
-              key={i}
-              className="text-[1.05rem] leading-8 text-foreground/92"
-              style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-            >
-              {para}
-            </p>
-          ))}
+          {extendedParagraphs.map((para, i) => {
+            const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
+            const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
+            const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
+            return (
+              <p
+                key={i}
+                className="text-[1.05rem] leading-8 text-foreground/92"
+                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+              >
+                {headerText && (
+                  <span className="font-semibold tracking-wide">
+                    {headerText}.{" "}
+                  </span>
+                )}
+                {bodyText}
+              </p>
+            );
+          })}
         </div>
       </article>
 
