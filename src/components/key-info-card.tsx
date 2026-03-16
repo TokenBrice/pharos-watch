@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Copy, ExternalLink, Globe } from "lucide-react";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -233,7 +234,11 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 const explorerUrl = getExplorerUrl(openContract.chain, openContract.address);
                 return (
                   <div className="mt-3 rounded-lg bg-background/60 px-3 py-2 space-y-1.5">
-                    <div className="text-sm font-medium">{chain?.name ?? openContract.chain}</div>
+                    <div className="text-sm font-medium">
+                      <Link href={`/chains/${openContract.chain}/`} className="hover:underline">
+                        {chain?.name ?? openContract.chain}
+                      </Link>
+                    </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs text-muted-foreground truncate">
                         {openContract.address.slice(0, 6)}...{openContract.address.slice(-4)}
