@@ -341,7 +341,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     dlAllowed
       ? fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`, signal ? { signal } : undefined)
       : Promise.resolve(null),
-    fetchSupplementalTrackedTokens(cgData, signal, coingeckoApiKey),
+    fetchSupplementalTrackedTokens(cgData, signal, coingeckoApiKey, chainRpcs),
   ]);
   const { goldTokens, silverTokens, fiatCgTokens } = supplementalTokens;
 

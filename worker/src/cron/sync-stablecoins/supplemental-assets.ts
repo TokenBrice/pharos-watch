@@ -6,7 +6,11 @@ import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DefiLlamaCoinPrice, PeggedAsset } from "../enrich-prices";
+
+const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 
 const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.pegCurrency === "GOLD" || stablecoin.flags.pegCurrency === "SILVER",
@@ -282,7 +286,43 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
   }
 }
 
-async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal): Promise<PeggedAsset[]> {
+/** Fetch ERC-20 totalSupply for a coin's first EVM contract and return mcap = supply × price. */
+async function fetchOnChainMcap(
+  meta: StablecoinMeta,
+  priceUsd: number,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<number | null> {
+  const evmContract = meta.contracts?.find(
+    (c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron",
+  );
+  if (!evmContract) return null;
+
+  try {
+    const raw = await fetchEvmUint256AtBlock(
+      evmContract.chain,
+      evmContract.address,
+      TOTAL_SUPPLY_SELECTOR,
+      "latest",
+      { chainRpcs, signal, timeoutMs: 10_000 },
+    );
+    if (raw == null || raw <= 0n) return null;
+    const supply = Number(raw) / 10 ** (evmContract.decimals ?? 18);
+    const mcap = supply * priceUsd;
+    if (!Number.isFinite(mcap) || mcap <= 0) return null;
+    console.log(`[fiat-cg] On-chain supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
+    return mcap;
+  } catch (err) {
+    console.warn(`[fiat-cg] On-chain supply probe failed for ${meta.symbol}: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+async function fetchFiatCoinGeckoTokens(
+  cgData: CoinGeckoMcapData,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<PeggedAsset[]> {
   if (FIAT_CG_METAS.length === 0) return [];
   throwIfAborted(signal);
 
@@ -304,12 +344,23 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: Abor
       if (mcap && mcap > 0) mcapMap[token.id] = mcap;
     }
 
-    return FIAT_CG_METAS
-      .map((meta) => {
+    const results = await Promise.all(
+      FIAT_CG_METAS.map(async (meta) => {
         const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
         if (!priceResolution) return null;
 
-        const mcap = mcapMap[meta.id];
+        let mcap = mcapMap[meta.id];
+        let supplySource: string = "coingecko-fallback";
+
+        // Fallback: on-chain totalSupply × price when CG has no market cap
+        if (!mcap) {
+          const onChainMcap = await fetchOnChainMcap(meta, priceResolution.price, chainRpcs, signal);
+          if (onChainMcap) {
+            mcap = onChainMcap;
+            supplySource = "onchain-total-supply";
+          }
+        }
+
         if (!mcap) {
           console.log(`[fiat-cg] No mcap for ${meta.symbol}, skipping`);
           return null;
@@ -327,7 +378,7 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: Abor
           priceSource: priceResolution.source,
           priceConfidence: "single-source",
           priceUpdatedAt: Math.floor(Date.now() / 1000),
-          supplySource: "coingecko-fallback",
+          supplySource,
           circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
@@ -335,8 +386,10 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData, signal?: Abor
           chainCirculating: {},
           chains: ["Ethereum"],
         } as PeggedAsset;
-      })
-      .filter((token): token is PeggedAsset => token !== null);
+      }),
+    );
+
+    return results.filter((token): token is PeggedAsset => token !== null);
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.error("[fiat-cg] fetchFiatCoinGeckoTokens failed:", err);
@@ -389,6 +442,7 @@ export async function fetchSupplementalTrackedTokens(
   cgData: CoinGeckoMcapData,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<{
   goldTokens: PeggedAsset[];
   silverTokens: PeggedAsset[];
@@ -398,7 +452,7 @@ export async function fetchSupplementalTrackedTokens(
   const [goldTokens, silverTokens, fiatCgTokens] = await Promise.all([
     fetchGoldTokens(cgData, signal),
     fetchSilverTokens(cgData, signal, coingeckoApiKey),
-    fetchFiatCoinGeckoTokens(cgData, signal),
+    fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs),
   ]);
 
   return { goldTokens, silverTokens, fiatCgTokens };
