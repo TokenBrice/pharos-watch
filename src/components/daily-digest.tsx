@@ -90,9 +90,11 @@ const digestDisplay = Newsreader({
 
 interface DailyDigestProps {
   variant?: "preview" | "full";
+  /** Override the CTA link target (e.g. point to the detail page instead of the archive). */
+  detailHref?: string;
 }
 
-export function DailyDigest({ variant = "full" }: DailyDigestProps) {
+export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) {
   const { data, isLoading, error, refetch } = useDailyDigest();
   const paragraphs = getDigestBodyParagraphs({
     digest: data?.digest,
@@ -101,7 +103,11 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
   const isPreview = variant === "preview";
   const visibleParagraphs = variant === "preview" ? paragraphs.slice(0, 1) : paragraphs;
   const shouldShowCta = variant === "preview";
-  const ctaLabel = variant === "preview" ? "Read today's full digest" : "Read all previous recaps";
+  const ctaLabel = detailHref
+    ? "Continue reading"
+    : variant === "preview"
+      ? "Read today's full digest"
+      : "Read all previous recaps";
 
   if (!isLoading && !data) {
     if (error) return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
@@ -134,10 +140,14 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
     );
   }
 
+  const editionLabel = data?.editionNumber
+    ? `Pharos Daily Digest #${data.editionNumber}`
+    : "Pharos Daily Digest";
+
   if (!isPreview) {
     return (
       <DigestFullDisplay
-        label="Pharos Daily Digest"
+        label={editionLabel}
         dateString={data?.generatedAt ? formatMasthead(data.generatedAt) : ""}
         title={data?.digestTitle || "Signal & Noise"}
         paragraphs={visibleParagraphs}
@@ -150,7 +160,7 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
       {/* Masthead (preview) */}
       <div className="border-t border-b border-border py-3 text-left flex flex-wrap items-end justify-between gap-3">
         <p className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.34em] text-muted-foreground/90 sm:text-[0.8rem]">
-          Pharos Daily Digest
+          {editionLabel}
         </p>
         {data?.generatedAt && (
           <p className="mt-0.5 text-xs text-muted-foreground/85">
@@ -159,65 +169,93 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
         )}
       </div>
 
-      <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
-        <div className="space-y-5">
-          <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
-            <span className="h-px w-12 bg-border/70" />
-            <span className="font-mono font-medium">Executive Summary</span>
-          </div>
-          <h2
-            className={cn(
-              digestDisplay.className,
-              "max-w-[10ch] text-[clamp(2.8rem,6vw,5rem)] font-semibold leading-[0.88] tracking-[-0.045em] text-foreground/98 [text-wrap:balance]",
+      {(() => {
+        const bodyBlock = (
+          <div className="flex min-w-0 flex-col gap-4">
+            {visibleParagraphs.map((para, i) => {
+              const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
+              const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
+              const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
+              return (
+                <p
+                  key={i}
+                  className={cn(
+                    "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
+                    i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
+                  )}
+                  style={SERIF}
+                >
+                  {headerText && (
+                    <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
+                      {headerText}.{" "}
+                    </span>
+                  )}
+                  {bodyText}
+                </p>
+              );
+            })}
+            {shouldShowCta && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
+                <Link
+                  href={detailHref ?? "/digest/"}
+                  className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {ctaLabel} &rarr;
+                </Link>
+                {!detailHref && (
+                  <>
+                    <span className="text-border/70">|</span>
+                    <a
+                      href="https://t.me/pharoswatch"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      Telegram &rarr;
+                    </a>
+                  </>
+                )}
+              </div>
             )}
-          >
-            {data?.digestTitle || "Signal & Noise"}
-          </h2>
-        </div>
-        <div className="flex min-w-0 flex-col gap-4">
-          {visibleParagraphs.map((para, i) => {
-            const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
-            const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
-            const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
-            return (
-              <p
-                key={i}
+          </div>
+        );
+
+        const title = data?.digestTitle || "Signal & Noise";
+
+        return detailHref ? (
+          /* Archive: stacked layout — title above text */
+          <div className="py-6 space-y-5">
+            <h2
+              className={cn(
+                digestDisplay.className,
+                "text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]",
+              )}
+            >
+              {title}
+            </h2>
+            {bodyBlock}
+          </div>
+        ) : (
+          /* Homepage: two-column layout */
+          <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
+            <div className="min-w-0 space-y-5">
+              <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
+                <span className="h-px w-12 bg-border/70" />
+                <span className="font-mono font-medium">Executive Summary</span>
+              </div>
+              <h2
                 className={cn(
-                  "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
-                  i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
+                  digestDisplay.className,
+                  "max-w-[10ch] text-[clamp(2.8rem,6vw,5rem)] font-semibold leading-[0.88] tracking-[-0.045em] text-foreground/98 [text-wrap:balance]",
                 )}
-                style={SERIF}
               >
-                {headerText && (
-                  <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
-                    {headerText}.{" "}
-                  </span>
-                )}
-                {bodyText}
-              </p>
-            );
-          })}
-          {shouldShowCta && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
-              <Link
-                href="/digest/"
-                className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {ctaLabel} &rarr;
-              </Link>
-              <span className="text-border/70">|</span>
-              <a
-                href="https://t.me/pharoswatch"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Telegram &rarr;
-              </a>
+                {title}
+              </h2>
             </div>
-          )}
-        </div>
-      </div>
+            {bodyBlock}
+          </div>
+        );
+      })()}
     </div>
   );
 }

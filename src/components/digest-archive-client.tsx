@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestArchive } from "@/hooks/api-hooks";
-import { DailyDigest, DigestFullDisplay } from "@/components/daily-digest";
+import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
@@ -42,20 +42,40 @@ function formatWeeklyMasthead(ts: number): string {
   return `${start} – ${end}`;
 }
 
-function WeeklyRecapSection({ entry }: { entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number } }) {
+const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
+
+function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number; editionNumber?: number } }) {
   const paragraphs = splitDigestParagraphs(entry.digestExtended);
   if (paragraphs.length === 0) return null;
 
+  // First sentence as teaser, stripping any bold markdown headers
+  const raw = paragraphs[0].replace(/\*\*.*?\*\*\s*/, "");
+  const teaser = raw.split(/(?<=\.)\s/)[0] || raw;
+
+  const weeklyLabel = entry.editionNumber ? `Pharos Weekly Recap #${entry.editionNumber}` : "Pharos Weekly Recap";
+
   return (
-    <div className="mt-8">
-      <DigestFullDisplay
-        label="Weekly Recap"
-        dateString={formatWeeklyMasthead(entry.generatedAt)}
-        title={entry.digestTitle || "The Week in Review"}
-        paragraphs={paragraphs}
-        ctaHref={`/digest/${tsToDateSlug(entry.generatedAt)}/`}
-        ctaLabel="Full weekly detail"
-      />
+    <div className="mt-6 border-t-2 border-foreground/10 pt-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+          {weeklyLabel}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {formatWeeklyMasthead(entry.generatedAt)}
+        </p>
+      </div>
+      <h3 className="mt-2 text-lg font-bold tracking-tight" style={SERIF}>
+        {entry.digestTitle || "The Week in Review"}
+      </h3>
+      <p className="mt-1.5 text-sm leading-relaxed text-foreground/75 line-clamp-2" style={SERIF}>
+        {teaser}
+      </p>
+      <Link
+        href={`/digest/${tsToDateSlug(entry.generatedAt)}/`}
+        className="inline-block mt-3 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+      >
+        Read the full recap &rarr;
+      </Link>
     </div>
   );
 }
@@ -142,12 +162,12 @@ export function DigestArchiveClient() {
         queries={[{ preset: "digestArchive", dataUpdatedAt, error, hasData: !!data?.digests?.length }]}
       />
 
-      {/* Broadsheet: today's digest */}
-      <DailyDigest variant="full" />
+      {/* Lead story: today's digest */}
+      <DailyDigest variant="preview" detailHref={latestSlug ? `/digest/${latestSlug}/` : undefined} />
 
-      {/* Weekly recap (latest) */}
+      {/* Weekly column: compact teaser */}
       {latestWeekly && latestWeekly.digestExtended && (
-        <WeeklyRecapSection entry={latestWeekly} />
+        <WeeklyTeaser entry={latestWeekly} />
       )}
 
       {/* Archive divider (double-rule) */}
@@ -208,7 +228,12 @@ export function DigestArchiveClient() {
                   {d.digestTitle || (isWeekly ? "The Week in Review" : "Signal & Noise")}
                   {isWeekly && (
                     <span className="rounded border border-border/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Weekly
+                      Weekly{d.editionNumber ? ` #${d.editionNumber}` : ""}
+                    </span>
+                  )}
+                  {!isWeekly && d.editionNumber != null && (
+                    <span className="font-mono text-[0.65rem] text-muted-foreground/70">
+                      #{d.editionNumber}
                     </span>
                   )}
                 </span>

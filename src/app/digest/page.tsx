@@ -24,7 +24,6 @@ export default function DigestArchivePage() {
       containerClassName="mx-auto max-w-4xl"
       leadParagraphs={[
         "Every Pharos stablecoin recap, newest first.",
-        "Every day, Pharos reviews its core metrics and output a Daily Digest. Every Monday, the previous weeks Daily Digests are reviewed to output the Weekly Recap. All digests and recaps are preserved in the archive, creating a day-by-day and week-by-week archive on the whole stablecoin market activity.",
       ]}
     >
       <CalloutBanner icon={<Send className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
@@ -48,10 +47,6 @@ export default function DigestArchivePage() {
         ))}
       </nav>
 
-      <p className="text-xs text-muted-foreground text-center max-w-2xl mx-auto pt-4">
-        Each day Pharos generates a market recap covering peg deviations, supply movements, and emerging trends across
-        the stablecoin landscape.
-      </p>
     </FeaturePageShell>
   );
 }

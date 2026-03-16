@@ -141,6 +141,7 @@ export interface DailyDigestResponse {
   digestTitle?: string | null;
   digestExtended?: string | null;
   generatedAt?: number | null;
+  editionNumber?: number | null;
 }
 
 export interface DigestArchiveEntry {
@@ -152,6 +153,7 @@ export interface DigestArchiveEntry {
   psiBand: string | null;
   totalMcapUsd: number | null;
   digestType?: "daily" | "weekly";
+  editionNumber?: number;
 }
 
 export interface DigestArchiveResponse {

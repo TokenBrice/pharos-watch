@@ -13,6 +13,8 @@ interface DigestEntry {
   text: string;
   extended: string;
   generatedAt: number;
+  digestType?: "daily" | "weekly";
+  editionNumber?: number;
 }
 
 const allDigests = digests as DigestEntry[];
@@ -62,6 +64,10 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
 
   const formatted = formatDate(digest.date);
   const extendedParagraphs = splitDigestParagraphs(digest.extended);
+  const isWeekly = digest.digestType === "weekly";
+  const editionKicker = digest.editionNumber
+    ? (isWeekly ? `Weekly Recap #${digest.editionNumber}` : `Daily Digest #${digest.editionNumber}`)
+    : (isWeekly ? "Weekly Recap" : undefined);
 
   // Find prev/next digests
   const idx = allDigests.findIndex((d) => d.date === digest.date);
@@ -70,7 +76,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <BreadcrumbJsonLd name={`Daily Digest: ${formatted}`} path={`/digest/${digest.date}/`} />
+      <BreadcrumbJsonLd name={`${isWeekly ? "Weekly Recap" : "Daily Digest"}: ${formatted}`} path={`/digest/${digest.date}/`} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -107,6 +113,11 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
           <span>/</span>
           <span className="text-foreground">{formatted}</span>
         </nav>
+        {editionKicker && (
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+            {editionKicker}
+          </p>
+        )}
         <h1 className="text-3xl font-extrabold tracking-tighter">{digest.title}</h1>
         <p className="text-sm text-muted-foreground">{formatted}</p>
       </div>

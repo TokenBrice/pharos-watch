@@ -11,6 +11,8 @@ interface ApiDigest {
   digestTitle?: string;
   digestExtended?: string;
   generatedAt: number;
+  digestType?: "daily" | "weekly";
+  editionNumber?: number;
 }
 
 interface DigestEntry {
@@ -19,6 +21,8 @@ interface DigestEntry {
   text: string;
   extended: string;
   generatedAt: number;
+  digestType: "daily" | "weekly";
+  editionNumber: number;
 }
 
 function tsToDate(ts: number): string {
@@ -39,6 +43,8 @@ async function main() {
       text: d.digestText,
       extended: d.digestExtended || "",
       generatedAt: d.generatedAt,
+      digestType: d.digestType ?? ("daily" as const),
+      editionNumber: d.editionNumber ?? 0,
     }))
     .sort((a, b) => b.generatedAt - a.generatedAt);
 

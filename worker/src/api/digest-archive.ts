@@ -37,8 +37,21 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
       psiBand,
       totalMcapUsd,
       digestType,
+      editionNumber: 0, // computed below
     };
   });
+
+  // Assign sequential edition numbers per type (oldest first)
+  let dailyCount = 0;
+  let weeklyCount = 0;
+  const chronological = [...digests].sort((a, b) => a.generatedAt - b.generatedAt);
+  for (const d of chronological) {
+    if (d.digestType === "weekly") {
+      d.editionNumber = ++weeklyCount;
+    } else {
+      d.editionNumber = ++dailyCount;
+    }
+  }
 
   const latestTs = digests.length > 0 ? digests[0].generatedAt : Math.floor(Date.now() / 1000);
 
