@@ -76,6 +76,7 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   "dex-liquidity": SECONDS.TWELVE_HOURS,
   "yield-data": SECONDS.ONE_HOUR,
   dews: SECONDS.THIRTY_MINUTES,
+  chains: 600,
 };
 
 // --- Depeg multi-source confirmation (>$1B coins) ---

@@ -90,6 +90,7 @@ export const API_PATHS = {
   mintBurnEvents: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-events", params),
   stressSignals: (stablecoinId?: string, days?: number) =>
     buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
+  chains: () => "/api/chains",
 } as const;
 
 export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
@@ -341,6 +342,15 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     strictContract: true,
+    probeGroup: "public",
+  },
+  {
+    key: "chains",
+    path: API_PATHS.chains(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
     probeGroup: "public",
   },
   {
