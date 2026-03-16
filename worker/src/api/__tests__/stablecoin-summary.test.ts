@@ -13,7 +13,7 @@ function makeStablecoinsCacheValue() {
         pegType: "peggedUSD",
         pegMechanism: "fiat-backed",
         price: 1.0001,
-        priceSource: "coingecko+defillama",
+        priceSource: "coingecko+defillama-list",
         priceConfidence: "high",
         supplySource: "defillama",
         circulating: { peggedUSD: 100 },

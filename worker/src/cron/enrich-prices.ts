@@ -1,4 +1,4 @@
-import { DEFILLAMA_COINS, USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
+import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -25,7 +25,6 @@ import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../lib/authorita
 import { fetchEvmCallHexAtBlock } from "../lib/evm-rpc";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
-import { DLPriceResponseSchema } from "../lib/schemas";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
 
@@ -106,14 +105,13 @@ export interface PriceValidationStats {
   high: number;
   singleSource: number;
   cgOnly: number;
-  dlOnly: number;
   low: number;
-  divergences: { id: string; symbol: string; dlPrice: number; cgPrice: number; bps: number }[];
 }
 
 /**
- * Fetch prices from both DL coins API and CG direct API in parallel,
+ * Fetch prices from CG, Pyth, CEX tickers, Curve on-chain, and DEX sources in parallel,
  * cross-validate within 50bps, and return a confidence-tagged result per asset.
+ * Optionally accepts DL stablecoins list prices as an independent voice.
  */
 export async function fetchPrimaryPrices(
   assets: PeggedAsset[],
@@ -122,10 +120,11 @@ export async function fetchPrimaryPrices(
   references?: PriceValidationReferences,
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  dlListPrices?: Map<string, number>,
 ): Promise<{ results: Map<string, PrimaryPriceResult>; stats: PriceValidationStats; cgPrices: Map<string, number> }> {
   throwIfAborted(signal);
   const results = new Map<string, PrimaryPriceResult>();
-  const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, dlOnly: 0, low: 0, divergences: [] };
+  const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 };
 
   // Only consider assets with a valid geckoId (no "wrong" tag)
   const candidates = assets.filter(
@@ -133,7 +132,6 @@ export async function fetchPrimaryPrices(
   );
   if (candidates.length === 0) return { results, stats, cgPrices: new Map() };
 
-  const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS);
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
   const pythAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES);
   const binanceAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
@@ -141,7 +139,7 @@ export async function fetchPrimaryPrices(
   const redstoneAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES);
   const curveAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN);
 
-  if (!dlAllowed && !cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
+  if (!cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
     console.warn("[primary-prices] All primary price circuits are open, skipping");
     return { results, stats, cgPrices: new Map() };
   }
@@ -150,7 +148,6 @@ export async function fetchPrimaryPrices(
   const geckoIds = candidates.map((a) => a.geckoId!);
   const BATCH_SIZE = 250; // CG supports 250 IDs per call
 
-  const dlPrices = new Map<string, number>();
   const cgPrices = new Map<string, number>();
 
   // Build Pyth feed map from tracked stablecoin metadata
@@ -179,39 +176,6 @@ export async function fetchPrimaryPrices(
   const redstoneSymbols = [...new Set(candidates.map((a) => a.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)))];
 
   const fetches: Promise<void>[] = [];
-
-  if (dlAllowed) {
-    fetches.push(
-      (async () => {
-        try {
-          // DL coins API accepts coingecko:id format, no batch limit
-          const coinIds = geckoIds.map((id) => `coingecko:${id}`).join(",");
-          const res = await fetchWithRetry(
-            `${DEFILLAMA_COINS}/prices/current/${coinIds}`,
-            signal ? { signal } : undefined,
-          );
-          if (res?.ok) {
-            const raw = await res.json();
-            const data = DLPriceResponseSchema.parse(raw);
-            for (const [key, val] of Object.entries(data.coins)) {
-              if (val.price > 0) {
-                const gId = key.replace("coingecko:", "");
-                dlPrices.set(gId, val.price);
-              }
-            }
-            await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, true);
-          } else {
-            console.warn(`[primary-prices] DL coins API returned ${res?.status ?? "no response"}`);
-            await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
-          }
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] DL coins API failed:", err);
-          await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
-        }
-      })(),
-    );
-  }
 
   if (cgAllowed) {
     fetches.push(
@@ -369,13 +333,15 @@ export async function fetchPrimaryPrices(
 
   for (const asset of candidates) {
     const gId = asset.geckoId!;
-    const dl = dlPrices.get(gId) ?? null;
     const cg = cgPrices.get(gId) ?? null;
     const pyth = pythPrices.get(asset.id);
 
     const sources: SourcePrice[] = [];
     if (cg != null) sources.push({ source: "coingecko", price: cg, weight: 2 });
-    if (dl != null) sources.push({ source: "defillama", price: dl, weight: 1 });
+    const dlListPrice = dlListPrices?.get(asset.id);
+    if (dlListPrice != null && dlListPrice > 0) {
+      sources.push({ source: "defillama-list", price: dlListPrice, weight: 1 });
+    }
     if (pyth != null) sources.push({ source: "pyth", price: pyth.price, weight: 2, metadata: { confidenceBps: pyth.confidenceBps } });
     const binancePrice = binancePrices.get(asset.symbol.toUpperCase());
     if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2 });
@@ -422,7 +388,7 @@ export async function fetchPrimaryPrices(
       price: consensus.price,
       source: consensus.source,
       confidence: consensus.confidence,
-      dlPrice: dl ?? null,
+      dlPrice: dlListPrices?.get(asset.id) ?? null,
       cgPrice: cg ?? null,
       candidateSources: sources.map((s) => s.source),
       agreeSources: consensus.agreeSources,
@@ -434,30 +400,87 @@ export async function fetchPrimaryPrices(
 
     // Track single-source breakdown
     if (consensus.confidence === "single-source") {
-      if (consensus.source === "defillama") stats.dlOnly++;
-      else if (consensus.source === "coingecko") stats.cgOnly++;
-    }
-
-    // Track divergences for observability
-    if (consensus.confidence === "low" && dl != null && cg != null) {
-      const mid = (dl + cg) / 2;
-      const bps = mid > 0 ? Math.round(Math.abs(dl - cg) / mid * 10_000) : 0;
-      stats.divergences.push({ id: asset.id, symbol: asset.symbol, dlPrice: dl, cgPrice: cg, bps });
+      if (consensus.source === "coingecko") stats.cgOnly++;
     }
   }
 
-  if (stats.divergences.length > 0) {
-    console.warn(
-      `[primary-prices] ${stats.divergences.length} price divergences: ` +
-      stats.divergences.slice(0, 5).map((d) => `${d.symbol}(${d.bps}bps)`).join(", ") +
-      (stats.divergences.length > 5 ? ` ...+${stats.divergences.length - 5} more` : ""),
-    );
-  }
   console.log(
     `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
   );
 
   return { results, stats, cgPrices };
+}
+
+/**
+ * For assets that are single-source CG-only after primary consensus,
+ * probe GeckoTerminal for an independent pool-level price and re-run
+ * consensus with the additional source.
+ */
+export async function runGtProbePass(
+  assets: PeggedAsset[],
+  primaryResults: Map<string, PrimaryPriceResult>,
+  db: D1Database,
+  signal?: AbortSignal,
+  references?: PriceValidationReferences,
+): Promise<{ updatedCount: number; stats: import("../lib/geckoterminal-price-probe").GtProbeStats }> {
+  const { probeGeckoTerminalPrices } = await import("../lib/geckoterminal-price-probe");
+
+  // Identify single-source CG-only assets
+  const cgOnlyAssets: { id: string; price: number }[] = [];
+  for (const asset of assets) {
+    const primary = primaryResults.get(asset.id);
+    if (
+      primary &&
+      primary.confidence === "single-source" &&
+      primary.candidateSources.length === 1 &&
+      primary.candidateSources[0] === "coingecko"
+    ) {
+      cgOnlyAssets.push({ id: asset.id, price: primary.price });
+    }
+  }
+
+  if (cgOnlyAssets.length === 0) {
+    return { updatedCount: 0, stats: { probed: 0, pricesObtained: 0, divergences500bps: 0, skippedLowTvl: 0 } };
+  }
+
+  const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(cgOnlyAssets, db, signal);
+
+  // Re-run consensus for assets that got a GT price
+  let updatedCount = 0;
+  for (const asset of assets) {
+    const gtSource = gtPrices.get(asset.id);
+    if (!gtSource) continue;
+
+    const primary = primaryResults.get(asset.id);
+    if (!primary) continue;
+
+    // Build source list: original CG + GT
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: primary.cgPrice ?? primary.price, weight: 2 },
+      gtSource,
+    ];
+
+    const context = buildPriceValidationContext({
+      stablecoinId: String(asset.id),
+      pegType: asset.pegType,
+      navToken: asset.navToken,
+      commodityOunces: asset.commodityOunces,
+    });
+    const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
+    const consensus = computePriceConsensus(sources, pegRef, 50);
+
+    if (!consensus) continue;
+
+    // Update the primary result
+    primary.price = consensus.price;
+    primary.source = consensus.source;
+    primary.confidence = consensus.confidence;
+    primary.candidateSources = sources.map((s) => s.source);
+    primary.agreeSources = consensus.agreeSources;
+    updatedCount++;
+  }
+
+  return { updatedCount, stats };
 }
 
 export interface EnrichmentStats {

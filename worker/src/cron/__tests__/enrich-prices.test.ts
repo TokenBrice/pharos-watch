@@ -516,17 +516,12 @@ describe("fetchPrimaryPrices", () => {
     ]);
   }
 
-  it("returns high confidence when DL and CG prices agree within 50bps", async () => {
+  it("returns high confidence when CG and DL list prices agree within 50bps", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (typeof url === "string" && url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({
-          coins: { "coingecko:tether": { price: 1.0002 } },
-        }), { status: 200 });
-      }
       if (typeof url === "string" && url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
           tether: { usd: 1.0001 },
@@ -536,32 +531,28 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats, cgPrices } = await fetchPrimaryPrices(assets, db);
+    const dlListPrices = new Map([["usdt-tether", 1.0002]]);
+    const { results, stats, cgPrices } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
     const result = results.get("usdt-tether")!;
     expect(result.confidence).toBe("high");
-    expect(result.source).toBe("coingecko+defillama");
+    expect(result.source).toBe("coingecko+defillama-list");
     expect(result.price).toBe(1.0001);
     expect(cgPrices.get("tether")).toBe(1.0001);
     expect(stats.high).toBe(1);
     expect(stats.low).toBe(0);
   });
 
-  it("returns low confidence when DL and CG prices diverge beyond 50bps", async () => {
+  it("returns single-source when CG is the only source (no DL list price)", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (typeof url === "string" && url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({
-          coins: { "coingecko:tether": { price: 1.05 } },
-        }), { status: 200 });
-      }
       if (typeof url === "string" && url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
-          tether: { usd: 0.99 },
+          tether: { usd: 1.0001 },
         }), { status: 200 });
       }
       return new Response("Not found", { status: 404 });
@@ -572,9 +563,34 @@ describe("fetchPrimaryPrices", () => {
 
     expect(results.size).toBe(1);
     const result = results.get("usdt-tether")!;
+    expect(result.confidence).toBe("single-source");
+    expect(result.source).toBe("coingecko");
+    expect(stats.singleSource).toBe(1);
+    expect(stats.cgOnly).toBe(1);
+  });
+
+  it("returns low confidence when CG and DL list prices diverge beyond 50bps", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          tether: { usd: 0.99 },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const db = makeTestDb();
+    const dlListPrices = new Map([["usdt-tether", 1.05]]);
+    const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
+
+    expect(results.size).toBe(1);
+    const result = results.get("usdt-tether")!;
     expect(result.confidence).toBe("low");
     expect(stats.low).toBe(1);
-    expect(stats.divergences.length).toBe(1);
   });
 
   it("chooses the peg-closer candidate for non-USD divergences when references are available", async () => {
@@ -583,11 +599,6 @@ describe("fetchPrimaryPrices", () => {
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (typeof url === "string" && url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({
-          coins: { "coingecko:euro-coin": { price: 1.8 } },
-        }), { status: 200 });
-      }
       if (typeof url === "string" && url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
           "euro-coin": { usd: 1.08 },
@@ -597,11 +608,15 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
+    const dlListPrices = new Map([["eurc-circle", 1.8]]);
     const { results, stats } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
       { rates: { peggedEUR: 1.08 }, type: "fresh", updatedAt: Math.floor(Date.now() / 1000) },
+      undefined,
+      undefined,
+      dlListPrices,
     );
 
     expect(results.size).toBe(1);
@@ -619,11 +634,6 @@ describe("fetchPrimaryPrices", () => {
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (typeof url === "string" && url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({
-          coins: { "coingecko:ousg": { price: 110 } },
-        }), { status: 200 });
-      }
       if (typeof url === "string" && url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
           ousg: { usd: 1.01 },
@@ -633,7 +643,8 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchPrimaryPrices(assets, db);
+    const dlListPrices = new Map([["ousg-ondo-finance", 110]]);
+    const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
     const result = results.get("ousg-ondo-finance")!;
@@ -643,17 +654,12 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.low).toBe(1);
   });
 
-  it("returns single-source when only one API has data", async () => {
+  it("returns single-source when DL list is the only source", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (typeof url === "string" && url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({
-          coins: { "coingecko:tether": { price: 1.0 } },
-        }), { status: 200 });
-      }
       if (typeof url === "string" && url.includes("coingecko.com")) {
         // CG returns empty — no price data
         return new Response(JSON.stringify({}), { status: 200 });
@@ -662,12 +668,13 @@ describe("fetchPrimaryPrices", () => {
     }));
 
     const db = makeTestDb();
-    const { results, stats } = await fetchPrimaryPrices(assets, db);
+    const dlListPrices = new Map([["usdt-tether", 1.0]]);
+    const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
     const result = results.get("usdt-tether")!;
     expect(result.confidence).toBe("single-source");
-    expect(result.source).toBe("defillama");
+    expect(result.source).toBe("defillama-list");
     expect(stats.singleSource).toBe(1);
   });
 
@@ -703,28 +710,23 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.attempted).toBe(0);
   });
 
-  it("tracks cgOnly and dlOnly in stats", async () => {
+  it("tracks cgOnly in stats for CG-only single-source assets", async () => {
     const assets: PeggedAsset[] = [
       { id: "a", name: "A", symbol: "A", geckoId: "a-id", pegType: "peggedUSD", circulating: {} },
       { id: "b", name: "B", symbol: "B", geckoId: "b-id", pegType: "peggedUSD", circulating: {} },
     ];
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (typeof url === "string" && url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({
-          coins: { "coingecko:a-id": { price: 1.0 } }, // only A in DL
-        }), { status: 200 });
-      }
       if (typeof url === "string" && url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
-          "b-id": { usd: 1.0 }, // only B in CG
+          "a-id": { usd: 1.0 },
+          "b-id": { usd: 1.0 },
         }), { status: 200 });
       }
       return new Response("Not found", { status: 404 });
     }));
     const db = makeTestDb();
     const { stats } = await fetchPrimaryPrices(assets, db);
-    expect(stats.dlOnly).toBe(1);
-    expect(stats.cgOnly).toBe(1);
+    expect(stats.cgOnly).toBe(2);
     expect(stats.singleSource).toBe(2);
   });
 
@@ -735,9 +737,6 @@ describe("fetchPrimaryPrices", () => {
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (typeof url === "string" && url.includes("coins.llama.fi")) {
-        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
-      }
       if (typeof url === "string" && url.includes("coingecko.com")) {
         return new Response(JSON.stringify({}), { status: 200 });
       }

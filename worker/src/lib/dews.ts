@@ -362,11 +362,12 @@ function computePriceSignal(input: DEWSInput): SignalResult {
 
   let value = CONFIDENCE_SCORES[priceConfidence ?? ""] ?? 0;
 
-  // Degradation transition bonus
+  // Degradation transition bonus — suppress for the high→single-source
+  // reclassification caused by the consensus honesty fix (not a real degradation)
   if (prevPriceConfidence) {
     const prevScore = CONFIDENCE_SCORES[prevPriceConfidence] ?? 0;
     const currScore = CONFIDENCE_SCORES[priceConfidence ?? ""] ?? 0;
-    if (currScore > prevScore) {
+    if (currScore > prevScore && !(prevPriceConfidence === "high" && (priceConfidence ?? "") === "single-source")) {
       value = Math.min(100, value + 15);
     }
   }

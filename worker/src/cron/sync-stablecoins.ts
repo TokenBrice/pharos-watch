@@ -5,6 +5,7 @@ import {
   enrichMissingPrices,
   hasMissingPrice,
   fetchPrimaryPrices,
+  runGtProbePass,
 } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices";
 import {
@@ -480,12 +481,25 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const { fxFallbackRates: fxRates, validationReferences } = await loadFreshFxRates(db, syncStartSec);
   const validationContexts = createValidationContextResolver();
 
+  // Extract DL list prices before primary consensus overwrites them
+  const dlListPrices = new Map<string, number>();
+  for (const asset of llamaData.peggedAssets) {
+    if (
+      asset.price != null &&
+      typeof asset.price === "number" &&
+      Number.isFinite(asset.price) &&
+      asset.price > 0
+    ) {
+      dlListPrices.set(asset.id, asset.price);
+    }
+  }
+
   // --- Primary price validation ---
-  // Cross-validate DL coins API and CG prices for higher confidence
+  // Cross-validate CG and independent sources for higher confidence
   const primaryPricesAbort = returnIfAborted(signal, "primary-prices");
   if (primaryPricesAbort) return primaryPricesAbort;
   const { results: primaryPriceResults, stats: priceValidationStats } = await fetchPrimaryPrices(
-    llamaData.peggedAssets, db, signal, validationReferences, coingeckoApiKey, chainRpcs,
+    llamaData.peggedAssets, db, signal, validationReferences, coingeckoApiKey, chainRpcs, dlListPrices,
   );
   const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(llamaData.peggedAssets, signal);
   const protocolOverrideCount = protocolPriceOverrides.size;
@@ -531,6 +545,36 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
   if (protocolOverrideCount > 0) {
     console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);
+  }
+
+  // GT probe for single-source CG-only assets
+  const gtProbeAbort = returnIfAborted(signal, "gt-probe");
+  if (gtProbeAbort) return gtProbeAbort;
+  try {
+    const { updatedCount: gtUpdated } = await runGtProbePass(
+      llamaData.peggedAssets, primaryPriceResults, db, signal, validationReferences,
+    );
+    if (gtUpdated > 0) {
+      for (const asset of llamaData.peggedAssets) {
+        const primary = primaryPriceResults.get(asset.id);
+        if (primary && primary.candidateSources.includes("geckoterminal")) {
+          const decision = validatePriceCandidate(
+            primary.price,
+            validationContexts.get(asset),
+            "primary_authoritative",
+            validationReferences,
+          );
+          if (decision.accepted) {
+            asset.price = primary.price;
+            stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec, primary.candidateSources, primary.agreeSources);
+          }
+        }
+      }
+      console.log(`[sync-stablecoins] GT probe updated ${gtUpdated} asset prices`);
+    }
+  } catch (err) {
+    if (signal?.aborted) return abortResult(signal, "gt-probe");
+    console.warn("[sync-stablecoins] GT probe failed (non-fatal):", err);
   }
 
   // Tag all DL-sourced assets with supplySource
@@ -689,9 +733,9 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
 
   const INDIVIDUAL_SOURCE_KEYS = new Set<string>([
-    "coingecko", "defillama", "protocol-redeem", "defillama-contract",
+    "coingecko", "defillama", "defillama-list", "protocol-redeem", "defillama-contract",
     "coinmarketcap", "dexscreener", "pyth", "binance", "coinbase",
-    "redstone", "curve-onchain", "dex-promoted", "cached",
+    "redstone", "curve-onchain", "dex-promoted", "geckoterminal", "cached",
   ]);
 
   function mapSourceToBucket(
@@ -706,9 +750,10 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
   const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
   const finalSourceDistribution: PriceSourceHealth["sourceDistribution"] = {
-    "coingecko+defillama": 0,
+    "coingecko+defillama-list": 0,
     coingecko: 0,
     defillama: 0,
+    "defillama-list": 0,
     "protocol-redeem": 0,
     "defillama-contract": 0,
     coinmarketcap: 0,
@@ -719,6 +764,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     redstone: 0,
     "curve-onchain": 0,
     "dex-promoted": 0,
+    geckoterminal: 0,
     cached: 0,
     missing: 0,
   };
@@ -740,8 +786,8 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     // are visible even when they're not first alphabetically in the label.
     if (asset.agreeSources && asset.agreeSources.length > 0) {
       const agreeSet = new Set(asset.agreeSources);
-      if (agreeSet.has("coingecko") && agreeSet.has("defillama")) {
-        finalSourceDistribution["coingecko+defillama"]++;
+      if (agreeSet.has("coingecko") && agreeSet.has("defillama-list")) {
+        finalSourceDistribution["coingecko+defillama-list"]++;
       }
       for (const src of asset.agreeSources) {
         if (INDIVIDUAL_SOURCE_KEYS.has(src)) {
@@ -768,13 +814,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const priceSourceHealth: PriceSourceHealth = {
     sourceDistribution: finalSourceDistribution,
     confidenceDistribution: finalConfidenceDistribution,
-    divergences: priceValidationStats.divergences.slice(0, 10).map((d) => ({
-      id: d.id,
-      symbol: d.symbol,
-      cgPrice: d.cgPrice,
-      dlPrice: d.dlPrice,
-      bps: d.bps,
-    })),
     totalAssets: llamaData.peggedAssets.length,
     lastSync: Math.floor(Date.now() / 1000),
   };

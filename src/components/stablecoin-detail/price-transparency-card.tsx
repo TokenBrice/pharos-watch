@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 const KNOWN_SOURCES = [
   { key: "coingecko", label: "CoinGecko" },
   { key: "defillama", label: "DefiLlama" },
+  { key: "defillama-list", label: "DefiLlama (list)" },
+  { key: "geckoterminal", label: "GeckoTerminal" },
   { key: "pyth", label: "Pyth Network" },
   { key: "binance", label: "Binance" },
   { key: "coinbase", label: "Coinbase" },
