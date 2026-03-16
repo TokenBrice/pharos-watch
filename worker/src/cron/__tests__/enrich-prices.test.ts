@@ -869,9 +869,10 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     ]);
   }
 
-  it("downgrades soft-only high confidence when highest-TVL pool diverges >500bps", async () => {
+  it("downgrades soft-only high confidence when ANY large pool diverges >500bps", async () => {
     // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
-    // But highest-TVL DEX pool shows $0.80 → >500bps divergence → downgrade to low
+    // But one large DEX pool shows $0.80 → >500bps divergence → downgrade to low
+    // (even though another large pool shows $1.00 which is near-peg)
     const assets: PeggedAsset[] = [
       { id: "dusd-dtrinity", name: "dUSD", symbol: "dUSD", geckoId: "dtrinity-usd", pegType: "peggedUSD", circulating: {} },
     ];
@@ -887,8 +888,9 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     const db = makePoolChallengeDb([{
       stablecoin_id: "dusd-dtrinity",
       price_sources_json: JSON.stringify([
+        { protocol: "uniswap-v3", chain: "ethereum", price: 1.00, tvl: 1_480_000 },
+        { protocol: "curve", chain: "ethereum", price: 0.999, tvl: 967_000 },
         { protocol: "curve", chain: "ethereum", price: 0.80, tvl: 849_000 },
-        { protocol: "curve", chain: "fraxtal", price: 0.99, tvl: 11_000 },
       ]),
       updated_at: nowSec - 60,
     }]);

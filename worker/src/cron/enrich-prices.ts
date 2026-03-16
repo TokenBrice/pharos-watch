@@ -406,9 +406,9 @@ export async function fetchPrimaryPrices(
 
   // --- Pool challenge pass ---
   // For high-confidence results built entirely from soft aggregator sources,
-  // check if the highest-TVL DEX pool diverges significantly. If so, the
-  // aggregators may all be pricing from the same small misleading pool while
-  // ignoring larger pools that show a different price.
+  // check if ANY large DEX pool diverges significantly. If so, the
+  // aggregators may all be pricing from small misleading pools while
+  // ignoring large pools that show a depeg.
   const POOL_CHALLENGE_BPS = 500; // 5% divergence threshold
   const POOL_CHALLENGE_MIN_TVL = 100_000; // $100K minimum pool TVL for challenger
   const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, nowSec);
@@ -418,17 +418,21 @@ export async function fetchPrimaryPrices(
     if (result.confidence !== "high") continue;
     if (!isAllSoftSources(result.agreeSources)) continue;
 
-    const challenger = poolChallengers.get(assetId);
-    if (!challenger) continue;
+    const pools = poolChallengers.get(assetId);
+    if (!pools?.length) continue;
 
-    const mid = (result.price + challenger.price) / 2;
-    if (mid <= 0) continue;
-    const bps = Math.abs(result.price - challenger.price) / mid * 10_000;
-    if (bps >= POOL_CHALLENGE_BPS) {
-      result.confidence = "low";
-      stats.high--;
-      stats.low++;
-      poolChallengeDowngrades++;
+    // Check if ANY qualifying pool diverges from consensus
+    for (const pool of pools) {
+      const mid = (result.price + pool.price) / 2;
+      if (mid <= 0) continue;
+      const bps = Math.abs(result.price - pool.price) / mid * 10_000;
+      if (bps >= POOL_CHALLENGE_BPS) {
+        result.confidence = "low";
+        stats.high--;
+        stats.low++;
+        poolChallengeDowngrades++;
+        break; // one divergent pool is enough
+      }
     }
   }
   if (poolChallengeDowngrades > 0) {

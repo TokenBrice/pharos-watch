@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.0`
+- **Current methodology version:** `v2.1`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`

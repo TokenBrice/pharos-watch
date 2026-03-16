@@ -56,8 +56,9 @@ export function MethodologySections() {
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
-            Every score Pharos computes starts with a price. The pricing pipeline collects quotes from 8 independent
-            sources, clusters them into agreement groups, and selects the highest-confidence result. Protocol-level
+            Every score Pharos computes starts with a price. The pricing pipeline collects quotes from up to 10 independent
+            sources, clusters them into agreement groups, and selects the highest-confidence result. A pool challenge guard
+            downgrades confidence when large DEX pools diverge from aggregator consensus. Protocol-level
             redemption prices override market data for wrapper assets, and a 4-pass enrichment pipeline fills gaps for
             long-tail coins. Each asset is tagged with a confidence level so downstream systems can react to data quality.
           </p>
@@ -68,7 +69,7 @@ export function MethodologySections() {
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Sources</p>
-              <p className="text-foreground">8 independent voices</p>
+              <p className="text-foreground">10 independent voices</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Output</p>
@@ -115,7 +116,7 @@ export function MethodologySections() {
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">Aggregators</p>
                   <p className="text-xs text-muted-foreground mt-0.5">CoinGecko (w2)</p>
-                  <p className="text-xs text-muted-foreground">DefiLlama (w1)</p>
+                  <p className="text-xs text-muted-foreground">DL list (w1)</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">Exchanges</p>
@@ -130,13 +131,18 @@ export function MethodologySections() {
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">On-chain</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Curve (w3)</p>
-                  <p className="text-xs text-muted-foreground">DEX pools (w1)</p>
+                  <p className="text-xs text-muted-foreground">DEX pools (w1), GT (w1)</p>
                 </div>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border p-3 text-center w-80">
                 <p className="text-foreground font-medium">N-Source Consensus</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Cluster within 50 bps, pick highest-weight</p>
+              </div>
+              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+              <div className="rounded-lg border border-orange-500/40 p-3 text-center w-80">
+                <p className="text-foreground font-medium">Pool Challenge</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Soft-only consensus challenged by large DEX pools</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border border-blue-500/40 p-3 text-center w-80">
@@ -160,7 +166,7 @@ export function MethodologySections() {
               <div className="grid grid-cols-2 gap-2 w-full">
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Aggregators</p>
-                  <p className="text-xs text-muted-foreground">CG (w2), DL (w1)</p>
+                  <p className="text-xs text-muted-foreground">CG (w2), DL-list (w1)</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Exchanges</p>
@@ -172,13 +178,18 @@ export function MethodologySections() {
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">On-chain</p>
-                  <p className="text-xs text-muted-foreground">Curve (w3), DEX (w1)</p>
+                  <p className="text-xs text-muted-foreground">Curve (w3), DEX (w1), GT (w1)</p>
                 </div>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium">N-Source Consensus</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Cluster within 50 bps, pick highest-weight</p>
+              </div>
+              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+              <div className="w-full rounded-lg border border-orange-500/40 p-3 text-center">
+                <p className="text-foreground font-medium">Pool Challenge</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Soft-only &rarr; check large DEX pools</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border border-blue-500/40 p-3 text-center">
@@ -218,10 +229,10 @@ export function MethodologySections() {
                       <td className="py-2">Primary market data via <code className="text-xs">/simple/price</code></td>
                     </tr>
                     <tr>
-                      <td className="py-2 pr-4 text-foreground">DefiLlama</td>
+                      <td className="py-2 pr-4 text-foreground">DefiLlama (list)</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">Aggregator</td>
-                      <td className="py-2">Cross-validation via <code className="text-xs">coins.llama.fi</code></td>
+                      <td className="py-2">Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 text-foreground">Pyth Network</td>
@@ -259,6 +270,12 @@ export function MethodologySections() {
                       <td className="py-2 pr-4">On-chain</td>
                       <td className="py-2">Promoted from depeg-only to primary voice</td>
                     </tr>
+                    <tr>
+                      <td className="py-2 pr-4 text-foreground">GeckoTerminal</td>
+                      <td className="py-2 pr-4">1</td>
+                      <td className="py-2 pr-4">On-chain</td>
+                      <td className="py-2">Pool-level cross-check for single-source CG-only assets (&ge;$10K TVL)</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -278,6 +295,12 @@ export function MethodologySections() {
                 </li>
                 <li>Within the winning cluster, select the source with the highest weight</li>
                 <li>If no cluster of 2+ forms, pick the source closest to the canonical peg reference</li>
+                <li>
+                  <span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are soft aggregators
+                  (CG, DL-list, DEX average), check each large DEX pool (&ge;$100K TVL). If any diverges &ge;500 bps
+                  from consensus, downgrade to <code className="text-xs">low</code> &mdash; the aggregators may be pricing from
+                  small misleading pools
+                </li>
               </ol>
               <code className="block rounded-lg border bg-muted px-4 py-3 text-xs font-mono">
                 agree(a,b) = |a.price &minus; b.price| / midpoint(a,b) &times; 10000 &le; thresholdBps
@@ -341,7 +364,7 @@ export function MethodologySections() {
                     </tr>
                     <tr>
                       <td className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">low</td>
-                      <td className="py-2 pr-4">Sources disagree beyond threshold</td>
+                      <td className="py-2 pr-4">Sources disagree beyond threshold, or pool challenge fired</td>
                       <td className="py-2">Closest to peg reference used; depeg requires confirmation</td>
                     </tr>
                     <tr>

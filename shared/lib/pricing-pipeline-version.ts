@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.0",
+  currentVersion: "2.1",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+  {
+    version: "2.1",
+    title: "Consensus honesty — independent DL list price, GeckoTerminal probe, pool challenge",
+    date: "2026-03-16",
+    effectiveAt: 1773811200,
+    summary:
+      "Replaced the DL coins API (which mirrored CoinGecko data, creating illusory 2-source agreement) with the independent DL stablecoins list price. Added GeckoTerminal pool-level cross-check for single-source CG-only assets. Added pool challenge guard that downgrades confidence when a large DEX pool diverges from soft-only consensus.",
+    impact: [
+      "Dropped DL coins API from primary consensus — it returned CG-sourced data, making CG+DL agreement tautological",
+      "Added DefiLlama stablecoins list price (weight 1) as a genuinely independent aggregator voice",
+      "Added GeckoTerminal pool probe (weight 1) for single-source CG-only assets with $10K TVL gate",
+      "Pool challenge guard: downgrades soft-only high confidence to 'low' when any $100K+ TVL DEX pool diverges ≥500 bps",
+      "DEWS scoring suppresses degradation bonus for high→single-source transitions to prevent alert spikes",
+      "~130 assets retain genuine high confidence via CG+DL-list agreement; ~27 gain GT cross-check",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "2.0",
     title: "Multi-source consensus with oracle, CEX, and on-chain pricing",
