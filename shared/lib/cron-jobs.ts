@@ -222,6 +222,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     maxConnections: 0, // DB-only snapshot from cached stablecoins data
   },
   {
+    job: "snapshot-chain-supply",
+    label: "Chain supply snapshot",
+    group: "quarter-hourly",
+    intervalSec: 86400,
+    scheduleKey: "quarterHourly",
+    triggerMode: "shared",
+    maxConnections: 0,
+  },
+  {
     job: "snapshot-safety-grade-history",
     label: "Safety grade snapshot",
     group: "daily",

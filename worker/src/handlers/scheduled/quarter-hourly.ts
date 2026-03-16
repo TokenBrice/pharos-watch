@@ -12,6 +12,7 @@ import { sendAlert } from "../../lib/alerts";
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
+import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
 import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
 import { computeAndStoreDEWS } from "../../cron/compute-dews";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
@@ -46,6 +47,10 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
 
     if (stablecoinsCacheSafe) {
       await runQuarterHourlyJob("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
+    }
+
+    if (stablecoinsCacheSafe) {
+      await runQuarterHourlyJob("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
     }
 
     await runQuarterHourlyJob("sync-fx-rates", (signal) =>
