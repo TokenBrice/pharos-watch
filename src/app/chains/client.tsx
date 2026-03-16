@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useChains } from "@/hooks/use-chains";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { ChainSummary, HealthBand } from "@shared/types/chains";
+import type { HealthBand } from "@shared/types/chains";
 
 type SortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
 type SortDir = "asc" | "desc";
