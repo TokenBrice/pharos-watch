@@ -452,18 +452,8 @@ export default function AboutPage() {
                 tracking, liquidity depth, systemic spillovers, and a graveyard for the ones that did not make it.
               </p>
               <p>
-                Development runs through{" "}
-                <a
-                  href="https://github.com/TokenBrice/cmcs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(INLINE_EXTERNAL_LINK_CLASS, "font-mono")}
-                >
-                  cmcs
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>{" "}
-                and a Claude-led, Codex-executed workflow where Claude acts as architect and orchestrator, dispatching
-                Codex agents to implement features in parallel.
+                Pharos is a public good, and designed as a resource to increase transparency for stablecoins: free, open
+                source, and with no plan to monetize. Make the most of it!
               </p>
             </div>
           </CardContent>
