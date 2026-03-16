@@ -19,12 +19,17 @@ const REDSTONE_REQUEST_TIMEOUT_MS = 7_500;
 
 export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = [
   "ALUSD",
+  "AUSD",
+  "CETES",
   "CEUR",
   "DAI",
   "DOLA",
+  "EURC",
   "EURS",
+  "EUSD",
   "FDUSD",
   "FRAX",
+  "FRXUSD",
   "GHO",
   "GYEN",
   "HONEY",
@@ -51,6 +56,22 @@ export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = [
   "sUSDe",
 ] as const;
 
+/**
+ * Maps metadata symbol → RedStone API symbol when they differ.
+ * RedStone is case-sensitive; some feeds use different casing or legacy names.
+ */
+const REDSTONE_API_SYMBOL_MAP: Record<string, string> = {
+  AUSD: "aUSD",
+  EURC: "EUROC",
+  EUSD: "eUSD",
+  FRXUSD: "frxUSD",
+  XAUT: "XAUt",
+};
+
+function toApiSymbol(metaSymbol: string): string {
+  return REDSTONE_API_SYMBOL_MAP[metaSymbol] ?? metaSymbol;
+}
+
 const REDSTONE_TRACKED_SYMBOL_SET = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
 
 function normalizeSymbols(symbols: string[]): string[] {
@@ -76,7 +97,16 @@ async function fetchRedstoneBatch(
   const results = new Map<string, RedstoneResult>();
   if (symbols.length === 0) return results;
 
-  const symbolsParam = symbols.join(",");
+  // Translate metadata symbols to RedStone API symbols and build reverse map
+  const apiToMeta = new Map<string, string>();
+  const apiSymbols: string[] = [];
+  for (const metaSym of symbols) {
+    const apiSym = toApiSymbol(metaSym);
+    apiSymbols.push(apiSym);
+    apiToMeta.set(apiSym, metaSym);
+  }
+
+  const symbolsParam = apiSymbols.join(",");
   const res = await fetchWithRetry(
     `https://api.redstone.finance/prices?symbols=${encodeURIComponent(symbolsParam)}&provider=redstone-primary-prod`,
     { signal, headers: { Accept: "application/json" } },
@@ -89,8 +119,8 @@ async function fetchRedstoneBatch(
   }
 
   const data = (await res.json()) as Record<string, RedstoneEntry | RedstoneEntry[]>;
-  for (const symbol of symbols) {
-    const entry = normalizeEntry(data[symbol]);
+  for (const apiSym of apiSymbols) {
+    const entry = normalizeEntry(data[apiSym]);
     if (!entry?.value || entry.value <= 0) continue;
 
     const venues = new Map<string, number>();
@@ -111,7 +141,9 @@ async function fetchRedstoneBatch(
       ? Math.round((agreeCount / venues.size) * 100)
       : 100;
 
-    results.set(symbol, {
+    // Key results by metadata symbol so callers can look up by asset.symbol
+    const metaSym = apiToMeta.get(apiSym) ?? apiSym;
+    results.set(metaSym, {
       price: entry.value,
       venues,
       venueCount: venues.size,

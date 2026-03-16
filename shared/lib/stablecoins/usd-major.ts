@@ -725,6 +725,7 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "USD.AI savings (sUSDai)", yieldType: "lending-vault" },
     geckoId: "usdai",
+    pythFeedId: "0x2062b35e2893383ffcd1699b01622618fec1d95d1bc6fa81111df38940ee3134",
     deploymentModel: "third-party-bridge",
     collateral: "GPU-backed infrastructure loans (NVIDIA hardware tokenized as on-chain warehouse receipts under UCC law via the CALIBER framework); base USDai is backed 1:1 by wM (M0 Protocol T-bills) and PYUSD (PayPal USD, added as a reserve and settlement asset via a PayPal partnership in December 2025) while sUSDai earns yield from hardware-collateralized credit to AI compute operators",
     pegMechanism: "Minted 1:1 by depositing USDC/USDT converted to wM (M0 T-bill tokens); redeemable 1:1 in fixed 30-day processing windows; sUSDai is an ERC-4626 vault accruing yield from GPU-backed loans; QEV auction mechanism manages redemptions against illiquid collateral",
@@ -1031,6 +1032,7 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
   usd("usx-solstice", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
     llamaId: "310",
     geckoId: "usx",
+    pythFeedId: "0x80950327494d0e7f29bdddb061ed7d1def1d712cec73bc167af02f0664137a16",
     governanceQuality: "wrapper",
     collateral: "USDC and USDT deposited 1:1; plans to expand to SOL, ETH, and BTC collateral",
     pegMechanism: "1:1 collateralization with multi-oracle pricing via Chainlink and Pyth; Chainlink Proof of Reserve provides real-time on-chain verification of reserves; institutional minting ($500K minimum, KYC-gated); permissionless access via Solana DEXs",
