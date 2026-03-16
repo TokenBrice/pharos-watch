@@ -41,6 +41,7 @@ import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
 import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleReclassifyAtomicRoundtrips } from "./api/reclassify-atomic-roundtrips";
 import { handleStressSignals } from "./api/stress-signals";
+import { handleChains } from "./api/chains";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import { handleDiscoveryCandidates } from "./api/discovery";
 import { handleFeedback, type FeedbackEnv } from "./api/feedback";
@@ -207,6 +208,7 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
     ),
   ),
   "stress-signals": withErrorHandler("stress-signals", ({ db, url }) => handleStressSignals(db, url)),
+  chains: withErrorHandler("chains", ({ db }) => handleChains(db)),
   "backfill-dews": withErrorHandler("backfill-dews", ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request)),
   feedback: withErrorHandler("feedback", ({ db, request, feedbackEnv }) =>
     handleFeedback(db, request, feedbackEnv ?? {}),
