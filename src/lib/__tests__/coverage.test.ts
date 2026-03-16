@@ -118,6 +118,8 @@ describe("coverage helpers", () => {
         }),
         marketCapUsd: 800,
         hasPegCoverage: true,
+        consensusSources: ["coingecko", "defillama-list", "pyth"],
+        priceConfidence: "high",
         safetyScore: 82,
         dexCoverageClass: "primary",
         hasYieldCoverage: true,
@@ -155,10 +157,11 @@ describe("coverage helpers", () => {
       1_000,
     );
 
-    expect(summary.availableCount).toBe(2);
-    expect(summary.coveragePct).toBe(100);
-    expect(summary.mcapSharePct).toBe(100);
-    expect(summary.breakdown).toBe("tracked 1 · price-only 1");
+    // headlineFilter requires sourceCount >= 3; only "one" (tracked, 3 sources) passes
+    expect(summary.availableCount).toBe(1);
+    expect(summary.coveragePct).toBe(50);
+    expect(summary.mcapSharePct).toBe(80);
+    expect(summary.breakdown).toBe("tracked 1 · price-only 1 · 5+ sources: 0 · 3-4: 1 · 1-2: 0");
   });
 
   it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {
