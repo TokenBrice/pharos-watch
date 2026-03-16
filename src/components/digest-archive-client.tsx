@@ -51,10 +51,10 @@ function WeeklyRecapSection({ entry }: { entry: { digestTitle: string | null; di
     <div className="mt-8 space-y-4">
       {/* Weekly header */}
       <div className="border-t border-b border-border py-3 space-y-0.5">
-        <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.3em] text-muted-foreground/80">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">
           Weekly Recap
         </p>
-        <p className="text-xs text-muted-foreground/70">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           {formatWeeklyMasthead(entry.generatedAt)}
         </p>
       </div>
