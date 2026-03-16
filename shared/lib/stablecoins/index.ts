@@ -133,6 +133,7 @@ const CANONICAL_ORDER: string[] = [
   "ustb-superstate",
   "ousg-ondo-finance",
   "mtbill-midas",
+  "thbill-theo",
   "wsrusd-reservoir",
   "usdp-parallel",
   "xsgd-straitsx",

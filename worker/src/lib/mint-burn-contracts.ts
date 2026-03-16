@@ -600,6 +600,12 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
   {
+    chain: ETHEREUM, stablecoinId: "thbill-theo",
+    dustThreshold: 10_000, startBlock: 21_900_000,
+    tier: "extended",
+    events: transferMintBurn(),
+  },
+  {
     chain: ETHEREUM, stablecoinId: "wsrusd-reservoir",
     dustThreshold: 10_000, startBlock: 21_900_000,
     tier: "extended",
