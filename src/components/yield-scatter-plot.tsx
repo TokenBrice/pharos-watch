@@ -6,15 +6,16 @@ import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_R
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { computeApyAxis, computeSafetyDomain, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
+import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { YieldRanking, YieldType } from "@shared/types";
 
 interface ScatterDataPoint {
-  x: number; // safety score
-  y: number; // APY 30d
-  plotY: number;
+  x: number; // safety score (original, for tooltip)
+  y: number; // APY 30d (original, for tooltip)
+  plotX: number; // nudged X for rendering
+  plotY: number; // clipped + nudged Y for rendering
   id: string;
   name: string;
   symbol: string;
@@ -174,28 +175,35 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
     [rawData, riskFreeRate],
   );
 
-  const data = useMemo(
-    (): ScatterDataPoint[] =>
-      rawData.map((point) => {
-        const isClipped = apyAxis.clipThreshold !== null && point.y > apyAxis.clipThreshold;
-        return {
-          ...point,
-          plotY: isClipped ? apyAxis.domainMax : point.y,
-          isClipped,
-          clipThreshold: apyAxis.clipThreshold,
-        };
-      }),
-    [apyAxis, rawData],
-  );
-
   const safetyDomain = useMemo(
     () =>
       computeSafetyDomain(
-        data.map((point) => point.x),
+        rawData.map((point) => point.x),
         isMobile,
       ),
-    [data, isMobile],
+    [rawData, isMobile],
   );
+
+  const data = useMemo((): ScatterDataPoint[] => {
+    const clipped = rawData.map((point) => {
+      const isClipped = apyAxis.clipThreshold !== null && point.y > apyAxis.clipThreshold;
+      return {
+        ...point,
+        plotX: point.x,
+        plotY: isClipped ? apyAxis.domainMax : point.y,
+        isClipped,
+        clipThreshold: apyAxis.clipThreshold,
+      };
+    });
+    return nudgeOverlaps(
+      clipped,
+      safetyDomain,
+      [0, apyAxis.domainMax],
+      width || 900,
+      height || 300,
+      isMobile,
+    );
+  }, [apyAxis, rawData, safetyDomain, width, height, isMobile]);
 
   const handleClick = useCallback(
     (entry: unknown) => {
@@ -337,7 +345,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
 
               <XAxis
                 type="number"
-                dataKey="x"
+                dataKey="plotX"
                 domain={safetyDomain}
                 name="Safety Score"
                 label={

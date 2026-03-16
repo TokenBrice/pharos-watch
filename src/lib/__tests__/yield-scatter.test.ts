@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeApyAxis, computeSafetyDomain } from "@/lib/yield-scatter";
+import { computeApyAxis, computeSafetyDomain, nudgeOverlaps } from "@/lib/yield-scatter";
 
 describe("computeSafetyDomain", () => {
   it("falls back to the full safety range when no scores are available", () => {
@@ -13,6 +13,61 @@ describe("computeSafetyDomain", () => {
 
   it("keeps the safety threshold visible when all scores are high", () => {
     expect(computeSafetyDomain([71, 77, 84], false)).toEqual([55, 90]);
+  });
+});
+
+describe("nudgeOverlaps", () => {
+  const xDomain: [number, number] = [35, 90];
+  const yDomain: [number, number] = [0, 12];
+  const w = 900;
+  const h = 300;
+
+  it("returns points unchanged when there are no overlaps", () => {
+    const points = [
+      { plotX: 40, plotY: 3 },
+      { plotX: 70, plotY: 8 },
+    ];
+    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
+    expect(result[0].plotX).toBe(40);
+    expect(result[1].plotX).toBe(70);
+  });
+
+  it("separates two points at the same coordinates", () => {
+    const points = [
+      { plotX: 66, plotY: 5.22, id: "a" },
+      { plotX: 66, plotY: 5.22, id: "b" },
+    ];
+    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
+    const dx = Math.abs(result[0].plotX - result[1].plotX);
+    const dy = Math.abs(result[0].plotY - result[1].plotY);
+    // They should be pushed apart
+    expect(dx).toBeGreaterThan(0.3);
+    expect(dy).toBeGreaterThan(0.1);
+  });
+
+  it("separates a cluster of three overlapping points", () => {
+    const points = [
+      { plotX: 63, plotY: 3.7 },
+      { plotX: 63, plotY: 3.56 },
+      { plotX: 63, plotY: 3.22 },
+    ];
+    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
+    // All three should end up at distinct positions
+    for (let i = 0; i < result.length; i++) {
+      for (let j = i + 1; j < result.length; j++) {
+        const dist = Math.sqrt(
+          ((result[i].plotX - result[j].plotX) / (55 / w)) ** 2 +
+          ((result[i].plotY - result[j].plotY) / (12 / h)) ** 2,
+        );
+        expect(dist).toBeGreaterThan(5);
+      }
+    }
+  });
+
+  it("returns single-point arrays unchanged", () => {
+    const points = [{ plotX: 50, plotY: 5 }];
+    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
+    expect(result).toEqual(points);
   });
 });
 

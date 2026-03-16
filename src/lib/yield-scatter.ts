@@ -76,6 +76,81 @@ export function computeSafetyDomain(scores: number[], isMobile: boolean): [numbe
   return [start, end];
 }
 
+// ---------------------------------------------------------------------------
+// Overlap nudging — push apart scatter points whose logos would fully overlap
+// ---------------------------------------------------------------------------
+
+const LOGO_DIAMETER_DESKTOP = 16;
+const LOGO_DIAMETER_MOBILE = 14;
+
+interface NudgeablePoint {
+  plotX: number;
+  plotY: number;
+}
+
+/**
+ * Detect scatter points whose logo circles overlap and apply small
+ * deterministic coordinate offsets to separate them. Original `x` / `y`
+ * values stay intact for tooltips; only `plotX` / `plotY` are adjusted.
+ */
+export function nudgeOverlaps<T extends NudgeablePoint>(
+  points: T[],
+  xDomain: [number, number],
+  yDomain: [number, number],
+  chartWidth: number,
+  chartHeight: number,
+  mobile: boolean,
+): T[] {
+  if (points.length <= 1) return points;
+
+  const result = points.map((p) => ({ ...p }));
+  const logoDiam = mobile ? LOGO_DIAMETER_MOBILE : LOGO_DIAMETER_DESKTOP;
+  const xSpan = xDomain[1] - xDomain[0];
+  const ySpan = yDomain[1] - yDomain[0];
+  if (xSpan === 0 || ySpan === 0 || chartWidth === 0 || chartHeight === 0) return result;
+
+  // Collision threshold: one logo diameter in data-space units
+  const xThresh = (logoDiam / chartWidth) * xSpan;
+  const yThresh = (logoDiam / chartHeight) * ySpan;
+
+  // Push distance per pass (each point moves half this amount)
+  const pushX = xThresh * 0.6;
+  const pushY = yThresh * 0.6;
+
+  // Iterative collision resolution (max 3 passes for chained clusters)
+  for (let pass = 0; pass < 3; pass++) {
+    let moved = false;
+    for (let i = 0; i < result.length; i++) {
+      for (let j = i + 1; j < result.length; j++) {
+        const dx = result[j].plotX - result[i].plotX;
+        const dy = result[j].plotY - result[i].plotY;
+        if (Math.abs(dx) >= xThresh || Math.abs(dy) >= yThresh) continue;
+
+        // Deterministic angle — 45° for near-exact overlaps
+        const angle =
+          Math.abs(dx) < xThresh * 0.05 && Math.abs(dy) < yThresh * 0.05
+            ? Math.PI / 4
+            : Math.atan2(dy, dx);
+
+        const cx = pushX * 0.5 * Math.cos(angle);
+        const cy = pushY * 0.5 * Math.sin(angle);
+        result[i].plotX -= cx;
+        result[i].plotY -= cy;
+        result[j].plotX += cx;
+        result[j].plotY += cy;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// APY axis computation
+// ---------------------------------------------------------------------------
+
 export function computeApyAxis(apys: number[], riskFreeRate: number): ApyAxisConfig {
   if (apys.length === 0) {
     return {
