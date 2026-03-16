@@ -12,6 +12,7 @@ export const METHODOLOGY_SECTIONS = [
   { id: "pegscore-dews-methodology", label: "PegScore + DEWS" },
   { id: "contagion-stress-test-methodology", label: "Contagion Test" },
   { id: "blacklist-tracker-methodology", label: "Blacklist Tracker" },
+  { id: "chain-health-score", label: "Chain Health Score" },
 ] as const;
 
 export const METHODOLOGY_READING_STEPS = [

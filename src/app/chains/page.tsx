@@ -32,7 +32,7 @@ export default function ChainsPage() {
       path="/chains/"
       title="Chains"
       statusBadge={{ status: "experimental" }}
-      methodology={{ version: "1.0", changelogPath: "/methodology#chain-health-score" }}
+      methodology={{ version: "1.1", changelogPath: "/methodology#chain-health-score" }}
       leadParagraphs={[
         "Blockchain networks ranked by stablecoin supply and health. The Chain Health Score rates each chain's stablecoin ecosystem on quality, concentration, peg stability, and backing diversity.",
       ]}
