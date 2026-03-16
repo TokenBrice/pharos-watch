@@ -174,12 +174,12 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   "safety-score-history": withErrorHandler("safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)),
   "mint-burn-flows": withErrorHandler("mint-burn-flows", ({ db, url }) => handleMintBurnFlows(db, url)),
   "mint-burn-events": withErrorHandler("mint-burn-events", ({ db, url }) => handleMintBurnEvents(db, url)),
-  "backfill-cg-prices": withErrorHandler("backfill-cg-prices", ({ db, url, trustedAdmin, request }) =>
+  "backfill-cg-prices": withErrorHandler("backfill-cg-prices", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
     runIdempotentAdminAction(
       db,
       "backfill-cg-prices",
       request,
-      () => handleBackfillCgPrices(db, url, trustedAdmin, request),
+      () => handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
     ),
   ),
   "backfill-mint-burn-prices": withErrorHandler("backfill-mint-burn-prices", ({ db, url, trustedAdmin, request }) =>

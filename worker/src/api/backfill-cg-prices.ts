@@ -24,6 +24,7 @@ export const handleBackfillCgPrices = withErrorHandler(
     url: URL,
     trustedAdmin?: boolean,
     request?: Request,
+    cgApiKey?: string | null,
   ): Promise<Response> => {
     return withAdmin(request, async () => {
       const selection = selectBackfillCoins(url, TRACKED_STABLECOINS, {
@@ -38,6 +39,7 @@ export const handleBackfillCgPrices = withErrorHandler(
         return noCoinsInBatchResponse();
       }
 
+      const apiKey = cgApiKey ?? null;
       let totalPricesFilled = 0;
       let totalRowsInserted = 0;
       const coinDetails: CoinResult[] = [];
@@ -57,8 +59,8 @@ export const handleBackfillCgPrices = withErrorHandler(
 
         // Fetch historical prices + market caps from CoinGecko
         const cgRes = await fetchWithRetry(
-          cgUrl(`/coins/${meta.geckoId}/market_chart?vs_currency=usd&days=max`),
-          { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+          cgUrl(`/coins/${meta.geckoId}/market_chart?vs_currency=usd&days=max`, apiKey),
+          { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey) },
           2,
           { timeoutMs: 30_000 },
         );
