@@ -7,3 +7,4 @@ export * from "./status";
 export * from "./yield";
 export * from "./mint-burn";
 export * from "./redemption";
+export * from "./chains";
