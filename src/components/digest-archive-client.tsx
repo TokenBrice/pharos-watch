@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestArchive } from "@/hooks/api-hooks";
-import { DailyDigest } from "@/components/daily-digest";
+import { DailyDigest, DigestFullDisplay } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
@@ -13,7 +13,6 @@ import { formatCurrency } from "@shared/lib/format";
 import { splitDigestParagraphs } from "@/lib/digest";
 import { cn } from "@/lib/utils";
 
-const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, i) => i);
 
 function tsToDateSlug(ts: number): string {
@@ -48,52 +47,15 @@ function WeeklyRecapSection({ entry }: { entry: { digestTitle: string | null; di
   if (paragraphs.length === 0) return null;
 
   return (
-    <div className="mt-8 space-y-4">
-      {/* Weekly header */}
-      <div className="border-t border-b border-border py-3 space-y-0.5">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-          Weekly Recap
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {formatWeeklyMasthead(entry.generatedAt)}
-        </p>
-      </div>
-
-      <div className="space-y-3 py-2 mx-auto max-w-[68ch]">
-        <h3 className="text-xl font-bold sm:text-2xl" style={SERIF}>
-          {entry.digestTitle || "The Week in Review"}
-        </h3>
-
-        {paragraphs.map((para, i) => {
-          const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
-          const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
-          const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
-          return (
-            <p
-              key={i}
-              className={cn(
-                "text-[1.02rem] leading-8 text-foreground/88",
-                i === 0 && "border-l-2 border-border/60 pl-4 italic",
-              )}
-              style={SERIF}
-            >
-              {headerText && (
-                <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
-                  {headerText}.{" "}
-                </span>
-              )}
-              {bodyText}
-            </p>
-          );
-        })}
-
-        <Link
-          href={`/digest/${tsToDateSlug(entry.generatedAt)}/`}
-          className="inline-block mt-1 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Full weekly detail &rarr;
-        </Link>
-      </div>
+    <div className="mt-8">
+      <DigestFullDisplay
+        label="Weekly Recap"
+        dateString={formatWeeklyMasthead(entry.generatedAt)}
+        title={entry.digestTitle || "The Week in Review"}
+        paragraphs={paragraphs}
+        ctaHref={`/digest/${tsToDateSlug(entry.generatedAt)}/`}
+        ctaLabel="Full weekly detail"
+      />
     </div>
   );
 }
@@ -123,16 +85,15 @@ export function DigestArchiveClient() {
     return data?.digests.find((d) => d.digestType === "weekly") ?? null;
   }, [data]);
 
-  // Skip today's digest (shown in broadsheet) and latest weekly (shown separately), filter by month
+  // Skip only today's digest (shown in broadsheet above), filter by month
   const latestSlug = data?.digests[0] ? tsToDateSlug(data.digests[0].generatedAt) : null;
   const wireDigests = useMemo(() => {
     if (!data?.digests || !activeMonth) return [];
     return data.digests.filter((d) => {
       if (tsToDateSlug(d.generatedAt) === latestSlug) return false;
-      if (latestWeekly && d.generatedAt === latestWeekly.generatedAt) return false;
       return tsToMonthKey(d.generatedAt) === activeMonth;
     });
-  }, [data, activeMonth, latestSlug, latestWeekly]);
+  }, [data, activeMonth, latestSlug]);
 
   if (isLoading) {
     return (
@@ -182,9 +143,7 @@ export function DigestArchiveClient() {
       />
 
       {/* Broadsheet: today's digest */}
-      <div className="[&>div]:lg:max-w-[84ch]">
-        <DailyDigest variant="full" />
-      </div>
+      <DailyDigest variant="full" />
 
       {/* Weekly recap (latest) */}
       {latestWeekly && latestWeekly.digestExtended && (
@@ -228,54 +187,62 @@ export function DigestArchiveClient() {
             No other digests this month.
           </p>
         )}
-        {wireDigests.map((d) => (
-          <Link
-            key={d.generatedAt}
-            href={`/digest/${tsToDateSlug(d.generatedAt)}/`}
-            className="flex items-start sm:items-center gap-3 sm:gap-4 py-2.5 border-b border-border/30 hover:bg-muted/20 transition-colors -mx-2 px-2 rounded"
-          >
-            <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 sm:mt-0">
-              {formatWireDate(d.generatedAt)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium truncate flex items-center gap-1.5">
-                {d.digestTitle || "Signal & Noise"}
-                {d.digestType === "weekly" && (
-                  <span className="rounded bg-accent/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-accent-foreground/80">
-                    Weekly
-                  </span>
-                )}
-              </span>
-              {(d.psiBand || d.totalMcapUsd != null) && (
-                <div className="flex items-center gap-2 mt-0.5 sm:hidden">
-                  {d.psiBand && d.psiScore != null && (
-                    <span className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}>
-                      {d.psiBand} {d.psiScore.toFixed(1)}
-                    </span>
-                  )}
-                  {d.totalMcapUsd != null && (
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {formatCurrency(d.totalMcapUsd, 0)}
-                    </span>
-                  )}
-                </div>
+        {wireDigests.map((d) => {
+          const isWeekly = d.digestType === "weekly";
+          return (
+            <Link
+              key={d.generatedAt}
+              href={`/digest/${tsToDateSlug(d.generatedAt)}/`}
+              className={cn(
+                "flex items-start sm:items-center gap-3 sm:gap-4 border-b transition-colors -mx-2 px-2 rounded",
+                isWeekly
+                  ? "py-3.5 border-border/60 hover:bg-muted/30 border-l-2 border-l-foreground/20"
+                  : "py-2.5 border-border/30 hover:bg-muted/20",
               )}
-            </div>
-            {d.psiBand && d.psiScore != null && (
-              <span
-                className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}
-              >
-                {d.psiBand} {d.psiScore.toFixed(1)}
+            >
+              <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 sm:mt-0">
+                {formatWireDate(d.generatedAt)}
               </span>
-            )}
-            {d.totalMcapUsd != null && (
-              <span className="text-xs font-mono text-muted-foreground shrink-0 hidden sm:inline">
-                {formatCurrency(d.totalMcapUsd, 0)}
-              </span>
-            )}
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5 sm:mt-0" />
-          </Link>
-        ))}
+              <div className="flex-1 min-w-0">
+                <span className={cn("truncate flex items-center gap-1.5", isWeekly ? "text-sm font-semibold" : "text-sm font-medium")}>
+                  {d.digestTitle || (isWeekly ? "The Week in Review" : "Signal & Noise")}
+                  {isWeekly && (
+                    <span className="rounded border border-border/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Weekly
+                    </span>
+                  )}
+                </span>
+                {(d.psiBand || d.totalMcapUsd != null) && (
+                  <div className="flex items-center gap-2 mt-0.5 sm:hidden">
+                    {d.psiBand && d.psiScore != null && (
+                      <span className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}>
+                        {d.psiBand} {d.psiScore.toFixed(1)}
+                      </span>
+                    )}
+                    {d.totalMcapUsd != null && (
+                      <span className="text-xs font-mono text-muted-foreground">
+                        {formatCurrency(d.totalMcapUsd, 0)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {d.psiBand && d.psiScore != null && (
+                <span
+                  className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}
+                >
+                  {d.psiBand} {d.psiScore.toFixed(1)}
+                </span>
+              )}
+              {d.totalMcapUsd != null && (
+                <span className="text-xs font-mono text-muted-foreground shrink-0 hidden sm:inline">
+                  {formatCurrency(d.totalMcapUsd, 0)}
+                </span>
+              )}
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5 sm:mt-0" />
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

@@ -19,6 +19,66 @@ function formatMasthead(ts: number): string {
 
 const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
 
+interface DigestFullDisplayProps {
+  label: string;
+  dateString: string;
+  title: string;
+  paragraphs: string[];
+  ctaHref?: string;
+  ctaLabel?: string;
+}
+
+export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHref, ctaLabel }: DigestFullDisplayProps) {
+  return (
+    <div className="animate-in fade-in duration-300 mx-auto max-w-[68ch]">
+      <div className="border-t border-b border-border py-3 text-left">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+          {label}
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{dateString}</p>
+      </div>
+
+      <div className="space-y-3 py-5">
+        <h2 className="text-2xl font-bold sm:text-3xl" style={SERIF}>
+          {title}
+        </h2>
+
+        {paragraphs.map((para, i) => {
+          const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
+          const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
+          const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
+          return (
+            <p
+              key={i}
+              className={cn(
+                "text-[1.05rem] leading-8 text-foreground/92",
+                i === 0 && "border-l-2 border-border/60 pl-4 italic",
+              )}
+              style={SERIF}
+            >
+              {headerText && (
+                <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
+                  {headerText}.{" "}
+                </span>
+              )}
+              {bodyText}
+            </p>
+          );
+        })}
+
+        {ctaHref && ctaLabel && (
+          <Link
+            href={ctaHref}
+            className="inline-block mt-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {ctaLabel} &rarr;
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const digestDisplay = Newsreader({
   weight: "variable",
   style: ["normal", "italic"],
@@ -74,97 +134,47 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
     );
   }
 
+  if (!isPreview) {
+    return (
+      <DigestFullDisplay
+        label="Pharos Daily Digest"
+        dateString={data?.generatedAt ? formatMasthead(data.generatedAt) : ""}
+        title={data?.digestTitle || "Signal & Noise"}
+        paragraphs={visibleParagraphs}
+      />
+    );
+  }
+
   return (
-    <div className={cn("animate-in fade-in duration-300", isPreview ? "space-y-5" : "mx-auto max-w-[68ch]")}>
-      {/* Masthead */}
-      <div
-        className={cn(
-          "border-t border-b border-border py-3 text-left",
-          isPreview && "flex flex-wrap items-end justify-between gap-3",
-        )}
-      >
-        <p
-          className={cn(
-            isPreview
-              ? "font-mono text-[0.76rem] font-semibold uppercase tracking-[0.34em] text-muted-foreground/90 sm:text-[0.8rem]"
-              : "text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground",
-          )}
-        >
+    <div className="animate-in fade-in duration-300 space-y-5">
+      {/* Masthead (preview) */}
+      <div className="border-t border-b border-border py-3 text-left flex flex-wrap items-end justify-between gap-3">
+        <p className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.34em] text-muted-foreground/90 sm:text-[0.8rem]">
           Pharos Daily Digest
         </p>
         {data?.generatedAt && (
-          <p className={cn("mt-0.5 text-xs", isPreview ? "text-muted-foreground/85" : "text-muted-foreground")}>
+          <p className="mt-0.5 text-xs text-muted-foreground/85">
             {formatMasthead(data.generatedAt)}
           </p>
         )}
       </div>
 
-      {isPreview ? (
-        <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
-          <div className="space-y-5">
-            <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
-              <span className="h-px w-12 bg-border/70" />
-              <span className="font-mono font-medium">Executive Summary</span>
-            </div>
-            <h2
-              className={cn(
-                digestDisplay.className,
-                "max-w-[10ch] text-[clamp(2.8rem,6vw,5rem)] font-semibold leading-[0.88] tracking-[-0.045em] text-foreground/98 [text-wrap:balance]",
-              )}
-            >
-              {data?.digestTitle || "Signal & Noise"}
-            </h2>
+      <div className="grid gap-6 py-6 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)] lg:gap-10">
+        <div className="space-y-5">
+          <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
+            <span className="h-px w-12 bg-border/70" />
+            <span className="font-mono font-medium">Executive Summary</span>
           </div>
-          <div className="flex min-w-0 flex-col gap-4">
-            {visibleParagraphs.map((para, i) => {
-              const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
-              const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
-              const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
-              return (
-                <p
-                  key={i}
-                  className={cn(
-                    "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
-                    i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
-                  )}
-                  style={SERIF}
-                >
-                  {headerText && (
-                    <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
-                      {headerText}.{" "}
-                    </span>
-                  )}
-                  {bodyText}
-                </p>
-              );
-            })}
-            {shouldShowCta && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
-                <Link
-                  href="/digest/"
-                  className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {ctaLabel} &rarr;
-                </Link>
-                <span className="text-border/70">|</span>
-                <a
-                  href="https://t.me/pharoswatch"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Telegram &rarr;
-                </a>
-              </div>
+          <h2
+            className={cn(
+              digestDisplay.className,
+              "max-w-[10ch] text-[clamp(2.8rem,6vw,5rem)] font-semibold leading-[0.88] tracking-[-0.045em] text-foreground/98 [text-wrap:balance]",
             )}
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3 py-5">
-          <h2 className="text-2xl font-bold sm:text-3xl" style={SERIF}>
+          >
             {data?.digestTitle || "Signal & Noise"}
           </h2>
-
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
           {visibleParagraphs.map((para, i) => {
             const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
             const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
@@ -173,8 +183,8 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
               <p
                 key={i}
                 className={cn(
-                  "text-[1.05rem] leading-8 text-foreground/92",
-                  i === 0 && "border-l-2 border-border/60 pl-4 italic",
+                  "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
+                  i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
                 )}
                 style={SERIF}
               >
@@ -187,17 +197,27 @@ export function DailyDigest({ variant = "full" }: DailyDigestProps) {
               </p>
             );
           })}
-
           {shouldShowCta && (
-            <Link
-              href="/digest/"
-              className="inline-block mt-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {ctaLabel} &rarr;
-            </Link>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
+              <Link
+                href="/digest/"
+                className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {ctaLabel} &rarr;
+              </Link>
+              <span className="text-border/70">|</span>
+              <a
+                href="https://t.me/pharoswatch"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[0.76rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Telegram &rarr;
+              </a>
+            </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
