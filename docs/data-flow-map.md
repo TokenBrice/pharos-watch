@@ -41,7 +41,7 @@ Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worke
 - `11 * * * *`: live reserve sync, then redemption backstop sync
 - `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram subscriber alerts + cemetery announcements
 - `0 8 * * *`: supply snapshot, safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status
-- `5 8 * * *`: bluechip sync, daily digest, discovery scan
+- `5 8 * * *`: bluechip sync, daily digest, weekly recap, discovery scan
 
 ## Freshness Contract (Frontend)
 

@@ -414,7 +414,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (74 total)
+├── migrations/                   # D1 SQL migration files (75 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata
@@ -465,6 +465,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── snapshot-psi.ts       # Daily PSI snapshot → D1 (daily, 8AM UTC)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
     │   ├── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 08:05 UTC)
+    │   ├── weekly-recap.ts      # AI-generated weekly market recap via Claude API (weekly, 08:05 UTC)
     │   ├── discovery-scan.ts     # Daily stablecoin coverage discovery → D1 (daily, 08:05 UTC)
     │   ├── compute-dews.ts       # DEWS computation cron (every 15min, after sync-stablecoins)
     │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety transitions (dedicated every-5-minute trigger)

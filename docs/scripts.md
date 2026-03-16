@@ -40,9 +40,9 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/pull-re
 - `check-worker-import-boundary.mjs` via `npm run check:worker-boundary`
 - `check-worker-migrations.mjs` via `npm run check:migrations`
 - `check-critical-coverage.mjs` via `npm run coverage:critical`
+- `check-cron-schedule-sync.ts` via `npm run check:cron-sync`
+- `check-doc-counts.mjs` via `npm run check:doc-counts`
 - `check-duplicate-exports.mjs` via `npm run check:duplicate-exports`
-
-`scripts/check-cron-schedule-sync.ts` is intentionally not a CI gate today. Run it locally whenever you change `worker/wrangler.toml` cron expressions or `shared/lib/cron-jobs.ts`.
 
 ## Operational Notes
 

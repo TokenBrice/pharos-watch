@@ -153,7 +153,8 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | -------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                                           |
 | Per-coin | `public, s-maxage=300, max-age=10`   | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                                         |
-| Standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, dex-liquidity, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
+| Standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
+| Custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity                                                                                                                                                      |
 | Slow     | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, digest-snapshot                                                                     |
 
 Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetNoStoreHeader()` in `worker/src/router.ts`.
@@ -539,6 +540,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                            |
 | `CURVE_LIQUIDITY_API`                | `curve-liquidity-api`         | `sync-dex-liquidity` (Curve pool liquidity fetch)                            |
 | `FX_REALTIME`                        | `fx-realtime`                 | `sync-fx-rates` real-time FX cross-validation                                |
+| `GECKO_TERMINAL_PROBE`               | `geckoterminal-probe`         | `enrich-prices` GeckoTerminal price probe fallback                           |
 | `TWITTER_API`                        | `twitter-api`                 | `daily-digest` social posting                                                |
 | `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
 | Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured source or exact shared-source cluster    |
@@ -867,7 +869,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 23 cron jobs across 10 triggers via `CRON_INTERVALS` in `worker/src/lib/cron-schedule.ts`, which is derived from the shared `shared/lib/cron-jobs.ts` source of truth:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 25 cron jobs across 10 triggers via `CRON_INTERVALS` in `shared/lib/cron-jobs.ts`:
 
 | Job                             | Interval       | Trigger                                     |
 | ------------------------------- | -------------- | ------------------------------------------- |
@@ -885,6 +887,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `sync-dex-liquidity`            | 1,800s (30min) | `10,40 * * * *`                             |
 | `sync-yield-data`               | 1,800s (30min) | `10,40 * * * *`                             |
 | `snapshot-supply`               | 86,400s (24h)  | `*/15 * * * *` (primary) / `0 8 * * *` (fallback) |
+| `snapshot-chain-supply`         | 86,400s (24h)  | `*/15 * * * *`                              |
 | `snapshot-safety-grade-history` | 86,400s (24h)  | `0 8 * * *`                                 |
 | `fetch-tbill-rate`              | 86,400s (24h)  | `0 8 * * *`                                 |
 | `snapshot-psi`                  | 86,400s (24h)  | `0 8 * * *`                                 |
@@ -893,6 +896,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `sync-redemption-backstops`     | 3,600s (1h)    | `11 * * * *`                                |
 | `sync-bluechip`                 | 86,400s (24h)  | `5 8 * * *`                                 |
 | `daily-digest`                  | 86,400s (24h)  | `5 8 * * *`                                 |
+| `weekly-recap`                  | 604,800s (7d)  | `5 8 * * *`                                 |
 | `discovery-scan`                | 86,400s (24h)  | `5 8 * * *`                                 |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating.
@@ -938,8 +942,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/auth.ts`                           | Admin auth: `ops-api` Access/service-token signal validation                                                                                                        |
 | `worker/src/lib/alerts.ts`                         | Webhook alerts: auto-detects Discord/Slack format                                                                                                                   |
 | `worker/src/lib/constants.ts`                      | Shared constants: API URLs, thresholds, cache profiles                                                                                                              |
-| `worker/src/lib/cron-schedule.ts`                  | Worker-facing `CRON_INTERVALS` export derived from shared cron metadata                                                                                             |
-| `shared/lib/cron-jobs.ts`                          | Shared cron expressions, per-job intervals, and status-page grouping/trigger metadata                                                                               |
+| `shared/lib/cron-jobs.ts`                          | Shared cron expressions, per-job intervals, `CRON_INTERVALS`, and status-page grouping/trigger metadata                                                             |
 | `shared/lib/status-thresholds.ts`                  | Shared status threshold constants for frontend + worker data-quality/status bands                                                                                   |
 | `worker/src/lib/blacklist-gaps.ts`                 | Shared blacklist gap query helper (Tron null-amount exclusion + recent window)                                                                                      |
 | `worker/src/lib/chain-registry.ts`                 | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains                                                                              |
