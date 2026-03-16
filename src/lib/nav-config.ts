@@ -7,6 +7,7 @@ import {
   ShieldBan,
   Skull,
   Info,
+  Layers,
   BookOpen,
   FlaskConical,
   ArrowLeftRight,
@@ -55,6 +56,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Data",
     items: [
+      { href: "/chains", label: "Chains", icon: Layers, description: "Stablecoin activity per chain" },
       { href: "/liquidity", label: "Liquidity Tracker", icon: Droplets, description: "DEX liquidity analysis" },
       { href: "/depeg", label: "Depeg Tracker", icon: Activity, description: "Live peg monitoring & early warnings" },
       { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Mint and burn flow tracker" },
