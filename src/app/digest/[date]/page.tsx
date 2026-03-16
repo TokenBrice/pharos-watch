@@ -118,7 +118,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             {editionKicker}
           </p>
         )}
-        <h1 className="text-3xl font-extrabold tracking-tighter">{digest.title}</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">{digest.title}</h1>
         <p className="text-sm text-muted-foreground">{formatted}</p>
       </div>
 
