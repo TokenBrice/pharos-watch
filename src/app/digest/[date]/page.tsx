@@ -127,7 +127,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
           <p className="pharos-kicker">Executive Summary</p>
           <p
             className="mt-3 text-[1.1rem] leading-8 text-foreground/92"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+            style={{ fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" }}
           >
             {digest.text}
           </p>
@@ -142,7 +142,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
               <p
                 key={i}
                 className="text-[1.05rem] leading-8 text-foreground/92"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                style={{ fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" }}
               >
                 {headerText && (
                   <span className="font-semibold tracking-wide">

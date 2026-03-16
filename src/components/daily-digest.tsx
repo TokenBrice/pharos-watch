@@ -17,7 +17,7 @@ function formatMasthead(ts: number): string {
   });
 }
 
-const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
+const SERIF = { fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" };
 
 interface DigestFullDisplayProps {
   label: string;

@@ -47,7 +47,7 @@ function formatWeeklyMasthead(ts: number): string {
   return `${start} – ${end}`;
 }
 
-const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
+const SERIF = { fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" };
 
 function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number; editionNumber?: number } }) {
   const paragraphs = splitDigestParagraphs(entry.digestExtended);
