@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
@@ -36,6 +37,7 @@ const LAST_EDITED: Record<string, string> = {
   "/stablecoins/governance/cefi/": "2026-03-07",
   "/stablecoins/governance/cefi-dependent/": "2026-03-07",
   "/stablecoins/governance/defi/": "2026-03-07",
+  "/chains/": "2026-03-16",
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -209,6 +211,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })
   );
 
+  const activeChainIds = new Set<string>();
+  for (const coin of TRACKED_STABLECOINS) {
+    if (coin.contracts) {
+      for (const c of coin.contracts) {
+        if (CHAIN_META[c.chain]) activeChainIds.add(c.chain);
+      }
+    }
+  }
+  const chainPages: MetadataRoute.Sitemap = [
+    {
+      url: "https://pharos.watch/chains/",
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    ...[...activeChainIds].sort().map((chainId) => ({
+      url: `https://pharos.watch/chains/${chainId}/`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.5,
+    })),
+  ];
+
   const pegPages: MetadataRoute.Sitemap = ACTIVE_PEGS.map((peg) => ({
     url: `https://pharos.watch/stablecoins/${PEG_SLUGS[peg]}/`,
     lastModified: now,
@@ -237,5 +262,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...stablecoinPages, ...pegPages, ...taxonomyPages, ...comparisonPages, ...digestPages];
+  return [...staticPages, ...stablecoinPages, ...chainPages, ...pegPages, ...taxonomyPages, ...comparisonPages, ...digestPages];
 }

@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { CHAIN_META } from "@shared/lib/chains";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ChainsLeaderboardClient } from "./client";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -9,7 +12,20 @@ export const metadata: Metadata = buildPageMetadata({
   canonical: "/chains/",
 });
 
+function getActiveChainIds(): string[] {
+  const chainIds = new Set<string>();
+  for (const coin of TRACKED_STABLECOINS) {
+    if (coin.contracts) {
+      for (const contract of coin.contracts) {
+        if (CHAIN_META[contract.chain]) chainIds.add(contract.chain);
+      }
+    }
+  }
+  return Array.from(chainIds).sort();
+}
+
 export default function ChainsPage() {
+  const chainIds = getActiveChainIds();
   return (
     <FeaturePageShell
       breadcrumbName="Chains"
@@ -22,6 +38,16 @@ export default function ChainsPage() {
       ]}
     >
       <ChainsLeaderboardClient />
+      {/* Server-rendered chain links for SEO crawlability */}
+      <nav className="sr-only" aria-label="All chain profiles">
+        <ul>
+          {chainIds.map((id) => (
+            <li key={id}>
+              <Link href={`/chains/${id}/`}>{CHAIN_META[id]?.name ?? id}</Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </FeaturePageShell>
   );
 }
