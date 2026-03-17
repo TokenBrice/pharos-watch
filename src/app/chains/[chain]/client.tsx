@@ -24,6 +24,8 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { MethodologyLabel, MethodologyHint, MethodologyCardActions } from "@/components/methodology-hint";
 import type { ChainSummary } from "@shared/types/chains";
 import { TrendingUp, TrendingDown, Minus, ChevronRight, Info } from "lucide-react";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import logos from "../../../../data/logos.json";
 
 const BACKING_BAR_COLORS: Record<string, string> = {
   "rwa-backed": "bg-sky-500",
@@ -275,11 +277,13 @@ function CompositionSection({ chainId }: { chainId: string }) {
             {coins.slice(0, 10).map((coin, i) => (
               <div key={coin.id} className="group flex items-center gap-2 text-sm">
                 <span className="w-5 text-right text-xs tabular-nums text-muted-foreground">{i + 1}</span>
+                <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={20} />
                 <Link
                   href={buildStablecoinUrl(coin.id)}
                   className="pharos-focus-ring flex flex-1 items-center gap-1 truncate font-medium hover:text-primary"
                 >
-                  {coin.name} ({coin.symbol})
+                  <span className="hidden sm:inline">{coin.name}</span>
+                  <span className="text-muted-foreground">({coin.symbol})</span>
                   <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
                 </Link>
                 <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
@@ -325,7 +329,8 @@ function CompositionBlock({
       onMouseLeave={() => setIsHovered(false)}
       title={`${coin.name} (${coin.symbol}) - Click to view details`}
     >
-      <span className="font-semibold">{coin.symbol}</span>
+      <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={shouldSpan ? 32 : 24} />
+      <span className="mt-1 font-semibold">{coin.symbol}</span>
       <span className="text-muted-foreground">{(percentage * 100).toFixed(1)}%</span>
       <span className={cn("font-mono text-[10px] transition-opacity", isHovered ? "opacity-100" : "opacity-70")}>
         {formatChainUsd(coin.supplyOnChain)}
@@ -499,8 +504,9 @@ function StablecoinTable({
                 >
                   <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{i + 1}</td>
                   <td className="px-3 py-2.5">
-                    <span className="flex items-center gap-1 font-medium group-hover:text-primary">
-                      {coin.name}
+                    <span className="flex items-center gap-2 font-medium group-hover:text-primary">
+                      <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={24} />
+                      <span className="hidden sm:inline">{coin.name}</span>
                       <span className="text-muted-foreground">({coin.symbol})</span>
                       <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
                     </span>
