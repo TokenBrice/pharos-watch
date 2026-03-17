@@ -11,7 +11,7 @@ const FOOTER_PRIMARY_LINKS = [
   { href: "/yield/", label: "Yield" },
   { href: "/coverage/", label: "Coverage" },
   { href: "/methodology/", label: "Methodology" },
-  { href: "/about/", label: "PHAROS" },
+  { href: "/about/", label: "About" },
 ] as const;
 
 export function Footer() {
