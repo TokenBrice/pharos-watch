@@ -179,6 +179,7 @@ const CANONICAL_ORDER: string[] = [
   "eur-qivalis",
   "pusd-polaris",
   "pgold-polaris",
+  "usg-tangent",
   "klarnausd-klarna",
 ];
 

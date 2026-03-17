@@ -2863,6 +2863,19 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/polarisfinance_" },
     ],
   }),
+  usd("usg-tangent", "Tangent USD", "USG", "crypto-backed", "decentralized", {
+    status: "pre-launch",
+    announcedDate: "2026-03",
+    expectedLaunchDate: "2026-Q2",
+    launchPhase: "announced",
+    launchPhaseDetail: "CDP stablecoin backed by productive DeFi collateral (Curve LP, Pendle PT); peg via dynamic rates inspired by crvUSD",
+    yieldBearing: true,
+    links: [
+      { label: "Website", url: "https://www.tangent.finance/" },
+      { label: "Docs", url: "https://docs.tangent.finance/docs/overview" },
+      { label: "Twitter", url: "https://x.com/Tangent_fi" },
+    ],
+  }),
   usd("klarnausd-klarna", "KlarnaUSD", "KLARNAUSD", "rwa-backed", "centralized", {
     status: "pre-launch",
     announcedDate: "2025-11",
