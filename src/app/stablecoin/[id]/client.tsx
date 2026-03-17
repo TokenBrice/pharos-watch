@@ -14,6 +14,7 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
+import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import {
   useStablecoinDetailViewModel,
@@ -161,6 +162,8 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         liqBorderClass={viewModel.liqBorderClass}
         onOpenFeedback={() => setFeedbackOpen(true)}
       />
+
+      <ExploitNoticeBanner notices={viewModel.coin.notices} />
 
       <LongformScrollspyNav
         sections={detailSections}

@@ -2399,6 +2399,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { name: "sUSDS (Sky Savings Rate)", pct: 3, risk: "medium" },
     ],
     notices: [
+      { type: "danger", title: "Recent Exploit", message: "dTRINITY protocol was exploited on March 17 2026, dUSD should be considered at risk. https://x.com/DefimonAlerts/status/2033868831504965995" },
       { type: "warning", title: "Sonic deployment paused", message: "dUSD minting and redemption on Sonic is currently paused per the dTRINITY app." },
     ],
   }),

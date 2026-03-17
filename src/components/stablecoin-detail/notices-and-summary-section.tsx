@@ -54,8 +54,9 @@ export function NoticesAndSummarySection({
         dexPriceCheck={dexPriceCheck}
       />
 
+      {/* Filter out danger notices - they're shown prominently in ExploitNoticeBanner above */}
       {coin.notices && coin.notices.length > 0 && (
-        <CoinNotices notices={coin.notices} />
+        <CoinNotices notices={coin.notices.filter((n) => n.type !== "danger")} />
       )}
     </>
   );
