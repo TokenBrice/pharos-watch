@@ -61,7 +61,7 @@ export function MethodologySectionShell({
   return (
     <Card
       id={id}
-      className={`scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28 ${accentClassName}`}
+      className={`scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] bg-card md:scroll-mt-28 ${accentClassName}`}
     >
       <CardHeader className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">

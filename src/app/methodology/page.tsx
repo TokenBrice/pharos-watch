@@ -114,18 +114,7 @@ export default function MethodologyPage() {
         </div>
       </div>
 
-      <LongformScrollspyNav
-        sections={METHODOLOGY_SECTIONS}
-        railLabel="Jump to Section"
-        navAriaLabel="Methodology section controls"
-        rightSlot={
-          <div className="hidden md:block">
-            <MethodologyModeToggle />
-          </div>
-        }
-      />
-
-      <Card className="hidden rounded-[1.5rem] border border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:block">
+      <Card className="hidden rounded-xl border border-border/70 bg-card md:block">
         <CardHeader className="space-y-3 pb-2">
           <CardTitle as="h2">How to Read This Page</CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -149,6 +138,17 @@ export default function MethodologyPage() {
           ))}
         </CardContent>
       </Card>
+
+      <LongformScrollspyNav
+        sections={METHODOLOGY_SECTIONS}
+        railLabel="Jump to Section"
+        navAriaLabel="Methodology section controls"
+        rightSlot={
+          <div className="hidden md:block">
+            <MethodologyModeToggle />
+          </div>
+        }
+      />
 
       <MethodologySections />
     </div>

@@ -35,7 +35,7 @@ export function MethodologySections() {
       {/* Pricing Pipeline */}
       <Card
         id="pricing-pipeline-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-blue-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-blue-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -222,55 +222,55 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">CoinGecko</td>
                       <td className="py-2 pr-4">2</td>
                       <td className="py-2 pr-4">Aggregator</td>
                       <td className="py-2">Primary market data via <code className="text-xs">/simple/price</code></td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">DefiLlama (list)</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">Aggregator</td>
                       <td className="py-2">Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Pyth Network</td>
                       <td className="py-2 pr-4">2</td>
                       <td className="py-2 pr-4">Oracle</td>
                       <td className="py-2">Hermes endpoint with confidence intervals</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Binance</td>
                       <td className="py-2 pr-4">2</td>
                       <td className="py-2 pr-4">CEX</td>
                       <td className="py-2">Single batch call for all spot tickers</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Coinbase</td>
                       <td className="py-2 pr-4">2</td>
                       <td className="py-2 pr-4">CEX</td>
                       <td className="py-2">Per-symbol spot prices</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">RedStone</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">Oracle</td>
                       <td className="py-2">Per-venue breakdown with agreement %</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Curve on-chain</td>
                       <td className="py-2 pr-4">3</td>
                       <td className="py-2 pr-4">On-chain</td>
                       <td className="py-2">StableSwap implied prices via <code className="text-xs">get_dy()</code></td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">DEX pools</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">On-chain</td>
                       <td className="py-2">Promoted from depeg-only to primary voice</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">GeckoTerminal</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">On-chain</td>
@@ -303,7 +303,7 @@ export function MethodologySections() {
                   when aggregators share upstream data
                 </li>
               </ol>
-              <code className="block rounded-lg border bg-muted px-4 py-3 text-xs font-mono">
+              <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs font-mono">
                 agree(a,b) = |a.price &minus; b.price| / midpoint(a,b) &times; 10000 &le; thresholdBps
               </code>
             </div>
@@ -353,22 +353,22 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">high</td>
                       <td className="py-2 pr-4">&ge;2 sources agree within threshold</td>
                       <td className="py-2">Full trust for depeg detection and scoring</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">single-source</td>
                       <td className="py-2 pr-4">Only 1 source returned a price</td>
                       <td className="py-2">Depeg detection requires pending confirmation</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">low</td>
                       <td className="py-2 pr-4">Sources disagree beyond threshold, or pool challenge fired</td>
                       <td className="py-2">Pool challenge: TVL-weighted pool price used; otherwise closest to peg reference; depeg requires confirmation</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">fallback</td>
                       <td className="py-2 pr-4">All primary sources down; enrichment or cache used</td>
                       <td className="py-2">Depeg mutations blocked; stale banner shown on frontend</td>
@@ -401,7 +401,7 @@ export function MethodologySections() {
 
       <Card
         id="stability-index-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-cyan-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-cyan-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -471,7 +471,7 @@ export function MethodologySections() {
           >
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Scoring Formula</h3>
-              <code className="block rounded-lg border bg-muted px-4 py-3 text-xs font-mono">
+              <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs font-mono">
                 Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
               </code>
               <p className="text-xs">The final value is clamped to [0, 100] and rounded to one decimal.</p>
@@ -554,7 +554,7 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Severity</td>
                       <td className="py-2 pr-4">0&ndash;68</td>
                       <td className="py-2 pr-4 font-mono text-xs">
@@ -564,7 +564,7 @@ export function MethodologySections() {
                         Magnitude-weighted depeg damage with extra emphasis on mega-cap instability
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Breadth</td>
                       <td className="py-2 pr-4">0&ndash;17</td>
                       <td className="py-2 pr-4 font-mono text-xs">
@@ -572,13 +572,13 @@ export function MethodologySections() {
                       </td>
                       <td className="py-2">How widely depegs are spreading across unique coins</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Stress Breadth</td>
                       <td className="py-2 pr-4">0&ndash;5</td>
                       <td className="py-2 pr-4 font-mono text-xs">min(5, dewsStressBreadth)</td>
                       <td className="py-2">Early-warning pressure from DEWS stress signals before full depegs</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Trend</td>
                       <td className="py-2 pr-4">&minus;5 to +5</td>
                       <td className="py-2 pr-4 font-mono text-xs">clamp(-5, 5, mcap7dChangePct)</td>
@@ -601,7 +601,7 @@ export function MethodologySections() {
                   weight for 30 days, then decay linearly to a 25% floor over 120 days.
                 </li>
               </ul>
-              <code className="block rounded-lg border bg-muted px-4 py-3 text-xs font-mono">
+              <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs font-mono">
                 factor = ageDays &le; 30 ? 1.0 : max(0.25, 1.0 &minus; (ageDays &minus; 30)/120)
               </code>
             </div>
@@ -618,32 +618,32 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4">90&ndash;100</td>
                       <td className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">BEDROCK</td>
                       <td className="py-2">Near-ideal market stability</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4">75&ndash;89</td>
                       <td className="py-2 pr-4 text-teal-700 dark:text-teal-400 font-medium">STEADY</td>
                       <td className="py-2">Normal conditions with minor stress</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4">60&ndash;74</td>
                       <td className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">TREMOR</td>
                       <td className="py-2">Meaningful instability emerging</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4">40&ndash;59</td>
                       <td className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">FRACTURE</td>
                       <td className="py-2">Broad, significant market stress</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4">20&ndash;39</td>
                       <td className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">CRISIS</td>
                       <td className="py-2">Contagion-level instability</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4">0&ndash;19</td>
                       <td className="py-2 pr-4 text-red-800 font-medium">MELTDOWN</td>
                       <td className="py-2">Systemic peg failure conditions</td>
@@ -659,7 +659,7 @@ export function MethodologySections() {
       {/* Grading Methodology */}
       <Card
         id="safety-scores-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-amber-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-amber-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -826,25 +826,25 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Exit Liquidity</td>
                       <td className="py-2 pr-4">30%</td>
                       <td className="py-2 pr-4">DEX liquidity + redemption backstop</td>
                       <td className="py-2">Uses effective exit: DEX liquidity stays the floor, redemption can improve the dimension when a direct exit path exists</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Resilience</td>
                       <td className="py-2 pr-4">20%</td>
                       <td className="py-2 pr-4">Collateral, custody, blacklist</td>
                       <td className="py-2">Structural resilience across 3 equally-weighted sub-factors</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Decentralization</td>
                       <td className="py-2 pr-4">15%</td>
                       <td className="py-2 pr-4">Governance type, chain risk</td>
                       <td className="py-2">Governance structure with chain-risk penalty</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Dependency Risk</td>
                       <td className="py-2 pr-4">25%</td>
                       <td className="py-2 pr-4">Upstream grades, collateral weights</td>
@@ -913,7 +913,7 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Collateral Quality</td>
                       <td className="py-2 pr-4">Reserve composition risk</td>
                       <td className="py-2">
@@ -922,7 +922,7 @@ export function MethodologySections() {
                         without curated reserves.
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Custody Model</td>
                       <td className="py-2 pr-4">Who holds the collateral?</td>
                       <td className="py-2">
@@ -930,7 +930,7 @@ export function MethodologySections() {
                         CEX/off&#8209;exchange&nbsp;(0)
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Blacklist Capability</td>
                       <td className="py-2 pr-4">Can the issuer freeze holder funds?</td>
                       <td className="py-2">
@@ -1048,51 +1048,51 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">A+</td>
                       <td className="py-1.5">87&ndash;100</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">A</td>
                       <td className="py-1.5">83&ndash;86</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">A&minus;</td>
                       <td className="py-1.5">80&ndash;82</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">B+</td>
                       <td className="py-1.5">75&ndash;79</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">B</td>
                       <td className="py-1.5">70&ndash;74</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">B&minus;</td>
                       <td className="py-1.5">65&ndash;69</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">C+</td>
                       <td className="py-1.5">60&ndash;64</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">C</td>
                       <td className="py-1.5">55&ndash;59</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">C&minus;</td>
                       <td className="py-1.5">50&ndash;54</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">D</td>
                       <td className="py-1.5">40&ndash;49</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">F</td>
                       <td className="py-1.5">0&ndash;39</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-8 text-foreground">NR</td>
                       <td className="py-1.5">Not enough data</td>
                     </tr>
@@ -1166,7 +1166,7 @@ export function MethodologySections() {
       {/* Liquidity Score */}
       <Card
         id="liquidity-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-cyan-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-cyan-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -1316,7 +1316,7 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">TVL Depth</td>
                       <td className="py-2 pr-4">35%</td>
                       <td className="py-2">
@@ -1324,14 +1324,14 @@ export function MethodologySections() {
                         $10M&rarr;60, $100M&rarr;80, $1B+&rarr;100
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Volume Activity</td>
                       <td className="py-2 pr-4">20%</td>
                       <td className="py-2">
                         Log-scale V/T ratio: 33.3&times;log10(vtRatio/0.005). ~0.5%&rarr;13, ~5%&rarr;56, ~50%&rarr;100
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Pool Quality</td>
                       <td className="py-2 pr-4">22.5%</td>
                       <td className="py-2">
@@ -1340,7 +1340,7 @@ export function MethodologySections() {
                         0.3&times;
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Durability</td>
                       <td className="py-2 pr-4">15%</td>
                       <td className="py-2">
@@ -1348,7 +1348,7 @@ export function MethodologySections() {
                         sqrt curve (15%)
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Pair Diversity</td>
                       <td className="py-2 pr-4">7.5%</td>
                       <td className="py-2">Pool count with diminishing returns: min(100, poolCount &times; 5)</td>
@@ -1389,7 +1389,7 @@ export function MethodologySections() {
       {/* Mint/Burn Flow Scoring */}
       <Card
         id="mint-burn-flow-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-orange-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-orange-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -1580,7 +1580,7 @@ export function MethodologySections() {
                 This is the existing Flow Intensity formula under clearer naming. It measures how far current 24-hour
                 flow pressure deviates from the coin&apos;s own trailing 30 fully closed daily Ethereum baseline.
               </p>
-              <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                 denominator = max(baselineDailyAbs &times; 0.3, $1M)
                 <br />
                 z = (currentDailyNet &minus; baselineDailyNet) / denominator
@@ -1632,37 +1632,37 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-4 text-foreground">CRISIS</td>
                       <td className="py-1.5 pr-4">&minus;100 to &minus;70</td>
                       <td className="py-1.5">Severe below-baseline redemption pressure across major coins</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-4 text-foreground">STRESS</td>
                       <td className="py-1.5 pr-4">&minus;70 to &minus;40</td>
                       <td className="py-1.5">Worsening coordinated pressure versus normal conditions</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-4 text-foreground">CAUTIOUS</td>
                       <td className="py-1.5 pr-4">&minus;40 to &minus;10</td>
                       <td className="py-1.5">Mild but broad pressure deterioration</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-4 text-foreground">NEUTRAL</td>
                       <td className="py-1.5 pr-4">&minus;10 to 10</td>
                       <td className="py-1.5">Close to 30D norms across the market</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-4 text-foreground">HEALTHY</td>
                       <td className="py-1.5 pr-4">10 to 40</td>
                       <td className="py-1.5">Improving aggregate pressure versus baseline</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-4 text-foreground">CONFIDENT</td>
                       <td className="py-1.5 pr-4">40 to 70</td>
                       <td className="py-1.5">Strong positive pressure shift across major coins</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-1.5 pr-4 text-foreground">SURGE</td>
                       <td className="py-1.5 pr-4">70 to 100</td>
                       <td className="py-1.5">Exceptional improvement versus recent norms</td>
@@ -1706,7 +1706,7 @@ export function MethodologySections() {
       {/* Yield Intelligence */}
       <Card
         id="yield-intelligence-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-violet-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-violet-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -1900,7 +1900,7 @@ export function MethodologySections() {
             {/* PYS formula */}
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Pharos Yield Score (PYS)</h3>
-              <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                 riskPenalty = max(0.5, (101 &minus; safetyScore) / 20)
                 <br />
                 yieldEfficiency = apy30d / riskPenalty
@@ -1961,7 +1961,7 @@ export function MethodologySections() {
       {/* PegScore and Depeg Early Warning Score (DEWS) */}
       <Card
         id="pegscore-dews-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-amber-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-amber-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -2065,7 +2065,7 @@ export function MethodologySections() {
             {/* Peg score formula */}
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">PegScore Formula</h3>
-              <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                 pegScore = 0.5 &times; pegPct + 0.5 &times; severityScore &minus; activeDepegPenalty &minus;
                 spreadPenalty
               </p>
@@ -2133,7 +2133,7 @@ export function MethodologySections() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Time-at-Peg (pegPct)</td>
                       <td className="py-2 pr-4">50%</td>
                       <td className="py-2 pr-4">0&ndash;100</td>
@@ -2141,7 +2141,7 @@ export function MethodologySections() {
                         Percentage of time spent at peg. Overlapping depeg intervals are merged to avoid double-counting
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Event Severity</td>
                       <td className="py-2 pr-4">50%</td>
                       <td className="py-2 pr-4">0&ndash;100</td>
@@ -2154,7 +2154,7 @@ export function MethodologySections() {
                         count more. Duration capped at 90 days
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Active Depeg Penalty</td>
                       <td className="py-2 pr-4">subtracted</td>
                       <td className="py-2 pr-4">5&ndash;50</td>
@@ -2163,7 +2163,7 @@ export function MethodologySections() {
                         clamp(absBps&nbsp;/&nbsp;50, 5, 50)
                       </td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Spread Penalty</td>
                       <td className="py-2 pr-4">subtracted</td>
                       <td className="py-2 pr-4">0&ndash;15</td>
@@ -2325,7 +2325,7 @@ export function MethodologySections() {
             {/* Formula */}
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Score Formula</h3>
-              <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                 DEWS = round(clamp(0, 100, sum(W_i &times; S_i) / sum(W_i)))
               </p>
               <p>
@@ -2417,7 +2417,7 @@ export function MethodologySections() {
       {/* Contagion Stress Test */}
       <Card
         id="contagion-stress-test-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-emerald-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-emerald-500 bg-card md:scroll-mt-28"
       >
         <CardHeader>
           <CardTitle as="h2">Contagion Stress Test</CardTitle>
@@ -2556,7 +2556,7 @@ export function MethodologySections() {
 
       <Card
         id="blacklist-tracker-methodology"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-rose-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-rose-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -2591,7 +2591,7 @@ export function MethodologySections() {
       {/* ─── Chain Health Score ─────────────────────────────── */}
       <Card
         id="chain-health-score"
-        className="scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] border-l-teal-500 bg-card/78 shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28"
+        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-teal-500 bg-card md:scroll-mt-28"
       >
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
