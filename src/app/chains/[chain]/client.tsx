@@ -234,8 +234,8 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
 function CompositionSection({ chainId }: { chainId: string }) {
   const { coins, totalUsd } = useChainStablecoins(chainId);
 
-  // Show top 8 coins max, rest go to "others"
-  const DISPLAY_COUNT = 8;
+  // Show top 9 coins max (fills 4×3 grid nicely), rest go to "others"
+  const DISPLAY_COUNT = 9;
   const topCoins = coins.slice(0, DISPLAY_COUNT);
   const rest = coins.slice(DISPLAY_COUNT);
   const restTotal = rest.reduce((s, c) => s + c.supplyOnChain, 0);
