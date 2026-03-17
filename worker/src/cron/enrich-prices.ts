@@ -342,13 +342,18 @@ export async function fetchPrimaryPrices(
     if (dlListPrice != null && dlListPrice > 0) {
       sources.push({ source: "defillama-list", price: dlListPrice, weight: 1 });
     }
-    if (pyth != null) sources.push({ source: "pyth", price: pyth.price, weight: 2, metadata: { confidenceBps: pyth.confidenceBps } });
+    if (pyth != null) {
+      const pythWeight = pyth.confidenceBps > 200 ? 0 : pyth.confidenceBps > 100 ? 1 : 2;
+      if (pythWeight > 0) {
+        sources.push({ source: "pyth", price: pyth.price, weight: pythWeight, metadata: { confidenceBps: pyth.confidenceBps } });
+      }
+    }
     const binancePrice = binancePrices.get(asset.symbol.toUpperCase());
     if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2 });
     const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
     if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2 });
     const redstoneResult = redstonePrices.get(asset.symbol);
-    if (redstoneResult != null) {
+    if (redstoneResult != null && redstoneResult.venueAgreementPct >= 50) {
       sources.push({
         source: "redstone",
         price: redstoneResult.price,
