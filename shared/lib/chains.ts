@@ -178,15 +178,9 @@ export function resolveChainId(raw: string): string | null {
   return null;
 }
 
-/** Chain IDs that have at least one tracked stablecoin contract and a CHAIN_META entry. */
+/** Chain IDs that have a CHAIN_META entry (all defined chains are potentially active). */
 export function getActiveChainIds(): string[] {
-  const chainIds = new Set<string>();
-  for (const coin of TRACKED_STABLECOINS) {
-    if (coin.contracts) {
-      for (const contract of coin.contracts) {
-        if (CHAIN_META[contract.chain]) chainIds.add(contract.chain);
-      }
-    }
-  }
-  return Array.from(chainIds).sort();
+  // Return all chains that have metadata defined, as they may have supply data
+  // from DefiLlama even without explicit contract tracking
+  return Object.keys(CHAIN_META).sort();
 }
