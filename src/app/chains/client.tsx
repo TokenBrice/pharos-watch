@@ -9,31 +9,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { cn } from "@/lib/utils";
+import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 
 type ChainSortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
-
-function formatUsd(value: number): string {
-  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-  if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-  return `$${value.toFixed(0)}`;
-}
-
-function formatPct(value: number): string {
-  const pct = value * 100;
-  const sign = pct >= 0 ? "+" : "";
-  return `${sign}${pct.toFixed(2)}%`;
-}
-
-const HEALTH_BAND_COLORS: Record<HealthBand, string> = {
-  robust: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  healthy: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
-  mixed: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  fragile: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
-  concentrated: "bg-red-500/15 text-red-700 dark:text-red-400",
-};
 
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
@@ -51,7 +30,7 @@ function HealthBadge({ score, band }: { score: number | null; band: HealthBand |
     return <span className="text-xs text-muted-foreground">--</span>;
   }
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", HEALTH_BAND_COLORS[band])}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", HEALTH_BADGE_CLASSES[band])}>
       {score}
       <span className="hidden sm:inline capitalize">{band}</span>
     </span>
@@ -89,7 +68,7 @@ export function ChainsLeaderboardClient() {
     <div className="space-y-6">
       {/* KPI Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Stablecoin Supply" value={formatUsd(data.globalTotalUsd)} />
+        <KpiCard label="Total Stablecoin Supply" value={formatChainUsd(data.globalTotalUsd)} />
         <KpiCard label="Active Chains" value={String(data.chains.length)} />
         <KpiCard label="Top Chain Dominance" value={data.chains[0] ? `${data.chains[0].name} ${(data.chains[0].dominanceShare * 100).toFixed(1)}%` : "--"} />
         <KpiCard label="Healthiest Chain" value={topHealthChain?.healthScore != null ? `${topHealthChain.name} (${topHealthChain.healthScore})` : "--"} />
@@ -181,9 +160,9 @@ export function ChainsLeaderboardClient() {
                 <TableCell>
                   <HealthBadge score={chain.healthScore} band={chain.healthBand} />
                 </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">{formatUsd(chain.totalUsd)}</TableCell>
-                <TableCell className={cn("text-right font-mono tabular-nums", chain.change7dPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                  {formatPct(chain.change7dPct)}
+                <TableCell className="text-right font-mono tabular-nums">{formatChainUsd(chain.totalUsd)}</TableCell>
+                <TableCell className={cn("text-right font-mono tabular-nums", trendColor(chain.change7dPct))}>
+                  {formatRatioPct(chain.change7dPct)}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
