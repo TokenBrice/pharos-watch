@@ -8,7 +8,7 @@ import {
 } from "@shared/lib/classification";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { StablecoinMeta, LaunchPhase, StablecoinLink } from "@shared/types";
+import type { StablecoinMeta, LaunchPhase } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Launch-phase labels
@@ -347,7 +347,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         <section className="pharos-card-shell p-4 sm:p-5">
           <h3 className="mb-3 text-lg font-semibold tracking-tight">Links</h3>
           <div className="flex flex-wrap gap-2">
-            {coin.links.map((link: StablecoinLink) => (
+            {coin.links.map((link) => (
               <a
                 key={link.url}
                 href={link.url}

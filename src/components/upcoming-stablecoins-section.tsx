@@ -44,10 +44,13 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
   const summaries = aiSummaries as Record<string, { title?: string; text?: string; updatedAt?: string }>;
 
   return (
-    <section className="mt-8 space-y-3">
+    <section aria-labelledby="upcoming-heading" className="mt-8 space-y-3">
       <div className="flex items-center gap-2">
-        <h2 className="pharos-kicker">Upcoming Stablecoins</h2>
-        <span className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-indigo-400">
+        <h2 id="upcoming-heading" className="pharos-kicker">Upcoming Stablecoins</h2>
+        <span
+          className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-indigo-600 dark:text-indigo-400"
+          aria-hidden="true"
+        >
           {PRE_LAUNCH_STABLECOINS.length}
         </span>
       </div>
@@ -61,14 +64,15 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
             <Link
               key={coin.id}
               href={buildStablecoinUrl(coin.id)}
-              className="pharos-focus-ring group flex flex-col gap-2.5 rounded-xl border border-border/60 bg-card/50 p-4 transition-colors hover:bg-accent"
+              className="pharos-focus-ring pharos-interactive-card group flex flex-col gap-2.5 rounded-xl border border-border/60 bg-card/50 p-4 hover:bg-accent"
+              aria-label={`${coin.name} (${coin.symbol})${coin.launchPhase ? ` — ${LAUNCH_PHASE_LABELS[coin.launchPhase]}` : ""}`}
             >
               {/* Name row */}
               <div className="flex items-center gap-2.5">
                 <StablecoinLogo src={logos[coin.id]} name={coin.name} size={28} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{coin.name}</p>
-                  <p className="text-xs text-muted-foreground">{coin.symbol}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{coin.symbol}</p>
                 </div>
               </div>
 
@@ -84,22 +88,26 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
                   {GOVERNANCE_LABELS_SHORT[coin.flags.governance]}
                 </span>
                 {coin.launchPhase && (
-                  <span className="inline-flex rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[11px] font-medium text-indigo-400">
+                  <span className="inline-flex rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
                     {LAUNCH_PHASE_LABELS[coin.launchPhase]}
                   </span>
                 )}
               </div>
 
               {/* Teaser */}
-              {teaser && (
-                <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+              {teaser ? (
+                <p className="line-clamp-3 text-xs leading-snug text-muted-foreground">
                   {teaser}
+                </p>
+              ) : (
+                <p className="line-clamp-3 text-xs italic leading-snug text-muted-foreground/50">
+                  No description available
                 </p>
               )}
 
               {/* Expected launch */}
               {coin.expectedLaunchDate && (
-                <p className="mt-auto text-[11px] text-muted-foreground/70">
+                <p className="mt-auto text-xs text-muted-foreground/70">
                   Expected {formatExpectedDate(coin.expectedLaunchDate)}
                 </p>
               )}
