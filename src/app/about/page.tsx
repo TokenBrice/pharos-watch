@@ -212,14 +212,14 @@ function AboutFeatureSection({
 export const metadata: Metadata = {
   title: "About Pharos: Shining a Light on Every Peg",
   description:
-    "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+    "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, Codex, and Kimi. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
   alternates: {
     canonical: "/about/",
   },
   openGraph: {
     title: "About Pharos: Shining a Light on Every Peg",
     description:
-      "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+      "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, Codex, and Kimi. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
     url: "/about/",
     type: "website",
     images: [{ url: "/og-card.png", width: 1200, height: 628 }],
@@ -359,7 +359,7 @@ export default function AboutPage() {
                   name: "Why does Pharos exist?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "Pharos is a project by TokenBrice, Claude, and Codex. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+                    text: "Pharos is a project by TokenBrice, Claude, Codex, and Kimi. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
                   },
                 },
                 {
@@ -474,7 +474,7 @@ export default function AboutPage() {
                   Claude
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
-                , and{" "}
+                ,{" "}
                 <a
                   href="https://openai.com/codex/"
                   target="_blank"
@@ -482,6 +482,16 @@ export default function AboutPage() {
                   className={INLINE_EXTERNAL_LINK_CLASS}
                 >
                   Codex
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                , and{" "}
+                <a
+                  href="https://www.kimi.com/en"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={INLINE_EXTERNAL_LINK_CLASS}
+                >
+                  Kimi
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
                 . It puts the stablecoin picture you actually need in one place: honest classification, peg and freeze
