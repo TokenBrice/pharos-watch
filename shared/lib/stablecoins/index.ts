@@ -213,3 +213,21 @@ export const TRACKED_META_BY_ID = new Map(TRACKED_STABLECOINS.map((s) => [s.id, 
 
 /** Set of all tracked stablecoin IDs. */
 export const TRACKED_IDS = new Set(TRACKED_STABLECOINS.map((s) => s.id));
+
+// --- Active vs Pre-Launch partitions ---
+
+/** Stablecoins with full worker processing (excludes pre-launch). */
+export const ACTIVE_STABLECOINS = TRACKED_STABLECOINS.filter(
+  (c) => c.status !== "pre-launch",
+);
+
+/** Set of active stablecoin IDs (excludes pre-launch). */
+export const ACTIVE_IDS = new Set(ACTIVE_STABLECOINS.map((s) => s.id));
+
+/** Map of active stablecoin ID -> metadata (excludes pre-launch). */
+export const ACTIVE_META_BY_ID = new Map(ACTIVE_STABLECOINS.map((s) => [s.id, s]));
+
+/** Stablecoins in pre-launch stage. */
+export const PRE_LAUNCH_STABLECOINS = TRACKED_STABLECOINS.filter(
+  (c) => c.status === "pre-launch",
+);

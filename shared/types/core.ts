@@ -218,6 +218,8 @@ interface YieldConfig {
   yieldType: YieldType;
 }
 
+export type LaunchPhase = "announced" | "testnet" | "auditing" | "beta" | "launching-soon";
+
 export interface StablecoinMeta {
   id: string;
   llamaId?: string;
@@ -249,6 +251,11 @@ export interface StablecoinMeta {
   notices?: CoinNotice[];
   tags?: string[];
   yieldConfig?: YieldConfig;
+  status?: "pre-launch" | "active";
+  announcedDate?: string;
+  expectedLaunchDate?: string;
+  launchPhase?: LaunchPhase;
+  launchPhaseDetail?: string;
 }
 
 export type FilterTag =
