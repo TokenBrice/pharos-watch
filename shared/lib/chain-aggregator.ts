@@ -118,8 +118,9 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     // Backing distribution
     const backingTotals: Record<string, number> = { "rwa-backed": 0, "crypto-backed": 0, algorithmic: 0 };
     for (const coin of acc.coins) {
-      const key = coin.backing ?? "rwa-backed";
-      backingTotals[key] = (backingTotals[key] ?? 0) + coin.supplyUsd;
+      if (coin.backing && coin.backing in backingTotals) {
+        backingTotals[coin.backing] += coin.supplyUsd;
+      }
     }
     const backingDist: Record<string, number> = {};
     for (const [key, val] of Object.entries(backingTotals)) {

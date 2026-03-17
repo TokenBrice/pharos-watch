@@ -127,6 +127,26 @@ describe("aggregateChains", () => {
     expect(eth!.totalUsd).toBe(200);
   });
 
+  it("excludes unclassified coins from backing distribution used in health score", () => {
+    const input = makeInput({
+      peggedAssets: [
+        {
+          id: "dai-makerdao", symbol: "DAI", price: 1.0, pegType: "peggedUSD",
+          chainCirculating: { ethereum: { current: 500, circulatingPrevDay: 500, circulatingPrevWeek: 500, circulatingPrevMonth: 500 } },
+        },
+        {
+          id: "unknown-coin", symbol: "UNK", price: 1.0, pegType: "peggedUSD",
+          chainCirculating: { ethereum: { current: 500, circulatingPrevDay: 500, circulatingPrevWeek: 500, circulatingPrevMonth: 500 } },
+        },
+      ],
+      safetyScores: { "dai-makerdao": 60 },
+      pegRates: { peggedUSD: 1 },
+    });
+    const result = aggregateChains(input);
+    const eth = result.chains.find((c) => c.id === "ethereum")!;
+    expect(eth.healthFactors.backingDiversity).toBe(0);
+  });
+
   it("deduplicates alias chains (hyperliquid)", () => {
     const input = makeInput({
       peggedAssets: [{

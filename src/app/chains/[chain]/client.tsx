@@ -18,6 +18,7 @@ const BACKING_BAR_COLORS: Record<string, string> = {
   "rwa-backed": "bg-sky-500",
   "crypto-backed": "bg-violet-500",
   algorithmic: "bg-amber-500",
+  other: "bg-zinc-400",
 };
 
 function FactorGauge({ label, score }: { label: string; score: number | null }) {
@@ -166,10 +167,10 @@ function BackingBreakdown({ chainId }: { chainId: string }) {
   const { coins, totalUsd } = useChainStablecoins(chainId);
 
   const backingTotals = useMemo(() => {
-    const totals: Record<string, number> = { "rwa-backed": 0, "crypto-backed": 0, algorithmic: 0 };
+    const totals: Record<string, number> = { "rwa-backed": 0, "crypto-backed": 0, algorithmic: 0, other: 0 };
     for (const coin of coins) {
-      const key = coin.backing ?? "rwa-backed";
-      totals[key] = (totals[key] ?? 0) + coin.supplyOnChain;
+      const key = coin.backing && coin.backing in totals ? coin.backing : "other";
+      totals[key] += coin.supplyOnChain;
     }
     return totals;
   }, [coins]);
@@ -194,7 +195,7 @@ function BackingBreakdown({ chainId }: { chainId: string }) {
             return (
               <div key={type} className="flex items-center gap-1.5">
                 <div className={cn("h-2.5 w-2.5 rounded-full", BACKING_BAR_COLORS[type])} />
-                <span>{BACKING_LABELS_SHORT[type as keyof typeof BACKING_LABELS_SHORT] ?? type}</span>
+                <span>{BACKING_LABELS_SHORT[type as keyof typeof BACKING_LABELS_SHORT] ?? (type === "other" ? "Other" : type)}</span>
                 <span className="font-mono text-muted-foreground">{pct.toFixed(1)}%</span>
               </div>
             );
