@@ -1,3 +1,5 @@
+import { TRACKED_STABLECOINS } from "./stablecoins";
+
 interface ChainMeta {
   name: string;
   explorerUrl: string;
@@ -174,4 +176,17 @@ export function resolveChainId(raw: string): string | null {
   }
 
   return null;
+}
+
+/** Chain IDs that have at least one tracked stablecoin contract and a CHAIN_META entry. */
+export function getActiveChainIds(): string[] {
+  const chainIds = new Set<string>();
+  for (const coin of TRACKED_STABLECOINS) {
+    if (coin.contracts) {
+      for (const contract of coin.contracts) {
+        if (CHAIN_META[contract.chain]) chainIds.add(contract.chain);
+      }
+    }
+  }
+  return Array.from(chainIds).sort();
 }

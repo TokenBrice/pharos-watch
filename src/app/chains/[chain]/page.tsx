@@ -1,22 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CHAIN_META } from "@shared/lib/chains";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ChainProfileClient } from "./client";
-
-function getActiveChainIds(): string[] {
-  const chainIds = new Set<string>();
-  for (const coin of TRACKED_STABLECOINS) {
-    if (coin.contracts) {
-      for (const contract of coin.contracts) {
-        if (CHAIN_META[contract.chain]) chainIds.add(contract.chain);
-      }
-    }
-  }
-  return Array.from(chainIds);
-}
 
 export function generateStaticParams() {
   return getActiveChainIds().map((chain) => ({ chain }));

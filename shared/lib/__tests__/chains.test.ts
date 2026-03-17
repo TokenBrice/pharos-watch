@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CHAIN_META } from "@shared/lib/chains";
+import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 
 describe("CHAIN_META", () => {
   it("exposes only lowercase chain keys", () => {
@@ -29,5 +29,23 @@ describe("CHAIN_META", () => {
     for (const meta of Object.values(CHAIN_META)) {
       expect(meta.explorerUrl.startsWith("https://")).toBe(true);
     }
+  });
+});
+
+describe("getActiveChainIds", () => {
+  it("returns chain IDs that appear in both contracts and CHAIN_META", () => {
+    const ids = getActiveChainIds();
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) {
+      expect(CHAIN_META[id]).toBeDefined();
+    }
+    expect(ids).toContain("ethereum");
+  });
+
+  it("returns sorted, deduplicated IDs", () => {
+    const ids = getActiveChainIds();
+    const sorted = [...ids].sort();
+    expect(ids).toEqual(sorted);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

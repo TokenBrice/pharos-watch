@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CHAIN_META } from "@shared/lib/chains";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/chain-health-version";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ChainsLeaderboardClient } from "./client";
@@ -12,18 +11,6 @@ export const metadata: Metadata = buildPageMetadata({
   description: "Ranking blockchain networks by stablecoin supply, health score, and composition. Explore per-chain stablecoin analytics on Pharos.",
   canonical: "/chains/",
 });
-
-function getActiveChainIds(): string[] {
-  const chainIds = new Set<string>();
-  for (const coin of TRACKED_STABLECOINS) {
-    if (coin.contracts) {
-      for (const contract of coin.contracts) {
-        if (CHAIN_META[contract.chain]) chainIds.add(contract.chain);
-      }
-    }
-  }
-  return Array.from(chainIds).sort();
-}
 
 export default function ChainsPage() {
   const chainIds = getActiveChainIds();
