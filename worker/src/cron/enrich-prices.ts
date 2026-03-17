@@ -98,6 +98,7 @@ export interface PrimaryPriceResult {
   cgPrice: number | null;
   candidateSources: string[];
   agreeSources: string[];
+  softOnly?: boolean;
 }
 
 export interface PriceValidationStats {
@@ -408,6 +409,18 @@ export async function fetchPrimaryPrices(
       if (consensus.source === "coingecko") stats.cgOnly++;
     }
 
+    // Log when high-weight sources disagree — aids operational monitoring (IMPROVE-4)
+    if (consensus.disagreeSources.length > 0) {
+      const highWeightDisagrees = sources
+        .filter((s) => s.weight >= 2 && consensus.disagreeSources.includes(s.source))
+        .map((s) => `${s.source}($${s.price.toFixed(4)})`);
+      if (highWeightDisagrees.length > 0) {
+        console.log(
+          `[primary-prices] ${asset.symbol}: high-weight disagree: ${highWeightDisagrees.join(", ")} ` +
+          `vs consensus $${consensus.price.toFixed(4)}`,
+        );
+      }
+    }
   }
 
   // --- Pool challenge pass ---
@@ -430,6 +443,20 @@ export async function fetchPrimaryPrices(
       result.confidence = "single-source";
       stats.high--;
       stats.singleSource++;
+    }
+
+    // Annotate soft-only high-confidence results for observability
+    if (result.confidence === "high" && isAllSoftSources(result.agreeSources)) {
+      result.softOnly = true;
+    }
+  }
+
+  // Log coverage: how many candidates received a DL list price
+  if (dlListPrices) {
+    const withDl = candidates.filter((a) => dlListPrices.has(a.id)).length;
+    const withoutDl = candidates.length - withDl;
+    if (withoutDl > 0) {
+      console.log(`[primary-prices] DL list coverage: ${withDl}/${candidates.length} (${withoutDl} missing)`);
     }
   }
 
