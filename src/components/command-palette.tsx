@@ -127,7 +127,7 @@ export function CommandPalette() {
         items.push({
           id: `coin-${coin.id}`,
           label: coin.name,
-          sublabel: coin.symbol,
+          sublabel: coin.status === "pre-launch" ? `${coin.symbol} · Pre-launch` : coin.symbol,
           section: "Stablecoins",
           logoUrl,
           onSelect: () => {
