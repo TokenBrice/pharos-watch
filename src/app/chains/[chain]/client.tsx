@@ -8,44 +8,15 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { HealthBand, ChainSummary } from "@shared/types/chains";
-
-const HEALTH_BAND_COLORS: Record<HealthBand, string> = {
-  robust: "text-emerald-600 dark:text-emerald-400",
-  healthy: "text-sky-600 dark:text-sky-400",
-  mixed: "text-amber-600 dark:text-amber-400",
-  fragile: "text-orange-600 dark:text-orange-400",
-  concentrated: "text-red-600 dark:text-red-400",
-};
-
-const HEALTH_BAND_BG: Record<HealthBand, string> = {
-  robust: "bg-emerald-500/15",
-  healthy: "bg-sky-500/15",
-  mixed: "bg-amber-500/15",
-  fragile: "bg-orange-500/15",
-  concentrated: "bg-red-500/15",
-};
+import type { ChainSummary } from "@shared/types/chains";
 
 const BACKING_BAR_COLORS: Record<string, string> = {
   "rwa-backed": "bg-sky-500",
   "crypto-backed": "bg-violet-500",
   algorithmic: "bg-amber-500",
 };
-
-function formatUsd(value: number): string {
-  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-  if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-  return `$${value.toFixed(0)}`;
-}
-
-function formatPct(value: number): string {
-  const pct = value * 100;
-  const sign = pct >= 0 ? "+" : "";
-  return `${sign}${pct.toFixed(2)}%`;
-}
 
 function FactorGauge({ label, score }: { label: string; score: number | null }) {
   return (
@@ -77,18 +48,18 @@ function HeroCard({ chain, chainId }: { chain: ChainSummary; chainId: string }) 
                 <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">{chain.type}</span>
               </div>
               {chain.healthScore != null && chain.healthBand && (
-                <span className={cn("text-sm font-semibold", HEALTH_BAND_COLORS[chain.healthBand])}>
+                <span className={cn("text-sm font-semibold", HEALTH_TEXT_CLASSES[chain.healthBand])}>
                   Health: {chain.healthScore} ({chain.healthBand})
                 </span>
               )}
             </div>
           </div>
           <div className="ml-auto grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-5">
-            <div><p className="text-xs text-muted-foreground">Supply</p><p className="font-bold">{formatUsd(chain.totalUsd)}</p></div>
+            <div><p className="text-xs text-muted-foreground">Supply</p><p className="font-bold">{formatChainUsd(chain.totalUsd)}</p></div>
             <div><p className="text-xs text-muted-foreground">Global Share</p><p className="font-bold">{(chain.dominanceShare * 100).toFixed(1)}%</p></div>
-            <div><p className="text-xs text-muted-foreground">24h</p><p className={cn("font-mono", chain.change24hPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>{formatPct(chain.change24hPct)}</p></div>
-            <div><p className="text-xs text-muted-foreground">7d</p><p className={cn("font-mono", chain.change7dPct >= 0 ? "text-emerald-600" : "text-red-600")}>{formatPct(chain.change7dPct)}</p></div>
-            <div><p className="text-xs text-muted-foreground">30d</p><p className={cn("font-mono", chain.change30dPct >= 0 ? "text-emerald-600" : "text-red-600")}>{formatPct(chain.change30dPct)}</p></div>
+            <div><p className="text-xs text-muted-foreground">24h</p><p className={cn("font-mono", trendColor(chain.change24hPct))}>{formatRatioPct(chain.change24hPct)}</p></div>
+            <div><p className="text-xs text-muted-foreground">7d</p><p className={cn("font-mono", trendColor(chain.change7dPct))}>{formatRatioPct(chain.change7dPct)}</p></div>
+            <div><p className="text-xs text-muted-foreground">30d</p><p className={cn("font-mono", trendColor(chain.change30dPct))}>{formatRatioPct(chain.change30dPct)}</p></div>
           </div>
         </div>
       </CardContent>
@@ -106,11 +77,11 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
       <CardContent className="space-y-4">
         {healthScore != null && healthBand ? (
           <div className="flex items-center gap-3">
-            <div className={cn("flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold", HEALTH_BAND_BG[healthBand], HEALTH_BAND_COLORS[healthBand])}>
+            <div className={cn("flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold", HEALTH_BADGE_CLASSES[healthBand])}>
               {healthScore}
             </div>
             <div>
-              <p className={cn("font-semibold capitalize", HEALTH_BAND_COLORS[healthBand])}>{healthBand}</p>
+              <p className={cn("font-semibold capitalize", HEALTH_TEXT_CLASSES[healthBand])}>{healthBand}</p>
               <p className="text-xs text-muted-foreground">Composite health score</p>
             </div>
           </div>
@@ -155,14 +126,14 @@ function CompositionSection({ chainId }: { chainId: string }) {
                 >
                   <span className="font-semibold">{coin.symbol}</span>
                   <span className="text-muted-foreground">{(pct * 100).toFixed(1)}%</span>
-                  <span className="font-mono text-[10px]">{formatUsd(coin.supplyOnChain)}</span>
+                  <span className="font-mono text-[10px]">{formatChainUsd(coin.supplyOnChain)}</span>
                 </Link>
               );
             })}
             {rest.length > 0 && (
               <div className="flex flex-col items-center justify-center rounded-lg border bg-muted/20 p-2 text-center text-xs">
                 <span className="text-muted-foreground">{rest.length} others</span>
-                <span className="font-mono text-[10px]">{formatUsd(restTotal)}</span>
+                <span className="font-mono text-[10px]">{formatChainUsd(restTotal)}</span>
               </div>
             )}
           </div>
@@ -178,7 +149,7 @@ function CompositionSection({ chainId }: { chainId: string }) {
                 <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full bg-primary/60" style={{ width: `${coin.chainShare * 100}%` }} />
                 </div>
-                <span className="w-16 text-right font-mono text-xs">{formatUsd(coin.supplyOnChain)}</span>
+                <span className="w-16 text-right font-mono text-xs">{formatChainUsd(coin.supplyOnChain)}</span>
                 <span className="w-12 text-right font-mono text-xs text-muted-foreground">{(coin.chainShare * 100).toFixed(1)}%</span>
               </div>
             ))}
@@ -262,7 +233,7 @@ function StablecoinTable({ chainId }: { chainId: string }) {
                       {coin.name} <span className="text-muted-foreground">({coin.symbol})</span>
                     </Link>
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono">{formatUsd(coin.supplyOnChain)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono">{formatChainUsd(coin.supplyOnChain)}</td>
                   <td className="px-3 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">
@@ -271,11 +242,11 @@ function StablecoinTable({ chainId }: { chainId: string }) {
                       <span className="font-mono text-xs text-muted-foreground">{(coin.chainShare * 100).toFixed(1)}%</span>
                     </div>
                   </td>
-                  <td className={cn("px-3 py-2.5 text-right font-mono", coin.change7dPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                    {formatPct(coin.change7dPct)}
+                  <td className={cn("px-3 py-2.5 text-right font-mono", trendColor(coin.change7dPct))}>
+                    {formatRatioPct(coin.change7dPct)}
                   </td>
-                  <td className={cn("px-3 py-2.5 text-right font-mono", coin.change30dPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                    {formatPct(coin.change30dPct)}
+                  <td className={cn("px-3 py-2.5 text-right font-mono", trendColor(coin.change30dPct))}>
+                    {formatRatioPct(coin.change30dPct)}
                   </td>
                 </tr>
               ))}
