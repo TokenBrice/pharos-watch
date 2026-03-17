@@ -140,7 +140,7 @@ export function CoinSelector({
         </span>
         <button
           onClick={onRemove}
-          className="ml-auto text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="pharos-focus-ring ml-auto text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
           aria-label={`Remove ${selected.name}`}
         >
           <X className="h-4 w-4" />

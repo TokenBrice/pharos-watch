@@ -135,7 +135,7 @@ export function CompareClient() {
           <button
             onClick={handleTwitterShare}
             disabled={shareLoading}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+            className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
             title="Share on Twitter/X"
           >
             <Twitter className="h-3.5 w-3.5" />
@@ -144,7 +144,7 @@ export function CompareClient() {
           <button
             onClick={handleWebShare}
             disabled={shareLoading}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+            className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
             title="Share comparison"
           >
             <Share2 className="h-3.5 w-3.5" />
@@ -153,7 +153,7 @@ export function CompareClient() {
           <button
             onClick={handleDownload}
             disabled={shareLoading}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+            className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
             title="Download comparison image"
           >
             <Download className="h-3.5 w-3.5" />
@@ -186,7 +186,7 @@ export function CompareClient() {
           {(flowCardData.length > 0 || flowSeries.length > 0) && (
             <div className="rounded-2xl border border-border/60 bg-card/50 p-4 space-y-4">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                <h3 className="pharos-kicker">
                   Live Flow Signals
                 </h3>
                 {flowData?.updatedAt && (
@@ -245,7 +245,7 @@ export function CompareClient() {
             {radarCards.length >= 2 && (
               <Card className="h-full flex flex-col">
                 <CardHeader>
-                  <CardTitle className="text-lg">Safety Score Comparison</CardTitle>
+                  <CardTitle className="pharos-kicker">Safety Score Comparison</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col items-center justify-center">
                   <CompareRadar cards={radarCards} size={350} />

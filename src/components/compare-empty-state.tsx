@@ -123,7 +123,7 @@ function ComparePresetCard({
 }) {
   return (
     <Card
-      className={`cursor-pointer border-border/70 transition-[border-color,background-color,transform,box-shadow] hover:border-primary/40 hover:bg-accent/35 hover:shadow-[0_16px_34px_oklch(0_0_0_/0.16)] ${featured ? "bg-card/92" : "bg-card/72"}`}
+      className={`pharos-focus-ring cursor-pointer border-border/70 transition-[border-color,background-color,transform,box-shadow] hover:border-primary/40 hover:bg-accent/35 hover:shadow-[0_16px_34px_oklch(0_0_0_/0.16)] ${featured ? "bg-card/92" : "bg-card/72"}`}
       role="button"
       tabIndex={0}
       aria-label={`Apply ${preset.title} preset`}

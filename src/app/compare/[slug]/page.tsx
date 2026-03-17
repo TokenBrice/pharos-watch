@@ -73,7 +73,7 @@ export default async function StaticComparisonPage({
       <section className="grid gap-4 lg:grid-cols-2">
         {[page.left, page.right].map((coin) => (
           <article key={coin.id} className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{coin.symbol}</p>
+            <p className="pharos-kicker">{coin.symbol}</p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">{coin.name}</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>{coin.flags.yieldBearing ? "Yield-bearing design" : "Non-yield-bearing design"}</li>
@@ -82,7 +82,7 @@ export default async function StaticComparisonPage({
             </ul>
             <Link
               href={researchLinks.find((link) => link.href.includes(coin.id))?.href ?? "/"}
-              className="mt-4 inline-flex text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="pharos-focus-ring mt-4 inline-flex text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Open {coin.symbol} detail page &rarr;
             </Link>
@@ -92,7 +92,7 @@ export default async function StaticComparisonPage({
 
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">At A Glance</h2>
+          <h2 className="pharos-kicker">At A Glance</h2>
           <p className="text-sm text-muted-foreground">
             Static structural differences between the two stablecoins before you switch to the live comparison tool.
           </p>
@@ -124,13 +124,13 @@ export default async function StaticComparisonPage({
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="space-y-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Research Links</h2>
+          <h2 className="pharos-kicker">Research Links</h2>
           <div className="flex flex-col gap-2">
             {researchLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-sm transition-colors hover:bg-accent"
+                className="pharos-focus-ring rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-sm transition-colors hover:bg-accent"
               >
                 {link.label}
               </Link>
@@ -139,13 +139,13 @@ export default async function StaticComparisonPage({
         </div>
 
         <div className="space-y-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Related Taxonomies</h2>
+          <h2 className="pharos-kicker">Related Taxonomies</h2>
           <div className="flex flex-col gap-2">
             {taxonomyLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-sm transition-colors hover:bg-accent"
+                className="pharos-focus-ring rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-sm transition-colors hover:bg-accent"
               >
                 {link.label}
               </Link>
@@ -153,7 +153,7 @@ export default async function StaticComparisonPage({
             {pegSlug && (
               <Link
                 href={`/stablecoins/${pegSlug}/`}
-                className="rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-sm transition-colors hover:bg-accent"
+                className="pharos-focus-ring rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-sm transition-colors hover:bg-accent"
               >
                 Explore all {page.left.flags.pegCurrency} stablecoins
               </Link>
