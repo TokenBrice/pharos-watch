@@ -173,11 +173,13 @@ function buildUserPrompt(
     }
     if (data.historicalContext) {
       const { psiPrecedent, psiBandStreak } = data.historicalContext;
-      if (psiPrecedent) {
+      if (psiPrecedent && psiPrecedent.lastSeenDaysAgo >= 2) {
         const precDate = new Date(psiPrecedent.lastSeenDate * 1000).toISOString().slice(0, 10);
         lines.push(`Context: last below ${score} on ${precDate}, ${psiPrecedent.lastSeenDaysAgo} days ago. Current ${band} streak: ${psiBandStreak} days.`);
-      } else {
+      } else if (!psiPrecedent) {
         lines.push(`Context: all-time low. Current ${band} streak: ${psiBandStreak} days.`);
+      } else {
+        lines.push(`Context: current ${band} streak: ${psiBandStreak} days.`);
       }
     }
   }
