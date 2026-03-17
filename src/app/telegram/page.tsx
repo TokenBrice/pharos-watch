@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell, MessageSquare, Send } from "lucide-react";
+import { Bell, MessageSquare, Send, ExternalLink, Bot } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -55,56 +56,67 @@ const COMMANDS = [
     command: "/subscribe <types> all",
     description: "Enable alert types across all tracked stablecoins",
     example: "/subscribe depeg,safety all",
+    common: true,
   },
   {
     command: "/subscribe <types> <tickers>",
     description: "Enable alert types and subscribe to coins",
     example: "/subscribe dews,depeg USDT,USDC",
+    common: true,
   },
   {
     command: "/unsubscribe <tickers>",
     description: "Remove specific coin subscriptions",
     example: "/unsubscribe USDT",
+    common: false,
   },
   {
     command: "/unsubscribe all",
     description: "Clear all per-coin and all-stablecoin subscriptions",
     example: null,
+    common: false,
   },
   {
     command: "/set <ticker> <setting> <value>",
     description: "Tune per-coin thresholds and modes",
     example: "/set USDC depeg-step 250",
+    common: false,
   },
   {
     command: "/set all <setting> <value>",
     description: "Turn global all-stablecoin alert types on or off",
     example: "/set all depeg off",
+    common: false,
   },
   {
     command: "/mute <start>-<end>",
     description: "Silence Telegram notifications during UTC quiet hours",
     example: "/mute 22-07",
+    common: false,
   },
   {
     command: "/unmutehours",
     description: "Disable quiet hours",
     example: null,
+    common: false,
   },
   {
     command: "/list",
     description: "Show global alerts, subscribed coins, settings, and quiet hours",
     example: null,
+    common: true,
   },
   {
     command: "/cancel",
     description: "Cancel a pending disambiguation prompt",
     example: null,
+    common: false,
   },
   {
     command: "/help",
     description: "Show command reference",
     example: null,
+    common: true,
   },
 ] as const;
 
@@ -119,6 +131,7 @@ Top stress signals:
   supply_velocity: 0.48
 
 View on Pharos: pharos.watch/stablecoin/usdt-tether`,
+    color: "amber",
   },
   {
     label: "Depeg triggered",
@@ -128,14 +141,7 @@ Deviation: -112 bps
 Price: $0.9888
 
 View on Pharos: pharos.watch/stablecoin/usdc-circle`,
-  },
-  {
-    label: "Depeg worsening",
-    content: `Depeg Worsening: USDC
-Deviation: -120 bps -> -260 bps
-Price: $0.9740
-
-View on Pharos: pharos.watch/stablecoin/usdc-circle`,
+    color: "red",
   },
   {
     label: "Safety grade change",
@@ -144,6 +150,7 @@ Grade: A- -> B+
 Score: 71
 
 View on Pharos: pharos.watch/stablecoin/dai-makerdao`,
+    color: "emerald",
   },
 ] as const;
 
@@ -174,9 +181,10 @@ export default function TelegramPage() {
                 href="https://t.me/pharoswatch"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+                className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
               >
                 @pharoswatch
+                <ExternalLink className="h-3 w-3" />
               </a>{" "}
               channel posts an AI-written daily recap of the stablecoin market
               every morning &mdash; covering peg deviations, supply shifts,
@@ -207,28 +215,29 @@ export default function TelegramPage() {
               Alert Bot
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-4">
+          <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-5">
             <p>
               <a
                 href="https://t.me/PharosWatchBot"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors"
+                className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors"
               >
                 @PharosWatchBot
+                <ExternalLink className="h-3 w-3" />
               </a>{" "}
               sends you cron-driven alerts for the stablecoins you care about.
               DEWS and depeg alerts are near-real-time within the bot&apos;s cron cadence. Safety alerts are checked after the daily safety snapshot. You can subscribe per coin or follow all tracked stablecoins by alert type, with optional per-coin settings and quiet hours.
             </p>
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
-                Follow Modes
-              </p>
+            
+            {/* Follow Modes */}
+            <div className="space-y-3">
+              <p className="pharos-kicker">Follow Modes</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {FOLLOW_MODES.map((mode) => (
                   <div
                     key={mode.key}
-                    className="rounded-lg border p-3 space-y-2"
+                    className="rounded-lg border p-3 space-y-2 bg-background/50"
                   >
                     <p className="text-sm font-medium text-foreground">
                       {mode.label}
@@ -243,25 +252,25 @@ export default function TelegramPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
-                Alert Types
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            
+            {/* Alert Types */}
+            <div className="space-y-3">
+              <p className="pharos-kicker">Alert Types</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {ALERT_TYPES.map((alert) => (
                   <div
                     key={alert.key}
-                    className="rounded-lg border p-3 space-y-1"
+                    className="rounded-lg border p-4 space-y-2 bg-background/50"
                   >
-                    <p className="text-foreground font-medium">
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono uppercase">
                         {alert.key}
                       </span>
-                    </p>
+                    </div>
                     <p className="text-foreground font-medium text-sm">
                       {alert.label}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       {alert.description}
                     </p>
                   </div>
@@ -291,14 +300,15 @@ export default function TelegramPage() {
                   href="https://t.me/PharosWatchBot"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-foreground underline underline-offset-4 hover:text-emerald-500 transition-colors"
+                  className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-emerald-500 transition-colors"
                 >
                   @PharosWatchBot
+                  <ExternalLink className="h-3 w-3" />
                 </a>{" "}
                 in Telegram and send{" "}
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
                   /start
-                </span>
+                </code>
                 .
               </p>
             </div>
@@ -308,55 +318,55 @@ export default function TelegramPage() {
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-bold text-emerald-700 dark:text-emerald-400">
                 2
               </span>
-              <div className="space-y-3">
+              <div className="space-y-4 flex-1">
                 <p>Pick a follow mode, then add any tuning you want:</p>
-                <div className="space-y-2">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-lg border p-3 space-y-1.5 bg-background/50">
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
                       /subscribe dews,depeg USDT,USDC
                     </code>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       DEWS + depeg alerts for the two largest stablecoins
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-lg border p-3 space-y-1.5 bg-background/50">
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
                       /subscribe safety all
                     </code>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Safety-grade alerts for every tracked stablecoin
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-lg border p-3 space-y-1.5 bg-background/50">
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
                       /set all safety off
                     </code>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Turn that global safety stream back off without touching your coin watchlist
+                    <p className="text-xs text-muted-foreground">
+                      Turn global safety stream off without touching your watchlist
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-lg border p-3 space-y-1.5 bg-background/50">
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
                       /set USDC depeg-step 250
                     </code>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Add worsening-depeg follow-ups every additional 250 bps
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-lg border p-3 space-y-1.5 bg-background/50">
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
                       /set DAI safety downgrade-only
                     </code>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Ignore safety upgrades and only notify on downgrades
+                    <p className="text-xs text-muted-foreground">
+                      Only notify on safety downgrades, ignore upgrades
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-lg border p-3 space-y-1.5 bg-background/50">
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">
                       /mute 22-07
                     </code>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Keep messages flowing while silencing Telegram notifications overnight
+                    <p className="text-xs text-muted-foreground">
+                      Silence notifications overnight (UTC 22:00-07:00)
                     </p>
                   </div>
                 </div>
@@ -371,9 +381,9 @@ export default function TelegramPage() {
               <p>
                 Done &mdash; alerts arrive automatically when conditions change.
                 Use{" "}
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
                   /list
-                </span>{" "}
+                </code>{" "}
                 at any time to check your active subscriptions.
               </p>
             </div>
@@ -381,20 +391,50 @@ export default function TelegramPage() {
         </Card>
 
         {/* What Alerts Look Like */}
-        <Card className="rounded-xl">
+        <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
           <CardHeader>
             <CardTitle as="h2">What Alerts Look Like</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <p className="text-sm text-muted-foreground">
+              Real alert messages from @PharosWatchBot look like this:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {EXAMPLE_MESSAGES.map((msg) => (
-                <div key={msg.label} className="space-y-1.5">
+                <div key={msg.label} className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     {msg.label}
                   </p>
-                  <pre className="whitespace-pre-wrap rounded-lg border bg-muted/50 p-3 text-xs font-mono leading-relaxed text-foreground">
-                    {msg.content}
-                  </pre>
+                  {/* Telegram Message Bubble Style */}
+                  <div className="relative">
+                    {/* Message bubble */}
+                    <div 
+                      className={`
+                        relative rounded-2xl rounded-tl-sm p-3 
+                        bg-[#1e3a5f] dark:bg-[#2b5278]
+                        text-white
+                        shadow-md
+                      `}
+                    >
+                      {/* Bot header */}
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
+                        <img
+                          src="/pharos-icon.png"
+                          alt=""
+                          className="h-5 w-5 rounded-full"
+                        />
+                        <span className="text-xs font-medium text-white/90">PharosWatchBot</span>
+                      </div>
+                      {/* Message content */}
+                      <pre className="whitespace-pre-wrap text-xs font-mono leading-relaxed text-white/95">
+                        {msg.content}
+                      </pre>
+                      {/* Time indicator */}
+                      <div className="mt-2 flex justify-end">
+                        <span className="text-[10px] text-white/50">09:41</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -402,38 +442,47 @@ export default function TelegramPage() {
         </Card>
 
         {/* Command Reference */}
-        <Card className="rounded-xl">
+        <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
           <CardHeader>
             <CardTitle as="h2">Command Reference</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="overflow-x-auto">
+          <CardContent className="space-y-4">
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="pb-2 pr-4 font-medium">Command</th>
-                    <th className="pb-2 pr-4 font-medium">Description</th>
-                    <th className="pb-2 font-medium">Example</th>
+                  <tr className="border-b border-border/60 text-left">
+                    <th className="pb-3 pr-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                      Command
+                    </th>
+                    <th className="pb-3 pr-4 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="pb-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                      Example
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-border/40">
                   {COMMANDS.map((cmd) => (
-                    <tr key={cmd.command}>
-                      <td className="py-2 pr-4 align-top">
-                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono whitespace-nowrap">
+                    <tr 
+                      key={cmd.command} 
+                      className="group hover:bg-muted/40 transition-colors"
+                    >
+                      <td className="py-3 pr-4 align-top">
+                        <code className="inline-flex items-center rounded bg-muted px-2 py-1 text-xs font-mono text-foreground whitespace-nowrap">
                           {cmd.command}
                         </code>
                       </td>
-                      <td className="py-2 pr-4 align-top text-muted-foreground">
+                      <td className="py-3 pr-4 align-top text-muted-foreground">
                         {cmd.description}
                       </td>
-                      <td className="py-2 align-top">
+                      <td className="py-3 align-top">
                         {cmd.example ? (
-                          <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono whitespace-nowrap">
+                          <code className="rounded bg-muted/70 px-2 py-1 text-xs font-mono text-foreground/80 whitespace-nowrap">
                             {cmd.example}
                           </code>
                         ) : (
-                          <span className="text-muted-foreground">
+                          <span className="text-muted-foreground/50">
                             &mdash;
                           </span>
                         )}
@@ -443,15 +492,63 @@ export default function TelegramPage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Use{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono text-foreground">
-                all
-              </code>{" "}
-              to follow an alert type across every tracked stablecoin. Unknown tickers get a closest-match suggestion when possible.
-            </p>
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Pro tip:</span>{" "}
+                Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Use{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono text-foreground">
+                  all
+                </code>{" "}
+                to follow an alert type across every tracked stablecoin. Unknown tickers get a closest-match suggestion when possible.
+              </p>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Final CTA */}
+        <div className="pharos-card-shell p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold">Ready to get started?</h3>
+              <p className="text-sm text-muted-foreground">
+                Join @pharoswatch for daily digests or chat with @PharosWatchBot for instant alerts.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="gap-2"
+              >
+                <a
+                  href="https://t.me/pharoswatch"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Send className="h-4 w-4" />
+                  Join Channel
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </Button>
+              <Button
+                size="sm"
+                asChild
+                className="gap-2"
+              >
+                <a
+                  href="https://t.me/PharosWatchBot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Bot className="h-4 w-4" />
+                  Start Bot
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     </FeaturePageShell>
   );
