@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.1`
+- **Current methodology version:** `v2.2`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -59,15 +59,14 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
    - fixed pegs -> choose the source closest to peg reference, mark `low`
    - NAV tokens -> use a wider 500 bps cluster threshold first, otherwise choose the highest-weight source and mark `low`
 
-Source labels are compressed for agreeing clusters:
+Source labels list all agreeing sources alphabetically:
 
 - 1 source: source name directly
-- 2 sources: `sourceA+sourceB`
-- 3+ sources: `firstSource+Nmore`
+- 2+ sources: `sourceA+sourceB+sourceC` (full list, no truncation)
 
 ### Pool Challenge (Soft-Source Guard)
 
-After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against ALL individual DEX pools from `dex_prices.price_sources_json` that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. If ANY qualifying pool diverges from consensus by ≥500 bps:
+After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against ALL individual DEX pools from `dex_prices.price_sources_json` that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from consensus beyond the threshold:
 
 1. Confidence is downgraded to `low`.
 2. The consensus price is **replaced** with the TVL-weighted mean of all qualifying individual pool prices (`source = "pool-tvl-weighted"`).

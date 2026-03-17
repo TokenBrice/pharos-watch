@@ -293,14 +293,14 @@ export async function confirmPendingDepegs(
       console.log(
         `[depeg-confirm] PROMOTED ${row.symbol}: ${row.first_seen_bps}bps confirmed by ${confirmedBy}${row.reason ? ` (${row.reason})` : ""}`
       );
-    } else if (offchainAgrees === false && dexAgrees === false && poolAgrees !== true) {
-      // Both secondary sources disagree and no pool evidence -- confirmed false positive
+    } else if (offchainAgrees === false && dexAgrees === false) {
+      // Both secondary sources disagree, pools didn't confirm either -- confirmed false positive
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
         `[depeg-confirm] Rejected false positive for ${row.symbol}: both off-chain and DEX checks disagree`
       );
-    } else if (offchainAgrees === false && dexAgrees === null && poolAgrees !== true) {
-      // Off-chain check disagrees, no DEX data, no pool evidence -- lean toward false positive
+    } else if (offchainAgrees === false && dexAgrees === null) {
+      // Off-chain check disagrees, no DEX data, pools didn't confirm -- lean toward false positive
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
         `[depeg-confirm] Rejected ${row.symbol}: off-chain check disagrees, no DEX data`

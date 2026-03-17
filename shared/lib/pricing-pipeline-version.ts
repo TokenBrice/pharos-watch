@@ -3,9 +3,31 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.1",
+  currentVersion: "2.2",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+  {
+    version: "2.2",
+    title: "Pool confirmation fix, peg-type-aware challenge, source quality gating",
+    date: "2026-03-17",
+    effectiveAt: 1773897600,
+    summary:
+      "Fixed critical depeg detection gap where pool-challenge-driven depegs could never be confirmed. " +
+      "Made pool challenge threshold peg-type-aware. Added Pyth confidence and RedStone venue agreement gating. " +
+      "Downgraded CG+DL-only consensus to single-source.",
+    impact: [
+      "Pool-level individual prices added as fourth depeg confirmation source — fixes dUSD-like depegs going undetected",
+      "Pool challenge threshold now peg-type-aware: 300 bps for non-USD (was 500 bps for all)",
+      "Pyth feeds with >200 bps confidence excluded from consensus; 100-200 bps downweighted",
+      "RedStone excluded when internal venue agreement < 50%",
+      "CG+DL-only consensus downgraded from high to single-source (illusory agreement)",
+      "NAV tokens (FPI) now visible in peg-summary API with null deviation",
+      "Full source list preserved in consensus label (no more truncation)",
+      "Protocol override divergence warnings logged when >100 bps from consensus",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "2.1",
     title: "Consensus honesty — independent DL list price, GeckoTerminal probe, pool challenge",
