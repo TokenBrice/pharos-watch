@@ -219,6 +219,7 @@ export function mergeCgPools(
         volumeUsd7d: pool.volume7dUsd ?? null,
         poolType: pool.poolType,
         source: "cg_onchain",
+        ...(pool.price > 0 ? { price: pool.price } : {}),
         extra: {
           ...(pool.balanceRatio != null ? { balanceRatio: Math.round(pool.balanceRatio * 100) / 100 } : {}),
           ...(pool.feePercentage != null ? { feeTier: Math.round(pool.feePercentage * 10000) } : {}),
@@ -408,6 +409,7 @@ export function mergeGtPools(
         volumeUsd7d: pool.volume7dUsd ?? null,
         poolType: pool.poolType,
         source: pool.sourceFamily,
+        ...(pool.price > 0 ? { price: pool.price } : {}),
         extra: {
           qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
           effectiveTvl: Math.round(poolEffTvl),

@@ -168,6 +168,9 @@ function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; t
               </th>
               <th className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground">TVL</th>
               <th className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground hidden md:table-cell">
+                Price
+              </th>
+              <th className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground hidden md:table-cell">
                 Balance
               </th>
               <th className="px-3 py-1.5 text-right text-xs font-medium text-muted-foreground hidden sm:table-cell">
@@ -195,6 +198,13 @@ function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; t
                 </td>
                 <td className="px-3 py-1.5 text-muted-foreground hidden sm:table-cell">{pool.chain}</td>
                 <td className="px-3 py-1.5 text-right font-mono tabular-nums">{formatCurrency(pool.tvlUsd)}</td>
+                <td className="px-3 py-1.5 text-right font-mono tabular-nums hidden md:table-cell">
+                  {pool.price != null ? (
+                    `$${pool.price.toFixed(4)}`
+                  ) : (
+                    <span className="text-muted-foreground text-xs">&mdash;</span>
+                  )}
+                </td>
                 <td className="px-3 py-1.5 text-right hidden md:table-cell">
                   {pool.extra?.balanceRatio != null ? (
                     <BalanceBar ratio={pool.extra.balanceRatio} />

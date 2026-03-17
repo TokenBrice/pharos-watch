@@ -89,6 +89,8 @@ export interface PoolEntry {
   poolType: string;
   /** Canonical source family for coverage-confidence accounting and UI attribution. */
   source: LiquidityPoolSourceFamily;
+  /** DEX-implied price of the tracked stablecoin in this pool (USD). */
+  price?: number;
   extra?: {
     amplificationCoefficient?: number;
     balanceRatio?: number;
@@ -173,6 +175,8 @@ export interface CurvePoolEntry {
   metapoolAdjustedTvl: number;
   creationTs: number;
   balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[];
+  /** Normalized symbol → USD price for each coin in the pool (from Curve API). */
+  tokenPrices: Record<string, number>;
 }
 
 export interface SymbolLookups {

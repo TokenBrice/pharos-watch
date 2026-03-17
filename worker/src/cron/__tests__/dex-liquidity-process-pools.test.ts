@@ -33,6 +33,7 @@ function makeCurveEntry(overrides: Partial<CurvePoolEntry>): CurvePoolEntry {
     metapoolAdjustedTvl: 900_000,
     creationTs: 0,
     balanceDetails: [],
+    tokenPrices: {},
     ...overrides,
   };
 }

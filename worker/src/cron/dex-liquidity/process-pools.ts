@@ -212,6 +212,9 @@ export function processPoolMetrics(
       m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
       m.chainTvl[pool.chain] = (m.chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
 
+      // Pool-level price: use Curve per-token price when available
+      const poolPrice = curveData?.tokenPrices[meta.symbol.toUpperCase()];
+
       // Pool entry with enriched extra
       m.topPools.push({
         poolId: `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`,
@@ -223,6 +226,7 @@ export function processPoolMetrics(
         volumeUsd7d: vol7d,
         poolType: resolvedPoolType,
         source: "dl",
+        ...(poolPrice != null ? { price: poolPrice } : {}),
         extra: {
           ...(curveData
             ? {

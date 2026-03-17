@@ -155,6 +155,7 @@ const DexLiquidityPoolSchema = z.object({
   volumeUsd1d: z.number(),
   poolType: z.string(),
   source: z.union([LiquidityPoolSourceFamilySchema, LegacyLiquidityPoolSourceSchema]).optional(),
+  price: z.number().optional(),
   extra: z
     .object({
       amplificationCoefficient: z.number().optional(),

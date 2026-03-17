@@ -239,6 +239,12 @@ export async function buildCurveLookups(
           .map((c) => normalizeDexSymbol(c.symbol))
           .sort()
           .join("-");
+        const tokenPrices: Record<string, number> = {};
+        for (const c of pool.coins) {
+          if (c.usdPrice && c.usdPrice > 0) {
+            tokenPrices[normalizeDexSymbol(c.symbol)] = c.usdPrice;
+          }
+        }
         const entry: CurvePoolEntry = {
           A,
           balanceRatio,
@@ -248,6 +254,7 @@ export async function buildCurveLookups(
           metapoolAdjustedTvl,
           creationTs: pool.creationTs ?? 0,
           balanceDetails,
+          tokenPrices,
         };
         curvePoolMap.set(
           `${CURVE_CHAINS[i]}:${pool.address.toLowerCase()}`,
