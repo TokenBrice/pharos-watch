@@ -54,7 +54,7 @@ export function CemeteryClient() {
       <Card className="rounded-xl gap-2">
         <CardHeader className="gap-3">
           <div className="space-y-1.5">
-            <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <CardTitle as="h2" className="pharos-kicker">
               The Cemetery
             </CardTitle>
             <CardDescription className="max-w-2xl leading-relaxed">
@@ -70,7 +70,7 @@ export function CemeteryClient() {
                   key={option.value}
                   type="button"
                   className={cn(
-                    "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                    "pharos-focus-ring rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                     sortMode === option.value
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
@@ -92,7 +92,7 @@ export function CemeteryClient() {
       {/* Autopsy reports */}
       <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
         <CardHeader className="gap-1.5 border-b border-border/60">
-          <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <CardTitle as="h2" className="pharos-kicker">
             Autopsy Reports
           </CardTitle>
           <CardDescription className="leading-relaxed">

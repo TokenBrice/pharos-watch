@@ -48,7 +48,7 @@ function CemeteryChartCard({ title, ariaLabel, children }: { title: string; aria
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle as="h2" className="pharos-kicker">
           {title}
         </CardTitle>
       </CardHeader>

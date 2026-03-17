@@ -62,7 +62,7 @@ export default function CemeteryPage() {
       />
       <div className="space-y-2">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
+          <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">Dashboard</Link>
           <span>/</span>
           <span className="text-foreground">Stablecoin Cemetery</span>
         </nav>

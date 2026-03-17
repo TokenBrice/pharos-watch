@@ -214,7 +214,7 @@ function Tombstone({
 
   return (
     <div
-      className={`relative flex flex-col items-center ${staggerClass}`}
+      className={`pharos-focus-ring relative flex flex-col items-center ${staggerClass}`}
       tabIndex={0}
       role="button"
       aria-label={`${coin.symbol} — ${coin.name}, ${CAUSE_META[coin.causeOfDeath].label}`}

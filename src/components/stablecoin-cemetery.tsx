@@ -40,7 +40,7 @@ export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCeme
             {/* Collapsed row — always visible */}
             <button
               type="button"
-              className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/30 transition-colors cursor-pointer"
+              className="pharos-focus-ring w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/30 transition-colors cursor-pointer"
               onClick={() => onToggle(coin.symbol)}
               aria-expanded={isExpanded}
               aria-controls={`autopsy-${coin.symbol}`}
@@ -158,7 +158,7 @@ export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCeme
                               href={url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-mono text-muted-foreground hover:text-foreground transition-colors"
+                              className="pharos-focus-ring font-mono text-muted-foreground hover:text-foreground transition-colors"
                             >
                               {truncateAddress(c.address)}
                             </a>
@@ -181,7 +181,7 @@ export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCeme
                   href={coin.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {coin.sourceLabel}
                   <ExternalLink className="h-3 w-3" />

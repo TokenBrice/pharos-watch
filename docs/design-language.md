@@ -149,6 +149,17 @@ This pairing creates a "broadsheet newspaper" aesthetic that signals both author
 - `EDITORIAL_META_STYLE` — Courier upright for labels
 - `digestDisplay.className` — Newsreader (via next/font) for titles
 
+### Cemetery (Special)
+
+The Stablecoin Cemetery (`/cemetery/`) employs a **unique memorial aesthetic** that is intentionally divergent from standard Pharos UI patterns:
+
+- **Tombstone visualizations**: Custom SVG-based tombstones with varying shapes (arch, hammer, cross), sizes (by peak market cap), and weathering effects (by age)
+- **Hardcoded dark palette**: Uses explicit `slate`, `stone`, and `zinc` colors for artistic atmosphere — not theme-adaptive
+- **Cause-of-death color system**: Algorithmic failure (red), counterparty failure (amber), liquidity drain (orange), regulatory (blue), abandoned (zinc)
+- **Interactive memorial**: "Press F to pay respects" with persistent flower accumulation
+
+This is a **one-off artistic treatment** — the patterns are not intended for reuse on other pages. The hardcoded colors and bespoke components serve the specific narrative of memorializing failed stablecoins.
+
 ---
 
 ## Typography
