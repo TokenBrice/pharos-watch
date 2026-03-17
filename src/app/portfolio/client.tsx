@@ -170,13 +170,13 @@ function HoldingRow({
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="0"
-            className="w-28 rounded-md border bg-transparent pl-5 pr-2 py-1.5 text-sm text-right outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="pharos-focus-ring w-28 rounded-md border bg-transparent pl-5 pr-2 py-1.5 text-sm text-right outline-none placeholder:text-muted-foreground"
             aria-label={`Amount in USD for ${meta.name}`}
           />
         </div>
         <button
           onClick={() => onRemove(coinId)}
-          className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="pharos-focus-ring text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
           aria-label={`Remove ${meta.name}`}
         >
           <X className="h-4 w-4" />
@@ -389,17 +389,17 @@ export function PortfolioClient() {
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               <Wallet className="h-5 w-5 text-violet-700 dark:text-violet-400 shrink-0" />
-              <CardTitle className="text-lg">My Holdings</CardTitle>
+              <CardTitle className="pharos-kicker">My Holdings</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               {toast && <span className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>}
               {portfolio.holdings.length > 0 && (
                 <>
-                  <Button variant="ghost" size="xs" onClick={handleShare} className="text-muted-foreground">
+                  <Button variant="ghost" size="xs" onClick={handleShare} className="pharos-focus-ring text-muted-foreground">
                     <Share2 className="h-3 w-3" />
                     Share
                   </Button>
-                  <Button variant="ghost" size="xs" onClick={handleClear} className="text-muted-foreground">
+                  <Button variant="ghost" size="xs" onClick={handleClear} className="pharos-focus-ring text-muted-foreground">
                     <Trash2 className="h-3 w-3" />
                     Clear
                   </Button>
@@ -461,7 +461,7 @@ export function PortfolioClient() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {portfolioRadarCard && (
                 <div>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  <h3 className="pharos-kicker mb-2">
                     Portfolio Radar
                   </h3>
                   <ReportCardRadar card={portfolioRadarCard} size={260} labels="short" />
@@ -471,21 +471,21 @@ export function PortfolioClient() {
               {(portfolio.upstreamExposureGrouped.length > 0 || portfolio.upstreamExposure.length > 0) && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    <h3 className="pharos-kicker">
                       Upstream Exposure
                     </h3>
                     <div className="inline-flex items-center rounded-md border bg-muted/30 p-0.5 gap-0.5">
                       <button
                         type="button"
                         onClick={() => setShowUpstreamDetail(false)}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${!showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`pharos-focus-ring px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${!showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Summary
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowUpstreamDetail(true)}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`pharos-focus-ring px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Detail
                       </button>
@@ -523,7 +523,7 @@ export function PortfolioClient() {
       {/* Grade cards for held coins only */}
       {portfolio.holdings.length > 0 && (
         <>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <h2 className="pharos-kicker">
             Holdings Safety Grades
           </h2>
 

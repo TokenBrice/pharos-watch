@@ -128,7 +128,7 @@ export function PortfolioEmptyState({ presets, logos, onApplyPreset }: Portfolio
         {presets.map((preset) => (
           <Card
             key={preset.title}
-            className="cursor-pointer border-border/70 bg-card/75 transition-[border-color,background-color,transform,box-shadow] hover:border-primary/40 hover:bg-accent/35 hover:shadow-[0_16px_34px_oklch(0_0_0_/0.16)]"
+            className="pharos-focus-ring cursor-pointer border-border/70 bg-card/75 transition-[border-color,background-color,transform,box-shadow] hover:border-primary/40 hover:bg-accent/35 hover:shadow-[0_16px_34px_oklch(0_0_0_/0.16)]"
             role="button"
             tabIndex={0}
             aria-label={`Load ${preset.title} starting portfolio`}
