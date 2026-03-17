@@ -1,0 +1,21 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pusdBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a3a5c"/>
+      <stop offset="100%" style="stop-color:#0d1f3c"/>
+    </linearGradient>
+    <linearGradient id="pusdAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F5F0E6"/>
+      <stop offset="100%" style="stop-color:#E8DCC4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#pusdBg)" stroke="#E8DCC4" stroke-width="1.5" stroke-opacity="0.3"/>
+
+  <!-- Dollar symbol with star accent -->
+  <text x="32" y="42" font-family="'Cormorant Garamond', Georgia, serif" font-size="26" font-weight="500" fill="url(#pusdAccent)" text-anchor="middle">$</text>
+
+  <!-- Small star above -->
+  <polygon points="32,16 32.8,18.5 35.5,18.5 33.3,20.2 34.2,22.8 32,21 29.8,22.8 30.7,20.2 28.5,18.5 31.2,18.5" fill="#E8DCC4" fill-opacity="0.6"/>
+</svg>

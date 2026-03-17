@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, Globe, Calendar, Shield, Landmark, Sparkles } from "lucide-react";
+import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText } from "lucide-react";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   BACKING_LABELS,
@@ -8,7 +8,7 @@ import {
 } from "@shared/lib/classification";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { StablecoinMeta, LaunchPhase } from "@shared/types";
+import type { StablecoinMeta, LaunchPhase, StablecoinLink } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Launch-phase labels
@@ -21,6 +21,27 @@ const LAUNCH_PHASE_LABELS: Record<LaunchPhase, string> = {
   beta: "Beta",
   "launching-soon": "Launching Soon",
 };
+
+// ---------------------------------------------------------------------------
+// Link icon mapping
+// ---------------------------------------------------------------------------
+
+function getLinkIcon(label: string) {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("twitter") || normalized.includes("x")) {
+    return <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
+  }
+  if (normalized.includes("website") || normalized.includes("homepage")) {
+    return <Globe className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
+  }
+  if (normalized.includes("docs") || normalized.includes("documentation")) {
+    return <FileText className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
+  }
+  if (normalized.includes("audit") || normalized.includes("security")) {
+    return <Shield className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
+  }
+  return <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />;
+}
 
 // ---------------------------------------------------------------------------
 // Date helpers — parse YYYY, YYYY-MM, YYYY-QN
@@ -85,7 +106,7 @@ function getRelatedActiveCoins(coin: StablecoinMeta, limit = 6): StablecoinMeta[
 
 function LaunchPhaseBadge({ phase }: { phase: LaunchPhase }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-medium text-indigo-400">
+    <span className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
       {LAUNCH_PHASE_LABELS[phase]}
     </span>
   );
@@ -108,13 +129,25 @@ function TimelineBar({
   const elapsedMs = now.getTime() - start.getTime();
   const pct = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100));
 
+  // ARIA values for accessibility
+  const ariaValueNow = Math.round(pct);
+  const ariaValueMin = 0;
+  const ariaValueMax = 100;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{formatFuzzyDate(announcedDate)}</span>
         <span>Expected: {formatFuzzyDate(expectedLaunchDate)}</span>
       </div>
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40">
+      <div
+        className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40"
+        role="progressbar"
+        aria-valuenow={ariaValueNow}
+        aria-valuemin={ariaValueMin}
+        aria-valuemax={ariaValueMax}
+        aria-label="Launch timeline progress"
+      >
         <div
           className="absolute inset-y-0 left-0 rounded-full bg-indigo-500/60"
           style={{ width: `${pct}%` }}
@@ -128,7 +161,7 @@ function TimelineBar({
         )}
       </div>
       {pct > 2 && pct < 98 && (
-        <div className="text-center text-[11px] text-muted-foreground">Today</div>
+        <div className="text-center text-xs text-muted-foreground">Today</div>
       )}
     </div>
   );
@@ -137,7 +170,7 @@ function TimelineBar({
 function InfoGridItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-1">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dt className="pharos-kicker">{label}</dt>
       <dd className="text-sm font-medium">{value}</dd>
     </div>
   );
@@ -163,12 +196,33 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
   const chains = coin.contracts?.map((c) => c.chain) ?? [];
   const uniqueChains = [...new Set(chains)];
 
+  // Build jurisdiction display with regulator if available
+  const jurisdictionDisplay = coin.jurisdiction?.regulator
+    ? `${coin.jurisdiction.country} (${coin.jurisdiction.regulator})`
+    : coin.jurisdiction?.country;
+
   return (
     <div className="space-y-8">
+      {/* Screen-reader-only page title */}
+      <h1 className="sr-only">
+        {coin.name} ({coin.symbol}) — Pre-Launch Stablecoin
+      </h1>
+
+      {/* ── Back Navigation ───────────────────────────────────────── */}
+      <nav aria-label="Breadcrumb">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <span>Back to Dashboard</span>
+        </Link>
+      </nav>
+
       {/* ── Pre-Launch Banner ─────────────────────────────────────── */}
       <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-indigo-400">
+          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
             Pre-Launch
           </span>
           <span className="text-sm text-muted-foreground">
@@ -186,10 +240,10 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Header ────────────────────────────────────────────────── */}
       <header className="flex items-start gap-4">
         <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
-        <div className="space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+        <div className="min-w-0 space-y-1">
+          <h2 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">
             {coin.name}
-          </h1>
+          </h2>
           <p className="font-mono text-sm text-muted-foreground">{coin.symbol}</p>
         </div>
       </header>
@@ -197,7 +251,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Launch Timeline ───────────────────────────────────────── */}
       {coin.announcedDate && coin.expectedLaunchDate ? (
         <section className="pharos-card-shell p-4 sm:p-5">
-          <h2 className="mb-3 text-lg font-semibold tracking-tight">Launch Timeline</h2>
+          <h3 className="mb-3 text-lg font-semibold tracking-tight">Launch Timeline</h3>
           <TimelineBar
             announcedDate={coin.announcedDate}
             expectedLaunchDate={coin.expectedLaunchDate}
@@ -206,7 +260,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       ) : coin.expectedLaunchDate ? (
         <section className="pharos-card-shell p-4 sm:p-5">
           <div className="flex items-center gap-2 text-sm">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <span className="text-muted-foreground">Expected Launch:</span>
             <span className="font-medium">{formatFuzzyDate(coin.expectedLaunchDate)}</span>
           </div>
@@ -216,7 +270,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Editorial Summary ─────────────────────────────────────── */}
       {summary && (
         <section className="pharos-card-shell space-y-2 p-4 sm:p-5">
-          <h2 className="text-lg font-semibold tracking-tight">{summary.title}</h2>
+          <h3 className="text-lg font-semibold tracking-tight">{summary.title}</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">{summary.text}</p>
           <p className="text-[11px] text-muted-foreground/60">
             Updated {summary.updatedAt}
@@ -226,7 +280,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
 
       {/* ── At-a-Glance Grid ─────────────────────────────────────── */}
       <section className="pharos-card-shell p-4 sm:p-5">
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">At a Glance</h2>
+        <h3 className="mb-3 text-lg font-semibold tracking-tight">At a Glance</h3>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <InfoGridItem
             label="Backing"
@@ -240,8 +294,8 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
             label="Peg Currency"
             value={PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
           />
-          {coin.jurisdiction?.country && (
-            <InfoGridItem label="Jurisdiction" value={coin.jurisdiction.country} />
+          {jurisdictionDisplay && (
+            <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />
           )}
           {coin.flags.yieldBearing && (
             <InfoGridItem label="Yield-Bearing" value="Yes" />
@@ -252,9 +306,9 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Planned Reserves ──────────────────────────────────────── */}
       {coin.reserves && coin.reserves.length > 0 && (
         <section className="pharos-card-shell p-4 sm:p-5">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">
+          <h3 className="mb-3 text-lg font-semibold tracking-tight">
             Planned Collateral Composition
-          </h2>
+          </h3>
           <div className="space-y-2">
             {coin.reserves.map((slice) => (
               <div
@@ -274,7 +328,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Target Chains ─────────────────────────────────────────── */}
       {uniqueChains.length > 0 && (
         <section className="pharos-card-shell p-4 sm:p-5">
-          <h2 className="mb-3 text-lg font-semibold tracking-tight">Target Chains</h2>
+          <h3 className="mb-3 text-lg font-semibold tracking-tight">Target Chains</h3>
           <div className="flex flex-wrap gap-2">
             {uniqueChains.map((chain) => (
               <span
@@ -291,27 +345,20 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Links ─────────────────────────────────────────────────── */}
       {coin.links && coin.links.length > 0 && (
         <section className="pharos-card-shell p-4 sm:p-5">
-          <h2 className="mb-3 text-lg font-semibold tracking-tight">Links</h2>
+          <h3 className="mb-3 text-lg font-semibold tracking-tight">Links</h3>
           <div className="flex flex-wrap gap-2">
-            {coin.links.map((link) => (
+            {coin.links.map((link: StablecoinLink) => (
               <a
                 key={link.url}
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent sm:min-h-9"
+                aria-label={`${link.label} (opens in new tab)`}
               >
-                {link.label === "Website" ? (
-                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                ) : link.label === "Twitter" ? (
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                ) : link.label === "Docs" ? (
-                  <Shield className="h-3.5 w-3.5 text-muted-foreground" />
-                ) : (
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
+                {getLinkIcon(link.label)}
                 <span>{link.label}</span>
-                <ExternalLink className="h-3 w-3 text-muted-foreground/60" />
+                <ExternalLink className="h-3 w-3 text-muted-foreground/60" aria-hidden="true" />
               </a>
             ))}
           </div>
@@ -319,15 +366,17 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       )}
 
       {/* ── Related Active Stablecoins ────────────────────────────── */}
-      {related.length > 0 && (
-        <section className="pharos-card-shell p-4 sm:p-5">
-          <div className="space-y-1.5">
-            <h2 className="text-lg font-semibold tracking-tight">Related Stablecoins</h2>
-            <p className="text-sm text-muted-foreground">
-              Active stablecoins with similar governance, backing, or peg currency.
-            </p>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
+      <section className="pharos-card-shell p-4 sm:p-5">
+        <div className="mb-3 space-y-1.5">
+          <h3 className="text-lg font-semibold tracking-tight">Related Stablecoins</h3>
+          <p className="text-sm text-muted-foreground">
+            {related.length > 0
+              ? "Active stablecoins with similar governance, backing, or peg currency."
+              : "No active stablecoins with matching governance, backing, or peg currency."}
+          </p>
+        </div>
+        {related.length > 0 && (
+          <div className="flex flex-wrap gap-2">
             {related.map((rel) => (
               <Link
                 key={rel.id}
@@ -339,8 +388,8 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
               </Link>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }
