@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { CHAIN_META } from "@shared/lib/chains";
+import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
@@ -218,14 +218,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })
   );
 
-  const activeChainIds = new Set<string>();
-  for (const coin of TRACKED_STABLECOINS) {
-    if (coin.contracts) {
-      for (const c of coin.contracts) {
-        if (CHAIN_META[c.chain]) activeChainIds.add(c.chain);
-      }
-    }
-  }
   const chainPages: MetadataRoute.Sitemap = [
     {
       url: "https://pharos.watch/chains/",
@@ -233,7 +225,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.8,
     },
-    ...[...activeChainIds].sort().map((chainId) => ({
+    ...getActiveChainIds().map((chainId) => ({
       url: `https://pharos.watch/chains/${chainId}/`,
       lastModified: now,
       changeFrequency: "daily" as const,
