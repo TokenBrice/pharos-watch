@@ -148,6 +148,9 @@ export const CIRCUIT_SOURCE = {
   GECKO_TERMINAL_PROBE: "geckoterminal-probe",
 } as const;
 
+/** Minimum per-pool TVL for DEX pool challenge and pool-level depeg confirmation */
+export const POOL_CHALLENGE_MIN_TVL = 100_000; // $100K
+
 /** Minimum TVL for a GeckoTerminal pool to be used as a price cross-check */
 export const GT_PROBE_MIN_TVL_USD = 10_000;
 

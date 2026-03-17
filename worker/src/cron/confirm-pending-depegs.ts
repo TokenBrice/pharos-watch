@@ -6,6 +6,8 @@ import {
   DEFILLAMA_COINS,
   USER_AGENT,
   CIRCUIT_SOURCE,
+  DEX_FRESHNESS_SEC,
+  POOL_CHALLENGE_MIN_TVL,
 } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
@@ -19,6 +21,7 @@ import {
   classifyPrimaryDepegTrust,
   isTrustedDexPriceRow,
   loadDexPriceRows,
+  loadDexPoolChallengers,
 } from "../lib/depeg-helpers";
 import type { DepegEvent, PegAssetBase } from "@shared/types";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
@@ -73,6 +76,10 @@ export async function confirmPendingDepegs(
   // Load DEX prices
   throwIfAborted(signal);
   const dexPriceRows = await loadDexPriceRows(db);
+
+  // Load individual pool prices for pool-level confirmation
+  throwIfAborted(signal);
+  const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, now);
 
   // Check for existing open events to avoid duplicates
   throwIfAborted(signal);
@@ -217,8 +224,31 @@ export async function confirmPendingDepegs(
       }
     }
 
+    // 4c. Individual DEX pool check
+    let poolAgrees: boolean | null = null;
+    const pools = poolChallengers.get(row.stablecoin_id);
+    if (pools?.length) {
+      for (const pool of pools) {
+        const poolBps = Math.abs(Math.round(((pool.price / row.peg_reference) - 1) * 10000));
+        if (poolBps >= secondaryBar) {
+          poolAgrees = true;
+          console.log(
+            `[depeg-confirm] ${row.symbol} pool check: price=$${pool.price} (${pool.protocol}/${pool.chain}), ` +
+            `deviation=${poolBps}bps, bar=${secondaryBar}bps, agrees=true`,
+          );
+          break;
+        }
+      }
+      if (poolAgrees !== true) {
+        poolAgrees = false;
+        console.log(
+          `[depeg-confirm] ${row.symbol} pool check: ${pools.length} pools, none diverge ≥${secondaryBar}bps`,
+        );
+      }
+    }
+
     // 5. Decision
-    if (offchainAgrees === true || dexAgrees === true || cexAgrees === true) {
+    if (offchainAgrees === true || dexAgrees === true || cexAgrees === true || poolAgrees === true) {
       // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
       const authoritativePrice =
         asset != null &&
@@ -258,18 +288,19 @@ export async function confirmPendingDepegs(
         offchainAgrees ? (asset?.priceSource?.startsWith("coingecko") ? "DefiLlama" : "CoinGecko") : null,
         dexAgrees ? "DEX" : null,
         cexAgrees ? "CEX" : null,
+        poolAgrees ? "Pool" : null,
       ].filter(Boolean).join("+");
       console.log(
         `[depeg-confirm] PROMOTED ${row.symbol}: ${row.first_seen_bps}bps confirmed by ${confirmedBy}${row.reason ? ` (${row.reason})` : ""}`
       );
-    } else if (offchainAgrees === false && dexAgrees === false) {
-      // Both secondary sources disagree -- confirmed false positive
+    } else if (offchainAgrees === false && dexAgrees === false && poolAgrees !== true) {
+      // Both secondary sources disagree and no pool evidence -- confirmed false positive
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
         `[depeg-confirm] Rejected false positive for ${row.symbol}: both off-chain and DEX checks disagree`
       );
-    } else if (offchainAgrees === false && dexAgrees === null) {
-      // Off-chain check disagrees, no DEX data -- lean toward false positive
+    } else if (offchainAgrees === false && dexAgrees === null && poolAgrees !== true) {
+      // Off-chain check disagrees, no DEX data, no pool evidence -- lean toward false positive
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
         `[depeg-confirm] Rejected ${row.symbol}: off-chain check disagrees, no DEX data`

@@ -70,6 +70,7 @@ function makeDb(config: {
     source_pool_count?: number;
     source_total_tvl?: number;
     deviation_from_primary_bps?: number | null;
+    price_sources_json?: string;
   }>;
   openRows?: Array<{ stablecoin_id: string }>;
   dexError?: unknown;
@@ -432,6 +433,129 @@ describe("confirmPendingDepegs", () => {
 
     expect(errorSpy).not.toHaveBeenCalled();
     expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("promotes a pending depeg when individual pool prices confirm the deviation", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    // CoinGecko returns ~$1 (disagrees with depeg)
+    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
+      if (url.includes("dusd")) {
+        return new Response(JSON.stringify({ "dusd-trinity": { usd: 1.0 } }), { status: 200 });
+      }
+      return null;
+    });
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 40,
+            stablecoin_id: "dusd-trinity",
+            symbol: "dUSD",
+            peg_type: "peggedUSD",
+            first_seen_bps: -510,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.949,
+            peg_reference: 1,
+          }),
+        ],
+        // DEX aggregate shows ~$1 (misleading)
+        dexRows: [
+          {
+            stablecoin_id: "dusd-trinity",
+            dex_price_usd: 0.9988,
+            updated_at: nowSec - 30,
+            source_pool_count: 3,
+            source_total_tvl: 3_290_000,
+            // Individual pools show real depeg via price_sources_json
+            price_sources_json: JSON.stringify([
+              { price: 0.80, tvl: 500_000, protocol: "curve", chain: "ethereum" },
+              { price: 0.95, tvl: 200_000, protocol: "uniswap", chain: "ethereum" },
+              { price: 1.00, tvl: 50_000, protocol: "balancer", chain: "ethereum" },
+            ]),
+          },
+        ],
+      }),
+      [
+        makeAsset({
+          id: "dusd-trinity",
+          name: "dUSD",
+          symbol: "dUSD",
+          geckoId: "dusd-trinity",
+          price: 0.949,
+          priceSource: "pool-tvl-weighted",
+          priceConfidence: "low",
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const prepared = statements as PreparedStatementWithMeta[];
+    const inserts = prepared.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]?.boundValues?.[0]).toBe("dusd-trinity");
+  });
+
+  it("does not promote when individual pool prices do not confirm the deviation", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    // CoinGecko disagrees
+    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
+      if (url.includes("tether")) {
+        return new Response(JSON.stringify({ tether: { usd: 1.0 } }), { status: 200 });
+      }
+      return null;
+    });
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 41,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            peg_type: "peggedUSD",
+            first_seen_bps: -200,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.98,
+            peg_reference: 1,
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 1.0,
+            updated_at: nowSec - 30,
+            source_pool_count: 5,
+            source_total_tvl: 50_000_000,
+            // All pools near peg — should NOT confirm
+            price_sources_json: JSON.stringify([
+              { price: 1.001, tvl: 20_000_000, protocol: "uniswap", chain: "ethereum" },
+              { price: 0.999, tvl: 15_000_000, protocol: "curve", chain: "ethereum" },
+            ]),
+          },
+        ],
+      }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.98 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    // Off-chain (CG $1) disagrees, DEX aggregate ($1) disagrees, pools near peg
+    // → rejected as false positive
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const prepared = statements as PreparedStatementWithMeta[];
+    const inserts = prepared.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    expect(inserts).toHaveLength(0);
   });
 
   it("rethrows abort-related failures from secondary fetches", async () => {

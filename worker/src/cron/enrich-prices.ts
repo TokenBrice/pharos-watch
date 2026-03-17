@@ -1,4 +1,4 @@
-import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC } from "../lib/constants";
+import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -410,7 +410,6 @@ export async function fetchPrimaryPrices(
   // aggregators may all be pricing from small misleading pools while
   // ignoring large pools that show a depeg.
   const POOL_CHALLENGE_BPS = 500; // 5% divergence threshold
-  const POOL_CHALLENGE_MIN_TVL = 100_000; // $100K minimum pool TVL for challenger
   const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, nowSec);
 
   let poolChallengeDowngrades = 0;
