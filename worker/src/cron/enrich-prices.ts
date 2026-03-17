@@ -405,14 +405,31 @@ export async function fetchPrimaryPrices(
   }
 
   // --- Pool challenge pass ---
-  // For high-confidence results built entirely from soft aggregator sources,
-  // check if ANY large DEX pool diverges significantly. If so, the
-  // aggregators may all be pricing from small misleading pools while
-  // ignoring large pools that show a depeg.
-  const POOL_CHALLENGE_BPS = 500; // 5% divergence threshold
   const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, nowSec);
+  const assetPegTypes = new Map(candidates.map((a) => [a.id, a.pegType]));
+  const poolChallengeDowngrades = applyPoolChallenge(results, poolChallengers, assetPegTypes, stats);
+  if (poolChallengeDowngrades > 0) {
+    console.log(`[primary-prices] Pool challenge downgraded ${poolChallengeDowngrades} soft-only results to low confidence`);
+  }
 
-  let poolChallengeDowngrades = 0;
+  console.log(
+    `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
+  );
+
+  return { results, stats, cgPrices };
+}
+
+/**
+ * Post-consensus pool challenge: downgrade soft-only results when
+ * large DEX pools diverge from the consensus price.
+ */
+export function applyPoolChallenge(
+  results: Map<string, PrimaryPriceResult>,
+  poolChallengers: Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string }>>,
+  assetPegTypes: Map<string, string | undefined>,
+  stats: PriceValidationStats,
+): number {
+  let downgrades = 0;
   for (const [assetId, result] of results) {
     if (result.confidence !== "high") continue;
     if (!isAllSoftSources(result.agreeSources)) continue;
@@ -420,26 +437,27 @@ export async function fetchPrimaryPrices(
     const pools = poolChallengers.get(assetId);
     if (!pools?.length) continue;
 
-    // Check if ANY qualifying pool diverges from consensus
+    const pegType = assetPegTypes.get(assetId);
+    const poolChallengeBps = pegType === "peggedUSD"
+      ? 500
+      : Math.min(getDepegThresholdBps(pegType) * 2, 500);
+
     let challenged = false;
     for (const pool of pools) {
       const mid = (result.price + pool.price) / 2;
       if (mid <= 0) continue;
       const bps = Math.abs(result.price - pool.price) / mid * 10_000;
-      if (bps >= POOL_CHALLENGE_BPS) {
+      if (bps >= poolChallengeBps) {
         challenged = true;
-        break; // one divergent pool is enough
+        break;
       }
     }
     if (challenged) {
       result.confidence = "low";
       stats.high--;
       stats.low++;
-      poolChallengeDowngrades++;
+      downgrades++;
 
-      // Replace soft-only consensus price with TVL-weighted mean of individual pools.
-      // When aggregators agree on a misleading price, on-chain pool liquidity is
-      // a more honest signal — large pools carry proportional weight.
       let tvlWeightedSum = 0;
       let tvlSum = 0;
       for (const pool of pools) {
@@ -452,15 +470,7 @@ export async function fetchPrimaryPrices(
       }
     }
   }
-  if (poolChallengeDowngrades > 0) {
-    console.log(`[primary-prices] Pool challenge downgraded ${poolChallengeDowngrades} soft-only results to low confidence`);
-  }
-
-  console.log(
-    `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
-  );
-
-  return { results, stats, cgPrices };
+  return downgrades;
 }
 
 /** Sources that are independent exchanges/oracles — NOT aggregators that may share upstream data */

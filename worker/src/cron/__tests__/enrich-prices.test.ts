@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice } from "../enrich-prices";
-import type { PeggedAsset } from "../enrich-prices";
+import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice, applyPoolChallenge } from "../enrich-prices";
+import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../enrich-prices";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 
@@ -975,5 +975,95 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
 
     expect(results.size).toBe(1);
     expect(results.get("dusd-dtrinity")!.confidence).toBe("high");
+  });
+});
+
+describe("applyPoolChallenge", () => {
+  function makeStats(): PriceValidationStats {
+    return { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
+  }
+
+  it("fires for non-USD peg at 300 bps divergence", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["jpyc-jpyc", {
+        price: 0.00682, source: "coingecko+defillama-list+dex-promoted",
+        confidence: "high", dlPrice: 0.00682, cgPrice: 0.00682,
+        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
+        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
+      }],
+    ]);
+    const pools = new Map([
+      ["jpyc-jpyc", [{ price: 0.00704, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["jpyc-jpyc", "peggedJPY"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(1);
+    expect(results.get("jpyc-jpyc")!.confidence).toBe("low");
+  });
+
+  it("does NOT fire for USD peg at 300 bps divergence", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usdt-tether", {
+        price: 1.0, source: "coingecko+defillama-list+dex-promoted",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list", "dex-promoted"],
+        agreeSources: ["coingecko", "defillama-list", "dex-promoted"],
+      }],
+    ]);
+    const pools = new Map([
+      ["usdt-tether", [{ price: 0.97, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["usdt-tether", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(0);
+    expect(results.get("usdt-tether")!.confidence).toBe("high");
+  });
+
+  it("fires for USD peg at 500+ bps divergence", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [{ price: 0.80, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(1);
+    expect(results.get("dusd-test")!.confidence).toBe("low");
+    expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
+  });
+
+  it("skips results with hard sources in agreeSources", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["usdt-tether", {
+        price: 1.0, source: "coingecko+binance",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "binance"],
+        agreeSources: ["coingecko", "binance"],
+      }],
+    ]);
+    const pools = new Map([
+      ["usdt-tether", [{ price: 0.80, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["usdt-tether", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(0); // binance is a hard source
   });
 });
