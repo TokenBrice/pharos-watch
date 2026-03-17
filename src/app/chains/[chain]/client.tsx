@@ -41,7 +41,7 @@ function HeroCard({ chain, chainId }: { chain: ChainSummary; chainId: string }) 
       <CardContent className="px-5 py-5">
         <div className="flex flex-wrap items-start gap-4">
           <div className="flex items-center gap-3">
-            {meta && <Image src={meta.logoPath} alt="" width={40} height={40} className="rounded-full" />}
+            {meta && <Image src={meta.logoPath} alt="" width={40} height={40} className={`rounded-full${meta.darkInvert ? " dark:invert" : ""}`} />}
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold">{chain.name}</h2>

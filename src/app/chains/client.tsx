@@ -10,6 +10,7 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/compon
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { cn } from "@/lib/utils";
 import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
+import { CHAIN_META } from "@shared/lib/chains";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 
 type ChainSortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
@@ -153,7 +154,7 @@ export function ChainsLeaderboardClient() {
                 <TableCell className="text-right text-muted-foreground tabular-nums">{i + 1}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Image src={chain.logoPath} alt="" width={20} height={20} className="rounded-full" />
+                    <Image src={chain.logoPath} alt="" width={20} height={20} className={`rounded-full${CHAIN_META[chain.id]?.darkInvert ? " dark:invert" : ""}`} />
                     <span className="font-medium">{chain.name}</span>
                     <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">{chain.type}</span>
                   </div>
