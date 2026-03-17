@@ -407,6 +407,7 @@ export async function fetchPrimaryPrices(
     if (consensus.confidence === "single-source") {
       if (consensus.source === "coingecko") stats.cgOnly++;
     }
+
   }
 
   // --- Pool challenge pass ---
@@ -415,6 +416,21 @@ export async function fetchPrimaryPrices(
   const poolChallengeDowngrades = applyPoolChallenge(results, poolChallengers, assetPegTypes, stats);
   if (poolChallengeDowngrades > 0) {
     console.log(`[primary-prices] Pool challenge downgraded ${poolChallengeDowngrades} soft-only results to low confidence`);
+  }
+
+  // Downgrade CG+DL-only "high" to "single-source" — these soft aggregators
+  // may share upstream data, creating illusory agreement. Runs after pool
+  // challenge so pool-challenged assets get caught at "high" confidence first.
+  for (const result of results.values()) {
+    if (
+      result.confidence === "high" &&
+      result.agreeSources.length === 2 &&
+      result.agreeSources.every((s) => s === "coingecko" || s === "defillama-list")
+    ) {
+      result.confidence = "single-source";
+      stats.high--;
+      stats.singleSource++;
+    }
   }
 
   console.log(

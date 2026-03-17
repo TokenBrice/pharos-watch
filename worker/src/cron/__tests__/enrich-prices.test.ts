@@ -516,7 +516,7 @@ describe("fetchPrimaryPrices", () => {
     ]);
   }
 
-  it("returns high confidence when CG and DL list prices agree within 50bps", async () => {
+  it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
@@ -536,11 +536,13 @@ describe("fetchPrimaryPrices", () => {
 
     expect(results.size).toBe(1);
     const result = results.get("usdt-tether")!;
-    expect(result.confidence).toBe("high");
+    // CG+DL-only gets downgraded from high to single-source
+    expect(result.confidence).toBe("single-source");
     expect(result.source).toBe("coingecko+defillama-list");
     expect(result.price).toBe(1.0001);
     expect(cgPrices.get("tether")).toBe(1.0001);
-    expect(stats.high).toBe(1);
+    expect(stats.high).toBe(0);
+    expect(stats.singleSource).toBe(1);
     expect(stats.low).toBe(0);
   });
 
@@ -949,7 +951,7 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     expect(result.confidence).toBe("high");
   });
 
-  it("does NOT downgrade when pool divergence is <500bps", async () => {
+  it("does NOT downgrade via pool challenge when pool divergence is <500bps", async () => {
     const assets: PeggedAsset[] = [
       { id: "dusd-dtrinity", name: "dUSD", symbol: "dUSD", geckoId: "dtrinity-usd", pegType: "peggedUSD", circulating: {} },
     ];
@@ -974,7 +976,9 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     const { results } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
-    expect(results.get("dusd-dtrinity")!.confidence).toBe("high");
+    // Pool challenge doesn't fire (<500bps), but CG+DL-only downgrade applies
+    expect(results.get("dusd-dtrinity")!.confidence).toBe("single-source");
+    expect(results.get("dusd-dtrinity")!.source).not.toBe("pool-tvl-weighted");
   });
 });
 
