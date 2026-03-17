@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { BackingType, FilterTag, GovernanceType, StablecoinMeta } from "@shared/types";
 
 type TaxonomyKind = "governance" | "backing";
@@ -91,7 +91,7 @@ const BACKING_CONTENT: Record<
 export const GOVERNANCE_TAXONOMY_PAGES = (Object.entries(GOVERNANCE_SLUGS) as [GovernanceType, string][])
   .map(([value, slug]) => {
     const content = GOVERNANCE_CONTENT[value];
-    const coins = TRACKED_STABLECOINS.filter((coin) => coin.flags.governance === value);
+    const coins = ACTIVE_STABLECOINS.filter((coin) => coin.flags.governance === value);
     return {
       kind: "governance" as const,
       slug,
@@ -110,7 +110,7 @@ export const GOVERNANCE_TAXONOMY_PAGES = (Object.entries(GOVERNANCE_SLUGS) as [G
 export const BACKING_TAXONOMY_PAGES = (Object.entries(BACKING_SLUGS) as [BackingType, string][])
   .map(([value, slug]) => {
     const content = BACKING_CONTENT[value];
-    const coins = TRACKED_STABLECOINS.filter((coin) => coin.flags.backing === value);
+    const coins = ACTIVE_STABLECOINS.filter((coin) => coin.flags.backing === value);
     return {
       kind: "backing" as const,
       slug,

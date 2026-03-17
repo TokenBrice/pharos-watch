@@ -1,5 +1,5 @@
 import type { PegCurrency } from "@shared/types";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 
 // ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ export const SLUG_TO_PEG: Record<string, PegCurrency> = Object.fromEntries(
 
 /** Number of tracked stablecoins per peg currency. */
 export function pegCoinCount(peg: PegCurrency): number {
-  return TRACKED_STABLECOINS.filter((c) => c.flags.pegCurrency === peg).length;
+  return ACTIVE_STABLECOINS.filter((c) => c.flags.pegCurrency === peg).length;
 }
 
 // ---------------------------------------------------------------------------

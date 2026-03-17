@@ -1,9 +1,9 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
-const compareDescription = `Side-by-side comparison of stablecoin stats, supply history, and peg stability for ${TRACKED_STABLECOINS.length} tracked stablecoins.`;
+const compareDescription = `Side-by-side comparison of stablecoin stats, supply history, and peg stability for ${ACTIVE_STABLECOINS.length} tracked stablecoins.`;
 
 export const metadata = buildPageMetadata({
   title: "Compare Stablecoins: Side-by-Side Analysis",

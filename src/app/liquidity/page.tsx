@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -7,7 +7,7 @@ import {
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/liquidity-score-version";
 
-const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${TRACKED_STABLECOINS.length} stablecoins across Curve, Uniswap, Fluid, and more.`;
+const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${ACTIVE_STABLECOINS.length} stablecoins across Curve, Uniswap, Fluid, and more.`;
 export const metadata = buildPageMetadata({
   title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
   description: liquidityDescription,
@@ -28,7 +28,7 @@ export default createClientFeaturePage({
       changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
     },
     leadParagraphs: [
-      `Liquidity scores, pool depth, and protocol breakdowns for ${TRACKED_STABLECOINS.length} stablecoins across decentralized exchanges.`,
+      `Liquidity scores, pool depth, and protocol breakdowns for ${ACTIVE_STABLECOINS.length} stablecoins across decentralized exchanges.`,
       "The liquidity score is a 0–100 composite that measures on-chain pool depth, 24h trading volume, and protocol diversity across DEXes like Curve, Uniswap, and Fluid. Higher scores mean a stablecoin can absorb larger trades with less slippage, critical for both everyday swaps and stress scenarios.",
     ],
   },

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { computeStressedGrades, GRADE_THRESHOLDS } from "@shared/lib/report-cards";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
   ReportCard,
   ReportCardGrade,
@@ -59,7 +59,7 @@ export interface StressTestState {
 
 const idToMeta = new Map<string, { name: string; symbol: string }>();
 
-for (const coin of TRACKED_STABLECOINS) {
+for (const coin of ACTIVE_STABLECOINS) {
   idToMeta.set(coin.id, { name: coin.name, symbol: coin.symbol });
 }
 

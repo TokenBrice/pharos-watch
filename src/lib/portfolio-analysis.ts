@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
   DependencyWeight,
   ReportCard,
@@ -27,7 +27,7 @@ const STABLECOIN_SLICE_KEYWORDS = [
 ];
 
 const PORTFOLIO_META_BY_ID = new Map(
-  TRACKED_STABLECOINS.map((stablecoin) => [
+  ACTIVE_STABLECOINS.map((stablecoin) => [
     stablecoin.id,
     {
       name: stablecoin.name,

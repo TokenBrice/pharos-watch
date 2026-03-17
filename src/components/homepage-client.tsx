@@ -18,7 +18,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
 import { derivePegRates } from "@shared/lib/peg-rates";
@@ -539,11 +539,11 @@ export function HomepageClient() {
 
       <section className="space-y-2 border-t border-border/50 pt-6">
         <p className="mx-auto max-w-5xl text-center text-xs leading-loose text-muted-foreground">
-          Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies (USD, EUR,
+          Pharos tracks {ACTIVE_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies (USD, EUR,
           GBP, gold, silver, and more) with honest governance classification:{" "}
-          {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,{" "}
-          {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and{" "}
-          {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
+          {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,{" "}
+          {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and{" "}
+          {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
           deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of fallen stablecoins. Updated
           every 15 minutes.
         </p>

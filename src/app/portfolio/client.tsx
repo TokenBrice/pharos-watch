@@ -12,7 +12,7 @@ import { ReportCardMini } from "@/components/report-card-mini";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { usePortfolio } from "@/hooks/use-portfolio";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { DIMENSION_ORDER, scoreToGrade } from "@shared/lib/report-cards";
 import type { ReportCard } from "@shared/types";
@@ -31,7 +31,7 @@ import type { PortfolioPreset } from "@/components/portfolio-empty-state";
 
 const deadIds = new Set(DEAD_STABLECOINS.filter((d) => d.llamaId).map((d) => d.llamaId!));
 
-const coinOptions = TRACKED_STABLECOINS.filter((s) => !deadIds.has(s.id)).map((s) => ({
+const coinOptions = ACTIVE_STABLECOINS.filter((s) => !deadIds.has(s.id)).map((s) => ({
   id: s.id,
   name: s.name,
   symbol: s.symbol,

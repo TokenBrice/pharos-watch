@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { ShareButton } from "@/components/share-button";
@@ -12,7 +12,7 @@ import {
 } from "@shared/lib/depeg-dews-version";
 import { safeJsonLd } from "@/lib/json-ld";
 
-const depegDescription = `Live peg monitoring for ${TRACKED_STABLECOINS.length} stablecoins. Track peg scores, DEWS early warning signals, real-time deviation heatmaps, and a full history of depeg events — all in one place.`;
+const depegDescription = `Live peg monitoring for ${ACTIVE_STABLECOINS.length} stablecoins. Track peg scores, DEWS early warning signals, real-time deviation heatmaps, and a full history of depeg events — all in one place.`;
 
 export const metadata = buildPageMetadata({
   title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",
@@ -72,7 +72,7 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      `Real-time peg monitoring across ${TRACKED_STABLECOINS.length} stablecoins. Peg scores, DEWS early warning signals, live deviation heatmaps, and a full history of depeg events — all in one place.`,
+      `Real-time peg monitoring across ${ACTIVE_STABLECOINS.length} stablecoins. Peg scores, DEWS early warning signals, live deviation heatmaps, and a full history of depeg events — all in one place.`,
     ],
   },
   beforeClient: (

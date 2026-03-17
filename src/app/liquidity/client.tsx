@@ -14,7 +14,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { LiquidityRow } from "@/components/liquidity-table";
 import type { LiquidityStatsData } from "@/components/liquidity-stats";
 import type { PegCurrency } from "@shared/types";
@@ -50,7 +50,7 @@ export function LiquidityClient() {
   const rows = useMemo((): LiquidityRow[] => {
     if (!liquidityMap) return [];
     const q = searchQuery.toLowerCase().trim();
-    return TRACKED_STABLECOINS
+    return ACTIVE_STABLECOINS
       .filter((meta) => {
         if (pegFilter !== "all" && meta.flags.pegCurrency !== pegFilter) return false;
         if (q && !meta.name.toLowerCase().includes(q) && !meta.symbol.toLowerCase().includes(q)) return false;
@@ -91,7 +91,7 @@ export function LiquidityClient() {
     let totalOrganic = 0;
     let organicWeight = 0;
 
-    for (const meta of TRACKED_STABLECOINS) {
+    for (const meta of ACTIVE_STABLECOINS) {
       const liq = liquidityMap[meta.id];
       if (!liq) continue;
       if (liq.liquidityScore != null) {
@@ -128,7 +128,7 @@ export function LiquidityClient() {
       withLiquidity,
       highConfidenceCoverage,
       fallbackCoverage,
-      totalTracked: TRACKED_STABLECOINS.length,
+      totalTracked: ACTIVE_STABLECOINS.length,
       agg7dChange: agg7dChange != null ? Math.round(agg7dChange * 10) / 10 : null,
       avgBalance: balanceWeight > 0 ? Math.round((totalBalance / balanceWeight) * 100) : null,
       avgOrganic: organicWeight > 0 ? Math.round((totalOrganic / organicWeight) * 100) : null,

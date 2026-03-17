@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
 import {
   useDexLiquidity,
@@ -49,7 +49,7 @@ export function useCoverageMatrixModel() {
     );
 
     for (const id of liveIds) {
-      const meta = TRACKED_META_BY_ID.get(id);
+      const meta = ACTIVE_META_BY_ID.get(id);
       if (!meta) continue;
 
       for (const dependency of deriveDependencies(meta)) {
@@ -59,7 +59,7 @@ export function useCoverageMatrixModel() {
       }
     }
 
-    return TRACKED_STABLECOINS.map((coin) => {
+    return ACTIVE_STABLECOINS.map((coin) => {
       const pegCoin = pegCoinById.get(coin.id);
       return buildCoverageRow({
         coin,

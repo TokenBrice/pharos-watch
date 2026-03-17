@@ -3,7 +3,7 @@ import { createTableComparator } from "@/lib/table-comparator";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { TRACKED_IDS, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
 import { getFilterTags, OTHER_PEG_TAGS } from "@shared/types";
 
@@ -37,11 +37,11 @@ const SORT_KEY_TO_COLUMN: Record<StablecoinTableSortKey, ColumnId> = {
 
 export function buildTrackedIdSet(activeFilters: FilterTag[]): ReadonlySet<string> {
   if (activeFilters.length === 0) {
-    return TRACKED_IDS;
+    return ACTIVE_IDS;
   }
 
   return new Set(
-    TRACKED_STABLECOINS.filter((stablecoin) => {
+    ACTIVE_STABLECOINS.filter((stablecoin) => {
       const tags = getFilterTags(stablecoin);
       return activeFilters.every((filter) =>
         filter === "other-peg"

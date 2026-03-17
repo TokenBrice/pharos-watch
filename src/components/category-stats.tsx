@@ -7,7 +7,7 @@ import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { PEG_CHART_COLORS as PEG_META } from "@shared/lib/classification";
 import { getCirculatingRaw, computeGovernanceBreakdown } from "@shared/lib/supply";
-import { TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData, ReportCard } from "@shared/types";
 import { GOVERNANCE_TIER_COLORS } from "@shared/lib/classification";
 
@@ -57,7 +57,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
   const stats = useMemo(() => {
     if (!data) return null;
 
-    const trackedIds = TRACKED_IDS;
+    const trackedIds = ACTIVE_IDS;
     const trackedData = data.filter((c) => trackedIds.has(c.id));
     const rankedByMcap = trackedData
       .map((coin) => ({
@@ -89,7 +89,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
     }
 
     // Alternative peg breakdown (non-USD)
-    const metaById = TRACKED_META_BY_ID;
+    const metaById = ACTIVE_META_BY_ID;
     const pegTotals: Record<string, number> = {};
     let altTotal = 0;
     for (const coin of trackedData) {

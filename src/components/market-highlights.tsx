@@ -9,7 +9,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { formatPegDeviation } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -70,7 +70,7 @@ function useDepegs(data: StablecoinData[] | undefined, pegRates: Record<string, 
     const entries: DepegItem[] = [];
 
     for (const coin of data) {
-      const meta = TRACKED_META_BY_ID.get(coin.id);
+      const meta = ACTIVE_META_BY_ID.get(coin.id);
       if (!meta) continue;
       if (meta.flags.navToken) continue;
       if (coin.price == null || typeof coin.price !== "number" || isNaN(coin.price)) continue;
@@ -96,7 +96,7 @@ function useMovers(data: StablecoinData[] | undefined) {
     const entries: MoverItem[] = [];
 
     for (const coin of data) {
-      if (!TRACKED_IDS.has(coin.id)) continue;
+      if (!ACTIVE_IDS.has(coin.id)) continue;
       const current = getCirculatingRaw(coin);
       const prev = getPrevWeekRaw(coin);
       if (current < SUPPLY_FLOOR || prev < SUPPLY_FLOOR) continue;

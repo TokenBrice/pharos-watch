@@ -8,7 +8,7 @@ import {
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from "d3-force";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
 import type { DependencyType, ReportCard } from "@shared/types";
 
@@ -203,7 +203,7 @@ export function buildGraphData(
   const outboundCounts = new Map<string, number>();
   const liveLinks: RawGraphLink[] = [];
 
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     if (!liveIdSet.has(meta.id)) continue;
     const deps = deriveDependencies(meta);
     let outCount = 0;

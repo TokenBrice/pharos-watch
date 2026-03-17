@@ -27,7 +27,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 const DATA_SOURCE_GROUPS = [
   {
@@ -229,7 +229,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   const trackedFeatures: AboutFeatureItem[] = [
     {
-      title: `${TRACKED_STABLECOINS.length} stablecoins`,
+      title: `${ACTIVE_STABLECOINS.length} stablecoins`,
       description: "Coverage across every major chain, classified by governance, backing, and peg currency.",
       icon: BarChart3,
     },
@@ -367,7 +367,7 @@ export default function AboutPage() {
                   name: "What does Pharos track?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: `Pharos tracks ${TRACKED_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a daily Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
+                    text: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a daily Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
                   },
                 },
                 {

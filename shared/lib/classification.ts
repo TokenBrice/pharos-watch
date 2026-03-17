@@ -14,7 +14,7 @@ import type {
   BlacklistStablecoin,
   YieldType,
 } from "../types";
-import { TRACKED_STABLECOINS } from "./stablecoins";
+import { ACTIVE_STABLECOINS } from "./stablecoins";
 
 // ---------------------------------------------------------------------------
 // Governance (Type) labels
@@ -84,7 +84,7 @@ export const PEG_LABELS: Record<PegCurrency, string> = {
 };
 
 /** Number of distinct peg currencies actually tracked (with at least one stablecoin). */
-export const PEG_CURRENCY_COUNT = new Set(TRACKED_STABLECOINS.map((s) => s.flags.pegCurrency)).size;
+export const PEG_CURRENCY_COUNT = new Set(ACTIVE_STABLECOINS.map((s) => s.flags.pegCurrency)).size;
 
 /** Labels without article, for metadata and keywords. */
 export const PEG_LABELS_SHORT: Record<PegCurrency, string> = {

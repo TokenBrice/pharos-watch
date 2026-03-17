@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 export interface StartHereGoal {
   title: string;
@@ -132,7 +132,7 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
 
 export const START_HERE_FACTS: readonly StartHereFact[] = [
   {
-    value: String(TRACKED_STABLECOINS.length),
+    value: String(ACTIVE_STABLECOINS.length),
     label: "tracked stablecoins",
     detail: "Major fiat issuers, DeFi-native names, non-USD pegs, and metal-backed assets.",
   },

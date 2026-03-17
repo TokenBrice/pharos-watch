@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
@@ -25,10 +25,10 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  const total = TRACKED_STABLECOINS.length;
+  const total = ACTIVE_STABLECOINS.length;
 
   // Top 20 stablecoins for ItemList schema
-  const itemListElements = TRACKED_STABLECOINS.slice(0, 20).map((coin, i) => ({
+  const itemListElements = ACTIVE_STABLECOINS.slice(0, 20).map((coin, i) => ({
     "@type": "ListItem" as const,
     position: i + 1,
     name: `${coin.name} (${coin.symbol})`,

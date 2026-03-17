@@ -1,10 +1,10 @@
 import { REGISTRY_BY_ID, REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 const UNIQUE_SYMBOL_TO_ID = new Map<string, string>();
 const AMBIGUOUS_SYMBOLS = new Set<string>();
 
-for (const stablecoin of TRACKED_STABLECOINS) {
+for (const stablecoin of ACTIVE_STABLECOINS) {
   const symbol = stablecoin.symbol.toLowerCase();
   if (UNIQUE_SYMBOL_TO_ID.has(symbol)) {
     UNIQUE_SYMBOL_TO_ID.delete(symbol);

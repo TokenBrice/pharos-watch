@@ -9,7 +9,7 @@ import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 
@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteDescription = `Track ${TRACKED_STABLECOINS.length} stablecoins across ${PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOINS.length} dead stablecoins, updated every 15 minutes.`;
+const siteDescription = `Track ${ACTIVE_STABLECOINS.length} stablecoins across ${PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOINS.length} dead stablecoins, updated every 15 minutes.`;
 
 export const viewport: Viewport = {
   width: "device-width",

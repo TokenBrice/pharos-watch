@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
   ACTIVE_PEGS,
@@ -63,7 +63,7 @@ export default async function PegLandingPage({
   const intro = PEG_INTRO[pegCurrency];
 
   // Build ItemList schema for all coins in this peg
-  const coins = TRACKED_STABLECOINS.filter(
+  const coins = ACTIVE_STABLECOINS.filter(
     (c) => c.flags.pegCurrency === pegCurrency,
   );
 
