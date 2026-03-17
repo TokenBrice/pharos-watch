@@ -112,6 +112,22 @@ describe("computePriceConsensus", () => {
     expect(result!.confidence).toBe("high");
   });
 
+  it("includes all agree sources in the source label", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.0001, weight: 2 },
+      { source: "binance", price: 1.0002, weight: 2 },
+      { source: "pyth", price: 1.0001, weight: 2 },
+      { source: "redstone", price: 1.0003, weight: 1 },
+    ];
+    const result = computePriceConsensus(sources, 1.0, 50);
+    // All 4 sources agree within 50 bps — label should include all
+    expect(result!.source).toContain("coingecko");
+    expect(result!.source).toContain("binance");
+    expect(result!.source).toContain("pyth");
+    expect(result!.source).toContain("redstone");
+    expect(result!.source).not.toContain("more");
+  });
+
   it("disagrees just beyond 50bps boundary", () => {
     // 1.0000 and 1.0060 are ~60bps apart — should disagree
     const sources: SourcePrice[] = [

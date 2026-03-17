@@ -136,9 +136,7 @@ function findAgreementClusters(sources: SourcePrice[], thresholdBps: number): So
 }
 
 function buildSourceLabel(cluster: SourcePrice[]): string {
-  const names = cluster.map((s) => s.source).sort();
-  if (names.length <= 2) return names.join("+");
-  return `${names[0]}+${names.length - 1}more`;
+  return cluster.map((s) => s.source).sort().join("+");
 }
 
 /** Pick highest-weight source; break ties by proximity to reference price. */
