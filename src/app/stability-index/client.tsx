@@ -11,6 +11,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,7 +32,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { THREE_DAYS_MS } from "@/lib/constants";
-import { MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyLabel, MethodologyHint } from "@/components/methodology-hint";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -76,8 +78,8 @@ const CONDITION_BANDS: Array<{ range: string; band: ConditionBand; meaning: stri
 function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader>
-        <CardTitle as="h2">Notable Events</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="pharos-kicker">Notable Events</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {PSI_EVENTS.map((evt) => {
@@ -118,12 +120,10 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1 min-w-0 shrink"
+                    className="pharos-focus-ring text-sm text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1 min-w-0 shrink rounded-sm"
                   >
                     <span className="truncate">{link.title}</span>
-                    <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M3.5 1.5h7v7M10.5 1.5 1.5 10.5" />
-                    </svg>
+                    <ExternalLink className="h-3 w-3 shrink-0" />
                   </a>
                 ))}
               </div>
@@ -146,8 +146,8 @@ function ComponentChart({
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle as="h2">Component Breakdown</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="pharos-kicker">Component Breakdown</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-components", range: r }); setRange(r); }} />
       </CardHeader>
       <CardContent>
@@ -302,7 +302,7 @@ function HistoryStats({ history }: { history: HistoryPoint[] }) {
         const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
           <div key={item.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
+            <span className="pharos-kicker">{item.label}</span>
             <span className={`text-lg font-extrabold tabular-nums leading-none ${color}`}>{item.value}</span>
             {item.sub ? <span className="text-[11px] leading-tight text-muted-foreground">{item.sub}</span> : null}
           </div>
@@ -352,9 +352,9 @@ function Methodology({
 }) {
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="space-y-2">
+      <CardHeader className="space-y-2 pb-3">
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle as="h2">Methodology</CardTitle>
+          <CardTitle className="pharos-kicker">Methodology</CardTitle>
           <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/60">
             {methodology.versionLabel}
           </Badge>
@@ -365,7 +365,7 @@ function Methodology({
           )}
           <Link
             href={methodology.changelogPath}
-            className="text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors"
+            className="pharos-focus-ring text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors rounded-sm"
           >
             Version history &rarr;
           </Link>
@@ -385,7 +385,7 @@ function Methodology({
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold mb-2">Components</h3>
+          <h3 className="pharos-kicker mb-3">Components</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -422,7 +422,7 @@ function Methodology({
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold mb-2">Depreciation</h3>
+          <h3 className="pharos-kicker mb-3">Depreciation</h3>
           <p className="text-sm text-muted-foreground mb-2">
             Chronically depegged coins have their impact reduced over time to prevent zombie stablecoins
             from permanently dominating the score. Fresh depegs (under 30 days) have full impact. After 30 days,
@@ -431,7 +431,7 @@ function Methodology({
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold mb-2">Condition Bands</h3>
+          <h3 className="pharos-kicker mb-3">Condition Bands</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -484,13 +484,19 @@ function ContributorsTable({
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader>
-        <CardTitle as="h2">Top Contributors</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="pharos-kicker">Top Contributors</CardTitle>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No data available
+          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+            <div className="rounded-full bg-muted/50 p-3">
+              <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <p className="text-sm text-muted-foreground">No contributor data available</p>
+            <p className="text-xs text-muted-foreground">Data appears when stablecoins are actively depegged</p>
           </div>
         ) : (
           <>
@@ -502,40 +508,63 @@ function ContributorsTable({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground">Coin</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Deviation</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">MCap</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">Severity</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">Breadth</th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Total</th>
-                    <th className="pb-2 font-medium text-muted-foreground text-right">Age</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Coin</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right">Deviation</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right hidden sm:table-cell">MCap</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right hidden sm:table-cell">Severity</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right hidden sm:table-cell">Breadth</th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right">Total</th>
+                    <th className="pb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider text-right">Age</th>
                   </tr>
                 </thead>
                 <tbody className="text-muted-foreground">
-                  {rows.map((r) => (
-                    <tr key={r.id} className="border-b last:border-0">
-                      <td className="py-2 pr-4">
+                  {rows.map((r, idx) => (
+                    <tr
+                      key={r.id}
+                      className={cn(
+                        "border-b last:border-0 transition-colors hover:bg-muted/30",
+                        idx === 0 && "bg-amber-500/5"
+                      )}
+                    >
+                      <td className="py-2.5 pr-4">
                         <a
                           href={buildStablecoinUrl(r.id)}
-                          className="flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:text-blue-400 transition-colors"
+                          className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:hover:text-blue-400 transition-colors rounded-sm"
                         >
-                          <StablecoinLogo src={logos[r.id]} name={r.symbol} size={20} />
-                          {r.symbol}
+                          <StablecoinLogo src={logos[r.id]} name={r.symbol} size={22} />
+                          <span className={cn(idx === 0 && "font-semibold")}>{r.symbol}</span>
+                          {idx === 0 && (
+                            <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                              Top
+                            </span>
+                          )}
                         </a>
                       </td>
-                      <td className={`py-2 pr-4 text-right tabular-nums ${r.bps < 0 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"}`}>
+                      <td className={cn("py-2.5 pr-4 text-right tabular-nums", r.bps < 0 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
                         {r.bps > 0 ? "+" : ""}{(r.bps / 100).toFixed(2)}%
                       </td>
-                      <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">
+                      <td className="py-2.5 pr-4 text-right tabular-nums hidden sm:table-cell font-mono text-xs">
                         {formatCurrency(r.mcapUsd)}
                       </td>
-                      <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.severity.toFixed(2)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.breadth.toFixed(2)}</td>
-                      <td className="py-2 pr-4 text-right tabular-nums font-medium text-foreground">{r.total.toFixed(2)}</td>
-                      <td className="py-2 text-right tabular-nums">
-                        {r.ageDays < 1 ? "<1d" : `${Math.round(r.ageDays)}d`}
+                      <td className="py-2.5 pr-4 text-right tabular-nums hidden sm:table-cell font-mono">{r.severity.toFixed(2)}</td>
+                      <td className="py-2.5 pr-4 text-right tabular-nums hidden sm:table-cell font-mono">{r.breadth.toFixed(2)}</td>
+                      <td className="py-2.5 pr-4 text-right tabular-nums">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-foreground/60"
+                              style={{ width: `${Math.min(100, (r.total / (rows[0]?.total ?? 1)) * 100)}%` }}
+                            />
+                          </div>
+                          <span className={cn("font-mono font-medium", idx === 0 ? "text-foreground" : "text-foreground/70")}>
+                            {r.total.toFixed(2)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums">
+                        <span className="font-mono text-xs">{r.ageDays < 1 ? "<1d" : `${Math.round(r.ageDays)}d`}</span>
                         {r.factor < 1 && (
-                          <span className="ml-1 text-xs text-muted-foreground/60">({Math.round(r.factor * 100)}%)</span>
+                          <span className="ml-1 text-[10px] text-muted-foreground/60">({Math.round(r.factor * 100)}%)</span>
                         )}
                       </td>
                     </tr>
@@ -653,7 +682,15 @@ export function StabilityIndexClient() {
       <div className="space-y-6 animate-in fade-in duration-300">
         <Card className="rounded-xl">
           <CardContent>
-            <div className="text-center py-8 text-muted-foreground text-sm">No data available</div>
+            <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+              <div className="rounded-full bg-muted/50 p-4">
+                <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <p className="font-medium">No stability data available</p>
+              <p className="text-sm text-muted-foreground">PSI scores are computed every 15 minutes. Check back soon.</p>
+            </div>
           </CardContent>
         </Card>
       </div>
