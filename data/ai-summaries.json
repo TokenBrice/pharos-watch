@@ -773,5 +773,40 @@
     "title": "Fee Yield, No Tricks",
     "text": "Parallel's USDp is a relatively small but architecturally interesting CDP: an overcollateralized basket of yield-bearing stablecoins (sfrxUSD, sUSDe) whose Parallelizer module adjusts minting and redemption fees dynamically to correct peg drift without oracles or liquidation cascades. The yield story is unusually honest — sUSDp distributes 70% of actual protocol fees from the Parallelizer, bridging, and flash loan modules, meaning yield tracks real usage rather than governance votes on a made-up rate. With a supply of roughly $3.5M since launching in September 2025, it's still early, but the Bailsec audit and Certora formal verification suggest Mimo Labs built this for durability rather than speed. The central tension is whether a fee-revenue yield model can remain attractive at $3.5M when it competes against synthetic dollar protocols running leveraged basis trades at hundred-fold the scale.",
     "updatedAt": "2026-03-13"
+  },
+  "usdpt-western-union": {
+    "title": "Remittance Giant Meets Federal Charter",
+    "text": "Western Union moves $200B+ in cross-border remittances annually and has decided the next leg of that journey runs through Solana. USDPT is issued by Anchorage Digital Bank \u2014 the first federally chartered OCC crypto bank \u2014 with Western Union providing the distribution network spanning 200+ countries and half a million retail locations. The arrangement neatly sidesteps the \"who regulates the issuer\" question that haunts most stablecoin projects, since Anchorage already answers to the OCC. Whether a 170-year-old money transfer company can compete for on-chain liquidity against Circle and Tether remains the open question; the bet is that Western Union's physical footprint gives USDPT an on-ramp advantage nobody else can replicate.",
+    "updatedAt": "2026-03-17"
+  },
+  "roughrider-bnd": {
+    "title": "State-Owned Banking Goes On-Chain",
+    "text": "North Dakota's Bank of North Dakota \u2014 the only state-owned bank in the US \u2014 is building a wholesale stablecoin on Solana via Fiserv's infrastructure. Roughrider Coin is designed for bank-to-bank settlement, not consumer wallets, backed by USD reserves and 93-day Treasury notes. The pilot is pending ND Industrial Commission approval, making this one of the rare stablecoins whose launch date depends on a state government meeting agenda rather than a Discord vote. As the second US state stablecoin after Wyoming's FRNT, Roughrider represents an emerging pattern: state treasurers discovering that blockchain settlement is cheaper than correspondent banking, even if the branding choices remain firmly rooted in local pride.",
+    "updatedAt": "2026-03-17"
+  },
+  "fiusd-fiserv": {
+    "title": "The Payments Stack Play",
+    "text": "Fiserv processes $2 trillion in payments annually for 6,000+ financial institutions and wants to make stablecoins just another rail in that plumbing. FIUSD is less a single stablecoin and more a platform: Paxos handles issuance, Circle provides ecosystem interop, PayPal enables interoperability, and Mastercard connects the payments network. The centralized-dependent classification captures this architecture accurately \u2014 FIUSD depends on an entire constellation of partners, any of which could become a bottleneck. The end-of-2025 launch target has quietly slipped into 2026 with no firm date, which either means careful regulatory preparation or the inherent difficulty of coordinating four major fintech companies on a shared timeline.",
+    "updatedAt": "2026-03-17"
+  },
+  "eur-qivalis": {
+    "title": "Twelve Banks, One Euro",
+    "text": "Qivalis is the European banking establishment's answer to USDC and Tether: a MiCA-compliant euro stablecoin backed by a consortium of 12 major banks including BNP Paribas, ING, UniCredit, and BBVA. The reserve design \u2014 40% bank deposits, 60% short-term eurozone government bonds \u2014 reads like a money market fund with a blockchain address. Qivalis B.V. is seeking an EMI license from the Dutch Central Bank, and no blockchain has been announced yet, which suggests the consortium is still negotiating whether they want Ethereum's liquidity or a permissioned chain's control. The central tension is whether twelve banks that compete fiercely in every other market can cooperate long enough to ship a product before Circle's EURC and SocGen's EURCV eat the entire MiCA-compliant euro stablecoin market.",
+    "updatedAt": "2026-03-17"
+  },
+  "pusd-polaris": {
+    "title": "Immutable CDP, Yield Included",
+    "text": "Polaris Finance is building what its co-founders TokenBrice and 0xLuude call the successor to Liquity's ethos: a crypto-collateralized stablecoin on Ethereum with immutable core contracts, no admin keys, and no off-chain assets. pUSD is minted against pETH collateral via CDPs, and the yield-bearing angle comes from protocol revenue \u2014 borrowing interest, swap fees, conversion gains, and DEX fees \u2014 rather than from depositing reserves into Aave. The private testnet is live with a Q4 2026 target, which gives the team time to prove that you can ship immutability without sacrificing usability. For a market saturated with centralized fiat-backed tokens and yield products built on leverage, pUSD is a deliberate bet that there's still demand for the Liquity V1 philosophy, upgraded.",
+    "updatedAt": "2026-03-17"
+  },
+  "pgold-polaris": {
+    "title": "Synthetic Gold, No Vault Required",
+    "text": "Polaris Gold shares infrastructure with its sibling pUSD but pegs to gold rather than the dollar \u2014 and critically, does so without any physical gold backing. Unlike XAUT or PAXG, which tokenize actual bars in Swiss vaults, pGOLD is a synthetic gold exposure minted from the same pETH collateral pool via CDPs on Ethereum. This makes it arguably more decentralized than any gold-pegged token on the market, at the cost of carrying all the risks of crypto collateral in a down market. Whether DeFi users want synthetic gold exposure from immutable contracts instead of custodied metal from Tether or Paxos is an experiment Polaris is willing to run.",
+    "updatedAt": "2026-03-17"
+  },
+  "klarnausd-klarna": {
+    "title": "Buy Now, Settle On-Chain Later",
+    "text": "Klarna \u2014 the Swedish fintech with 114 million customers and $112B in annual GMV \u2014 is building a stablecoin via Stripe's Bridge infrastructure on the Tempo L1 (backed by a $500M Stripe/Paradigm raise). The initial use case is mundane by crypto standards but massive by payments standards: reducing Klarna's own cross-border settlement costs before expanding to consumer and merchant flows. Tempo testnet has been live since November 2025, though no official ticker has been disclosed. The interesting dynamic is that Klarna doesn't need external adoption for KlarnaUSD to succeed; its own payment volume is large enough to justify the infrastructure, making external DeFi liquidity a bonus rather than a requirement.",
+    "updatedAt": "2026-03-17"
   }
 }
