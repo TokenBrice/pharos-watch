@@ -234,24 +234,60 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
 function CompositionSection({ chainId }: { chainId: string }) {
   const { coins, totalUsd } = useChainStablecoins(chainId);
 
-  // Show top 9 coins max (fills 4×3 grid nicely), rest go to "others"
-  const DISPLAY_COUNT = 9;
-  const topCoins = coins.slice(0, DISPLAY_COUNT);
-  const rest = coins.slice(DISPLAY_COUNT);
-  const restTotal = rest.reduce((s, c) => s + c.supplyOnChain, 0);
+  // Dynamic layout calculation to fill grid completely with no dead zones
+  const layout = useMemo(() => {
+    const totalCoins = coins.length;
+    if (totalCoins === 0) return { displayCoins: [], rest: [], restTotal: 0, cols: 2, rows: 1 };
 
-  // Calculate grid layout based on coin count and proportions
-  const getGridLayout = () => {
-    const count = topCoins.length;
-    if (count <= 2) return { cols: 2, rows: 1 };
-    if (count <= 4) return { cols: 2, rows: 2 };
-    if (count <= 6) return { cols: 3, rows: 2 };
-    return { cols: 4, rows: 2 };
-  };
+    // Determine grid dimensions based on total available coins
+    // Goal: fill the grid completely with display coins + optional Others block
+    let cols: number;
+    let rows: number;
+    let maxDisplay: number;
 
-  const { cols, rows } = getGridLayout();
-  const totalCells = cols * rows;
-  const showOthers = rest.length > 0 || topCoins.length < totalCells;
+    if (totalCoins <= 3) {
+      // Small chains: 2 columns, 1-2 rows
+      cols = 2;
+      rows = totalCoins <= 2 ? 1 : 2;
+      maxDisplay = totalCoins; // Show all, no Others needed
+    } else if (totalCoins <= 6) {
+      // Medium chains: 3 columns, 2 rows = 6 cells
+      cols = 3;
+      rows = 2;
+      // Reserve 1 cell for Others if we have more than 5 coins
+      maxDisplay = totalCoins > 6 ? 5 : totalCoins;
+    } else if (totalCoins <= 8) {
+      // Larger medium: 4 columns, 2 rows = 8 cells
+      cols = 4;
+      rows = 2;
+      maxDisplay = totalCoins > 8 ? 7 : totalCoins;
+    } else if (totalCoins <= 11) {
+      // Large chains: 4 columns, 3 rows = 12 cells, but cap at 11 coins + Others
+      cols = 4;
+      rows = 3;
+      maxDisplay = totalCoins > 11 ? 10 : totalCoins;
+    } else {
+      // Very large chains: 4 columns, 3 rows, show top 11 + Others
+      cols = 4;
+      rows = 3;
+      maxDisplay = 11;
+    }
+
+    const totalCells = cols * rows;
+    const needsOthers = totalCoins > maxDisplay;
+    // If we need Others, reduce display count by 1 to make room
+    const finalDisplayCount = needsOthers ? Math.min(maxDisplay - 1, totalCoins) : totalCoins;
+    const actualDisplayCount = Math.min(finalDisplayCount, totalCoins);
+
+    const displayCoins = coins.slice(0, actualDisplayCount);
+    const rest = coins.slice(actualDisplayCount);
+    const restTotal = rest.reduce((s, c) => s + c.supplyOnChain, 0);
+
+    return { displayCoins, rest, restTotal, cols, rows };
+  }, [coins]);
+
+  const { displayCoins, rest, restTotal, cols, rows } = layout;
+  const showOthers = rest.length > 0;
 
   return (
     <Card>
@@ -259,26 +295,29 @@ function CompositionSection({ chainId }: { chainId: string }) {
         <CardTitle className="pharos-kicker">Stablecoin Composition</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Unified Treemap - Full Width */}
+        {/* Unified Treemap - Full Width, Dynamic Grid */}
         <div
           className={cn(
-            "grid gap-2 auto-rows-fr",
+            "grid gap-2",
             cols === 2 && "grid-cols-2",
             cols === 3 && "grid-cols-3",
             cols === 4 && "grid-cols-2 sm:grid-cols-4"
           )}
-          style={{ minHeight: cols <= 2 ? "180px" : "240px" }}
+          style={{
+            gridAutoRows: "minmax(100px, 1fr)",
+            minHeight: rows === 1 ? "120px" : rows === 2 ? "220px" : "320px",
+          }}
         >
-          {topCoins.map((coin) => {
+          {displayCoins.map((coin) => {
             const pct = totalUsd > 0 ? coin.supplyOnChain / totalUsd : 0;
-            // Large coins (>30%) span 2 cells for visual emphasis
-            const shouldSpan = pct > 0.3;
+            // Only large dominant coins (>35%) span 2 columns in 3+ col layouts
+            const shouldSpan = pct > 0.35 && cols >= 3;
             return (
               <CompositionBlock
                 key={coin.id}
                 coin={coin}
                 percentage={pct}
-                shouldSpan={shouldSpan && cols >= 3}
+                shouldSpan={shouldSpan}
               />
             );
           })}
@@ -292,9 +331,9 @@ function CompositionSection({ chainId }: { chainId: string }) {
         </div>
 
         {/* Legend - Compact summary of top coins for quick scanning */}
-        {topCoins.length > 0 && (
+        {displayCoins.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-border/40 pt-3">
-            {topCoins.slice(0, 5).map((coin) => (
+            {displayCoins.slice(0, 5).map((coin) => (
               <Link
                 key={coin.id}
                 href={buildStablecoinUrl(coin.id)}
