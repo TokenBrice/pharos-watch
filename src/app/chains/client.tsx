@@ -83,6 +83,7 @@ export function ChainsLeaderboardClient() {
   if (!data) return null;
 
   const topHealthChain = [...data.chains].sort((a, b) => (b.healthScore ?? -1) - (a.healthScore ?? -1))[0];
+  const topSupplyChain = [...data.chains].sort((a, b) => b.totalUsd - a.totalUsd)[0];
 
   return (
     <div className="space-y-6">
@@ -92,7 +93,7 @@ export function ChainsLeaderboardClient() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiCard label="Total Stablecoin Supply" value={formatChainUsd(data.globalTotalUsd)} />
         <KpiCard label="Active Chains" value={String(data.chains.length)} />
-        <KpiCard label="Top Chain Dominance" value={data.chains[0] ? `${data.chains[0].name} ${(data.chains[0].dominanceShare * 100).toFixed(1)}%` : "--"} />
+        <KpiCard label="Top Chain" value={topSupplyChain ? `${topSupplyChain.name} ${(topSupplyChain.dominanceShare * 100).toFixed(1)}%` : "--"} />
         <KpiCard label="Healthiest Chain" value={topHealthChain?.healthScore != null ? `${topHealthChain.name} (${topHealthChain.healthScore})` : "--"} />
       </div>
 
