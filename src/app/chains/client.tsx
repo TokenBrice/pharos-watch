@@ -22,7 +22,7 @@ function KpiCard({ label, value }: { label: string; value: string }) {
   return (
     <Card>
       <CardContent className="px-4 py-3">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="pharos-kicker">{label}</p>
         <p className="text-lg font-bold tracking-tight">{value}</p>
       </CardContent>
     </Card>
@@ -163,7 +163,7 @@ export function ChainsLeaderboardClient() {
             {sorted.map((chain, i) => (
               <TableRow
                 key={chain.id}
-                className="group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="pharos-focus-ring group cursor-pointer"
                 onClick={() => router.push(`/chains/${chain.id}/`)}
                 tabIndex={0}
                 onKeyDown={(e) => {

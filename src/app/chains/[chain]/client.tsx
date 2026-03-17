@@ -32,7 +32,7 @@ function FactorGauge({ label, score }: { label: string; score: number | null }) 
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
+        <span className="pharos-kicker">{label}</span>
         <span className="font-mono font-medium">{score != null ? score : "--"}</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -65,11 +65,11 @@ function HeroCard({ chain, chainId }: { chain: ChainSummary; chainId: string }) 
             </div>
           </div>
           <div className="ml-auto grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-5">
-            <div><p className="text-xs text-muted-foreground">Supply</p><p className="font-bold">{formatChainUsd(chain.totalUsd)}</p></div>
-            <div><p className="text-xs text-muted-foreground">Global Share</p><p className="font-bold">{(chain.dominanceShare * 100).toFixed(1)}%</p></div>
-            <div><p className="text-xs text-muted-foreground">24h</p><p className={cn("font-mono", trendColor(chain.change24hPct))}>{formatRatioPct(chain.change24hPct)}</p></div>
-            <div><p className="text-xs text-muted-foreground">7d</p><p className={cn("font-mono", trendColor(chain.change7dPct))}>{formatRatioPct(chain.change7dPct)}</p></div>
-            <div><p className="text-xs text-muted-foreground">30d</p><p className={cn("font-mono", trendColor(chain.change30dPct))}>{formatRatioPct(chain.change30dPct)}</p></div>
+            <div><p className="pharos-kicker">Supply</p><p className="font-bold">{formatChainUsd(chain.totalUsd)}</p></div>
+            <div><p className="pharos-kicker">Global Share</p><p className="font-bold">{(chain.dominanceShare * 100).toFixed(1)}%</p></div>
+            <div><p className="pharos-kicker">24h</p><p className={cn("font-mono", trendColor(chain.change24hPct))}>{formatRatioPct(chain.change24hPct)}</p></div>
+            <div><p className="pharos-kicker">7d</p><p className={cn("font-mono", trendColor(chain.change7dPct))}>{formatRatioPct(chain.change7dPct)}</p></div>
+            <div><p className="pharos-kicker">30d</p><p className={cn("font-mono", trendColor(chain.change30dPct))}>{formatRatioPct(chain.change30dPct)}</p></div>
           </div>
         </div>
       </CardContent>
@@ -82,7 +82,7 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Chain Health Score</CardTitle>
+        <CardTitle className="pharos-kicker">Chain Health Score</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {healthScore != null && healthBand ? (
@@ -119,7 +119,7 @@ function CompositionSection({ chainId }: { chainId: string }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Stablecoin Composition</CardTitle>
+        <CardTitle className="pharos-kicker">Stablecoin Composition</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid gap-6 lg:grid-cols-2">
@@ -138,7 +138,7 @@ function CompositionSection({ chainId }: { chainId: string }) {
                 <Link
                   key={coin.id}
                   href={buildStablecoinUrl(coin.id)}
-                  className="flex flex-col items-center justify-center rounded-lg border bg-muted/30 p-2 text-center text-xs hover:bg-muted/50 transition-colors"
+                  className="pharos-focus-ring flex flex-col items-center justify-center rounded-lg border bg-muted/30 p-2 text-center text-xs hover:bg-muted/50 transition-colors"
                   style={{
                     gridColumn: shouldSpan ? "span 2" : undefined,
                     gridRow: shouldSpan ? "span 2" : undefined,
@@ -163,7 +163,7 @@ function CompositionSection({ chainId }: { chainId: string }) {
             {coins.slice(0, 10).map((coin, i) => (
               <div key={coin.id} className="flex items-center gap-2 text-sm">
                 <span className="w-5 text-right text-xs text-muted-foreground">{i + 1}</span>
-                <Link href={buildStablecoinUrl(coin.id)} className="flex-1 truncate font-medium hover:underline">
+                <Link href={buildStablecoinUrl(coin.id)} className="pharos-focus-ring flex-1 truncate font-medium hover:underline">
                   {coin.name} ({coin.symbol})
                 </Link>
                 <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
@@ -195,7 +195,7 @@ function BackingBreakdown({ chainId }: { chainId: string }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Supply by Backing Type</CardTitle>
+        <CardTitle className="pharos-kicker">Supply by Backing Type</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex h-4 w-full overflow-hidden rounded-full">
@@ -229,7 +229,7 @@ function StablecoinTable({ chainId }: { chainId: string }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">All Stablecoins</CardTitle>
+        <CardTitle className="pharos-kicker">All Stablecoins</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -250,7 +250,7 @@ function StablecoinTable({ chainId }: { chainId: string }) {
                 <tr key={coin.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                   <td className="px-3 py-2.5 text-muted-foreground">{i + 1}</td>
                   <td className="px-3 py-2.5">
-                    <Link href={buildStablecoinUrl(coin.id)} className="font-medium hover:underline">
+                    <Link href={buildStablecoinUrl(coin.id)} className="pharos-focus-ring font-medium hover:underline">
                       {coin.name} <span className="text-muted-foreground">({coin.symbol})</span>
                     </Link>
                   </td>
