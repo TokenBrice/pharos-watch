@@ -402,28 +402,55 @@ export default function AboutPage() {
             <CardTitle as="h2">Why Pharos?</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-5">
-            <div className="flex flex-wrap gap-3 lg:max-w-[18rem]">
-              <Image
-                src="/tokenbrice.png"
-                alt="TokenBrice"
-                width={80}
-                height={80}
-                className="h-16 w-16 rounded-xl sm:h-20 sm:w-20"
-              />
-              <Image
-                src="/claude.png"
-                alt="Claude"
-                width={80}
-                height={80}
-                className="h-16 w-16 rounded-xl sm:h-20 sm:w-20"
-              />
-              <Image
-                src="/codex.svg"
-                alt="Codex"
-                width={80}
-                height={80}
-                className="h-16 w-16 rounded-xl sm:h-20 sm:w-20"
-              />
+            <div className="flex items-start gap-4">
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="rounded-xl border border-border/60 bg-background/50 p-1">
+                  <Image
+                    src="/tokenbrice.png"
+                    alt="TokenBrice"
+                    width={72}
+                    height={72}
+                    className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
+                  />
+                </div>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Creator</span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="rounded-xl border border-border/60 bg-background/50 p-1">
+                  <Image
+                    src="/claude.png"
+                    alt="Claude"
+                    width={72}
+                    height={72}
+                    className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
+                  />
+                </div>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI 1</span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="rounded-xl border border-border/60 bg-background/50 p-1">
+                  <Image
+                    src="/codex.svg"
+                    alt="Codex"
+                    width={72}
+                    height={72}
+                    className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
+                  />
+                </div>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI 2</span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="rounded-xl border border-border/60 bg-background/50 p-1">
+                  <Image
+                    src="/kimi.png"
+                    alt="Kimi"
+                    width={72}
+                    height={72}
+                    className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
+                  />
+                </div>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI 3</span>
+              </div>
             </div>
             <div className="space-y-3">
               <p>
@@ -556,11 +583,11 @@ export default function AboutPage() {
               APIs directly.
             </p>
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
-              <div className="space-y-4">
+              <div className="rounded-xl bg-muted/20 p-4 space-y-4">
                 <p className="text-sm font-semibold text-foreground">Source groups</p>
                 <PipelineSources />
               </div>
-              <div className="space-y-4 lg:border-l lg:border-border/60 lg:pl-6">
+              <div className="rounded-xl bg-muted/20 p-4 space-y-4 lg:border-l-2 lg:border-border/60 lg:bg-transparent lg:p-0 lg:border-l">
                 <p className="text-sm font-semibold text-foreground">Processing path</p>
                 <ol className="space-y-4">
                   <li className="flex gap-3">
@@ -657,7 +684,7 @@ export default function AboutPage() {
               how something is computed, open the code or reach out directly.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+              <Button asChild className="min-h-11 w-full justify-between rounded-2xl px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full">
                 <a href="https://github.com/TokenBrice/stablecoin-dashboard" target="_blank" rel="noopener noreferrer">
                   <Github className="h-4 w-4" />
                   View on GitHub
