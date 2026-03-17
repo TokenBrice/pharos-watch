@@ -10,7 +10,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { formatCurrency } from "@shared/lib/format";
-import { splitDigestParagraphs } from "@/lib/digest";
+import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, EDITORIAL_META_STYLE } from "@/lib/digest";
 import { cn } from "@/lib/utils";
 
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, i) => i);
@@ -47,8 +47,7 @@ function formatWeeklyMasthead(ts: number): string {
   return `${start} – ${end}`;
 }
 
-const SERIF = { fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" };
-const MONO_UPRIGHT = { fontFamily: "'Courier New', Courier, monospace" };
+// Editorial typography imported from @/lib/digest for consistent wire-service aesthetic
 
 function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestExtended: string | null; generatedAt: number; editionNumber?: number } }) {
   const paragraphs = splitDigestParagraphs(entry.digestExtended);
@@ -70,10 +69,10 @@ function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestEx
           {formatWeeklyMasthead(entry.generatedAt)}
         </p>
       </div>
-      <h3 className="mt-2 text-lg font-bold tracking-tight" style={SERIF}>
+      <h3 className="mt-2 text-lg font-bold tracking-tight" style={EDITORIAL_BODY_STYLE}>
         {entry.digestTitle || "The Week in Review"}
       </h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-foreground/75 line-clamp-2" style={SERIF}>
+      <p className="mt-1.5 text-sm leading-relaxed text-foreground/75 line-clamp-2" style={EDITORIAL_BODY_STYLE}>
         {teaser}
       </p>
       <Link
@@ -220,7 +219,7 @@ export function DigestArchiveClient() {
               key={d.generatedAt}
               href={`/digest/${toDigestSlug(d.generatedAt, d.digestType ?? "daily")}/`}
               className={cn(
-                "flex items-start sm:items-center gap-3 sm:gap-4 border-b transition-colors -mx-2 px-2 rounded",
+                "pharos-focus-ring flex items-start sm:items-center gap-3 sm:gap-4 border-b transition-colors -mx-2 px-2 rounded",
                 isWeekly
                   ? "py-3.5 border-border/60 hover:bg-muted/30 border-l-2 border-l-foreground/20"
                   : "py-2.5 border-border/30 hover:bg-muted/20",
@@ -230,7 +229,7 @@ export function DigestArchiveClient() {
                 {formatWireDate(d.generatedAt)}
               </span>
               <div className="flex-1 min-w-0">
-                <span className={cn("truncate flex items-center gap-1.5", isWeekly ? "text-sm font-semibold" : "text-sm font-medium")} style={MONO_UPRIGHT}>
+                <span className={cn("truncate flex items-center gap-1.5", isWeekly ? "text-sm font-semibold" : "text-sm font-medium")} style={EDITORIAL_META_STYLE}>
                   {d.digestTitle || (isWeekly ? "The Week in Review" : "Signal & Noise")}
                   {isWeekly && (
                     <span className="rounded border border-border/60 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">

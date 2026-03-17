@@ -21,7 +21,7 @@ function SnapshotCard({
 }) {
   return (
     <div className={`rounded-lg border border-border/50 border-l-[3px] ${borderClass} p-3 space-y-1.5`}>
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="pharos-kicker">
         <span className="flex items-center gap-1.5">
           {icon}
           {title}
@@ -49,9 +49,7 @@ export function DigestSnapshot({ date }: { date: string }) {
   if (isLoading) {
     return (
       <section className="mt-8 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          The data behind this digest
-        </p>
+        <p className="pharos-kicker">The data behind this digest</p>
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
         <Skeleton className="h-4 w-2/3" />
@@ -68,7 +66,7 @@ export function DigestSnapshot({ date }: { date: string }) {
 
   return (
     <section className="mt-8 space-y-4 animate-in fade-in duration-300">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="pharos-kicker">
         The data behind this digest
       </p>
 

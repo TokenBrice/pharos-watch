@@ -125,12 +125,29 @@ This is intentionally denser than standard feature pages.
 
 ### Digest Article (Special)
 
-Digest entries use:
+Digest entries use a distinctive **"intelligence briefing"** editorial aesthetic that deliberately departs from the standard Geist-based UI:
 
 - `h1`: `text-3xl font-extrabold tracking-tighter`
 - Executive summary card ahead of body copy
 - Editorial prose constrained to `max-w-[68ch]`
 - Homepage digest preview switches to a split desktop layout so the title block and italic executive-summary paragraph can use the full container width; dedicated digest pages keep the `max-w-[68ch]` editorial measure.
+
+#### Editorial Typography System
+
+The digest feature employs a dual-font hierarchy that evokes newspaper headlines over wire-service dispatches:
+
+| Element | Font | Rationale |
+|---------|------|-----------|
+| **Headlines** | `Newsreader` (variable serif) | Editorial authority — magazine headline gravitas |
+| **Body copy** | `Courier New` italic | Raw urgency — telegrams, terminals, raw intel |
+| **Metadata** | `Courier New` upright | Systematic precision — timestamps, edition numbers |
+
+This pairing creates a "broadsheet newspaper" aesthetic that signals both authority (through refined serif titles) and real-time urgency (through monospace body text). It is an **intentional design exception** — the only surface in Pharos that does not use Geist Sans/Mono for text.
+
+**Implementation**: Import styles from `@/lib/digest`:
+- `EDITORIAL_BODY_STYLE` — Courier italic for prose
+- `EDITORIAL_META_STYLE` — Courier upright for labels
+- `digestDisplay.className` — Newsreader (via next/font) for titles
 
 ---
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Newsreader } from "next/font/google";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/api-hooks";
-import { getDigestBodyParagraphs } from "@/lib/digest";
+import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ function formatMasthead(ts: number): string {
   });
 }
 
-const SERIF = { fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" };
+// Editorial body style imported from @/lib/digest for consistent wire-service aesthetic
 
 interface DigestFullDisplayProps {
   label: string;
@@ -39,7 +39,7 @@ export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHre
       </div>
 
       <div className="space-y-3 py-5">
-        <h2 className="text-2xl font-bold sm:text-3xl" style={SERIF}>
+        <h2 className="text-2xl font-bold sm:text-3xl" style={EDITORIAL_BODY_STYLE}>
           {title}
         </h2>
 
@@ -54,7 +54,7 @@ export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHre
                 "text-[1.05rem] leading-8 text-foreground/92",
                 i === 0 && "border-l-2 border-border/60 pl-4 italic",
               )}
-              style={SERIF}
+              style={EDITORIAL_BODY_STYLE}
             >
               {headerText && (
                 <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
@@ -183,7 +183,7 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
                     "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
                     i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
                   )}
-                  style={SERIF}
+                  style={EDITORIAL_BODY_STYLE}
                 >
                   {headerText && (
                     <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
@@ -241,7 +241,7 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
             <div className="min-w-0 space-y-5">
               <div className="flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.28em] text-muted-foreground/80">
                 <span className="h-px w-12 bg-border/70" />
-                <span className="font-mono font-medium">Executive Summary</span>
+                <span className="pharos-kicker">Executive Summary</span>
               </div>
               <h2
                 className={cn(

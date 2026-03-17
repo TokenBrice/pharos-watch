@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Newsreader } from "next/font/google";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
-import { splitDigestParagraphs } from "@/lib/digest";
+import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { summarizeText } from "@/lib/page-metadata";
 import digests from "../../../../data/digests.json";
 
@@ -16,6 +17,15 @@ interface DigestEntry {
   digestType?: "daily" | "weekly";
   editionNumber?: number;
 }
+
+const titleFont = Newsreader({
+  weight: "variable",
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  display: "swap",
+  axes: ["opsz"],
+  fallback: ["Georgia", "Times New Roman", "serif"],
+});
 
 const allDigests = digests as DigestEntry[];
 const digestByDate = new Map(allDigests.map((d) => [d.date, d]));
@@ -103,31 +113,31 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
       />
       <div className="space-y-2">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">
+          <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">
             Dashboard
           </Link>
           <span>/</span>
-          <Link href="/digest/" className="hover:text-foreground transition-colors">
+          <Link href="/digest/" className="pharos-focus-ring hover:text-foreground transition-colors">
             Digest Archive
           </Link>
           <span>/</span>
           <span className="text-foreground">{formatted}</span>
         </nav>
         {editionKicker && (
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+          <p className="pharos-kicker">
             {editionKicker}
           </p>
         )}
-        <h1 className="text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">{digest.title}</h1>
+        <h1 className={`${titleFont.className} text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]`}>{digest.title}</h1>
         <p className="text-sm text-muted-foreground">{formatted}</p>
       </div>
 
       <article className="space-y-6">
-        <div className="rounded-[1.5rem] border border-border/60 bg-card/75 px-5 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.12)]">
+        <div className="pharos-card-shell rounded-[1.5rem] px-5 py-5">
           <p className="pharos-kicker">Executive Summary</p>
           <p
             className="mt-3 text-[1.1rem] leading-8 text-foreground/92"
-            style={{ fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" }}
+            style={EDITORIAL_BODY_STYLE}
           >
             {digest.text}
           </p>
@@ -142,7 +152,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
               <p
                 key={i}
                 className="text-[1.05rem] leading-8 text-foreground/92"
-                style={{ fontFamily: "'Courier New', Courier, monospace", fontStyle: "italic" }}
+                style={EDITORIAL_BODY_STYLE}
               >
                 {headerText && (
                   <span className="font-semibold tracking-wide">
@@ -162,7 +172,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
         {older ? (
           <Link
             href={`/digest/${older.date}/`}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="pharos-focus-ring text-muted-foreground hover:text-foreground transition-colors"
           >
             &larr; {formatDate(older.date)}
           </Link>
@@ -172,7 +182,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
         {newer ? (
           <Link
             href={`/digest/${newer.date}/`}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="pharos-focus-ring text-muted-foreground hover:text-foreground transition-colors"
           >
             {formatDate(newer.date)} &rarr;
           </Link>
