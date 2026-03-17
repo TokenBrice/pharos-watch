@@ -2811,4 +2811,67 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { name: "U.S. Treasury Bills (liquidity buffer)", pct: 25, risk: "low" },
     ],
   }),
+
+  // ── Pre-Launch ──────────────────────────────────────────────────────
+  usd("usdpt-western-union", "US Dollar Payment Token", "USDPT", "rwa-backed", "centralized", {
+    status: "pre-launch",
+    announcedDate: "2025-10",
+    expectedLaunchDate: "2026-Q2",
+    launchPhase: "announced",
+    launchPhaseDetail: "Listed as 'Coming soon' on Anchorage Digital reserve page",
+    jurisdiction: { country: "United States" },
+    links: [
+      { label: "Website", url: "https://www.westernunion.com" },
+      { label: "Twitter", url: "https://x.com/WesternUnion" },
+    ],
+  }),
+  usd("roughrider-bnd", "Roughrider Coin", "ROUGHRIDER", "rwa-backed", "centralized", {
+    status: "pre-launch",
+    announcedDate: "2025-10",
+    expectedLaunchDate: "2026-09",
+    launchPhase: "beta",
+    launchPhaseDetail: "Pilot pending ND Industrial Commission approval (Mar 25, 2026 meeting)",
+    jurisdiction: { country: "United States" },
+    links: [
+      { label: "Website", url: "https://bnd.nd.gov/roughrider/" },
+      { label: "Docs", url: "https://bnd.nd.gov/fintech/" },
+      { label: "Twitter", url: "https://x.com/BankofND" },
+    ],
+  }),
+  usd("fiusd-fiserv", "Fiserv USD", "FIUSD", "rwa-backed", "centralized-dependent", {
+    status: "pre-launch",
+    announcedDate: "2025-06",
+    expectedLaunchDate: "2026",
+    launchPhase: "beta",
+    launchPhaseDetail: "Platform built; end-of-2025 target slipped, no confirmed production launch",
+    jurisdiction: { country: "United States" },
+    links: [
+      { label: "Website", url: "https://www.fiserv.com" },
+      { label: "Twitter", url: "https://x.com/Fiserv" },
+    ],
+  }),
+  usd("pusd-polaris", "Polaris USD", "pUSD", "crypto-backed", "decentralized", {
+    status: "pre-launch",
+    announcedDate: "2026-01",
+    expectedLaunchDate: "2026-Q4",
+    launchPhase: "testnet",
+    launchPhaseDetail: "Private testnet live",
+    yieldBearing: true,
+    links: [
+      { label: "Website", url: "https://polarisfinance.io" },
+      { label: "Twitter", url: "https://x.com/polarisfinance_" },
+    ],
+  }),
+  usd("klarnausd-klarna", "KlarnaUSD", "KLARNAUSD", "rwa-backed", "centralized", {
+    status: "pre-launch",
+    announcedDate: "2025-11",
+    expectedLaunchDate: "2026",
+    launchPhase: "testnet",
+    launchPhaseDetail: "Live on Tempo testnet since Nov 2025",
+    jurisdiction: { country: "Sweden" },
+    links: [
+      { label: "Website", url: "https://www.klarna.com" },
+      { label: "Twitter", url: "https://x.com/Klarna" },
+    ],
+  }),
 ];

@@ -172,6 +172,14 @@ const CANONICAL_ORDER: string[] = [
   "yousd-yield-optimizer",
   "aid-gaib",
   "apxusd-apyx",
+  // Pre-launch
+  "usdpt-western-union",
+  "roughrider-bnd",
+  "fiusd-fiserv",
+  "eur-qivalis",
+  "pusd-polaris",
+  "pgold-polaris",
+  "klarnausd-klarna",
 ];
 
 // Build ID → entry lookup from all category arrays

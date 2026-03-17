@@ -172,4 +172,17 @@ export const COMMODITY_COINS: StablecoinMeta[] = [
       { name: "Physical silver bullion (999 fine, ABX global vaults)", pct: 100, risk: "very-low" },
     ],
   }),
+
+  // ── Pre-Launch ──────────────────────────────────────────────────────
+  other("pgold-polaris", "Polaris Gold", "pGOLD", "crypto-backed", "decentralized", "GOLD", {
+    status: "pre-launch",
+    announcedDate: "2026-01",
+    expectedLaunchDate: "2026-Q4",
+    launchPhase: "testnet",
+    launchPhaseDetail: "Private testnet live (shared infrastructure with pUSD)",
+    links: [
+      { label: "Website", url: "https://polarisfinance.io" },
+      { label: "Twitter", url: "https://x.com/polarisfinance_" },
+    ],
+  }),
 ];

@@ -798,4 +798,18 @@ export const NON_USD_COINS: StablecoinMeta[] = [
       },
     },
   }),
+
+  // ── Pre-Launch ──────────────────────────────────────────────────────
+  eur("eur-qivalis", "Qivalis Euro", "QEUR", "rwa-backed", "centralized", {
+    status: "pre-launch",
+    announcedDate: "2025-09",
+    expectedLaunchDate: "2026-Q4",
+    launchPhase: "announced",
+    launchPhaseDetail: "Seeking Dutch Central Bank EMI license; in talks with crypto exchanges",
+    jurisdiction: { country: "Netherlands" },
+    links: [
+      { label: "Website", url: "https://qivalis.eu" },
+      { label: "Twitter", url: "https://x.com/qivaliseu" },
+    ],
+  }),
 ];
