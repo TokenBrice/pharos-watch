@@ -7,6 +7,8 @@ import { useChains, useChainStablecoins } from "@/hooks/use-chains";
 import { CHAIN_META } from "@shared/lib/chains";
 import { BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { QueryErrorNotice } from "@/components/query-error-notice";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -260,7 +262,7 @@ function StablecoinTable({ chainId }: { chainId: string }) {
 }
 
 export function ChainProfileClient({ chainId }: { chainId: string }) {
-  const { data, isLoading, isError } = useChains();
+  const { data, isLoading, isError, error, refetch } = useChains();
 
   const chain = useMemo(() => {
     if (!data?.chains) return null;
@@ -268,10 +270,18 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
   }, [data, chainId]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-20 text-muted-foreground">Loading chain data...</div>;
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-28 rounded-lg" />
+        <Skeleton className="h-64 rounded-lg" />
+        <Skeleton className="h-48 rounded-lg" />
+      </div>
+    );
   }
-  if (isError || !data) {
-    return <div className="flex items-center justify-center py-20 text-destructive">Failed to load chain data.</div>;
+  if (isError && !data) {
+    return (
+      <QueryErrorNotice error={error} onRetry={() => { void refetch(); }} />
+    );
   }
   if (!chain) {
     return <div className="flex items-center justify-center py-20 text-muted-foreground">No data available for this chain.</div>;
@@ -279,6 +289,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
 
   return (
     <div className="space-y-6">
+      <QueryErrorNotice error={error} hasData={!!data?.chains?.length} onRetry={() => { void refetch(); }} />
       <HeroCard chain={chain} chainId={chainId} />
       <HealthBreakdownCard chain={chain} />
       <CompositionSection chainId={chainId} />

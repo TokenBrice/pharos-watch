@@ -8,6 +8,9 @@ import { useSort } from "@/hooks/use-sort";
 import { Card, CardContent } from "@/components/ui/card";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableTableHead } from "@/components/sortable-table-head";
+import { QueryErrorNotice } from "@/components/query-error-notice";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -47,7 +50,7 @@ function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "des
 }
 
 export function ChainsLeaderboardClient() {
-  const { data, isLoading, isError } = useChains();
+  const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useChains();
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<ChainSortKey>("totalUsd", "desc");
   const router = useRouter();
 
@@ -57,16 +60,34 @@ export function ChainsLeaderboardClient() {
   }, [data, sortKey, sortDirection]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-20 text-muted-foreground">Loading chain data...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 rounded-lg" />
+          ))}
+        </div>
+        <div className="rounded-lg border">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="mx-3 my-2.5 h-8 rounded" />
+          ))}
+        </div>
+      </div>
+    );
   }
-  if (isError || !data) {
-    return <div className="flex items-center justify-center py-20 text-destructive">Failed to load chain data.</div>;
+  if (isError && !data) {
+    return (
+      <QueryErrorNotice error={error} onRetry={() => { void refetch(); }} />
+    );
   }
+  if (!data) return null;
 
   const topHealthChain = [...data.chains].sort((a, b) => (b.healthScore ?? -1) - (a.healthScore ?? -1))[0];
 
   return (
     <div className="space-y-6">
+      <QueryErrorNotice error={error} hasData={!!data?.chains?.length} onRetry={() => { void refetch(); }} />
+      <StaleDataBanner queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length }]} />
       {/* KPI Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiCard label="Total Stablecoin Supply" value={formatChainUsd(data.globalTotalUsd)} />

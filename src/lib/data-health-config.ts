@@ -7,6 +7,7 @@ interface DataHealthPreset {
 
 export const DATA_HEALTH_PRESETS = {
   stablecoins: { label: "Prices", staleTime: CRON_15MIN },
+  chains: { label: "Chain Data", staleTime: CRON_15MIN },
   pegSummary: { label: "Peg Data", staleTime: CRON_15MIN },
   stressSignals: { label: "DEWS", staleTime: CRON_15MIN },
   depegEvents: { label: "Depeg Events", staleTime: CRON_15MIN },
