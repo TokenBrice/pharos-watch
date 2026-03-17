@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PharosLogo } from "@/components/pharos-logo";
 import {
   Sheet,
   SheetTrigger,
@@ -53,14 +53,7 @@ export function Header() {
     <header className="md:hidden sticky top-0 z-50 border-b border-border/80 bg-background/88 shadow-[0_6px_20px_oklch(0_0_0_/0.08)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md font-semibold">
-          <Image
-            src="/pharos-icon.png"
-            alt="Pharos"
-            width={32}
-            height={32}
-            className="rounded-lg ring-1 ring-border/60 bg-slate-900/90 dark:bg-transparent"
-            priority
-          />
+          <PharosLogo size={32} priority />
           <span className="text-[1.05rem] font-mono uppercase tracking-[0.18em]">PHAROS</span>
         </Link>
 
@@ -79,13 +72,7 @@ export function Header() {
             {/* Header */}
             <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
               <Link href="/" onClick={() => setOpen(false)} className="pharos-focus-ring flex items-center gap-3 rounded-md">
-                <Image
-                  src="/pharos-icon.png"
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="rounded-lg ring-1 ring-border/60 bg-slate-900/90 dark:bg-transparent"
-                />
+                <PharosLogo size={28} />
                 <SheetTitle className="text-lg font-mono uppercase tracking-[0.18em]">PHAROS</SheetTitle>
               </Link>
               <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setOpen(false)}>

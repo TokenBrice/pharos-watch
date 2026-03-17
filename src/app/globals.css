@@ -113,6 +113,24 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* Smooth theme transitions for color-related properties */
+    transition: background-color var(--theme-transition-duration) var(--motion-ease-standard),
+                color var(--theme-transition-duration) var(--motion-ease-standard);
+  }
+  html * {
+    /* Allow elements to transition between theme values */
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: var(--theme-transition-duration);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+  /* Disable theme transition for elements that shouldn't animate */
+  html *[data-no-theme-transition],
+  html svg *,
+  html .recharts-surface *,
+  html canvas {
+    transition: none !important;
+  }
   body {
     @apply bg-background text-foreground;
     text-rendering: optimizeLegibility;

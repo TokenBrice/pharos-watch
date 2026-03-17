@@ -16,7 +16,7 @@ const FOOTER_PRIMARY_LINKS = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-border/70 bg-muted/10 py-8 sm:py-10">
+    <footer className="border-t border-border/70 py-8 sm:py-10">
       <div className="container mx-auto space-y-6 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0 space-y-2 lg:pr-6">
@@ -63,20 +63,20 @@ export function Footer() {
           </div>
         </div>
 
-        <nav aria-label="Footer navigation" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2">
           {FOOTER_PRIMARY_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="pharos-focus-ring min-h-11 rounded-xl border border-border/50 bg-background/35 px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-border/70 hover:text-foreground sm:min-h-0"
+              className="pharos-focus-ring text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {link.label}
             </Link>
           ))}
         </nav>
 
-        <details className="rounded-xl border border-border/60 bg-card/45 px-3 py-3 sm:hidden">
-          <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <details className="sm:hidden">
+          <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground transition-colors">
             Browse stablecoins by category
           </summary>
           <nav
@@ -87,7 +87,7 @@ export function Footer() {
               <Link
                 key={cat.href}
                 href={cat.href}
-                className="pharos-focus-ring min-h-11 rounded-full border border-border/50 bg-background/50 px-3 py-2 hover:text-foreground"
+                className="pharos-focus-ring rounded-full px-2 py-1 hover:text-foreground"
               >
                 {cat.label}
               </Link>
@@ -96,12 +96,12 @@ export function Footer() {
         </details>
 
         <div className="hidden flex-wrap items-center justify-between gap-4 border-t border-border/50 pt-4 sm:flex">
-          <nav aria-label="Browse by category" className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <nav aria-label="Browse by category" className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             {CATEGORY_LINKS.map((cat) => (
               <Link
                 key={cat.href}
                 href={cat.href}
-                className="pharos-focus-ring rounded-full border border-border/50 bg-background/35 px-3 py-1.5 hover:text-foreground"
+                className="pharos-focus-ring hover:text-foreground transition-colors"
               >
                 {cat.label}
               </Link>

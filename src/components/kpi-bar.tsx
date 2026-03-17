@@ -112,19 +112,34 @@ function KpiCell({
   value,
   sublabel,
   valueClassName,
+  centered = false,
+  className = "",
 }: {
   label: string;
   value: React.ReactNode;
   sublabel?: React.ReactNode;
   valueClassName?: string;
+  centered?: boolean;
+  className?: string;
 }) {
+  if (centered) {
+    return (
+      <div className={`flex h-full flex-col items-center justify-center gap-1.5 px-4 py-3 text-center ${className}`}>
+        <span className="pharos-kicker">{label}</span>
+        <span className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
+          {value}
+        </span>
+        {sublabel && <div className="flex flex-wrap items-center justify-center gap-1 pt-0.5 text-xs">{sublabel}</div>}
+      </div>
+    );
+  }
   return (
-    <div className="flex min-h-[92px] flex-col justify-between gap-2 px-4 py-3">
+    <div className={`flex min-h-[92px] flex-col justify-between gap-2 px-4 py-3 ${className}`}>
       <span className="pharos-kicker">{label}</span>
       <span className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
         {value}
       </span>
-      {sublabel && <div className="flex flex-wrap items-center gap-1 text-xs">{sublabel}</div>}
+      {sublabel && <div className="flex flex-wrap items-center gap-1 pb-1 text-xs">{sublabel}</div>}
     </div>
   );
 }
@@ -187,24 +202,49 @@ function PrimarySnapshotCard({
   band,
   delta24h,
   delta7d,
+  delta30d,
   valueClassName,
 }: {
   value: string;
   band: string;
   delta24h: string | null;
   delta7d: string | null;
+  delta30d: string | null;
   valueClassName?: string;
 }) {
+  // Detect crisis/meltdown bands for alert styling
+  const isCrisis = band.toLowerCase().includes('crisis') || band.toLowerCase().includes('meltdown');
+  const isTremor = band.toLowerCase().includes('tremor') || band.toLowerCase().includes('fracture');
+  
   return (
-    <div className="rounded-[1.4rem] border border-sky-200/45 bg-[radial-gradient(120%_150%_at_0%_0%,rgba(125,211,252,0.28),transparent_48%),linear-gradient(145deg,rgba(255,255,255,0.94),rgba(239,246,255,0.96)_52%,rgba(226,232,240,0.92))] px-4 py-3.5 shadow-[0_16px_36px_rgba(148,163,184,0.18)] dark:border-sky-500/15 dark:bg-[radial-gradient(120%_150%_at_0%_0%,rgba(34,211,238,0.12),transparent_48%),linear-gradient(145deg,rgba(8,15,28,0.96),rgba(4,19,40,0.96)_55%,rgba(3,9,21,0.98))] dark:shadow-[0_20px_44px_rgba(2,6,23,0.28)] sm:px-5 sm:py-4">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2">
+    <div 
+      className={`rounded-[1.4rem] border px-4 py-3.5 transition-all duration-500 sm:px-5 sm:py-4 ${
+        isCrisis ? 'animate-pulse' : ''
+      }`}
+      style={{
+        background: 'var(--surface-featured-gradient)',
+        borderColor: isCrisis ? 'var(--p-red-400)' : isTremor ? 'var(--p-amber-400)' : 'var(--surface-featured-border)',
+        boxShadow: isCrisis 
+          ? 'var(--surface-featured-shadow), 0 0 30px oklch(0.7 0.2 25 / 0.3)' 
+          : isTremor 
+            ? 'var(--surface-featured-shadow), 0 0 20px oklch(0.75 0.15 85 / 0.2)'
+            : 'var(--surface-featured-shadow)',
+      }}
+    >
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
         <div className="min-w-0 space-y-2">
           <div className="flex w-fit flex-col items-center gap-1.5">
-            <p className="text-center text-[14px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-primary/80 sm:text-[13px]">
-              PSI
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-center text-[14px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-primary/80 sm:text-[13px]">
+                PSI
+              </p>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+            </div>
             <div
-              className={`font-mono text-[2.8rem] font-extrabold leading-none tabular-nums sm:text-[2.95rem] ${valueClassName ?? ""}`}
+              className={`font-mono text-[3.2rem] font-extrabold leading-none tabular-nums sm:text-[3.4rem] ${valueClassName ?? ""}`}
             >
               {value}
             </div>
@@ -213,12 +253,7 @@ function PrimarySnapshotCard({
             {band || "No current PSI band"}
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5 min-[1024px]:max-[1599px]:hidden">
-          <span
-            className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
-          >
-            Live market health
-          </span>
+        <div className="flex shrink-0 flex-col items-end justify-center gap-2 min-[1024px]:max-[1599px]:hidden">
           <div className="flex flex-col items-end gap-2">
             <span
               className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
@@ -229,6 +264,11 @@ function PrimarySnapshotCard({
               className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
             >
               7d {delta7d ?? "—"}
+            </span>
+            <span
+              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
+            >
+              30d {delta30d ?? "—"}
             </span>
           </div>
         </div>
@@ -356,9 +396,9 @@ export function KpiBar() {
         ? "negative"
         : "neutral";
 
-  const { psiDaysInBand, psiDelta24h, psiDelta7d } = useMemo(() => {
+  const { psiDaysInBand, psiDelta24h, psiDelta7d, psiDelta30d } = useMemo(() => {
     if (!psiBand || !psiData?.history || psiScoreNum === null) {
-      return { psiDaysInBand: 0, psiDelta24h: null, psiDelta7d: null };
+      return { psiDaysInBand: 0, psiDelta24h: null, psiDelta7d: null, psiDelta30d: null };
     }
 
     let days = 1;
@@ -369,7 +409,8 @@ export function KpiBar() {
 
     const d24h = psiData.history.length > 0 ? psiScoreNum - psiData.history[0].score : null;
     const d7d = psiData.history.length >= 7 ? psiScoreNum - psiData.history[6].score : null;
-    return { psiDaysInBand: days, psiDelta24h: d24h, psiDelta7d: d7d };
+    const d30d = psiData.history.length >= 30 ? psiScoreNum - psiData.history[29].score : null;
+    return { psiDaysInBand: days, psiDelta24h: d24h, psiDelta7d: d7d, psiDelta30d: d30d };
   }, [psiBand, psiData, psiScoreNum]);
 
   const dewsBandCounts = useMemo(() => {
@@ -446,6 +487,7 @@ export function KpiBar() {
 
   const psiDelta24hValue = psiDelta24h !== null ? `${psiDelta24h >= 0 ? "+" : ""}${psiDelta24h.toFixed(1)}` : null;
   const psiDelta7dValue = psiDelta7d !== null ? `${psiDelta7d >= 0 ? "+" : ""}${psiDelta7d.toFixed(1)}` : null;
+  const psiDelta30dValue = psiDelta30d !== null ? `${psiDelta30d >= 0 ? "+" : ""}${psiDelta30d.toFixed(1)}` : null;
 
   const allDewsCalm = dewsBandCounts
     ? dewsBandCounts.danger === 0 && dewsBandCounts.warning === 0 && dewsBandCounts.alert === 0
@@ -539,6 +581,7 @@ export function KpiBar() {
             band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
             delta24h={psiDelta24hValue}
             delta7d={psiDelta7dValue}
+            delta30d={psiDelta30dValue}
             valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
           />
         </div>
@@ -576,6 +619,7 @@ export function KpiBar() {
             band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
             delta24h={psiDelta24hValue}
             delta7d={psiDelta7dValue}
+            delta30d={psiDelta30dValue}
             valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
           />
         </div>
@@ -583,6 +627,7 @@ export function KpiBar() {
         {metricDefinitions.map((metric, i) => (
           <div
             key={metric.key}
+            className="h-full flex"
             style={{
               animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
               animationDelay: `${delayFor("kpi", i + 1)}ms`,
@@ -593,6 +638,8 @@ export function KpiBar() {
               value={metric.value}
               valueClassName={`text-lg${metric.desktopValueClassName ? ` ${metric.desktopValueClassName}` : ""}`}
               sublabel={metric.desktopSublabel}
+              centered
+              className="flex-1"
             />
           </div>
         ))}

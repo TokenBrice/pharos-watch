@@ -31,6 +31,7 @@ import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { usePreference, DEFAULT_VISIBLE_COLUMNS, MOBILE_DEFAULT_COLUMNS, type ColumnId } from "@/hooks/use-preferences";
 import { ColumnVisibilityDropdown } from "@/components/stablecoin-table-column-visibility";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import {
   buildTrackedIdSet,
   exportStablecoinsCsv,
@@ -520,10 +521,13 @@ export function StablecoinTable({
             )}
             {sorted.length === 0 && (
               <TableRow>
-                <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-                  <p>{searchQuery ? `No results for "${searchQuery}"` : "No stablecoin data available"}</p>
+                <TableCell colSpan={99} className="py-8">
+                  <EmptyStateIllustration variant={searchQuery ? "search" : "data"} />
+                  <p className="text-center text-muted-foreground">
+                    {searchQuery ? `No results for "${searchQuery}"` : "No stablecoin data available"}
+                  </p>
                   {(searchQuery || activeFilters.length > 0) && (
-                    <p className="mt-2 text-sm">
+                    <p className="mt-4 text-center text-sm">
                       {searchQuery && onClearSearch && (
                         <button
                           onClick={onClearSearch}

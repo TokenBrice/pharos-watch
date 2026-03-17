@@ -25,11 +25,28 @@
   /* ── Brand ────────────────────────────────────────────────────── */
   --brand-accent:    var(--p-frost-blue);
 
+  /* ── Featured Surfaces ─────────────────────────────────────────── */
+  --surface-featured-gradient: radial-gradient(120% 150% at 0% 0%, rgba(125,211,252,0.28), transparent 48%), linear-gradient(145deg, rgba(255,255,255,0.94), rgba(239,246,255,0.96) 52%, rgba(226,232,240,0.92));
+  --surface-featured-border: rgba(186, 230, 253, 0.45);
+  --surface-featured-shadow: 0 16px 36px rgba(148,163,184,0.18);
+  --surface-campaign-gradient: linear-gradient(135deg, oklch(0.985 0.012 248 / 0.98), oklch(0.958 0.03 220 / 0.96));
+  --surface-campaign-border: oklch(0.62 0.12 230 / 0.25);
+  --surface-campaign-shadow: 0 18px 40px oklch(0 0 0 / 0.08);
+  --surface-onboarding-gradient: linear-gradient(135deg, oklch(0.985 0.01 248 / 0.98), oklch(0.95 0.018 248 / 0.98));
+
   /* ── Severity (peg deviation) ─────────────────────────────────── */
   --severity-healthy:  var(--p-green-500);
   --severity-mild:     var(--p-amber-300);
   --severity-moderate: var(--p-orange-500);
   --severity-severe:   var(--p-red-600);
+
+  /* ── Risk Alert States ─────────────────────────────────────────── */
+  --risk-alert-border: var(--p-amber-500);
+  --risk-alert-bg:     oklch(0.98 0.02 85 / 0.6);
+  --risk-danger-border: var(--p-red-500);
+  --risk-danger-bg:    oklch(0.97 0.03 25 / 0.5);
+  --risk-calm-border:  var(--p-green-500);
+  --risk-calm-bg:      oklch(0.98 0.02 145 / 0.4);
 
   /* ── Severity hex values (for Recharts / canvas) ──────────────── */
   --severity-healthy-hex:  #22c55e;
@@ -131,6 +148,9 @@
   --motion-duration-entrance: 400ms;
   --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --motion-ease-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+
+  /* ── Theme Transition ─────────────────────────────────────────── */
+  --theme-transition-duration: 200ms;
 }
 
 /* ── Dark Mode ─────────────────────────────────────────────────── */
@@ -156,6 +176,23 @@
   --severity-mild:     var(--p-amber-300);
   --severity-moderate: var(--p-orange-500);
   --severity-severe:   var(--p-red-400);
+
+  /* ── Featured Surfaces (Dark) ─────────────────────────────────── */
+  --surface-featured-gradient: radial-gradient(120% 150% at 0% 0%, rgba(34,211,238,0.12), transparent 48%), linear-gradient(145deg, rgba(8,15,28,0.96), rgba(4,19,40,0.96) 55%, rgba(3,9,21,0.98));
+  --surface-featured-border: oklch(0.5 0.12 230 / 0.15);
+  --surface-featured-shadow: 0 20px 44px rgba(2,6,23,0.28);
+  --surface-campaign-gradient: linear-gradient(135deg, oklch(0.22 0.03 248 / 0.94), oklch(0.17 0.03 220 / 0.98));
+  --surface-campaign-border: oklch(0.55 0.1 230 / 0.20);
+  --surface-campaign-shadow: 0 24px 48px oklch(0 0 0 / 0.18);
+  --surface-onboarding-gradient: linear-gradient(135deg, oklch(0.21 0.03 250 / 0.92), oklch(0.16 0.02 250 / 0.98));
+
+  /* ── Risk Alert States (Dark) ─────────────────────────────────── */
+  --risk-alert-border: var(--p-amber-400);
+  --risk-alert-bg:     oklch(0.22 0.03 85 / 0.25);
+  --risk-danger-border: var(--p-red-400);
+  --risk-danger-bg:    oklch(0.20 0.04 25 / 0.35);
+  --risk-calm-border:  var(--p-green-500);
+  --risk-calm-bg:      oklch(0.22 0.03 145 / 0.15);
 
   /* ── Interactive States ───────────────────────────────────────── */
   --interactive-hover:   oklch(0.26 0.015 260);
@@ -209,4 +246,7 @@
   --motion-duration-entrance: 400ms;
   --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --motion-ease-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+
+  /* ── Theme Transition ─────────────────────────────────────────── */
+  --theme-transition-duration: 200ms;
 }

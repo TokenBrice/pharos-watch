@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -115,9 +116,9 @@ function useMovers(data: StablecoinData[] | undefined) {
 /* ─── Color helpers ─────────────────────────────────────────────── */
 
 /**
- * Sign-aware depeg color:
- * - Below peg (negative bps): red — insolvency/redemption concern
- * - Above peg (positive bps): amber — liquidity premium
+ * Sign-aware depeg color and icon:
+ * - Below peg (negative bps): red + TrendingDown — insolvency/redemption concern
+ * - Above peg (positive bps): amber + TrendingUp — liquidity premium
  * - Near peg (<10 bps absolute): muted
  */
 function depegColorClass(bps: number): string {
@@ -125,6 +126,13 @@ function depegColorClass(bps: number): string {
   if (abs < 10) return "text-muted-foreground";
   if (bps < 0) return "text-red-700 dark:text-red-400";
   return "text-amber-700 dark:text-amber-400";
+}
+
+function DepegIcon({ bps }: { bps: number }) {
+  const abs = Math.abs(bps);
+  if (abs < 10) return null;
+  const Icon = bps < 0 ? TrendingDown : TrendingUp;
+  return <Icon className="h-3 w-3" aria-hidden="true" />;
 }
 
 /* ─── Sub-components ────────────────────────────────────────────── */
@@ -150,7 +158,8 @@ function DepegEntry({
       <span className="text-xs font-medium group-hover:underline group-focus-visible:underline">
         {entry.symbol}
       </span>
-      <span className={`text-xs font-mono font-semibold ${depegColorClass(entry.bps)}`}>
+      <span className={`inline-flex items-center gap-0.5 text-xs font-mono font-semibold ${depegColorClass(entry.bps)}`}>
+        <DepegIcon bps={entry.bps} />
         {formatPegDeviation(entry.bps / 10000 + 1, 1)}
       </span>
     </Link>

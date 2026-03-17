@@ -4,11 +4,13 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Compass, Megaphone, Search } from "lucide-react";
-import { useDexLiquidity, usePegSummary, useReportCards } from "@/hooks/api-hooks";
+import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { useHomepageFilters } from "@/hooks/use-homepage-filters";
 import { useStartHereCallout } from "@/hooks/use-start-here-callout";
+import { useDataAnnounce } from "@/hooks/use-data-announce";
+import { DataLiveRegion } from "@/components/data-live-region";
 import { MarketHighlights } from "@/components/market-highlights";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -26,6 +28,75 @@ function SectionSkeleton({ className }: { className: string }) {
   return <Skeleton className={className} />;
 }
 
+function ChartSkeleton({ className, type = "area" }: { className?: string; type?: "area" | "bar" | "radar" | "line" }) {
+  const heightClass = className?.match(/h-\[?\d+(?:px)?\]?/) || "h-[300px]";
+  return (
+    <div className={`relative overflow-hidden rounded-xl border border-border/50 bg-card/50 ${className}`}>
+      {/* Chart header placeholder */}
+      <div className="flex items-center justify-between border-b border-border/30 px-4 py-3">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-8 w-24 rounded-md" />
+      </div>
+      {/* Chart area placeholder */}
+      <div className="relative px-4 pb-4 pt-3">
+        {/* Y-axis labels */}
+        <div className="absolute left-4 top-3 bottom-4 flex flex-col justify-between py-2">
+          <Skeleton className="h-3 w-8" />
+          <Skeleton className="h-3 w-8" />
+          <Skeleton className="h-3 w-8" />
+          <Skeleton className="h-3 w-6" />
+        </div>
+        {/* Chart content */}
+        <div className={`ml-12 ${heightClass} relative`}>
+          {type === "area" && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-b from-muted/60 via-muted/30 to-transparent rounded-lg" />
+              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-muted/40 to-transparent rounded-b-lg" />
+              {/* Simulated line path */}
+              <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                <path
+                  d="M0,80 C50,70 100,90 150,60 S250,40 300,50 S400,30 450,45 S550,35 600,40"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-muted-foreground/30"
+                />
+              </svg>
+            </>
+          )}
+          {type === "radar" && (
+            <div className="flex h-full items-center justify-center">
+              <div className="relative h-4/5 w-4/5">
+                <div className="absolute inset-0 rounded-full border-2 border-dashed border-muted-foreground/20" />
+                <div className="absolute inset-[15%] rounded-full border-2 border-dashed border-muted-foreground/20" />
+                <div className="absolute inset-[30%] rounded-full border-2 border-dashed border-muted-foreground/20" />
+                <div className="absolute inset-[45%] rounded-full bg-muted-foreground/10" />
+              </div>
+            </div>
+          )}
+          {type === "bar" && (
+            <div className="flex h-full items-end justify-around gap-2 px-4">
+              <Skeleton className="h-[40%] w-8" />
+              <Skeleton className="h-[65%] w-8" />
+              <Skeleton className="h-[50%] w-8" />
+              <Skeleton className="h-[80%] w-8" />
+              <Skeleton className="h-[45%] w-8" />
+              <Skeleton className="h-[70%] w-8" />
+            </div>
+          )}
+          {/* X-axis labels */}
+          <div className="absolute -bottom-6 left-0 right-0 flex justify-between">
+            <Skeleton className="h-3 w-10" />
+            <Skeleton className="h-3 w-10" />
+            <Skeleton className="h-3 w-10" />
+            <Skeleton className="h-3 w-10" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const StablecoinTable = dynamic(() => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable), {
   loading: () => <SectionSkeleton className="h-[720px] w-full rounded-xl" />,
 });
@@ -35,15 +106,15 @@ const CategoryStats = dynamic(() => import("@/components/category-stats").then((
 });
 
 const TotalMcapChart = dynamic(() => import("@/components/total-mcap-chart").then((mod) => mod.TotalMcapChart), {
-  loading: () => <SectionSkeleton className="h-[360px] w-full rounded-xl" />,
+  loading: () => <ChartSkeleton className="h-[360px] w-full" type="area" />,
 });
 
 const PsiHistoryChart = dynamic(() => import("@/components/psi-history-chart").then((mod) => mod.PsiHistoryChart), {
-  loading: () => <SectionSkeleton className="h-[360px] w-full rounded-xl" />,
+  loading: () => <ChartSkeleton className="h-[360px] w-full" type="area" />,
 });
 
 const DEWSSummary = dynamic(() => import("@/components/dews-summary").then((mod) => mod.DEWSSummary), {
-  loading: () => <SectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  loading: () => <ChartSkeleton className="h-[320px] w-full" type="radar" />,
 });
 
 const HomepageFlowOverview = dynamic(
@@ -63,7 +134,7 @@ const HomepageSafetyOverview = dynamic(
 const PegDiversityChart = dynamic(
   () => import("@/components/peg-diversity-chart").then((mod) => mod.PegDiversityChart),
   {
-    loading: () => <SectionSkeleton className="h-[360px] w-full rounded-xl" />,
+    loading: () => <ChartSkeleton className="h-[360px] w-full" type="bar" />,
   },
 );
 
@@ -79,9 +150,20 @@ function CampaignCallout() {
   return (
     <section
       aria-label="Pharos community campaign"
-      className="pharos-card-shell relative overflow-hidden border border-sky-500/25 bg-[linear-gradient(135deg,oklch(0.985_0.012_248_/_0.98),oklch(0.958_0.03_220_/_0.96))] px-4 py-4 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 dark:border-sky-400/20 dark:bg-[linear-gradient(135deg,oklch(0.22_0.03_248_/_0.94),oklch(0.17_0.03_220_/_0.98))] dark:shadow-[0_24px_48px_oklch(0_0_0_/0.18)]"
+      className="pharos-card-shell relative overflow-hidden border px-4 py-4 sm:px-5"
+      style={{
+        background: 'var(--surface-campaign-gradient)',
+        borderColor: 'var(--surface-campaign-border)',
+        boxShadow: 'var(--surface-campaign-shadow)',
+      }}
+      data-no-theme-transition
     >
-      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-56 bg-[radial-gradient(circle_at_center,oklch(0.82_0.09_230_/_0.22),transparent_68%)] md:block dark:bg-[radial-gradient(circle_at_center,oklch(0.72_0.1_240_/_0.18),transparent_72%)]" />
+      <div 
+        className="pointer-events-none absolute inset-y-0 right-0 hidden w-56 md:block"
+        style={{
+          background: 'radial-gradient(circle at center, oklch(0.82 0.09 230 / 0.22), transparent 68%)',
+        }}
+      />
       <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-sky-900/78 dark:text-sky-100/76">
@@ -170,7 +252,10 @@ function PegBrowseSection({
 
 function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
   return (
-    <section className="pharos-card-shell overflow-hidden border border-black/7 bg-[linear-gradient(135deg,oklch(0.985_0.01_248_/_0.98),oklch(0.95_0.018_248_/_0.98))] px-4 py-4 shadow-[0_16px_34px_oklch(0_0_0_/0.08)] sm:px-5 dark:border-white/10 dark:bg-[linear-gradient(135deg,oklch(0.21_0.03_250_/_0.92),oklch(0.16_0.02_250_/_0.98))] dark:shadow-[0_20px_42px_oklch(0_0_0_/0.16)]">
+    <section 
+      className="pharos-card-shell overflow-hidden border border-black/7 px-4 py-4 shadow-[0_16px_34px_oklch(0_0_0_/0.08)] sm:px-5 dark:border-white/10 dark:shadow-[0_20px_42px_oklch(0_0_0_/0.16)]"
+      style={{ background: 'var(--surface-onboarding-gradient)' }}
+    >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-center gap-2 text-sky-700 dark:text-sky-200/82">
@@ -247,7 +332,22 @@ export function HomepageClient() {
     error: reportCardsError,
     refetch: refetchReportCards,
   } = useReportCards();
+  const { data: stressData } = useStressSignals();
   const metaById = TRACKED_META_BY_ID;
+
+  // Compute DEWS risk level for visual styling
+  const dewsRiskLevel = useMemo(() => {
+    if (!stressData?.signals) return "calm";
+    const signals = Object.values(stressData.signals);
+    const dangerCount = signals.filter((s) => s.band === "DANGER").length;
+    const warningCount = signals.filter((s) => s.band === "WARNING").length;
+    const alertCount = signals.filter((s) => s.band === "ALERT").length;
+    
+    if (dangerCount > 0) return "danger";
+    if (warningCount > 0) return "warning";
+    if (alertCount > 0) return "alert";
+    return "calm";
+  }, [stressData]);
   const pegScores = useMemo(() => {
     const map = new Map<string, PegSummaryCoin>();
     if (!pegSummaryData?.coins) return map;
@@ -270,6 +370,14 @@ export function HomepageClient() {
     void Promise.allSettled([refetchPrices(), refetchPeg(), refetchLiquidity(), refetchReportCards()]);
   }, [refetchPeg, refetchLiquidity, refetchPrices, refetchReportCards]);
 
+  // Announce data updates to screen readers
+  useDataAnnounce([
+    { dataUpdatedAt, dataName: "Market data" },
+    { dataUpdatedAt: pegUpdatedAt, dataName: "Peg summary" },
+    { dataUpdatedAt: liqUpdatedAt, dataName: "Liquidity" },
+    { dataUpdatedAt: rcUpdatedAt, dataName: "Report cards" },
+  ]);
+
   useEffect(() => {
     const remainingMs = CAMPAIGN_END_AT - Date.now();
     const timeoutId = window.setTimeout(() => setShowCampaignCallout(false), Math.max(0, remainingMs));
@@ -278,6 +386,7 @@ export function HomepageClient() {
 
   return (
     <div className="space-y-6">
+      <DataLiveRegion />
       <QueryErrorNotice error={globalError} hasData={!!data?.peggedAssets?.length} onRetry={handleRetry} />
       <StaleDataBanner
         queries={[
@@ -344,7 +453,17 @@ export function HomepageClient() {
           <SectionErrorBoundary name="dews-radar">
             <section className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
+                <div className={`border-l-4 pl-3 transition-colors duration-300 ${
+                  dewsRiskLevel === "danger" 
+                    ? "border-l-red-500" 
+                    : dewsRiskLevel === "warning"
+                      ? "border-l-amber-500"
+                      : dewsRiskLevel === "alert"
+                        ? "border-l-orange-500"
+                        : "border-l-transparent"
+                }`}>
+                  <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
+                </div>
                 <Link
                   href="/depeg/"
                   className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"

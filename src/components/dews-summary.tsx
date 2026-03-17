@@ -232,10 +232,12 @@ function DEWSDot({
   coin,
   onHover,
   onClick,
+  isSelected,
 }: {
   coin: ElevatedCoin;
   onHover: (id: string | null) => void;
   onClick: (id: string) => void;
+  isSelected?: boolean;
 }) {
   const hex = THREAT_BAND_HEX[coin.band];
   const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
@@ -264,6 +266,34 @@ function DEWSDot({
     >
       {/* Touch-friendly hit area to improve mobile targeting precision */}
       <circle r={18} fill="transparent" stroke="transparent" />
+      {/* Visual selection ring for touch devices */}
+      {isSelected && (
+        <>
+          <circle
+            r={dotR + 12}
+            fill="none"
+            stroke={hex}
+            strokeWidth={2}
+            strokeDasharray="4 2"
+            opacity={0.6}
+          >
+            <animateTransform
+              attributeName="transform"
+              type="rotate"
+              from="0 0 0"
+              to="360 0 0"
+              dur="8s"
+              repeatCount="indefinite"
+            />
+          </circle>
+          <circle
+            r={dotR + 4}
+            fill="none"
+            stroke="var(--color-background)"
+            strokeWidth={2}
+          />
+        </>
+      )}
       {/* Animated glow ring */}
       <circle
         r={glowR}
@@ -505,6 +535,7 @@ function DEWSRadar({
         <DEWSDot
           key={coin.id}
           coin={coin}
+          isSelected={hoveredId === coin.id}
           onHover={(id) => {
             if (isFinePointer) {
               setHoveredId(id);

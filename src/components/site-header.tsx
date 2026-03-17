@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import Image from "next/image";
 import { useDexLiquidity, useHealth } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
+import { PharosLogo } from "@/components/pharos-logo";
 
 function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
@@ -62,14 +62,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   return (
     <div className="pharos-card-shell hidden lg:flex items-end justify-between gap-6 px-5 py-5">
       <div className="flex min-w-0 items-center gap-4">
-        <Image
-          src="/pharos-icon.png"
-          alt=""
-          width={40}
-          height={40}
-          className="rounded-xl ring-1 ring-border/60 bg-slate-900/90 shadow-sm dark:bg-transparent"
-          priority
-        />
+        <PharosLogo size={40} className="rounded-xl shadow-sm" priority />
         <div className="min-w-0">
           <p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>
           <p className="mt-1 max-w-xl text-sm tracking-[0.01em] text-muted-foreground/85">

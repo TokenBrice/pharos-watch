@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PharosLogo } from "@/components/pharos-logo";
 import { useTheme } from "next-themes";
 import { ChevronsLeft, ChevronsRight, Moon, Search, Sun } from "lucide-react";
 import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
@@ -209,13 +209,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className={`flex items-center h-14 shrink-0 border-b border-border/65 ${expanded ? "px-4 gap-3" : "justify-center"}`}>
         <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md" aria-label="Pharos home">
-          <Image
-            src="/pharos-icon.png"
-            alt="Pharos"
-            width={28}
-            height={28}
-            className="rounded-lg ring-1 ring-border/60 shrink-0 bg-slate-900/90 dark:bg-transparent"
-          />
+          <PharosLogo size={28} />
           {expanded && <span className="text-sm font-mono uppercase tracking-[0.18em] font-semibold">PHAROS</span>}
         </Link>
       </div>
