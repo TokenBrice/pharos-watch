@@ -77,6 +77,7 @@ export function ChainsLeaderboardClient() {
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
+          <caption className="sr-only">Blockchain networks ranked by stablecoin supply</caption>
           <TableHeader>
             <TableRow className="bg-muted/40">
               <TableHead className="w-[50px] text-right">#</TableHead>
