@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ChevronDown,
   Search,
-  TableProperties,
+  SearchX,
 } from "lucide-react";
 import { formatCurrency } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -153,7 +153,7 @@ function CoverageMobileCard({
   );
 
   return (
-    <details className="group rounded-[1.35rem] border border-border/70 bg-background/35 open:bg-background/42">
+    <details className="group rounded-2xl border border-border/70 bg-background/35 open:bg-background/42">
       <summary className="pharos-focus-ring flex cursor-pointer list-none flex-col gap-4 p-4 [&::-webkit-details-marker]:hidden">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
@@ -255,7 +255,7 @@ function CoverageFeatureSnapshotRow({
   return (
     <li
       className={cn(
-        "relative grid gap-4 overflow-hidden rounded-[1.15rem] border border-border/60 bg-[linear-gradient(180deg,oklch(0.985_0.006_248_/_0.98),oklch(0.95_0.008_248_/_1))] px-4 py-4 shadow-[inset_0_1px_0_oklch(1_0_0_/0.7),0_12px_28px_oklch(0_0_0_/0.05)] before:absolute before:inset-y-4 before:left-0 before:w-[2px] dark:bg-[linear-gradient(180deg,oklch(0.17_0.01_248_/_0.78),oklch(0.12_0.008_248_/_0.92))] dark:shadow-[inset_0_1px_0_oklch(1_0_0_/0.03)] xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)_minmax(15rem,0.9fr)]",
+        "relative grid gap-4 overflow-hidden rounded-xl border border-border/60 bg-card px-4 py-4 before:absolute before:inset-y-4 before:left-0 before:w-[2px] xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)_minmax(15rem,0.9fr)]",
         accent.rail,
       )}
     >
@@ -546,13 +546,21 @@ export default function CoveragePageClient() {
             </div>
 
             {authoritativeSources.length > 0 && (
-              <div className="space-y-3">
-                <p className="pharos-kicker">Authoritative Overrides</p>
+              <div className="space-y-3 rounded-xl border border-violet-500/25 bg-violet-500/[0.03] p-4">
+                <div className="flex items-center gap-2">
+                  <p className="pharos-kicker">Authoritative Overrides</p>
+                  <span className="inline-flex items-center rounded-full border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
+                    Protocol
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Direct issuer or protocol pricing that supersedes market sources for specific assets.
+                </p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {authoritativeSources.map((src) => (
                     <div
                       key={src.name}
-                      className="flex flex-col items-center gap-1.5 rounded-[1.15rem] border border-violet-500/20 bg-violet-500/5 px-4 py-4"
+                      className="flex flex-col items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-4"
                     >
                       <span className="text-sm font-semibold text-violet-800 dark:text-violet-300">
                         {SOURCE_DISPLAY_NAMES[src.name] ?? src.name}
@@ -583,21 +591,39 @@ export default function CoveragePageClient() {
             </CardDescription>
           </div>
 
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="relative min-w-0 flex-1 xl:max-w-sm">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search stablecoin or ticker"
-                className="h-11 rounded-2xl border-border/65 bg-background/45 pl-10"
-                aria-label="Search stablecoin coverage table"
-              />
+          <div className="flex flex-col gap-3">
+            {/* Row 1: Search + Sort */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative min-w-0 flex-1 sm:max-w-sm">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search stablecoin or ticker"
+                  className="h-10 rounded-2xl border-border/65 bg-background/45 pl-10"
+                  aria-label="Search stablecoin coverage table"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="shrink-0">Sort</span>
+                <select
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as CoverageSortKey)}
+                  className="h-10 rounded-2xl border border-border/65 bg-background/45 px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                  aria-label="Sort coverage table"
+                >
+                  <option value="market-cap">Market cap</option>
+                  <option value="most-covered">Most covered</option>
+                  <option value="name">Alphabetical</option>
+                </select>
+              </label>
             </div>
 
+            {/* Row 2: Filter Pills */}
             <div
               role="toolbar"
               aria-label="Coverage filters"
@@ -611,7 +637,7 @@ export default function CoveragePageClient() {
                   aria-controls="coverage-results"
                   onClick={() => setFilter(option.key)}
                   className={cn(
-                    "pharos-focus-ring min-h-11 rounded-full border px-3 py-2 text-xs font-medium transition-colors sm:min-h-0",
+                    "pharos-focus-ring h-8 rounded-full border px-3 text-xs font-medium transition-colors",
                     filter === option.key
                       ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
                       : "border-border/60 bg-background/45 text-muted-foreground hover:text-foreground",
@@ -621,20 +647,6 @@ export default function CoveragePageClient() {
                 </button>
               ))}
             </div>
-
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="shrink-0">Sort</span>
-              <select
-                value={sort}
-                onChange={(event) => setSort(event.target.value as CoverageSortKey)}
-                className="h-11 rounded-2xl border border-border/65 bg-background/45 px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 sm:h-10"
-                aria-label="Sort coverage table"
-              >
-                <option value="market-cap">Market cap</option>
-                <option value="most-covered">Most covered</option>
-                <option value="name">Alphabetical</option>
-              </select>
-            </label>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -676,13 +688,37 @@ export default function CoveragePageClient() {
         <CardContent id="coverage-results" className="space-y-4">
           {filteredRows.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-10 text-center">
-              <TableProperties className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
+              <SearchX className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
               <p className="mt-4 text-sm font-medium text-foreground">
-                No stablecoins match the current search and filter set.
+                No stablecoins match your search or filters.
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Clear the search input or switch back to All coins.
+                Try adjusting your filters or search for popular stablecoins like USDT, USDC, or DAI.
               </p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                {["USDT", "USDC", "DAI", "USDe"].map((ticker) => (
+                  <button
+                    key={ticker}
+                    type="button"
+                    onClick={() => setSearch(ticker)}
+                    className="pharos-focus-ring h-8 rounded-full border border-border/60 bg-background/60 px-3 text-xs font-medium text-foreground hover:bg-accent"
+                  >
+                    {ticker}
+                  </button>
+                ))}
+              </div>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setFilter("all");
+                  }}
+                  className="pharos-focus-ring mt-4 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent"
+                >
+                  Clear all filters
+                </button>
+              )}
             </div>
           ) : (
             <>
