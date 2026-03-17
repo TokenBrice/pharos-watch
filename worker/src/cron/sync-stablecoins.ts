@@ -540,6 +540,17 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     );
     if (!decision.accepted) continue;
 
+    // Warn if protocol override diverges significantly from market consensus
+    if (asset.price != null && asset.price > 0 && override.price > 0) {
+      const divergenceBps = Math.abs(Math.round(((override.price / asset.price) - 1) * 10000));
+      if (divergenceBps > 100) {
+        console.warn(
+          `[sync] Protocol override for ${asset.symbol} diverges ${divergenceBps}bps from consensus ` +
+          `(override=$${override.price.toFixed(4)}, consensus=$${asset.price.toFixed(4)})`,
+        );
+      }
+    }
+
     asset.price = override.price;
     stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source]);
   }
