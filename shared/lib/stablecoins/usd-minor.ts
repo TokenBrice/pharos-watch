@@ -2875,6 +2875,14 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     ],
     featuredContent: [
       { type: "tweet", url: "https://x.com/polarisfinance_/status/2016180350087549420", title: "pUSD announcement thread", source: "@polarisfinance_" },
+      {
+        type: "blog",
+        url: "https://polarisfinance.io/blog/pusd-no-counterparty/",
+        title: "pUSD: No Counterparty, No Ceiling",
+        description: "How pUSD delivers counterparty-free yield that scales alongside protocol adoption and the developing ecosystem supporting it.",
+        image: "/featured/polaris-pusd-no-counterparty.png",
+        source: "Polaris Finance Blog",
+      },
     ],
   }),
   usd("usg-tangent", "Tangent USD", "USG", "crypto-backed", "decentralized", {

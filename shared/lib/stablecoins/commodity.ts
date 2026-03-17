@@ -193,6 +193,14 @@ export const COMMODITY_COINS: StablecoinMeta[] = [
         image: "/featured/polaris-pgold-cover.png",
         source: "Polaris Finance Blog",
       },
+      {
+        type: "blog",
+        url: "https://polarisfinance.io/blog/polaris-mints-anything/",
+        title: "CDPs Mint Dollars. Polaris Mints Anything",
+        description: "Polaris advances the CDP model with pETH collateral, autonomous interest rate mechanisms, and a multi-stablecoin factory framework.",
+        image: "/featured/polaris-mints-anything.png",
+        source: "Polaris Finance Blog",
+      },
     ],
   }),
 ];
