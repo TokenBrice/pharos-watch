@@ -117,15 +117,25 @@ function CompositionSection({ chainId }: { chainId: string }) {
       <CardContent>
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Treemap-like blocks */}
-          <div className="grid grid-cols-3 gap-1.5 auto-rows-fr" style={{ minHeight: "200px" }}>
+          <div
+            className={cn(
+              "grid gap-1.5 auto-rows-fr",
+              top5.length <= 2 ? "grid-cols-2" : "grid-cols-3",
+            )}
+            style={{ minHeight: "200px" }}
+          >
             {top5.map((coin) => {
               const pct = totalUsd > 0 ? coin.supplyOnChain / totalUsd : 0;
+              const shouldSpan = top5.length > 2 && pct > 0.4;
               return (
                 <Link
                   key={coin.id}
                   href={buildStablecoinUrl(coin.id)}
                   className="flex flex-col items-center justify-center rounded-lg border bg-muted/30 p-2 text-center text-xs hover:bg-muted/50 transition-colors"
-                  style={{ gridColumn: pct > 0.4 ? "span 2" : undefined, gridRow: pct > 0.4 ? "span 2" : undefined }}
+                  style={{
+                    gridColumn: shouldSpan ? "span 2" : undefined,
+                    gridRow: shouldSpan ? "span 2" : undefined,
+                  }}
                 >
                   <span className="font-semibold">{coin.symbol}</span>
                   <span className="text-muted-foreground">{(pct * 100).toFixed(1)}%</span>
