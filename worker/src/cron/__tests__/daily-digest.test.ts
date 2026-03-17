@@ -513,11 +513,11 @@ describe("generateDailyDigest", () => {
     const baseTables = makeBaseTables();
     const db = mockD1([
       ...baseTables,
-      // PSI precedent: last time score was at/below current
+      // PSI precedent: query previous digests for displayed PSI scores
       {
-        match: "FROM stability_index WHERE score <= ?",
+        match: "FROM daily_digest\n           WHERE json_extract(input_data",
         rows: [],
-        first: { computed_at: todayTs - 30 * 86_400, score: 89.0, band: "STEADY" },
+        first: { generated_at: todayTs - 30 * 86_400 + 8 * 3600, psi_score: 89.0, psi_band: "STEADY" },
       },
       // PSI band streak
       {

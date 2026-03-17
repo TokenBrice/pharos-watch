@@ -516,22 +516,42 @@ export async function collectHistoricalContext(
       .first<{ cnt: number }>();
 
     if (displayScore != null && displayBand && (histDepth?.cnt ?? 0) > 30) {
-      // PSI precedent: last time score was at or below current
-      const precedent = await ctx.db
+      // PSI precedent: last time the digest reported a score at or below current.
+      // Query previous daily digests (not stability_index daily snapshots) so we
+      // compare displayed rolling-24h avgs against displayed rolling-24h avgs —
+      // the stability_index table uses midnight-to-midnight windows that diverge
+      // from the displayed score during trending periods.
+      const DAILY_DIGEST_FILTER = "digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly'";
+      const digestPrecedent = await ctx.db
         .prepare(
-          "SELECT computed_at, score, band FROM stability_index WHERE score <= ? AND computed_at < ? ORDER BY computed_at DESC LIMIT 1",
+          `SELECT generated_at,
+                  json_extract(input_data, '$.stabilityIndex.score') as psi_score,
+                  json_extract(input_data, '$.stabilityIndex.band') as psi_band
+           FROM daily_digest
+           WHERE json_extract(input_data, '$.stabilityIndex.score') <= ?
+             AND generated_at < ?
+             AND (${DAILY_DIGEST_FILTER})
+           ORDER BY generated_at DESC LIMIT 1`,
         )
         .bind(displayScore, ctx.todayTs)
-        .first<{ computed_at: number; score: number; band: string }>();
+        .first<{ generated_at: number; psi_score: number; psi_band: string }>();
 
-      const psiPrecedent = precedent
-        ? {
-            lastSeenDate: precedent.computed_at,
-            lastSeenDaysAgo: Math.round((ctx.todayTs - precedent.computed_at) / SECONDS.ONE_DAY),
-            lastSeenScore: precedent.score,
-            lastSeenBand: precedent.band,
-          }
-        : null;
+      let psiPrecedent: {
+        lastSeenDate: number;
+        lastSeenDaysAgo: number;
+        lastSeenScore: number;
+        lastSeenBand: string;
+      } | null = null;
+
+      if (digestPrecedent) {
+        const dayTs = digestPrecedent.generated_at - (digestPrecedent.generated_at % SECONDS.ONE_DAY);
+        psiPrecedent = {
+          lastSeenDate: dayTs,
+          lastSeenDaysAgo: Math.round((ctx.todayTs - dayTs) / SECONDS.ONE_DAY),
+          lastSeenScore: digestPrecedent.psi_score,
+          lastSeenBand: digestPrecedent.psi_band,
+        };
+      }
 
       // PSI band streak: count consecutive days in current band
       const bandHistory = await ctx.db
