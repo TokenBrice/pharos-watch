@@ -18,8 +18,10 @@ Contract for the public chain analytics surfaces:
 - **Primary API:** `GET /api/chains`
 - **Methodology version source:** `shared/lib/chain-health-version.ts`
 - **Scoring implementation:** `shared/lib/chain-health.ts`, `shared/lib/chain-aggregator.ts`, `shared/lib/chains.ts`
+- **Shared chain UI helpers:** `src/lib/chain-ui.ts` (formatting + health band color maps)
+- **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains.ts`
 
-The leaderboard is public and indexable. The profile routes are statically generated from the set of tracked chains derived from stablecoin contract metadata.
+The leaderboard is public and indexable. The profile routes are statically generated from `getActiveChainIds()` which returns chains that have at least one tracked stablecoin contract and a `CHAIN_META` entry.
 
 ---
 
@@ -35,9 +37,12 @@ The leaderboard is public and indexable. The profile routes are statically gener
 
 `src/app/chains/client.tsx` consumes `useChains()` and renders:
 
-- KPI strip: total stablecoin supply, active chains, top-chain dominance, healthiest chain
-- sortable leaderboard table
+- KPI strip: total stablecoin supply, active chains, top chain (explicit sort by supply), healthiest chain
+- sortable leaderboard table with `<caption>` for screen readers
+- `QueryErrorNotice` with retry and `StaleDataBanner` (preset `"chains"`)
+- skeleton loading states (KPI grid + table rows)
 - row click and keyboard navigation into `/chains/[chain]/`
+- chain logos apply `dark:invert` when `CHAIN_META[id].darkInvert` is set
 
 Current sortable columns are:
 
@@ -61,11 +66,13 @@ Default sort is `totalUsd desc`.
 
 `src/app/chains/[chain]/client.tsx` uses `useChains()` plus `useChainStablecoins(chainId)` and renders, in order:
 
-1. hero card with supply, global share, 24h/7d/30d change, and health badge
-2. Chain Health breakdown card
-3. stablecoin composition section
-4. backing-type breakdown
-5. full stablecoin table
+1. `QueryErrorNotice` (inline banner when error + stale data)
+2. hero card with supply, global share, 24h/7d/30d change (all with dark-mode colors via `trendColor()`), health badge, and `dark:invert` logo support
+3. Chain Health breakdown card — weight labels derived dynamically from exported constants in `chain-health.ts`
+4. stablecoin composition treemap — uses `grid-cols-2` for 1-2 coins, `grid-cols-3` otherwise; dominant span only for 3+ coins
+5. backing-type breakdown — unclassified coins shown as "Other" (zinc-colored) bucket
+6. full stablecoin table with `<caption>` and `scope="col"` attributes
+7. skeleton loading states (hero + health + composition blocks)
 
 `useChainStablecoins()` derives profile rows from `/api/stablecoins`, not `/api/chains`, by summing every `chainCirculating` entry that resolves to the selected canonical chain ID.
 
@@ -91,7 +98,7 @@ Factors:
 - `chainEnvironment`: resilience tier mapping from `shared/lib/chains.ts` (`1 -> 100`, `2 -> 60`, `3 -> 20`)
 - `concentration`: `100 * (1 - HHI)`
 - `pegStability`: supply-weighted peg proximity; missing prices contribute a neutral `50`
-- `backingDiversity`: normalized Shannon entropy across `rwa-backed`, `crypto-backed`, and `algorithmic`
+- `backingDiversity`: normalized Shannon entropy across `rwa-backed`, `crypto-backed`, and `algorithmic`. Coins without backing metadata are excluded from the distribution (not defaulted to `rwa-backed`). Weight constants are exported from `chain-health.ts`.
 
 Bands:
 
@@ -129,6 +136,7 @@ Update this file when any of the following change:
 - `/chains/[chain]/` section order or data sourcing
 - `generateStaticParams()` source of truth for chain routes
 - `GET /api/chains` response fields or freshness behavior
+- Health band colors in `src/lib/chain-ui.ts`
 
 Related docs to update in the same change:
 
