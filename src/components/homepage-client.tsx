@@ -19,6 +19,7 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
 import { derivePegRates } from "@shared/lib/peg-rates";
@@ -440,6 +441,10 @@ export function HomepageClient() {
           </div>
           <PegBrowseSection pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
         </section>
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="upcoming-stablecoins">
+        <UpcomingStablecoinsSection logos={logos} />
       </SectionErrorBoundary>
 
       <section className="space-y-6 border-t border-border/50 pt-6">
