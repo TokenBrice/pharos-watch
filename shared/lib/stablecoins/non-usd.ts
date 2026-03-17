@@ -811,5 +811,15 @@ export const NON_USD_COINS: StablecoinMeta[] = [
       { label: "Website", url: "https://qivalis.eu" },
       { label: "Twitter", url: "https://x.com/qivaliseu" },
     ],
+    featuredContent: [
+      {
+        type: "article",
+        url: "https://www.caixabank.com/comunicacion/noticia/caixabank-and-qivalis-partner-to-launch-a-euro-stablecoin_en.html",
+        title: "CaixaBank and Qivalis partner to launch a euro stablecoin",
+        description: "Spanish banking giant CaixaBank partners with Qivalis to develop a fully regulated euro stablecoin under MiCA, targeting crypto exchanges and DeFi protocols.",
+        image: "/featured/qivalis-caixabank.png",
+        source: "CaixaBank",
+      },
+    ],
   }),
 ];

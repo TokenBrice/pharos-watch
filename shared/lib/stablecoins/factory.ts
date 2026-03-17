@@ -36,6 +36,7 @@ export interface StablecoinOpts {
   expectedLaunchDate?: string;
   launchPhase?: StablecoinMeta["launchPhase"];
   launchPhaseDetail?: string;
+  featuredContent?: StablecoinMeta["featuredContent"];
 }
 
 export function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
@@ -82,6 +83,7 @@ export function coin(id: string, name: string, symbol: string, backing: Stableco
     expectedLaunchDate: opts?.expectedLaunchDate,
     launchPhase: opts?.launchPhase,
     launchPhaseDetail: opts?.launchPhaseDetail,
+    featuredContent: opts?.featuredContent,
   };
 }
 export const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);

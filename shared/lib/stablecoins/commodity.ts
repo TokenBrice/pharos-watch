@@ -184,5 +184,15 @@ export const COMMODITY_COINS: StablecoinMeta[] = [
       { label: "Website", url: "https://polarisfinance.io" },
       { label: "Twitter", url: "https://x.com/polarisfinance_" },
     ],
+    featuredContent: [
+      {
+        type: "blog",
+        url: "https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/",
+        title: "pGOLD: Finishing what DigixDAO started",
+        description: "A decentralized alternative to centralized gold stablecoins, offering trustless gold exposure backed by pETH collateral via CDP infrastructure.",
+        image: "/featured/polaris-pgold-cover.png",
+        source: "Polaris Finance Blog",
+      },
+    ],
   }),
 ];

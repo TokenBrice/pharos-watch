@@ -2825,6 +2825,10 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.westernunion.com" },
       { label: "Twitter", url: "https://x.com/WesternUnion" },
     ],
+    featuredContent: [
+      { type: "tweet", url: "https://x.com/solana/status/1983222673841775098", title: "USDPT and the Digital Asset Network, built on Solana", source: "@solana" },
+      { type: "article", url: "https://www.coindesk.com/business/2025/10/28/western-union-to-launch-stablecoin-on-solana-with-anchorage-digital", title: "Western Union to Launch Stablecoin on Solana With Anchorage Digital", description: "Western Union plans to launch USDPT for its 100-million-user payment network, becoming the latest traditional finance firm tapping blockchain rails for global transfers.", image: "/featured/usdpt-coindesk.jpg", source: "CoinDesk" },
+    ],
   }),
   usd("roughrider-bnd", "Roughrider Coin", "ROUGHRIDER", "rwa-backed", "centralized", {
     status: "pre-launch",
@@ -2838,6 +2842,10 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://bnd.nd.gov/fintech/" },
       { label: "Twitter", url: "https://x.com/BankofND" },
     ],
+    featuredContent: [
+      { type: "tweet", url: "https://x.com/GovArmstrong/status/1975965566390370469", title: "Governor Armstrong announces Roughrider Coin", source: "@GovArmstrong" },
+      { type: "article", url: "https://bnd.nd.gov/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin/", title: "Bank of North Dakota and Fiserv Partner to Launch Roughrider Coin", description: "North Dakota's first stablecoin \u2014 fully USD-backed, built on Fiserv's digital asset platform, targeting bank-to-bank transactions for 2026 launch.", image: "/featured/roughrider-bnd-press.jpg", source: "Bank of North Dakota" },
+    ],
   }),
   usd("fiusd-fiserv", "Fiserv USD", "FIUSD", "rwa-backed", "centralized-dependent", {
     status: "pre-launch",
@@ -2850,6 +2858,9 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.fiserv.com" },
       { label: "Twitter", url: "https://x.com/Fiserv" },
     ],
+    featuredContent: [
+      { type: "article", url: "https://www.coindesk.com/business/2025/06/23/fiserv-joins-stablecoin-fray-teaming-up-with-circle-paxos-paypal-for-launch-on-solana", title: "Fiserv Joins Stablecoin Fray, Teaming Up With Circle and Paxos", description: "Fiserv enters the stablecoin space with FIUSD, a bank-friendly coin built on Solana targeting its network of 10,000 financial institutions and 6 million merchant locations.", image: "/featured/fiusd-coindesk.jpg", source: "CoinDesk" },
+    ],
   }),
   usd("pusd-polaris", "Polaris USD", "pUSD", "crypto-backed", "decentralized", {
     status: "pre-launch",
@@ -2861,6 +2872,9 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://polarisfinance.io" },
       { label: "Twitter", url: "https://x.com/polarisfinance_" },
+    ],
+    featuredContent: [
+      { type: "tweet", url: "https://x.com/polarisfinance_/status/2016180350087549420", title: "pUSD announcement thread", source: "@polarisfinance_" },
     ],
   }),
   usd("usg-tangent", "Tangent USD", "USG", "crypto-backed", "decentralized", {
@@ -2875,6 +2889,9 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.tangent.finance/docs/overview" },
       { label: "Twitter", url: "https://x.com/Tangent_fi" },
     ],
+    featuredContent: [
+      { type: "tweet", url: "https://x.com/Tangent_fi/status/2033564442982592623", title: "USG announcement thread", source: "@Tangent_fi" },
+    ],
   }),
   usd("klarnausd-klarna", "KlarnaUSD", "KLARNAUSD", "rwa-backed", "centralized", {
     status: "pre-launch",
@@ -2886,6 +2903,14 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://www.klarna.com" },
       { label: "Twitter", url: "https://x.com/Klarna" },
+    ],
+    featuredContent: [
+      {
+        type: "tweet",
+        url: "https://x.com/Klarna/status/1993303819715854549",
+        title: "Klarna announces KlarnaUSD stablecoin",
+        source: "Klarna",
+      },
     ],
   }),
 ];

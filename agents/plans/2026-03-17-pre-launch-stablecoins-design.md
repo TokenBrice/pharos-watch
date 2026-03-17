@@ -17,9 +17,15 @@ The pre-launch stage fills this gap. It lets Pharos showcase upcoming stablecoin
 status?: "pre-launch" | "active";       // defaults to "active"
 announcedDate?: string;                // "YYYY-MM", pre-launch only
 expectedLaunchDate?: string;            // "YYYY-MM" or "YYYY-QN", pre-launch only
+launchPhase?: LaunchPhase;             // pre-launch only
+launchPhaseDetail?: string;            // optional free-text context for launchPhase
+
+type LaunchPhase = "announced" | "testnet" | "auditing" | "beta" | "launching-soon";
 ```
 
-`status` is optional. Omitting it (or setting it to `"active"`) means the coin behaves exactly as today. Only coins explicitly marked `"pre-launch"` get the new treatment. `announcedDate` and `expectedLaunchDate` are only meaningful for pre-launch coins and should be removed on promotion.
+`status` is optional. Omitting it (or setting it to `"active"`) means the coin behaves exactly as today. Only coins explicitly marked `"pre-launch"` get the new treatment. `announcedDate`, `expectedLaunchDate`, `launchPhase`, and `launchPhaseDetail` are only meaningful for pre-launch coins and should be removed on promotion.
+
+`launchPhase` provides a structured badge for consistent display across the homepage cards and detail page. `launchPhaseDetail` is an optional free-text string for specifics (e.g., "Live on Sepolia since Feb 2026", "Audited by Trail of Bits").
 
 ### Derived lists in `shared/lib/stablecoins/index.ts`
 
@@ -39,7 +45,7 @@ export const PRE_LAUNCH_STABLECOINS = TRACKED_STABLECOINS.filter(
 
 ### Factory helper update
 
-Add `status`, `announcedDate`, and `expectedLaunchDate` to `StablecoinOpts` in `shared/lib/stablecoins/factory.ts`, and spread them into the returned `StablecoinMeta` object. No new factory function needed.
+Add `status`, `announcedDate`, `expectedLaunchDate`, `launchPhase`, and `launchPhaseDetail` to `StablecoinOpts` in `shared/lib/stablecoins/factory.ts`, and spread them into the returned `StablecoinMeta` object. No new factory function needed.
 
 ### Pre-launch coin definition
 
@@ -50,6 +56,8 @@ usd("xyz-dollar", "XYZ Dollar", "XYZD", "rwa-backed", "centralized", {
   status: "pre-launch",
   announcedDate: "2026-01",
   expectedLaunchDate: "2026-Q3",
+  launchPhase: "testnet",
+  launchPhaseDetail: "Live on Sepolia since Feb 2026",
   jurisdiction: "US",
   links: [
     { label: "Website", url: "https://example.com" },
@@ -60,6 +68,10 @@ usd("xyz-dollar", "XYZ Dollar", "XYZD", "rwa-backed", "centralized", {
 ```
 
 Minimal required fields for a pre-launch coin: `id`, `name`, `symbol`, `backing`, `governance`, `pegCurrency`, `status: "pre-launch"`, and at least one link. Everything else is optional and can be populated as information becomes available.
+
+### Logos
+
+Pre-launch coin logos follow the existing pattern: image files in `public/logos/`, keyed by coin ID in `data/logos.json`. For coins that have a publicly available logo, download and add it. For coins without a logo yet, no entry is needed — `StablecoinLogo` already renders a first-letter fallback circle.
 
 ### Editorial summary storage
 
@@ -85,7 +97,7 @@ Same route as active coins: `/stablecoin/[id]`. The page component checks `meta.
 
 ### Layout (top to bottom)
 
-1. **Pre-Launch Banner** — Full-width, purple/indigo accent. Text: "Pre-Launch — Not yet tracked by Pharos".
+1. **Pre-Launch Banner** — Full-width, purple/indigo accent. Text: "Pre-Launch — Not yet tracked by Pharos". Displays the `launchPhase` as a badge (e.g., "Testnet") and `launchPhaseDetail` as secondary text if present.
 
 2. **Header** — Name, symbol, peg currency, classification badges (backing, governance). Same style as active coin headers but without price/supply stats.
 
@@ -138,6 +150,7 @@ Each card contains:
 - Coin logo placeholder (or actual logo if available) + name + symbol
 - Peg currency
 - Classification badges (backing type, governance model)
+- Launch phase badge (e.g., "Testnet", "Beta", "Announced")
 - One-line teaser (~100 chars from editorial summary)
 - Expected launch date
 - Entire card is clickable → `/stablecoin/[id]`
@@ -176,7 +189,7 @@ Not affected: cemetery (separate data structure), about page, methodology page.
 
 To promote a pre-launch coin to active tracking:
 
-1. Remove `status: "pre-launch"`, `announcedDate`, and `expectedLaunchDate` from the coin definition
+1. Remove `status: "pre-launch"`, `announcedDate`, `expectedLaunchDate`, `launchPhase`, and `launchPhaseDetail` from the coin definition
 2. Add worker-specific config as needed (`llamaId`, `geckoId`, full `contracts[]`, `liveReservesConfig`, etc.)
 3. Deploy
 
@@ -186,7 +199,7 @@ The detail page automatically switches to the full active layout. The homepage c
 
 | Concern | Approach |
 |---|---|
-| Data model | `status` + `announcedDate` + `expectedLaunchDate` fields on `StablecoinMeta` |
+| Data model | `status` + `announcedDate` + `expectedLaunchDate` + `launchPhase` / `launchPhaseDetail` on `StablecoinMeta` |
 | Shared helpers | `ACTIVE_STABLECOINS`, `ACTIVE_IDS`, `PRE_LAUNCH_STABLECOINS` derived lists |
 | Workers | All crons switch to `ACTIVE_STABLECOINS` |
 | Detail page | Purpose-built pre-launch layout, same route |

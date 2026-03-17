@@ -220,6 +220,17 @@ interface YieldConfig {
 
 export type LaunchPhase = "announced" | "testnet" | "auditing" | "beta" | "launching-soon";
 
+export type FeaturedContentType = "tweet" | "blog" | "video" | "article";
+
+export interface FeaturedContent {
+  type: FeaturedContentType;
+  url: string;
+  title: string;
+  description?: string;
+  image?: string;
+  source?: string;
+}
+
 export interface StablecoinMeta {
   id: string;
   llamaId?: string;
@@ -256,6 +267,7 @@ export interface StablecoinMeta {
   expectedLaunchDate?: string;
   launchPhase?: LaunchPhase;
   launchPhaseDetail?: string;
+  featuredContent?: FeaturedContent[];
 }
 
 export type FilterTag =
