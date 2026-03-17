@@ -63,7 +63,7 @@ function FlowsPageInner() {
           aria-label="Breadcrumb"
           className="flex items-center gap-1.5 text-sm text-muted-foreground"
         >
-          <Link href="/" className="hover:text-foreground transition-colors">
+          <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">
             Dashboard
           </Link>
           <span>/</span>
@@ -85,7 +85,7 @@ function FlowsPageInner() {
           Methodology {MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}.{" "}
           <Link
             href={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
-            className="underline underline-offset-4 hover:text-foreground transition-colors"
+            className="pharos-focus-ring underline underline-offset-4 hover:text-foreground transition-colors"
           >
             Version history &rarr;
           </Link>
@@ -158,7 +158,7 @@ function FlowsPageInner() {
 
       {/* Section 2: Per-coin flow table */}
       <section aria-labelledby="table-heading">
-        <h2 id="table-heading" className="text-lg font-semibold tracking-tight">
+        <h2 id="table-heading" className="pharos-kicker">
           Per-Coin Flows
         </h2>
         <div className="mt-3">
@@ -171,7 +171,7 @@ function FlowsPageInner() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2
             id="chart-heading"
-            className="text-lg font-semibold tracking-tight"
+            className="pharos-kicker"
           >
             Aggregate Flows
           </h2>

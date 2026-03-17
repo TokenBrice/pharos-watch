@@ -15,10 +15,11 @@ The pre-launch stage fills this gap. It lets Pharos showcase upcoming stablecoin
 ```ts
 // shared/types/core.ts
 status?: "pre-launch" | "active";       // defaults to "active"
+announcedDate?: string;                // "YYYY-MM", pre-launch only
 expectedLaunchDate?: string;            // "YYYY-MM" or "YYYY-QN", pre-launch only
 ```
 
-`status` is optional. Omitting it (or setting it to `"active"`) means the coin behaves exactly as today. Only coins explicitly marked `"pre-launch"` get the new treatment. `expectedLaunchDate` is only meaningful for pre-launch coins and should be removed on promotion.
+`status` is optional. Omitting it (or setting it to `"active"`) means the coin behaves exactly as today. Only coins explicitly marked `"pre-launch"` get the new treatment. `announcedDate` and `expectedLaunchDate` are only meaningful for pre-launch coins and should be removed on promotion.
 
 ### Derived lists in `shared/lib/stablecoins/index.ts`
 
@@ -38,7 +39,7 @@ export const PRE_LAUNCH_STABLECOINS = TRACKED_STABLECOINS.filter(
 
 ### Factory helper update
 
-Add `status` and `expectedLaunchDate` to `StablecoinOpts` in `shared/lib/stablecoins/factory.ts`, and spread them into the returned `StablecoinMeta` object. No new factory function needed.
+Add `status`, `announcedDate`, and `expectedLaunchDate` to `StablecoinOpts` in `shared/lib/stablecoins/factory.ts`, and spread them into the returned `StablecoinMeta` object. No new factory function needed.
 
 ### Pre-launch coin definition
 
@@ -47,6 +48,7 @@ Pre-launch coins are defined alongside active coins in the same category arrays 
 ```ts
 usd("xyz-dollar", "XYZ Dollar", "XYZD", "rwa-backed", "centralized", {
   status: "pre-launch",
+  announcedDate: "2026-01",
   expectedLaunchDate: "2026-Q3",
   jurisdiction: "US",
   links: [
@@ -83,27 +85,28 @@ Same route as active coins: `/stablecoin/[id]`. The page component checks `meta.
 
 ### Layout (top to bottom)
 
-1. **Pre-Launch Banner** — Full-width, purple/indigo accent. Text: "Pre-Launch — Not yet tracked by Pharos". Shows expected launch date if set (e.g., "Expected Q3 2026").
+1. **Pre-Launch Banner** — Full-width, purple/indigo accent. Text: "Pre-Launch — Not yet tracked by Pharos".
 
 2. **Header** — Name, symbol, peg currency, classification badges (backing, governance). Same style as active coin headers but without price/supply stats.
 
-3. **Editorial Summary** — Hand-written overview. Front and center — this is the primary content.
+3. **Launch Timeline** — Horizontal progress bar from announcement date to expected launch date, with a "Today" marker positioned proportionally. Left anchor: "Announced" + `announcedDate`. Right anchor: "Expected Launch" + `expectedLaunchDate`. The progress fill uses the Pharos purple/indigo gradient. For quarter-based launch dates, use the start of the quarter as the target (Q2 → April 1). If `announcedDate` is missing, omit the timeline and fall back to a simple "Expected Launch: Q2 2026" label.
 
-4. **At a Glance Grid** — Responsive grid of classification cards:
+4. **Editorial Summary** — Hand-written overview. Front and center — this is the primary content.
+
+5. **At a Glance Grid** — Responsive grid of classification cards:
    - Backing type
    - Governance model
    - Jurisdiction (if known)
    - Peg currency
    - Yield-bearing (if applicable)
-   - Expected launch date
 
-5. **Reserve/Collateral Design** — If `reserves[]` is populated, show intended collateral composition with a "Planned" qualifier. Uses existing reserve display components.
+6. **Reserve/Collateral Design** — If `reserves[]` is populated, show intended collateral composition with a "Planned" qualifier. Uses existing reserve display components.
 
-6. **Target Chains** — From `contracts[]` if known. Chain icon list.
+7. **Target Chains** — From `contracts[]` if known. Chain icon list.
 
-7. **Links & Resources** — Website, whitepaper, docs, socials. Reuses existing link component.
+8. **Links & Resources** — Website, whitepaper, docs, socials. Reuses existing link component.
 
-8. **Related Stablecoins** — "Similar tracked stablecoins" using existing similarity logic (backing, governance, peg), filtered to `ACTIVE_STABLECOINS` only. Links to active coins with live data. Provides useful outbound navigation.
+9. **Related Stablecoins** — "Similar tracked stablecoins" using existing similarity logic (backing, governance, peg), filtered to `ACTIVE_STABLECOINS` only. Links to active coins with live data. Provides useful outbound navigation.
 
 ### What is NOT shown
 
@@ -173,7 +176,7 @@ Not affected: cemetery (separate data structure), about page, methodology page.
 
 To promote a pre-launch coin to active tracking:
 
-1. Remove `status: "pre-launch"` and `expectedLaunchDate` from the coin definition
+1. Remove `status: "pre-launch"`, `announcedDate`, and `expectedLaunchDate` from the coin definition
 2. Add worker-specific config as needed (`llamaId`, `geckoId`, full `contracts[]`, `liveReservesConfig`, etc.)
 3. Deploy
 
@@ -183,7 +186,7 @@ The detail page automatically switches to the full active layout. The homepage c
 
 | Concern | Approach |
 |---|---|
-| Data model | `status` + `expectedLaunchDate` fields on `StablecoinMeta` |
+| Data model | `status` + `announcedDate` + `expectedLaunchDate` fields on `StablecoinMeta` |
 | Shared helpers | `ACTIVE_STABLECOINS`, `ACTIVE_IDS`, `PRE_LAUNCH_STABLECOINS` derived lists |
 | Workers | All crons switch to `ACTIVE_STABLECOINS` |
 | Detail page | Purpose-built pre-launch layout, same route |

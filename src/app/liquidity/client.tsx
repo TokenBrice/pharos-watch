@@ -177,7 +177,7 @@ export function LiquidityClient() {
       {/* Filters + Leaderboard */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">Liquidity Leaderboard</h2>
+          <h2 className="pharos-kicker">Liquidity Leaderboard</h2>
           <div className="flex items-center gap-3">
             <ToggleGroup
               type="single"
@@ -216,7 +216,7 @@ export function LiquidityClient() {
       {unratedRows.length > 0 && (
         <div className="space-y-3">
           <div className="space-y-1">
-            <h2 className="text-xl font-semibold">Unrated / Not Observed</h2>
+            <h2 className="pharos-kicker">Unrated / Not Observed</h2>
             <p className="text-sm text-muted-foreground">
               These assets are tracked, but the current liquidity pipeline has not observed enough DEX coverage to assign a Liquidity Score.
             </p>

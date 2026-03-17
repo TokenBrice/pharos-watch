@@ -72,7 +72,7 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
   return (
     <Card className="rounded-xl border-l-[3px] border-l-sky-500">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle className="pharos-kicker">
           Chain TVL Breakdown
         </CardTitle>
       </CardHeader>
@@ -132,7 +132,7 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
   return (
     <Card className="rounded-xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle className="pharos-kicker">
           Protocol TVL Breakdown
         </CardTitle>
       </CardHeader>

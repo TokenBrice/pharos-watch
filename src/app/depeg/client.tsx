@@ -182,7 +182,7 @@ export function DepegClient() {
       <SectionErrorBoundary name="depeg-table">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold">Peg Leaderboard</h2>
+            <h2 className="pharos-kicker">Peg Leaderboard</h2>
             <div className="flex flex-wrap items-center gap-3">
               <ToggleGroup
                 type="single"

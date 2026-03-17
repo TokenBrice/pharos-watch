@@ -101,7 +101,7 @@ function SummarySkeleton() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
+        <CardTitle as="h3" className="pharos-kicker">
           <Skeleton className="h-4 w-28" />
         </CardTitle>
       </CardHeader>
@@ -231,7 +231,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
               />
               <Link
                 href="/flows"
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 View all flows
                 <ArrowRight className="h-3 w-3" />

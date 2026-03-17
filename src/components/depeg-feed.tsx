@@ -83,7 +83,7 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
   return (
     <Card className="rounded-xl flex flex-col">
       <CardHeader className="pb-3">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <CardTitle as="h2" className="pharos-kicker">
           Recent Depeg Events
         </CardTitle>
       </CardHeader>
@@ -95,7 +95,7 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
             <Link
               key={evt.id}
               href={buildStablecoinUrl(evt.stablecoinId)}
-              className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-accent/50 transition-colors group"
+              className="pharos-focus-ring flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-accent/50 transition-colors group"
               onMouseEnter={() => prefetch(evt.stablecoinId)}
               style={newIndex != null ? {
                 animation: 'pharos-slide-in-right 300ms var(--motion-ease-standard) both',
@@ -158,7 +158,7 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
                 setVisibleCount((c) => c + pageSize);
                 onLoadMore?.();
               }}
-              className="text-xs"
+              className="pharos-focus-ring text-xs"
               disabled={isLoadingMore}
             >
               {isLoadingMore

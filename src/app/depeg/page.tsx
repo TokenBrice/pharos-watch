@@ -80,7 +80,7 @@ export default createClientFeaturePage({
       Tired of monitoring the situation? Let Pharos do it for you: get instant Telegram alerts for depeg events and DEWS threat level changes.{" "}
       <Link
         href="/telegram#bot"
-        className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+        className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
       >
         Set up alerts&nbsp;&rarr;
       </Link>
