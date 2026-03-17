@@ -233,9 +233,25 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
 
 function CompositionSection({ chainId }: { chainId: string }) {
   const { coins, totalUsd } = useChainStablecoins(chainId);
-  const top5 = coins.slice(0, 5);
-  const rest = coins.slice(5);
+
+  // Show top 8 coins max, rest go to "others"
+  const DISPLAY_COUNT = 8;
+  const topCoins = coins.slice(0, DISPLAY_COUNT);
+  const rest = coins.slice(DISPLAY_COUNT);
   const restTotal = rest.reduce((s, c) => s + c.supplyOnChain, 0);
+
+  // Calculate grid layout based on coin count and proportions
+  const getGridLayout = () => {
+    const count = topCoins.length;
+    if (count <= 2) return { cols: 2, rows: 1 };
+    if (count <= 4) return { cols: 2, rows: 2 };
+    if (count <= 6) return { cols: 3, rows: 2 };
+    return { cols: 4, rows: 2 };
+  };
+
+  const { cols, rows } = getGridLayout();
+  const totalCells = cols * rows;
+  const showOthers = rest.length > 0 || topCoins.length < totalCells;
 
   return (
     <Card>
@@ -243,60 +259,59 @@ function CompositionSection({ chainId }: { chainId: string }) {
         <CardTitle className="pharos-kicker">Stablecoin Composition</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Treemap - Enhanced interactivity */}
-          <div
-            className={cn("grid gap-2 auto-rows-fr", top5.length <= 2 ? "grid-cols-2" : "grid-cols-3")}
-            style={{ minHeight: "220px" }}
-          >
-            {top5.map((coin) => {
-              const pct = totalUsd > 0 ? coin.supplyOnChain / totalUsd : 0;
-              const shouldSpan = top5.length > 2 && pct > 0.4;
-              return (
-                <CompositionBlock
-                  key={coin.id}
-                  coin={coin}
-                  percentage={pct}
-                  shouldSpan={shouldSpan}
-                />
-              );
-            })}
+        {/* Unified Treemap - Full Width */}
+        <div
+          className={cn(
+            "grid gap-2 auto-rows-fr",
+            cols === 2 && "grid-cols-2",
+            cols === 3 && "grid-cols-3",
+            cols === 4 && "grid-cols-2 sm:grid-cols-4"
+          )}
+          style={{ minHeight: cols <= 2 ? "180px" : "240px" }}
+        >
+          {topCoins.map((coin) => {
+            const pct = totalUsd > 0 ? coin.supplyOnChain / totalUsd : 0;
+            // Large coins (>30%) span 2 cells for visual emphasis
+            const shouldSpan = pct > 0.3;
+            return (
+              <CompositionBlock
+                key={coin.id}
+                coin={coin}
+                percentage={pct}
+                shouldSpan={shouldSpan && cols >= 3}
+              />
+            );
+          })}
+          {showOthers && (
+            <CompositionOthersBlock
+              count={rest.length}
+              total={restTotal}
+              totalUsd={totalUsd}
+            />
+          )}
+        </div>
+
+        {/* Legend - Compact summary of top coins for quick scanning */}
+        {topCoins.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-border/40 pt-3">
+            {topCoins.slice(0, 5).map((coin) => (
+              <Link
+                key={coin.id}
+                href={buildStablecoinUrl(coin.id)}
+                className="pharos-focus-ring inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={16} />
+                <span className="font-medium">{coin.symbol}</span>
+                <span className="tabular-nums">{(coin.chainShare * 100).toFixed(1)}%</span>
+              </Link>
+            ))}
             {rest.length > 0 && (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-3 text-center text-xs">
-                <span className="text-muted-foreground">{rest.length} others</span>
-                <span className="font-mono text-[10px] text-muted-foreground">{formatChainUsd(restTotal)}</span>
-                <span className="mt-1 text-[10px] text-muted-foreground">
-                  {((restTotal / totalUsd) * 100).toFixed(1)}%
-                </span>
-              </div>
+              <span className="text-xs text-muted-foreground">
+                +{rest.length} more
+              </span>
             )}
           </div>
-
-          {/* Ranked breakdown */}
-          <div className="space-y-2">
-            {coins.slice(0, 10).map((coin, i) => (
-              <div key={coin.id} className="group flex items-center gap-2 text-sm">
-                <span className="w-5 text-right text-xs tabular-nums text-muted-foreground">{i + 1}</span>
-                <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={20} />
-                <Link
-                  href={buildStablecoinUrl(coin.id)}
-                  className="pharos-focus-ring flex flex-1 items-center gap-1 truncate font-medium hover:text-primary"
-                >
-                  <span className="hidden sm:inline">{coin.name}</span>
-                  <span className="text-muted-foreground">({coin.symbol})</span>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
-                </Link>
-                <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary/60" style={{ width: `${coin.chainShare * 100}%` }} />
-                </div>
-                <span className="w-16 text-right font-mono text-xs tabular-nums">{formatChainUsd(coin.supplyOnChain)}</span>
-                <span className="w-10 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
-                  {(coin.chainShare * 100).toFixed(1)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -312,6 +327,7 @@ function CompositionBlock({
   shouldSpan: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const logoSize = shouldSpan ? 40 : percentage > 0.15 ? 32 : 24;
 
   return (
     <Link
@@ -319,29 +335,66 @@ function CompositionBlock({
       className={cn(
         "pharos-focus-ring group relative flex flex-col items-center justify-center rounded-xl border p-3 text-center transition-all duration-200",
         "bg-gradient-to-b from-muted/40 to-muted/20 hover:from-muted/60 hover:to-muted/40",
-        "hover:border-primary/30 hover:shadow-sm"
+        "hover:border-primary/30 hover:shadow-sm",
+        shouldSpan && "min-h-[100px]"
       )}
       style={{
         gridColumn: shouldSpan ? "span 2" : undefined,
-        gridRow: shouldSpan ? "span 2" : undefined,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      title={`${coin.name} (${coin.symbol}) - Click to view details`}
+      title={`${coin.name} (${coin.symbol}) - ${(percentage * 100).toFixed(1)}% - Click to view details`}
     >
-      <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={shouldSpan ? 32 : 24} />
-      <span className="mt-1 font-semibold">{coin.symbol}</span>
-      <span className="text-muted-foreground">{(percentage * 100).toFixed(1)}%</span>
-      <span className={cn("font-mono text-[10px] transition-opacity", isHovered ? "opacity-100" : "opacity-70")}>
+      <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={logoSize} />
+      <span className={cn("mt-1 font-semibold", shouldSpan ? "text-base" : "text-sm")}>{coin.symbol}</span>
+      <span className={cn("text-muted-foreground", shouldSpan && "text-sm")}>
+        {(percentage * 100).toFixed(1)}%
+      </span>
+      <span className={cn("font-mono transition-opacity", shouldSpan ? "text-xs" : "text-[10px]", isHovered ? "opacity-100" : "opacity-70")}>
         {formatChainUsd(coin.supplyOnChain)}
       </span>
       <ChevronRight
         className={cn(
-          "absolute right-2 top-2 h-4 w-4 text-primary/50 transition-all duration-200",
+          "absolute right-2 top-2 text-primary/50 transition-all duration-200",
+          shouldSpan ? "h-5 w-5" : "h-4 w-4",
           isHovered ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
         )}
       />
     </Link>
+  );
+}
+
+function CompositionOthersBlock({
+  count,
+  total,
+  totalUsd,
+}: {
+  count: number;
+  total: number;
+  totalUsd: number;
+}) {
+  const [isHovered, setIsHovered] = useState(false);
+  const percentage = totalUsd > 0 ? (total / totalUsd) * 100 : 0;
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-3 text-center transition-all duration-200",
+        isHovered && "bg-muted/30 border-border/80"
+      )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      title={`${count} other stablecoins totaling ${formatChainUsd(total)}`}
+    >
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60">
+        <span className="text-xs font-semibold text-muted-foreground">+{count}</span>
+      </div>
+      <span className="mt-1 text-sm font-medium text-muted-foreground">Others</span>
+      <span className="text-xs text-muted-foreground">{percentage.toFixed(1)}%</span>
+      <span className={cn("font-mono text-[10px] transition-opacity", isHovered ? "opacity-100" : "opacity-70")}>
+        {formatChainUsd(total)}
+      </span>
+    </div>
   );
 }
 
