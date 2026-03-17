@@ -61,7 +61,7 @@ export function FeaturePageShell({
           <span className="text-foreground">{breadcrumbLabel ?? breadcrumbName}</span>
         </nav>
         <div className="flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-2">
-          <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-2">
             <h1 className="min-w-0 text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">{title}</h1>
             {statusBadge && <FeatureStatusBadge status={statusBadge.status} version={statusBadge.version} />}
           </div>
