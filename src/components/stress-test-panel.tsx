@@ -9,7 +9,8 @@ import { GradeBadge } from "@/components/grade-badge";
 import { formatCurrency } from "@shared/lib/format";
 import type { StressTestState } from "@/hooks/use-stress-test";
 import type { ReportCardGrade } from "@shared/types";
-import { Network, Play, ChevronDown } from "lucide-react";
+import { Network, Play, ChevronDown, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
 
 // ---------------------------------------------------------------------------
@@ -45,46 +46,77 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
     <Card>
       {/* Header */}
       <CardHeader
-        className="cursor-pointer select-none"
+        className="cursor-pointer select-none pb-3"
         onClick={() => setIsOpen((v) => !v)}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Network className="h-5 w-5 text-rose-700 dark:text-rose-400 shrink-0" />
-            <CardTitle as="h2" className="text-lg">
-              Contagion Map
-            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/15">
+              <Network className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
+            </div>
+            <div>
+              <p className="pharos-kicker text-rose-600 dark:text-rose-400">Risk Simulation</p>
+              <CardTitle as="h2" className="text-base font-semibold">
+                Contagion Map
+              </CardTitle>
+            </div>
             <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ml-2 ${isOpen ? "rotate-180" : ""}`}
             />
           </div>
           <Link
             href="/dependency-map/"
-            className="pharos-focus-ring rounded-full border border-border/60 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="pharos-focus-ring rounded-full border border-border/60 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
-            Full dependency map
+            Full map →
           </Link>
         </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Simulate cascading failures when a stablecoin degrades. Trace dependency chains and see which coins are affected.
+        </p>
       </CardHeader>
 
       {isOpen && <CardContent className="space-y-4 pt-0">
         {/* Systemic Risk Scoreboard */}
         {stressTest.systemicRisks.length > 0 && (
           <div className="space-y-3">
-            <div className="space-y-1">
-              {stressTest.systemicRisks.map((risk, i) => (
-                <div key={risk.coinId} className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground w-5 text-right shrink-0">{i + 1}.</span>
-                  <span className="font-medium">{risk.symbol}</span>
-                  <span className="text-muted-foreground">
-                    &rarr; {risk.affectedCount} coin
-                    {risk.affectedCount !== 1 ? "s" : ""}, {formatCurrency(risk.supplyAtRisk)} at risk
+            <p className="pharos-kicker">Highest Systemic Risk</p>
+            <div className="space-y-2">
+              {stressTest.systemicRisks.slice(0, 5).map((risk, i) => (
+                <div
+                  key={risk.coinId}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg p-2 text-sm transition-colors",
+                    i === 0 ? "bg-rose-500/10 border border-rose-500/20" : "hover:bg-muted/50"
+                  )}
+                >
+                  <span className={cn(
+                    "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shrink-0",
+                    i === 0 ? "bg-rose-500 text-white" : "bg-muted text-muted-foreground"
+                  )}>
+                    {i + 1}
                   </span>
+                  <StablecoinLogo src={logos?.[risk.coinId]} name={risk.symbol} size={24} />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium block truncate">{risk.symbol}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {risk.affectedCount} dependent{risk.affectedCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className={cn(
+                      "font-mono text-sm font-semibold block",
+                      i === 0 ? "text-rose-600 dark:text-rose-400" : ""
+                    )}>
+                      {formatCurrency(risk.supplyAtRisk)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">at risk</span>
+                  </div>
                   <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="h-6 w-6 ml-auto shrink-0"
+                    variant="outline"
+                    size="sm"
+                    className="pharos-focus-ring h-7 shrink-0 text-xs"
                     aria-label={`Simulate ${risk.symbol} downgrade`}
                     onClick={() => {
                       stressTest.setTarget(risk.coinId);
@@ -96,22 +128,23 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
                       });
                     }}
                   >
-                    <Play className="h-3 w-3" />
+                    <Play className="h-3 w-3 mr-1" />
+                    Run
                   </Button>
                 </div>
               ))}
             </div>
 
             <div className="border-t pt-3">
-              <p className="text-xs text-muted-foreground">or simulate your own</p>
+              <p className="text-xs text-muted-foreground">Or simulate a custom scenario below</p>
             </div>
           </div>
         )}
 
         {/* Controls */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
-            <label htmlFor="stress-target" className="text-xs text-muted-foreground mb-1 block">
+            <label htmlFor="stress-target" className="pharos-kicker mb-2 block">
               Target Coin
             </label>
             <select
@@ -131,7 +164,7 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
           </div>
 
           <div className="flex-1">
-            <label htmlFor="stress-grade" className="text-xs text-muted-foreground mb-1 block">
+            <label htmlFor="stress-grade" className="pharos-kicker mb-2 block">
               Downgrade To
             </label>
             <select
@@ -162,13 +195,16 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
         </div>
 
         {/* Headline */}
-        {stressTest.headline && (
-          <div className="text-sm text-muted-foreground">
-            {stressTest.headline.affectedCount} coin
-            {stressTest.headline.affectedCount !== 1 ? "s" : ""} affected.{" "}
-            {stressTest.headline.totalAtRisk > 0 && (
-              <>{formatCurrency(stressTest.headline.totalAtRisk)} in supply at risk.</>
-            )}
+        {stressTest.headline && stressTest.headline.affectedCount > 0 && (
+          <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-sm">
+              <strong className="text-amber-700 dark:text-amber-400">{stressTest.headline.affectedCount}</strong>
+              {" "}coin{stressTest.headline.affectedCount !== 1 ? "s" : ""} affected
+              {stressTest.headline.totalAtRisk > 0 && (
+                <>, <strong className="font-mono">{formatCurrency(stressTest.headline.totalAtRisk)}</strong> at risk</>
+              )}
+            </span>
           </div>
         )}
 
@@ -183,45 +219,56 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
                     Coin
                   </th>
                   <th scope="col" className="pb-2 pr-3 font-medium hidden sm:table-cell">
-                    Mkt Cap
+                    Market Cap
                   </th>
-                  <th scope="col" className="pb-2 pr-3 font-medium">
+                  <th scope="col" className="pb-2 pr-3 font-medium text-center">
                     Before
                   </th>
-                  <th scope="col" className="pb-2 pr-3 font-medium">
+                  <th scope="col" className="pb-2 pr-3 font-medium text-center">
                     After
                   </th>
-                  <th scope="col" className="pb-2 font-medium">
-                    Delta
+                  <th scope="col" className="pb-2 font-medium text-right">
+                    Impact
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {stressTest.impacts.map((impact) => {
                   const mcap = mcapMap.get(impact.coinId);
+                  const severity = Math.abs(impact.delta);
+                  const severityColor = severity >= 25 ? "text-red-600 dark:text-red-400" :
+                                        severity >= 15 ? "text-orange-600 dark:text-orange-400" :
+                                        severity >= 5 ? "text-amber-600 dark:text-amber-400" :
+                                        "text-muted-foreground";
                   return (
-                    <tr key={impact.coinId} className="border-b last:border-0">
-                      <th scope="row" className="py-2 pr-3 text-left font-normal">
+                    <tr key={impact.coinId} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <th scope="row" className="py-2.5 pr-3 text-left font-normal">
                         <div className="flex items-center gap-2">
-                          <StablecoinLogo src={logos?.[impact.coinId]} name={impact.name} size={20} />
-                          <span className="truncate font-medium">{impact.name}</span>
-                          <span className="text-xs text-muted-foreground hidden sm:inline">{impact.symbol}</span>
+                          <StablecoinLogo src={logos?.[impact.coinId]} name={impact.name} size={22} />
+                          <div className="min-w-0">
+                            <span className="block truncate font-medium">{impact.name}</span>
+                            <span className="text-xs text-muted-foreground">{impact.symbol}</span>
+                          </div>
                         </div>
                       </th>
-                      <td className="py-2 pr-3 text-muted-foreground hidden sm:table-cell">
-                        {mcap != null ? formatCurrency(mcap) : ""}
+                      <td className="py-2.5 pr-3 text-muted-foreground font-mono text-xs hidden sm:table-cell">
+                        {mcap != null ? formatCurrency(mcap) : "—"}
                       </td>
-                      <td className="py-2 pr-3">
+                      <td className="py-2.5 pr-3 text-center">
                         <GradeBadge grade={impact.gradeBefore} score={impact.scoreBefore} />
                       </td>
-                      <td className="py-2 pr-3">
+                      <td className="py-2.5 pr-3 text-center">
                         <GradeBadge grade={impact.gradeAfter} score={impact.scoreAfter} />
                       </td>
-                      <td className="py-2">
-                        <span className="font-medium text-red-700 dark:text-red-400">
-                          {impact.delta > 0 ? "+" : ""}
-                          {impact.delta} {severityArrow(impact.delta)}
+                      <td className="py-2.5 text-right">
+                        <span className={cn("font-mono font-semibold", severityColor)}>
+                          {impact.delta > 0 ? "+" : ""}{impact.delta}
                         </span>
+                        {severity >= 5 && (
+                          <span className="block text-xs text-red-600 dark:text-red-400">
+                            {severityArrow(impact.delta)}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -240,9 +287,15 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
 
         {/* Methodology note */}
         {stressTest.impacts.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Grades recomputed client-side using the same algorithm. Only the Dependency Risk dimension is affected.
-          </p>
+          <div className="flex items-start gap-2 rounded-md bg-muted/50 px-3 py-2">
+            <div className="h-4 w-4 rounded-full bg-muted-foreground/20 flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-[10px] text-muted-foreground">i</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Grades recomputed client-side using the same algorithm.
+              Only the <strong>Dependency Risk</strong> dimension is affected by this simulation.
+            </p>
+          </div>
         )}
       </CardContent>}
     </Card>
