@@ -298,16 +298,16 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
       aria-labelledby="upcoming-heading"
       className="mt-8 space-y-5 border-t border-border/40 pt-6"
     >
-      <div className="flex items-center gap-2">
-        <h2 id="upcoming-heading" className="pharos-kicker">
-          Upcoming Stablecoins
-        </h2>
-        <span
-          className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-indigo-600 dark:text-indigo-400"
-          aria-hidden="true"
-        >
-          {PRE_LAUNCH_STABLECOINS.length}
-        </span>
+      <div className="space-y-1.5">
+        <p className="pharos-kicker">Upcoming Stablecoins</p>
+        <div className="space-y-1">
+          <h2 id="upcoming-heading" className="text-2xl font-semibold tracking-tight text-foreground">
+            {PRE_LAUNCH_STABLECOINS.length} stablecoins on the horizon
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Pre-launch projects tracked by Pharos. Hover a coin for details, or click to view the full profile.
+          </p>
+        </div>
       </div>
 
       {/* ── Desktop: horizontal timeline ─────────────────────── */}
