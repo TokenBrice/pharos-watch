@@ -233,7 +233,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                     <InteractiveTableRow
                       onActivate={() => setExpandedId((current) => (current === row.id ? null : row.id))}
                       onHover={() => prefetch(row.id)}
-                      className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50" : ""}
+                      className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50 hover:bg-muted/30" : "hover:bg-muted/30"}
                     >
                       <TableCell className="text-right text-muted-foreground text-xs font-mono tabular-nums">
                         {pageStartIndex + index + 1}
@@ -400,13 +400,24 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                         )}
                       </TableCell>
                       <TableCell className="px-2 py-2 text-right">
-                        <ChevronDown
-                          className={
-                            visibleExpandedId === row.id
-                              ? "h-4 w-4 text-muted-foreground rotate-180 transition-transform"
-                              : "h-4 w-4 text-muted-foreground transition-transform"
-                          }
-                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedId((current) => (current === row.id ? null : row.id));
+                          }}
+                          className="pharos-focus-ring inline-flex items-center justify-center rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          aria-label={visibleExpandedId === row.id ? "Hide yield history" : "Show yield history"}
+                          title={visibleExpandedId === row.id ? "Hide yield history" : "Show yield history"}
+                        >
+                          <ChevronDown
+                            className={
+                              visibleExpandedId === row.id
+                                ? "h-4 w-4 rotate-180 transition-transform"
+                                : "h-4 w-4 transition-transform"
+                            }
+                          />
+                        </button>
                       </TableCell>
                     </InteractiveTableRow>
                     {visibleExpandedId === row.id && (

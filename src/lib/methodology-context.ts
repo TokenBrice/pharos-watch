@@ -7,6 +7,10 @@ import {
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/liquidity-score-version";
 import {
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/chain-health-version";
+import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/mint-burn-flow-version";
@@ -56,7 +60,13 @@ export type MethodologyContextKey =
   | "yieldWarnings"
   | "mintBurnFlows"
   | "pressureShift"
-  | "bankRunGauge";
+  | "bankRunGauge"
+  | "chainHealth"
+  | "chainHealthQuality"
+  | "chainHealthEnvironment"
+  | "chainHealthConcentration"
+  | "chainHealthPegStability"
+  | "chainHealthBackingDiversity";
 
 export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyContextItem> = {
   psi: {
@@ -243,5 +253,53 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     methodologyPath: "/methodology/#mint-burn-flow-methodology",
     versionLabel: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
     changelogPath: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
+  },
+  chainHealth: {
+    title: "Chain Health Score",
+    summary: "Composite 0-100 score rating a blockchain's stablecoin ecosystem quality across five weighted factors.",
+    detail: "Health bands: robust (80-100), healthy (60-79), mixed (40-59), fragile (20-39), concentrated (0-19). Chains with concentrated supply in few assets score lower.",
+    methodologyPath: "/methodology/#chain-health-methodology",
+    versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+    changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  },
+  chainHealthQuality: {
+    title: "Quality",
+    summary: "Supply-weighted average of Pharos Safety Scores for stablecoins on this chain.",
+    detail: "Requires ≥50% of supply to have safety score coverage. Missing data penalizes the score rather than ignoring it.",
+    methodologyPath: "/methodology/#chain-health-methodology",
+    versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+    changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  },
+  chainHealthEnvironment: {
+    title: "Chain Environment",
+    summary: "Infrastructure quality rating based on chain resilience tier.",
+    detail: "Tier 1 (e.g., Ethereum) = 100, Tier 2 = 60, Tier 3 = 20. Factors decentralization, uptime history, and economic security.",
+    methodologyPath: "/methodology/#chain-health-methodology",
+    versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+    changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  },
+  chainHealthConcentration: {
+    title: "Concentration",
+    summary: "HHI-based metric measuring stablecoin supply diversity on the chain.",
+    detail: "100 = perfectly distributed, 0 = single coin dominates. Prevents unhealthy over-concentration in one stablecoin.",
+    methodologyPath: "/methodology/#chain-health-methodology",
+    versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+    changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  },
+  chainHealthPegStability: {
+    title: "Peg Stability",
+    summary: "Supply-weighted average of peg proximity for all stablecoins on this chain.",
+    detail: "Coins further from their peg drag this score down. Real-time price vs reference peg.",
+    methodologyPath: "/methodology/#chain-health-methodology",
+    versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+    changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  },
+  chainHealthBackingDiversity: {
+    title: "Backing Diversity",
+    summary: "Shannon entropy across backing types: RWA-backed, crypto-backed, and algorithmic.",
+    detail: "Rewards chains with diverse collateral approaches. Concentrated in one backing type scores lower.",
+    methodologyPath: "/methodology/#chain-health-methodology",
+    versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
+    changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   },
 };

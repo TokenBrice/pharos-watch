@@ -92,13 +92,13 @@ export function YieldClient() {
       <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]} />
 
       {data?.provenance ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:gap-5 sm:grid-cols-3">
           <Card className="rounded-xl">
             <CardHeader className="pb-1">
               <span className="text-xs text-muted-foreground">Benchmark Provenance</span>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <p className="font-medium">
+              <p className="font-medium text-foreground">
                 {data.provenance.benchmark.recordDate
                   ? `T-Bill as of ${data.provenance.benchmark.recordDate}`
                   : "T-Bill record date unavailable"}
@@ -117,7 +117,7 @@ export function YieldClient() {
               <span className="text-xs text-muted-foreground">Yield Input Freshness</span>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <p className="font-medium">
+              <p className="font-medium text-foreground">
                 {data.provenance.dlPools.mode === "dex-cache"
                   ? "Using DEX-sync cached DeFiLlama pools"
                   : data.provenance.dlPools.mode === "direct-fetch"
@@ -138,7 +138,7 @@ export function YieldClient() {
               <span className="text-xs text-muted-foreground">Safety Coverage</span>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <p className="font-medium">
+              <p className="font-medium text-foreground">
                 {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}% of tracked coins scored
               </p>
               <p className="text-muted-foreground">

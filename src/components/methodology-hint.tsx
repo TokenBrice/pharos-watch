@@ -86,7 +86,7 @@ const HintButton = forwardRef<
   );
 });
 
-function MethodologyHint({
+export function MethodologyHint({
   topic,
   className,
   buttonClassName,
