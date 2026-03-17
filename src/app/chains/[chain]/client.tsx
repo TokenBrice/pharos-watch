@@ -6,6 +6,13 @@ import Image from "next/image";
 import { useChains, useChainStablecoins } from "@/hooks/use-chains";
 import { CHAIN_META } from "@shared/lib/chains";
 import { BACKING_LABELS_SHORT } from "@shared/lib/classification";
+import {
+  QUALITY_WEIGHT,
+  CHAIN_ENVIRONMENT_WEIGHT,
+  CONCENTRATION_WEIGHT,
+  PEG_STABILITY_WEIGHT,
+  BACKING_DIVERSITY_WEIGHT,
+} from "@shared/lib/chain-health";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -92,11 +99,11 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
           <p className="text-sm text-muted-foreground">Insufficient safety score coverage for a composite health score. Sub-factors shown below.</p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
-          <FactorGauge label="Quality (30%)" score={healthFactors.quality} />
-          <FactorGauge label="Chain Environment (20%)" score={healthFactors.chainEnvironment} />
-          <FactorGauge label="Concentration (20%)" score={healthFactors.concentration} />
-          <FactorGauge label="Peg Stability (20%)" score={healthFactors.pegStability} />
-          <FactorGauge label="Backing Diversity (10%)" score={healthFactors.backingDiversity} />
+          <FactorGauge label={`Quality (${Math.round(QUALITY_WEIGHT * 100)}%)`} score={healthFactors.quality} />
+          <FactorGauge label={`Chain Environment (${Math.round(CHAIN_ENVIRONMENT_WEIGHT * 100)}%)`} score={healthFactors.chainEnvironment} />
+          <FactorGauge label={`Concentration (${Math.round(CONCENTRATION_WEIGHT * 100)}%)`} score={healthFactors.concentration} />
+          <FactorGauge label={`Peg Stability (${Math.round(PEG_STABILITY_WEIGHT * 100)}%)`} score={healthFactors.pegStability} />
+          <FactorGauge label={`Backing Diversity (${Math.round(BACKING_DIVERSITY_WEIGHT * 100)}%)`} score={healthFactors.backingDiversity} />
         </div>
       </CardContent>
     </Card>

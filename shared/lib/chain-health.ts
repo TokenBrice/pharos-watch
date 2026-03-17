@@ -3,11 +3,11 @@ import type { ChainHealthFactors, HealthBand } from "../types/chains";
 
 export const HEALTH_METHODOLOGY_VERSION = "1.1";
 
-const QUALITY_WEIGHT = 0.30;
-const CHAIN_ENVIRONMENT_WEIGHT = 0.20;
-const CONCENTRATION_WEIGHT = 0.20;
-const PEG_STABILITY_WEIGHT = 0.20;
-const BACKING_DIVERSITY_WEIGHT = 0.10;
+export const QUALITY_WEIGHT = 0.30;
+export const CHAIN_ENVIRONMENT_WEIGHT = 0.20;
+export const CONCENTRATION_WEIGHT = 0.20;
+export const PEG_STABILITY_WEIGHT = 0.20;
+export const BACKING_DIVERSITY_WEIGHT = 0.10;
 
 const DEFAULT_UNRATED_SAFETY_SCORE = 40;
 const QUALITY_COVERAGE_THRESHOLD = 0.5;
