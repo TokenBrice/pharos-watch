@@ -16,7 +16,7 @@ interface MetricStatCardProps {
   children?: ReactNode;
 }
 
-const TITLE_CLASS = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+const TITLE_CLASS = "pharos-kicker";
 const VALUE_CLASS = "text-2xl font-extrabold font-mono tabular-nums";
 const SUBTEXT_CLASS = "text-xs text-muted-foreground";
 

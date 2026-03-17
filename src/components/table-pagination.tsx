@@ -31,7 +31,7 @@ export function TablePagination({
         <Button
           variant="outline"
           size="sm"
-          className="h-10 min-w-10 sm:h-8 sm:min-w-8"
+          className="pharos-focus-ring h-10 min-w-10 sm:h-8 sm:min-w-8"
           onClick={onPrevious}
           disabled={page === 0}
         >
@@ -41,7 +41,7 @@ export function TablePagination({
         <Button
           variant="outline"
           size="sm"
-          className="h-10 min-w-10 sm:h-8 sm:min-w-8"
+          className="pharos-focus-ring h-10 min-w-10 sm:h-8 sm:min-w-8"
           onClick={onNext}
           disabled={page >= totalPages - 1}
         >

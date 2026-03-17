@@ -108,7 +108,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
       topSlot={
         <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
           <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
-          <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
+          <Button variant="outline" size="sm" className="pharos-focus-ring min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </Button>
@@ -133,7 +133,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
                   href={evt.explorerAddressUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block max-w-[120px] sm:max-w-none truncate sm:overflow-visible font-mono text-xs hover:underline"
+                  className="pharos-focus-ring block max-w-[120px] sm:max-w-none truncate sm:overflow-visible font-mono text-xs hover:underline"
                 >
                   {formatAddress(evt.address)}
                 </a>
@@ -150,7 +150,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
                   href={evt.explorerTxUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                  className="pharos-focus-ring inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={`Open ${evt.chainName} transaction ${evt.txHash} in explorer`}
                   title={`View tx ${evt.txHash.slice(0, 10)}... on ${evt.chainName}`}
                 >

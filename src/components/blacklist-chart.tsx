@@ -120,7 +120,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle as="h2">Blacklisted Funds Over Time</CardTitle>
+            <CardTitle as="h2" className="pharos-kicker">Blacklisted Funds Over Time</CardTitle>
             <p className="text-sm text-muted-foreground">
               Frozen balances at time of blacklisting, per quarter, in USD value
             </p>

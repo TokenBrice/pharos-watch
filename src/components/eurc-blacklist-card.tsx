@@ -6,7 +6,7 @@ export function EurcBlacklistCard() {
     <Card className="rounded-xl border-l-[3px] border-l-blue-500">
       <CardHeader className="pb-1">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <CardTitle className="pharos-kicker">
             EURC Blacklisting
           </CardTitle>
           <Badge variant="secondary" className="text-xs">

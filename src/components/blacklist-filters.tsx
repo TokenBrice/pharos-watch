@@ -42,7 +42,7 @@ export function BlacklistFilters({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-6">
       <div className="space-y-1.5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Stablecoin</span>
+        <span className="pharos-kicker">Stablecoin</span>
         <ToggleGroup
           type="single"
           variant="outline"
@@ -64,7 +64,7 @@ export function BlacklistFilters({
         </ToggleGroup>
       </div>
       <div className="space-y-1.5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chain</span>
+        <span className="pharos-kicker">Chain</span>
         <ToggleGroup
           type="single"
           variant="outline"
@@ -86,7 +86,7 @@ export function BlacklistFilters({
         </ToggleGroup>
       </div>
       <div className="space-y-1.5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Event Type</span>
+        <span className="pharos-kicker">Event Type</span>
         <ToggleGroup
           type="single"
           variant="outline"
