@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import {
   QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol,
@@ -262,7 +262,7 @@ export function isCryptoSwap(registryId: string): boolean {
 export function buildSymbolLookups(): SymbolLookups {
   const symbolToIds = new Map<string, string[]>();
   const collidingSymbols = new Set<string>();
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     const key = normalizeDexSymbol(meta.symbol);
     const existing = symbolToIds.get(key) ?? [];
     existing.push(meta.id);
@@ -275,7 +275,7 @@ export function buildSymbolLookups(): SymbolLookups {
 
   // Auto-seed from all contract addresses — resolves symbol collisions automatically
   const addressToId = new Map<string, string>();
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     for (const c of getTrackedContracts(meta)) {
       addressToId.set(c.address.toLowerCase(), meta.id);
     }

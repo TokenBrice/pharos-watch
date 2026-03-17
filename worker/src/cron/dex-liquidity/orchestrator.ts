@@ -1,5 +1,5 @@
 import type { CronResult } from "../../lib/cron-logger";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
@@ -239,7 +239,7 @@ export async function syncDexLiquidity(
     mixed: 0,
     fallback: 0,
     legacy: 0,
-    unobserved: TRACKED_STABLECOINS.length - currentCoverage,
+    unobserved: ACTIVE_STABLECOINS.length - currentCoverage,
   };
   for (const row of scoreResults.values()) {
     currentCoverageClasses[row.coverageClass] += 1;

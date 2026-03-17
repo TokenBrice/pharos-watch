@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
@@ -157,7 +157,7 @@ export function mergeCgPools(
   let withBalance = 0;
 
   for (const [stablecoinId, pools] of cgNewPools) {
-    const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
+    const meta = ACTIVE_STABLECOINS.find((s) => s.id === stablecoinId);
     if (!meta) continue;
 
     let m = metrics.get(stablecoinId);
@@ -359,7 +359,7 @@ export function mergeGtPools(
   let merged = 0;
 
   for (const [stablecoinId, pools] of gtNewPools) {
-    const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
+    const meta = ACTIVE_STABLECOINS.find((s) => s.id === stablecoinId);
     if (!meta) continue;
 
     let m = metrics.get(stablecoinId);

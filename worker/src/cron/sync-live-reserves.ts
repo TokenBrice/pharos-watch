@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
@@ -10,7 +10,7 @@ import {
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
 
-const CONFIGURED_COINS = TRACKED_STABLECOINS.filter((c) => c.liveReservesConfig);
+const CONFIGURED_COINS = ACTIVE_STABLECOINS.filter((c) => c.liveReservesConfig);
 type ConfiguredCoin = (typeof CONFIGURED_COINS)[number];
 type LiveReserveConfig = NonNullable<ConfiguredCoin["liveReservesConfig"]>;
 

@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { loadFreshLiveReserveMap } from "./live-reserves-store";
 
@@ -25,7 +25,7 @@ export async function checkCollateralDrift(db: D1Database): Promise<CollateralDr
   const driftCoins: CollateralDriftEntry[] = [];
   const fallbackCoins: string[] = [];
 
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     if (!meta.liveReservesConfig) continue;
 
     const liveSlices = liveReserveMap.get(meta.id);

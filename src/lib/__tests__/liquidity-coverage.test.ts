@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
 
 /** Chains with no standard DEX infrastructure — intentionally unsupported */
@@ -23,7 +23,7 @@ describe("liquidity coverage", () => {
   it("every contract chain is mapped in CG, DS, or explicitly unsupported", () => {
     const unmapped: string[] = [];
     const allChains = new Set<string>();
-    for (const meta of TRACKED_STABLECOINS) {
+    for (const meta of ACTIVE_STABLECOINS) {
       for (const c of meta.contracts ?? []) {
         allChains.add(c.chain);
       }
@@ -41,7 +41,7 @@ describe("liquidity coverage", () => {
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {
     const symbolToIds = new Map<string, string[]>();
-    for (const meta of TRACKED_STABLECOINS) {
+    for (const meta of ACTIVE_STABLECOINS) {
       const key = meta.symbol.toUpperCase();
       const ids = symbolToIds.get(key) ?? [];
       ids.push(meta.id);
@@ -52,7 +52,7 @@ describe("liquidity coverage", () => {
     for (const [symbol, ids] of symbolToIds) {
       if (ids.length <= 1) continue;
       for (const id of ids) {
-        const meta = TRACKED_STABLECOINS.find((m) => m.id === id);
+        const meta = ACTIVE_STABLECOINS.find((m) => m.id === id);
         // Small symbols can rely on external IDs when there is no contract footprint.
         if (!meta?.contracts?.length && !meta?.tradedContracts?.length && (meta?.geckoId || meta?.cmcSlug)) continue;
         if (!meta?.contracts?.length && !meta?.tradedContracts?.length) {

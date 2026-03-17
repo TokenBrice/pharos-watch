@@ -39,8 +39,7 @@ vi.mock("@shared/lib/stablecoins", () => {
     flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
   }));
 
-  return {
-    TRACKED_STABLECOINS: [
+  const stablecoins = [
     {
       id: "usdt-tether",
       name: "Tether",
@@ -79,7 +78,10 @@ vi.mock("@shared/lib/stablecoins", () => {
       flags: { pegCurrency: "GOLD", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
       ...fallbackTrackedTokens,
-    ],
+    ];
+    return {
+    TRACKED_STABLECOINS: stablecoins,
+    ACTIVE_STABLECOINS: stablecoins,
     TRACKED_META_BY_ID: new Map([
       ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
       ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],

@@ -1,5 +1,5 @@
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import {
   enrichMissingPrices,
@@ -120,7 +120,7 @@ async function syncViaCoingeckoFallback(
 
   // Build asset list from tracked stablecoins with geckoId
   const assets: PeggedAsset[] = [];
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     if (!meta.geckoId) continue;
     const mcap = cgData[meta.geckoId]?.usd_market_cap;
     if (!mcap || mcap <= 0) continue;

@@ -6,7 +6,7 @@ import { getCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 import { runDlContractPasses, runCmcPass, runDexScreenerPass } from "./enrich-prices-passes";
 import type { PriceConfidence } from "@shared/types";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   buildPriceValidationContext,
   buildPriceReasonablenessOptions,
@@ -152,7 +152,7 @@ export async function fetchPrimaryPrices(
   const cgPrices = new Map<string, number>();
 
   // Build Pyth feed map from tracked stablecoin metadata
-  const metaById = new Map(TRACKED_STABLECOINS.map((m) => [m.id, m]));
+  const metaById = new Map(ACTIVE_STABLECOINS.map((m) => [m.id, m]));
   const pythFeedIds = new Map<string, string>();
   for (const asset of candidates) {
     const meta = metaById.get(asset.id);

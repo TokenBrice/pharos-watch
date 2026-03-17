@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
@@ -27,7 +27,7 @@ export const handleBackfillCgPrices = withErrorHandler(
     cgApiKey?: string | null,
   ): Promise<Response> => {
     return withAdmin(request, async () => {
-      const selection = selectBackfillCoins(url, TRACKED_STABLECOINS, {
+      const selection = selectBackfillCoins(url, ACTIVE_STABLECOINS, {
         defaultBatchSize: DEFAULT_BATCH_SIZE,
       });
       if ("response" in selection) {

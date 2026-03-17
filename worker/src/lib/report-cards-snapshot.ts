@@ -1,5 +1,5 @@
 import { getCache } from "./db-cache";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
@@ -125,12 +125,12 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   const pegDataById = pegAnalytics.pegDataById;
 
   const blacklistableIds: ReadonlySet<string> = new Set(
-    TRACKED_STABLECOINS
+    ACTIVE_STABLECOINS
       .filter((meta) => isBlacklistable(meta) === true)
       .map((meta) => meta.id),
   );
 
-  const sortedMetas = topologicalOrder([...TRACKED_STABLECOINS]);
+  const sortedMetas = topologicalOrder([...ACTIVE_STABLECOINS]);
   const overallScores = new Map<string, number>();
   const liveCards: ReportCard[] = [];
   const collateralDriftCoins: CollateralDriftEntry[] = [];
@@ -222,7 +222,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   });
 
   const edges: { from: string; to: string }[] = [];
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     for (const dep of deriveDependencies(meta)) {
       edges.push({ from: dep.id, to: meta.id });
     }
@@ -245,7 +245,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
 }
 
 interface ComputeCardInput {
-  meta: (typeof TRACKED_STABLECOINS)[number];
+  meta: (typeof ACTIVE_STABLECOINS)[number];
   pegDataById: Map<string, PegSummaryCoin>;
   dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>;
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;

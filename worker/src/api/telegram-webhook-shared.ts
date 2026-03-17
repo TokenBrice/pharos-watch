@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 
 export const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
@@ -146,7 +146,7 @@ export type PendingAction =
     };
 
 export const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(
-  TRACKED_STABLECOINS.map((coin) => [
+  ACTIVE_STABLECOINS.map((coin) => [
     coin.id,
     {
       id: coin.id,

@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 export interface TwitterCreds {
   apiKey: string;
@@ -69,7 +69,7 @@ async function buildOAuthHeader(
 
 /** Inject $ cashtag prefix on the first mention of each tracked ticker in text. */
 function injectCashtags(text: string): string {
-  const symbols = [...new Set(TRACKED_STABLECOINS.map((s) => s.symbol))];
+  const symbols = [...new Set(ACTIVE_STABLECOINS.map((s) => s.symbol))];
   let result = text;
   for (const sym of symbols) {
     result = result.replace(new RegExp(`\\b${sym}\\b`, "i"), `$${sym}`);

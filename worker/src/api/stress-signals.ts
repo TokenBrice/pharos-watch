@@ -16,7 +16,7 @@ import {
   getDepegDewsMethodologyVersionAt,
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
-import { TRACKED_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins";
 
 export const handleStressSignals = withErrorHandler(
   "stress-signals",
@@ -34,7 +34,7 @@ export const handleStressSignals = withErrorHandler(
       }
       const canonicalId = resolved.canonicalId;
 
-      if (!TRACKED_IDS.has(canonicalId)) {
+      if (!ACTIVE_IDS.has(canonicalId)) {
         return errorResponse(404, "Stablecoin not tracked");
       }
       // Single coin: latest valid row + daily history.
@@ -141,7 +141,7 @@ export const handleStressSignals = withErrorHandler(
     let updatedAt = 0;
     let malformedRows = 0;
     for (const row of rows.results) {
-      if (!TRACKED_IDS.has(row.stablecoin_id)) {
+      if (!ACTIVE_IDS.has(row.stablecoin_id)) {
         continue;
       }
       const parsedSignals = safeJsonParse<Record<string, unknown> | null>(row.signals_json, null);

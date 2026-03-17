@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type {
@@ -528,7 +528,7 @@ export async function computeDexPrices(
       .slice(0, 5)
       .map((o) => ({ protocol: o.protocol, chain: o.chain, price: o.price, tvl: o.tvl }));
 
-    const meta = TRACKED_STABLECOINS.find((s) => s.id === id);
+    const meta = ACTIVE_STABLECOINS.find((s) => s.id === id);
     const symbol = meta?.symbol ?? id;
 
     priceStmts.push(

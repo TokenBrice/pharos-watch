@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeAsset } from "../../api/__tests__/helpers/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../api/__tests__/helpers/mock-d1";
 
-vi.mock("@shared/lib/stablecoins", () => ({
-  TRACKED_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins", () => {
+  const stablecoins = [
     {
       id: "usdt-tether",
       symbol: "USDT",
@@ -50,7 +50,11 @@ vi.mock("@shared/lib/stablecoins", () => ({
         { chain: "ethereum", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6 },
       ],
     },
-  ],
+  ];
+  const ids = new Set(["usdt-tether", "usdc-circle"]);
+  return {
+  TRACKED_STABLECOINS: stablecoins,
+  ACTIVE_STABLECOINS: stablecoins,
   TRACKED_META_BY_ID: new Map([
     ["usdt-tether", {
       id: "usdt-tether",
@@ -95,8 +99,10 @@ vi.mock("@shared/lib/stablecoins", () => ({
       contracts: [{ chain: "ethereum", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6 }],
     }],
   ]),
-  TRACKED_IDS: new Set(["usdt-tether", "usdc-circle"]),
-}));
+  TRACKED_IDS: ids,
+  ACTIVE_IDS: ids,
+  };
+});
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(),

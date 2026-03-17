@@ -5,7 +5,7 @@ import { USER_AGENT, GT_PROBE_MIN_TVL_USD, GT_PROBE_TIMEOUT_MS, CIRCUIT_SOURCE }
 import { shouldAttemptFetch, recordOutcome } from "./circuit-breaker";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { GT_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { GtPool } from "../cron/dex-liquidity/types";
 import type { SourcePrice } from "./price-consensus";
 
@@ -87,7 +87,7 @@ export async function probeGeckoTerminalPrices(
 
   throwIfAborted(signal);
 
-  const metaById = new Map(TRACKED_STABLECOINS.map((m) => [m.id, m]));
+  const metaById = new Map(ACTIVE_STABLECOINS.map((m) => [m.id, m]));
   let failures = 0;
 
   for (const asset of singleSourceCgAssets) {

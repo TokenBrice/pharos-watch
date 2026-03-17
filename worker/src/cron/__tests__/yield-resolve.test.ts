@@ -11,8 +11,8 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
 // --- Module-level mocks ---
 
-vi.mock("@shared/lib/stablecoins", () => ({
-  TRACKED_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins", () => {
+  const stablecoins = [
     {
       id: "sdai-maker",
       name: "sDAI",
@@ -73,7 +73,10 @@ vi.mock("@shared/lib/stablecoins", () => ({
         governance: "centralized",
       },
     },
-  ],
+  ];
+  return {
+  TRACKED_STABLECOINS: stablecoins,
+  ACTIVE_STABLECOINS: stablecoins,
   TRACKED_META_BY_ID: new Map([
     [
       "sdai-maker",
@@ -145,7 +148,8 @@ vi.mock("@shared/lib/stablecoins", () => ({
       },
     }],
   ]),
-}));
+  };
+});
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) =>

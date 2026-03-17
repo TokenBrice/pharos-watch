@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { RATE_LIMITS } from "../../lib/rate-limit";
@@ -41,7 +41,7 @@ export async function crawlCoin(
   const pools: StagedPool[] = [];
   const priceObs: CrawlResult["priceObs"] = [];
   const nowSec = Math.floor(Date.now() / 1000);
-  const stablecoinMeta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
+  const stablecoinMeta = ACTIVE_STABLECOINS.find((s) => s.id === stablecoinId);
   const cgQueriedChains = new Set<string>();
   const unresolvedChains: string[] = [];
 

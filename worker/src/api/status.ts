@@ -30,7 +30,7 @@ import { emptyDataQuality, getDataQuality } from "./status-data-quality";
 import { computeReserveCompositionOverview, loadFreshLiveReserveMap } from "../lib/live-reserves-store";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
   CronInFlight,
   CronRun,
@@ -829,7 +829,7 @@ export const handleStatus = withErrorHandler(
         const liveReserveMap = await loadFreshLiveReserveMap(db, now);
         const driftEntries: ReserveDriftEntry[] = [];
         for (const [coinId, liveSlices] of liveReserveMap) {
-          const meta = TRACKED_STABLECOINS.find((c) => c.id === coinId);
+          const meta = ACTIVE_STABLECOINS.find((c) => c.id === coinId);
           if (!meta?.reserves?.length) continue;
           const liveScore = computeCollateralQualityFromReserves(liveSlices);
           const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
@@ -849,9 +849,9 @@ export const handleStatus = withErrorHandler(
       try {
         const threshold = 0.50;
         const warnings: ClassificationWarning[] = [];
-        const defiCoins = TRACKED_STABLECOINS.filter((c) => c.flags.governance === "decentralized");
+        const defiCoins = ACTIVE_STABLECOINS.filter((c) => c.flags.governance === "decentralized");
         for (const coin of defiCoins) {
-          const fraction = computeCentralizedCustodyFraction(coin.id, TRACKED_STABLECOINS);
+          const fraction = computeCentralizedCustodyFraction(coin.id, ACTIVE_STABLECOINS);
           if (fraction > threshold) {
             warnings.push({
               coinId: coin.id,

@@ -1,6 +1,6 @@
 import type { DigestInputData, StablecoinData } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { TRACKED_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins";
 import { formatCurrency } from "@shared/lib/format";
 import { type CronResult } from "../lib/cron-logger";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
@@ -433,7 +433,7 @@ export async function generateDailyDigest(
     };
   }
   const stablecoinAssets = stablecoinsCacheResult.payload.peggedAssets as StablecoinData[];
-  const trackedStablecoinAssets = stablecoinAssets.filter((coin) => TRACKED_IDS.has(coin.id));
+  const trackedStablecoinAssets = stablecoinAssets.filter((coin) => ACTIVE_IDS.has(coin.id));
   const mcapById = new Map<string, number>();
   for (const coin of stablecoinAssets) {
     mcapById.set(coin.id, getCirculatingRaw(coin));

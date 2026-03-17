@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
-const { TRACKED_STABLECOINS_MOCK } = vi.hoisted(() => ({
-  TRACKED_STABLECOINS_MOCK: [
+const { STABLECOINS_MOCK } = vi.hoisted(() => ({
+  STABLECOINS_MOCK: [
     {
       id: "usdt-tether",
       symbol: "AAA",
@@ -21,8 +21,9 @@ const { TRACKED_STABLECOINS_MOCK } = vi.hoisted(() => ({
 }));
 
 vi.mock("@shared/lib/stablecoins", () => ({
-  TRACKED_STABLECOINS: TRACKED_STABLECOINS_MOCK,
-  TRACKED_META_BY_ID: new Map(TRACKED_STABLECOINS_MOCK.map((coin) => [coin.id, coin])),
+  TRACKED_STABLECOINS: STABLECOINS_MOCK,
+  ACTIVE_STABLECOINS: STABLECOINS_MOCK,
+  TRACKED_META_BY_ID: new Map(STABLECOINS_MOCK.map((coin: { id: string }) => [coin.id, coin])),
 }));
 
 vi.mock("@shared/lib/peg-score", () => ({

@@ -4,8 +4,8 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 // --- Module-level mocks ---
 
 // Stub the stablecoins list — one yield-bearing, two non-yield-bearing
-vi.mock("@shared/lib/stablecoins", () => ({
-  TRACKED_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins", () => {
+  const stablecoins = [
     {
       id: "100",
       name: "sDAI",
@@ -63,7 +63,10 @@ vi.mock("@shared/lib/stablecoins", () => ({
       },
       contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
     },
-  ],
+  ];
+  return {
+  TRACKED_STABLECOINS: stablecoins,
+  ACTIVE_STABLECOINS: stablecoins,
   TRACKED_META_BY_ID: new Map([
     ["100", {
       id: "100",
@@ -123,7 +126,8 @@ vi.mock("@shared/lib/stablecoins", () => ({
       contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
     }],
   ]),
-}));
+  };
+});
 
 // Stub fetch-retry to delegate to global fetch
 vi.mock("../../lib/fetch-retry", () => ({
@@ -244,7 +248,7 @@ import { getCache, setCache } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 
@@ -444,17 +448,17 @@ describe("syncYieldData", () => {
 
   it("chunks stale-yield cleanup under the D1 bind limit", async () => {
     const db = makeDb();
-    const originalLength = TRACKED_STABLECOINS.length;
+    const originalLength = ACTIVE_STABLECOINS.length;
 
     for (let i = 0; i < 120; i++) {
-      TRACKED_STABLECOINS.push({
+      ACTIVE_STABLECOINS.push({
         id: `extra-${i}`,
         name: `Extra ${i}`,
         symbol: `E${i}`,
         geckoId: `extra-${i}`,
         flags: {
           pegCurrency: "USD",
-          backing: TRACKED_STABLECOINS[1]!.flags.backing,
+          backing: ACTIVE_STABLECOINS[1]!.flags.backing,
           yieldBearing: false,
           rwa: false,
           navToken: false,
@@ -490,7 +494,7 @@ describe("syncYieldData", () => {
 
       await syncYieldData(db);
     } finally {
-      TRACKED_STABLECOINS.splice(originalLength);
+      ACTIVE_STABLECOINS.splice(originalLength);
     }
 
     const staleDeleteCalls = db

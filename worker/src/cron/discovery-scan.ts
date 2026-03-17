@@ -2,7 +2,7 @@ import { CIRCUIT_SOURCE, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { CronResult } from "../lib/cron-logger";
 const DISMISSED_CLEANUP_DAYS = 90;
@@ -138,7 +138,7 @@ export async function runDiscoveryScan(
   coingeckoApiKey?: string | null,
 ): Promise<CronResult> {
   const trackedGeckoIds = new Set(
-    TRACKED_STABLECOINS.map((s) => s.geckoId).filter(Boolean) as string[],
+    ACTIVE_STABLECOINS.map((s) => s.geckoId).filter(Boolean) as string[],
   );
 
   let cgCandidates: { geckoId: string; name: string; symbol: string; marketCap: number }[] = [];

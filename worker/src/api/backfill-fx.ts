@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
 import { USER_AGENT } from "../lib/constants";
@@ -230,7 +230,7 @@ export async function fetchHistoricalSecondaryFxRates(
 export async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTimeSeries[]>> {
   const result: Record<string, FxTimeSeries[]> = { GOLD: [], SILVER: [] };
 
-  const allCommodityCoins = TRACKED_STABLECOINS.filter(
+  const allCommodityCoins = ACTIVE_STABLECOINS.filter(
     (m) => COMMODITY_PEGS.has(m.flags.pegCurrency) && !m.flags.navToken
       && !COMMODITY_MEDIAN_EXCLUDES.has(m.id)
   );

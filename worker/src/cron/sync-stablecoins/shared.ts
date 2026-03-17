@@ -1,6 +1,6 @@
 import { StablecoinListResponseSchema } from "@shared/types";
 import type { PriceSourceHealth } from "@shared/types";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { setCacheIfNewer, getCache } from "../../lib/db-cache";
 import type { CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "../enrich-prices";
@@ -10,7 +10,7 @@ const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
 const FX_REFERENCE_MAX_AGE_SEC = 6 * 3600;
 const SUPPLEMENTAL_TRACKED_IDS = new Set(
-  TRACKED_STABLECOINS
+  ACTIVE_STABLECOINS
     .filter(
       (meta) =>
         !!meta.geckoId &&

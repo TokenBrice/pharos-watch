@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { setCache } from "../../lib/db-cache";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
@@ -598,7 +598,7 @@ export interface ProviderChainAddress {
 /** Build provider chain → tracked token addresses map from canonical chain ids. */
 export function buildChainAddresses(chainMap: Record<string, string>): Map<string, ProviderChainAddress[]> {
   const result = new Map<string, ProviderChainAddress[]>();
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     for (const c of getTrackedContracts(meta)) {
       const canonicalChain = c.chain.toLowerCase();
       const mappedChain = chainMap[canonicalChain];

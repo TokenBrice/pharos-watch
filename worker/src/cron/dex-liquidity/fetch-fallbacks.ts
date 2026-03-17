@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
@@ -21,8 +21,8 @@ export function getFallbackTargets(
     requireGeckoId?: boolean;
     requireTrackedContracts?: boolean;
   } = {},
-): typeof TRACKED_STABLECOINS {
-  return TRACKED_STABLECOINS.filter((meta) => {
+): typeof ACTIVE_STABLECOINS {
+  return ACTIVE_STABLECOINS.filter((meta) => {
     if (options.requireGeckoId && !meta.geckoId) return false;
     if (options.requireTrackedContracts && getTrackedContracts(meta).length === 0) return false;
     const metric = metrics.get(meta.id);

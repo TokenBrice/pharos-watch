@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   buildReportCardsSnapshot,
   ReportCardsSnapshotUnavailableError,
@@ -98,7 +98,7 @@ export async function computeSafetyScoresSnapshot(
 ): Promise<SafetyScoresSnapshotResult> {
   const outputMode = options.outputMode ?? "map";
   const includeNavTokens = options.includeNavTokens ?? true;
-  const trackedCount = TRACKED_STABLECOINS.filter((meta) => includeNavTokens || !meta.flags.navToken).length;
+  const trackedCount = ACTIVE_STABLECOINS.filter((meta) => includeNavTokens || !meta.flags.navToken).length;
 
   const scores = new Map<string, SafetyResult>();
   const allGrades: SafetyGradeRow[] = [];

@@ -10,7 +10,7 @@ import { resolveOrReject } from "../lib/api-utils";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { TRACKED_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
 
@@ -146,7 +146,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   }
   const id = resolved.canonicalId;
 
-  if (!TRACKED_IDS.has(id)) {
+  if (!ACTIVE_IDS.has(id)) {
     return new Response("Unknown stablecoin", { status: 404, headers: { "Content-Type": "text/plain" } });
   }
 
@@ -231,7 +231,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
 
   let pulseScore = 0;
   let ratedCount = 0;
-  let totalCoins = TRACKED_IDS.size;
+  let totalCoins = ACTIVE_IDS.size;
 
   const reportCardCache = await loadReportCardCache(db);
   if (reportCardCache.kind === "ok") {

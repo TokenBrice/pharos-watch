@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 const getReserveAdapterMock = vi.fn();
 const shouldAttemptFetchMock = vi.fn();
@@ -16,8 +16,8 @@ vi.mock("../../lib/circuit-breaker", () => ({
 }));
 
 describe("syncLiveReserves", () => {
-  const configuredCoinCount = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
-  const sharedSourceInvocationCount = TRACKED_STABLECOINS
+  const configuredCoinCount = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig).length;
+  const sharedSourceInvocationCount = ACTIVE_STABLECOINS
     .filter((coin) => coin.liveReservesConfig)
     .reduce((keys, coin) => {
       const config = coin.liveReservesConfig!;
@@ -62,7 +62,7 @@ describe("syncLiveReserves", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_state"))).toBe(true);
     expect(recordOutcomeSafeMock).toHaveBeenCalledWith(db, "live-reserves:infinifi", true);
     const uniqueBreakerKeyCount = new Set(
-      TRACKED_STABLECOINS
+      ACTIVE_STABLECOINS
         .filter((c) => c.liveReservesConfig)
         .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
     ).size;
@@ -135,7 +135,7 @@ describe("syncLiveReserves", () => {
     }
 
     const uniqueBreakerKeys = new Set(
-      TRACKED_STABLECOINS
+      ACTIVE_STABLECOINS
         .filter((c) => c.liveReservesConfig)
         .map((c) => `live-reserves:${c.liveReservesConfig!.breakerScope ?? c.liveReservesConfig!.adapter}`),
     );

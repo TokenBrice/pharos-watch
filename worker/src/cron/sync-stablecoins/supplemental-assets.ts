@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { StablecoinMeta } from "@shared/types";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
@@ -12,13 +12,13 @@ import type { DefiLlamaCoinPrice, PeggedAsset } from "../enrich-prices";
 
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 
-const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(
+const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.pegCurrency === "GOLD" || stablecoin.flags.pegCurrency === "SILVER",
 );
 
-const GOLD_METAS = TRACKED_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
-const SILVER_METAS = TRACKED_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "SILVER");
-const FIAT_CG_METAS = TRACKED_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
+const GOLD_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
+const SILVER_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "SILVER");
+const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 
 function pegTypeKey(meta: StablecoinMeta): string {
   return `pegged${meta.flags.pegCurrency}`;

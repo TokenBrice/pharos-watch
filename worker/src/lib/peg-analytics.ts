@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
@@ -50,7 +50,7 @@ export async function derivePegAnalyticsSnapshot(
   const trackingFallbackStart = nowSec - 4 * 365.25 * 86400;
 
   const pegDataById = new Map<string, PegSummaryCoin>();
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     if (!includeNavTokens && meta.flags.navToken) continue;
 
     const asset = priceById.get(meta.id);

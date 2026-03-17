@@ -4,7 +4,7 @@ vi.mock("../../lib/db", () => ({
   batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
 }));
 
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
@@ -150,7 +150,7 @@ describe("dex-liquidity persistence", () => {
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const prepared = statements as PreparedStatementWithMeta[];
-    expect(prepared).toHaveLength(TRACKED_STABLECOINS.length + 1);
+    expect(prepared).toHaveLength(ACTIVE_STABLECOINS.length + 1);
 
     const usdtRow = prepared.find((stmt) => stmt.boundValues[0] === "usdt-tether");
     const usdcPlaceholder = prepared.find((stmt) => stmt.boundValues[0] === "usdc-circle");
@@ -258,7 +258,7 @@ describe("dex-liquidity persistence", () => {
     await writeHistoricalSnapshots(
       makeDb({
         historyRow: {
-          cnt: TRACKED_STABLECOINS.length,
+          cnt: ACTIVE_STABLECOINS.length,
           scored: 2,
         },
       }),
@@ -292,7 +292,7 @@ describe("dex-liquidity persistence", () => {
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const prepared = statements as PreparedStatementWithMeta[];
-    expect(prepared).toHaveLength(TRACKED_STABLECOINS.length);
+    expect(prepared).toHaveLength(ACTIVE_STABLECOINS.length);
 
     const todayMidnight = Math.floor(nowMs / 86_400_000) * 86_400;
     const usdtSnapshot = prepared.find((stmt) => stmt.boundValues[0] === "usdt-tether");

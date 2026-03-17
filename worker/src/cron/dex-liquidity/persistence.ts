@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -93,7 +93,7 @@ export async function persistScores(
 
   // Write placeholder rows for tracked stablecoins with no DEX presence
   // liquidity_score = NULL so report cards treat them as NR (not rated)
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     if (!metrics.has(meta.id)) {
       placeholderCount++;
       stmts.push(
@@ -179,7 +179,7 @@ export async function writeHistoricalSnapshots(
   scoreMap: Map<string, FullScoreResult>,
 ): Promise<void> {
   const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400; // epoch seconds at UTC midnight
-  const expectedRowCount = TRACKED_STABLECOINS.length;
+  const expectedRowCount = ACTIVE_STABLECOINS.length;
   try {
     const existing = await db
       .prepare(
@@ -225,7 +225,7 @@ export async function writeHistoricalSnapshots(
       );
     }
     // Also insert placeholder rows for coins without DEX presence (NULL score = NR)
-    for (const meta of TRACKED_STABLECOINS) {
+    for (const meta of ACTIVE_STABLECOINS) {
       if (!scoreMap.has(meta.id)) {
         snapStmts.push(
           db

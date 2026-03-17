@@ -1,6 +1,6 @@
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
@@ -148,7 +148,7 @@ export async function syncDexDiscovery(
     runSeq = await incrementRunSeq(db);
 
     const eligibleCoins: DiscoveryCandidate[] = [];
-    for (const coin of TRACKED_STABLECOINS) {
+    for (const coin of ACTIVE_STABLECOINS) {
       const coverage = liquidityCoverage.get(coin.id);
       const tier = computeEffectiveTier(
         coverage?.poolCount ?? 0,

@@ -1,6 +1,6 @@
 // worker/src/cron/sync-yield-data.ts
 import {
-  TRACKED_STABLECOINS,
+  ACTIVE_STABLECOINS,
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins";
 import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
@@ -834,7 +834,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
   const writeStmts = [...yieldDataStmts, ...historyStmts];
   if (writeStmts.length > 0) await batchExecute(db, writeStmts);
 
-  const managedYieldIds = TRACKED_STABLECOINS.map((meta) => meta.id);
+  const managedYieldIds = ACTIVE_STABLECOINS.map((meta) => meta.id);
   if (managedYieldIds.length > 0) {
     await deleteStaleYieldRows(db, managedYieldIds, startSec);
     await deleteOrphanYieldRows(db, managedYieldIds);

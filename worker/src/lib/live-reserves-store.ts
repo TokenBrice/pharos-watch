@@ -1,5 +1,5 @@
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { buildInClause } from "./db";
 
@@ -114,7 +114,7 @@ function parseSlices(value: string): ReserveSlice[] {
 }
 
 export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {
-  return TRACKED_STABLECOINS.filter((coin) => !!coin.liveReservesConfig);
+  return ACTIVE_STABLECOINS.filter((coin) => !!coin.liveReservesConfig);
 }
 
 function buildReserveCompositionUpsertStatement(

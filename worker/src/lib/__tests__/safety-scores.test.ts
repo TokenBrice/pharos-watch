@@ -44,8 +44,8 @@ const buildReportCardsSnapshotMock = vi.hoisted(() =>
   })),
 );
 
-vi.mock("@shared/lib/stablecoins", () => ({
-  TRACKED_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins", () => {
+  const stablecoins = [
     {
       id: "usdt-tether",
       symbol: "AAA",
@@ -64,8 +64,12 @@ vi.mock("@shared/lib/stablecoins", () => ({
       name: "NAV Token",
       flags: { pegCurrency: "USD", governance: "centralized", navToken: true },
     },
-  ],
-}));
+  ];
+  return {
+    TRACKED_STABLECOINS: stablecoins,
+    ACTIVE_STABLECOINS: stablecoins,
+  };
+});
 
 vi.mock("../report-cards-snapshot", () => ({
   buildReportCardsSnapshot: buildReportCardsSnapshotMock,

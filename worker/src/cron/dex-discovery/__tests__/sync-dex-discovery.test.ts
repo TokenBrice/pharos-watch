@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@shared/lib/stablecoins", () => ({
-  TRACKED_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins", () => {
+  const stablecoins = [
     {
       id: "coin-a",
       contracts: [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
@@ -10,8 +10,12 @@ vi.mock("@shared/lib/stablecoins", () => ({
       id: "coin-b",
       contracts: [{ chain: "ethereum", address: "0xbbb", decimals: 18 }],
     },
-  ],
-}));
+  ];
+  return {
+    TRACKED_STABLECOINS: stablecoins,
+    ACTIVE_STABLECOINS: stablecoins,
+  };
+});
 
 vi.mock("../../dex-liquidity/pool-helpers", () => ({
   getTrackedContracts: vi.fn((coin: { contracts?: unknown[] }) => coin.contracts ?? []),

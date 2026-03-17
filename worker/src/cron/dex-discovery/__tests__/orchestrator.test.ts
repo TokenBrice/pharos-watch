@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { DiscoveryMeta } from "../types";
 import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
 import {
@@ -87,7 +87,7 @@ describe("compareDiscoveryMeta", () => {
 
 describe("chain-aware routing", () => {
   it("discovery targets include traded contracts and preserve same-chain deployments", () => {
-    const usdt = TRACKED_STABLECOINS.find((stablecoin) => stablecoin.id === "usdt-tether");
+    const usdt = ACTIVE_STABLECOINS.find((stablecoin) => stablecoin.id === "usdt-tether");
     expect(usdt).toBeDefined();
     expect(usdt?.tradedContracts?.length ?? 0).toBeGreaterThan(0);
 
