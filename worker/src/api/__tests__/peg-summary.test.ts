@@ -200,6 +200,23 @@ describe("handlePegSummary", () => {
     });
   });
 
+  it("includes navToken coins with null deviation fields", async () => {
+    const db = makePegSummaryDb([
+      makeAsset({
+        id: "fpi-frax",
+        name: "Frax Price Index",
+        symbol: "FPI",
+        pegType: "peggedVAR",
+        price: 1.12,
+      }),
+    ]);
+    const res = await handlePegSummary(db);
+    const data = (await res.json()) as { coins: Array<{ id: string; currentDeviationBps: number | null }> };
+    const fpi = data.coins.find((c) => c.id === "fpi-frax");
+    expect(fpi).toBeDefined();
+    expect(fpi!.currentDeviationBps).toBeNull();
+  });
+
   it("counts non-USD coins within the non-USD threshold as at peg", async () => {
     const asset = makeAsset({
       id: "eurc-circle",

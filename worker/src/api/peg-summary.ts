@@ -105,7 +105,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     peggedAssets,
     fxFallbackRates,
     methodologyAsOf: stablecoinsCache.updatedAt,
-    includeNavTokens: false,
+    includeNavTokens: true,
   });
   const allEvents = pegAnalytics.allEvents;
   const pegDataById = pegAnalytics.pegDataById;
@@ -161,13 +161,13 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   let coinsAtPeg = 0;
 
   for (const meta of TRACKED_META_BY_ID.values()) {
-    if (meta.flags.navToken) continue;
+    const isNavToken = meta.flags.navToken === true;
 
     const pegData = pegDataById.get(meta.id);
     if (!pegData) continue;
 
     const asset = priceById.get(meta.id);
-    const currentBps = pegData.currentDeviationBps;
+    const currentBps = isNavToken ? null : pegData.currentDeviationBps;
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
 
     // Build DEX price check if available (only for coins with meaningful supply)
@@ -222,7 +222,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       spreadPenalty: pegData.spreadPenalty,
       eventCount: pegData.eventCount,
       worstDeviationBps: pegData.worstDeviationBps,
-      activeDepeg: pegData.activeDepeg,
+      activeDepeg: isNavToken ? false : pegData.activeDepeg,
       lastEventAt: pegData.lastEventAt,
       trackingSpanDays: pegData.trackingSpanDays,
       methodologyVersion,
@@ -230,7 +230,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     });
 
     // Summary aggregation
-    if (pegData.activeDepeg) activeDepegCount++;
+    if (!isNavToken && pegData.activeDepeg) activeDepegCount++;
     if (currentBps !== null) {
       const absBps = Math.abs(currentBps);
       allAbsBps.push(absBps);
