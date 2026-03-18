@@ -82,7 +82,6 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiPo
       const poolType = isStable ? "balancer-stable" : "balancer-weighted";
 
       const balances = pool.poolTokens.map((t) => parseFloat(t.balance)).filter(Number.isFinite);
-      const balancesUsd = pool.poolTokens.map((t) => parseFloat(t.balanceUSD)).filter(Number.isFinite);
 
       // Derive price from balanceUSD / balance for each token
       let price: number | null = null;
