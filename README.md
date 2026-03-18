@@ -11,7 +11,7 @@ Public-facing analytics dashboard tracking 166 stablecoins (plus 2 shadow assets
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
-- **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, and DexScreener pools used to suppress false depeg alerts
+- **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, Fluid, Balancer, Raydium, Orca, and DexScreener pools used to suppress false depeg alerts
 - **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
 - **Chains** — per-chain stablecoin leaderboard and profile pages with Chain Health Score breakdowns
 - **Compare** — side-by-side stablecoin comparison across key metrics

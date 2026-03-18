@@ -43,6 +43,10 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 | Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
 | Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/enrich-prices.ts` | Additional primary-consensus voice for crvUSD |
 | Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only trusted DEX rows are promoted into primary pricing |
+| Fluid DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | Per-protocol disaggregated price from `price_sources_json` |
+| Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | Per-protocol disaggregated price from `price_sources_json` |
+| Raydium DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | Per-protocol disaggregated price from `price_sources_json` |
+| Orca DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | Per-protocol disaggregated price from `price_sources_json` |
 | GeckoTerminal pool probe | 1 | `worker/src/lib/geckoterminal-price-probe.ts` | Pool-level cross-check for single-source CG-only assets |
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.

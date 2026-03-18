@@ -22,7 +22,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Alerts**: Webhook alert fires on open and close transitions
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-Sources tracked: `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime`, `geckoterminal-probe`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`.
+Sources tracked: `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fluid-dex-api`, `balancer-api`, `raydium-api`, `orca-api`, `fx-realtime`, `geckoterminal-probe`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`.
 
 ### DefiLlama list vs detail API
 
