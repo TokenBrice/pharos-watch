@@ -119,7 +119,10 @@ export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
  * source-specific dexId/exchange suffixes to the protocol string.
  */
 export function dexPriceConfidenceForProtocol(protocol: string): number {
-  if (protocol === "curve" || protocol === "uniswap-v3" || protocol === "aerodrome") return 1.0;
+  if (
+    protocol === "curve" || protocol === "uniswap-v3" || protocol === "aerodrome" ||
+    protocol === "fluid" || protocol === "balancer" || protocol === "raydium" || protocol === "orca"
+  ) return 1.0;
   if (
     protocol.startsWith("staged-cg_onchain") ||
     protocol.startsWith("geckoterminal") ||

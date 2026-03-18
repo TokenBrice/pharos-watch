@@ -35,8 +35,14 @@ describe("dex-liquidity pool helpers", () => {
     expect(classifyPoolType("balancer-stable-pool")).toBe("balancer-stable");
     expect(classifyPoolType("balancer-v2")).toBe("balancer-weighted");
     expect(classifyPoolType("uniswap-v3")).toBe("uniswap-v3-5bp");
+    expect(classifyPoolType("raydium")).toBe("raydium-amm");
+    expect(classifyPoolType("Raydium CLMM")).toBe("raydium-amm");
+    expect(classifyPoolType("orca-whirlpool")).toBe("orca-whirlpool");
     expect(classifyPoolType("mystery-dex")).toBe("generic");
 
+    expect(getQualityMultiplier("raydium-clmm")).toBe(QUALITY_MULTIPLIERS["raydium-clmm"]);
+    expect(getQualityMultiplier("raydium-amm")).toBe(QUALITY_MULTIPLIERS["raydium-amm"]);
+    expect(getQualityMultiplier("orca-whirlpool")).toBe(QUALITY_MULTIPLIERS["orca-whirlpool"]);
     expect(getQualityMultiplier("curve-stableswap", 700)).toBe(QUALITY_MULTIPLIERS["curve-stableswap-high-a"]);
     expect(getQualityMultiplier("curve-stableswap", 100)).toBe(QUALITY_MULTIPLIERS["curve-stableswap"]);
     expect(getQualityMultiplier("uniswap-v3-30bp")).toBe(QUALITY_MULTIPLIERS["uniswap-v3-30bp"]);

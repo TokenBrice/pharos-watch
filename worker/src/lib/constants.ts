@@ -146,6 +146,10 @@ export const CIRCUIT_SOURCE = {
   CURVE_LIQUIDITY_API: "curve-liquidity-api",
   FX_REALTIME: "fx-realtime",
   GECKO_TERMINAL_PROBE: "geckoterminal-probe",
+  FLUID_DEX_API: "fluid-dex-api",
+  BALANCER_API: "balancer-api",
+  RAYDIUM_API: "raydium-api",
+  ORCA_API: "orca-api",
 } as const;
 
 /** Minimum per-pool TVL for DEX pool challenge and pool-level depeg confirmation */

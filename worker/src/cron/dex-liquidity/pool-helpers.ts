@@ -29,6 +29,8 @@ export function classifyPoolType(project: string): string {
   if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined to aerodrome-stable via subgraph isStable flag
   if (proj.includes("balancer") && proj.includes("stable")) return "balancer-stable";
   if (proj.includes("balancer")) return "balancer-weighted";
+  if (proj.includes("raydium")) return "raydium-amm";
+  if (proj.includes("orca")) return "orca-whirlpool";
   if (proj.includes("uniswap-v3") || proj === "uniswap-v3") return "uniswap-v3-5bp";
   return "generic";
 }
