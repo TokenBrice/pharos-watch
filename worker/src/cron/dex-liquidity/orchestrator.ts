@@ -15,6 +15,13 @@ import { mergeGtPools } from "./fetch-crawlers";
 import { fetchDsFallbackPools, fetchCgTickersFallback } from "./fetch-fallbacks";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
+import { fetchFluidPools } from "./fetch-fluid";
+import { fetchBalancerPools } from "./fetch-balancer";
+import { fetchRaydiumPools } from "./fetch-raydium";
+import { fetchOrcaPools } from "./fetch-orca";
+import { convertToGtNewPools, extractPriceObservations, type DexApiPool } from "../../lib/dex-api-common";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
 
 export async function syncDexLiquidity(
   db: D1Database,
@@ -46,6 +53,36 @@ export async function syncDexLiquidity(
     criticalSourceFailures.push("defillama-protocols");
     fallbackSignals.push("dl-protocols-unavailable");
   }
+
+  // Fetch direct API sources in parallel (non-fatal, circuit-breaker gated)
+  // These run alongside the existing data source processing to maximize parallelism.
+  // All response bodies are consumed inline (await res.json()), so connections are released promptly.
+  const directApiFetchers: Array<{ name: string; circuitKey: string; fn: (s?: AbortSignal) => Promise<DexApiPool[]> }> = [
+    { name: "Fluid", circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API, fn: fetchFluidPools },
+    { name: "Balancer", circuitKey: CIRCUIT_SOURCE.BALANCER_API, fn: fetchBalancerPools },
+    { name: "Raydium", circuitKey: CIRCUIT_SOURCE.RAYDIUM_API, fn: fetchRaydiumPools },
+    { name: "Orca", circuitKey: CIRCUIT_SOURCE.ORCA_API, fn: fetchOrcaPools },
+  ];
+
+  const directApiPromise = Promise.allSettled(
+    directApiFetchers.map(async ({ name, circuitKey, fn }) => {
+      if (!(await shouldAttemptFetch(db, circuitKey))) {
+        console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
+        return [];
+      }
+      try {
+        const pools = await fn(signal);
+        await recordOutcomeSafe(db, circuitKey, true);
+        return pools;
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
+        await recordOutcomeSafe(db, circuitKey, false);
+        failedSources.push(circuitKey);
+        return [];
+      }
+    }),
+  );
 
   // 2. Build symbol/address lookup maps
   const { symbolToIds, addressToId } = buildSymbolLookups();
@@ -164,6 +201,47 @@ export async function syncDexLiquidity(
     rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
     failedSources.push("cg-tickers-fallback");
+  }
+
+  // Await direct API results and merge into pipeline
+  const directApiPools: DexApiPool[] = [];
+  const directApiSettled = await directApiPromise;
+  for (const result of directApiSettled) {
+    if (result.status === "fulfilled") directApiPools.push(...result.value);
+  }
+
+  if (directApiPools.length > 0) {
+    console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
+
+    // Convert to GtNewPool, dedup against DL-sourced pools, then merge
+    // symbolToIds, addressToId, and knownPoolAddrs are already in scope
+    const directApiGtPools = convertToGtNewPools(directApiPools, addressToId, symbolToIds);
+
+    // Filter out pools already known from DL/Curve/subgraphs to avoid double-counting TVL
+    let dedupSkipped = 0;
+    for (const [id, pools] of directApiGtPools) {
+      const filtered = pools.filter((p) => {
+        const key = `${p.chain.toLowerCase()}:${p.address.toLowerCase()}`;
+        if (knownPoolAddrs.has(key)) { dedupSkipped++; return false; }
+        knownPoolAddrs.add(key); // register so future fallback crawlers skip these too
+        return true;
+      });
+      if (filtered.length > 0) directApiGtPools.set(id, filtered);
+      else directApiGtPools.delete(id);
+    }
+    if (dedupSkipped > 0) console.log(`[dex-liquidity] Skipped ${dedupSkipped} direct API pools already in DL`);
+
+    if (directApiGtPools.size > 0) mergeGtPools(metrics, directApiGtPools);
+
+    // Extract price observations with plausibility filtering
+    const directApiPriceObs = extractPriceObservations(
+      directApiPools, addressToId, symbolToIds, validationReferences,
+    );
+    for (const [id, obs] of directApiPriceObs) {
+      const existing = priceObservations.get(id) ?? [];
+      existing.push(...obs);
+      priceObservations.set(id, existing);
+    }
   }
 
   console.log(
