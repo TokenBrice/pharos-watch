@@ -1,9 +1,7 @@
 import type { DexPriceObs, GtNewPool } from "../cron/dex-liquidity/types";
 import type { PriceValidationReferences } from "./price-validation";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
-import { normalizeProtocol } from "../cron/dex-liquidity/pool-helpers";
 import { QUALITY_MULTIPLIERS, normalizeDexSymbol, isUsdReferenceSymbol } from "./dex-constants";
-import { CHAIN_META } from "@shared/lib/chains";
 
 export interface DexApiPoolToken {
   address: string;
@@ -120,15 +118,10 @@ export function convertToGtNewPools(
       // Derive price for this specific stablecoin token
       const tokenPrice = deriveTokenUsdPrice(pool, i, addressToId);
 
-      // Normalize chain to display name (e.g., "solana" → "Solana") to match DL convention
-      const chainDisplay = CHAIN_META[pool.chain.toLowerCase()]?.name ?? pool.chain;
-      // Normalize dexId through normalizeProtocol for consistent grouping
-      const dexId = normalizeProtocol(pool.source);
-
       const gtPool: GtNewPool = {
         address: pool.poolAddress,
-        chain: chainDisplay,
-        dexId,
+        chain: pool.chain,
+        dexId: pool.source,
         name: `${pool.source}:${symbolStr}`,
         tvlUsd: pool.tvlUsd,
         volume24hUsd: pool.volume24hUsd,

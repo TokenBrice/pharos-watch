@@ -8,6 +8,7 @@ import {
 import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS, CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { GT_API_BASE, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import { CHAIN_META } from "@shared/lib/chains";
 import { sleepWithSignal } from "../../lib/abort";
 import type {
   LiquidityMetrics, DexPriceObs, GtPool,
@@ -383,10 +384,13 @@ export function mergeGtPools(
       const poolEffTvl = pool.tvlUsd * combinedQuality;
       const stressIdx = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, coinPairQuality);
 
+      // Normalize chain name to display form (e.g., "solana" → "Solana") for consistent aggregation
+      const chainDisplay = CHAIN_META[pool.chain.toLowerCase()]?.name ?? pool.chain;
+
       m.totalTvlUsd += pool.tvlUsd;
       m.totalVolume24hUsd += pool.volume24hUsd;
       m.poolCount++;
-      m.chains.add(pool.chain);
+      m.chains.add(chainDisplay);
       m.pairs.add(pool.symbol);
       m.qualityAdjustedTvl += qualityAdjustedTvl;
       m.effectiveTvl += poolEffTvl;
@@ -396,13 +400,13 @@ export function mergeGtPools(
       // Protocol and chain TVL (use same normalizer as processPoolMetrics)
       const protocol = normalizeProtocol(pool.dexId);
       m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
-      m.chainTvl[pool.chain] = (m.chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
+      m.chainTvl[chainDisplay] = (m.chainTvl[chainDisplay] ?? 0) + pool.tvlUsd;
 
       // Add to top pools
       m.topPools.push({
         poolId: `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`,
-        project: pool.dexId,
-        chain: pool.chain,
+        project: protocol,
+        chain: chainDisplay,
         tvlUsd: pool.tvlUsd,
         symbol: pool.symbol,
         volumeUsd1d: pool.volume24hUsd,

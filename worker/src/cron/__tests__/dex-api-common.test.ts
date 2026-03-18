@@ -70,7 +70,7 @@ describe("convertToGtNewPools", () => {
     const result = convertToGtNewPools([MOCK_POOL], addressToId, new Map());
     const gtPool = result.get("usdc")![0];
     expect(gtPool.address).toBe("0xpool1");
-    expect(gtPool.chain).toBe("Ethereum");
+    expect(gtPool.chain).toBe("ethereum");
     expect(gtPool.dexId).toBe("fluid");
     expect(gtPool.name).toContain("fluid:");
     expect(gtPool.tvlUsd).toBe(500_000);
