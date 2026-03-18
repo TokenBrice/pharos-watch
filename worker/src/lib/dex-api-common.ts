@@ -28,6 +28,13 @@ export interface DexApiPool {
 /** Min TVL for a pool's price to be considered as a price observation */
 export const DIRECT_API_PRICE_MIN_TVL_USD = 50_000;
 
+/**
+ * Max TVL for a single pool — any pool reporting more than this is treated as a data error.
+ * The largest individual DEX pool in existence is ~$1-2B (Curve 3pool).
+ * $10B gives plenty of headroom while catching obvious anomalies like $337B.
+ */
+export const DIRECT_API_MAX_POOL_TVL_USD = 10_000_000_000;
+
 /** Min TVL for a pool to be included in liquidity scoring */
 export const DIRECT_API_POOL_MIN_TVL_USD = 10_000;
 
@@ -97,7 +104,7 @@ export function convertToGtNewPools(
   const result = new Map<string, GtNewPool[]>();
 
   for (const pool of pools) {
-    if (pool.tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) continue;
+    if (pool.tvlUsd < DIRECT_API_POOL_MIN_TVL_USD || pool.tvlUsd > DIRECT_API_MAX_POOL_TVL_USD) continue;
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
@@ -149,7 +156,7 @@ export function extractPriceObservations(
   const result = new Map<string, DexPriceObs[]>();
 
   for (const pool of pools) {
-    if (pool.tvlUsd < DIRECT_API_PRICE_MIN_TVL_USD) continue;
+    if (pool.tvlUsd < DIRECT_API_PRICE_MIN_TVL_USD || pool.tvlUsd > DIRECT_API_MAX_POOL_TVL_USD) continue;
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
