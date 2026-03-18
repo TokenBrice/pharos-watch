@@ -46,7 +46,12 @@ function formatDate(dateStr: string): string {
 export async function generateMetadata({ params }: { params: Promise<{ date: string }> }): Promise<Metadata> {
   const { date } = await params;
   const digest = digestByDate.get(date);
-  if (!digest) return {};
+  if (!digest) {
+    return {
+      title: "Digest Not Found | Pharos",
+      robots: { index: false },
+    };
+  }
   const formatted = formatDate(digest.date);
   const description = summarizeText(digest.text, 160);
   return {

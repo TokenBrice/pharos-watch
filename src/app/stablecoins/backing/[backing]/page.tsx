@@ -17,7 +17,12 @@ export async function generateMetadata({
 }) {
   const { backing } = await params;
   const page = BACKING_TAXONOMY_PAGE_BY_SLUG.get(backing);
-  if (!page) return {};
+  if (!page) {
+    return {
+      title: "Backing Type Not Found | Pharos",
+      robots: { index: false },
+    };
+  }
 
   return buildPageMetadata({
     title: page.title,

@@ -17,7 +17,12 @@ export async function generateMetadata({
 }) {
   const { governance } = await params;
   const page = GOVERNANCE_TAXONOMY_PAGE_BY_SLUG.get(governance);
-  if (!page) return {};
+  if (!page) {
+    return {
+      title: "Governance Type Not Found | Pharos",
+      robots: { index: false },
+    };
+  }
 
   return buildPageMetadata({
     title: page.title,

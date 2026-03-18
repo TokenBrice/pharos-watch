@@ -23,7 +23,12 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const page = STATIC_COMPARISON_PAGE_BY_SLUG.get(slug);
-  if (!page) return {};
+  if (!page) {
+    return {
+      title: "Comparison Not Found | Pharos",
+      robots: { index: false },
+    };
+  }
 
   return buildPageMetadata({
     title: page.title,

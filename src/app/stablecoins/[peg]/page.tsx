@@ -27,7 +27,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { peg } = await params;
   const pegCurrency = SLUG_TO_PEG[peg];
-  if (!pegCurrency) return {};
+  if (!pegCurrency) {
+    return {
+      title: "Peg Currency Not Found | Pharos",
+      robots: { index: false },
+    };
+  }
   const count = pegCoinCount(pegCurrency);
   const label = PEG_LABELS_SHORT[pegCurrency];
   const slug = PEG_SLUGS[pegCurrency]!;

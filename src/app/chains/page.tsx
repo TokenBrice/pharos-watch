@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/chain-health-version";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { safeJsonLd } from "@/lib/json-ld";
 import { ChainsLeaderboardClient } from "./client";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 
@@ -10,7 +11,31 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Chains",
   description: "Ranking blockchain networks by stablecoin supply, health score, and composition. Explore per-chain stablecoin analytics on Pharos.",
   canonical: "/chains/",
+  ogImage: "https://pharos.watch/og-chains.png",
 });
+
+const CHAINS_FAQ_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What is the Chain Health Score?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "The Chain Health Score is a composite rating (0–100) that evaluates a blockchain's stablecoin ecosystem across five dimensions: stablecoin quality (market cap and safety grades), chain environment (settlement finality, uptime, and decentralization), concentration risk (supply distribution across coins), peg stability (aggregate deviation from target prices), and backing diversity (collateral types and governance models).",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Which chains have the most stablecoin supply?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Ethereum dominates stablecoin supply, followed by Tron, BSC, Solana, and Arbitrum. However, supply alone doesn't tell the full story—concentration risk and backing diversity also matter. A chain with slightly lower total supply but better distribution across high-quality, diverse stablecoins may have a higher Chain Health Score.",
+      },
+    },
+  ],
+};
 
 export default function ChainsPage() {
   const chainIds = getActiveChainIds();
@@ -24,6 +49,12 @@ export default function ChainsPage() {
       leadParagraphs={[
         "Blockchain networks ranked by stablecoin supply and health. The Chain Health Score rates each chain's stablecoin ecosystem on quality, chain environment, concentration, peg stability, and backing diversity.",
       ]}
+      preface={
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(CHAINS_FAQ_JSON_LD) }}
+        />
+      }
     >
       <ChainsLeaderboardClient />
       {/* Server-rendered chain links for SEO crawlability */}

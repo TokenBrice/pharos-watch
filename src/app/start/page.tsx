@@ -7,6 +7,7 @@ export const metadata = buildPageMetadata({
   description:
     "New to Pharos? Learn what the main stablecoin signals mean, choose the right feature for your goal, and find the fastest path into market monitoring, research, yield, and alerts.",
   canonical: "/start/",
+  ogImage: "https://pharos.watch/og-start.png",
 });
 
 export default function StartPage() {

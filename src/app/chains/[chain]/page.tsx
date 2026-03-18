@@ -16,7 +16,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { chain } = await params;
   const meta = CHAIN_META[chain];
-  if (!meta) return {};
+  if (!meta) {
+    return {
+      title: "Chain Not Found | Pharos",
+      robots: { index: false },
+    };
+  }
   return buildPageMetadata({
     title: `${meta.name} Stablecoin Analytics`,
     description: `Stablecoin supply, composition, health score, and activity on ${meta.name}. Explore which stablecoins are deployed on ${meta.name} and their market share.`,
