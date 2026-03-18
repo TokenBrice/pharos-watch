@@ -237,7 +237,7 @@ export function processPoolMetrics(
                 balanceDetails,
               }
             : feeTierForExtra != null
-              ? { feeTier: feeTierForExtra }
+              ? { feeTier: Math.round(feeTierForExtra / 100) }
               : {}),
           qualityAdjustedTvl: Math.round(poolQualityAdjustedTvl),
           effectiveTvl: Math.round(poolEffTvl),

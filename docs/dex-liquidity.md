@@ -35,6 +35,8 @@ Four DEX protocols are fetched directly during the scoring cron (`syncDexLiquidi
 
 All four fetchers now surface partial/total upstream failure explicitly to the cron, use circuit breakers (`CIRCUIT_SOURCE.FLUID_DEX_API`, `BALANCER_API`, `RAYDIUM_API`, `ORCA_API`), and apply min TVL thresholds ($10K for liquidity inclusion, $50K for price observations). When both DL and a direct API cover the same pool, the direct API data is preferred (fresher, richer metadata).
 
+Balancer, Raydium, and Orca now preserve that richer metadata through `top_pools_json`: measured `balanceRatio`, per-token `balanceDetails`, and normalized `feeTier` badges in basis points. Balancer weighted pools compare actual USD composition versus target token weights before deriving balance health; Raydium and Orca derive inventory balance from token balances plus per-token USD prices. Fluid still falls back to neutral balance because the current ticker endpoint does not expose reserves.
+
 After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates.
 
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
@@ -70,6 +72,8 @@ See the [Discovery Cron](#discovery-cron) section below for the full discovery p
 - **Pair quality**: Co-token scored using Pharos governance classification (CeFi->1.0, DeFi->0.9, CeFi-Dep->0.8) + static map for volatile assets (WETH->0.65, WBTC->0.6, unknown->0.3). Known quote aliases such as `USD₮0`, `USDT0`, `aUSDC`, `aUSDT`, `USDbC`, and `.e` bridged variants are normalized to canonical symbols before scoring. Multi-asset pools use best co-token score
 - **MetaPool TVL dedup**: Uses `usdTotalExcludingBasePool` to prevent double-counting base pool liquidity across ~322 Curve metapools
 - **Effective TVL**: `poolTvl x mechanismMultiplier x balanceHealth x pairQuality`, summed across all pools
+
+For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydium, and Orca now contribute measured balance ratios when their APIs provide enough token-balance and pricing context; Fluid continues to default to `1.0` balance until a reserves-resolver source is added.
 
 ### Data Quality Filters
 

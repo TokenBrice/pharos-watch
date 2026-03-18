@@ -122,6 +122,52 @@ describe("convertToGtNewPools", () => {
     expect(result.get("usdc")![0].qualityMultiplier).toBe(0.85);
   });
 
+  it("preserves measured balance and fee detail for direct API pools", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      source: "raydium",
+      poolType: "raydium-clmm",
+      feeRate: 0.0001,
+      balances: [200_000, 300_000],
+    };
+    const addressToId = new Map([
+      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
+      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
+    ]);
+
+    const result = convertToGtNewPools([pool], addressToId, new Map());
+    const gtPool = result.get("usdc")![0];
+
+    expect(gtPool.feeTierBps).toBe(1);
+    expect(gtPool.balanceRatio).toBeCloseTo(2 / 3, 2);
+    expect(gtPool.balanceDetails).toEqual([
+      { symbol: "USDC", balancePct: 40, isTracked: true },
+      { symbol: "USDT", balancePct: 60, isTracked: true },
+    ]);
+  });
+
+  it("normalizes Balancer weighted pools against target weights", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      source: "balancer",
+      poolType: "balancer-weighted",
+      tokens: [
+        { address: "0xusdc", symbol: "USDC", decimals: 6, priceUsd: 1, weight: 0.8 },
+        { address: "0xweth", symbol: "WETH", decimals: 18, priceUsd: 1, weight: 0.2 },
+      ],
+      balances: [800_000, 200_000],
+      feeRate: 0.003,
+      price: null,
+    };
+    const addressToId = new Map([["0xusdc", "usdc"]]);
+
+    const result = convertToGtNewPools([pool], addressToId, new Map());
+    const gtPool = result.get("usdc")![0];
+
+    expect(gtPool.balanceRatio).toBeCloseTo(1);
+    expect(gtPool.feeTierBps).toBe(30);
+  });
+
   it("normalizes per-token Fluid volumes into one-sided USD volume", () => {
     const pool: DexApiPool = {
       ...MOCK_POOL,

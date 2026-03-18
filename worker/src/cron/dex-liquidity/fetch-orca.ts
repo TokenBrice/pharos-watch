@@ -98,6 +98,8 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
       const volume = parseFloat(pool.stats?.["24h"]?.volume ?? "0");
       const balA = parseFloat(pool.tokenBalanceA);
       const balB = parseFloat(pool.tokenBalanceB);
+      const normalizedBalA = Number.isFinite(balA) ? balA / 10 ** pool.tokenA.decimals : NaN;
+      const normalizedBalB = Number.isFinite(balB) ? balB / 10 ** pool.tokenB.decimals : NaN;
 
       if (!Number.isFinite(tvlUsd) || tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) continue;
       pageHasEligiblePool = true;
@@ -116,7 +118,9 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
         volume24hUsd: Number.isFinite(volume) ? volume : 0,
         // Orca feeRate is in hundredths of a basis point (100 = 1bp = 0.0001)
         feeRate: Number.isFinite(pool.feeRate) ? pool.feeRate / 1_000_000 : null,
-        balances: Number.isFinite(balA) && Number.isFinite(balB) ? [balA, balB] : null,
+        balances: Number.isFinite(normalizedBalA) && Number.isFinite(normalizedBalB)
+          ? [normalizedBalA, normalizedBalB]
+          : null,
       });
     }
 

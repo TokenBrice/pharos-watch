@@ -255,7 +255,7 @@ describe("mergeStagedPools", () => {
     expect(metric.topPools).toHaveLength(1);
     expect(metric.topPools[0]?.source).toBe("cg_onchain");
     expect(metric.topPools[0]?.extra?.balanceRatio).toBe(0.8);
-    expect(metric.topPools[0]?.extra?.feeTier).toBe(500);
+    expect(metric.topPools[0]?.extra?.feeTier).toBe(5);
   });
 
   it("extracts price observations from pools skipped by address dedup", async () => {

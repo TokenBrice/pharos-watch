@@ -246,6 +246,16 @@ export interface GtNewPool {
   sourceFamily: Exclude<LiquidityPoolSourceFamily, "dl">;
   /** Optional per-pool 7d volume when source provides it */
   volume7dUsd?: number | null;
+  /** Optional measured balance ratio from richer direct/discovery APIs. */
+  balanceRatio?: number | null;
+  /** Optional normalized fee tier in basis points. */
+  feeTierBps?: number | null;
+  /** Optional token balance composition details for richer top-pool UI. */
+  balanceDetails?: {
+    symbol: string;
+    balancePct: number;
+    isTracked: boolean;
+  }[];
 }
 
 export interface CgNewPool extends GtNewPool {

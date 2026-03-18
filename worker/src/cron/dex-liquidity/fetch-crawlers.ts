@@ -223,7 +223,7 @@ export function mergeCgPools(
         ...(pool.price > 0 ? { price: pool.price } : {}),
         extra: {
           ...(pool.balanceRatio != null ? { balanceRatio: Math.round(pool.balanceRatio * 100) / 100 } : {}),
-          ...(pool.feePercentage != null ? { feeTier: Math.round(pool.feePercentage * 10000) } : {}),
+          ...(pool.feePercentage != null ? { feeTier: Math.round(pool.feePercentage * 100) } : {}),
           qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
           effectiveTvl: Math.round(poolEffTvl),
           organicFraction,
@@ -371,7 +371,9 @@ export function mergeGtPools(
 
     for (const pool of pools) {
       const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
-      const balanceRatio = STAGED_POOL_DEFAULTS.balanceRatioFallback;
+      const hasMeasuredBalance = pool.balanceRatio != null && Number.isFinite(pool.balanceRatio);
+      const balanceRatio = hasMeasuredBalance ? pool.balanceRatio! : STAGED_POOL_DEFAULTS.balanceRatioFallback;
+      const balanceHealth = hasMeasuredBalance ? Math.pow(balanceRatio, 1.5) : 1;
       // Note: GT pools intentionally excluded from balanceRatioWeightedSum and
       // organicTvlWeightedSum to avoid diluting those signals with neutral defaults.
       // Only Curve (balance) and DeFiLlama-APY (organic) pools contribute real data.
@@ -379,8 +381,8 @@ export function mergeGtPools(
         pool.symbol.split(/\s*\/\s*/).map((s) => s.trim()),
         meta.symbol,
       );
-      const combinedQuality = pool.qualityMultiplier * coinPairQuality;
-      const qualityAdjustedTvl = pool.tvlUsd * pool.qualityMultiplier;
+      const combinedQuality = pool.qualityMultiplier * balanceHealth * coinPairQuality;
+      const qualityAdjustedTvl = pool.tvlUsd * pool.qualityMultiplier * balanceHealth;
       const poolEffTvl = pool.tvlUsd * combinedQuality;
       const stressIdx = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, coinPairQuality);
 
@@ -396,6 +398,10 @@ export function mergeGtPools(
       m.effectiveTvl += poolEffTvl;
       m.stressWeightedSum += pool.tvlUsd * stressIdx;
       m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
+      if (hasMeasuredBalance) {
+        m.balanceRatioWeightedSum += pool.tvlUsd * balanceRatio;
+        m.totalTvlForBalance += pool.tvlUsd;
+      }
 
       // Protocol and chain TVL (use same normalizer as processPoolMetrics)
       const protocol = normalizeProtocol(pool.dexId);
@@ -415,6 +421,11 @@ export function mergeGtPools(
         source: pool.sourceFamily,
         ...(pool.price > 0 ? { price: pool.price } : {}),
         extra: {
+          ...(hasMeasuredBalance ? {
+            balanceRatio: Math.round(balanceRatio * 100) / 100,
+            balanceDetails: pool.balanceDetails,
+          } : {}),
+          ...(pool.feeTierBps != null ? { feeTier: pool.feeTierBps } : {}),
           qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
           effectiveTvl: Math.round(poolEffTvl),
           organicFraction,

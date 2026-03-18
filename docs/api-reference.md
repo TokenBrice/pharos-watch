@@ -786,6 +786,15 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `source`      | `string \| undefined` | Canonical source family for this retained pool                 |
 | `extra`       | `object \| undefined` | Optional detailed pool metrics (A-factor, balance ratio, etc.) |
 
+`extra` may include:
+
+| Field                      | Type                                              | Description                                                                                   |
+| -------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `amplificationCoefficient` | `number \| undefined`                             | Curve amplification coefficient (`A`)                                                         |
+| `balanceRatio`             | `number \| undefined`                             | Measured pool balance ratio from 0 to 1; Balancer weighted pools normalize against weights    |
+| `feeTier`                  | `number \| undefined`                             | Normalized fee tier in basis points                                                           |
+| `balanceDetails`           | `Array<{ symbol: string; balancePct: number; isTracked: boolean }> \| undefined` | Per-token USD composition shares used for balance tooltips/detail                             |
+
 **`DexPriceSource`**
 
 | Field      | Type     | Description            |

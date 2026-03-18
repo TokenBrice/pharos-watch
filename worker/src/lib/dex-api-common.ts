@@ -13,6 +13,8 @@ export interface DexApiPoolToken {
   decimals: number;
   /** Per-token USD price when available (Balancer provides this via balanceUSD/balance). */
   priceUsd?: number | null;
+  /** Optional target pool weight for protocols like Balancer weighted pools. */
+  weight?: number | null;
 }
 
 export interface DexApiPool {
@@ -56,6 +58,10 @@ export const DIRECT_API_MAX_POOL_TVL_USD = 10_000_000_000;
 
 /** Min TVL for a pool to be included in liquidity scoring */
 export const DIRECT_API_POOL_MIN_TVL_USD = 10_000;
+
+function getDisplayTokenSymbol(token: DexApiPoolToken): string {
+  return normalizeDexSymbol(token.symbol) || token.address.slice(0, 10);
+}
 
 /** Resolve a token to a stablecoin ID via address match or symbol fallback. */
 function resolveStablecoinId(
@@ -108,6 +114,13 @@ function deriveTokenUsdPrice(
   return (1 / pool.price) * otherUsdRef;
 }
 
+function derivePoolFeeTierBps(feeRate: number | null): number | null {
+  if (feeRate == null || !Number.isFinite(feeRate) || feeRate <= 0) return null;
+  const bps = feeRate * 10_000;
+  if (!Number.isFinite(bps) || bps <= 0) return null;
+  return Math.round(bps * 100) / 100;
+}
+
 function getTokenReferenceUsdPrice(
   token: DexApiPoolToken,
   addressToId: Map<string, string>,
@@ -154,6 +167,77 @@ function derivePoolVolume24hUsd(
   return candidates.reduce((sum, value) => sum + value, 0) / candidates.length;
 }
 
+function derivePoolBalanceMetrics(
+  pool: DexApiPool,
+  addressToId: Map<string, string>,
+  symbolToIds: Map<string, string[]>,
+  validationReferences?: PriceValidationReferences,
+): {
+  balanceRatio: number;
+  balanceDetails: {
+    symbol: string;
+    balancePct: number;
+    isTracked: boolean;
+  }[];
+} | null {
+  if (!pool.balances || pool.balances.length !== pool.tokens.length || pool.tokens.length < 2) {
+    return null;
+  }
+
+  const usdBalances = pool.tokens.map((token, index) => {
+    const balance = pool.balances?.[index];
+    if (!Number.isFinite(balance) || balance == null || balance < 0) return null;
+
+    const directPrice = token.priceUsd;
+    const priceUsd = directPrice != null && Number.isFinite(directPrice) && directPrice > 0
+      ? directPrice
+      : getTokenReferenceUsdPrice(token, addressToId, validationReferences) ??
+        deriveTokenUsdPrice(pool, index, addressToId, validationReferences);
+
+    if (priceUsd == null || !Number.isFinite(priceUsd) || priceUsd <= 0) return null;
+    return balance * priceUsd;
+  });
+
+  if (usdBalances.some((value) => value == null)) return null;
+
+  const measuredBalances = usdBalances as number[];
+  const totalUsd = measuredBalances.reduce((sum, value) => sum + value, 0);
+  if (!Number.isFinite(totalUsd) || totalUsd <= 0) return null;
+
+  const rawWeights = pool.tokens.map((token) => {
+    const weight = token.weight;
+    return weight != null && Number.isFinite(weight) && weight > 0 ? weight : 0;
+  });
+  const hasMeasuredWeights = rawWeights.every((weight) => weight > 0);
+  const normalizedWeights = hasMeasuredWeights ? rawWeights : new Array(pool.tokens.length).fill(1);
+  const totalWeight = normalizedWeights.reduce((sum, value) => sum + value, 0);
+  if (!Number.isFinite(totalWeight) || totalWeight <= 0) return null;
+
+  const normalizedShares = measuredBalances.map((usdBalance, index) => {
+    const actualShare = usdBalance / totalUsd;
+    const targetShare = normalizedWeights[index]! / totalWeight;
+    return targetShare > 0 ? actualShare / targetShare : 0;
+  });
+
+  const minShare = normalizedShares.reduce((min, value) => Math.min(min, value), Infinity);
+  const maxShare = normalizedShares.reduce((max, value) => Math.max(max, value), 0);
+  if (!Number.isFinite(minShare) || !Number.isFinite(maxShare) || maxShare <= 0) return null;
+
+  return {
+    balanceRatio: minShare / maxShare,
+    balanceDetails: measuredBalances.map((usdBalance, index) => {
+      const token = pool.tokens[index]!;
+      const symbol = normalizeDexSymbol(token.symbol);
+      const trackedBySymbol = symbol ? (symbolToIds.get(symbol)?.length ?? 0) > 0 : false;
+      return {
+        symbol: getDisplayTokenSymbol(token),
+        balancePct: Math.round((usdBalance / totalUsd) * 1000) / 10,
+        isTracked: addressToId.has(token.address.toLowerCase()) || trackedBySymbol,
+      };
+    }),
+  };
+}
+
 /**
  * Convert DexApiPool[] to GtNewPool[] keyed by stablecoinId.
  * Matches pool tokens against the stablecoin contract registry + symbol fallback.
@@ -169,6 +253,8 @@ export function convertToGtNewPools(
   for (const pool of pools) {
     if (pool.tvlUsd < DIRECT_API_POOL_MIN_TVL_USD || pool.tvlUsd > DIRECT_API_MAX_POOL_TVL_USD) continue;
     const volume24hUsd = derivePoolVolume24hUsd(pool, addressToId, validationReferences);
+    const balanceMetrics = derivePoolBalanceMetrics(pool, addressToId, symbolToIds, validationReferences);
+    const feeTierBps = derivePoolFeeTierBps(pool.feeRate);
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
@@ -176,7 +262,7 @@ export function convertToGtNewPools(
       if (!stablecoinId) continue;
 
       const qualityMultiplier = QUALITY_MULTIPLIERS[pool.poolType] ?? QUALITY_MULTIPLIERS.generic!;
-      const pairSymbols = pool.tokens.map((t) => normalizeDexSymbol(t.symbol) || t.address.slice(0, 10));
+      const pairSymbols = pool.tokens.map((t) => getDisplayTokenSymbol(t));
       const symbolStr = pairSymbols.join(" / ");
 
       // Derive price for this specific stablecoin token
@@ -195,6 +281,11 @@ export function convertToGtNewPools(
         symbol: symbolStr,
         poolType: pool.poolType,
         sourceFamily: "direct_api",
+        ...(balanceMetrics ? {
+          balanceRatio: balanceMetrics.balanceRatio,
+          balanceDetails: balanceMetrics.balanceDetails,
+        } : {}),
+        ...(feeTierBps != null ? { feeTierBps } : {}),
       };
 
       const existing = result.get(stablecoinId) ?? [];

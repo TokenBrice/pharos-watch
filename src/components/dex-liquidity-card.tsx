@@ -27,6 +27,8 @@ import { BalanceBar } from "@/components/balance-bar";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
+type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["balanceDetails"]>;
+
 function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
   if (Math.abs(value) < 0.05) return null;
@@ -45,6 +47,35 @@ function getConcentrationLabel(hhi: number): { label: string; color: string } {
   if (hhi >= 0.5) return { label: "High", color: "text-red-700 dark:text-red-400" };
   if (hhi >= 0.25) return { label: "Medium", color: "text-amber-700 dark:text-amber-400" };
   return { label: "Low", color: "text-emerald-700 dark:text-emerald-400" };
+}
+
+function formatFeeTierLabel(feeTier: number): string {
+  if (Math.abs(feeTier - Math.round(feeTier)) < 0.01) return `${Math.round(feeTier)}bp`;
+  return `${feeTier.toFixed(2).replace(/\.?0+$/, "")}bp`;
+}
+
+function getPoolVariantLabel(poolType: string): string | null {
+  switch (poolType) {
+    case "balancer-stable":
+      return "stable";
+    case "balancer-weighted":
+      return "weighted";
+    case "raydium-clmm":
+      return "CLMM";
+    case "raydium-amm":
+      return "AMM";
+    case "orca-whirlpool":
+      return "Whirlpool";
+    default:
+      return null;
+  }
+}
+
+function formatBalanceDetails(balanceDetails: PoolBalanceDetails | undefined): string | null {
+  if (!balanceDetails || balanceDetails.length === 0) return null;
+  return balanceDetails
+    .map((entry) => `${entry.symbol} ${entry.balancePct.toFixed(1)}%`)
+    .join(", ");
 }
 
 function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
@@ -205,7 +236,10 @@ function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; t
                     <span className="text-muted-foreground text-xs">&mdash;</span>
                   )}
                 </td>
-                <td className="px-3 py-1.5 text-right hidden md:table-cell">
+                <td
+                  className="px-3 py-1.5 text-right hidden md:table-cell"
+                  title={formatBalanceDetails(pool.extra?.balanceDetails) ?? undefined}
+                >
                   {pool.extra?.balanceRatio != null ? (
                     <BalanceBar ratio={pool.extra.balanceRatio} />
                   ) : (
@@ -216,11 +250,24 @@ function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; t
                   {formatCurrency(pool.volumeUsd1d)}
                 </td>
                 <td className="px-3 py-1.5 text-right text-xs text-muted-foreground hidden lg:table-cell">
-                  {pool.extra?.amplificationCoefficient != null && (
-                    <span title="Curve amplification coefficient">A={pool.extra.amplificationCoefficient}</span>
-                  )}
-                  {pool.extra?.feeTier != null && <span title="Fee tier">{pool.extra.feeTier}bp</span>}
-                  {pool.extra?.isMetaPool && <span className="ml-1 text-xs opacity-60">meta</span>}
+                  <div className="flex justify-end gap-1.5">
+                    {pool.extra?.amplificationCoefficient != null && (
+                      <span title="Curve amplification coefficient">A={pool.extra.amplificationCoefficient}</span>
+                    )}
+                    {pool.extra?.amplificationCoefficient == null && getPoolVariantLabel(pool.poolType) && (
+                      <span title="Pool variant">{getPoolVariantLabel(pool.poolType)}</span>
+                    )}
+                    {pool.extra?.feeTier != null && (
+                      <span title="Fee tier">{formatFeeTierLabel(pool.extra.feeTier)}</span>
+                    )}
+                    {pool.extra?.isMetaPool && <span className="opacity-60">meta</span>}
+                    {pool.extra?.amplificationCoefficient == null &&
+                      pool.extra?.feeTier == null &&
+                      !pool.extra?.isMetaPool &&
+                      !getPoolVariantLabel(pool.poolType) && (
+                        <span>&mdash;</span>
+                      )}
+                  </div>
                 </td>
               </tr>
             ))}

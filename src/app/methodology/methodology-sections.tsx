@@ -1203,6 +1203,12 @@ export function MethodologySections() {
             replace overlapping DeFiLlama pools before staged or fallback discovery sources are merged.
           </p>
           <p>
+            When direct APIs expose pool-inventory metadata, Balancer, Raydium, and Orca now contribute measured
+            balance health and fee detail instead of neutral placeholders. Balancer weighted pools are normalized
+            against target token weights before the balance ratio is computed; Fluid still defaults to neutral balance
+            until a reserves-resolver path is added.
+          </p>
+          <p>
             After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score
             input is rebuilt from the retained pool set. That keeps filtered or downscaled pools from lingering in the
             final score through stale pre-filter totals.
@@ -1347,8 +1353,8 @@ export function MethodologySections() {
                       <td className="py-2 pr-4">22.5%</td>
                       <td className="py-2">
                         Quality-adjusted TVL using pool mechanism multiplier &times; balance health &times; pair
-                        quality. Curve StableSwap (A&ge;500) = 1.0&times;, Uni V3 1bp = 1.1&times;, generic AMM =
-                        0.3&times;
+                        quality. Curve StableSwap (A&ge;500) = 1.0&times;, Uni V3 1bp = 1.1&times;, Balancer/Raydium/
+                        Orca direct APIs now feed measured balance health when available, and generic AMM = 0.3&times;
                       </td>
                     </tr>
                     <tr className="hover:bg-muted/40 transition-colors">

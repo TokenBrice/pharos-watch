@@ -40,7 +40,7 @@ const QUERY = `query($first: Int!, $skip: Int!) {
     type
     chain
     dynamicData { totalLiquidity volume24h swapFee }
-    poolTokens { address symbol decimals balance balanceUSD }
+    poolTokens { address symbol decimals balance balanceUSD weight }
   }
 }`;
 
@@ -49,7 +49,7 @@ interface BalancerPool {
   type: string;
   chain: string;
   dynamicData: { totalLiquidity: string; volume24h: string; swapFee: string };
-  poolTokens: { address: string; symbol: string; decimals: number; balance: string; balanceUSD: string }[];
+  poolTokens: { address: string; symbol: string; decimals: number; balance: string; balanceUSD: string; weight?: string | null }[];
 }
 
 export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
@@ -130,9 +130,16 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         tokens: pool.poolTokens.map((t) => {
           const bal = parseFloat(t.balance);
           const balUsd = parseFloat(t.balanceUSD);
+          const weight = t.weight == null ? null : parseFloat(t.weight);
           const tokenPriceUsd = (Number.isFinite(bal) && bal > 0 && Number.isFinite(balUsd) && balUsd > 0)
             ? balUsd / bal : null;
-          return { address: t.address, symbol: t.symbol, decimals: t.decimals, priceUsd: tokenPriceUsd };
+          return {
+            address: t.address,
+            symbol: t.symbol,
+            decimals: t.decimals,
+            priceUsd: tokenPriceUsd,
+            weight: Number.isFinite(weight) && weight != null && weight > 0 ? weight : null,
+          };
         }),
         price,
         tvlUsd,

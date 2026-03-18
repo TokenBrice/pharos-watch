@@ -225,7 +225,7 @@ describe("processPoolMetrics", () => {
     expect(uniAddressPool).toMatchObject({
       poolType: "uniswap-v3-1bp",
       extra: {
-        feeTier: 100,
+        feeTier: 1,
         organicFraction: 1,
         maturityDays: 45,
       },
@@ -239,7 +239,7 @@ describe("processPoolMetrics", () => {
     expect(uniSymbolPool).toMatchObject({
       poolType: "uniswap-v3-30bp",
       extra: {
-        feeTier: 3000,
+        feeTier: 30,
         organicFraction: 0,
         maturityDays: 20,
       },

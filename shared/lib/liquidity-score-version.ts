@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "4.1",
+  currentVersion: "4.2",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "4.2",
+    title: "Measured direct-API balance health and normalized pool-detail metadata",
+    date: "2026-03-18",
+    effectiveAt: 1773879300,
+    summary:
+      "Balancer, Raydium, and Orca direct-API pools now preserve measured balance and fee metadata through scoring " +
+      "instead of merging with neutral placeholders. Pool-detail fee tiers are normalized to basis points for all sources.",
+    impact: [
+      "Direct-API Balancer, Raydium, and Orca pools now populate top-pool balance bars and detail badges",
+      "Measured direct-API balance ratios now feed balance-weighted aggregates, stress, and effective TVL instead of assuming 1.0",
+      "Balancer weighted pools normalize balance health against target token weights rather than raw reserve symmetry",
+      "Orca vault balances are normalized from raw token units before balance-health calculation",
+      "Top-pool fee tiers now serialize as actual basis points (for example 1bp, 5bp, 30bp) across UniV3, CG-onchain, and direct APIs",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.1",
     title: "Direct API precedence, primary-grade coverage, and fetcher contract hardening",
