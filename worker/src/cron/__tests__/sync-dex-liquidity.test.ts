@@ -28,6 +28,11 @@ vi.mock("../dex-liquidity/fetch-fallbacks", () => ({
   fetchCgTickersFallback: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
 }));
 
+vi.mock("../dex-liquidity/fetch-fluid", () => ({ fetchFluidPools: vi.fn(async () => []) }));
+vi.mock("../dex-liquidity/fetch-balancer", () => ({ fetchBalancerPools: vi.fn(async () => []) }));
+vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(async () => []) }));
+vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => []) }));
+
 import { syncDexLiquidity } from "../dex-liquidity";
 import { fetchDataSources } from "../dex-liquidity/fetch-primary";
 
