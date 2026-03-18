@@ -28,14 +28,14 @@ Four DEX protocols are fetched directly during the scoring cron (`syncDexLiquidi
 
 | Protocol | API Endpoint | Chains | Pool Types | Quality Multipliers | Fields Extracted |
 |----------|-------------|--------|------------|--------------------:|------------------|
-| **Fluid** | `GET https://api.fluid.instadapp.io/v2/:chainId/dexes/stats/tickers` | Ethereum, Arbitrum, Base, Polygon, BSC, Plasma | `fluid-dex` | 0.85x | TVL (`liquidity_in_usd`), one-sided USD volume (normalized from `base_volume` / `target_volume`), price (`last_price`) |
+| **Fluid** | `GET https://api.fluid.instadapp.io/v2/:chainId/dexes/stats/tickers` + official DexReservesResolver on Ethereum/Arbitrum/Base/Polygon | Ethereum, Arbitrum, Base, Polygon, BSC, Plasma | `fluid-dex` | 0.85x | TVL (`liquidity_in_usd`), one-sided USD volume (normalized from `base_volume` / `target_volume`), price (`last_price`), balances (collateral + debt real reserves), fee (`getPoolFee`) |
 | **Balancer** | `POST https://api-v3.balancer.fi/` (GraphQL `poolGetPools`) | 14 mapped chains (ETH, ARB, Base, Polygon, Optimism, Gnosis, Avalanche, Sonic, Fantom, Monad, HyperEVM, Plasma, Mode, zkEVM) | `balancer-stable`, `balancer-weighted` | stable 0.85x, weighted 0.4x | TVL (`totalLiquidity`), volume (`volume24h`), price (derived from `balanceUSD / balance`), balances (`balance`, `balanceUSD`, `weight`), fees (`swapFee`) |
 | **Raydium** | `GET https://api-v3.raydium.io/pools/info/list` | Solana | `raydium-clmm`, `raydium-amm` | clmm 0.85x, amm 0.4x | TVL (`tvl`), volume (`day.volume`), price (`price`), balances (`mintAmountA/B`), fees (`feeRate`) |
 | **Orca** | `GET https://api.orca.so/v2/solana/pools` | Solana | `orca-whirlpool` | 0.85x | TVL (`tvlUsdc`), volume (`stats.24h.volume`), price (`price`), balances (`tokenBalanceA/B`), fees (`feeRate`) |
 
 All four fetchers now surface partial/total upstream failure explicitly to the cron, use circuit breakers (`CIRCUIT_SOURCE.FLUID_DEX_API`, `BALANCER_API`, `RAYDIUM_API`, `ORCA_API`), and apply min TVL thresholds ($10K for liquidity inclusion, $50K for price observations). When both DL and a direct API cover the same pool, the direct API data is preferred (fresher, richer metadata).
 
-Balancer, Raydium, and Orca now preserve that richer metadata through `top_pools_json`: measured `balanceRatio`, per-token `balanceDetails`, and normalized `feeTier` badges in basis points. Balancer weighted pools compare actual USD composition versus target token weights before deriving balance health; Raydium and Orca derive inventory balance from token balances plus per-token USD prices. Fluid still falls back to neutral balance because the current ticker endpoint does not expose reserves.
+Balancer, Raydium, Orca, and resolver-backed Fluid pools now preserve richer metadata through `top_pools_json`: measured `balanceRatio`, per-token `balanceDetails`, and normalized `feeTier` badges in basis points. Balancer weighted pools compare actual USD composition versus target token weights before deriving balance health; Raydium and Orca derive inventory balance from token balances plus per-token USD prices; Fluid derives inventory from the official DexReservesResolver by summing collateral and debt real reserves per token. Fluid pools on chains without that resolver deployment still fall back to neutral balance.
 
 After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates.
 
@@ -73,7 +73,7 @@ See the [Discovery Cron](#discovery-cron) section below for the full discovery p
 - **MetaPool TVL dedup**: Uses `usdTotalExcludingBasePool` to prevent double-counting base pool liquidity across ~322 Curve metapools
 - **Effective TVL**: `poolTvl x mechanismMultiplier x balanceHealth x pairQuality`, summed across all pools
 
-For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydium, and Orca now contribute measured balance ratios when their APIs provide enough token-balance and pricing context; Fluid continues to default to `1.0` balance until a reserves-resolver source is added.
+For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydium, Orca, and resolver-backed Fluid pools now contribute measured balance ratios when their APIs provide enough token-balance and pricing context. Fluid chains without the official DexReservesResolver deployment continue to default to `1.0` balance.
 
 ### Data Quality Filters
 

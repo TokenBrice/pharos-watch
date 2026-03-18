@@ -1205,8 +1205,9 @@ export function MethodologySections() {
           <p>
             When direct APIs expose pool-inventory metadata, Balancer, Raydium, and Orca now contribute measured
             balance health and fee detail instead of neutral placeholders. Balancer weighted pools are normalized
-            against target token weights before the balance ratio is computed; Fluid still defaults to neutral balance
-            until a reserves-resolver path is added.
+            against target token weights before the balance ratio is computed. Fluid now reads reserves and fee detail
+            from the official DexReservesResolver on Ethereum, Arbitrum, Base, and Polygon; unsupported Fluid chains
+            such as BSC and Plasma still fall back to neutral balance.
           </p>
           <p>
             After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score
@@ -1353,8 +1354,9 @@ export function MethodologySections() {
                       <td className="py-2 pr-4">22.5%</td>
                       <td className="py-2">
                         Quality-adjusted TVL using pool mechanism multiplier &times; balance health &times; pair
-                        quality. Curve StableSwap (A&ge;500) = 1.0&times;, Uni V3 1bp = 1.1&times;, Balancer/Raydium/
-                        Orca direct APIs now feed measured balance health when available, and generic AMM = 0.3&times;
+                        quality. Curve StableSwap (A&ge;500) = 1.0&times;, Uni V3 1bp = 1.1&times;, Fluid/
+                        Balancer/Raydium/Orca direct APIs now feed measured balance health when available, and generic
+                        AMM = 0.3&times;
                       </td>
                     </tr>
                     <tr className="hover:bg-muted/40 transition-colors">

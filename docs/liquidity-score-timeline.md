@@ -1,6 +1,28 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.1` (2026-02-19 -> 2026-03-18).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.3` (2026-02-19 -> 2026-03-18).
+
+---
+
+## v4.3 - Fluid DexReservesResolver balance integration (Mar 18, 2026)
+
+**Commit:** `unreleased`
+
+- Fluid pools on Ethereum, Arbitrum, Base, and Polygon now read balances from the official DexReservesResolver instead of staying on a neutral-balance fallback
+- Fluid fee detail now comes from the on-chain pool config and is normalized to basis-point badges in the top-pools UI
+- Measured Fluid balance ratios now feed pool quality, effective TVL, weighted balance ratio, and stress calculations on resolver-backed chains
+- Fluid pools on BSC and Plasma still use neutral-balance fallback because the official resolver is not deployed there
+
+---
+
+## v4.2 - Measured direct-API balance health and normalized pool-detail metadata (Mar 18, 2026)
+
+**Commit:** `unreleased`
+
+- Balancer, Raydium, and Orca direct-API pools now preserve measured balance ratios and fee detail through scoring instead of merging with neutral placeholders
+- Balancer weighted pools normalize pool balance against target token weights rather than raw reserve symmetry
+- Orca vault balances are normalized from raw token units before balance-health calculation
+- Top-pool fee tiers are now serialized as real basis points across UniV3, CG-onchain, and direct APIs
 
 ---
 

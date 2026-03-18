@@ -791,7 +791,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | Field                      | Type                                              | Description                                                                                   |
 | -------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `amplificationCoefficient` | `number \| undefined`                             | Curve amplification coefficient (`A`)                                                         |
-| `balanceRatio`             | `number \| undefined`                             | Measured pool balance ratio from 0 to 1; Balancer weighted pools normalize against weights    |
+| `balanceRatio`             | `number \| undefined`                             | Measured pool balance ratio from 0 to 1; Balancer weighted pools normalize against weights and Fluid uses official DexReservesResolver balances where deployed |
 | `feeTier`                  | `number \| undefined`                             | Normalized fee tier in basis points                                                           |
 | `balanceDetails`           | `Array<{ symbol: string; balancePct: number; isTracked: boolean }> \| undefined` | Per-token USD composition shares used for balance tooltips/detail                             |
 

@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "4.2",
+  currentVersion: "4.3",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "4.3",
+    title: "Fluid DexReservesResolver balance integration",
+    date: "2026-03-18",
+    effectiveAt: 1773882000,
+    summary:
+      "Fluid pools on Ethereum, Arbitrum, Base, and Polygon now read balances and fee detail from the official " +
+      "DexReservesResolver instead of staying on neutral placeholders.",
+    impact: [
+      "Fluid top-pool rows now populate Balance and Detail when the official DexReservesResolver is deployed on that chain",
+      "Fluid pool quality now uses measured balance health on resolver-backed EVM chains, rather than a hardcoded neutral 1.0",
+      "Fluid fee detail now comes from the on-chain pool config (`1% = 10_000`), normalized to basis-point badges in the UI",
+      "BSC and Plasma Fluid pools remain on neutral-balance fallback until Fluid ships the same resolver path there",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.2",
     title: "Measured direct-API balance health and normalized pool-detail metadata",

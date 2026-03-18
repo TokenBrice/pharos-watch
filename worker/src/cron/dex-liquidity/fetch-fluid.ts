@@ -1,7 +1,19 @@
-import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
+import {
+  DIRECT_API_POOL_MIN_TVL_USD,
+  makeDexApiFetchResult,
+  type DexApiFetchResult,
+  type DexApiPool,
+} from "../../lib/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
+import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
+import { buildChainRpcs } from "../../lib/chain-registry";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
+const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
+const FLUID_GET_COLLATERAL_RESERVES_SELECTOR = "0x957755e6";
+const FLUID_GET_DEBT_RESERVES_SELECTOR = "0x55181f11";
+const FLUID_GET_POOL_FEE_SELECTOR = "0x42fcc6fb";
+const FLUID_CHAIN_RPCS = buildChainRpcs();
 
 /** Fluid API chain IDs mapped to our internal chain keys */
 const FLUID_CHAINS: Record<string, number> = {
@@ -11,6 +23,14 @@ const FLUID_CHAINS: Record<string, number> = {
   polygon: 137,
   bsc: 56,
   plasma: 9745,
+};
+
+/** Official Fluid DexReservesResolver deployments from instadapp/fluid-deployments. */
+const FLUID_RESOLVER_BY_CHAIN: Partial<Record<keyof typeof FLUID_CHAINS, string>> = {
+  ethereum: "0xC93876C0EEd99645DD53937b25433e311881A27C",
+  arbitrum: "0x666A400b8cDA0Dc9b59D61706B0F982dDdAF2d98",
+  base: "0x41E6055a282F8b7Abdb8D22Bcd85c2A0eE22e38A",
+  polygon: "0x18DeDd1cF3Af3537D4e726D2Aa81004D65DA8581",
 };
 
 interface FluidTicker {
@@ -24,60 +44,131 @@ interface FluidTicker {
   liquidity_in_usd: string;
 }
 
+function encodeFluidAddressCall(selector: string, address: string): string {
+  return `${selector}${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
+}
+
+function decodeUint256Words(resultHex: `0x${string}` | null, expectedWords: number): bigint[] | null {
+  if (!resultHex) return null;
+  const body = resultHex.slice(2);
+  if (body.length < expectedWords * 64) return null;
+
+  const words: bigint[] = [];
+  for (let i = 0; i < expectedWords; i++) {
+    words.push(BigInt(`0x${body.slice(i * 64, (i + 1) * 64)}`));
+  }
+  return words;
+}
+
+async function enrichFluidPool(
+  chain: keyof typeof FLUID_CHAINS,
+  pool: DexApiPool,
+  signal?: AbortSignal,
+): Promise<void> {
+  const resolver = FLUID_RESOLVER_BY_CHAIN[chain];
+  if (!resolver || pool.tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) return;
+
+  const [collateralReservesResult, debtReservesResult, feeResult] = await Promise.allSettled([
+    fetchEvmCallHexAtBlock(
+      chain,
+      resolver,
+      encodeFluidAddressCall(FLUID_GET_COLLATERAL_RESERVES_SELECTOR, pool.poolAddress),
+      "latest",
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs: FLUID_CHAIN_RPCS },
+    ),
+    fetchEvmCallHexAtBlock(
+      chain,
+      resolver,
+      encodeFluidAddressCall(FLUID_GET_DEBT_RESERVES_SELECTOR, pool.poolAddress),
+      "latest",
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs: FLUID_CHAIN_RPCS },
+    ),
+    fetchEvmCallHexAtBlock(
+      chain,
+      resolver,
+      encodeFluidAddressCall(FLUID_GET_POOL_FEE_SELECTOR, pool.poolAddress),
+      "latest",
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs: FLUID_CHAIN_RPCS },
+    ),
+  ]);
+
+  const collateralReserves = collateralReservesResult.status === "fulfilled"
+    ? decodeUint256Words(collateralReservesResult.value, 4)
+    : null;
+  const debtReserves = debtReservesResult.status === "fulfilled"
+    ? decodeUint256Words(debtReservesResult.value, 6)
+    : null;
+  const feeWords = feeResult.status === "fulfilled"
+    ? decodeUint256Words(feeResult.value, 1)
+    : null;
+
+  const token0Balance = (collateralReserves?.[0] ?? 0n) + (debtReserves?.[2] ?? 0n);
+  const token1Balance = (collateralReserves?.[1] ?? 0n) + (debtReserves?.[3] ?? 0n);
+  if (token0Balance > 0n || token1Balance > 0n) {
+    pool.balances = [Number(token0Balance), Number(token1Balance)];
+  }
+
+  const fee = feeWords?.[0] ?? 0n;
+  if (fee > 0n) {
+    // Fluid fee encoding uses 1% = 10_000, so divide by 1_000_000 for decimal form.
+    pool.feeRate = Number(fee) / 1_000_000;
+  }
+}
+
 export async function fetchFluidPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
   let successfulChains = 0;
 
-  const fetches = Object.entries(FLUID_CHAINS).map(async ([chain, chainId]) => {
+  for (const [chain, chainId] of Object.entries(FLUID_CHAINS) as Array<[keyof typeof FLUID_CHAINS, number]>) {
     const url = `${FLUID_API_BASE}/${chainId}/dexes/stats/tickers`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT },
-      signal,
-    });
-    if (!res.ok) {
-      throw new Error(`${chain} returned ${res.status}`);
-    }
-    const tickers = await res.json() as unknown;
-    if (!Array.isArray(tickers)) {
-      throw new Error(`${chain} returned non-array body`);
-    }
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT },
+        signal,
+      });
+      if (!res.ok) {
+        throw new Error(`${chain} returned ${res.status}`);
+      }
+      const tickers = await res.json() as unknown;
+      if (!Array.isArray(tickers)) {
+        throw new Error(`${chain} returned non-array body`);
+      }
 
-    return (tickers as FluidTicker[]).map((t): DexApiPool | null => {
-      const tvlUsd = parseFloat(t.liquidity_in_usd);
-      const price = parseFloat(t.last_price);
-      const baseVol = parseFloat(t.base_volume);
-      const targetVol = parseFloat(t.target_volume);
-      if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) return null;
+      const pools = (tickers as FluidTicker[]).map((t): DexApiPool | null => {
+        const tvlUsd = parseFloat(t.liquidity_in_usd);
+        const price = parseFloat(t.last_price);
+        const baseVol = parseFloat(t.base_volume);
+        const targetVol = parseFloat(t.target_volume);
+        if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) return null;
 
-      return {
-        source: "fluid",
-        chain,
-        poolAddress: t.pool_id,
-        poolType: "fluid-dex",
-        tokens: [
-          { address: t.base_currency, symbol: "", decimals: 0 },
-          { address: t.target_currency, symbol: "", decimals: 0 },
-        ],
-        price: Number.isFinite(price) && price > 0 ? price : null,
-        tvlUsd,
-        volume24hUsd:
-          (Number.isFinite(baseVol) ? baseVol : 0) +
-          (Number.isFinite(targetVol) ? targetVol : 0),
-        feeRate: null,
-        balances: null,
-        tokenVolumes24h: [Number.isFinite(baseVol) ? baseVol : 0, Number.isFinite(targetVol) ? targetVol : 0],
-      };
-    }).filter((p): p is DexApiPool => p !== null);
-  });
+        return {
+          source: "fluid",
+          chain,
+          poolAddress: t.pool_id,
+          poolType: "fluid-dex",
+          tokens: [
+            { address: t.base_currency, symbol: "", decimals: 0 },
+            { address: t.target_currency, symbol: "", decimals: 0 },
+          ],
+          price: Number.isFinite(price) && price > 0 ? price : null,
+          tvlUsd,
+          volume24hUsd:
+            (Number.isFinite(baseVol) ? baseVol : 0) +
+            (Number.isFinite(targetVol) ? targetVol : 0),
+          feeRate: null,
+          balances: null,
+          tokenVolumes24h: [Number.isFinite(baseVol) ? baseVol : 0, Number.isFinite(targetVol) ? targetVol : 0],
+        };
+      }).filter((p): p is DexApiPool => p !== null);
 
-  const settled = await Promise.allSettled(fetches);
-  for (const result of settled) {
-    if (result.status === "fulfilled") {
       successfulChains++;
-      results.push(...result.value);
-    } else {
-      const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      for (const pool of pools) {
+        await enrichFluidPool(chain, pool, signal);
+      }
+      results.push(...pools);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
       errors.push(reason);
       console.warn("[fetch-fluid] Chain fetch failed:", reason);
     }

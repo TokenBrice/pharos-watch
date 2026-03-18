@@ -52,7 +52,7 @@ const DATA_SOURCE_GROUPS = [
   },
   {
     label: "DEX Data",
-    sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, Fluid API, Balancer API, Raydium API, Orca API, GeckoTerminal, DexScreener",
+    sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, GeckoTerminal, DexScreener",
   },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest)" },
 ] as const;
@@ -383,7 +383,7 @@ export default function AboutPage() {
                   name: "Where does Pharos get its data?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; direct protocol redemption quotes for selected redeemable assets; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads for live reserve composition and redemption-backstop capacity where available, including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Accountable, Tether, Frax, Circle, Origin Protocol, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO reserve feeds; Etherscan v2 and TronGrid for freeze-event tracking; Alchemy and dRPC for EVM RPCs including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Liquity/B.Protocol, and ERC-4626 vault reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/exchange-api for live FX rates including CNH and other non-ECB coverage; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
+                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; direct protocol redemption quotes for selected redeemable assets; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads for live reserve composition and redemption-backstop capacity where available, including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Accountable, Tether, Frax, Circle, Origin Protocol, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO reserve feeds; Etherscan v2 and TronGrid for freeze-event tracking; Alchemy and dRPC for EVM RPCs including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Liquity/B.Protocol, ERC-4626 vault reads, and Fluid DexReservesResolver reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/exchange-api for live FX rates including CNH and other non-ECB coverage; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
                   },
                 },
               ],
