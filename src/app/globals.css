@@ -202,6 +202,66 @@
   [data-slot="button"][data-size="icon-xs"]:not(:disabled):active {
     transform: scale(0.98) translateY(1px);
   }
+
+  /* Live data change indicators */
+  @keyframes pharos-flash-up {
+    0% { background-color: oklch(0.7 0.15 145 / 0.3); }
+    100% { background-color: transparent; }
+  }
+  
+  @keyframes pharos-flash-down {
+    0% { background-color: oklch(0.7 0.15 25 / 0.3); }
+    100% { background-color: transparent; }
+  }
+  
+  .pharos-data-fresh-up {
+    animation: pharos-flash-up 1.5s ease-out;
+  }
+  
+  .pharos-data-fresh-down {
+    animation: pharos-flash-down 1.5s ease-out;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .pharos-data-fresh-up,
+    .pharos-data-fresh-down {
+      animation: none;
+    }
+  }
+
+  /* Column resize handle */
+  .pharos-resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    cursor: col-resize;
+    opacity: 0;
+    transition: opacity 0.15s;
+    background: var(--brand-accent);
+  }
+  
+  [data-slot="table-head"]:hover .pharos-resize-handle,
+  .pharos-resize-handle.is-resizing {
+    opacity: 1;
+  }
+  
+  .pharos-resize-handle:hover,
+  .pharos-resize-handle.is-resizing {
+    width: 6px;
+  }
+  
+  /* Density modes */
+  .pharos-density-compact [data-slot="table-cell"] {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .pharos-density-spacious [data-slot="table-cell"] {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
   [data-slot="button"][data-variant="default"] {
     box-shadow:
       0 1px 2px oklch(0 0 0 / 20%),
