@@ -33,7 +33,7 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "Supply & Price",
     sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Pyth Network, Binance, Coinbase, RedStone, Curve on-chain, and direct protocol redemption quotes for selected redeemable assets",
+      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Pyth Network, Binance, Coinbase, RedStone, Curve on-chain, Fluid, Balancer, Raydium, Orca, and direct protocol redemption quotes for selected redeemable assets",
   },
   {
     label: "Reserve Transparency",
@@ -52,7 +52,7 @@ const DATA_SOURCE_GROUPS = [
   },
   {
     label: "DEX Data",
-    sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, GeckoTerminal, DexScreener",
+    sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, Fluid API, Balancer API, Raydium API, Orca API, GeckoTerminal, DexScreener",
   },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest)" },
 ] as const;

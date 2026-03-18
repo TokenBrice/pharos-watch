@@ -18,6 +18,10 @@ const KNOWN_SOURCES = [
   { key: "curve-onchain", label: "Curve on-chain" },
   { key: "curve-oracle", label: "Curve oracle" },
   { key: "dex-promoted", label: "DEX prices" },
+  { key: "fluid-dex", label: "Fluid" },
+  { key: "balancer-dex", label: "Balancer" },
+  { key: "raydium-dex", label: "Raydium" },
+  { key: "orca-dex", label: "Orca" },
 ] as const;
 
 type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
