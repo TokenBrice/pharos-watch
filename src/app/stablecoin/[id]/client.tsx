@@ -207,13 +207,13 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       {detailSections.some((section) => section.id === "yield") ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
 
-      <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
-
       <section id="liquidity">
         <SectionErrorBoundary name="liquidity">
           <DexLiquidityCard stablecoinId={viewModel.id} />
         </SectionErrorBoundary>
       </section>
+
+      <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
 
       {!viewModel.isNavToken ? (
         <section id="history">
