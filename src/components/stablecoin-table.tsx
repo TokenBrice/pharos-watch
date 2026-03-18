@@ -8,15 +8,9 @@ import { TableBody, TableCell, TableHead, TableCaption, TableHeader, TableRow } 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, MoreHorizontal } from "lucide-react";
+import { Download } from "lucide-react";
 import { TableToolbar } from "./table-toolbar";
 import { useTableDensity, DENSITY_CONFIGS } from "@/hooks/use-table-density";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -192,7 +186,6 @@ export function StablecoinTable({
   const metaById = TRACKED_META_BY_ID;
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-  const [showFilters, setShowFilters] = useState(true);
 
   // Density mode
   const [density, setDensity] = useTableDensity();
@@ -210,7 +203,7 @@ export function StablecoinTable({
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcut: focus table
   useEffect(() => {
     function handleFocusTable() {
       tableRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -219,17 +212,8 @@ export function StablecoinTable({
       firstRow?.focus();
     }
 
-    function handleToggleFilters() {
-      setShowFilters((prev) => !prev);
-    }
-
     window.addEventListener("focus-stablecoin-table", handleFocusTable);
-    window.addEventListener("toggle-filters", handleToggleFilters);
-
-    return () => {
-      window.removeEventListener("focus-stablecoin-table", handleFocusTable);
-      window.removeEventListener("toggle-filters", handleToggleFilters);
-    };
+    return () => window.removeEventListener("focus-stablecoin-table", handleFocusTable);
   }, []);
 
   const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sortKey, visibleSet), [sortKey, visibleSet]);
@@ -319,8 +303,8 @@ export function StablecoinTable({
       />
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
-      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-auto px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
-        <table className="min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped">
+      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-hidden px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
+        <table className={`min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped pharos-density-${density}`}>
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
             <TableRow>
@@ -567,33 +551,6 @@ export function StablecoinTable({
                       </div>
                     </TableCell>
                   )}
-                  {/* Action menu */}
-                  <TableCell className="w-[40px] p-0">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          onClick={(e) => e.stopPropagation()}
-                          className="pharos-focus-ring flex h-full w-full items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="More actions"
-                        >
-                          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.push(buildStablecoinUrl(coin.id))}>
-                          View details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          navigator.clipboard.writeText(`${coin.name} (${coin.symbol})`);
-                        }}>
-                          Copy name
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.push(`/compare/?coins=${coin.id}`)}>
-                          Compare
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
                 </TableRow>
               );
             })}

@@ -318,6 +318,7 @@ function HomepageSectionBand({
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
   const [showCampaignCallout, setShowCampaignCallout] = useState(true);
+  const [showFilters, setShowFilters] = useState(true);
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
   const { data: logos } = useLogos();
   const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg } = usePegSummary();
@@ -385,6 +386,15 @@ export function HomepageClient() {
     return () => window.clearTimeout(timeoutId);
   }, []);
 
+  // Keyboard shortcut to toggle filters
+  useEffect(() => {
+    function handleToggleFilters(e: Event) {
+      setShowFilters((prev) => !prev);
+    }
+    window.addEventListener("toggle-filters", handleToggleFilters);
+    return () => window.removeEventListener("toggle-filters", handleToggleFilters);
+  }, []);
+
   return (
     <div className="space-y-6">
       <DataLiveRegion />
@@ -423,8 +433,8 @@ export function HomepageClient() {
       <SectionErrorBoundary name="table">
         <section>
           <h2 className="mb-4 text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
-          <FilterBar {...filters} />
-          <div className="mt-6">
+          {showFilters && <FilterBar {...filters} />}
+          <div className={showFilters ? "mt-6" : ""}>
             <StablecoinTable
               data={data?.peggedAssets}
               isLoading={isLoading}
