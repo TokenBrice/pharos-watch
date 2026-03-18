@@ -20,7 +20,20 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool m
 | **Durability**      | 15%    | DeFiLlama Yields + History | 35% TVL stability, 25% volume consistency, 25% maturity, 15% organic fraction (sqrt curve)                             |
 | **Pair Diversity**  | 7.5%   | DeFiLlama Yields           | Pool count, diminishing returns: min(100, poolCount x 5)                                                               |
 
-Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base). After primary-source pool matching, the scoring cron also reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
+Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + four direct API fetchers (Fluid, Balancer, Raydium, Orca). After primary-source pool matching, the scoring cron also reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
+
+### Direct API Data Sources
+
+Four DEX protocols are fetched directly during the scoring cron (`syncDexLiquidity`), in parallel with existing DL/Curve/Uniswap/Aerodrome fetches. Results are normalized into a shared `DexApiPool` type (`worker/src/lib/dex-api-common.ts`), token-matched against the stablecoin contract registry, deduplicated against DL via `buildPoolFingerprint()`, and merged into the pool scoring pipeline. Source family: `direct_api`.
+
+| Protocol | API Endpoint | Chains | Pool Types | Quality Multipliers | Fields Extracted |
+|----------|-------------|--------|------------|--------------------:|------------------|
+| **Fluid** | `GET https://api.fluid.instadapp.io/v2/:chainId/dexes/stats/tickers` | Ethereum, Arbitrum, Base, Polygon, BSC, Plasma, Solana | `fluid-dex` | 0.85x | TVL (`liquidity_in_usd`), volume (`base_volume` + `target_volume`), price (`last_price`) |
+| **Balancer** | `POST https://api-v3.balancer.fi/` (GraphQL `poolGetPools`) | 17 chains (ETH, ARB, Base, Polygon, Optimism, Gnosis, Avalanche, Sonic, Plasma, ...) | `balancer-stable`, `balancer-weighted` | stable 0.85x, weighted 0.4x | TVL (`totalLiquidity`), volume (`volume24h`), price (derived from `balanceUSD / balance`), balances (`balance`, `balanceUSD`, `weight`), fees (`swapFee`) |
+| **Raydium** | `GET https://api-v3.raydium.io/pools/info/list` | Solana | `raydium-clmm`, `raydium-amm` | clmm 0.85x, amm 0.4x | TVL (`tvl`), volume (`day.volume`), price (`price`), balances (`mintAmountA/B`), fees (`feeRate`) |
+| **Orca** | `GET https://api.orca.so/v2/solana/pools` | Solana | `orca-whirlpool` | 0.85x | TVL (`tvlUsdc`), volume (`stats.24h.volume`), price (`price`), balances (`tokenBalanceA/B`), fees (`feeRate`) |
+
+All four fetchers use `Promise.allSettled()` for partial-failure tolerance, circuit breakers (`CIRCUIT_SOURCE.FLUID_DEX_API`, `BALANCER_API`, `RAYDIUM_API`, `ORCA_API`), and min TVL thresholds ($10K for liquidity inclusion, $50K for price observations). When both DL and a direct API cover the same pool, the direct API data is preferred (fresher, richer metadata).
 
 After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates.
 
@@ -45,6 +58,9 @@ See the [Discovery Cron](#discovery-cron) section below for the full discovery p
 | Aerodrome Volatile (vAMM) | 0.4x       | project contains `aerodrome`, non-stable                  |
 | Balancer Stable           | 0.85x      | project contains `balancer` + stable pattern              |
 | Balancer Weighted         | 0.4x       | project contains `balancer`, non-stable                   |
+| Raydium CLMM              | 0.85x      | concentrated liquidity (direct API or DL)                 |
+| Raydium AMM               | 0.4x       | standard AMM, wider spreads                               |
+| Orca Whirlpool            | 0.85x      | concentrated liquidity (direct API or DL)                 |
 | Generic AMM               | 0.3x       | fallback                                                  |
 | Orderbook                 | 0.6x       | CoinGecko tickers fallback (centralized exchange, no AMM) |
 
@@ -230,16 +246,20 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 
 **Price observation sources:**
 
-| Source               | Chains                            | Method                                                                | Filter                                                                                                                                               |
-| -------------------- | --------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin                                 | TVL >= $50K, balance ratio >= 0.3                                                                                                                    |
-| **Uniswap V3**       | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. (after alias normalization such as `USD₮0` -> `USDT`), peg-aware price sanity against the shared validation engine |
-| **Aerodrome**        | Base                              | Subgraph `token0Price`/`token1Price` + `reserveUSD`                   | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity against the shared validation engine                                                        |
-| **DexScreener**      | 30+ chains (universal fallback)   | Token pools API `priceUsd`                                            | Pair liquidity >= $50K for price observations, >= $1K for pool discovery, peg-aware price sanity against the shared validation engine                |
+| Source               | Tier | Chains                            | Method                                                                | Filter                                                                                                                                               |
+| -------------------- | ---- | --------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Curve StableSwap** | 1 (1.0) | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin                                 | TVL >= $50K, balance ratio >= 0.3                                                                                                                    |
+| **Uniswap V3**       | 1 (1.0) | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. (after alias normalization such as `USD₮0` -> `USDT`), peg-aware price sanity against the shared validation engine |
+| **Aerodrome**        | 1 (1.0) | Base                              | Subgraph `token0Price`/`token1Price` + `reserveUSD`                   | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity against the shared validation engine                                                        |
+| **Fluid**            | 1 (1.0) | Ethereum, Arbitrum, Base, Polygon, BSC, Plasma, Solana | Direct API `last_price` (base/target ratio)                           | TVL >= $50K, peg-aware price sanity against the shared validation engine                                                                              |
+| **Balancer**         | 1 (1.0) | 17 chains (ETH, ARB, Base, Polygon, Optimism, Gnosis, Avalanche, Sonic, ...) | Derived from `balanceUSD / balance` per token                         | TVL >= $50K, peg-aware price sanity against the shared validation engine                                                                              |
+| **Raydium**          | 1 (1.0) | Solana                            | Direct API `price` field (base/quote ratio)                           | TVL >= $50K, peg-aware price sanity against the shared validation engine                                                                              |
+| **Orca**             | 1 (1.0) | Solana                            | Direct API `price` field (base/quote ratio)                           | TVL >= $50K, peg-aware price sanity against the shared validation engine                                                                              |
+| **DexScreener**      | lower | 30+ chains (universal fallback)   | Token pools API `priceUsd`                                            | Pair liquidity >= $50K for price observations, >= $1K for pool discovery, peg-aware price sanity against the shared validation engine                |
 
 **Price extraction pipeline:**
 
-1. Collect price observations from all four source families during data fetching phase
+1. Collect price observations from all source families during data fetching phase
 2. Merge all observations into a single map keyed by stablecoin ID
 3. Compute TVL-weighted median per stablecoin (robust against distorted pools from any single source)
 4. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
