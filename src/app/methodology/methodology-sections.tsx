@@ -56,11 +56,12 @@ export function MethodologySections() {
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
-            Every score Pharos computes starts with a price. The pricing pipeline collects quotes from up to 10 independent
-            sources, clusters them into agreement groups, and selects the highest-confidence result. A pool challenge guard
-            downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools diverge from aggregator consensus. Protocol-level
-            redemption prices override market data for wrapper assets, and a 4-pass enrichment pipeline fills gaps for
-            long-tail coins. Each asset is tagged with a confidence level so downstream systems can react to data quality.
+            Every score Pharos computes starts with a price. The pricing pipeline collects quotes from more than a dozen
+            live voices, clusters them into agreement groups, and selects the highest-confidence result. A pool challenge
+            guard downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools
+            diverge from aggregator consensus. Protocol-level redemption prices override market data for wrapper assets,
+            and a 4-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
+            so downstream systems can react to data quality.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
@@ -69,7 +70,7 @@ export function MethodologySections() {
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Sources</p>
-              <p className="text-foreground">10 independent voices</p>
+              <p className="text-foreground">12+ live voices</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Output</p>
@@ -131,7 +132,7 @@ export function MethodologySections() {
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">On-chain</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Curve (w3)</p>
-                  <p className="text-xs text-muted-foreground">DEX pools (w1), GT (w1)</p>
+                  <p className="text-xs text-muted-foreground">DEX agg (w1), protocol DEX (w2-w3), GT (w1)</p>
                 </div>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -178,7 +179,7 @@ export function MethodologySections() {
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">On-chain</p>
-                  <p className="text-xs text-muted-foreground">Curve (w3), DEX (w1), GT (w1)</p>
+                  <p className="text-xs text-muted-foreground">Curve (w3), DEX agg (w1), protocol DEX (w2-w3), GT (w1)</p>
                 </div>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -271,6 +272,12 @@ export function MethodologySections() {
                       <td className="py-2">Promoted from depeg-only to primary voice</td>
                     </tr>
                     <tr className="hover:bg-muted/40 transition-colors">
+                      <td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td>
+                      <td className="py-2 pr-4">2-3</td>
+                      <td className="py-2 pr-4">On-chain / pool-state API</td>
+                      <td className="py-2">One aggregated source per protocol from Fluid, Balancer, Raydium, and Orca</td>
+                    </tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">GeckoTerminal</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">On-chain</td>
@@ -297,9 +304,9 @@ export function MethodologySections() {
                 <li>If no cluster of 2+ forms, pick the source closest to the canonical peg reference</li>
                 <li>
                   <span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are soft aggregators
-                  (CG, DL-list, DEX average), check each large DEX pool (&ge;$100K TVL). If any diverges &ge;500 bps
-                  from consensus, downgrade to <code className="text-xs">low</code> and replace the price with a TVL-weighted
-                  mean of all qualifying individual pool prices &mdash; on-chain liquidity is a more honest signal
+                  (CG, DL-list, DEX average), check each large priced DEX pool (&ge;$100K TVL) from the current liquidity
+                  snapshot. If any diverges &ge;500 bps from consensus, downgrade to <code className="text-xs">low</code> and
+                  replace the price with a TVL-weighted mean of all qualifying individual pool prices &mdash; on-chain liquidity is a more honest signal
                   when aggregators share upstream data
                 </li>
               </ol>
@@ -1190,6 +1197,10 @@ export function MethodologySections() {
           <p>
             Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 30 minutes.
             Aggregates pool data across all major DEXes and chains.
+          </p>
+          <p>
+            Dedicated direct-API sources (Fluid, Balancer, Raydium, Orca) are treated as primary-grade inputs and
+            replace overlapping DeFiLlama pools before staged or fallback discovery sources are merged.
           </p>
           <p>
             After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score

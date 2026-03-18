@@ -1,6 +1,19 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.0` (2026-02-19 -> 2026-03-10).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.1` (2026-02-19 -> 2026-03-18).
+
+---
+
+## v4.1 - Direct API precedence, primary-grade coverage, and fetcher hardening (Mar 18, 2026)
+
+**Commit:** `unreleased`
+
+- Direct API pools now replace overlapping DeFiLlama pools before scoring via address/fingerprint dedup, instead of being appended after fallback sources
+- Direct API sources now merge before staged discovery and DexScreener/CG-ticker recovery paths, preventing lower-confidence sources from claiming the same pool first
+- direct_api-only rows now classify as `primary` coverage with confidence `1.0`, rather than falling into the generic fallback bucket
+- Raydium and Orca fetchers were hardened against live API drift (Raydium lowercase `poolType`, Orca cursor pagination / retry handling)
+- Fluid pool volume is now normalized to one-sided USD volume instead of summing both raw token legs
+- Balancer intake is now constrained to supported stable/weighted pool families on mapped chains only
 
 ---
 

@@ -59,7 +59,7 @@ export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexP
   }
 }
 
-/** Per-pool price source stored in dex_prices.price_sources_json */
+/** Per-protocol price source stored in dex_prices.price_sources_json */
 export interface DexPoolSource {
   protocol: string;
   chain: string;
@@ -68,7 +68,7 @@ export interface DexPoolSource {
 }
 
 /**
- * Load all qualifying individual pool prices per asset from dex_prices.price_sources_json.
+ * Load all qualifying individual pool prices per asset from dex_liquidity.top_pools_json.
  * Used as "pool challengers" — if ANY large pool diverges from consensus,
  * it signals that aggregators may be picking up small misleading pools
  * while ignoring large pools showing depeg.
@@ -80,6 +80,50 @@ export async function loadDexPoolChallengers(
   nowSec: number,
 ): Promise<Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string }>>> {
   const result = new Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string }>>();
+  try {
+    const rows = await db
+      .prepare(
+        `SELECT stablecoin_id, top_pools_json, updated_at
+         FROM dex_liquidity
+         WHERE stablecoin_id != '__global__' AND top_pools_json IS NOT NULL`,
+      )
+      .all<{ stablecoin_id: string; top_pools_json: string; updated_at: number }>();
+
+    for (const row of rows.results ?? []) {
+      if (nowSec - row.updated_at > maxAgeSec) continue;
+      let pools: Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown }>;
+      try {
+        pools = JSON.parse(row.top_pools_json);
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(pools) || pools.length === 0) continue;
+
+      const qualifying: Array<{ price: number; tvlUsd: number; protocol: string; chain: string }> = [];
+      for (const pool of pools) {
+        const price = typeof pool.price === "number" ? pool.price : Number(pool.price);
+        const tvlUsd = typeof pool.tvlUsd === "number" ? pool.tvlUsd : Number(pool.tvlUsd);
+        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
+        qualifying.push({
+          price,
+          tvlUsd,
+          protocol: typeof pool.project === "string" ? pool.project : "unknown",
+          chain: typeof pool.chain === "string" ? pool.chain : "unknown",
+        });
+      }
+      if (qualifying.length > 0) {
+        result.set(row.stablecoin_id, qualifying);
+      }
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("no such table")) {
+      console.error("[depeg-helpers] Unexpected error loading dex pool challengers:", msg);
+    }
+  }
+
+  if (result.size > 0) return result;
+
   try {
     const rows = await db
       .prepare("SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL")
@@ -96,9 +140,9 @@ export async function loadDexPoolChallengers(
       if (!Array.isArray(sources) || sources.length === 0) continue;
 
       const qualifying: Array<{ price: number; tvlUsd: number; protocol: string; chain: string }> = [];
-      for (const s of sources) {
-        if (s.tvl < minPoolTvlUsd || !Number.isFinite(s.price) || s.price <= 0) continue;
-        qualifying.push({ price: s.price, tvlUsd: s.tvl, protocol: s.protocol, chain: s.chain });
+      for (const source of sources) {
+        if (source.tvl < minPoolTvlUsd || !Number.isFinite(source.price) || source.price <= 0) continue;
+        qualifying.push({ price: source.price, tvlUsd: source.tvl, protocol: source.protocol, chain: source.chain });
       }
       if (qualifying.length > 0) {
         result.set(row.stablecoin_id, qualifying);
@@ -107,7 +151,7 @@ export async function loadDexPoolChallengers(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("no such table")) {
-      console.error("[depeg-helpers] Unexpected error loading dex pool challengers:", msg);
+      console.error("[depeg-helpers] Unexpected error loading legacy dex pool challengers:", msg);
     }
   }
   return result;

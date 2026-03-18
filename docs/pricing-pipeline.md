@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.2`
+- **Current methodology version:** `v2.3`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -43,10 +43,10 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 | Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
 | Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/enrich-prices.ts` | Additional primary-consensus voice for crvUSD |
 | Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only trusted DEX rows are promoted into primary pricing |
-| Fluid DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | Per-protocol disaggregated price from `price_sources_json` |
-| Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | Per-protocol disaggregated price from `price_sources_json` |
-| Raydium DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | Per-protocol disaggregated price from `price_sources_json` |
-| Orca DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | Per-protocol disaggregated price from `price_sources_json` |
+| Fluid DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Fluid price per asset from `price_sources_json` |
+| Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Balancer price per asset from `price_sources_json` |
+| Raydium DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Raydium price per asset from `price_sources_json` |
+| Orca DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Orca price per asset from `price_sources_json` |
 | GeckoTerminal pool probe | 1 | `worker/src/lib/geckoterminal-price-probe.ts` | Pool-level cross-check for single-source CG-only assets |
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
@@ -70,10 +70,15 @@ Source labels list all agreeing sources alphabetically:
 
 ### Pool Challenge (Soft-Source Guard)
 
-After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against ALL individual DEX pools from `dex_prices.price_sources_json` that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from consensus beyond the threshold:
+After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against current individual priced pools from `dex_liquidity.top_pools_json` that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from consensus beyond the threshold:
 
 1. Confidence is downgraded to `low`.
 2. The consensus price is **replaced** with the TVL-weighted mean of all qualifying individual pool prices (`source = "pool-tvl-weighted"`).
+
+The DEX bridge and the pool challenge now deliberately read from different storage views:
+
+- `dex_prices.price_sources_json`: one aggregate per protocol, used for primary-price promotion
+- `dex_liquidity.top_pools_json`: current individual pools, used for large-pool challenge / depeg confirmation
 
 This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus — large pools carry proportional weight. Hard sources (Pyth, Binance, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
 
@@ -90,6 +95,8 @@ Several live providers need normalization before their prices can safely enter c
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **Circuit-breaker accounting:** for Pyth and RedStone, a transport-successful request that returns zero usable prices is still recorded as an unsuccessful outcome for breaker state. This avoids treating empty responses as healthy data.
 - **Curve on-chain sanity bound:** Implied prices from `get_dy` calls are capped at `< 10,000` (to accommodate commodity tokens like PAXG/XAUT at ~$2,900).
+- **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before they enter primary consensus, so one Balancer/Fluid/Raydium/Orca protocol can contribute at most one elevated source per asset.
+- **Direct-API pair conversion:** non-USD tracked stablecoin pairs use peg-reference-aware conversion rather than treating every tracked stablecoin counterparty as `$1`.
 
 These normalization rules live in code because they are provider quirks, not business-level scoring decisions.
 

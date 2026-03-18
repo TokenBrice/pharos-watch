@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.2",
+  currentVersion: "2.3",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+  {
+    version: "2.3",
+    title: "Per-protocol DEX bridge aggregation and top-pool challenge source split",
+    date: "2026-03-18",
+    effectiveAt: 1773875700,
+    summary:
+      "The DEX bridge now persists one aggregated price entry per protocol instead of re-injecting individual top pools as repeated consensus sources. " +
+      "Pool challenge reads large current pools from dex_liquidity.top_pools_json, separating consensus promotion from individual-pool depeg challenge inputs.",
+    impact: [
+      "Fluid, Balancer, Raydium, and Orca now contribute at most one promoted consensus source each",
+      "Repeated high-TVL pools from the same protocol can no longer overweight primary consensus by appearing multiple times",
+      "dex_prices.price_sources_json now stores per-protocol aggregates for the pricing bridge",
+      "Pool challenge no longer depends on dex_prices.price_sources_json; it reads current top pools from dex_liquidity instead",
+      "Non-USD tracked stablecoin pairs use peg-reference-aware conversion when deriving direct-API DEX prices",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "2.2",
     title: "Pool confirmation fix, peg-type-aware challenge, source quality gating",

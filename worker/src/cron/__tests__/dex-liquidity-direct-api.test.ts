@@ -1,9 +1,28 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { DexApiPool } from "../../lib/dex-api-common";
+
+vi.mock("../../lib/abort", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");
+  return {
+    ...actual,
+    sleepWithSignal: vi.fn(async () => {}),
+  };
+});
 
 // Mock global fetch
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status });
+}
+
+function mockJsonFetch(body: unknown, status = 200): void {
+  mockFetch.mockImplementation(() => Promise.resolve(jsonResponse(body, status)));
+}
+
+function mockTextFetch(body: string, status: number): void {
+  mockFetch.mockImplementation(() => Promise.resolve(new Response(body, { status })));
+}
 
 // ---------------------------------------------------------------------------
 // Fluid
@@ -13,7 +32,7 @@ describe("fetchFluidPools", () => {
 
   it("fetches all chains and normalizes to DexApiPool[]", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify([
+    mockJsonFetch([
       {
         ticker_id: "0xbase_0xquote",
         base_currency: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -24,10 +43,12 @@ describe("fetchFluidPools", () => {
         pool_id: "0xPoolAddr",
         liquidity_in_usd: "500000",
       },
-    ])));
+    ]);
 
     const pools = await fetchFluidPools();
     expect(pools.length).toBeGreaterThan(0);
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(false);
     const pool = pools[0];
     expect(pool.source).toBe("fluid");
     expect(pool.poolType).toBe("fluid-dex");
@@ -38,7 +59,7 @@ describe("fetchFluidPools", () => {
 
   it("sets empty symbols and decimals=0 for tokens", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify([
+    mockJsonFetch([
       {
         ticker_id: "0xbase_0xquote",
         base_currency: "0xtoken1",
@@ -49,7 +70,7 @@ describe("fetchFluidPools", () => {
         pool_id: "0xpool",
         liquidity_in_usd: "200000",
       },
-    ])));
+    ]);
 
     const pools = await fetchFluidPools();
     expect(pools[0].tokens[0].symbol).toBe("");
@@ -60,7 +81,7 @@ describe("fetchFluidPools", () => {
 
   it("approximates volume as sum of base and target volumes", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify([
+    mockJsonFetch([
       {
         ticker_id: "tid",
         base_currency: "0xa",
@@ -71,7 +92,7 @@ describe("fetchFluidPools", () => {
         pool_id: "0xp",
         liquidity_in_usd: "100000",
       },
-    ])));
+    ]);
 
     const pools = await fetchFluidPools();
     expect(pools[0].volume24hUsd).toBe(100000);
@@ -81,23 +102,27 @@ describe("fetchFluidPools", () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockFetch
       .mockRejectedValueOnce(new Error("network error"))
-      .mockResolvedValue(new Response(JSON.stringify([])));
+      .mockImplementation(() => Promise.resolve(jsonResponse([])));
 
     const pools = await fetchFluidPools();
     // Should not throw — partial failure is OK
     expect(Array.isArray(pools)).toBe(true);
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(true);
   });
 
   it("returns empty array on complete failure", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockFetch.mockRejectedValue(new Error("all chains down"));
     const pools = await fetchFluidPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("skips tickers with zero or invalid TVL", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify([
+    mockJsonFetch([
       {
         ticker_id: "tid",
         base_currency: "0xa",
@@ -118,15 +143,17 @@ describe("fetchFluidPools", () => {
         pool_id: "0xp2",
         liquidity_in_usd: "NaN",
       },
-    ])));
+    ]);
 
     const pools = await fetchFluidPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(false);
   });
 
   it("sets price to null for invalid prices", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify([
+    mockJsonFetch([
       {
         ticker_id: "tid",
         base_currency: "0xa",
@@ -137,7 +164,7 @@ describe("fetchFluidPools", () => {
         pool_id: "0xp",
         liquidity_in_usd: "100000",
       },
-    ])));
+    ]);
 
     const pools = await fetchFluidPools();
     expect(pools[0].price).toBeNull();
@@ -145,7 +172,7 @@ describe("fetchFluidPools", () => {
 
   it("sets feeRate to null (Fluid API does not provide fee data)", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify([
+    mockJsonFetch([
       {
         ticker_id: "tid",
         base_currency: "0xa",
@@ -156,7 +183,7 @@ describe("fetchFluidPools", () => {
         pool_id: "0xp",
         liquidity_in_usd: "100000",
       },
-    ])));
+    ]);
 
     const pools = await fetchFluidPools();
     expect(pools[0].feeRate).toBeNull();
@@ -165,18 +192,22 @@ describe("fetchFluidPools", () => {
 
   it("handles non-array response body", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: "bad request" })));
+    mockJsonFetch({ error: "bad request" });
 
     const pools = await fetchFluidPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("handles HTTP error status gracefully", async () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
-    mockFetch.mockResolvedValue(new Response("Server Error", { status: 500 }));
+    mockTextFetch("Server Error", 500);
 
     const pools = await fetchFluidPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 });
 
@@ -188,7 +219,7 @@ describe("fetchBalancerPools", () => {
 
   it("fetches stable pools and classifies pool type", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
         type: "STABLE",
@@ -199,7 +230,7 @@ describe("fetchBalancerPools", () => {
           { address: "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f", symbol: "GHO", decimals: 18, balance: "500000", balanceUSD: "500000" },
         ],
       }]},
-    })));
+    });
 
     const pools = await fetchBalancerPools();
     expect(pools.length).toBe(1);
@@ -212,7 +243,7 @@ describe("fetchBalancerPools", () => {
 
   it("classifies WEIGHTED pools correctly", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xweighted",
         type: "WEIGHTED",
@@ -223,7 +254,7 @@ describe("fetchBalancerPools", () => {
           { address: "0xtoken2", symbol: "WETH", decimals: 18, balance: "50", balanceUSD: "100000" },
         ],
       }]},
-    })));
+    });
 
     const pools = await fetchBalancerPools();
     expect(pools[0].poolType).toBe("balancer-weighted");
@@ -243,9 +274,7 @@ describe("fetchBalancerPools", () => {
       ],
     }));
 
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
-      data: { poolGetPools: poolData },
-    })));
+    mockJsonFetch({ data: { poolGetPools: poolData } });
 
     const pools = await fetchBalancerPools();
     expect(pools).toHaveLength(stableTypes.length);
@@ -256,7 +285,7 @@ describe("fetchBalancerPools", () => {
 
   it("derives per-token priceUsd from balanceUSD / balance", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
         type: "STABLE",
@@ -267,7 +296,7 @@ describe("fetchBalancerPools", () => {
           { address: "0xb", symbol: "DAI", decimals: 18, balance: "99950", balanceUSD: "99950" },
         ],
       }]},
-    })));
+    });
 
     const pools = await fetchBalancerPools();
     expect(pools[0].tokens[0].priceUsd).toBeCloseTo(100050 / 100000);
@@ -276,7 +305,7 @@ describe("fetchBalancerPools", () => {
 
   it("sets token priceUsd to null when balance is zero", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
         type: "STABLE",
@@ -287,7 +316,7 @@ describe("fetchBalancerPools", () => {
           { address: "0xb", symbol: "DAI", decimals: 18, balance: "50000", balanceUSD: "50000" },
         ],
       }]},
-    })));
+    });
 
     const pools = await fetchBalancerPools();
     expect(pools[0].tokens[0].priceUsd).toBeNull();
@@ -330,7 +359,7 @@ describe("fetchBalancerPools", () => {
 
   it("skips pools with unknown chain", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
         type: "STABLE",
@@ -340,15 +369,17 @@ describe("fetchBalancerPools", () => {
           { address: "0xa", symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
         ],
       }]},
-    })));
+    });
 
     const pools = await fetchBalancerPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(false);
   });
 
   it("skips pools with zero TVL", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
         type: "STABLE",
@@ -358,29 +389,35 @@ describe("fetchBalancerPools", () => {
           { address: "0xa", symbol: "USDC", decimals: 6, balance: "0", balanceUSD: "0" },
         ],
       }]},
-    })));
+    });
 
     const pools = await fetchBalancerPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(false);
   });
 
   it("returns empty array when API returns error status", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response("Internal Server Error", { status: 500 }));
+    mockTextFetch("Internal Server Error", 500);
     const pools = await fetchBalancerPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("returns empty array when response has no poolGetPools", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ data: {} })));
+    mockJsonFetch({ data: {} });
     const pools = await fetchBalancerPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("maps Balancer chain enums to internal chain names", async () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: { poolGetPools: [
         {
           id: "0xp1", type: "STABLE", chain: "MAINNET",
@@ -393,7 +430,7 @@ describe("fetchBalancerPools", () => {
           poolTokens: [{ address: "0xb", symbol: "Y", decimals: 6, balance: "50000", balanceUSD: "50000" }],
         },
       ]},
-    })));
+    });
 
     const pools = await fetchBalancerPools();
     expect(pools[0].chain).toBe("ethereum");
@@ -409,21 +446,26 @@ describe("fetchRaydiumPools", () => {
 
   it("fetches concentrated pools and maps to DexApiPool", async () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
-      success: true,
-      data: { count: 1, data: [{
-        type: "Concentrated",
-        id: "poolAddr1",
-        mintA: { address: "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA", symbol: "USDS", decimals: 6 },
-        mintB: { address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", symbol: "USDC", decimals: 6 },
-        price: 0.9999,
-        tvl: 42000000,
-        mintAmountA: 20000000,
-        mintAmountB: 22000000,
-        feeRate: 0.0001,
-        day: { volume: 2000000 },
-      }]},
-    })));
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({
+        success: true,
+        data: { count: 1, data: [{
+          type: "Concentrated",
+          id: "poolAddr1",
+          mintA: { address: "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA", symbol: "USDS", decimals: 6 },
+          mintB: { address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", symbol: "USDC", decimals: 6 },
+          price: 0.9999,
+          tvl: 42000000,
+          mintAmountA: 20000000,
+          mintAmountB: 22000000,
+          feeRate: 0.0001,
+          day: { volume: 2000000 },
+        }]},
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        success: true,
+        data: { count: 0, data: [] },
+      }));
 
     const pools = await fetchRaydiumPools();
     expect(pools.length).toBe(1);
@@ -462,7 +504,7 @@ describe("fetchRaydiumPools", () => {
 
   it("sets chain to solana for all pools", async () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       success: true,
       data: { count: 1, data: [{
         type: "Concentrated",
@@ -476,7 +518,7 @@ describe("fetchRaydiumPools", () => {
         feeRate: 0.0001,
         day: { volume: 10000 },
       }]},
-    })));
+    });
 
     const pools = await fetchRaydiumPools();
     expect(pools[0].chain).toBe("solana");
@@ -484,7 +526,7 @@ describe("fetchRaydiumPools", () => {
 
   it("stops pagination when TVL drops below threshold", async () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       success: true,
       data: { count: 2, data: [
         {
@@ -502,7 +544,7 @@ describe("fetchRaydiumPools", () => {
           feeRate: 0.0001, day: { volume: 100 },
         },
       ]},
-    })));
+    });
 
     const pools = await fetchRaydiumPools();
     // Only the first pool (50K TVL >= 10K threshold) is included;
@@ -516,26 +558,32 @@ describe("fetchRaydiumPools", () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockFetch.mockRejectedValue(new Error("network error"));
     const pools = await fetchRaydiumPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("handles HTTP error status", async () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
-    mockFetch.mockResolvedValue(new Response("error", { status: 503 }));
+    mockTextFetch("error", 503);
     const pools = await fetchRaydiumPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("handles malformed response body", async () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: true, data: null })));
+    mockJsonFetch({ success: true, data: null });
     const pools = await fetchRaydiumPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("sets price to null when pool price is zero", async () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       success: true,
       data: { count: 1, data: [{
         type: "Concentrated", id: "pool1",
@@ -544,7 +592,7 @@ describe("fetchRaydiumPools", () => {
         price: 0, tvl: 100000, mintAmountA: 50000, mintAmountB: 50000,
         feeRate: 0.001, day: { volume: 1000 },
       }]},
-    })));
+    });
 
     const pools = await fetchRaydiumPools();
     expect(pools[0].price).toBeNull();
@@ -559,7 +607,7 @@ describe("fetchOrcaPools", () => {
 
   it("fetches whirlpools and normalizes to DexApiPool", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: [{
         address: "9tXiuRRw7kbejLhZXtxDxYs2REe43uH2e7k1kocgdM9B",
         price: "0.99991840037040574739",
@@ -571,8 +619,8 @@ describe("fetchOrcaPools", () => {
         tokenBalanceB: "12182931105377",
         stats: { "24h": { volume: "1635006.18" } },
       }],
-      meta: { next: null },
-    })));
+      meta: { cursor: { next: null } },
+    });
 
     const pools = await fetchOrcaPools();
     expect(pools.length).toBe(1);
@@ -585,14 +633,16 @@ describe("fetchOrcaPools", () => {
 
   it("handles 429 rate limit gracefully", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response("rate limited", { status: 429 }));
+    mockTextFetch("rate limited", 429);
     const pools = await fetchOrcaPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("normalizes feeRate by dividing by 1_000_000", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: [{
         address: "pool1",
         price: "1.0",
@@ -604,8 +654,8 @@ describe("fetchOrcaPools", () => {
         tokenBalanceB: "50000",
         stats: { "24h": { volume: "5000" } },
       }],
-      meta: { next: null },
-    })));
+      meta: { cursor: { next: null } },
+    });
 
     const pools = await fetchOrcaPools();
     expect(pools[0].feeRate).toBeCloseTo(0.003);
@@ -613,7 +663,7 @@ describe("fetchOrcaPools", () => {
 
   it("sets chain to solana for all pools", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: [{
         address: "pool1",
         price: "1.0",
@@ -625,8 +675,8 @@ describe("fetchOrcaPools", () => {
         tokenBalanceB: "50000",
         stats: { "24h": { volume: "1000" } },
       }],
-      meta: { next: null },
-    })));
+      meta: { cursor: { next: null } },
+    });
 
     const pools = await fetchOrcaPools();
     expect(pools[0].chain).toBe("solana");
@@ -647,14 +697,14 @@ describe("fetchOrcaPools", () => {
     });
 
     mockFetch
-      .mockResolvedValueOnce(new Response(JSON.stringify({
+      .mockResolvedValueOnce(jsonResponse({
         data: [makePool("pool1")],
-        meta: { next: "cursor123" },
-      })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
+        meta: { cursor: { next: "cursor123" } },
+      }))
+      .mockResolvedValueOnce(jsonResponse({
         data: [makePool("pool2")],
-        meta: { next: null },
-      })));
+        meta: { cursor: { next: null } },
+      }));
 
     const pools = await fetchOrcaPools();
     expect(pools).toHaveLength(2);
@@ -667,7 +717,7 @@ describe("fetchOrcaPools", () => {
   it("stops pagination on 429 mid-pagination and returns partial results", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockFetch
-      .mockResolvedValueOnce(new Response(JSON.stringify({
+      .mockResolvedValueOnce(jsonResponse({
         data: [{
           address: "pool1",
           price: "1.0",
@@ -679,18 +729,23 @@ describe("fetchOrcaPools", () => {
           tokenBalanceB: "50000",
           stats: { "24h": { volume: "1000" } },
         }],
-        meta: { next: "cursor456" },
-      })))
+        meta: { cursor: { next: "cursor456" } },
+      }))
+      .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
+      .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
+      .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
       .mockResolvedValueOnce(new Response("rate limited", { status: 429 }));
 
     const pools = await fetchOrcaPools();
     expect(pools).toHaveLength(1);
     expect(pools[0].poolAddress).toBe("pool1");
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(true);
   });
 
   it("skips pools below TVL threshold", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: [{
         address: "pool1",
         price: "1.0",
@@ -702,33 +757,39 @@ describe("fetchOrcaPools", () => {
         tokenBalanceB: "2500",
         stats: { "24h": { volume: "100" } },
       }],
-      meta: { next: null },
-    })));
+      meta: { cursor: { next: null } },
+    });
 
     const pools = await fetchOrcaPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(false);
   });
 
   it("returns empty array on HTTP error", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response("error", { status: 500 }));
+    mockTextFetch("error", 500);
     const pools = await fetchOrcaPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(false);
+    expect(pools.degraded).toBe(true);
   });
 
   it("returns empty array when data is empty", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: [],
-      meta: { next: null },
-    })));
+      meta: { cursor: { next: null } },
+    });
     const pools = await fetchOrcaPools();
-    expect(pools).toEqual([]);
+    expect(pools).toHaveLength(0);
+    expect(pools.ok).toBe(true);
+    expect(pools.degraded).toBe(false);
   });
 
   it("parses string token balances correctly", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: [{
         address: "pool1",
         price: "0.9998",
@@ -740,8 +801,8 @@ describe("fetchOrcaPools", () => {
         tokenBalanceB: "249999.5",
         stats: { "24h": { volume: "10000" } },
       }],
-      meta: { next: null },
-    })));
+      meta: { cursor: { next: null } },
+    });
 
     const pools = await fetchOrcaPools();
     expect(pools[0].balances).toEqual([250000.5, 249999.5]);
@@ -749,7 +810,7 @@ describe("fetchOrcaPools", () => {
 
   it("sets price to null for invalid price strings", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({
+    mockJsonFetch({
       data: [{
         address: "pool1",
         price: "invalid",
@@ -761,8 +822,8 @@ describe("fetchOrcaPools", () => {
         tokenBalanceB: "50000",
         stats: { "24h": { volume: "1000" } },
       }],
-      meta: { next: null },
-    })));
+      meta: { cursor: { next: null } },
+    });
 
     const pools = await fetchOrcaPools();
     expect(pools[0].price).toBeNull();

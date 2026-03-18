@@ -81,7 +81,8 @@ function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undef
     source === "cg_onchain" ||
     source === "gecko_terminal" ||
     source === "dexscreener" ||
-    source === "cg_tickers"
+    source === "cg_tickers" ||
+    source === "direct_api"
   ) {
     return source;
   }

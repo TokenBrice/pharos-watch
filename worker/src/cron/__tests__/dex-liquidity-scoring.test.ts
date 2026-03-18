@@ -349,6 +349,39 @@ describe("dex-liquidity scoring", () => {
     expect(result.globalAgg.totalTvl).toBe(25_000);
   });
 
+  it("treats direct_api-only coverage as primary-confidence coverage", async () => {
+    const db = makeQueryDb([
+      { match: "FROM dex_liquidity_history", all: [] },
+    ]);
+
+    const metrics = initMetrics("usdc-circle", "USDC");
+    metrics.totalVolume24hUsd = 10_000;
+    metrics.totalVolume7dUsd = 70_000;
+    metrics.topPools = [
+      {
+        poolId: "solana:orca-usdc",
+        project: "orca",
+        chain: "solana",
+        tvlUsd: 50_000,
+        symbol: "USDC / USDT",
+        volumeUsd1d: 10_000,
+        poolType: "orca-whirlpool",
+        source: "direct_api",
+      },
+    ];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map(),
+    );
+
+    expect(result.scores.get("usdc-circle")).toMatchObject({
+      coverageClass: "primary",
+      coverageConfidence: 1,
+    });
+  });
+
   it("persists only eligible depth-stability rows and logs DB failures", async () => {
     const nowMs = Date.UTC(2026, 0, 1);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
@@ -454,8 +487,7 @@ describe("dex-liquidity scoring", () => {
       -99,
       1.01,
       JSON.stringify([
-        { protocol: "curve", chain: "Ethereum", price: 0.98, tvl: 40 },
-        { protocol: "curve", chain: "Ethereum", price: 1, tvl: 35 },
+        { protocol: "curve", chain: "Ethereum", price: 0.98, tvl: 75 },
         { protocol: "uniswap-v3", chain: "Base", price: 1.02, tvl: 25 },
       ]),
       1_700_000_001,

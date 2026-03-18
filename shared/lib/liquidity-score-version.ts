@@ -3,9 +3,30 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "4.0",
+  currentVersion: "4.1",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "4.1",
+    title: "Direct API precedence, primary-grade coverage, and fetcher contract hardening",
+    date: "2026-03-18",
+    effectiveAt: 1773875700,
+    summary:
+      "Direct API sources now replace overlapping DeFiLlama pools before scoring, run ahead of staged/fallback sources, " +
+      "and count as primary-grade coverage. Raydium and Orca contract handling was hardened against live API drift, " +
+      "Fluid volume normalization moved to one-sided USD volume, and Balancer intake now excludes unsupported pool types.",
+    impact: [
+      "Raydium lower-case poolType contract fix restores live Solana pool coverage",
+      "Orca now paginates via cursor.next with retry/backoff and a below-threshold stop, instead of truncating after page 1",
+      "Direct API pools are fingerprint-deduped and preferred over overlapping DeFiLlama pools before score computation",
+      "Direct API sources merge before staged/DexScreener/CG-ticker fallbacks, preventing lower-confidence sources from claiming the same pool first",
+      "direct_api-only rows now classify as primary coverage (confidence 1.0) instead of fallback coverage",
+      "Fluid volume now uses one-sided USD-normalized pool volume instead of double-counting raw token legs",
+      "Balancer intake is limited to supported stable/weighted pool families on mapped chains only",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.0",
     title: "Log-scale volume, cross-chain removal, durability rebalance",

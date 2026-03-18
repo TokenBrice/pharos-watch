@@ -209,8 +209,8 @@ function classifyCoverage(sourceMix: LiquiditySourceMix, totalTvlUsd: number): {
     return { coverageClass: "unobserved", coverageConfidence: 0 };
   }
 
-  const primaryTvl = sourceMix.dl?.tvlUsd ?? 0;
-  const fallbackTvl = totalTvlUsd - primaryTvl;
+  const primaryTvl = (sourceMix.dl?.tvlUsd ?? 0) + (sourceMix.direct_api?.tvlUsd ?? 0);
+  const fallbackTvl = Math.max(0, totalTvlUsd - primaryTvl);
 
   if (primaryTvl > 0 && fallbackTvl <= 0) {
     return { coverageClass: "primary", coverageConfidence: 1 };
@@ -220,6 +220,42 @@ function classifyCoverage(sourceMix: LiquiditySourceMix, totalTvlUsd: number): {
   }
 
   return { coverageClass: "fallback", coverageConfidence: 0.55 };
+}
+
+function aggregateProtocolSources(
+  observations: DexPriceObs[],
+): Array<{ protocol: string; chain: string; price: number; tvl: number }> {
+  const byProtocol = new Map<string, DexPriceObs[]>();
+  for (const observation of observations) {
+    const existing = byProtocol.get(observation.protocol) ?? [];
+    existing.push(observation);
+    byProtocol.set(observation.protocol, existing);
+  }
+
+  const aggregated = Array.from(byProtocol.entries(), ([protocol, protocolObs]) => {
+    const sorted = [...protocolObs].sort((a, b) => a.price - b.price);
+    const totalTvl = sorted.reduce((sum, obs) => sum + obs.tvl, 0);
+    const halfTvl = totalTvl / 2;
+    let cumulativeTvl = 0;
+    let medianPrice = sorted[0]?.price ?? 0;
+    for (const obs of sorted) {
+      cumulativeTvl += obs.tvl;
+      if (cumulativeTvl >= halfTvl) {
+        medianPrice = obs.price;
+        break;
+      }
+    }
+
+    const chains = [...new Set(protocolObs.map((obs) => obs.chain))];
+    return {
+      protocol,
+      chain: chains.length === 1 ? chains[0] : "multi",
+      price: medianPrice,
+      tvl: Math.round(totalTvl),
+    };
+  });
+
+  return aggregated.sort((a, b) => b.tvl - a.tvl || a.protocol.localeCompare(b.protocol));
 }
 
 /** Compute HHI, durability, and 6-component composite score per stablecoin. */
@@ -522,11 +558,8 @@ export async function computeDexPrices(
       deviationBps = Math.round(((medianPrice / primaryPrice) - 1) * 10000);
     }
 
-    // Top 5 sources by TVL for transparency (spread to avoid mutating price-sorted array)
-    const topSources = [...observations]
-      .sort((a, b) => b.tvl - a.tvl)
-      .slice(0, 5)
-      .map((o) => ({ protocol: o.protocol, chain: o.chain, price: o.price, tvl: o.tvl }));
+    // Persist one aggregate per protocol for the primary-pricing bridge.
+    const protocolSources = aggregateProtocolSources(observations);
 
     const meta = ACTIVE_STABLECOINS.find((s) => s.id === id);
     const symbol = meta?.symbol ?? id;
@@ -557,7 +590,7 @@ export async function computeDexPrices(
           Math.round(totalTvl),
           deviationBps,
           primaryPrice ?? null,
-          JSON.stringify(topSources),
+          JSON.stringify(protocolSources),
           nowSec
         )
     );

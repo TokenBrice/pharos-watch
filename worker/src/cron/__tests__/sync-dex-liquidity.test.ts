@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+function makeDirectApiResult() {
+  return Object.assign([], { ok: true, degraded: false, errors: [] as string[] });
+}
+
 vi.mock("../dex-liquidity/fetch-primary", () => ({
   fetchDataSources: vi.fn(async () => null),
   buildCurveLookups: vi.fn(async () => ({ curvePoolMap: new Map(), priceObservations: new Map() })),
@@ -28,13 +32,14 @@ vi.mock("../dex-liquidity/fetch-fallbacks", () => ({
   fetchCgTickersFallback: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
 }));
 
-vi.mock("../dex-liquidity/fetch-fluid", () => ({ fetchFluidPools: vi.fn(async () => []) }));
-vi.mock("../dex-liquidity/fetch-balancer", () => ({ fetchBalancerPools: vi.fn(async () => []) }));
-vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(async () => []) }));
-vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => []) }));
+vi.mock("../dex-liquidity/fetch-fluid", () => ({ fetchFluidPools: vi.fn(async () => makeDirectApiResult()) }));
+vi.mock("../dex-liquidity/fetch-balancer", () => ({ fetchBalancerPools: vi.fn(async () => makeDirectApiResult()) }));
+vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(async () => makeDirectApiResult()) }));
+vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => makeDirectApiResult()) }));
 
 import { syncDexLiquidity } from "../dex-liquidity";
 import { fetchDataSources } from "../dex-liquidity/fetch-primary";
+import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 
 const db = {
   prepare: () => ({
@@ -129,5 +134,21 @@ describe("syncDexLiquidity", () => {
     expect(metadata.stagedPoolsSkippedByAddress).toBe(0);
     expect(metadata.stagedPoolsSkippedByFingerprint).toBe(0);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
+  });
+
+  it("returns degraded when a direct API source is unavailable", async () => {
+    vi.mocked(fetchRaydiumPools).mockResolvedValueOnce(
+      Object.assign([], { ok: false, degraded: true, errors: ["query poolType type error"] }),
+    );
+
+    const result = await syncDexLiquidity(db, "graph-key");
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      failedSources?: string[];
+      fallbackMode?: string[];
+    };
+    expect(metadata.failedSources).toContain("raydium-api");
+    expect(metadata.fallbackMode).toContain("raydium-api-unavailable");
   });
 });

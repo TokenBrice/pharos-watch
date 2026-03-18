@@ -1,4 +1,4 @@
-import type { DexApiPool } from "../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
@@ -16,12 +16,17 @@ const BALANCER_CHAIN_MAP: Record<string, string> = {
   FANTOM: "fantom",
   FRAXTAL: "fraxtal",
   MODE: "mode",
-  ZKEVM: "zkevm",
+  ZKEVM: "polygon-zkevm",
+  PLASMA: "plasma",
+  MONAD: "monad",
+  HYPEREVM: "hyperevm",
+  XLAYER: "xlayer",
 };
 
 const STABLE_POOL_TYPES = new Set([
   "STABLE", "COMPOSABLE_STABLE", "META_STABLE", "PHANTOM_STABLE", "GYRO", "GYROE",
 ]);
+const SUPPORTED_POOL_TYPES = new Set([...STABLE_POOL_TYPES, "WEIGHTED"]);
 
 const QUERY = `query($first: Int!, $skip: Int!) {
   poolGetPools(
@@ -47,29 +52,52 @@ interface BalancerPool {
   poolTokens: { address: string; symbol: string; decimals: number; balance: string; balanceUSD: string }[];
 }
 
-export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiPool[]> {
+export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
+  const errors: string[] = [];
   let skip = 0;
   const pageSize = 1000;
+  let successfulPages = 0;
 
   while (true) {
-    const res = await fetch(BALANCER_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-      body: JSON.stringify({ query: QUERY, variables: { first: pageSize, skip } }),
-      signal,
-    });
-
-    if (!res.ok) {
-      console.warn(`[fetch-balancer] API returned ${res.status}`);
+    let res: Response;
+    try {
+      res = await fetch(BALANCER_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        body: JSON.stringify({ query: QUERY, variables: { first: pageSize, skip } }),
+        signal,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push(`request failed on page ${skip / pageSize + 1}: ${message}`);
       break;
     }
 
-    const json = await res.json() as { data?: { poolGetPools?: BalancerPool[] } };
+    if (!res.ok) {
+      errors.push(`API returned ${res.status} on page ${skip / pageSize + 1}`);
+      break;
+    }
+
+    const json = await res.json() as { data?: { poolGetPools?: BalancerPool[] }; errors?: Array<{ message?: string }> };
+    if (Array.isArray(json.errors) && json.errors.length > 0) {
+      errors.push(
+        `GraphQL errors on page ${skip / pageSize + 1}: ${json.errors.map((entry) => entry.message ?? "unknown").join("; ")}`,
+      );
+      break;
+    }
     const pools = json.data?.poolGetPools;
-    if (!pools || pools.length === 0) break;
+    if (!Array.isArray(pools)) {
+      errors.push(`Malformed response on page ${skip / pageSize + 1}`);
+      break;
+    }
+
+    successfulPages++;
+    if (pools.length === 0) break;
 
     for (const pool of pools) {
+      if (!SUPPORTED_POOL_TYPES.has(pool.type)) continue;
+
       const chain = BALANCER_CHAIN_MAP[pool.chain];
       if (!chain) continue;
 
@@ -121,5 +149,12 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiPo
   if (results.length > 0) {
     console.log(`[fetch-balancer] Fetched ${results.length} pools`);
   }
-  return results;
+  for (const error of errors) {
+    console.warn("[fetch-balancer]", error);
+  }
+  return makeDexApiFetchResult(results, {
+    ok: successfulPages > 0,
+    degraded: errors.length > 0,
+    errors,
+  });
 }

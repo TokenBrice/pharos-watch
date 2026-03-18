@@ -1,10 +1,11 @@
 import type { CronResult } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import type { LlamaPool } from "./types";
 import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs } from "./types";
-import { buildSymbolLookups } from "./pool-helpers";
+import { buildPoolFingerprint, buildSymbolLookups } from "./pool-helpers";
 import {
   fetchDataSources, buildCurveLookups, fetchUniV3Data,
   fetchAerodromeData, buildKnownPoolAddresses,
@@ -19,9 +20,55 @@ import { fetchFluidPools } from "./fetch-fluid";
 import { fetchBalancerPools } from "./fetch-balancer";
 import { fetchRaydiumPools } from "./fetch-raydium";
 import { fetchOrcaPools } from "./fetch-orca";
-import { convertToGtNewPools, extractPriceObservations, type DexApiPool } from "../../lib/dex-api-common";
+import {
+  convertToGtNewPools,
+  extractPriceObservations,
+  makeDexApiFetchResult,
+  type DexApiFetchResult,
+  type DexApiPool,
+} from "../../lib/dex-api-common";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+
+function filterPrimaryPoolsPreferDirectApi(
+  pools: LlamaPool[],
+  directApiPools: DexApiPool[],
+): {
+  filteredPools: LlamaPool[];
+  skippedByAddress: number;
+  skippedByFingerprint: number;
+} {
+  const directApiAddresses = new Set(
+    directApiPools.map((pool) => `${pool.chain.toLowerCase()}:${pool.poolAddress.toLowerCase()}`),
+  );
+  const directApiFingerprints = new Set(
+    directApiPools
+      .map((pool) => buildPoolFingerprint(pool.chain, pool.source, pool.tokens.map((token) => token.address)))
+      .filter((fingerprint): fingerprint is string => fingerprint != null),
+  );
+
+  const filteredPools: LlamaPool[] = [];
+  let skippedByAddress = 0;
+  let skippedByFingerprint = 0;
+
+  for (const pool of pools) {
+    const poolKey = `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`;
+    if (directApiAddresses.has(poolKey)) {
+      skippedByAddress++;
+      continue;
+    }
+
+    const fingerprint = buildPoolFingerprint(pool.chain, pool.project, pool.underlyingTokens ?? []);
+    if (fingerprint != null && directApiFingerprints.has(fingerprint)) {
+      skippedByFingerprint++;
+      continue;
+    }
+
+    filteredPools.push(pool);
+  }
+
+  return { filteredPools, skippedByAddress, skippedByFingerprint };
+}
 
 export async function syncDexLiquidity(
   db: D1Database,
@@ -57,29 +104,59 @@ export async function syncDexLiquidity(
   // Fetch direct API sources in parallel (non-fatal, circuit-breaker gated)
   // These run alongside the existing data source processing to maximize parallelism.
   // All response bodies are consumed inline (await res.json()), so connections are released promptly.
-  const directApiFetchers: Array<{ name: string; circuitKey: string; fn: (s?: AbortSignal) => Promise<DexApiPool[]> }> = [
+  const directApiFetchers: Array<{ name: string; circuitKey: string; fn: (s?: AbortSignal) => Promise<DexApiFetchResult> }> = [
     { name: "Fluid", circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API, fn: fetchFluidPools },
     { name: "Balancer", circuitKey: CIRCUIT_SOURCE.BALANCER_API, fn: fetchBalancerPools },
     { name: "Raydium", circuitKey: CIRCUIT_SOURCE.RAYDIUM_API, fn: fetchRaydiumPools },
     { name: "Orca", circuitKey: CIRCUIT_SOURCE.ORCA_API, fn: fetchOrcaPools },
   ];
 
-  const directApiPromise = Promise.allSettled(
+  const directApiPromise = Promise.all(
     directApiFetchers.map(async ({ name, circuitKey, fn }) => {
       if (!(await shouldAttemptFetch(db, circuitKey))) {
         console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
-        return [];
+        failedSources.push(circuitKey);
+        criticalSourceFailures.push(circuitKey);
+        fallbackSignals.push(`${circuitKey}-circuit-open`);
+        return {
+          name,
+          circuitKey,
+          result: makeDexApiFetchResult([], {
+            ok: false,
+            degraded: true,
+            errors: ["circuit open"],
+          }),
+        };
       }
       try {
-        const pools = await fn(signal);
-        await recordOutcomeSafe(db, circuitKey, true);
-        return pools;
+        const result = await fn(signal);
+        await recordOutcomeSafe(db, circuitKey, result.ok);
+        if (!result.ok || result.degraded) {
+          failedSources.push(circuitKey);
+          criticalSourceFailures.push(circuitKey);
+        }
+        if (!result.ok) {
+          fallbackSignals.push(`${circuitKey}-unavailable`);
+        } else if (result.degraded) {
+          fallbackSignals.push(`${circuitKey}-partial`);
+        }
+        return { name, circuitKey, result };
       } catch (err) {
         if (signal?.aborted) throw err;
         console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
         await recordOutcomeSafe(db, circuitKey, false);
         failedSources.push(circuitKey);
-        return [];
+        criticalSourceFailures.push(circuitKey);
+        fallbackSignals.push(`${circuitKey}-exception`);
+        return {
+          name,
+          circuitKey,
+          result: makeDexApiFetchResult([], {
+            ok: false,
+            degraded: true,
+            errors: [err instanceof Error ? err.message : String(err)],
+          }),
+        };
       }
     }),
   );
@@ -125,12 +202,6 @@ export async function syncDexLiquidity(
     failedSources.push("aerodrome-subgraph");
   }
 
-  // 4c. Build known pool address set from existing sources (for GT dedup)
-  const knownPoolAddrs = buildKnownPoolAddresses(
-    dataSources.pools, dataSources.dexProjects,
-    curvePoolMap, uniV3PoolFees, aerodromeIsStable,
-  );
-
   // Merge all price observations into a single map
   for (const [id, obs] of uniV3PriceObs) {
     const existing = priceObservations.get(id) ?? [];
@@ -144,11 +215,82 @@ export async function syncDexLiquidity(
   }
   console.log(`[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
 
+  const directApiResults = await directApiPromise;
+  const directApiPools = directApiResults.flatMap((entry) => entry.result);
+
+  const {
+    filteredPools: preferredPrimaryPools,
+    skippedByAddress: primarySkippedByDirectApiAddress,
+    skippedByFingerprint: primarySkippedByDirectApiFingerprint,
+  } = filterPrimaryPoolsPreferDirectApi(dataSources.pools, directApiPools);
+  if (primarySkippedByDirectApiAddress > 0 || primarySkippedByDirectApiFingerprint > 0) {
+    console.log(
+      `[dex-liquidity] Preferred direct API over DL for ${primarySkippedByDirectApiAddress} address matches and ` +
+      `${primarySkippedByDirectApiFingerprint} fingerprint matches`,
+    );
+  }
+
+  // 4c. Build known pool address set from preferred primary sources (for staged/fallback dedup)
+  const knownPoolAddrs = buildKnownPoolAddresses(
+    preferredPrimaryPools, dataSources.dexProjects,
+    curvePoolMap, uniV3PoolFees, aerodromeIsStable,
+  );
+
   // 5. Match pools to stablecoins and compute per-pool metrics
   const metrics = processPoolMetrics(
-    dataSources.pools, dataSources.dexProjects, symbolToIds, addressToId,
+    preferredPrimaryPools, dataSources.dexProjects, symbolToIds, addressToId,
     curvePoolMap, uniV3PoolFees, uniV3SymbolFees, aerodromeIsStable,
   );
+
+  let directApiDedupSkippedByAddress = 0;
+  let directApiDedupSkippedByFingerprint = 0;
+  if (directApiPools.length > 0) {
+    console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
+
+    const retainedDirectApiPools: DexApiPool[] = [];
+    for (const pool of directApiPools) {
+      const key = `${pool.chain.toLowerCase()}:${pool.poolAddress.toLowerCase()}`;
+      const fingerprint = buildPoolFingerprint(pool.chain, pool.source, pool.tokens.map((token) => token.address));
+      if (knownPoolAddrs.has(key)) {
+        directApiDedupSkippedByAddress++;
+        continue;
+      }
+      if (fingerprint != null && knownPoolAddrs.has(fingerprint)) {
+        directApiDedupSkippedByFingerprint++;
+        continue;
+      }
+
+      knownPoolAddrs.add(key);
+      if (fingerprint != null) knownPoolAddrs.add(fingerprint);
+      retainedDirectApiPools.push(pool);
+    }
+
+    if (retainedDirectApiPools.length > 0) {
+      const directApiGtPools = convertToGtNewPools(
+        retainedDirectApiPools,
+        addressToId,
+        symbolToIds,
+        validationReferences,
+      );
+      if (directApiGtPools.size > 0) mergeGtPools(metrics, directApiGtPools);
+
+      const directApiPriceObs = extractPriceObservations(
+        retainedDirectApiPools, addressToId, symbolToIds, validationReferences,
+      );
+      for (const [id, obs] of directApiPriceObs) {
+        const existing = priceObservations.get(id) ?? [];
+        existing.push(...obs);
+        priceObservations.set(id, existing);
+      }
+    }
+
+    if (directApiDedupSkippedByAddress > 0 || directApiDedupSkippedByFingerprint > 0) {
+      console.log(
+        `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} direct API pools by address and ` +
+        `${directApiDedupSkippedByFingerprint} by fingerprint`,
+      );
+    }
+  }
 
   const {
     mergedCount: stagedMergedCount,
@@ -201,47 +343,6 @@ export async function syncDexLiquidity(
     rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
     failedSources.push("cg-tickers-fallback");
-  }
-
-  // Await direct API results and merge into pipeline
-  const directApiPools: DexApiPool[] = [];
-  const directApiSettled = await directApiPromise;
-  for (const result of directApiSettled) {
-    if (result.status === "fulfilled") directApiPools.push(...result.value);
-  }
-
-  if (directApiPools.length > 0) {
-    console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
-
-    // Convert to GtNewPool, dedup against DL-sourced pools, then merge
-    // symbolToIds, addressToId, and knownPoolAddrs are already in scope
-    const directApiGtPools = convertToGtNewPools(directApiPools, addressToId, symbolToIds);
-
-    // Filter out pools already known from DL/Curve/subgraphs to avoid double-counting TVL
-    let dedupSkipped = 0;
-    for (const [id, pools] of directApiGtPools) {
-      const filtered = pools.filter((p) => {
-        const key = `${p.chain.toLowerCase()}:${p.address.toLowerCase()}`;
-        if (knownPoolAddrs.has(key)) { dedupSkipped++; return false; }
-        knownPoolAddrs.add(key); // register so future fallback crawlers skip these too
-        return true;
-      });
-      if (filtered.length > 0) directApiGtPools.set(id, filtered);
-      else directApiGtPools.delete(id);
-    }
-    if (dedupSkipped > 0) console.log(`[dex-liquidity] Skipped ${dedupSkipped} direct API pools already in DL`);
-
-    if (directApiGtPools.size > 0) mergeGtPools(metrics, directApiGtPools);
-
-    // Extract price observations with plausibility filtering
-    const directApiPriceObs = extractPriceObservations(
-      directApiPools, addressToId, symbolToIds, validationReferences,
-    );
-    for (const [id, obs] of directApiPriceObs) {
-      const existing = priceObservations.get(id) ?? [];
-      existing.push(...obs);
-      priceObservations.set(id, existing);
-    }
   }
 
   console.log(
@@ -403,8 +504,8 @@ export async function syncDexLiquidity(
         dsFallbackCoins,
         cgTickerFallbackCoins,
       },
-      failedSources,
-      fallbackMode: fallbackSignals,
+      failedSources: [...new Set(failedSources)],
+      fallbackMode: [...new Set(fallbackSignals)],
       validationFailures: 0,
     }),
   };

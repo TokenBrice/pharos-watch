@@ -1,5 +1,9 @@
 import type { DexPriceObs, GtNewPool } from "../cron/dex-liquidity/types";
-import type { PriceValidationReferences } from "./price-validation";
+import {
+  buildPriceValidationContext,
+  getReferencePriceForContext,
+  type PriceValidationReferences,
+} from "./price-validation";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import { QUALITY_MULTIPLIERS, normalizeDexSymbol, isUsdReferenceSymbol } from "./dex-constants";
 
@@ -23,6 +27,21 @@ export interface DexApiPool {
   volume24hUsd: number;
   feeRate: number | null;
   balances: number[] | null;
+  /** Optional per-token raw 24h volumes in native token units. */
+  tokenVolumes24h?: number[] | null;
+}
+
+export type DexApiFetchResult = DexApiPool[] & {
+  ok: boolean;
+  degraded: boolean;
+  errors: string[];
+};
+
+export function makeDexApiFetchResult(
+  pools: DexApiPool[],
+  meta: { ok: boolean; degraded: boolean; errors: string[] },
+): DexApiFetchResult {
+  return Object.assign(pools, meta);
 }
 
 /** Min TVL for a pool's price to be considered as a price observation */
@@ -66,6 +85,7 @@ function deriveTokenUsdPrice(
   pool: DexApiPool,
   tokenIndex: number,
   addressToId: Map<string, string>,
+  validationReferences?: PriceValidationReferences,
 ): number | null {
   const token = pool.tokens[tokenIndex];
 
@@ -80,16 +100,58 @@ function deriveTokenUsdPrice(
 
   const otherIdx = tokenIndex === 0 ? 1 : 0;
   const otherToken = pool.tokens[otherIdx];
-  const otherSym = normalizeDexSymbol(otherToken.symbol);
-  const otherAddr = otherToken.address.toLowerCase();
-
-  // Check if the other side is a USD reference (by symbol or by being a tracked stablecoin)
-  const otherIsUsdRef = isUsdReferenceSymbol(otherSym) || addressToId.has(otherAddr);
-  if (!otherIsUsdRef) return null;
+  const otherUsdRef = getTokenReferenceUsdPrice(otherToken, addressToId, validationReferences);
+  if (otherUsdRef == null) return null;
 
   // pool.price = token[0] priced in token[1]
-  if (tokenIndex === 0) return pool.price;       // token[0] price in USD terms
-  return 1 / pool.price;                          // token[1] price = inverse
+  if (tokenIndex === 0) return pool.price * otherUsdRef;
+  return (1 / pool.price) * otherUsdRef;
+}
+
+function getTokenReferenceUsdPrice(
+  token: DexApiPoolToken,
+  addressToId: Map<string, string>,
+  validationReferences?: PriceValidationReferences,
+): number | null {
+  const symbol = normalizeDexSymbol(token.symbol);
+  if (symbol && isUsdReferenceSymbol(symbol)) return 1;
+
+  const stablecoinId = addressToId.get(token.address.toLowerCase());
+  if (!stablecoinId) return null;
+
+  const context = buildPriceValidationContext({ stablecoinId });
+  return getReferencePriceForContext(context, validationReferences);
+}
+
+function derivePoolVolume24hUsd(
+  pool: DexApiPool,
+  addressToId: Map<string, string>,
+  validationReferences?: PriceValidationReferences,
+): number {
+  if (!pool.tokenVolumes24h || pool.tokenVolumes24h.length !== pool.tokens.length) {
+    return pool.volume24hUsd;
+  }
+
+  const candidates: number[] = [];
+  for (let i = 0; i < pool.tokenVolumes24h.length; i++) {
+    const rawVolume = pool.tokenVolumes24h[i];
+    if (!Number.isFinite(rawVolume) || rawVolume <= 0) continue;
+
+    const ownReferencePrice = getTokenReferenceUsdPrice(pool.tokens[i], addressToId, validationReferences);
+    if (ownReferencePrice != null && ownReferencePrice > 0) {
+      candidates.push(rawVolume * ownReferencePrice);
+      continue;
+    }
+
+    const derivedPrice = deriveTokenUsdPrice(pool, i, addressToId, validationReferences);
+    if (derivedPrice != null && derivedPrice > 0) {
+      candidates.push(rawVolume * derivedPrice);
+    }
+  }
+
+  if (candidates.length === 0) return pool.volume24hUsd;
+  if (candidates.length === 1) return candidates[0];
+  return candidates.reduce((sum, value) => sum + value, 0) / candidates.length;
 }
 
 /**
@@ -100,11 +162,13 @@ export function convertToGtNewPools(
   pools: DexApiPool[],
   addressToId: Map<string, string>,
   symbolToIds: Map<string, string[]>,
+  validationReferences?: PriceValidationReferences,
 ): Map<string, GtNewPool[]> {
   const result = new Map<string, GtNewPool[]>();
 
   for (const pool of pools) {
     if (pool.tvlUsd < DIRECT_API_POOL_MIN_TVL_USD || pool.tvlUsd > DIRECT_API_MAX_POOL_TVL_USD) continue;
+    const volume24hUsd = derivePoolVolume24hUsd(pool, addressToId, validationReferences);
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
@@ -116,7 +180,7 @@ export function convertToGtNewPools(
       const symbolStr = pairSymbols.join(" / ");
 
       // Derive price for this specific stablecoin token
-      const tokenPrice = deriveTokenUsdPrice(pool, i, addressToId);
+      const tokenPrice = deriveTokenUsdPrice(pool, i, addressToId, validationReferences);
 
       const gtPool: GtNewPool = {
         address: pool.poolAddress,
@@ -124,7 +188,7 @@ export function convertToGtNewPools(
         dexId: pool.source,
         name: `${pool.source}:${symbolStr}`,
         tvlUsd: pool.tvlUsd,
-        volume24hUsd: pool.volume24hUsd,
+        volume24hUsd,
         qualityMultiplier,
         maturityDays: 90, // conservative default for established DEXes
         price: tokenPrice ?? 0,
@@ -163,7 +227,7 @@ export function extractPriceObservations(
       const stablecoinId = resolveStablecoinId(token, addressToId, symbolToIds);
       if (!stablecoinId) continue;
 
-      const price = deriveTokenUsdPrice(pool, i, addressToId);
+      const price = deriveTokenUsdPrice(pool, i, addressToId, validationReferences);
       if (price == null || price <= 0) continue;
 
       // Plausibility filter — matches existing code paths in fetch-primary.ts

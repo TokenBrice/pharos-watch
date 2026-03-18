@@ -122,6 +122,22 @@ describe("convertToGtNewPools", () => {
     expect(result.get("usdc")![0].qualityMultiplier).toBe(0.85);
   });
 
+  it("normalizes per-token Fluid volumes into one-sided USD volume", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      tokens: [
+        { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "", decimals: 6 },
+        { address: "0xweth", symbol: "", decimals: 18 },
+      ],
+      price: 0.0005,
+      tokenVolumes24h: [10_000, 5],
+      volume24hUsd: 10_005,
+    };
+    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc-circle"]]);
+    const result = convertToGtNewPools([pool], addressToId, new Map());
+    expect(result.get("usdc-circle")![0].volume24hUsd).toBeCloseTo(10_000);
+  });
+
   it("falls back to generic quality multiplier for unknown pool types", () => {
     const pool = { ...MOCK_POOL, poolType: "unknown-pool-type" };
     const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
@@ -241,14 +257,14 @@ describe("extractPriceObservations", () => {
     };
     // GHO tracked, LUSD tracked — LUSD is both in addressToId AND a USD reference symbol
     const addressToId = new Map([
-      ["0xgho", "gho"],
-      ["0xlusd", "lusd"],
+      ["0xgho", "gho-aave"],
+      ["0xlusd", "lusd-liquity"],
     ]);
     const result = extractPriceObservations([pool], addressToId, new Map());
     // GHO (token[0]): other side (LUSD) is in addressToId → price = pool.price
-    expect(result.get("gho")![0].price).toBeCloseTo(1.002);
+    expect(result.get("gho-aave")![0].price).toBeCloseTo(1.002);
     // LUSD (token[1]): other side (GHO) is in addressToId → price = 1 / pool.price
-    expect(result.get("lusd")![0].price).toBeCloseTo(1 / 1.002);
+    expect(result.get("lusd-liquity")![0].price).toBeCloseTo(1 / 1.002);
   });
 
   it("prefers per-token priceUsd over pool.price ratio", () => {
