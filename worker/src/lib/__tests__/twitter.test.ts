@@ -37,6 +37,16 @@ describe("twitter helpers", () => {
     expect(longWord.endsWith("…")).toBe(true);
   });
 
+  it("includes edition number in tweet when provided", () => {
+    const result = buildTweetText("Calm Drift", "PSI held firm at 94.1.", 22);
+    expect(result).toBe("Calm Drift (#22)\n\nPSI held firm at 94.1.");
+  });
+
+  it("omits edition number when null or undefined", () => {
+    expect(buildTweetText("Calm Drift", "PSI held firm.", null)).toBe("Calm Drift\n\nPSI held firm.");
+    expect(buildTweetText("Calm Drift", "PSI held firm.")).toBe("Calm Drift\n\nPSI held firm.");
+  });
+
   it("posts a digest tweet with an OAuth header", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     vi.spyOn(console, "log").mockImplementation(() => {});

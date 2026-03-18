@@ -658,12 +658,14 @@ export async function generateDailyDigest(
 
   // --- Store result ---
   const now = Math.floor(Date.now() / 1000);
-  await db
-    .prepare(
+  const DAILY_FILTER = "digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly'";
+  const [, countResult] = await db.batch([
+    db.prepare(
       "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta) VALUES (?, ?, ?, ?, ?, ?)",
-    )
-    .bind(now, digestText, digestTitle || null, JSON.stringify(inputData), digestExtended || null, digestMeta)
-    .run();
+    ).bind(now, digestText, digestTitle || null, JSON.stringify(inputData), digestExtended || null, digestMeta),
+    db.prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE ${DAILY_FILTER}`),
+  ]);
+  const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
 
   // Post to Twitter if credentials are available
   let tweetStatus = "no-creds";
@@ -673,7 +675,7 @@ export async function generateDailyDigest(
       tweetStatus = "skipped: circuit-open";
     } else {
       try {
-        await postDigestTweet(digestTitle, digestText, twitterCreds);
+        await postDigestTweet(digestTitle, digestText, twitterCreds, editionNumber);
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TWITTER_API, true);
         tweetStatus = "ok";
       } catch (err) {
@@ -693,7 +695,7 @@ export async function generateDailyDigest(
     } else {
       try {
         const date = new Date(now * 1000).toISOString().slice(0, 10);
-        await postDigestToTelegram(digestTitle, digestExtended, date, telegramCreds);
+        await postDigestToTelegram(digestTitle, digestExtended, date, telegramCreds, editionNumber);
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
         telegramStatus = "ok";
       } catch (err) {

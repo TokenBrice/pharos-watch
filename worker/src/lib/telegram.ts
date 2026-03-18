@@ -12,10 +12,11 @@ export function escapeHtml(text: string): string {
 }
 
 /** Build the full Telegram message for a digest. */
-function buildTelegramMessage(title: string, extended: string, date: string): string {
+export function buildTelegramMessage(title: string, extended: string, date: string, editionNumber?: number | null): string {
   // Escape HTML first, then convert markdown bold **text** to <b>text</b>
   const body = escapeHtml(extended).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-  return `<b>${escapeHtml(title)}</b>\n\n${body}\n\n<a href="https://pharos.watch/digest/${date}">Read on Pharos →</a>`;
+  const kicker = editionNumber ? `Pharos Daily Digest #${editionNumber}\n` : "";
+  return `${kicker}<b>${escapeHtml(title)}</b>\n\n${body}\n\n<a href="https://pharos.watch/digest/${date}">Read on Pharos →</a>`;
 }
 
 /** Post a raw text message to a Telegram channel. Throws on API error. */
@@ -47,8 +48,9 @@ export async function postDigestToTelegram(
   extended: string,
   date: string,
   creds: TelegramCreds,
+  editionNumber?: number | null,
 ): Promise<void> {
-  const text = buildTelegramMessage(title, extended, date);
+  const text = buildTelegramMessage(title, extended, date, editionNumber);
   await postTelegramMessage(text, creds);
   console.log(`[telegram] Posted digest (${text.length} chars)`);
 }
