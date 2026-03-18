@@ -54,7 +54,6 @@ import {
   withErrorHandler,
 } from "./lib/api-utils";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
-import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
 import type { ChainRpcConfig } from "./lib/chain-registry";
 
@@ -77,7 +76,6 @@ export interface TelegramRouteFields {
 /** Domain-specific fields for digest generation/trigger. */
 export interface DigestRouteFields {
   anthropicApiKey?: string | null;
-  twitterCreds?: TwitterCreds | null;
   telegramCreds?: TelegramCreds | null;
 }
 
@@ -220,7 +218,7 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   ),
   "trigger-digest": withErrorHandler(
     "route-trigger-digest",
-    async ({ db, request, trustedAdmin, anthropicApiKey, twitterCreds, telegramCreds }) => {
+    async ({ db, request, trustedAdmin, anthropicApiKey, telegramCreds }) => {
       const authError = await requireAdmin(request, trustedAdmin);
       if (authError) return authError;
 
@@ -232,7 +230,7 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
           const result = await generateDailyDigest(
             db,
             anthropicApiKey ?? null,
-            twitterCreds ?? null,
+            null,
             true,
             telegramCreds ?? null,
           );

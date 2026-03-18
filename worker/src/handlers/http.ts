@@ -7,7 +7,7 @@ import { checkPublicApiRateLimit } from "../lib/rate-limit";
 import { errorResponse } from "../lib/api-utils";
 import { hasValidAdminCredential } from "../lib/auth";
 import { parseCsvEnv } from "../lib/env";
-import { buildTelegramCreds, buildTwitterCreds } from "../lib/runtime-credentials";
+import { buildTelegramCreds } from "../lib/runtime-credentials";
 import { isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
 
@@ -75,7 +75,6 @@ export async function handleHttpRequest(
     GITHUB_DISCUSSION_CATEGORY_ID: env.GITHUB_DISCUSSION_CATEGORY_ID,
     FEEDBACK_IP_SALT: env.FEEDBACK_IP_SALT,
   };
-  const twitterCreds = buildTwitterCreds(env);
   const telegramCreds = buildTelegramCreds(env);
 
   // Handle CORS preflight
@@ -134,7 +133,6 @@ export async function handleHttpRequest(
     mintBurnFreshnessConfig,
     feedbackEnv,
     anthropicApiKey: env.ANTHROPIC_API_KEY ?? null,
-    twitterCreds,
     telegramCreds,
     telegramWebhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
     telegramBotToken: env.TELEGRAM_BOT_TOKEN,

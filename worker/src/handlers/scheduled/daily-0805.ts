@@ -12,7 +12,7 @@ import { syncBluechip } from "../../cron/sync-bluechip";
 import { generateDailyDigest } from "../../cron/daily-digest";
 import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { runDiscoveryScan } from "../../cron/discovery-scan";
-import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
+import { buildTelegramCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 
 export function runDaily0805Slot(runtime: ScheduledRuntimeContext): void {
@@ -26,7 +26,7 @@ export function runDaily0805Slot(runtime: ScheduledRuntimeContext): void {
       return generateDailyDigest(
         runtime.db,
         runtime.env.ANTHROPIC_API_KEY ?? null,
-        buildTwitterCreds(runtime.env),
+        null,
         false,
         buildTelegramCreds(runtime.env),
         signal,
