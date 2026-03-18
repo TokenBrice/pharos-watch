@@ -77,12 +77,12 @@ function ChartSkeleton({ className, type = "area" }: { className?: string; type?
           )}
           {type === "bar" && (
             <div className="flex h-full items-end justify-around gap-2 px-4">
-              <Skeleton className="h-[40%] w-8" />
-              <Skeleton className="h-[65%] w-8" />
-              <Skeleton className="h-[50%] w-8" />
-              <Skeleton className="h-[80%] w-8" />
-              <Skeleton className="h-[45%] w-8" />
-              <Skeleton className="h-[70%] w-8" />
+              <Skeleton variant="shimmer" className="h-[40%] w-8" />
+              <Skeleton variant="shimmer" className="h-[65%] w-8" />
+              <Skeleton variant="shimmer" className="h-[50%] w-8" />
+              <Skeleton variant="shimmer" className="h-[80%] w-8" />
+              <Skeleton variant="shimmer" className="h-[45%] w-8" />
+              <Skeleton variant="shimmer" className="h-[70%] w-8" />
             </div>
           )}
           {/* X-axis labels */}

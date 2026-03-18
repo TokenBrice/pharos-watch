@@ -117,11 +117,16 @@
   --chart-tertiary-hex:  #14b8a6;
   --chart-negative-hex:  #ef4444;
 
+  /* ── Elevation System ─────────────────────────────────────────── */
+  --elevation-rest:    0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%);
+  --elevation-raised:  0 2px 6px oklch(0 0 0 / 7%), 0 14px 32px oklch(0 0 0 / 8%);
+  --elevation-featured: 0 16px 36px rgba(148,163,184,0.18);
+
   /* ── Component: Card ──────────────────────────────────────────── */
   --card-bg:         var(--surface-overlay);
   --card-border:     var(--border-default);
-  --card-shadow:     0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%);
-  --card-shadow-hover: 0 2px 6px oklch(0 0 0 / 7%), 0 14px 32px oklch(0 0 0 / 8%);
+  --card-shadow:     var(--elevation-rest);
+  --card-shadow-hover: var(--elevation-raised);
 
   /* ── Component: Table ─────────────────────────────────────────── */
   --table-header-bg:    var(--surface-raised);
@@ -215,11 +220,16 @@
   --dews-radar-calm-dot-bloom:     oklch(1 0 0 / 0.06);
   --dews-radar-calm-dot-core:      oklch(1 0 0 / 0.28);
 
+  /* ── Elevation System ─────────────────────────────────────────── */
+  --elevation-rest:    0 1px 2px oklch(0 0 0 / 30%), 0 10px 30px oklch(0 0 0 / 22%);
+  --elevation-raised:  0 2px 6px oklch(0 0 0 / 32%), 0 18px 44px oklch(0 0 0 / 28%);
+  --elevation-featured: 0 20px 44px rgba(2,6,23,0.28);
+
   /* ── Component: Card ──────────────────────────────────────────── */
   --card-bg:         var(--surface-overlay);
   --card-border:     var(--border-default);
-  --card-shadow:     0 1px 2px oklch(0 0 0 / 30%), 0 10px 30px oklch(0 0 0 / 22%);
-  --card-shadow-hover: 0 2px 6px oklch(0 0 0 / 32%), 0 18px 44px oklch(0 0 0 / 28%);
+  --card-shadow:     var(--elevation-rest);
+  --card-shadow-hover: var(--elevation-raised);
 
   /* ── Component: Table ─────────────────────────────────────────── */
   --table-header-bg:    var(--surface-raised);

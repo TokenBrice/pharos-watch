@@ -17,6 +17,33 @@ import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/secti
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 // ---------------------------------------------------------------------------
+// Grade Glow Component
+// ---------------------------------------------------------------------------
+
+const GRADE_GLOW_COLORS: Record<string, string> = {
+  A: 'oklch(0.5 0.18 145 / 0.12)',  // Green
+  B: 'oklch(0.5 0.12 250 / 0.12)',  // Blue
+  C: 'oklch(0.55 0.15 85 / 0.12)',  // Amber
+  D: 'oklch(0.55 0.18 55 / 0.15)',   // Orange
+  F: 'oklch(0.5 0.2 25 / 0.18)',     // Red
+};
+
+function GradeGlow({ grade }: { grade: string }) {
+  const color = GRADE_GLOW_COLORS[grade] || GRADE_GLOW_COLORS.B;
+  
+  return (
+    <div 
+      className="absolute inset-0 pointer-events-none"
+      style={{ 
+        background: `radial-gradient(circle at center, ${color}, transparent 65%)`,
+        transform: 'scale(0.9)',
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
@@ -121,7 +148,9 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
               )}
             </div>
             {/* Radar chart — fills remaining width and full column height on desktop */}
-            <div className="min-w-0 w-full flex-1 min-h-[240px] md:h-full md:min-h-[260px]">
+            <div className="relative min-w-0 w-full flex-1 min-h-[240px] md:h-full md:min-h-[260px]">
+              {/* Grade-colored glow behind radar */}
+              <GradeGlow grade={card.overallGrade} />
               <ReportCardRadar card={card} labels="full" />
             </div>
           </div>

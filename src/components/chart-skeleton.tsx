@@ -13,7 +13,7 @@ export function ChartSkeleton({
   return (
     <div
       className={cn(
-        "w-full rounded-lg bg-muted/30 animate-pulse relative overflow-hidden",
+        "w-full rounded-lg relative overflow-hidden skeleton-shimmer",
         className,
       )}
     >

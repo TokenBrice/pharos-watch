@@ -114,9 +114,18 @@
     @apply border-border outline-ring/50;
   }
   html {
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
     /* Smooth theme transitions for color-related properties */
     transition: background-color var(--theme-transition-duration) var(--motion-ease-standard),
                 color var(--theme-transition-duration) var(--motion-ease-standard);
+  }
+  
+  /* Respect reduced motion for scroll behavior */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
   html * {
     /* Allow elements to transition between theme values */
@@ -149,7 +158,7 @@
   /* Theme-aware card elevation shadows */
   [data-slot="card"] {
     border-color: var(--card-border);
-    box-shadow: var(--card-shadow);
+    box-shadow: var(--elevation-rest);
     transition:
       box-shadow var(--motion-duration-base) var(--motion-ease-standard),
       border-color var(--motion-duration-fast) var(--motion-ease-standard),
@@ -165,6 +174,33 @@
   }
   [data-slot="button"]:not(:disabled):active {
     transform: translateY(1px);
+    transition-duration: 0.05s;
+  }
+  
+  /* Enhanced button press feedback */
+  [data-slot="button"][data-variant="default"]:not(:disabled):active {
+    box-shadow: 
+      0 0 0 1px oklch(0 0 0 / 10%) inset,
+      0 1px 2px oklch(0 0 0 / 15%);
+  }
+  
+  .dark [data-slot="button"][data-variant="default"]:not(:disabled):active {
+    box-shadow: 
+      0 0 0 1px oklch(1 0 0 / 10%) inset,
+      0 1px 2px oklch(0 0 0 / 25%);
+  }
+  
+  /* Icon button hover enhancement */
+  [data-slot="button"][data-size="icon"]:not(:disabled):hover,
+  [data-slot="button"][data-size="icon-sm"]:not(:disabled):hover,
+  [data-slot="button"][data-size="icon-xs"]:not(:disabled):hover {
+    transform: scale(1.05);
+  }
+  
+  [data-slot="button"][data-size="icon"]:not(:disabled):active,
+  [data-slot="button"][data-size="icon-sm"]:not(:disabled):active,
+  [data-slot="button"][data-size="icon-xs"]:not(:disabled):active {
+    transform: scale(0.98) translateY(1px);
   }
   [data-slot="button"][data-variant="default"] {
     box-shadow:
@@ -249,6 +285,40 @@
   .pharos-grade-pop {
     animation: pharos-grade-pop 400ms var(--motion-ease-spring) both;
   }
+
+  /* Table striping for better horizontal scanning */
+  .pharos-table-striped tbody tr:nth-child(even) {
+    background-color: oklch(0.97 0.003 260 / 40%);
+  }
+  .dark .pharos-table-striped tbody tr:nth-child(even) {
+    background-color: oklch(1 0 0 / 3%);
+  }
+  .pharos-table-striped tbody tr:nth-child(even):hover {
+    background-color: var(--table-row-hover);
+  }
+
+  /* Risk row indicators */
+  .pharos-row-risk-depeg {
+    border-left: 3px solid var(--p-red-500) !important;
+    background-color: oklch(0.7 0.2 25 / 0.03) !important;
+  }
+  .pharos-row-risk-poor {
+    border-left: 3px solid var(--p-orange-500) !important;
+    background-color: oklch(0.75 0.15 55 / 0.02) !important;
+  }
+  .pharos-row-risk-warning {
+    border-left: 3px solid var(--p-amber-500) !important;
+    background-color: oklch(0.8 0.12 85 / 0.02) !important;
+  }
+  .dark .pharos-row-risk-depeg {
+    background-color: oklch(0.7 0.2 25 / 0.05) !important;
+  }
+  .dark .pharos-row-risk-poor {
+    background-color: oklch(0.75 0.15 55 / 0.04) !important;
+  }
+  .dark .pharos-row-risk-warning {
+    background-color: oklch(0.8 0.12 85 / 0.04) !important;
+  }
 }
 
 @media (max-width: 767px) {
@@ -266,6 +336,13 @@
   }
   .table-header-sticky thead tr {
     @apply bg-muted/80 backdrop-blur-sm;
+  }
+  /* Shadow appears when header is sticky (scrolled) */
+  .table-header-sticky:has(tbody tr:first-child) thead {
+    box-shadow: 0 4px 6px -2px oklch(0 0 0 / 0.1);
+  }
+  .dark .table-header-sticky:has(tbody tr:first-child) thead {
+    box-shadow: 0 4px 6px -2px oklch(0 0 0 / 0.3);
   }
   .scroll-shadow {
     background:
@@ -355,6 +432,81 @@
     }
   }
 
+  @keyframes pharos-risk-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(0.7 0.2 25 / 0.25); }
+    50% { box-shadow: 0 0 0 4px oklch(0.7 0.2 25 / 0); }
+  }
+
+  .animate-risk-pulse {
+    animation: pharos-risk-pulse 2s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-risk-pulse {
+      animation: none;
+    }
+  }
+
+  /* Shimmer loading effect for skeletons */
+  @keyframes pharos-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--p-neutral-200) 0%,
+      var(--p-neutral-100) 50%,
+      var(--p-neutral-200) 100%
+    );
+    background-size: 200% 100%;
+    animation: pharos-shimmer 1.5s ease-in-out infinite;
+  }
+
+  .dark .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--p-neutral-800) 0%,
+      var(--p-neutral-700) 50%,
+      var(--p-neutral-800) 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer {
+      animation: none;
+      background: var(--p-neutral-200);
+    }
+    .dark .skeleton-shimmer {
+      background: var(--p-neutral-800);
+    }
+  }
+
+  /* Breathing animation for live indicators */
+  @keyframes pharos-breathe {
+    0%, 100% { 
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    50% { 
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+
+  .animate-breathe {
+    animation: pharos-breathe 3s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-breathe {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
   .dark [data-slot="button"][data-variant="default"] {
     box-shadow:
       0 1px 2px oklch(0 0 0 / 34%),
@@ -379,6 +531,45 @@
   .psi-chart .recharts-reference-area rect {
     fill-opacity: var(--psi-band-opacity);
   }
+
+  /* Enhanced table row interactions */
+  [data-slot="table-row"] {
+    transition: 
+      background-color var(--motion-duration-fast) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard),
+      border-color var(--motion-duration-fast) var(--motion-ease-standard);
+    border-left: 3px solid transparent;
+  }
+
+  @media (hover: hover) {
+    [data-slot="table-row"]:hover {
+      transform: translateX(2px);
+    }
+  }
+
+  [data-slot="table-row"]:hover {
+    border-left-color: var(--brand-accent);
+  }
+
+  /* Override for risk rows - keep their color on hover */
+  [data-slot="table-row"].pharos-row-risk-depeg:hover {
+    border-left-color: var(--p-red-500);
+  }
+  [data-slot="table-row"].pharos-row-risk-poor:hover {
+    border-left-color: var(--p-orange-500);
+  }
+  [data-slot="table-row"].pharos-row-risk-warning:hover {
+    border-left-color: var(--p-amber-500);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot="table-row"] {
+      transition: none;
+    }
+    [data-slot="table-row"]:hover {
+      transform: none;
+    }
+  }
 }
 
 [data-node-id]:focus-visible {
@@ -394,5 +585,10 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Preserve essential motion for interaction feedback */
+  [data-slot="table-row"]:hover {
+    transform: none !important;
   }
 }

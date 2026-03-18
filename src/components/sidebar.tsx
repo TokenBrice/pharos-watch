@@ -109,7 +109,6 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
   useEffect(() => setMounted(true), []);
 
   const isDark = mounted ? theme === "dark" : false;
-  const Icon = isDark ? Sun : Moon;
   const label = isDark ? "Light mode" : "Dark mode";
 
   return (
@@ -125,7 +124,20 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
         expanded ? "w-full mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
       }`}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <div className="relative h-4 w-4 shrink-0">
+        <Sun 
+          className={`h-4 w-4 absolute transition-all duration-200 ${
+            isDark ? 'opacity-0 rotate-90 scale-50' : 'opacity-100 rotate-0 scale-100'
+          }`}
+          aria-hidden="true"
+        />
+        <Moon 
+          className={`h-4 w-4 absolute transition-all duration-200 ${
+            isDark ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'
+          }`}
+          aria-hidden="true"
+        />
+      </div>
       {expanded && <span className="text-sm">{label}</span>}
     </button>
   );

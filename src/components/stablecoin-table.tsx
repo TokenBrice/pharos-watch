@@ -107,6 +107,31 @@ interface StablecoinTableProps {
   onClearFilters?: () => void;
 }
 
+type RowRiskLevel = 'depeg' | 'poor' | 'warning' | 'normal';
+
+function getRowRiskLevel(
+  coin: StablecoinData,
+  pegScores?: Map<string, PegSummaryCoin>,
+  reportCards?: Record<string, ReportCard>
+): RowRiskLevel {
+  const pegCoin = pegScores?.get(coin.id);
+  const reportCard = reportCards?.[coin.id];
+
+  // Check for depeg (worst) - peg score below 60
+  if (pegCoin?.pegScore !== null && pegCoin?.pegScore !== undefined && pegCoin.pegScore < 60) {
+    return 'depeg';
+  }
+  // Check for poor grade
+  if (reportCard?.overallGrade && ['D', 'F'].includes(reportCard.overallGrade)) {
+    return 'poor';
+  }
+  // Check for warning grade
+  if (reportCard?.overallGrade === 'C') {
+    return 'warning';
+  }
+  return 'normal';
+}
+
 function MiniSparkline({ values }: { values: number[] }) {
   if (values.length < 2 || values.every((v) => v === 0)) return null;
   const min = values.reduce((m, v) => Math.min(m, v), Infinity);
@@ -275,7 +300,7 @@ export function StablecoinTable({
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
       <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-auto px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
-        <table className="min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm">
+        <table className="min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped">
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
             <TableRow>
@@ -319,10 +344,15 @@ export function StablecoinTable({
               const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
               const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
 
+              const riskLevel = getRowRiskLevel(coin, pegScores, reportCards);
+              const riskClass = riskLevel === 'depeg' ? 'pharos-row-risk-depeg' :
+                               riskLevel === 'poor' ? 'pharos-row-risk-poor' :
+                               riskLevel === 'warning' ? 'pharos-row-risk-warning' : '';
+
               return (
                 <TableRow
                   key={coin.id}
-                  className="group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                  className={`group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${riskClass}`}
                   style={{ height: ROW_HEIGHT }}
                   onClick={() => router.push(buildStablecoinUrl(coin.id))}
                   onMouseEnter={() => prefetch(coin.id)}
@@ -444,7 +474,13 @@ export function StablecoinTable({
                       {reportCards?.[coin.id] && (
                         <Badge
                           variant="outline"
-                          className={`text-xs font-mono px-1 py-0 ${REPORT_CARD_GRADE_COLORS[reportCards[coin.id].overallGrade]}`}
+                          className={`text-xs font-mono px-1.5 py-0.5 transition-all duration-200 ${
+                            REPORT_CARD_GRADE_COLORS[reportCards[coin.id].overallGrade]
+                          } ${
+                            ['D', 'F'].includes(reportCards[coin.id].overallGrade) 
+                              ? 'animate-risk-pulse border-red-500/60 bg-red-500/5' 
+                              : ''
+                          }`}
                           title={`Pharos grade: ${reportCards[coin.id].overallGrade}${reportCards[coin.id].overallScore ? ` (${reportCards[coin.id].overallScore}/100)` : ""}`}
                         >
                           {reportCards[coin.id].overallGrade}
