@@ -71,7 +71,7 @@ Scoped to specific UI components. Optional — use when a component needs tokens
 - **Table** — `--table-header-bg`, `--table-row-hover`, `--table-row-stripe`, `--table-border`
 - **Sidebar** — `--sidebar-bg`, `--sidebar-border`, `--sidebar-item-hover`
 
-## Bridge Layer (`globals.css`)
+## Bridge Layer (`src/app/globals.css`)
 
 Existing shadcn/ui variables (`--background`, `--card`, `--foreground`, etc.) are wired to semantic tokens through a bridge layer in `globals.css`. This means:
 

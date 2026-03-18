@@ -385,7 +385,7 @@ Requires Access service-token headers on `ops-api.pharos.watch`.  Rolls back syn
 
 Requires Access service-token headers on `ops-api.pharos.watch`.  Returns all sync state rows.
 
-Both admin endpoints are routed in `worker/src/router.ts` and executed via `worker/src/handlers/http.ts`.
+Both admin endpoints are routed in `worker/src/route-registry.ts` and executed via `worker/src/handlers/http.ts`.
 
 ---
 
@@ -465,12 +465,13 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 | `worker/src/lib/blacklist-contracts.ts`                    | Blacklist event configs: chains, event signatures, and shared-contract resolution rules    |
 | `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
 | `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
-| `worker/src/router.ts`                                     | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |
+| `worker/src/route-registry.ts`                             | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |
 | `worker/src/handlers/scheduled.ts`                         | Cron scheduling orchestration for `sync-blacklist`                                         |
 | `worker/src/lib/db.ts`                                     | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                       |
 | `worker/migrations/0001_initial.sql`                       | `blacklist_events` + `blacklist_sync_state` tables                                         |
 | `worker/migrations/0028_blacklist_indexes.sql`             | `chain_name` + `event_type` indexes                                                        |
 | `worker/migrations/0037_blacklist_methodology_version.sql` | Adds `methodology_version` to blacklist events and backfills by timestamp windows          |
+| `worker/migrations/0049_audit_blacklist_index.sql`         | Composite index `(chain_name, timestamp DESC)` for filtered pagination                     |
 | `src/hooks/use-blacklist-events.ts`                        | TanStack Query hook                                                                        |
 | `src/app/blacklist/page.tsx`                               | Blacklist page with filters, stats, chart, table                                           |
 | `src/components/blacklist-filters.tsx`                     | Filter UI (stablecoin, chain, event type)                                                  |

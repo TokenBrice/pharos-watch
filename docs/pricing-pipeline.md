@@ -119,7 +119,7 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 
 1. **Pass 1:** DefiLlama `coins.llama.fi` by current contract address
 2. **Pass 1b:** alternate-chain contract fallback via DefiLlama
-3. **Pass 2:** CoinMarketCap `listings/latest` batch — prefers `cmcSlug`-based matching over symbol to avoid cross-contamination in collision groups (e.g., two coins sharing "GUSD")
+3. **Pass 2:** CoinMarketCap `listings/latest` batch — prefers `cmcSlug`-based matching over symbol to avoid cross-contamination in collision groups (e.g., two coins sharing "GUSD"). Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
 4. **Pass 3:** DexScreener search fallback with liquidity and peg-aware validation gates
 
 The enrichment path is intentionally narrower than primary pricing:

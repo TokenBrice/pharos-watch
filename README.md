@@ -52,8 +52,8 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [DefiLlama Protocols](https://defillama.com/protocols)                  | Protocol TVL context used by DEX liquidity scoring and fallback coverage checks                            | 30 min                            |
 | [Curve Finance API](https://api.curve.finance/)                         | Pool A-factors, per-token balances, implied prices                                                         | 30 min                            |
 | [The Graph](https://thegraph.com/)                                      | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices                        | 30 min                            |
-| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain)           | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 20 min                            |
-| [GeckoTerminal](https://www.geckoterminal.com/)                         | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs                                        | 20 min                            |
+| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain)           | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 30 min                            |
+| [GeckoTerminal](https://www.geckoterminal.com/)                         | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs                                        | 30 min                            |
 | [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15/20/30 min) |
 | [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
@@ -181,7 +181,7 @@ Cloudflare Worker (API layer)
   ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + FX rates + PSI compute + DEWS + status self-check
   ├── Cron: 3,23,43 * * * *                     → blacklist sync
   ├── Cron: 4,24,44 * * * *                     → mint/burn critical lane
-  ├── Cron: 6,36 * * * *                         → DEX discovery staging
+  ├── Cron: 6,36 * * * *                         → DEX discovery staging (30 min)
   ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
   ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + yield sync
   ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots
@@ -200,6 +200,7 @@ Cloudflare D1 (SQLite database)
   ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, DexScreener
   ├── onchain_supply       → per-stablecoin on-chain supply by chain (contract calls)
   ├── supply_history       → daily per-coin supply snapshots from cached stablecoins data (08:00 UTC + retry upserts)
+  ├── chain_supply_history → daily per-chain supply aggregates for historical analysis
   ├── reserve_composition  → live reserve slices per coin for live-enabled assets
   ├── reserve_sync_state   → per-coin reserve-sync freshness, status, and warnings
   ├── redemption_backstop  → current modeled redemption-route / effective-exit snapshot per configured coin

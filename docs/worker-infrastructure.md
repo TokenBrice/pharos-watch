@@ -969,7 +969,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 
 ### Migration Squash Strategy
 
-Currently at 74 D1 migrations. When the count approaches ~150, perform a one-time squash:
+Currently at 69 D1 migrations. When the count approaches ~150, perform a one-time squash:
 
 1. Export current schema: `wrangler d1 export stablecoin-db --remote --output=baseline.sql`
 2. Replace all migration files with a single `0001_baseline.sql`

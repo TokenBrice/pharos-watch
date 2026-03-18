@@ -2,7 +2,7 @@
 
 This document reflects the current UI baseline in the codebase and was re-verified on **March 11, 2026**.
 
-Use this as the visual source of truth for product-facing design decisions. For token definitions (primitive, semantic, component), see [`design-tokens.md`](design-tokens.md).
+Use this as the visual source of truth for product-facing design decisions. For token definitions (primitive, semantic, component), see [`design-tokens.md`](design-tokens.md). The bridge layer lives in `src/app/globals.css`.
 
 ---
 

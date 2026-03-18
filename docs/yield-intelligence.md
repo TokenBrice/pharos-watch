@@ -265,7 +265,7 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 | `reward-heavy`     | `apyReward / apy > 0.8`                                | 80%+ from incentives, not base yield |
 | `tvl-outflow`      | TVL dropped > 20% from prev week                       | Capital leaving the protocol         |
 | `zero-yield`       | `currentApy === 0 AND apy30d > 0.5%`                   | Yield dropped to zero but had recent activity |
-| `data-stale`       | `updated_at` > 90 min old                              | Yield data hasn't refreshed in 90+ min |
+| `data-stale`       | `updated_at` > 90 min old (`STALE_THRESHOLD_MS` in `worker/src/cron/yield-helpers.ts`) | Yield data hasn't refreshed in 90+ min |
 
 All frontend surfaces (leaderboard, detail section, history chart) format warning signals via the shared `formatYieldWarningSignal()` function in `src/lib/yield-constants.ts`, which maps known signal keys to human-readable labels and falls back to hyphen-to-space conversion for unknown signals.
 

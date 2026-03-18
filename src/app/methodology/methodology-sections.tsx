@@ -709,7 +709,7 @@ export function MethodologySections() {
                 { label: "Required sources", value: "Peg summary, DEX liquidity/redemption data, and dependency/metadata inputs" },
                 {
                   label: "Failure behavior",
-                  value: "NR if peg is missing on non-NAV coins; 0.9 penalty applies only when both DEX and redemption signals are absent",
+                  value: "NR if peg is missing on non-NAV coins; 0.9 penalty applies when exit liquidity is NR (no DEX data and no redemption backstop signal available)",
                 },
               ]}
             />
@@ -864,7 +864,7 @@ export function MethodologySections() {
                 issuer redemption quality.
               </p>
               <p className="font-mono">
-                effectiveExit = max(liquidity, liquidity * 0.55 + redemption * 0.45)
+                effectiveExit = max(liquidity, liquidity * 0.55 + redemption * 0.45), with redemption-only capped at 70
               </p>
               <p>
                 Redemption backstops are scored across access, settlement, execution certainty, immediate capacity,
@@ -889,10 +889,10 @@ export function MethodologySections() {
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">No-Liquidity-Data Penalty</h3>
               <p>
-                A further 0.9&times; multiplier is applied only when a coin has no exit-liquidity signal at all —
-                neither DEX liquidity nor redemption-backstop coverage. The 30% weight would otherwise be redistributed
-                to other dimensions, effectively inflating the overall score; this multiplier corrects for that by
-                applying a flat 10% penalty instead.
+                A further 0.9&times; multiplier is applied when a coin has no exit-liquidity signal at all —
+                neither DEX liquidity nor redemption-backstop coverage. Weights are redistributed across available 
+                dimensions; this 0.9&times; multiplier is then applied to the final score to correct for the missing 
+                liquidity data by applying a flat 10% penalty.
               </p>
             </div>
 
