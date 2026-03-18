@@ -113,6 +113,35 @@ export async function loadDexPoolChallengers(
   return result;
 }
 
+/** Load per-protocol price breakdowns from dex_prices.price_sources_json for trusted rows. */
+export async function loadDexPriceSources(
+  db: D1Database,
+  maxAgeSec = 2100, // 35 min = 30min cron + 5min buffer
+): Promise<Map<string, DexPoolSource[]>> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  try {
+    const rows = await db
+      .prepare("SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL")
+      .all<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>();
+
+    const result = new Map<string, DexPoolSource[]>();
+    for (const row of rows.results ?? []) {
+      if (nowSec - row.updated_at > maxAgeSec) continue;
+      let sources: DexPoolSource[];
+      try { sources = JSON.parse(row.price_sources_json); } catch { continue; }
+      if (!Array.isArray(sources) || sources.length === 0) continue;
+      result.set(row.stablecoin_id, sources);
+    }
+    return result;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("no such table")) {
+      console.error("[depeg-helpers] Unexpected error loading dex price sources:", msg);
+    }
+    return new Map();
+  }
+}
+
 export function isTrustedDexPriceRow(
   row: Pick<DexPriceRow, "updated_at" | "source_total_tvl">,
   nowSec: number,

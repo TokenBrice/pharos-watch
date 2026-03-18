@@ -18,7 +18,7 @@ import {
 import { fetchPythPrices } from "../lib/pyth";
 import { fetchBinancePrices, fetchCoinbasePrices, COINBASE_KNOWN_SYMBOLS } from "../lib/cex-tickers";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../lib/redstone";
-import { loadDexPriceRows, isTrustedDexPriceRow, loadDexPoolChallengers } from "../lib/depeg-helpers";
+import { loadDexPriceRows, isTrustedDexPriceRow, loadDexPoolChallengers, loadDexPriceSources } from "../lib/depeg-helpers";
 import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
 import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../lib/authoritative-price-sources";
@@ -328,9 +328,11 @@ export async function fetchPrimaryPrices(
   // Load DEX prices for promotion into primary consensus
   const nowSec = Math.floor(Date.now() / 1000);
   const dexRows = await loadDexPriceRows(db);
+  const dexPriceSources = await loadDexPriceSources(db);
 
   // N-source consensus per asset
   const DIVERGENCE_THRESHOLD_BPS = 50;
+  const DEX_API_WEIGHTS: Record<string, number> = { fluid: 3, balancer: 3, raydium: 2, orca: 2 };
 
   for (const asset of candidates) {
     const gId = asset.geckoId!;
@@ -375,6 +377,23 @@ export async function fetchPrimaryPrices(
         weight: 1,
         metadata: { poolCount: dexRow.source_pool_count, tvl: dexRow.source_total_tvl },
       });
+    }
+
+    // Disaggregate per-protocol prices from dex_prices.price_sources_json
+    const protocolSources = dexPriceSources.get(asset.id);
+    if (protocolSources) {
+      for (const ps of protocolSources) {
+        const w = DEX_API_WEIGHTS[ps.protocol];
+        if (w == null) continue; // only inject for protocols with elevated weights
+        if (ps.tvl < 50_000) continue; // min TVL for pricing
+        if (!Number.isFinite(ps.price) || ps.price <= 0) continue;
+        sources.push({
+          source: `${ps.protocol}-dex`,
+          price: ps.price,
+          weight: w,
+          metadata: { tvl: ps.tvl, chain: ps.chain },
+        });
+      }
     }
 
     stats.attempted++;
@@ -524,6 +543,7 @@ export function applyPoolChallenge(
 /** Sources that are independent exchanges/oracles — NOT aggregators that may share upstream data */
 const HARD_SOURCES = new Set([
   "pyth", "binance", "coinbase", "curve-onchain", "curve-oracle", "redstone", "protocol-redeem",
+  "fluid-dex", "balancer-dex", "raydium-dex", "orca-dex",
 ]);
 
 /** Returns true if all sources are soft aggregators (CG, DL, DEX average, etc.) */
