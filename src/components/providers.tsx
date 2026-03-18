@@ -38,9 +38,22 @@ function AppProviders({ children }: { children: React.ReactNode }) {
     window.dispatchEvent(new CustomEvent("open-command-palette"));
   }, []);
 
+  const handleFocusTable = useCallback(() => {
+    // Dispatch event to focus table
+    window.dispatchEvent(new CustomEvent("focus-stablecoin-table"));
+  }, []);
+
+  const handleToggleFilters = useCallback(() => {
+    // Dispatch event to toggle filters
+    window.dispatchEvent(new CustomEvent("toggle-filters"));
+    addToast("Filters toggled", "info");
+  }, [addToast]);
+
   useGlobalShortcuts({
     onToggleTheme: handleToggleTheme,
     onFocusSearch: handleFocusSearch,
+    onFocusTable: handleFocusTable,
+    onToggleFilters: handleToggleFilters,
   });
 
   return (

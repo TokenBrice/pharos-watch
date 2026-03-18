@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useRef, useEffect } from "react";
+import { useMemo, useCallback, useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -8,7 +8,15 @@ import { TableBody, TableCell, TableHead, TableCaption, TableHeader, TableRow } 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download } from "lucide-react";
+import { Download, MoreHorizontal } from "lucide-react";
+import { TableToolbar } from "./table-toolbar";
+import { useTableDensity, DENSITY_CONFIGS } from "@/hooks/use-table-density";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -183,6 +191,12 @@ export function StablecoinTable({
   const prefetch = usePrefetchStablecoin();
   const metaById = TRACKED_META_BY_ID;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [showFilters, setShowFilters] = useState(true);
+
+  // Density mode
+  const [density, setDensity] = useTableDensity();
+  const densityConfig = DENSITY_CONFIGS[density];
 
   // Column visibility — mobile gets a reduced default (hiddenMobile columns start off)
   const deviceDefault = useMemo(
@@ -195,6 +209,28 @@ export function StablecoinTable({
   );
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleFocusTable() {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Focus the first row if available
+      const firstRow = tableRef.current?.querySelector('[role="link"]') as HTMLElement;
+      firstRow?.focus();
+    }
+
+    function handleToggleFilters() {
+      setShowFilters((prev) => !prev);
+    }
+
+    window.addEventListener("focus-stablecoin-table", handleFocusTable);
+    window.addEventListener("toggle-filters", handleToggleFilters);
+
+    return () => {
+      window.removeEventListener("focus-stablecoin-table", handleFocusTable);
+      window.removeEventListener("toggle-filters", handleToggleFilters);
+    };
+  }, []);
 
   const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sortKey, visibleSet), [sortKey, visibleSet]);
 
@@ -226,12 +262,12 @@ export function StablecoinTable({
     prevRef.current = { filtered, sort };
   }, [filtered, sort]);
 
-  // Virtual scrolling
+  // Virtual scrolling with density-aware row height
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentional for large datasets.
   const virtualizer = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => densityConfig.rowHeight,
     overscan: OVERSCAN,
   });
 
@@ -270,33 +306,17 @@ export function StablecoinTable({
   }
 
   return (
-    <div className="pharos-card-shell animate-in fade-in duration-300 overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/22 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <p className="pharos-kicker sm:hidden">Swipe to reveal more metrics</p>
-          <p className="text-xs text-muted-foreground sm:hidden">
-            Name, price, and market cap stay readable first. Columns and export stay above the table.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <ColumnVisibilityDropdown
-            visibleColumns={visibleColumns}
-            setVisibleColumns={setVisibleColumns}
-            resetColumns={resetColumns}
-            defaultColumns={deviceDefault}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="hidden sm:inline-flex border-border/70 sm:min-h-8 sm:w-auto"
-            onClick={handleCsvExport}
-            disabled={sorted.length === 0}
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </Button>
-        </div>
-      </div>
+    <div ref={tableRef} className="pharos-card-shell animate-in fade-in duration-300 overflow-hidden">
+      <TableToolbar
+        density={density}
+        onDensityChange={setDensity}
+        visibleColumns={visibleColumns}
+        onVisibleColumnsChange={setVisibleColumns}
+        onResetColumns={resetColumns}
+        defaultColumns={deviceDefault}
+        onExport={handleCsvExport}
+        exportDisabled={sorted.length === 0}
+      />
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
       <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-auto px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
@@ -353,7 +373,7 @@ export function StablecoinTable({
                 <TableRow
                   key={coin.id}
                   className={`group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${riskClass}`}
-                  style={{ height: ROW_HEIGHT }}
+                  style={{ height: densityConfig.rowHeight }}
                   onClick={() => router.push(buildStablecoinUrl(coin.id))}
                   onMouseEnter={() => prefetch(coin.id)}
                   onKeyDown={(e) => {
@@ -547,6 +567,33 @@ export function StablecoinTable({
                       </div>
                     </TableCell>
                   )}
+                  {/* Action menu */}
+                  <TableCell className="w-[40px] p-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="pharos-focus-ring flex h-full w-full items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="More actions"
+                        >
+                          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => router.push(buildStablecoinUrl(coin.id))}>
+                          View details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          navigator.clipboard.writeText(`${coin.name} (${coin.symbol})`);
+                        }}>
+                          Copy name
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/compare/?coins=${coin.id}`)}>
+                          Compare
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               );
             })}

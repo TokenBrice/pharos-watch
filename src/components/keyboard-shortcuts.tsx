@@ -105,9 +105,13 @@ export function KeyboardShortcuts() {
 export function useGlobalShortcuts({
   onToggleTheme,
   onFocusSearch,
+  onFocusTable,
+  onToggleFilters,
 }: {
   onToggleTheme?: () => void;
   onFocusSearch?: () => void;
+  onFocusTable?: () => void;
+  onToggleFilters?: () => void;
 }) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -132,10 +136,22 @@ export function useGlobalShortcuts({
             onFocusSearch?.();
           }
           break;
+        case "s":
+          if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            onFocusTable?.();
+          }
+          break;
+        case "f":
+          if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            onToggleFilters?.();
+          }
+          break;
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onToggleTheme, onFocusSearch]);
+  }, [onToggleTheme, onFocusSearch, onFocusTable, onToggleFilters]);
 }
