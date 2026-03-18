@@ -19,7 +19,7 @@
 | File | Responsibility |
 |------|---------------|
 | `worker/src/lib/dex-api-common.ts` | `DexApiPool` type, `convertToGtNewPools()`, `extractPriceObservations()` |
-| `worker/src/cron/dex-liquidity/fetch-fluid.ts` | Fluid REST fetcher (7 chains) |
+| `worker/src/cron/dex-liquidity/fetch-fluid.ts` | Fluid REST fetcher (5 EVM chains; Plasma/Solana chain IDs TBD, added when discovered) |
 | `worker/src/cron/dex-liquidity/fetch-balancer.ts` | Balancer GraphQL fetcher (multi-chain) |
 | `worker/src/cron/dex-liquidity/fetch-raydium.ts` | Raydium REST fetcher (Solana) |
 | `worker/src/cron/dex-liquidity/fetch-orca.ts` | Orca REST fetcher (Solana) |
@@ -118,7 +118,7 @@ Create `worker/src/lib/dex-api-common.ts`:
 
 ```typescript
 import type { DexPriceObs, GtNewPool } from "../cron/dex-liquidity/types";
-import type { PriceValidationReferences } from "../cron/dex-liquidity/price-sanity";
+import type { PriceValidationReferences } from "./price-validation";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import { QUALITY_MULTIPLIERS, normalizeDexSymbol, isUsdReferenceSymbol } from "./dex-constants";
 
@@ -1271,10 +1271,25 @@ After the CG tickers fallback block (line 167, after `failedSources.push("cg-tic
   if (directApiPools.length > 0) {
     console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
 
-    // Convert to GtNewPool and merge into metrics
-    // symbolToIds and addressToId are already in scope from line 51
+    // Convert to GtNewPool, dedup against DL-sourced pools, then merge
+    // symbolToIds, addressToId, and knownPoolAddrs are already in scope
     const directApiGtPools = convertToGtNewPools(directApiPools, addressToId, symbolToIds);
-    mergeGtPools(metrics, directApiGtPools);
+
+    // Filter out pools already known from DL/Curve/subgraphs to avoid double-counting TVL
+    let dedupSkipped = 0;
+    for (const [id, pools] of directApiGtPools) {
+      const filtered = pools.filter((p) => {
+        const key = `${p.chain.toLowerCase()}:${p.address.toLowerCase()}`;
+        if (knownPoolAddrs.has(key)) { dedupSkipped++; return false; }
+        knownPoolAddrs.add(key); // register so future fallback crawlers skip these too
+        return true;
+      });
+      if (filtered.length > 0) directApiGtPools.set(id, filtered);
+      else directApiGtPools.delete(id);
+    }
+    if (dedupSkipped > 0) console.log(`[dex-liquidity] Skipped ${dedupSkipped} direct API pools already in DL`);
+
+    if (directApiGtPools.size > 0) mergeGtPools(metrics, directApiGtPools);
 
     // Extract price observations with plausibility filtering
     const directApiPriceObs = extractPriceObservations(
@@ -1366,7 +1381,7 @@ describe("loadDexPriceSources", () => {
 
 - [ ] **Step 2: Add `loadDexPriceSources` to `depeg-helpers.ts`**
 
-In `worker/src/lib/depeg-helpers.ts`, add after `loadDexPriceRows()` (after line 60):
+In `worker/src/lib/depeg-helpers.ts`, add after `loadDexPoolChallengers()` (after line 114):
 
 ```typescript
 /** Load per-protocol price breakdowns from dex_prices.price_sources_json for trusted rows. */
@@ -1406,10 +1421,10 @@ Expected: All tests pass.
 
 - [ ] **Step 4: Inject per-protocol prices in `enrich-prices.ts`**
 
-In `worker/src/cron/enrich-prices.ts`, add import at the top:
+In `worker/src/cron/enrich-prices.ts`, extend the existing `depeg-helpers` import (line 21) to add `loadDexPriceSources`:
 
 ```typescript
-import { loadDexPriceSources, type DexPoolSource } from "../lib/depeg-helpers";
+import { loadDexPriceRows, isTrustedDexPriceRow, loadDexPoolChallengers, loadDexPriceSources } from "../lib/depeg-helpers";
 ```
 
 After the existing `loadDexPriceRows(db)` call (line 330), add:
