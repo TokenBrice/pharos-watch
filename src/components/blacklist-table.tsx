@@ -103,7 +103,8 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
         getAriaSortValue,
         handleSortKeyDown,
       }}
-      containerClassName="rounded-xl border overflow-x-auto"
+      striped
+      containerClassName="rounded-xl border"
       headerClassName="bg-muted/80 backdrop-blur-sm"
       topSlot={
         <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">

@@ -162,6 +162,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     <TooltipProvider>
       <DataTableShell
         columns={YIELD_COLUMNS}
+        striped
         sort={{
           sortKey,
           sortDirection,

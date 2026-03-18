@@ -151,6 +151,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
   return (
     <DataTableShell
       columns={FLOW_TABLE_COLUMNS}
+      striped
       sort={{
         sortKey,
         sortDirection,

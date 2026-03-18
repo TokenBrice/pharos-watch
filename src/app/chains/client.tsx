@@ -98,8 +98,8 @@ export function ChainsLeaderboardClient() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto lg:overflow-x-hidden rounded-lg border">
+        <table className="w-full text-sm pharos-table-striped">
           <caption className="sr-only">Blockchain networks ranked by stablecoin supply</caption>
           <TableHeader>
             <TableRow className="bg-muted/40">

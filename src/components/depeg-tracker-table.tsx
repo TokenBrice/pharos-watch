@@ -83,6 +83,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
         getAriaSortValue,
         handleSortKeyDown,
       }}
+      striped
       tableClassName="min-w-[420px]"
       pagination={{
         page: effectivePage,

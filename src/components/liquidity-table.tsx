@@ -81,6 +81,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
   return (
     <DataTableShell
       columns={LIQUIDITY_COLUMNS}
+      striped
       sort={{
         sortKey,
         sortDirection,

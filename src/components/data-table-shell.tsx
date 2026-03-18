@@ -13,6 +13,7 @@ import {
   type TablePaginationProps,
 } from "@/components/table-pagination";
 import { cn } from "@/lib/utils";
+import type { TableDensity } from "@/hooks/use-table-density";
 
 export interface DataTableColumn<K extends string = string> {
   id: string;
@@ -39,6 +40,10 @@ interface DataTableShellProps<K extends string> {
   tableClassName?: string;
   headerClassName?: string;
   pagination?: TablePaginationProps;
+  /** Enable striped rows for horizontal scanning */
+  striped?: boolean;
+  /** Density mode for row height */
+  density?: TableDensity;
 }
 
 export function DataTableShell<K extends string>({
@@ -50,11 +55,16 @@ export function DataTableShell<K extends string>({
   tableClassName,
   headerClassName,
   pagination,
+  striped = false,
+  density = "comfortable",
 }: DataTableShellProps<K>) {
   return (
-    <div className={cn("rounded-xl border overflow-x-auto scroll-shadow", containerClassName)}>
+    <div className={cn(
+      "rounded-xl border overflow-x-auto scroll-shadow lg:overflow-x-hidden",
+      containerClassName
+    )}>
       {topSlot}
-      <Table className={tableClassName}>
+      <Table className={cn(tableClassName, striped && "pharos-table-striped", `pharos-density-${density}`)}>
         <TableHeader className={cn("bg-muted/80", headerClassName)}>
           <TableRow>
             {columns.map((column) =>
