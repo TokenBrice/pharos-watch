@@ -54,8 +54,11 @@ function getAdaptiveTreatment(data: StablecoinCardData): {
 function formatBacking(backing: string): string {
   const map: Record<string, string> = {
     fiat: "Fiat",
+    "fiat-backed": "Fiat",
     crypto: "Crypto",
+    "crypto-backed": "Crypto",
     rwa: "RWA",
+    "rwa-backed": "RWA",
     algorithmic: "Algo",
   };
   return map[backing] || backing;

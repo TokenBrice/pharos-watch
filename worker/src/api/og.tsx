@@ -11,9 +11,10 @@ import { resolveOrReject } from "../lib/api-utils";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
+import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -161,19 +162,17 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     return new Response("Unknown stablecoin", { status: 404, headers: { "Content-Type": "text/plain" } });
   }
 
-  // Parallel queries: stablecoins cache, dex liquidity, DEWS, report card, 7d price sparkline, 
-  // active depeg, 7d flow, peg score, 24h price change, and metadata
+  // Parallel queries: stablecoins cache, dex liquidity, DEWS, report card, 7d price sparkline,
+  // active depeg, 7d flow, and 24h price change.
   const [
-    stablecoinsPayload, 
-    dexLiqMap, 
-    dewsRow, 
-    reportCardRow, 
-    sparklineRows, 
-    activeDepegRow, 
+    stablecoinsPayload,
+    dexLiqMap,
+    dewsRow,
+    reportCardRow,
+    sparklineRows,
+    activeDepegRow,
     flowRow,
-    pegSummaryRow,
     price24hRow,
-    metadataRow,
   ] = await Promise.all([
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
     loadDexLiquidityMap(db),
@@ -204,13 +203,6 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       )
       .bind(id, Math.floor(Date.now() / 1000) - 7 * 86400)
       .first<{ net_flow: number | null }>(),
-    // New queries for additional data
-    db
-      .prepare(
-        "SELECT peg_score FROM peg_summary WHERE stablecoin_id = ? ORDER BY computed_at DESC LIMIT 1",
-      )
-      .bind(id)
-      .first<{ peg_score: number }>(),
     db
       .prepare(
         `SELECT 
@@ -219,31 +211,37 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       )
       .bind(id, id)
       .first<{ current_price: number; prev_day_price: number }>(),
-    db
-      .prepare(
-        "SELECT backing, governance FROM stablecoins WHERE id = ?",
-      )
-      .bind(id)
-      .first<{ backing: string; governance: string }>(),
   ]);
 
   if (!hasUsableStablecoinsPayload(stablecoinsPayload)) {
     return new Response("Data not yet available", { status: 503, headers: { "Content-Type": "text/plain" } });
   }
 
-  const coin = stablecoinsPayload.payload.peggedAssets.find((a) => a.id === id);
+  const { peggedAssets, fxFallbackRates } = stablecoinsPayload.payload;
+  const coin = peggedAssets.find((a) => a.id === id);
   if (!coin) {
     return new Response("Stablecoin not found in cache", { status: 404, headers: { "Content-Type": "text/plain" } });
   }
 
+  const methodologyAsOf =
+    typeof stablecoinsPayload.updatedAt === "number"
+      ? stablecoinsPayload.updatedAt
+      : Math.floor(Date.now() / 1000);
+  const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
+    peggedAssets,
+    fxFallbackRates,
+    methodologyAsOf,
+    includeNavTokens: false,
+  });
+  const meta = TRACKED_META_BY_ID.get(id);
   const liq = dexLiqMap[id];
-  
+
   // Calculate 24h price change
   let change24h: number | null = null;
   if (price24hRow?.current_price && price24hRow?.prev_day_price) {
     change24h = ((price24hRow.current_price - price24hRow.prev_day_price) / price24hRow.prev_day_price) * 100;
   }
-  
+
   const data = deriveStablecoinOgCardData({
     coin,
     dexLiquidityScore: liq?.liquidityScore ?? null,
@@ -252,9 +250,9 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     sparklineRows: sparklineRows.results ?? [],
     hasActiveDepeg: activeDepegRow !== null,
     flow7d: flowRow?.net_flow,
-    pegScore: pegSummaryRow?.peg_score ?? null,
-    backing: metadataRow?.backing ?? "fiat",
-    governance: metadataRow?.governance ?? "centralized",
+    pegScore: pegAnalytics.pegDataById.get(id)?.pegScore ?? null,
+    backing: meta?.flags.backing ?? "rwa-backed",
+    governance: meta?.flags.governance ?? "centralized",
     redemptionScore: null, // Not available in current cache schema
     change24h,
   });
@@ -390,14 +388,13 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     // New: Get active depeg details
     db
       .prepare(
-        `SELECT d.stablecoin_id, d.deviation_bps, s.symbol, s.name
-         FROM depeg_events d
-         JOIN stablecoins s ON d.stablecoin_id = s.id
-         WHERE d.ended_at IS NULL
-         ORDER BY ABS(d.deviation_bps) DESC
+        `SELECT stablecoin_id, symbol, peak_deviation_bps
+         FROM depeg_events
+         WHERE ended_at IS NULL
+         ORDER BY ABS(peak_deviation_bps) DESC
          LIMIT 5`
       )
-      .all<{ stablecoin_id: string; deviation_bps: number; symbol: string; name: string }>(),
+      .all<{ stablecoin_id: string; symbol: string; peak_deviation_bps: number }>(),
     // New: Count recovered in last 24h
     db
       .prepare(
@@ -442,8 +439,8 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
   // Format active depegs for display
   const activeDepegs = (activeDepegsDetails.results ?? []).map(row => ({
     symbol: row.symbol,
-    name: row.name,
-    deviationBps: row.deviation_bps,
+    name: TRACKED_META_BY_ID.get(row.stablecoin_id)?.name ?? row.symbol,
+    deviationBps: row.peak_deviation_bps,
   }));
 
   const data: DepegCardData = {
@@ -480,8 +477,8 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
     atlRow,
   ] = await Promise.all([
     db
-      .prepare("SELECT score, band, stored_at, flight_to_quality, flight_intensity FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-      .first<{ score: number; band: string; stored_at: number; flight_to_quality: number | null; flight_intensity: number | null }>(),
+      .prepare("SELECT score, band, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+      .first<{ score: number; band: string; stored_at: number }>(),
     db
       .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
       .bind(now - 86400)
@@ -534,8 +531,8 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
     avg7d,
     allTimeHigh: athRow?.max ?? psiScore,
     allTimeLow: atlRow?.min ?? psiScore,
-    flightToQuality: latestSample?.flight_to_quality === 1,
-    flightIntensity: latestSample?.flight_intensity ?? null,
+    flightToQuality: false,
+    flightIntensity: null,
     lastUpdated: new Date().toISOString().slice(0, 16).replace("T", " ") + " UTC",
   };
 
