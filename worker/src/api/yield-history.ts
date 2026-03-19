@@ -24,6 +24,29 @@ interface YieldHistoryRow {
   is_best: number | null;
 }
 
+const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
+
+function buildOnChainSourceKey(stablecoinId: string): string {
+  return `onchain:${stablecoinId}`;
+}
+
+function normalizeHistorySourceKey(
+  stablecoinId: string,
+  row: YieldHistoryRow,
+  mode: "best" | "source",
+): string {
+  const sourceKey = row.source_key ?? "legacy-best";
+  if (
+    mode === "best"
+    && stablecoinId === "lusd-liquity"
+    && row.data_source === "onchain"
+    && sourceKey === LEGACY_LUSD_BPROTOCOL_SOURCE_KEY
+  ) {
+    return buildOnChainSourceKey(stablecoinId);
+  }
+  return sourceKey;
+}
+
 function parseWarningSignals(raw: string | null): string[] {
   if (!raw) return [];
   try {
@@ -79,7 +102,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
 
   let previousSourceKey: string | null = null;
   const history = (result.results ?? []).map((row) => {
-    const normalizedSourceKey = row.source_key ?? "legacy-best";
+    const normalizedSourceKey = normalizeHistorySourceKey(parsed.stablecoinId, row, mode);
     const sourceSwitch =
       mode === "best" &&
       previousSourceKey != null &&

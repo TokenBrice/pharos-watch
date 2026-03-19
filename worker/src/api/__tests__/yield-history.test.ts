@@ -102,6 +102,30 @@ describe("handleYieldHistory", () => {
     expect(body[1]).toMatchObject({ sourceKey: "rate-derived", sourceSwitch: true });
   });
 
+  it("normalizes legacy LUSD deterministic keys in best-mode history without a synthetic switch", async () => {
+    const legacyRow = makeYieldHistoryRow({
+      source_key: "bprotocol-lqty-only",
+      recorded_at: 1_773_960_283,
+      data_source: "onchain",
+      yield_source: "B.Protocol Stability Pool (LQTY only)",
+      yield_type: "lending-vault",
+    });
+    const normalizedRow = makeYieldHistoryRow({
+      source_key: "onchain:lusd-liquity",
+      recorded_at: 1_773_962_101,
+      data_source: "onchain",
+      yield_source: "B.Protocol Stability Pool (LQTY only)",
+      yield_type: "lending-vault",
+    });
+    const db = mockD1([{ match: "yield_history", rows: [legacyRow, normalizedRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=lusd-liquity"));
+    expect(res.status).toBe(200);
+    const body = await res.json() as Array<{ sourceKey: string; sourceSwitch: boolean }>;
+    expect(body[0]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
+    expect(body[1]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
+  });
+
   it("falls back to an empty warning list when warning_signals is malformed JSON", async () => {
     const malformedRow = makeYieldHistoryRow({ warning_signals: "not-json" });
     const db = mockD1([{ match: "yield_history", rows: [malformedRow] }]);
