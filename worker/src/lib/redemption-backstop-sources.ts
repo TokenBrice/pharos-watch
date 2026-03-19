@@ -67,19 +67,37 @@ function resolveDocs(
 
 function resolveCostScore(
   costModel: RedemptionCostModel,
-): { score: number; feeBps: number | null } {
+): { score: number; feeBps: number | null; feeDescription?: string } {
   if (costModel.kind === "dynamic-or-unclear") {
-    return { score: 40, feeBps: null };
+    return {
+      score: 40,
+      feeBps: null,
+      ...(costModel.feeDescription
+        ? { feeDescription: costModel.feeDescription }
+        : {}),
+    };
   }
   if (costModel.kind === "manual-or-unbounded") {
-    return { score: 20, feeBps: null };
+    return {
+      score: 20,
+      feeBps: null,
+      ...(costModel.feeDescription
+        ? { feeDescription: costModel.feeDescription }
+        : {}),
+    };
   }
 
   const feeBps = Math.max(0, costModel.feeBps);
-  if (feeBps <= 10) return { score: 100, feeBps };
-  if (feeBps <= 50) return { score: 80, feeBps };
-  if (feeBps <= 100) return { score: 60, feeBps };
-  return { score: 40, feeBps };
+  const base = {
+    feeBps,
+    ...(costModel.feeDescription
+      ? { feeDescription: costModel.feeDescription }
+      : {}),
+  };
+  if (feeBps <= 10) return { score: 100, ...base };
+  if (feeBps <= 50) return { score: 80, ...base };
+  if (feeBps <= 100) return { score: 60, ...base };
+  return { score: 40, ...base };
 }
 
 async function resolveCapacityFromReserveSyncMetadata(
@@ -219,7 +237,11 @@ export async function buildRedemptionBackstopEntry(
     REDEMPTION_EXECUTION_SCORES[config.executionModel];
   const outputAssetQualityScore =
     REDEMPTION_OUTPUT_ASSET_SCORES[config.outputAssetType];
-  const { score: costScore, feeBps } = resolveCostScore(config.costModel);
+  const {
+    score: costScore,
+    feeBps,
+    feeDescription,
+  } = resolveCostScore(config.costModel);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
     accessScore,
@@ -255,6 +277,7 @@ export async function buildRedemptionBackstopEntry(
     immediateCapacityUsd: capacity.immediateCapacityUsd,
     immediateCapacityRatio: capacity.immediateCapacityRatio,
     feeBps,
+    feeDescription,
     queueEnabled:
       config.routeFamily === "queue-redeem" ||
       config.settlementModel === "queued",

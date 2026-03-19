@@ -6,7 +6,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.0`
+- **Current methodology version:** `v1.1`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
@@ -105,6 +105,7 @@ Each configured coin declares:
 - `outputAssetType`
 - `capacityModel`
 - `costModel`
+- optional `costModel.feeDescription`
 - optional `totalScoreCap`
 - optional `notes`
 
@@ -129,8 +130,19 @@ The resulting row is tagged with one `sourceMode`:
 ### Docs / Notes
 
 - `docs` is resolved from the coin metadata's `proofOfReserves.url` first, then from preferred public links (`Docs`, `Proof of Reserve`, `Transparency`, `Website`)
+- `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
 - `notes` merges config notes plus runtime notes such as stale reserve metadata fallback
 - `capsApplied` records any score caps triggered during scoring
+
+### Cost Modeling
+
+- `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
+- `feeDescription` is used to surface:
+  - dynamic formulas such as Liquity-style `min 50 bps + baseRate`
+  - conditional fee schedules such as borrower-vs-non-borrower redemptions
+  - flat minimums or bank/network charges that do not map cleanly to one global bps number
+  - cases where public docs were reviewed but no numeric redemption-fee schedule is published
+- `costScore` remains driven by the existing bounded-fee buckets; descriptive variable-fee routes still use the conservative variable / unclear bucket
 
 ---
 
@@ -169,6 +181,8 @@ Key columns:
 - `methodology_version`
 - `details_json`
 
+`details_json` now also stores `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so descriptive fee logic survives current-snapshot and history writes without a schema migration.
+
 ### `redemption_backstop_history`
 
 Daily history table keyed by `(stablecoin_id, snapshot_date)`.
@@ -204,7 +218,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()` with `CRON_1H`
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, access/settlement/output/capacity blocks, an explicit redemption-fee summary, component subscores, docs link, and contextual methodology hint / footer actions)
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, access/settlement/output/capacity blocks, an explicit redemption-fee summary with fixed or documented variable/conditional fee text, component subscores, docs link, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `worker/src/lib/report-cards-snapshot.ts` injects `redemptionBackstopScore`, `redemptionRouteFamily`, and immediate-capacity fields into `rawInputs`, and `shared/lib/report-cards.ts` consumes the score in `scoreLiquidity()`
 

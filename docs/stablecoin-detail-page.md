@@ -150,7 +150,7 @@ That shared retry is used by the page-level error surfaces.
 | `HeroCard` | Price, supply deltas, peg metrics, liquidity headline, feedback entrypoint, and first-touch methodology hints for Peg Score / Liquidity |
 | `ReportCardDetail` | Overall Safety Score plus radar/dimension detail, contextual methodology hints, and a methodology footer line |
 | `SafetyScoreHistorySection` | Grade-transition timeline |
-| `OverviewSection` | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card with explicit fee messaging, DEWS detail, and the nested `price-transparency` anchor when price data exists |
+| `OverviewSection` | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card with explicit fixed or documented variable fee messaging, DEWS detail, and the nested `price-transparency` anchor when price data exists |
 | `CoinNotices` | Coin-specific warnings/info blocks from metadata |
 | `McapChart` | Historical supply / market-cap chart |
 | `KeyInfoCard` | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction |

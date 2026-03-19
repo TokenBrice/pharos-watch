@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.0",
+  currentVersion: "1.1",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.1",
+      title: "Fee-source coverage expansion",
+      date: "2026-03-20",
+      effectiveAt: 1773961200,
+      summary:
+        "Expanded redemption-fee coverage with docs-backed fixed fees, conditional fee descriptions, and clearer handling of issuer routes without a single public fee schedule.",
+      impact: [
+        "Redemption backstop entries now expose a fee description alongside bounded fee bps when available",
+        "Multiple assets now carry docs-backed fixed fee inputs instead of generic unknown-fee handling",
+        "Routes without a single public numeric fee now surface explicit variable or undisclosed fee descriptions instead of false precision",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.0",
       title: "Initial redemption backstop scoring",

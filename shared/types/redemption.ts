@@ -78,6 +78,7 @@ export const RedemptionBackstopEntrySchema = z.object({
   immediateCapacityUsd: z.number().nullable(),
   immediateCapacityRatio: z.number().nullable(),
   feeBps: z.number().nullable(),
+  feeDescription: z.string().optional(),
   queueEnabled: z.boolean(),
   methodologyVersion: z.string(),
   updatedAt: z.number(),

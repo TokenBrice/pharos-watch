@@ -36,9 +36,20 @@ function getFeeSummary(entry: RedemptionBackstopEntry): {
     return {
       headline: `${feeBps} bps (${formatPercent(feeBps / 100)})`,
       detail:
-        feeBps === 0
+        entry.feeDescription ??
+        (feeBps === 0
           ? "No fixed redemption fee is modeled for this route."
-          : "Pharos models this route with a fixed bounded redemption fee.",
+          : "Pharos models this route with a fixed bounded redemption fee."),
+    };
+  }
+
+  if (entry.feeDescription) {
+    return {
+      headline: entry.feeDescription,
+      detail:
+        (entry.costScore ?? 0) <= 20
+          ? "Pharos does not model a bounded fixed redemption fee for this route."
+          : "Protocol or issuer docs publish this fee logic, but it is variable, conditional, or not a single fixed bps value.",
     };
   }
 

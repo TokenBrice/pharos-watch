@@ -52,7 +52,10 @@ export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 
 function parseDetails(
   value: string | null,
-): Pick<RedemptionBackstopEntry, "docs" | "notes" | "capsApplied"> {
+): Pick<
+  RedemptionBackstopEntry,
+  "docs" | "notes" | "capsApplied" | "feeDescription"
+> {
   if (!value) return {};
 
   try {
@@ -60,12 +63,16 @@ function parseDetails(
       docs?: RedemptionBackstopEntry["docs"];
       notes?: string[];
       capsApplied?: string[];
+      feeDescription?: string;
     };
     return {
       ...(parsed.docs ? { docs: parsed.docs } : {}),
       ...(Array.isArray(parsed.notes) ? { notes: parsed.notes } : {}),
       ...(Array.isArray(parsed.capsApplied)
         ? { capsApplied: parsed.capsApplied }
+        : {}),
+      ...(typeof parsed.feeDescription === "string"
+        ? { feeDescription: parsed.feeDescription }
         : {}),
     };
   } catch {
@@ -187,6 +194,9 @@ function buildCurrentUpsert(
         ...(record.docs ? { docs: record.docs } : {}),
         ...(record.notes ? { notes: record.notes } : {}),
         ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
+        ...(record.feeDescription
+          ? { feeDescription: record.feeDescription }
+          : {}),
       }),
     );
 }
@@ -221,6 +231,9 @@ function buildHistoryUpsert(
         ...(record.docs ? { docs: record.docs } : {}),
         ...(record.notes ? { notes: record.notes } : {}),
         ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
+        ...(record.feeDescription
+          ? { feeDescription: record.feeDescription }
+          : {}),
       }),
     );
 }

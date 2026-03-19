@@ -24,8 +24,9 @@ const BASE_ENTRY: RedemptionBackstopEntry = {
   immediateCapacityUsd: 1_000_000,
   immediateCapacityRatio: 1,
   feeBps: null,
+  feeDescription: undefined,
   queueEnabled: false,
-  methodologyVersion: "1.0",
+  methodologyVersion: "1.1",
   updatedAt: 1_700_000_000,
   capsApplied: [],
 };
@@ -40,6 +41,7 @@ describe("RedemptionBackstopCard", () => {
           routeFamily: "queue-redeem",
           settlementModel: "days",
           feeBps: 5,
+          feeDescription: "Protocol docs list a 5 bps redemption fee",
           costScore: 100,
         }}
       />,
@@ -47,7 +49,25 @@ describe("RedemptionBackstopCard", () => {
 
     expect(html).toContain("Redemption Fee");
     expect(html).toContain("5 bps (0.05%)");
-    expect(html).toContain("fixed bounded redemption fee");
+    expect(html).toContain("Protocol docs list a 5 bps redemption fee");
+  });
+
+  it("renders documented variable fee logic when the route is not a single fixed bps value", () => {
+    const html = renderToStaticMarkup(
+      <RedemptionBackstopCard
+        entry={{
+          ...BASE_ENTRY,
+          stablecoinId: "bold-liquity",
+          routeFamily: "collateral-redeem",
+          settlementModel: "atomic",
+          feeDescription: "Minimum 50 bps + baseRate (decays over time).",
+        }}
+      />,
+    );
+
+    expect(html).toContain("Redemption Fee");
+    expect(html).toContain("Minimum 50 bps + baseRate");
+    expect(html).toContain("Protocol or issuer docs publish this fee logic");
   });
 
   it("renders an explicit unknown-fee fallback when no fixed fee is modeled", () => {

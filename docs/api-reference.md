@@ -1308,6 +1308,7 @@ Top-level fields:
 | `immediateCapacityUsd`   | `number \| null`                                | Immediate redeemable capacity in USD                                                                        |
 | `immediateCapacityRatio` | `number \| null`                                | Immediate redeemable capacity as a share of supply                                                          |
 | `feeBps`                 | `number \| null`                                | Explicit bounded fee when configured                                                                        |
+| `feeDescription`         | `string \| undefined`                           | Docs-backed fee description for variable, conditional, flat-minimum, or undisclosed redemption schedules   |
 | `queueEnabled`           | `boolean`                                       | Whether the modeled route is explicitly queued/serial                                                       |
 | `docs`                   | `{ label?: string, url?: string } \| undefined` | Optional external documentation / transparency link                                                         |
 | `notes`                  | `string[] \| undefined`                         | Runtime notes such as stale reserve metadata fallback                                                       |
