@@ -22,6 +22,10 @@ export const FILTER_GROUPS: FilterGroup[] = [
     label: "Backing",
     options: ["rwa-backed", "crypto-backed", "algorithmic"],
   },
+  {
+    label: "Grade",
+    options: ["grade-a", "grade-ge-b", "grade-ge-c-plus", "grade-ge-c-minus", "grade-le-d"],
+  },
 ];
 
 function parseHomepageParams(searchParams: URLSearchParams): {

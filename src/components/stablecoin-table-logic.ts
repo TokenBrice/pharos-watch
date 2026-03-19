@@ -5,7 +5,7 @@ import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
-import { getFilterTags, OTHER_PEG_TAGS } from "@shared/types";
+import { getFilterTags, OTHER_PEG_TAGS, GRADE_FILTER_TAGS, gradeMatchesFilter } from "@shared/types";
 
 export type StablecoinTableSortKey =
   | "name"
@@ -35,19 +35,37 @@ const SORT_KEY_TO_COLUMN: Record<StablecoinTableSortKey, ColumnId> = {
   peg: "peg",
 };
 
-export function buildTrackedIdSet(activeFilters: FilterTag[]): ReadonlySet<string> {
+export function buildTrackedIdSet(
+  activeFilters: FilterTag[],
+  reportCards?: Record<string, ReportCard>,
+): ReadonlySet<string> {
   if (activeFilters.length === 0) {
     return ACTIVE_IDS;
   }
 
+  // Separate grade filters from regular filters
+  const regularFilters = activeFilters.filter((f) => !GRADE_FILTER_TAGS.includes(f));
+  const gradeFilters = activeFilters.filter((f) => GRADE_FILTER_TAGS.includes(f));
+
   return new Set(
     ACTIVE_STABLECOINS.filter((stablecoin) => {
+      // Check regular filters (from metadata tags)
       const tags = getFilterTags(stablecoin);
-      return activeFilters.every((filter) =>
+      const regularMatch = regularFilters.every((filter) =>
         filter === "other-peg"
           ? tags.some((tag) => OTHER_PEG_TAGS.includes(tag))
           : tags.includes(filter),
       );
+      if (!regularMatch) return false;
+
+      // Check grade filters (from reportCards)
+      if (gradeFilters.length > 0) {
+        const grade = reportCards?.[stablecoin.id]?.overallGrade;
+        const gradeMatch = gradeFilters.every((filter) => gradeMatchesFilter(grade, filter));
+        if (!gradeMatch) return false;
+      }
+
+      return true;
     }).map((stablecoin) => stablecoin.id),
   );
 }

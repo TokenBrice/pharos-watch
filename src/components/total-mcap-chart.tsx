@@ -17,6 +17,12 @@ import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { computeChartYDomain } from "@/lib/chart-utils";
 
+/** Format a value as billions with $ prefix, e.g. "$142.5 B" */
+function formatBillions(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return "$0 B";
+  return `$${(value / 1e9).toFixed(1)} B`;
+}
+
 /* Brand colors */
 const USDT_GREEN = "#26a17b";
 const USDC_BLUE = "#2775ca";
@@ -68,6 +74,12 @@ export function TotalMcapChart() {
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 
+  // Get latest values for title and legend
+  const latest = useMemo(() => {
+    if (filteredData.length === 0) return null;
+    return filteredData[filteredData.length - 1];
+  }, [filteredData]);
+
   const yDomain = useMemo(
     () => computeChartYDomain(
       filteredData.map((d) => d.total).filter((v): v is number => v != null),
@@ -93,7 +105,7 @@ export function TotalMcapChart() {
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle as="h2" className="min-w-0">
-          Stablecoin Total Marketcap
+          Stablecoin Total Marketcap{latest ? `: ${formatBillions(latest.total)}` : ""}
         </CardTitle>
         <CardAction className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
           <TimeRangeButtons options={options} value={range} onChange={setRange} />
@@ -114,19 +126,19 @@ export function TotalMcapChart() {
             <div className="flex flex-wrap gap-4 mb-4">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDT_GREEN }} />
-                USDT
+                USDT{latest ? `: ${formatBillions(latest.usdt)}` : ""}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDC_BLUE }} />
-                USDC
+                USDC{latest ? `: ${formatBillions(latest.usdc)}` : ""}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SKY_YELLOW }} />
-                USDS + DAI
+                USDS + DAI{latest ? `: ${formatBillions(latest.sky)}` : ""}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: OTHERS_SLATE }} />
-                Others
+                Others{latest ? `: ${formatBillions(latest.others)}` : ""}
               </div>
             </div>
             <div

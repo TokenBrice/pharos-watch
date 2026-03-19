@@ -299,7 +299,12 @@ export type FilterTag =
   | "decentralized"
   | "rwa-backed"
   | "crypto-backed"
-  | "algorithmic";
+  | "algorithmic"
+  | "grade-a"
+  | "grade-ge-b"
+  | "grade-ge-c-plus"
+  | "grade-ge-c-minus"
+  | "grade-le-d";
 
 export const OTHER_PEG_TAGS: FilterTag[] = [
   "brl-peg",
@@ -352,6 +357,11 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "rwa-backed": "RWA-Backed",
   "crypto-backed": "Crypto-Backed",
   algorithmic: "Algorithmic",
+  "grade-a": "A",
+  "grade-ge-b": "≥B",
+  "grade-ge-c-plus": "≥C+",
+  "grade-ge-c-minus": "≥C-",
+  "grade-le-d": "≤D",
 };
 
 export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
@@ -411,6 +421,53 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
   tags.push(meta.flags.governance);
   tags.push(meta.flags.backing);
   return tags;
+}
+
+/** Grade filter tags that require reportCards data to evaluate */
+export const GRADE_FILTER_TAGS: FilterTag[] = [
+  "grade-a",
+  "grade-ge-b",
+  "grade-ge-c-plus",
+  "grade-ge-c-minus",
+  "grade-le-d",
+];
+
+/** Grade ranking for comparison (higher is better) */
+const GRADE_RANK: Record<string, number> = {
+  "A+": 12,
+  "A": 11,
+  "A-": 10,
+  "B+": 9,
+  "B": 8,
+  "B-": 7,
+  "C+": 6,
+  "C": 5,
+  "C-": 4,
+  "D+": 3,
+  "D": 2,
+  "D-": 1,
+  "F": 0,
+};
+
+/** Check if a grade meets the filter threshold */
+export function gradeMatchesFilter(grade: string | undefined, filterTag: FilterTag): boolean {
+  if (!grade) return false;
+  const gradeValue = GRADE_RANK[grade] ?? -1;
+
+  switch (filterTag) {
+    case "grade-a":
+      return grade.startsWith("A");
+    case "grade-ge-b":
+      return gradeValue >= GRADE_RANK["B"];
+    case "grade-ge-c-plus":
+      return gradeValue >= GRADE_RANK["C+"];
+    case "grade-ge-c-minus":
+      return gradeValue >= GRADE_RANK["C-"];
+    case "grade-le-d":
+      return gradeValue <= GRADE_RANK["D"];
+    default:
+      return false;
+  }
 }
 
 export type PriceConfidence = "high" | "single-source" | "low" | "fallback";
