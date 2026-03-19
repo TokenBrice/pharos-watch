@@ -2,6 +2,10 @@ import { configDefaults, defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
 import path from "path";
 
+const normalizedRoot = path.resolve(__dirname).replaceAll("\\", "/");
+const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
+const worktreeExcludes = isWorktreeCheckout ? [] : [".worktrees/**", "worktrees/**"];
+
 // Stub .wasm imports so vitest doesn't try to load WebAssembly modules
 function wasmStubPlugin(): Plugin {
   return {
@@ -19,8 +23,7 @@ export default defineConfig({
   test: {
     exclude: [
       ...configDefaults.exclude,
-      ".worktrees/**",
-      "worktrees/**",
+      ...worktreeExcludes,
       ".next/**",
       "out/**",
       "coverage/**",
@@ -30,8 +33,7 @@ export default defineConfig({
       reporter: ["text", "lcov"],
       exclude: [
         ...configDefaults.exclude,
-        ".worktrees/**",
-        "worktrees/**",
+        ...worktreeExcludes,
         ".next/**",
         "out/**",
         "coverage/**",

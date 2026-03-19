@@ -89,9 +89,12 @@ The workflows pin `actions/checkout@v5` and `actions/setup-node@v6` by commit SH
 **Config:** `vitest.config.ts`
 
 ```ts
+const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
+const worktreeExcludes = isWorktreeCheckout ? [] : [".worktrees/**", "worktrees/**"];
+
 export default defineConfig({
   test: {
-    exclude: [".worktrees/**", "worktrees/**", ".next/**", "out/**", "coverage/**"],
+    exclude: [...worktreeExcludes, ".next/**", "out/**", "coverage/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
@@ -101,6 +104,8 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname, "src"), "@shared": path.resolve(__dirname, "shared") } },
 });
 ```
+
+When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob exclusions so coverage still includes the active repository files; nested worktree directories remain excluded in a normal top-level checkout.
 
 **Locations:**
 
@@ -604,7 +609,7 @@ describe("syncFxRates", () => {
 | `react-hooks/purity`                      | warn  | `Date.now()` in render is intentional for timestamp-based UIs                                |
 | `react-hooks/incompatible-library`        | warn  | TanStack Virtual `useVirtualizer()` — known library limitation                               |
 
-**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.worktrees/`, `worktrees/`, `.codex-autorunner/`, `worker/.wrangler/` (auto-generated build artifacts).
+**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.codex-autorunner/`, `worker/.wrangler/` (auto-generated build artifacts). Nested `.worktrees/` and `worktrees/` directories are also ignored when the active checkout is not itself inside a worktree path.
 
 ### Zod Runtime Validation
 
