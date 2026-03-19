@@ -201,7 +201,7 @@
   },
   "fxusd-f-x-protocol": {
     "title": "A CDP With Extra Steps",
-    "text": "f(x) Protocol's fxUSD is a CDP stablecoin backed by wstETH and WBTC collateral. xPOSITIONs are NFT representations of looped leveraged positions (up to 10x in V2), not a separate volatility-absorbing class. Standard CDP dynamics apply: if leverage demand drops, fxUSD supply contracts naturally without threatening the peg. An f(x) Protocol Stability Pool (~25M USDC) arbitrages the USDC/fxUSD Curve pool to defend the peg, offering users three sub-strategies: wstETH real yield, fxSAVE autocompound, or FXN gauge rewards.",
+    "text": "f(x) Protocol's fxUSD is a CDP stablecoin backed by wstETH and WBTC collateral. xPOSITIONs are NFT representations of looped leveraged positions (up to 10x in V2), not a separate volatility-absorbing class. Standard CDP dynamics apply: if leverage demand drops, fxUSD supply contracts naturally without threatening the peg. An f(x) Protocol Stability Pool arbitrages the USDC/fxUSD Curve pool to defend the peg, offering users three sub-strategies: wstETH real yield, fxSAVE autocompound, or FXN gauge rewards.",
     "updatedAt": "2026-03-19"
   },
   "usdb-blast": {
