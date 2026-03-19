@@ -21,6 +21,7 @@ import {
   applyResolvedPrice,
   type PeggedAsset,
 } from "./enrich-prices";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 
 // ── Shared constants ────────────────────────────────────────────────
 
@@ -30,6 +31,12 @@ const DEXSCREENER_MAX_SEARCHES = 10;
 const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
 const DEXSCREENER_MAX_RETRIES = 0;
 const DEXSCREENER_PASS_BUDGET_MS = 45_000;
+const JUPITER_PRICE_API = "https://lite-api.jup.ag/price/v3";
+const JUPITER_MAX_IDS_PER_REQUEST = 50;
+const JUPITER_REQUEST_TIMEOUT_MS = 5_000;
+const JUPITER_MAX_RETRIES = 0;
+const JUPITER_MIN_LIQUIDITY_USD = 50_000;
+const JUPITER_MAX_AGE_SEC = 3600;
 
 /** Map DL stablecoins API chain names → DL coins API prefixes */
 const CHAIN_PREFIX_MAP: Record<string, string> = {
@@ -120,6 +127,21 @@ interface DexScreenerPair {
   priceUsd: string;
   liquidity: { usd: number };
   chainId: string;
+}
+
+interface JupiterPriceEntry {
+  usdPrice?: number;
+  liquidity?: number;
+  createdAt?: string | number;
+}
+
+const SOLANA_MINT_BY_ID = new Map<string, string>();
+for (const [id, meta] of ACTIVE_META_BY_ID) {
+  const deployments = [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
+  const solanaDeployment = deployments.find((deployment) => deployment.chain === "solana");
+  if (solanaDeployment?.address) {
+    SOLANA_MINT_BY_ID.set(id, solanaDeployment.address);
+  }
 }
 
 // ── Pass 1 + 1b: DefiLlama contract addresses ──────────────────────
@@ -447,5 +469,78 @@ export async function runDexScreenerPass(
     console.warn("[enrich] DexScreener circuit open — skipping pass 3");
   }
 
+  return { resolved, failures: [] };
+}
+
+// ── Pass 3: Jupiter Price API ───────────────────────────────────────
+
+export async function runJupiterPass(
+  assets: PeggedAsset[],
+  fxRates: Record<string, number> | undefined,
+  db: D1Database | undefined,
+  signal?: AbortSignal,
+): Promise<EnrichPassResult> {
+  let resolved = 0;
+  const jupiterAllowed = db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.JUPITER_PRICES) : true;
+  if (!jupiterAllowed) {
+    console.warn("[enrich] Jupiter circuit open — skipping pass 3");
+    return { resolved, failures: [] };
+  }
+
+  const candidates = assets
+    .map((asset, index) => ({ asset, index, mint: SOLANA_MINT_BY_ID.get(asset.id) }))
+    .filter((entry) => hasMissingPrice(entry.asset) && entry.mint);
+  if (candidates.length === 0) {
+    return { resolved, failures: [] };
+  }
+
+  let successfulCalls = 0;
+  for (let i = 0; i < candidates.length; i += JUPITER_MAX_IDS_PER_REQUEST) {
+    const batch = candidates.slice(i, i + JUPITER_MAX_IDS_PER_REQUEST);
+    const ids = batch.map((entry) => entry.mint!);
+
+    const res = await fetchWithRetry(
+      `${JUPITER_PRICE_API}?ids=${encodeURIComponent(ids.join(","))}`,
+      { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
+      JUPITER_MAX_RETRIES,
+      { timeoutMs: JUPITER_REQUEST_TIMEOUT_MS },
+    );
+    if (!res?.ok) {
+      console.warn(`[enrich] Jupiter returned ${res?.status ?? "no response"} for batch of ${ids.length}`);
+      continue;
+    }
+
+    successfulCalls++;
+    const data = (await res.json()) as Record<string, JupiterPriceEntry>;
+    for (const entry of batch) {
+      const payload = data[entry.mint!];
+      const usdPrice = payload?.usdPrice;
+      const liquidity = payload?.liquidity;
+      if (usdPrice == null || !Number.isFinite(usdPrice) || usdPrice <= 0) continue;
+      if (liquidity == null || !Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD) continue;
+
+      const createdAt = payload.createdAt != null ? new Date(payload.createdAt).getTime() : null;
+      if (createdAt != null && Number.isFinite(createdAt)) {
+        const ageSec = (Date.now() - createdAt) / 1000;
+        if (ageSec > JUPITER_MAX_AGE_SEC) continue;
+      }
+
+      if (!isReasonablePrice(
+        usdPrice,
+        entry.asset.pegType as string | undefined,
+        fxRates,
+        buildPriceReasonablenessOptions(entry.asset),
+      )) {
+        continue;
+      }
+
+      applyResolvedPrice(assets[entry.index], usdPrice, "jupiter", "fallback");
+      resolved++;
+    }
+  }
+
+  if (db) {
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.JUPITER_PRICES, successfulCalls > 0);
+  }
   return { resolved, failures: [] };
 }

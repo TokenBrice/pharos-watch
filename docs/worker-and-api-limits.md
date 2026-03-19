@@ -23,6 +23,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 - `worker/src/cron/sync-mint-burn.ts`
 - `worker/src/cron/dex-discovery/orchestrator.ts`
 - `worker/src/cron/enrich-prices.ts`
+- `worker/src/cron/sync-fx-rates.ts`
 - `worker/src/cron/daily-digest.ts`
 
 ---
@@ -75,6 +76,7 @@ Treat any new fetch-heavy work added to an existing trigger slot as competing fo
 | GeckoTerminal crawl throttle | `2000 ms` between requests | `worker/src/lib/rate-limit.ts` | Conservative crawl pacing |
 | GeckoTerminal crawl budget | `3 minutes` | `worker/src/lib/rate-limit.ts` | Per-source crawl budget |
 | DexScreener discovery fallback budget | `2 minutes` shared fallback window | `worker/src/lib/rate-limit.ts` | Shared with other late-stage discovery fallbacks |
+| Jupiter price fallback | `50` ids/request, `5 s` timeout/request, `0` retries | `worker/src/cron/enrich-prices-passes.ts` | Solana-only enrichment pass between CMC and DexScreener |
 | DexScreener price-enrichment pass | `10` searches, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/enrich-prices.ts` | Best-effort final fallback for missing prices |
 | CoinMarketCap fallback | `1 call / hour`, `10 s` timeout, `0` retries | `worker/src/cron/enrich-prices.ts` | Rate-limited through cache key `cmc_last_fetch` |
 | Generic circuit breaker | opens after `3` consecutive failures, probes every `30 minutes` | `worker/src/lib/circuit-breaker.ts` | Used to stop hammering degraded upstreams |
@@ -92,6 +94,7 @@ Treat any new fetch-heavy work added to an existing trigger slot as competing fo
 | Area | Current timeout | Source |
 |---|---|---|
 | CoinMarketCap price fallback | `10_000 ms` | `worker/src/cron/enrich-prices.ts` |
+| Jupiter price fallback | `5_000 ms` | `worker/src/cron/enrich-prices-passes.ts` |
 | DexScreener search fallback | up to `5_000 ms` per request | `worker/src/cron/enrich-prices.ts` |
 | Blacklist explorer / RPC reads | `15_000 ms` | `worker/src/lib/fetch-retry.ts` (default timeout) |
 | Daily digest LLM call | `120_000 ms` | `worker/src/cron/daily-digest.ts` |

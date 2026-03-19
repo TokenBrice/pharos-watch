@@ -4,7 +4,7 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
-import { runDlContractPasses, runCmcPass, runDexScreenerPass } from "./enrich-prices-passes";
+import { runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
 import type { PriceConfidence } from "@shared/types";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
@@ -16,7 +16,15 @@ import {
   type PriceValidationReferences,
 } from "../lib/price-validation";
 import { fetchPythPrices } from "../lib/pyth";
-import { fetchBinancePrices, fetchCoinbasePrices, COINBASE_KNOWN_SYMBOLS } from "../lib/cex-tickers";
+import {
+  BITSTAMP_KNOWN_SYMBOLS,
+  COINBASE_KNOWN_SYMBOLS,
+  KRAKEN_KNOWN_SYMBOLS,
+  fetchBinancePrices,
+  fetchBitstampPrices,
+  fetchCoinbasePrices,
+  fetchKrakenPrices,
+} from "../lib/cex-tickers";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../lib/redstone";
 import { loadDexPriceRows, isTrustedDexPriceRow, loadDexPoolChallengers, loadDexPriceSources } from "../lib/depeg-helpers";
 import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
@@ -82,11 +90,12 @@ export function applyResolvedPrice(
 }
 
 /**
- * Enrich assets that are missing prices via a 4-pass pipeline:
+ * Enrich assets that are missing prices via a 5-pass pipeline:
  *   1. Contract addresses via DefiLlama coins API
  *   1b. Multi-chain contract fallback
  *   2. CoinMarketCap API (rate-limited)
- *   3. DexScreener search API (best-effort)
+ *   3. Jupiter Price API for supported Solana assets
+ *   4. DexScreener search API (best-effort)
  *
  * Individual pass logic lives in ./enrich-prices-passes.ts.
  */
@@ -136,11 +145,13 @@ export async function fetchPrimaryPrices(
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
   const pythAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.PYTH_PRICES);
   const binanceAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
+  const krakenAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.KRAKEN_PRICES);
+  const bitstampAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BITSTAMP_PRICES);
   const coinbaseAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES);
   const redstoneAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES);
   const curveAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN);
 
-  if (!cgAllowed && !pythAllowed && !binanceAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
+  if (!cgAllowed && !pythAllowed && !binanceAllowed && !krakenAllowed && !bitstampAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
     console.warn("[primary-prices] All primary price circuits are open, skipping");
     return { results, stats, cgPrices: new Map() };
   }
@@ -162,6 +173,8 @@ export async function fetchPrimaryPrices(
   }
   const pythPrices = new Map<string, { price: number; confidenceBps: number }>();
   const binancePrices = new Map<string, number>();
+  const krakenPrices = new Map<string, number>();
+  const bitstampPrices = new Map<string, number>();
   const coinbasePrices = new Map<string, number>();
   const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number }>();
   const curvePrices = new Map<string, number>();
@@ -169,10 +182,13 @@ export async function fetchPrimaryPrices(
 
   // Coinbase uses uppercased product symbols. RedStone is exact-case and only
   // queried for the known-supported tracked subset to keep request volume bounded.
+  const candidateSymbolsUpper = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
   const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
-  const coinbaseSymbols = [...new Set(
-    candidates.map((a) => a.symbol.toUpperCase()).filter((s) => coinbaseKnownSet.has(s)),
-  )];
+  const coinbaseSymbols = candidateSymbolsUpper.filter((s) => coinbaseKnownSet.has(s));
+  const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
+  const krakenSymbols = candidateSymbolsUpper.filter((s) => krakenKnownSet.has(s));
+  const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
+  const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
   const redstoneSymbolSet = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
   const redstoneSymbols = [...new Set(candidates.map((a) => a.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)))];
 
@@ -235,33 +251,55 @@ export async function fetchPrimaryPrices(
     );
   }
 
-  if (binanceAllowed) {
+  if (binanceAllowed || krakenAllowed || bitstampAllowed || coinbaseAllowed) {
     fetches.push(
       (async () => {
-        try {
-          const prices = await fetchBinancePrices(signal);
-          for (const [symbol, price] of prices) binancePrices.set(symbol, price);
-          await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, prices.size > 0);
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] Binance ticker failed:", err);
-          await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, false);
+        if (binanceAllowed) {
+          try {
+            const prices = await fetchBinancePrices(signal);
+            for (const [symbol, price] of prices) binancePrices.set(symbol, price);
+            await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, prices.size > 0);
+          } catch (err) {
+            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+            console.warn("[primary-prices] Binance ticker failed:", err);
+            await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, false);
+          }
         }
-      })(),
-    );
-  }
 
-  if (coinbaseAllowed) {
-    fetches.push(
-      (async () => {
-        try {
-          const prices = await fetchCoinbasePrices(coinbaseSymbols, signal);
-          for (const [symbol, price] of prices) coinbasePrices.set(symbol, price);
-          await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, prices.size > 0);
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          console.warn("[primary-prices] Coinbase ticker failed:", err);
-          await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, false);
+        if (krakenAllowed && krakenSymbols.length > 0) {
+          try {
+            const prices = await fetchKrakenPrices(krakenSymbols, signal);
+            for (const [symbol, price] of prices) krakenPrices.set(symbol, price);
+            await recordOutcome(db, CIRCUIT_SOURCE.KRAKEN_PRICES, prices.size > 0);
+          } catch (err) {
+            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+            console.warn("[primary-prices] Kraken ticker failed:", err);
+            await recordOutcome(db, CIRCUIT_SOURCE.KRAKEN_PRICES, false);
+          }
+        }
+
+        if (bitstampAllowed && shouldFetchBitstamp) {
+          try {
+            const prices = await fetchBitstampPrices(signal);
+            for (const [symbol, price] of prices) bitstampPrices.set(symbol, price);
+            await recordOutcome(db, CIRCUIT_SOURCE.BITSTAMP_PRICES, prices.size > 0);
+          } catch (err) {
+            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+            console.warn("[primary-prices] Bitstamp ticker failed:", err);
+            await recordOutcome(db, CIRCUIT_SOURCE.BITSTAMP_PRICES, false);
+          }
+        }
+
+        if (coinbaseAllowed && coinbaseSymbols.length > 0) {
+          try {
+            const prices = await fetchCoinbasePrices(coinbaseSymbols, signal);
+            for (const [symbol, price] of prices) coinbasePrices.set(symbol, price);
+            await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, prices.size > 0);
+          } catch (err) {
+            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+            console.warn("[primary-prices] Coinbase ticker failed:", err);
+            await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, false);
+          }
         }
       })(),
     );
@@ -353,6 +391,10 @@ export async function fetchPrimaryPrices(
     }
     const binancePrice = binancePrices.get(asset.symbol.toUpperCase());
     if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2 });
+    const krakenPrice = krakenPrices.get(asset.symbol.toUpperCase());
+    if (krakenPrice != null) sources.push({ source: "kraken", price: krakenPrice, weight: 2 });
+    const bitstampPrice = bitstampPrices.get(asset.symbol.toUpperCase());
+    if (bitstampPrice != null) sources.push({ source: "bitstamp", price: bitstampPrice, weight: 1 });
     const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
     if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2 });
     const redstoneResult = redstonePrices.get(asset.symbol);
@@ -632,6 +674,7 @@ export interface EnrichmentStats {
   pass1: number;
   pass1b: number;
   passCmc: number;
+  passJupiter: number;
   passDex: number;
   finalMissing: number;
   failedPasses: string[];
@@ -645,7 +688,18 @@ export async function enrichMissingPrices(
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
-  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passDex: 0, finalMissing: 0, failedPasses: [] };
+  if (totalMissing === 0) {
+    return {
+      totalMissing: 0,
+      pass1: 0,
+      pass1b: 0,
+      passCmc: 0,
+      passJupiter: 0,
+      passDex: 0,
+      finalMissing: 0,
+      failedPasses: [],
+    };
+  }
 
   // Load FX rates once — shared across all passes for dynamic price bounds
   let fxRates: Record<string, number> | undefined;
@@ -668,6 +722,7 @@ export async function enrichMissingPrices(
   failedPasses.push(...dlResult.failures);
 
   let passCmcCount = 0;
+  let passJupiterCount = 0;
   let passDexCount = 0;
 
   try {
@@ -675,29 +730,52 @@ export async function enrichMissingPrices(
     const cmcResult = await runCmcPass(assets, cmcApiKey, fxRates, db, signal);
     passCmcCount = cmcResult.resolved;
 
-    // ── Pass 3: DexScreener search API (best-effort fallback) ──
+    // ── Pass 3: Jupiter Price API (Solana-only fallback) ──
+    const jupiterResult = await runJupiterPass(assets, fxRates, db, signal);
+    passJupiterCount = jupiterResult.resolved;
+
+    // ── Pass 4: DexScreener search API (best-effort fallback) ──
     const dexResult = await runDexScreenerPass(assets, fxRates, db, signal);
     passDexCount = dexResult.resolved;
 
     // ── Summary log ──
     const finalMissing = assets.filter(hasMissingPrice).length;
-    const totalEnriched = pass1Count + pass1bCount + passCmcCount + passDexCount;
+    const totalEnriched = pass1Count + pass1bCount + passCmcCount + passJupiterCount + passDexCount;
     if (totalMissing > 0) {
       console.log(
         `[enrich] ${totalMissing} assets missing prices → ` +
         `Pass 1: +${pass1Count}, Pass 1b (multi-chain): +${pass1bCount}, ` +
         `Pass 2 (CMC): +${passCmcCount}, ` +
-        `Pass 3 (DexScreener): +${passDexCount}, still missing: ${finalMissing}`
+        `Pass 3 (Jupiter): +${passJupiterCount}, ` +
+        `Pass 4 (DexScreener): +${passDexCount}, still missing: ${finalMissing}`
       );
     }
     if (totalEnriched > 0) {
       console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
     }
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, passDex: passDexCount, finalMissing, failedPasses };
+    return {
+      totalMissing,
+      pass1: pass1Count,
+      pass1b: pass1bCount,
+      passCmc: passCmcCount,
+      passJupiter: passJupiterCount,
+      passDex: passDexCount,
+      finalMissing,
+      failedPasses,
+    };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[sync-stablecoins] Price enrichment failed:", err);
-    failedPasses.push("passes-2-3");
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, passCmc: passCmcCount, passDex: passDexCount, finalMissing: totalMissing, failedPasses };
+    failedPasses.push("passes-2-4");
+    return {
+      totalMissing,
+      pass1: pass1Count,
+      pass1b: pass1bCount,
+      passCmc: passCmcCount,
+      passJupiter: passJupiterCount,
+      passDex: passDexCount,
+      finalMissing: totalMissing,
+      failedPasses,
+    };
   }
 }

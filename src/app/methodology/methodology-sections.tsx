@@ -58,11 +58,11 @@ export function MethodologySections() {
           <p>
             Every score Pharos computes starts with a price. The pricing pipeline collects quotes from more than a dozen
             live voices, requires fully pairwise agreement inside each cluster, and selects the highest-confidence result.
-            A pool challenge
+            Kraken and Bitstamp extend the direct venue set, a pool challenge
             guard downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools
             diverge from aggregator consensus. Fresh RedStone prices need timestamped venue breakdowns. Protocol-level
-            redemption prices override market data for wrapper assets,
-            and a 4-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
+            redemption prices override market data for wrapper assets, Chainlink refreshes supported FX and commodity
+            reference rates, and a 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
             so downstream systems can react to data quality.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -72,7 +72,7 @@ export function MethodologySections() {
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Sources</p>
-              <p className="text-foreground">12+ live voices</p>
+              <p className="text-foreground">14+ live voices</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Output</p>
@@ -95,16 +95,16 @@ export function MethodologySections() {
           <WorkedExample summary="Worked example: USDC price consensus across 6 sources">
             <p className="font-mono">
               Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Pyth=1.0002 (w2), Binance=1.0001 (w2),
-              Coinbase=0.9998 (w2), Curve=1.0003 (w3)
+              Kraken=1.0000 (w2), Coinbase=0.9998 (w2), Curve=1.0003 (w3)
             </p>
             <p className="font-mono">
-              Peg ref=1.0, threshold=50 bps. All 6 within 50 bps of each other &rarr; single cluster of 6.
+              Peg ref=1.0, threshold=50 bps. All 7 within 50 bps of each other &rarr; single cluster of 7.
             </p>
             <p className="font-mono">
               Highest weight in cluster: Curve (w3) &rarr; price=1.0003
             </p>
             <p>
-              Result: <span className="text-foreground">price 1.0003, confidence &ldquo;high&rdquo;, source &ldquo;binance+coingecko+coinbase+curve+defillama+pyth&rdquo;</span>.
+              Result: <span className="text-foreground">price 1.0003, confidence &ldquo;high&rdquo;, source &ldquo;binance+coingecko+coinbase+curve+defillama+kraken+pyth&rdquo;</span>.
             </p>
           </WorkedExample>
 
@@ -123,8 +123,8 @@ export function MethodologySections() {
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">Exchanges</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Binance (w2)</p>
-                  <p className="text-xs text-muted-foreground">Coinbase (w2)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Binance (w2), Kraken (w2)</p>
+                  <p className="text-xs text-muted-foreground">Coinbase (w2), Bitstamp (w1)</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium">Oracles</p>
@@ -155,7 +155,7 @@ export function MethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border p-3 text-center w-80">
                 <p className="text-foreground font-medium">Enrichment Pipeline</p>
-                <p className="text-xs text-muted-foreground mt-0.5">4-pass fallback for remaining gaps</p>
+                <p className="text-xs text-muted-foreground mt-0.5">5-pass fallback with Solana-native Jupiter recovery</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border p-3 text-center w-80">
@@ -173,7 +173,7 @@ export function MethodologySections() {
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Exchanges</p>
-                  <p className="text-xs text-muted-foreground">BN (w2), CB (w2)</p>
+                  <p className="text-xs text-muted-foreground">BN (w2), KR (w2), CB (w2), BS (w1)</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Oracles</p>
@@ -202,7 +202,7 @@ export function MethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium">Enrichment Pipeline</p>
-                <p className="text-xs text-muted-foreground mt-0.5">4-pass fallback for remaining gaps</p>
+                <p className="text-xs text-muted-foreground mt-0.5">5-pass fallback with Jupiter before DexScreener</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border p-3 text-center">
@@ -248,6 +248,18 @@ export function MethodologySections() {
                       <td className="py-2 pr-4">2</td>
                       <td className="py-2 pr-4">CEX</td>
                       <td className="py-2">Single batch call for all spot tickers</td>
+                    </tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
+                      <td className="py-2 pr-4 text-foreground">Kraken</td>
+                      <td className="py-2 pr-4">2</td>
+                      <td className="py-2 pr-4">CEX</td>
+                      <td className="py-2">Explicit pair mapping with alias-safe response handling</td>
+                    </tr>
+                    <tr className="hover:bg-muted/40 transition-colors">
+                      <td className="py-2 pr-4 text-foreground">Bitstamp</td>
+                      <td className="py-2 pr-4">1</td>
+                      <td className="py-2 pr-4">CEX</td>
+                      <td className="py-2">Lower-weight corroboration via the all-tickers endpoint</td>
                     </tr>
                     <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Coinbase</td>
@@ -338,7 +350,7 @@ export function MethodologySections() {
 
             {/* Enrichment pipeline */}
             <div className="space-y-2">
-              <h3 className="text-foreground font-medium">Enrichment Pipeline (4-pass fallback)</h3>
+              <h3 className="text-foreground font-medium">Enrichment Pipeline (5-pass fallback)</h3>
               <p>
                 Assets still missing prices after primary consensus go through a staged enrichment pipeline:
               </p>
@@ -346,7 +358,8 @@ export function MethodologySections() {
                 <li><span className="text-foreground font-medium">Pass 1:</span> Contract address &rarr; DefiLlama coins API</li>
                 <li><span className="text-foreground font-medium">Pass 1b:</span> Multi-chain contract fallback (alternate chain addresses via DefiLlama)</li>
                 <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (symbol match, rate-limited to 1 call/hour)</li>
-                <li><span className="text-foreground font-medium">Pass 3:</span> DexScreener search (filtered by &gt;$50K liquidity, capped at 10 searches per run)</li>
+                <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (liquidity-gated)</li>
+                <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener search (filtered by &gt;$50K liquidity, capped at 10 searches per run)</li>
               </ol>
             </div>
 

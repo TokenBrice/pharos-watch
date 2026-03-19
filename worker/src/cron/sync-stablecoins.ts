@@ -746,7 +746,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
   const INDIVIDUAL_SOURCE_KEYS = new Set<string>([
     "coingecko", "defillama", "defillama-list", "protocol-redeem", "defillama-contract",
-    "coinmarketcap", "dexscreener", "pyth", "binance", "coinbase",
+    "coinmarketcap", "dexscreener", "jupiter", "pyth", "binance", "kraken", "bitstamp", "coinbase",
     "redstone", "curve-onchain", "dex-promoted", "geckoterminal", "pool-tvl-weighted", "cached",
   ]);
 
@@ -770,8 +770,11 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     "defillama-contract": 0,
     coinmarketcap: 0,
     dexscreener: 0,
+    jupiter: 0,
     pyth: 0,
     binance: 0,
+    kraken: 0,
+    bitstamp: 0,
     coinbase: 0,
     redstone: 0,
     "curve-onchain": 0,

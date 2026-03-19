@@ -117,7 +117,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 900,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
-    maxConnections: 2, // Frankfurter/ExchangeRate sequential, then gold + silver in parallel
+    maxConnections: 2, // Frankfurter/secondary sequential, gold + silver in parallel, Chainlink overlay sequential
   },
   {
     job: "stability-index",

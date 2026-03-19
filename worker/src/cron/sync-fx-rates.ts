@@ -4,7 +4,9 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { RUB_FALLBACK, USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { fetchRealtimeFxRates } from "../lib/fx-realtime";
-import { recordOutcome } from "../lib/circuit-breaker";
+import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
+import { fetchChainlinkReferenceQuotes } from "../lib/chainlink-feeds";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 import { z } from "zod";
 
 /**
@@ -16,6 +18,8 @@ import { z } from "zod";
  *
  * CNH, RUB, UAH, and ARS are sourced from a secondary currency API because
  * Frankfurter/ECB does not publish them all directly.
+ * Supported Chainlink feeds overlay the reference cache for a curated subset
+ * of fiat and commodity pegs when the on-chain quotes are fresh and plausible.
  * Runs every 15 minutes.
  */
 
@@ -105,7 +109,12 @@ const MetalPriceSchema = z.object({
   price: z.number(),
 });
 
-export async function syncFxRates(db: D1Database, signal?: AbortSignal, openExchangeRatesKey?: string): Promise<CronResult> {
+export async function syncFxRates(
+  db: D1Database,
+  signal?: AbortSignal,
+  openExchangeRatesKey?: string,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   try {
     // Load previous rates for delta validation
@@ -353,6 +362,47 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal, openExch
       if (prevRates["peggedSILVER"]) rates["peggedSILVER"] = prevRates["peggedSILVER"];
     }
 
+    let chainlinkSource: "ok" | "partial" | "unavailable" = "unavailable";
+    const chainlinkAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS);
+    if (chainlinkAllowed) {
+      try {
+        const quotes = await fetchChainlinkReferenceQuotes(signal, chainRpcs, syncStartSec);
+        let applied = 0;
+        for (const [pegKey, quote] of quotes) {
+          const existing = rates[pegKey];
+          if (existing != null && existing > 0) {
+            const delta = Math.abs(quote.price - existing) / existing;
+            if (delta > 0.05) {
+              console.warn(
+                `[sync-fx-rates] Chainlink ${pegKey} diverges from current reference: ` +
+                `current=${existing}, chainlink=${quote.price} (${(delta * 100).toFixed(1)}%)`,
+              );
+              continue;
+            }
+          }
+
+          const normalized = Number(quote.price.toFixed(6));
+          if (isValidRate(pegKey, normalized, prevRates[pegKey])) {
+            rates[pegKey] = normalized;
+            applied++;
+          } else if (prevRates[pegKey]) {
+            rates[pegKey] = prevRates[pegKey];
+          }
+        }
+
+        chainlinkSource = quotes.size > 0
+          ? (applied === quotes.size ? "ok" : "partial")
+          : "unavailable";
+        await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, quotes.size > 0);
+      } catch (err) {
+        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+        console.warn("[sync-fx-rates] Chainlink reference feeds failed:", err);
+        await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, false);
+      }
+    } else {
+      console.warn("[sync-fx-rates] Chainlink reference-feed circuit open — skipping overlay");
+    }
+
     // Sanity check: we should have rates for all mapped currencies
     const expected = [...Object.values(CURRENCY_TO_PEG), ...Object.values(SECONDARY_CURRENCY_TO_PEG)];
     const missing = expected.filter((k) => !(k in rates));
@@ -378,6 +428,7 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal, openExch
             ? "partial"
             : "fallback",
         "gold-api.com": metalsSource,
+        chainlink: chainlinkSource,
         openExchangeRates: oxrSource,
       },
     };

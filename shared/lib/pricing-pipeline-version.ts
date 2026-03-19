@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.4",
+  currentVersion: "2.5",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+  {
+    version: "2.5",
+    title: "Kraken and Bitstamp primary pricing, Jupiter Solana fallback, Chainlink reference overlays",
+    date: "2026-03-19",
+    effectiveAt: 1773958123,
+    summary:
+      "Added Kraken and Bitstamp as additional direct venue voices in primary consensus, introduced a Jupiter Price API fallback pass for unresolved Solana assets, and overlaid curated Chainlink reference feeds onto supported FX and commodity validation rates.",
+    impact: [
+      "Kraken joins primary consensus at weight 2 for supported USD pairs",
+      "Bitstamp joins primary consensus at weight 1 as a lower-weight corroborating CEX venue",
+      "Primary CEX fetches remain grouped so the quarter-hour pricing lane does not add new peak connection fan-out",
+      "Missing Solana prices can now resolve through Jupiter before DexScreener, gated by liquidity and peg-aware plausibility checks",
+      "Curated Chainlink EUR/USD, GBP/USD, JPY/USD, XAU/USD, and XAG/USD feeds can now refresh the FX/reference cache when fresh and aligned",
+      "Status source distribution now reports Kraken, Bitstamp, and Jupiter participation explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "2.4",
     title: "Pairwise consensus hardening, RedStone freshness gate, authoritative override ordering",

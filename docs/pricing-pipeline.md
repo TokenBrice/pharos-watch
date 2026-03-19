@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.4`
+- **Current methodology version:** `v2.5`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -38,6 +38,8 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 | DefiLlama stablecoins list | 1 | Extracted from DL stablecoins endpoint | Independent DL aggregation for assets with `llamaId` |
 | Pyth Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle input with confidence intervals |
 | Binance spot | 2 | `worker/src/lib/cex-tickers.ts` | Batch venue input |
+| Kraken spot | 2 | `worker/src/lib/cex-tickers.ts` | Explicit-pair venue input with alias-safe symbol mapping |
+| Bitstamp spot | 1 | `worker/src/lib/cex-tickers.ts` | Lower-weight all-tickers corroboration venue |
 | Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input |
 | RedStone | 1 | `worker/src/lib/redstone.ts` | Fresh per-venue oracle snapshot with venue-agreement gating |
 | Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
@@ -87,7 +89,7 @@ The DEX bridge and the pool challenge now deliberately read from different stora
 - `dex_prices.price_sources_json`: one aggregate per protocol, used for primary-price promotion
 - `dex_liquidity.top_pools_json`: current individual pools, used for large-pool challenge / depeg confirmation
 
-This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus — large pools carry proportional weight. Hard sources (Pyth, Binance, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
+This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus — large pools carry proportional weight. Hard sources (Pyth, Binance, Kraken, Bitstamp, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
 
 ---
 
@@ -97,10 +99,13 @@ Several live providers need normalization before their prices can safely enter c
 
 - **Pyth feed IDs:** `worker/src/lib/pyth.ts` normalizes feed IDs to lowercase and strips any leading `0x` before reverse-matching them to tracked assets. Hermes may return the same feed in prefixed or unprefixed form.
 - **Pyth staleness guard:** Feeds with `publish_time` older than 5 minutes (`PYTH_MAX_STALENESS_SEC = 300`) are rejected before entering consensus. This prevents stale oracle snapshots from poisoning the price.
+- **Kraken symbols:** Kraken uses explicit request-pair and response-key maps in `worker/src/lib/cex-tickers.ts`; `USDT/USD` returns `USDTZUSD`, so the integration does not rely on naive string slicing.
+- **Bitstamp ticker surface:** Bitstamp is fetched from the exchange-wide all-tickers endpoint and then filtered through an explicit tracked-pair allowlist so venue coverage stays deterministic.
 - **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup. Active pairs: USDT, DAI, PAXG, USDS, USD1, HONEY.
 - **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (36 symbols including `USDe`, `crvUSD`, `fxUSD`, `sUSDe`). Unsupported symbols are filtered out before transport. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_API_SYMBOL_MAP` and keys results by metadata symbol so callers don't need to know the mapping.
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **RedStone freshness + transparency gate:** RedStone entries are only admitted when they carry a timestamp newer than 5 minutes and a usable per-venue price breakdown. Timestamp-less or opaque aggregate-only responses are rejected.
+- **Chainlink reference overlay:** `worker/src/cron/sync-fx-rates.ts` overlays curated Chainlink EUR/USD, GBP/USD, JPY/USD, XAU/USD, and XAG/USD feeds onto the shared `fx-rates` cache when their on-chain quotes are fresh and within 5% of the current reference stack. Frankfurter / secondary FX APIs and `gold-api.com` remain fallback sources for uncovered or divergent feeds.
 - **Circuit-breaker accounting:** for Pyth and RedStone, a transport-successful request that returns zero usable prices is still recorded as an unsuccessful outcome for breaker state. This avoids treating empty responses as healthy data.
 - **Curve on-chain sanity bound:** Implied prices from `get_dy` calls are capped at `< 10,000` (to accommodate commodity tokens like PAXG/XAUT at ~$2,900).
 - **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before they enter primary consensus, so one Balancer/Fluid/Raydium/Orca protocol can contribute at most one elevated source per asset.
@@ -141,7 +146,8 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 1. **Pass 1:** DefiLlama `coins.llama.fi` by current contract address
 2. **Pass 1b:** alternate-chain contract fallback via DefiLlama
 3. **Pass 2:** CoinMarketCap `listings/latest` batch — prefers `cmcSlug`-based matching over symbol to avoid cross-contamination in collision groups (e.g., two coins sharing "GUSD"). Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
-4. **Pass 3:** DexScreener search fallback with liquidity and peg-aware validation gates
+4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation
+5. **Pass 4:** DexScreener search fallback with liquidity and peg-aware validation gates
 
 The enrichment path is intentionally narrower than primary pricing:
 
@@ -188,7 +194,8 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 | `worker/src/lib/authoritative-price-sources.ts` | Redeem-quote live/historical override registry |
 | `worker/src/lib/pyth.ts` | Pyth Hermes integration and feed-ID normalization |
 | `worker/src/lib/redstone.ts` | Exact-case RedStone allowlist, batching, and retry behavior |
-| `worker/src/lib/cex-tickers.ts` | Binance and Coinbase price fetchers |
+| `worker/src/lib/cex-tickers.ts` | Binance, Kraken, Bitstamp, and Coinbase price fetchers |
+| `worker/src/lib/chainlink-feeds.ts` | Curated Chainlink FX / commodity reference-feed reads |
 | `worker/src/lib/curve-onchain.ts` | Curve on-chain price reads |
 | `worker/src/lib/price-validation.ts` | Peg-aware reasonableness validation |
 | `shared/lib/pricing-pipeline-version.ts` | Methodology version metadata and changelog route |
