@@ -251,6 +251,7 @@ import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
+import * as yieldHelpersModule from "../yield-helpers";
 
 // --- Helpers ---
 
@@ -292,6 +293,14 @@ describe("syncYieldData", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    (
+      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS
+    ).length = 0;
+    (
+      yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS
+    ).length = 0;
+    const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    for (const key of Object.keys(poolMap)) delete poolMap[key];
     // Reset mocks to factory defaults
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
@@ -893,6 +902,17 @@ describe("syncYieldData", () => {
       { match: "cache", rows: [] },
       { match: "yield_data", rows: [] },
       {
+        match: "AND recorded_at <= ? AND exchange_rate IS NOT NULL",
+        rows: [
+          {
+            stablecoin_id: "100",
+            source_key: "pool-sdai-native",
+            recorded_at: nowSec - 8 * 86400,
+            exchange_rate: 1.0,
+          },
+        ],
+      },
+      {
         match: "yield_history",
         rows: [
           {
@@ -1186,7 +1206,7 @@ describe("syncYieldData", () => {
         explorerUrl: "https://etherscan.io",
       }],
     ]);
-    const result = await syncYieldData(db, undefined, testChainRpcs);
+    await syncYieldData(db, undefined, testChainRpcs);
 
     const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
     const onChainRow = writeStatements?.find(
@@ -1198,7 +1218,298 @@ describe("syncYieldData", () => {
     onChainConfigs.length = 0;
   });
 
-  it("does not degrade when the retained benchmark is still fresh", async () => {
+  it("reuses pre-migration deterministic history after switching to onchain source keys", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "100",
+            source_key: "pool-sdai-native",
+            recorded_at: nowSec - 8 * 86400,
+            is_best: 1,
+            apy: 9,
+            source_tvl_usd: null,
+            data_source: "onchain",
+            yield_source: null,
+            yield_type: null,
+            exchange_rate: 1.0,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: nowSec };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(getChainRpc).mockReturnValue({
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      rpcUrl: "https://rpc.example/eth",
+      explorerUrl: "https://etherscan.io",
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | Request, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("rpc.example/eth")) {
+          const body = JSON.parse(String(init?.body)) as {
+            params?: Array<{ data?: string } | string>;
+          };
+          const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
+          if (callData?.startsWith("0x07a2d13a")) {
+            return new Response(
+              JSON.stringify({
+                result: "0x" + BigInt("1050000000000000000").toString(16).padStart(64, "0"),
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+        }
+        return new Response(JSON.stringify({ error: "Not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const testChainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example/eth",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+    const result = await syncYieldData(db, undefined, testChainRpcs);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const onChainRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "onchain:100",
+    );
+    expect(onChainRow).toBeDefined();
+    expect(Number(onChainRow?.boundValues?.[6])).toBeCloseTo(5, 6);
+    expect(Number(onChainRow?.boundValues?.[7])).toBeCloseTo(7, 6);
+    expect(onChainRow?.boundValues?.[23]).toBe(1.0);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
+    expect(metadata.sourceSwitches).toBe(0);
+  });
+
+  it("retains both on-chain and curated rows when the native pool overlaps with ON_CHAIN_RATE_CONFIGS", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+    poolMap["100"] = "pool-sdai-native";
+
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "100",
+            source_key: "onchain:100",
+            recorded_at: nowSec - 8 * 86400,
+            is_best: 1,
+            apy: 5,
+            source_tvl_usd: null,
+            data_source: "onchain",
+            yield_source: null,
+            yield_type: null,
+            exchange_rate: 1.0,
+          },
+          {
+            stablecoin_id: "100",
+            source_key: "pool-sdai-native",
+            recorded_at: nowSec - 7 * 86400 + 3600,
+            is_best: 1,
+            apy: 5.2,
+            source_tvl_usd: 1_000_000_000,
+            data_source: "defillama",
+            yield_source: "DSR",
+            yield_type: "nav-appreciation",
+            exchange_rate: null,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-sdai-native",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec - 60,
+        };
+      }
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: nowSec };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(getChainRpc).mockReturnValue({
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      rpcUrl: "https://rpc.example/eth",
+      explorerUrl: "https://etherscan.io",
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | Request, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("rpc.example/eth")) {
+          const body = JSON.parse(String(init?.body)) as {
+            params?: Array<{ data?: string } | string>;
+          };
+          const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
+          if (callData?.startsWith("0x07a2d13a")) {
+            return new Response(
+              JSON.stringify({
+                result: "0x" + BigInt("1050000000000000000").toString(16).padStart(64, "0"),
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+        }
+        return new Response(JSON.stringify({ error: "Not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const testChainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example/eth",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+    await syncYieldData(db, undefined, testChainRpcs);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const onChainRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "onchain:100",
+    );
+    const curatedRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "pool-sdai-native" && stmt.boundValues?.[12] === "defillama",
+    );
+    expect(onChainRow).toBeDefined();
+    expect(curatedRow).toBeDefined();
+    expect(Number(onChainRow?.boundValues?.[3])).toBeGreaterThan(0);
+
+    delete poolMap["100"];
+    onChainConfigs.length = 0;
+  });
+
+  it("labels yield-bearing auto-discovered rows as lending opportunities", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-placeholder",
+              chain: "Ethereum",
+              project: "aave-v3",
+              symbol: "USDC",
+              tvlUsd: 5_000_000,
+              apy: 3.25,
+              apyBase: 3.25,
+              apyReward: null,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec - 60,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(yieldHelpersModule.findBestLendingPool).mockImplementation((symbol) =>
+      symbol === "sDAI"
+        ? {
+          pool: "pool-sdai-aave",
+          apy: 3.25,
+          apyBase: 3.25,
+          apyReward: null,
+          tvlUsd: 5_000_000,
+          project: "aave-v3",
+        }
+        : null,
+    );
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.itemCount).toBe(1);
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const autoRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[12] === "defillama-auto",
+    );
+    expect(autoRow?.boundValues?.[8]).toBe("Aave V3");
+    expect(autoRow?.boundValues?.[9]).toBe("lending-opportunity");
+  });
+
+  it("marks the run degraded when a retained benchmark is in fallback mode, even if recent", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -1216,7 +1527,7 @@ describe("syncYieldData", () => {
             recordDate: "2025-06-13",
             fetchedAt: nowSec - 6 * 3600,
             source: "fred-dgs3mo",
-            isFallback: false,
+            isFallback: true,
             fallbackMode: "fred-api-error-retained",
           }),
           updatedAt: nowSec - 6 * 3600,
@@ -1232,9 +1543,8 @@ describe("syncYieldData", () => {
       fallbackMode: string | null;
     };
 
-    // Fresh retained rates (under 2 days old) should not trigger degradation
-    expect(result.status).toBeUndefined();
-    expect(metadata.fallbackMode).toBeNull();
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode).toContain("risk-free-rate:fred-api-error-retained");
 
     const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
     expect(rankingsCacheCall).toBeDefined();
@@ -1242,7 +1552,7 @@ describe("syncYieldData", () => {
       provenance: { benchmark: { fallbackMode: string | null; isFallback: boolean } };
     };
     expect(rankingsPayload.provenance.benchmark.fallbackMode).toBe("fred-api-error-retained");
-    expect(rankingsPayload.provenance.benchmark.isFallback).toBe(false);
+    expect(rankingsPayload.provenance.benchmark.isFallback).toBe(true);
   });
 
   it("marks yield sync degraded when the retained benchmark is older than two days", async () => {
@@ -1263,7 +1573,7 @@ describe("syncYieldData", () => {
             recordDate: "2025-06-10",
             fetchedAt: nowSec - 49 * 3600,
             source: "fred-dgs3mo",
-            isFallback: false,
+            isFallback: true,
             fallbackMode: "fred-api-error-retained",
           }),
           updatedAt: nowSec - 49 * 3600,

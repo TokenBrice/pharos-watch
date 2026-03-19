@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.2",
+  currentVersion: "4.3",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.3",
+    title: "Wrapper-preserving ingestion and hydration hardening",
+    date: "2026-03-19",
+    effectiveAt: 1773878400,
+    summary:
+      "Yield ingestion now preserves wrapper-relevant pools through pre-filtering, separates deterministic history from curated pools, and hardens public hydration paths against partial safety or warning data.",
+    impact: [
+      "DeFiLlama pool ingestion now retains single-exposure wrapper pools that are explicitly relevant via native or variant config even when upstream `stablecoin` flags are false",
+      "Deterministic on-chain rows now use `onchain:<stablecoinId>` source keys so previous-rate lookups and source-aware history cannot collide with curated pool UUIDs",
+      "Live `/api/yield-rankings` safety hydration keeps rows with `DEFAULT_SAFETY_SCORE` / `NR` when report-card coverage is incomplete instead of dropping yield coverage",
+      "Retained benchmark fallbacks stay marked as degraded, and malformed stored `warning_signals` payloads no longer fail `yield-history` requests",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.2",
     title: "Source-aware history and confidence-weighted arbitration",

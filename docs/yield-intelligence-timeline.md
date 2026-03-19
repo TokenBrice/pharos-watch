@@ -1,6 +1,17 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.2` (2026-03-01 -> 2026-03-10).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.3` (2026-03-01 -> 2026-03-19).
+
+---
+
+## v4.3 - Wrapper-preserving ingestion and hydration hardening (Mar 19, 2026)
+
+**Commit:** `unreleased`
+
+- Wrapper-relevant DeFiLlama pools are now preserved through pre-filtering even when upstream `stablecoin` flags are false
+- Deterministic on-chain rows now use `onchain:<stablecoinId>` source keys so source-aware history cannot collide with curated pool UUIDs
+- `/api/yield-rankings` retains rows with fallback safety (`40` / `NR`) when report-card hydration is incomplete instead of dropping coverage
+- Retained benchmark fallback snapshots stay marked degraded, and malformed stored `warning_signals` payloads no longer fail `yield-history`
 
 ---
 

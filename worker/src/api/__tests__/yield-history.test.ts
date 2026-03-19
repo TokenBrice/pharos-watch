@@ -101,4 +101,15 @@ describe("handleYieldHistory", () => {
     expect(body[0]).toMatchObject({ sourceKey: "legacy-best", sourceSwitch: false });
     expect(body[1]).toMatchObject({ sourceKey: "rate-derived", sourceSwitch: true });
   });
+
+  it("falls back to an empty warning list when warning_signals is malformed JSON", async () => {
+    const malformedRow = makeYieldHistoryRow({ warning_signals: "not-json" });
+    const db = mockD1([{ match: "yield_history", rows: [malformedRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as Array<{ warningSignals: string[] }>;
+    expect(body[0]?.warningSignals).toEqual([]);
+  });
 });

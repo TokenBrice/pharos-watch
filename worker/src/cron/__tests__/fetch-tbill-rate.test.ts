@@ -193,7 +193,7 @@ describe("fetchTbillRate", () => {
       rate: 3.91,
       source: "fred-dgs3mo",
       fallbackMode: "all-sources-failed-retained",
-      isFallback: false,
+      isFallback: true,
       recordDate: "2026-03-07",
     });
   });

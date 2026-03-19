@@ -50,7 +50,7 @@ describe("handleYieldRankings", () => {
     vi.useRealTimers();
   });
 
-  it("hydrates live safety scores from the report-card snapshot and filters orphan rows", async () => {
+  it("hydrates live safety scores from the report-card snapshot and falls back to NR defaults for missing cards", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const db = makeCacheDb({
       rankings: [
@@ -218,18 +218,22 @@ describe("handleYieldRankings", () => {
       };
       _meta: { ageSeconds: number };
     };
-    expect(body.rankings).toHaveLength(2);
-    expect(body.rankings.map((row: { id: string }) => row.id)).toEqual(["rated-coin", "nr-coin"]);
+    expect(body.rankings).toHaveLength(3);
+    expect(body.rankings.map((row: { id: string }) => row.id)).toEqual(["orphan-coin", "rated-coin", "nr-coin"]);
 
-    expect(body.rankings[0].safetyGrade).toBe("B-");
-    expect(body.rankings[0].safetyScore).toBe(66);
-    expect(body.rankings[0].yieldToRisk).toBeCloseTo(5 / 35);
-    expect(body.rankings[0].pharosYieldScore).toBe(11);
-    expect(body.rankings[0].provenance?.usedDefaultSafety).toBe(false);
+    expect(body.rankings[0].safetyGrade).toBe("NR");
+    expect(body.rankings[0].safetyScore).toBe(40);
+    expect(body.rankings[0].provenance?.usedDefaultSafety).toBeUndefined();
 
-    expect(body.rankings[1].safetyGrade).toBe("NR");
-    expect(body.rankings[1].safetyScore).toBe(40);
-    expect(body.rankings[1].provenance?.usedDefaultSafety).toBe(true);
+    expect(body.rankings[1].safetyGrade).toBe("B-");
+    expect(body.rankings[1].safetyScore).toBe(66);
+    expect(body.rankings[1].yieldToRisk).toBeCloseTo(5 / 35);
+    expect(body.rankings[1].pharosYieldScore).toBe(11);
+    expect(body.rankings[1].provenance?.usedDefaultSafety).toBe(false);
+
+    expect(body.rankings[2].safetyGrade).toBe("NR");
+    expect(body.rankings[2].safetyScore).toBe(40);
+    expect(body.rankings[2].provenance?.usedDefaultSafety).toBe(true);
 
     expect(body.provenance.safetySnapshot).toEqual({
       kind: "ok",

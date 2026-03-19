@@ -4,6 +4,7 @@ import { setCache } from "../../lib/db-cache";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
+import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
 import {
   fetchCgTokensBatch, onchainRateLimit, CG_CHAIN_MAP,
 } from "../../lib/coingecko-onchain";
@@ -69,11 +70,11 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
         // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
         try {
           const minimalPools = pools
-            .filter((p) => p.stablecoin && p.exposure === "single")
+            .filter(isYieldRelevantDlPool)
             .map((p) => ({
               pool: p.pool, chain: p.chain, project: p.project, symbol: p.symbol,
               tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
-              apyReward: p.apyReward, apyMean30d: p.apy, stablecoin: true, exposure: "single",
+              apyReward: p.apyReward, apyMean30d: p.apy, stablecoin: p.stablecoin, exposure: p.exposure,
               underlyingTokens: p.underlyingTokens ?? null,
             }));
           await setCache(db, "dl-stablecoin-pools", buildDlStablecoinPoolsCache(minimalPools));
