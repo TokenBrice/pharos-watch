@@ -20,7 +20,7 @@ import { isYieldRelevantDlPool } from "./pool-filter";
 import type { DlPool, ResolvedYield } from "./types";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
-const BPROTOCOL_LQTY_ONLY_SOURCE_KEY = "bprotocol-lqty-only";
+const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 const BPROTOCOL_LQTY_ONLY_SOURCE_LABEL = "B.Protocol Stability Pool (LQTY only)";
 const BPROTOCOL_LQTY_ONLY_SOURCE_TYPE = "lending-vault";
 const LIQUITY_STABILITY_POOL_TOTAL_LQTY_REWARD = 32_000_000;
@@ -32,6 +32,10 @@ const LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR = "0x9bf2f1ac";
 const LIQUITY_LQTY_GECKO_ID = "liquity";
 
 const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX sync refresh)
+
+function buildOnChainSourceKey(stablecoinId: string): string {
+  return `onchain:${stablecoinId}`;
+}
 
 export async function loadDlStablecoinPools(
   db: D1Database,
@@ -254,7 +258,7 @@ export async function fetchBprotocolLqtyOnlySource(
       sourceTvlUsd: totalLusdDeposits,
       dataSource: "onchain",
       exchangeRate: null,
-      sourceKey: BPROTOCOL_LQTY_ONLY_SOURCE_KEY,
+      sourceKey: buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
       yieldSource: BPROTOCOL_LQTY_ONLY_SOURCE_LABEL,
       yieldType: BPROTOCOL_LQTY_ONLY_SOURCE_TYPE,
     };

@@ -45,6 +45,7 @@ const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
 /** 30-day history window + 5-day buffer for legacy source-unaware rows. */
 const LEGACY_HISTORY_MAX_AGE_SEC = SECONDS.THIRTY_DAYS + 5 * SECONDS.ONE_DAY;
+const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
 
 type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 
@@ -103,6 +104,23 @@ function buildHistoryKey(stablecoinId: string, sourceKey: string): string {
 
 function buildOnChainSourceKey(stablecoinId: string): string {
   return `onchain:${stablecoinId}`;
+}
+
+function isLegacyDeterministicOnChainSourceKey(
+  stablecoinId: string,
+  sourceKey: string | null | undefined,
+): boolean {
+  return stablecoinId === "lusd-liquity" && sourceKey === LEGACY_LUSD_BPROTOCOL_SOURCE_KEY;
+}
+
+function shouldNormalizeOnChainSourceKey(row: {
+  stablecoin_id: string;
+  source_key: string | null;
+  data_source: string;
+  exchange_rate?: number | null;
+}): boolean {
+  return row.data_source === "onchain"
+    && (row.exchange_rate != null || isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, row.source_key));
 }
 
 function chunkArray<T>(values: readonly T[], chunkSize: number): T[][] {
@@ -296,6 +314,7 @@ function pickHistoryRowsForSource(
   dataSource: string,
   sourceHistory: Map<string, YieldHistorySnapshotRow[]>,
   onChainCompatibilityHistoryById: Map<string, YieldHistorySnapshotRow[]>,
+  legacyDeterministicOnChainHistoryById: Map<string, YieldHistorySnapshotRow[]>,
   legacyHistoryById: Map<string, YieldHistorySnapshotRow[]>,
   resolvedCountByCoin: Map<string, number>,
   startSec: number,
@@ -309,6 +328,11 @@ function pickHistoryRowsForSource(
     const compatibilityRows = onChainCompatibilityHistoryById.get(stablecoinId) ?? [];
     if (compatibilityRows.length > 0) {
       return { rows: compatibilityRows, usedLegacyHistory: false };
+    }
+
+    const legacyDeterministicRows = legacyDeterministicOnChainHistoryById.get(stablecoinId) ?? [];
+    if (legacyDeterministicRows.length > 0) {
+      return { rows: legacyDeterministicRows, usedLegacyHistory: false };
     }
   }
 
@@ -447,6 +471,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
 
   const sourceHistory = new Map<string, YieldHistorySnapshotRow[]>();
   const onChainCompatibilityHistoryById = new Map<string, YieldHistorySnapshotRow[]>();
+  const legacyDeterministicOnChainHistoryById = new Map<string, YieldHistorySnapshotRow[]>();
   const legacyHistoryById = new Map<string, YieldHistorySnapshotRow[]>();
   const prevTvlBySource = new Map<string, number | null>();
   const legacyPrevTvlById = new Map<string, number | null>();
@@ -478,6 +503,12 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
         list.push(normalizedRow);
         onChainCompatibilityHistoryById.set(row.stablecoin_id, list);
       }
+
+      if (isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, sourceKey)) {
+        const list = legacyDeterministicOnChainHistoryById.get(row.stablecoin_id) ?? [];
+        list.push(normalizedRow);
+        legacyDeterministicOnChainHistoryById.set(row.stablecoin_id, list);
+      }
     }
 
     for (const row of prevTvlRows) {
@@ -498,7 +529,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
       if (!prevBestSourceKeyByCoin.has(row.stablecoin_id)) {
         prevBestSourceKeyByCoin.set(
           row.stablecoin_id,
-          row.data_source === "onchain" && row.exchange_rate != null
+          shouldNormalizeOnChainSourceKey(row)
             ? buildOnChainSourceKey(row.stablecoin_id)
             : (row.source_key ?? "legacy-best"),
         );
@@ -541,6 +572,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
         y.dataSource,
         sourceHistory,
         onChainCompatibilityHistoryById,
+        legacyDeterministicOnChainHistoryById,
         legacyHistoryById,
         resolvedCountByCoin,
         startSec,

@@ -22,13 +22,9 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import {
-  fetchBprotocolLqtyOnlySource,
-  getPriceDerivedApy,
-} from "./sources";
+import { fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
-const BPROTOCOL_LQTY_ONLY_SOURCE_KEY = "bprotocol-lqty-only";
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 
 function buildOnChainSourceKey(stablecoinId: string): string {
@@ -248,7 +244,7 @@ export async function resolveYieldSources({
     && !resolved.some(
       (entry) =>
         entry.id === LIQUITY_V1_LUSD_ID
-        && entry.yield?.sourceKey === BPROTOCOL_LQTY_ONLY_SOURCE_KEY,
+        && entry.yield?.sourceKey === buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
     )
   ) {
     const bprotocolYield = await fetchBprotocolLqtyOnlySource(signal, chainRpcs, coingeckoApiKey);

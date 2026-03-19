@@ -744,7 +744,7 @@ describe("syncYieldData", () => {
     const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
 
     const bprotocolRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "lusd-liquity" && stmt.boundValues?.[1] === "bprotocol-lqty-only",
+      (stmt) => stmt.boundValues?.[0] === "lusd-liquity" && stmt.boundValues?.[1] === "onchain:lusd-liquity",
     );
     expect(bprotocolRow?.boundValues?.[8]).toBe("B.Protocol Stability Pool (LQTY only)");
     expect(bprotocolRow?.boundValues?.[9]).toBe("lending-vault");
@@ -1314,6 +1314,114 @@ describe("syncYieldData", () => {
     expect(Number(onChainRow?.boundValues?.[6])).toBeCloseTo(5, 6);
     expect(Number(onChainRow?.boundValues?.[7])).toBeCloseTo(7, 6);
     expect(onChainRow?.boundValues?.[23]).toBe(1.0);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
+    expect(metadata.sourceSwitches).toBe(0);
+  });
+
+  it("reuses legacy B.Protocol history after normalizing the LUSD deterministic source key", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "lusd-liquity",
+            source_key: "bprotocol-lqty-only",
+            recorded_at: nowSec - 8 * 86400,
+            is_best: 1,
+            apy: 4.5,
+            source_tvl_usd: 1_250_000,
+            data_source: "onchain",
+            yield_source: "B.Protocol Stability Pool (LQTY only)",
+            yield_type: "lending-vault",
+            exchange_rate: null,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: nowSec };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(getChainRpc).mockReturnValue({
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      rpcUrl: "https://rpc.example/eth",
+      explorerUrl: "https://etherscan.io",
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | Request, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.url;
+
+        if (url.includes("/simple/price?ids=liquity&vs_currencies=usd")) {
+          return new Response(JSON.stringify({ liquity: { usd: 0.280527 } }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        if (url.includes("rpc.example/eth")) {
+          const body = JSON.parse(String(init?.body)) as {
+            params?: Array<{ data?: string } | string>;
+          };
+          const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
+
+          if (callData === "0x9bf2f1ac") {
+            return new Response(
+              JSON.stringify({
+                result: "0x0000000000000000000000000000000000000000000a88622849a78584de759b",
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+
+          if (callData === "0xb140384b") {
+            return new Response(
+              JSON.stringify({
+                result: "0x0000000000000000000000000000000000000000001998cb5c5ea77bc8dc9000",
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+        }
+
+        return new Response(JSON.stringify({ error: "Not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const testChainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example/eth",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+    const result = await syncYieldData(db, undefined, testChainRpcs);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const onChainRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "lusd-liquity" && stmt.boundValues?.[1] === "onchain:lusd-liquity",
+    );
+    expect(onChainRow).toBeDefined();
+    expect(onChainRow?.boundValues?.[25]).toBe(1);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
     expect(metadata.sourceSwitches).toBe(0);
