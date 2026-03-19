@@ -145,4 +145,4 @@ Related docs to update in the same change:
 - [architecture.md](./architecture.md)
 - [methodology-page.md](./methodology-page.md)
 
-If the methodology version changes, also update `shared/lib/chain-health-version.ts` and the public changelog route at `src/app/methodology/chain-health-changelog/page.tsx`.
+If the methodology version changes, also update `shared/lib/chain-health-version.ts`, [chain-health-timeline.md](./chain-health-timeline.md), and the public changelog route at `src/app/methodology/chain-health-changelog/page.tsx`.

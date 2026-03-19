@@ -414,7 +414,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (75 total)
+├── migrations/                   # D1 SQL migration files (77 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata

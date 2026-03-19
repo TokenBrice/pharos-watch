@@ -183,7 +183,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 2. this document for canonical pricing behavior
 3. [data-pipeline.md](./data-pipeline.md) if broader sync/integrity semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/methodology-sections.tsx`
-5. `shared/lib/pricing-pipeline-version.ts` if methodology semantics changed
+5. `shared/lib/pricing-pipeline-version.ts` and [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) if methodology semantics changed
 6. [about-page.md](./about-page.md) and `src/app/about/page.tsx` when externally visible data sources change
 
 ---

@@ -62,14 +62,16 @@ If you add a new methodology changelog route, follow the existing pattern:
 If the Chain Health methodology changes, also update:
 
 1. `docs/chains-page.md`
-2. `docs/api-reference.md` (`GET /api/chains`)
-3. `src/app/chains/page.tsx` and `src/app/chains/[chain]/client.tsx` if any user-facing factor labels or weights change
+2. `docs/chain-health-timeline.md`
+3. `docs/api-reference.md` (`GET /api/chains`)
+4. `src/app/chains/page.tsx` and `src/app/chains/[chain]/client.tsx` if any user-facing factor labels or weights change
 
 If the pricing pipeline's source roster or live-price selection semantics change, also update:
 
 1. `docs/pricing-pipeline.md`
-2. `docs/data-pipeline.md`
-3. `docs/about-page.md` plus `src/app/about/page.tsx`
+2. `docs/pricing-pipeline-timeline.md`
+3. `docs/data-pipeline.md`
+4. `docs/about-page.md` plus `src/app/about/page.tsx`
 
 For the safety-score changelog specifically, update both:
 

@@ -92,10 +92,12 @@ Some public routes are documented by feature docs or the architecture doc rather
 
 ## Version Histories
 
+- [chain-health-timeline.md](./chain-health-timeline.md) - Chain Health Score methodology version history
 - [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md) - blacklist methodology version history
 - [depeg-dews-timeline.md](./depeg-dews-timeline.md) - depeg tracker and DEWS version history
 - [liquidity-score-timeline.md](./liquidity-score-timeline.md) - liquidity score version history
 - [mint-burn-flows-timeline.md](./mint-burn-flows-timeline.md) - mint/burn methodology version history
+- [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) - pricing pipeline methodology version history
 - [report-cards-timeline.md](./report-cards-timeline.md) - report-card scoring version history
 - [stability-index-timeline.md](./stability-index-timeline.md) - PSI version history
 - [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) - yield methodology version history
