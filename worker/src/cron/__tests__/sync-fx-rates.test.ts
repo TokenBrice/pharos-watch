@@ -126,4 +126,69 @@ describe("syncFxRates", () => {
     expect(metadata.rateCount).toBeGreaterThanOrEqual(20);
     expect(metadata.secondaryCoverage).toBe(4);
   });
+
+  it("overlays fresh Chainlink reference feeds when they agree with current references", async () => {
+    const decimalsHex = "0x0000000000000000000000000000000000000000000000000000000000000008";
+    const latestRoundDataHex =
+      "0x" +
+      "0000000000000000000000000000000000000000000000000000000000000001" +
+      "0000000000000000000000000000000000000000000000000000000006717d60" +
+      "0000000000000000000000000000000000000000000000000000000000000000" +
+      "00000000000000000000000000000000000000000000000000000000684ea5dc" +
+      "0000000000000000000000000000000000000000000000000000000000000001";
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("frankfurter.app")) {
+        return new Response(JSON.stringify({
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        }), { status: 200 });
+      }
+      if (url.includes("currency-api")) {
+        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } }), { status: 200 });
+      }
+      if (url.includes("gold-api.com/price/XAU")) {
+        return new Response(JSON.stringify({ price: 2900 }), { status: 200 });
+      }
+      if (url.includes("gold-api.com/price/XAG")) {
+        return new Response(JSON.stringify({ price: 32 }), { status: 200 });
+      }
+      if (url === "https://rpc.base.test") {
+        const body = JSON.parse(String(init?.body ?? "{}")) as { params?: Array<{ to?: string; data?: string }> };
+        const call = body.params?.[0];
+        if (call?.to === "0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F" && call.data === "0x313ce567") {
+          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: decimalsHex }), { status: 200 });
+        }
+        if (call?.to === "0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F" && call.data === "0xfeaf968c") {
+          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: latestRoundDataHex }), { status: 200 });
+        }
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    const db = mockD1([
+      { match: "cache", rows: [], first: null },
+      { match: "circuit", rows: [] },
+    ]);
+    const chainRpcs = new Map([
+      ["base", {
+        chainId: "base",
+        chainName: "Base",
+        type: "evm" as const,
+        rpcUrl: "https://rpc.base.test",
+        explorerUrl: "https://basescan.org",
+      }],
+    ]);
+
+    const result = await syncFxRates(db, undefined, undefined, chainRpcs);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.sources.chainlink).toBe("ok");
+
+    const write = db.getHistory().find(
+      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "fx-rates",
+    );
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedEUR).toBeCloseTo(1.08101, 4);
+  });
 });

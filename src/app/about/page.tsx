@@ -33,7 +33,7 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "Supply & Price",
     sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Pyth Network, Binance, Coinbase, RedStone, Curve on-chain, Fluid, Balancer, Raydium, Orca, and direct protocol redemption quotes for selected redeemable assets",
+      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Fluid, Balancer, Raydium, Orca, and direct protocol redemption quotes for selected redeemable assets",
   },
   {
     label: "Reserve Transparency",
@@ -48,7 +48,7 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "Ratings & Reference",
     sources:
-      "Bluechip, ECB via Frankfurter, Open Exchange Rates (real-time FX cross-validation), fawazahmed0/exchange-api (CNH and non-ECB FX), gold-api.com, FRED DGS3MO (T-bill rates)",
+      "Bluechip, Chainlink Data Feeds, ECB via Frankfurter, Open Exchange Rates (real-time FX cross-validation), fawazahmed0/exchange-api (CNH and non-ECB FX), gold-api.com, FRED DGS3MO (T-bill rates)",
   },
   {
     label: "DEX Data",

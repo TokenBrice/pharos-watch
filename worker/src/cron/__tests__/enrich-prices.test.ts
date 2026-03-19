@@ -501,6 +501,36 @@ describe("enrichMissingPrices", () => {
     expect(assets[1].priceSource).toBe("coinmarketcap");
     expect(stats.passCmc).toBe(2);
   });
+
+  it("fills missing Solana prices from Jupiter when liquidity is sufficient", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      { match: "coins.llama.fi", body: { coins: {} } },
+      {
+        match: "lite-api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 1.0002,
+            liquidity: 250_000,
+            createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+          },
+        },
+      },
+    ]);
+
+    const stats = await enrichMissingPrices(assets);
+
+    expect(stats.passJupiter).toBe(1);
+    expect(assets[0].price).toBe(1.0002);
+    expect(assets[0].priceSource).toBe("jupiter");
+    expect(stats.finalMissing).toBe(0);
+  });
 });
 
 // --- fetchPrimaryPrices tests ---
@@ -569,6 +599,38 @@ describe("fetchPrimaryPrices", () => {
     expect(result.source).toBe("coingecko");
     expect(stats.singleSource).toBe(1);
     expect(stats.cgOnly).toBe(1);
+  });
+
+  it("includes Kraken and Bitstamp in the consensus cluster when they agree", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({ tether: { usd: 1.0001 } }), { status: 200 });
+      }
+      if (url.includes("api.kraken.com")) {
+        return new Response(JSON.stringify({
+          error: [],
+          result: { USDTZUSD: { c: ["1.0000"] } },
+        }), { status: 200 });
+      }
+      if (url.includes("bitstamp.net")) {
+        return new Response(JSON.stringify([
+          { pair: "USDT/USD", market: "USDT/USD", last: "1.0002" },
+        ]), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const db = makeTestDb();
+    const { results } = await fetchPrimaryPrices(assets, db);
+    const result = results.get("usdt-tether");
+
+    expect(result).toBeDefined();
+    expect(result!.agreeSources).toEqual(expect.arrayContaining(["coingecko", "kraken", "bitstamp"]));
+    expect(result!.confidence).toBe("high");
   });
 
   it("returns low confidence when CG and DL list prices diverge beyond 50bps", async () => {

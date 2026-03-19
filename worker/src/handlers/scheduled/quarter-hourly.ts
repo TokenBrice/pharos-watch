@@ -54,7 +54,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
     }
 
     await runQuarterHourlyJob("sync-fx-rates", (signal) =>
-      syncFxRates(runtime.db, signal, runtime.env.OPENEXCHANGERATES_API_KEY),
+      syncFxRates(runtime.db, signal, runtime.env.OPENEXCHANGERATES_API_KEY, runtime.chainRpcs),
     );
 
     if (stablecoinsCacheSafe && depegPipelineSafe) {
