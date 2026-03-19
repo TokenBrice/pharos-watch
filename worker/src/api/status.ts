@@ -507,10 +507,9 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       severity: "critical",
       message:
         fxCache.warning ??
-        "Non-USD FX reference source data is stale even though usable FX rates still exist.",
+        "Non-USD FX reference source data is stale relative to its expected source cadence even though usable FX rates still exist.",
       metric: "fxSourceAgeSeconds",
       value: fxCache.sourceAgeSeconds ?? undefined,
-      threshold: 24 * 3600,
     });
   } else if (fxCache?.sourceStatus === "degraded") {
     pushCause(availabilityCauses, {
@@ -519,10 +518,9 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       severity: "warning",
       message:
         fxCache.warning ??
-        "Non-USD FX reference source data is older than the degraded freshness window.",
+        "Non-USD FX reference source data is behind its expected update cadence.",
       metric: "fxSourceAgeSeconds",
       value: fxCache.sourceAgeSeconds ?? undefined,
-      threshold: 6 * 3600,
     });
   } else if (cacheWarnings.length > 0) {
     for (const warning of cacheWarnings) {

@@ -276,7 +276,7 @@ describe("buildCacheStatuses", () => {
     ]);
   });
 
-  it("uses fx-rates-meta usableSyncAt for cache freshness and exposes stale source warnings separately", async () => {
+  it("uses fx-rates-meta usableSyncAt for cache freshness and keeps cadence-aware source warnings separate", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = {
       prepare: (sql: string) => {
@@ -304,6 +304,7 @@ describe("buildCacheStatuses", () => {
                         mode: "cached-fallback",
                         sourceUpdatedAtByPeg: { peggedEUR: nowSec - 8 * 3600 },
                         sourceModeByPeg: { peggedEUR: "cached" },
+                        sourceCadenceByPeg: { peggedEUR: "intraday" },
                         consecutiveFallbackRuns: 4,
                       }),
                     },

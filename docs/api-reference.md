@@ -1004,7 +1004,17 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
     "stablecoins": { "ageSeconds": 323, "maxAge": 600, "healthy": true },
     "stablecoin-charts": { "ageSeconds": 323, "maxAge": 3600, "healthy": true },
     "usds-status": { "ageSeconds": 47118, "maxAge": 86400, "healthy": true },
-    "fx-rates": { "ageSeconds": 1223, "maxAge": 1800, "healthy": true },
+    "fx-rates": {
+      "ageSeconds": 1223,
+      "maxAge": 1800,
+      "healthy": true,
+      "mode": "live",
+      "sourceUpdatedAt": 1771855200,
+      "sourceAgeSeconds": 323,
+      "sourceStatus": "fresh",
+      "warning": null,
+      "consecutiveFallbackRuns": 0
+    },
     "bluechip-ratings": { "ageSeconds": 22815, "maxAge": 86400, "healthy": true },
     "dex-liquidity": { "ageSeconds": 290, "maxAge": 43200, "healthy": true },
     "yield-data": { "ageSeconds": 820, "maxAge": 3600, "healthy": true },
@@ -1041,6 +1051,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `timestamp`                          | `number`                           | Unix seconds at time of response                                                                                                                                                                                                                                                                                                                                                       |
 | `warnings`                           | `string[]`                         | Best-effort diagnostics when health subqueries fail but the endpoint can still return a non-500 payload                                                                                                                                                                                                                                                                                |
 | `caches`                             | `Record<string, CacheStatus>`      | Per-cache freshness status                                                                                                                                                                                                                                                                                                                                                             |
+| `caches["fx-rates"]`                 | `CacheStatus`                      | FX cache freshness plus source-cadence diagnostics (`mode`, `sourceUpdatedAt`, `sourceAgeSeconds`, `sourceStatus`, `warning`, `consecutiveFallbackRuns`)                                                                                                                                                                                                                             |
 | `blacklist.totalEvents`              | `number`                           | Total events in blacklist table                                                                                                                                                                                                                                                                                                                                                        |
 | `blacklist.missingAmounts`           | `number`                           | Events where `amount` is null (should be 0)                                                                                                                                                                                                                                                                                                                                            |
 | `mintBurn.totalEvents`               | `number`                           | Total mint+burn event count (aggregated from `mint_burn_hourly`)                                                                                                                                                                                                                                                                                                                       |
@@ -1058,11 +1069,17 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 
 **`CacheStatus`**
 
-| Field        | Type             | Description                                               |
-| ------------ | ---------------- | --------------------------------------------------------- |
-| `ageSeconds` | `number \| null` | Seconds since last cron update; `null` if never populated |
-| `maxAge`     | `number`         | Expected max-age in seconds for this cache key            |
-| `healthy`    | `boolean`        | `true` when `ageSeconds / maxAge ≤ 1.5`                   |
+| Field                    | Type                                              | Description                                                                                   |
+| ------------------------ | ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `ageSeconds`             | `number \| null`                                  | Seconds since last cron update; `null` if never populated                                     |
+| `maxAge`                 | `number`                                          | Expected max-age in seconds for this cache key                                                |
+| `healthy`                | `boolean`                                         | `true` when `ageSeconds / maxAge ≤ 1.5`                                                       |
+| `mode`                   | `"live" \| "cached-fallback" \| undefined`        | FX cache only: whether the latest usable sync came from a live fetch or cached fallback       |
+| `sourceUpdatedAt`        | `number \| null \| undefined`                     | FX cache only: Unix seconds for the source currently driving `sourceStatus`                   |
+| `sourceAgeSeconds`       | `number \| null \| undefined`                     | FX cache only: age of the source currently driving `sourceStatus`                             |
+| `sourceStatus`           | `"fresh" \| "degraded" \| "stale" \| "none"`      | FX cache only: cadence-aware source freshness status                                          |
+| `warning`                | `string \| null \| undefined`                     | FX cache only: human-readable warning for fallback mode, stale source cadence, or hardcoding  |
+| `consecutiveFallbackRuns`| `number \| undefined`                             | FX cache only: number of back-to-back cached-fallback runs                                    |
 
 **Overall status logic:**
 

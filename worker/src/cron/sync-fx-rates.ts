@@ -6,7 +6,7 @@ import { fetchRealtimeFxRates } from "../lib/fx-realtime";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { fetchChainlinkReferenceQuotes } from "../lib/chainlink-feeds";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import type { FxRateSourceMode, FxRateSyncMode } from "../lib/fx-rate-state";
+import type { FxRateSourceMode, FxRateSyncMode, FxSourceCadence } from "../lib/fx-rate-state";
 import { loadFxRateState, persistFxRateState } from "../lib/fx-rate-state";
 import { z } from "zod";
 
@@ -111,6 +111,20 @@ const MetalPriceSchema = z.object({
   price: z.number(),
 });
 
+function resolveDatedSourceUpdatedAt(
+  dateText: string | null | undefined,
+  syncStartSec: number,
+  publishedHourUtc?: number,
+): number {
+  if (!dateText) return syncStartSec;
+  const timeSuffix = publishedHourUtc == null
+    ? "T23:59:59Z"
+    : `T${String(publishedHourUtc).padStart(2, "0")}:00:00Z`;
+  const parsed = Date.parse(`${dateText}${timeSuffix}`);
+  if (!Number.isFinite(parsed)) return syncStartSec;
+  return Math.min(syncStartSec, Math.floor(parsed / 1000));
+}
+
 export async function syncFxRates(
   db: D1Database,
   signal?: AbortSignal,
@@ -131,6 +145,8 @@ export async function syncFxRates(
     const prevRates = prevState?.rates ?? {};
     const sourceUpdatedAtByPeg: Record<string, number | null> = {};
     const sourceModeByPeg: Record<string, FxRateSourceMode> = {};
+    const sourceCadenceByPeg: Record<string, FxSourceCadence> = {};
+    const sourceDateByPeg: Record<string, string | null> = {};
     let usableRates: Record<string, number> = {};
     let mode: FxRateSyncMode = "live";
     let ecbDate: string | null = null;
@@ -144,9 +160,16 @@ export async function syncFxRates(
       openExchangeRates: "unavailable",
     };
 
-    const markLive = (pegKey: string, updatedAt: number) => {
+    const markLive = (
+      pegKey: string,
+      updatedAt: number,
+      cadence: FxSourceCadence = "intraday",
+      sourceDate: string | null = null,
+    ) => {
       sourceUpdatedAtByPeg[pegKey] = updatedAt;
       sourceModeByPeg[pegKey] = "live";
+      sourceCadenceByPeg[pegKey] = cadence;
+      sourceDateByPeg[pegKey] = sourceDate;
     };
     const inheritPrevious = (pegKey: string) => {
       if (prevState?.sourceModeByPeg[pegKey]) {
@@ -155,10 +178,14 @@ export async function syncFxRates(
         sourceModeByPeg[pegKey] = "cached";
       }
       sourceUpdatedAtByPeg[pegKey] = prevState?.sourceUpdatedAtByPeg[pegKey] ?? null;
+      sourceCadenceByPeg[pegKey] = prevState?.sourceCadenceByPeg[pegKey] ?? "intraday";
+      sourceDateByPeg[pegKey] = prevState?.sourceDateByPeg[pegKey] ?? null;
     };
     const setHardcoded = (pegKey: string) => {
       sourceModeByPeg[pegKey] = "hardcoded";
       sourceUpdatedAtByPeg[pegKey] = null;
+      sourceCadenceByPeg[pegKey] = "intraday";
+      sourceDateByPeg[pegKey] = null;
     };
 
     const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
@@ -215,7 +242,7 @@ export async function syncFxRates(
         ecbDate = data.date;
 
         const ecbDateObj = new Date(data.date + "T16:00:00Z");
-        const ecbUpdatedAt = Math.floor(ecbDateObj.getTime() / 1000);
+        const ecbUpdatedAt = resolveDatedSourceUpdatedAt(data.date, syncStartSec, 16);
         const ecbAgeSec = (Date.now() - ecbDateObj.getTime()) / 1000;
         if (ecbAgeSec > 86400) {
           console.warn(
@@ -230,7 +257,7 @@ export async function syncFxRates(
           const rate = Number((1 / unitsPerUsd).toFixed(6));
           if (isValidRate(pegKey, rate, prevRates[pegKey])) {
             usableRates[pegKey] = rate;
-            markLive(pegKey, ecbUpdatedAt);
+            markLive(pegKey, ecbUpdatedAt, "business-daily", data.date);
           } else if (prevRates[pegKey]) {
             usableRates[pegKey] = prevRates[pegKey];
             inheritPrevious(pegKey);
@@ -264,7 +291,7 @@ export async function syncFxRates(
               const erData = secondaryValidation.data;
               const secondaryUpdatedAt =
                 typeof erData.date === "string" && erData.date.length > 0
-                  ? Math.floor(new Date(`${erData.date}T00:00:00Z`).getTime() / 1000)
+                  ? resolveDatedSourceUpdatedAt(erData.date, syncStartSec)
                   : syncStartSec;
               for (const [currency, pegKey] of Object.entries(SECONDARY_CURRENCY_TO_PEG)) {
                 const perUsd = erData.usd?.[currency];
@@ -272,7 +299,12 @@ export async function syncFxRates(
                   const rate = Number((1 / perUsd).toFixed(6));
                   if (isValidRate(pegKey, rate, prevRates[pegKey])) {
                     usableRates[pegKey] = rate;
-                    markLive(pegKey, secondaryUpdatedAt);
+                    markLive(
+                      pegKey,
+                      secondaryUpdatedAt,
+                      "calendar-daily",
+                      typeof erData.date === "string" && erData.date.length > 0 ? erData.date : null,
+                    );
                   } else if (prevRates[pegKey]) {
                     usableRates[pegKey] = prevRates[pegKey];
                     inheritPrevious(pegKey);
@@ -501,6 +533,8 @@ export async function syncFxRates(
       mode,
       sourceUpdatedAtByPeg,
       sourceModeByPeg,
+      sourceCadenceByPeg,
+      sourceDateByPeg,
       sources,
       ecbDate,
       previousCacheUpdatedAt: prevState?.usableSyncAt ?? null,

@@ -159,6 +159,7 @@ describe("syncStablecoinCharts", () => {
             mode: "cached-fallback",
             sourceUpdatedAtByPeg: { peggedEUR: nowSec - 9 * 3600 },
             sourceModeByPeg: { peggedEUR: "cached" },
+            sourceCadenceByPeg: { peggedEUR: "intraday" },
             consecutiveFallbackRuns: 2,
           }),
           updated_at: nowSec - 60,

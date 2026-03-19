@@ -156,6 +156,7 @@ describe("loadPriceValidationReferences", () => {
             mode: "cached-fallback",
             sourceUpdatedAtByPeg: { peggedEUR: nowSec - (8 * 3600) },
             sourceModeByPeg: { peggedEUR: "cached" },
+            sourceCadenceByPeg: { peggedEUR: "intraday" },
             consecutiveFallbackRuns: 2,
           }),
           updated_at: nowSec - 60,
@@ -168,6 +169,43 @@ describe("loadPriceValidationReferences", () => {
     expect(result.type).toBe("stale");
     expect(result.updatedAtByPeg).toEqual({ peggedEUR: nowSec - (8 * 3600) });
     expect(result.typeByPeg).toEqual({ peggedEUR: "stale" });
+  });
+
+  it("keeps business-daily FX references fresh before the next publish window", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedEUR: 1.08 }),
+          updated_at: nowSec - 60,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: nowSec - 60,
+            mode: "live",
+            sourceUpdatedAtByPeg: { peggedEUR: nowSec - (16 * 3600) },
+            sourceModeByPeg: { peggedEUR: "live" },
+            sourceCadenceByPeg: { peggedEUR: "business-daily" },
+            sourceDateByPeg: { peggedEUR: "2026-03-10" },
+            consecutiveFallbackRuns: 0,
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+    ]);
+
+    const result = await loadPriceValidationReferences(db);
+
+    expect(result.type).toBe("fresh");
+    expect(result.typeByPeg).toEqual({ peggedEUR: "fresh" });
   });
 });
 

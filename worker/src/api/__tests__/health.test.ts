@@ -201,6 +201,7 @@ describe("handleHealth", () => {
               mode: "cached-fallback",
               sourceUpdatedAtByPeg: { peggedEUR: now - 8 * 3600 },
               sourceModeByPeg: { peggedEUR: "cached" },
+              sourceCadenceByPeg: { peggedEUR: "intraday" },
               consecutiveFallbackRuns: 4,
             }),
           },

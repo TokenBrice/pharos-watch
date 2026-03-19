@@ -4,11 +4,38 @@ import { getCache, setCacheIfNewer } from "./db-cache";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
-const FX_SOURCE_DEGRADED_AGE_SEC = 6 * 3600;
-const FX_SOURCE_STALE_AGE_SEC = 24 * 3600;
+const FX_INTRADAY_SOURCE_DEGRADED_AGE_SEC = 6 * 3600;
+const FX_INTRADAY_SOURCE_STALE_AGE_SEC = 24 * 3600;
+const FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC = 6;
+const FX_BUSINESS_DAILY_PUBLISH_HOUR_UTC = 16;
+
+const BUSINESS_DAILY_FX_PEGS = new Set([
+  "peggedEUR",
+  "peggedGBP",
+  "peggedCHF",
+  "peggedREAL",
+  "peggedJPY",
+  "peggedIDR",
+  "peggedSGD",
+  "peggedTRY",
+  "peggedAUD",
+  "peggedZAR",
+  "peggedCAD",
+  "peggedCNY",
+  "peggedPHP",
+  "peggedMXN",
+]);
+
+const CALENDAR_DAILY_FX_PEGS = new Set([
+  "peggedCNH",
+  "peggedRUB",
+  "peggedUAH",
+  "peggedARS",
+]);
 
 export type FxRateSyncMode = "live" | "cached-fallback";
 export type FxRateSourceMode = "live" | "cached" | "hardcoded";
+export type FxSourceCadence = "intraday" | "calendar-daily" | "business-daily";
 export type FxSourceStatus = "fresh" | "degraded" | "stale" | "none";
 
 export interface FxRatesMeta {
@@ -16,6 +43,8 @@ export interface FxRatesMeta {
   mode: FxRateSyncMode;
   sourceUpdatedAtByPeg: Record<string, number | null>;
   sourceModeByPeg: Record<string, FxRateSourceMode>;
+  sourceCadenceByPeg?: Record<string, FxSourceCadence>;
+  sourceDateByPeg?: Record<string, string | null>;
   sources?: Record<string, string>;
   ecbDate?: string | null;
   previousCacheUpdatedAt?: number | null;
@@ -29,6 +58,8 @@ export interface FxRateState {
   mode: FxRateSyncMode;
   sourceUpdatedAtByPeg: Record<string, number | null>;
   sourceModeByPeg: Record<string, FxRateSourceMode>;
+  sourceCadenceByPeg: Record<string, FxSourceCadence>;
+  sourceDateByPeg: Record<string, string | null>;
   sources?: Record<string, string>;
   ecbDate?: string | null;
   previousCacheUpdatedAt?: number | null;
@@ -75,6 +106,29 @@ function sanitizeSourceModeByPeg(input: unknown): Record<string, FxRateSourceMod
   return out;
 }
 
+function sanitizeSourceCadenceByPeg(input: unknown): Record<string, FxSourceCadence> {
+  if (!input || typeof input !== "object") return {};
+  const out: Record<string, FxSourceCadence> = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (value === "intraday" || value === "calendar-daily" || value === "business-daily") {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+function sanitizeSourceDateByPeg(input: unknown): Record<string, string | null> {
+  if (!input || typeof input !== "object") return {};
+  const out: Record<string, string | null> = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    out[key] =
+      typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? value
+        : null;
+  }
+  return out;
+}
+
 function sanitizeSources(input: unknown): Record<string, string> | undefined {
   if (!input || typeof input !== "object" || Array.isArray(input)) return undefined;
   const out: Record<string, string> = {};
@@ -89,15 +143,21 @@ function sanitizeSources(input: unknown): Record<string, string> | undefined {
 function buildBootstrapMeta(cache: CacheRow, rates: Record<string, number>): FxRatesMeta {
   const sourceUpdatedAtByPeg: Record<string, number | null> = {};
   const sourceModeByPeg: Record<string, FxRateSourceMode> = {};
+  const sourceCadenceByPeg: Record<string, FxSourceCadence> = {};
+  const sourceDateByPeg: Record<string, string | null> = {};
   for (const pegKey of Object.keys(rates)) {
     sourceUpdatedAtByPeg[pegKey] = cache.updatedAt;
     sourceModeByPeg[pegKey] = "live";
+    sourceCadenceByPeg[pegKey] = "intraday";
+    sourceDateByPeg[pegKey] = null;
   }
   return {
     usableSyncAt: cache.updatedAt,
     mode: "live",
     sourceUpdatedAtByPeg,
     sourceModeByPeg,
+    sourceCadenceByPeg,
+    sourceDateByPeg,
     previousCacheUpdatedAt: cache.updatedAt,
     consecutiveFallbackRuns: 0,
   };
@@ -116,6 +176,8 @@ function parseFxMeta(value: string, fallback: CacheRow, rates: Record<string, nu
       mode,
       sourceUpdatedAtByPeg: sanitizeSourceUpdatedAtByPeg(parsed.sourceUpdatedAtByPeg),
       sourceModeByPeg: sanitizeSourceModeByPeg(parsed.sourceModeByPeg),
+      sourceCadenceByPeg: sanitizeSourceCadenceByPeg(parsed.sourceCadenceByPeg),
+      sourceDateByPeg: sanitizeSourceDateByPeg(parsed.sourceDateByPeg),
       sources: sanitizeSources(parsed.sources),
       ecbDate: typeof parsed.ecbDate === "string" && parsed.ecbDate.length > 0 ? parsed.ecbDate : null,
       previousCacheUpdatedAt:
@@ -136,17 +198,179 @@ export function getFxRatesMetaKey(): string {
   return FX_RATES_META_KEY;
 }
 
+function inferFxSourceCadence(
+  pegKey: string,
+  mode: FxRateSourceMode | undefined,
+  explicitCadence?: FxSourceCadence,
+): FxSourceCadence {
+  if (explicitCadence) return explicitCadence;
+  if (mode === "hardcoded") return "intraday";
+  if (CALENDAR_DAILY_FX_PEGS.has(pegKey)) return "calendar-daily";
+  if (BUSINESS_DAILY_FX_PEGS.has(pegKey)) return "business-daily";
+  return "intraday";
+}
+
+function startOfUtcDaySec(nowSec: number): number {
+  const now = new Date(nowSec * 1000);
+  return Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000);
+}
+
+function formatUtcDate(dayStartSec: number): string {
+  return new Date(dayStartSec * 1000).toISOString().slice(0, 10);
+}
+
+function parseIsoDayStartSec(dateText: string | null | undefined): number | null {
+  if (!dateText || !/^\d{4}-\d{2}-\d{2}$/.test(dateText)) return null;
+  const parsed = Date.parse(`${dateText}T00:00:00Z`);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.floor(parsed / 1000);
+}
+
+function isWeekendDay(dayStartSec: number): boolean {
+  const day = new Date(dayStartSec * 1000).getUTCDay();
+  return day === 0 || day === 6;
+}
+
+function previousBusinessDaySec(dayStartSec: number): number {
+  let current = dayStartSec - 86400;
+  while (isWeekendDay(current)) {
+    current -= 86400;
+  }
+  return current;
+}
+
+function countBusinessDaysBehind(sourceDaySec: number, expectedDaySec: number): number {
+  if (sourceDaySec >= expectedDaySec) return 0;
+  let missed = 0;
+  for (let cursor = sourceDaySec + 86400; cursor <= expectedDaySec; cursor += 86400) {
+    if (!isWeekendDay(cursor)) {
+      missed++;
+    }
+  }
+  return missed;
+}
+
+function resolveBusinessDailyExpectedDaySec(nowSec: number): number {
+  const dayStartSec = startOfUtcDaySec(nowSec);
+  if (isWeekendDay(dayStartSec)) {
+    let expected = dayStartSec;
+    while (isWeekendDay(expected)) {
+      expected -= 86400;
+    }
+    return expected;
+  }
+  const hourUtc = new Date(nowSec * 1000).getUTCHours();
+  return hourUtc >= FX_BUSINESS_DAILY_PUBLISH_HOUR_UTC
+    ? dayStartSec
+    : previousBusinessDaySec(dayStartSec);
+}
+
+function resolveCalendarDailyExpectedDaySec(nowSec: number): number {
+  const dayStartSec = startOfUtcDaySec(nowSec);
+  const hourUtc = new Date(nowSec * 1000).getUTCHours();
+  return hourUtc >= FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC
+    ? dayStartSec
+    : dayStartSec - 86400;
+}
+
+interface FxSourceFreshness {
+  status: FxSourceStatus;
+  ageSec: number | null;
+  cadence: FxSourceCadence | null;
+  warning: string | null;
+}
+
+function evaluateFxSourceFreshness(
+  pegKey: string,
+  updatedAt: number | null,
+  mode: FxRateSourceMode | undefined,
+  cadence: FxSourceCadence | undefined,
+  sourceDate: string | null | undefined,
+  nowSec: number,
+): FxSourceFreshness {
+  if (mode === "hardcoded") {
+    return { status: "none", ageSec: null, cadence: null, warning: null };
+  }
+
+  const normalizedCadence = inferFxSourceCadence(pegKey, mode, cadence);
+  const ageSec =
+    updatedAt != null && Number.isFinite(updatedAt) && updatedAt > 0
+      ? Math.max(0, nowSec - updatedAt)
+      : null;
+  const sourceDaySec = parseIsoDayStartSec(sourceDate);
+
+  if (normalizedCadence === "business-daily" && sourceDaySec != null) {
+    const expectedDaySec = resolveBusinessDailyExpectedDaySec(nowSec);
+    const missedPublishes = countBusinessDaysBehind(sourceDaySec, expectedDaySec);
+    if (missedPublishes <= 0) {
+      return { status: "fresh", ageSec, cadence: normalizedCadence, warning: null };
+    }
+    return {
+      status: missedPublishes === 1 ? "degraded" : "stale",
+      ageSec,
+      cadence: normalizedCadence,
+      warning:
+        `${pegKey} business-daily reference is ${missedPublishes} publish` +
+        `${missedPublishes === 1 ? "" : "es"} behind (latest ${formatUtcDate(sourceDaySec)}, expected ${formatUtcDate(expectedDaySec)})`,
+    };
+  }
+
+  if (normalizedCadence === "calendar-daily" && sourceDaySec != null) {
+    const expectedDaySec = resolveCalendarDailyExpectedDaySec(nowSec);
+    const missedDays = Math.max(0, Math.floor((expectedDaySec - sourceDaySec) / 86400));
+    if (missedDays <= 0) {
+      return { status: "fresh", ageSec, cadence: normalizedCadence, warning: null };
+    }
+    return {
+      status: missedDays === 1 ? "degraded" : "stale",
+      ageSec,
+      cadence: normalizedCadence,
+      warning:
+        `${pegKey} calendar-daily reference is ${missedDays} day` +
+        `${missedDays === 1 ? "" : "s"} behind (latest ${formatUtcDate(sourceDaySec)}, expected ${formatUtcDate(expectedDaySec)})`,
+    };
+  }
+
+  if (ageSec == null) {
+    return { status: "none", ageSec: null, cadence: normalizedCadence, warning: null };
+  }
+  if (ageSec > FX_INTRADAY_SOURCE_STALE_AGE_SEC) {
+    return {
+      status: "stale",
+      ageSec,
+      cadence: normalizedCadence,
+      warning: `${pegKey} intraday reference is ${Math.round(ageSec / 3600)}h old`,
+    };
+  }
+  if (ageSec > FX_INTRADAY_SOURCE_DEGRADED_AGE_SEC) {
+    return {
+      status: "degraded",
+      ageSec,
+      cadence: normalizedCadence,
+      warning: `${pegKey} intraday reference is ${Math.round(ageSec / 3600)}h old`,
+    };
+  }
+  return { status: "fresh", ageSec, cadence: normalizedCadence, warning: null };
+}
+
 export function getFxSourceStatus(
   updatedAt: number | null,
   mode: FxRateSourceMode | undefined,
   nowSec = Math.floor(Date.now() / 1000),
+  opts?: {
+    pegKey?: string;
+    cadence?: FxSourceCadence;
+    sourceDate?: string | null;
+  },
 ): FxSourceStatus {
-  if (mode === "hardcoded") return "none";
-  if (updatedAt == null || !Number.isFinite(updatedAt) || updatedAt <= 0) return "none";
-  const ageSec = Math.max(0, nowSec - updatedAt);
-  if (ageSec > FX_SOURCE_STALE_AGE_SEC) return "stale";
-  if (ageSec > FX_SOURCE_DEGRADED_AGE_SEC) return "degraded";
-  return "fresh";
+  return evaluateFxSourceFreshness(
+    opts?.pegKey ?? "unknown",
+    updatedAt,
+    mode,
+    opts?.cadence,
+    opts?.sourceDate,
+    nowSec,
+  ).status;
 }
 
 export function getFxReferenceTypeFromState(
@@ -163,8 +387,24 @@ export function getFxReferenceTypeFromState(
   if (mode === "hardcoded") return "static";
 
   const updatedAt = state.sourceUpdatedAtByPeg[pegKey] ?? null;
-  if (updatedAt == null || !Number.isFinite(updatedAt) || updatedAt <= 0) return "none";
-  return Math.max(0, nowSec - updatedAt) <= maxAgeSec ? "fresh" : "stale";
+  const freshness = evaluateFxSourceFreshness(
+    pegKey,
+    updatedAt,
+    mode,
+    state.sourceCadenceByPeg[pegKey],
+    state.sourceDateByPeg[pegKey],
+    nowSec,
+  );
+  if (freshness.status === "none") return "none";
+  if (
+    freshness.status === "degraded" &&
+    freshness.cadence === "intraday" &&
+    updatedAt != null &&
+    Math.max(0, nowSec - updatedAt) > maxAgeSec
+  ) {
+    return "stale";
+  }
+  return freshness.status === "stale" ? "stale" : "fresh";
 }
 
 export async function loadFxRateState(db: D1Database): Promise<FxRateState | null> {
@@ -202,6 +442,15 @@ export function hydrateFxRateState(
     mode: meta.mode,
     sourceUpdatedAtByPeg: meta.sourceUpdatedAtByPeg,
     sourceModeByPeg: meta.sourceModeByPeg,
+    sourceCadenceByPeg: Object.fromEntries(
+      Object.keys(rates).map((pegKey) => [
+        pegKey,
+        inferFxSourceCadence(pegKey, meta.sourceModeByPeg[pegKey], meta.sourceCadenceByPeg?.[pegKey]),
+      ]),
+    ),
+    sourceDateByPeg: Object.fromEntries(
+      Object.keys(rates).map((pegKey) => [pegKey, meta.sourceDateByPeg?.[pegKey] ?? null]),
+    ),
     sources: meta.sources,
     ecbDate: meta.ecbDate ?? null,
     previousCacheUpdatedAt: meta.previousCacheUpdatedAt ?? ratesCache.updatedAt,
@@ -244,6 +493,13 @@ export function buildFxCacheStatus(
   let oldestSourceUpdatedAt: number | null = null;
   let maxSourceAgeSeconds: number | null = null;
   const hardcodedPegs: string[] = [];
+  let sourceStatus: FxSourceStatus = "none";
+  let sourceWarning: string | null = null;
+  let sourceStatusAgeSeconds: number | null = null;
+  let sourceStatusUpdatedAt: number | null = null;
+
+  const severityRank = (status: FxSourceStatus): number =>
+    status === "stale" ? 3 : status === "degraded" ? 2 : status === "fresh" ? 1 : 0;
 
   for (const pegKey of Object.keys(state.rates)) {
     if (pegKey === "peggedUSD") continue;
@@ -253,20 +509,28 @@ export function buildFxCacheStatus(
       continue;
     }
     const updatedAt = state.sourceUpdatedAtByPeg[pegKey] ?? null;
-    if (updatedAt == null || !Number.isFinite(updatedAt) || updatedAt <= 0) continue;
-    oldestSourceUpdatedAt = oldestSourceUpdatedAt == null ? updatedAt : Math.min(oldestSourceUpdatedAt, updatedAt);
-    const sourceAge = Math.max(0, nowSec - updatedAt);
-    maxSourceAgeSeconds = maxSourceAgeSeconds == null ? sourceAge : Math.max(maxSourceAgeSeconds, sourceAge);
-  }
+    if (updatedAt != null && Number.isFinite(updatedAt) && updatedAt > 0) {
+      oldestSourceUpdatedAt = oldestSourceUpdatedAt == null ? updatedAt : Math.min(oldestSourceUpdatedAt, updatedAt);
+      const sourceAge = Math.max(0, nowSec - updatedAt);
+      maxSourceAgeSeconds = maxSourceAgeSeconds == null ? sourceAge : Math.max(maxSourceAgeSeconds, sourceAge);
+    }
 
-  let sourceStatus: FxSourceStatus = "none";
-  if (maxSourceAgeSeconds != null) {
-    sourceStatus =
-      maxSourceAgeSeconds > FX_SOURCE_STALE_AGE_SEC
-        ? "stale"
-        : maxSourceAgeSeconds > FX_SOURCE_DEGRADED_AGE_SEC
-          ? "degraded"
-          : "fresh";
+    const freshness = evaluateFxSourceFreshness(
+      pegKey,
+      updatedAt,
+      sourceMode,
+      state.sourceCadenceByPeg[pegKey],
+      state.sourceDateByPeg[pegKey],
+      nowSec,
+    );
+    if (severityRank(freshness.status) > severityRank(sourceStatus)) {
+      sourceStatus = freshness.status;
+      sourceWarning = freshness.warning;
+      sourceStatusAgeSeconds = freshness.ageSec;
+      sourceStatusUpdatedAt = updatedAt;
+    } else if (sourceStatus === "none" && freshness.status === "fresh") {
+      sourceStatus = "fresh";
+    }
   }
 
   if (sourceStatus === "stale") {
@@ -282,10 +546,8 @@ export function buildFxCacheStatus(
   if (state.mode === "cached-fallback") {
     warningParts.push(`using cached fallback FX rates (${state.consecutiveFallbackRuns} consecutive run${state.consecutiveFallbackRuns === 1 ? "" : "s"})`);
   }
-  if (sourceStatus === "degraded" && maxSourceAgeSeconds != null) {
-    warningParts.push(`oldest non-USD source is ${Math.round(maxSourceAgeSeconds / 3600)}h old`);
-  } else if (sourceStatus === "stale" && maxSourceAgeSeconds != null) {
-    warningParts.push(`oldest non-USD source is ${Math.round(maxSourceAgeSeconds / 3600)}h old`);
+  if ((sourceStatus === "degraded" || sourceStatus === "stale") && sourceWarning) {
+    warningParts.push(sourceWarning);
   }
   if (hardcodedPegs.length > 0) {
     warningParts.push(`hardcoded source in use for ${hardcodedPegs.join(", ")}`);
@@ -296,8 +558,14 @@ export function buildFxCacheStatus(
     maxAge: maxAgeSec,
     healthy: ratio <= FRESHNESS_RATIOS.DEGRADED,
     mode: state.mode,
-    sourceUpdatedAt: oldestSourceUpdatedAt,
-    sourceAgeSeconds: maxSourceAgeSeconds,
+    sourceUpdatedAt:
+      sourceStatus === "degraded" || sourceStatus === "stale"
+        ? sourceStatusUpdatedAt
+        : oldestSourceUpdatedAt,
+    sourceAgeSeconds:
+      sourceStatus === "degraded" || sourceStatus === "stale"
+        ? sourceStatusAgeSeconds
+        : maxSourceAgeSeconds,
     sourceStatus,
     warning: warningParts.length > 0 ? warningParts.join("; ") : null,
     consecutiveFallbackRuns: state.consecutiveFallbackRuns,

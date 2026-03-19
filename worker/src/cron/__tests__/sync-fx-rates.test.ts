@@ -43,7 +43,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -89,10 +89,16 @@ describe("syncFxRates", () => {
       usableSyncAt: number;
       mode: string;
       sourceUpdatedAtByPeg: Record<string, number>;
+      sourceCadenceByPeg: Record<string, string>;
+      sourceDateByPeg: Record<string, string | null>;
     };
     expect(cachedMeta.usableSyncAt).toBe(Math.floor(Date.now() / 1000));
     expect(cachedMeta.mode).toBe("live");
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBeGreaterThan(0);
+    expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
+    expect(cachedMeta.sourceCadenceByPeg.peggedCNH).toBe("calendar-daily");
+    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
+    expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
   });
 
   it("falls back to cached rates when frankfurter.app is unavailable", async () => {
@@ -130,6 +136,14 @@ describe("syncFxRates", () => {
               peggedEUR: "live",
               peggedRUB: "live",
             },
+            sourceCadenceByPeg: {
+              peggedEUR: "business-daily",
+              peggedRUB: "calendar-daily",
+            },
+            sourceDateByPeg: {
+              peggedEUR: "2025-06-14",
+              peggedRUB: "2025-06-15",
+            },
             consecutiveFallbackRuns: 0,
           }),
           updated_at: Math.floor(Date.now() / 1000) - 60,
@@ -150,12 +164,18 @@ describe("syncFxRates", () => {
       usableSyncAt: number;
       mode: string;
       sourceUpdatedAtByPeg: Record<string, number>;
+      sourceCadenceByPeg: Record<string, string>;
+      sourceDateByPeg: Record<string, string | null>;
       consecutiveFallbackRuns: number;
     };
     expect(cachedMeta.usableSyncAt).toBe(Math.floor(Date.now() / 1000));
     expect(cachedMeta.mode).toBe("cached-fallback");
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBe(Math.floor(Date.now() / 1000) - 3600);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedRUB).toBe(Math.floor(Date.now() / 1000) - 7200);
+    expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
+    expect(cachedMeta.sourceCadenceByPeg.peggedRUB).toBe("calendar-daily");
+    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-14");
+    expect(cachedMeta.sourceDateByPeg.peggedRUB).toBe("2025-06-15");
     expect(cachedMeta.consecutiveFallbackRuns).toBe(1);
   });
 

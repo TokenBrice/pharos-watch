@@ -179,6 +179,8 @@ Computed from cache staleness + cron error state:
 
 `degraded` cron runs are counted separately in `summary.degradedCrons` and shown in cron cards, but do not by themselves mark availability degraded.
 
+FX source freshness is also cadence-aware now. `/api/health` and `/api/status` still expose `fx-rates.sourceStatus`, but intraday sources use age windows while ECB/secondary daily sources compare their published source date against the next expected business-day or calendar-day rollover. One-step daily lag stays operator-visible as `degraded`, while only `stale` FX sources are excluded from downstream price validation.
+
 ### Data quality status
 
 Computed from missing prices + blacklist gaps + on-chain supply monitor:
