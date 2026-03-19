@@ -22,6 +22,8 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 
 If the ID is not tracked, the server shell returns a not-found-style fallback instead of mounting the full client.
 
+If the ID is tracked but `coin.status === "pre-launch"`, the server route returns `PreLaunchDetail` instead of mounting the normal detail client.
+
 ---
 
 ## View-Model Contract
@@ -58,27 +60,29 @@ The builder returns one of four states:
 
 ## Section Order
 
-`src/app/stablecoin/[id]/client.tsx` renders sections in this order:
+`src/app/stablecoin/[id]/client.tsx` renders sections in this order for live/non-pre-launch assets:
 
 1. `QueryErrorNotice` for supply-history failures when the rest of the page can still render
 2. `StaleDataBanner` driven by the shared query freshness presets
 3. `HeroCard`
-4. `LongformScrollspyNav`
-5. `ReportCardDetail` + `SafetyScoreHistorySection`
-6. `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor)
-7. `McapChart`
-8. `KeyInfoCard`
-9. `YieldDetailSection`
-10. `FlowsSection`
+4. `ExploitNoticeBanner`
+5. `LongformScrollspyNav`
+6. `ReportCardDetail` + `SafetyScoreHistorySection`
+7. `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor)
+8. `McapChart`
+9. `KeyInfoCard`
+10. `YieldDetailSection`
 11. `DexLiquidityCard`
-12. `DepegHistory` (suppressed for NAV tokens)
-13. `FeedbackModal`
+12. `FlowsSection`
+13. `DepegHistory` (suppressed for NAV tokens)
+14. `FeedbackModal`
 
 The server shell then appends `ExploreNextSection` after the client-rendered analytics stack.
 
 ### Conditional rendering rules
 
 - `FlowsSection` stays in the rail only when the coin currently appears in the aggregate flows payload, or while that payload is still loading.
+- `FlowsSection` emits both `#flows` (summary card) and `#flow-history` (event feed) sections when flow coverage exists.
 - `DepegHistory` is omitted for NAV tokens.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata.
 - `PriceTransparencyCard` lives inside `OverviewSection` under the `price-transparency` anchor and is hidden when `coinData.price == null`.
@@ -152,8 +156,8 @@ That shared retry is used by the page-level error surfaces.
 | `KeyInfoCard` | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction |
 | `PriceTransparencyCard` | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered inside `OverviewSection` under the `price-transparency` anchor. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists |
 | `YieldDetailSection` | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help |
-| `FlowsSection` | Per-coin mint/burn summary plus event history embed, with contextual Pressure Shift help on the summary card |
 | `DexLiquidityCard` | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links |
+| `FlowsSection` | Per-coin mint/burn summary plus the separate `flow-history` event-feed section, with contextual Pressure Shift help on the summary card |
 | `DepegHistory` | Historical depeg timeline for non-NAV assets |
 | `ExploreNextSection` | Related stablecoins, compare pages, and taxonomy/deeper-navigation links |
 

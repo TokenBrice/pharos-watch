@@ -167,7 +167,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
-│   ├── status/                   # Operator status shell; interactive only on the Access-protected ops host
+│   ├── status/                   # Public system-status shell (read-only, noindex)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
@@ -534,7 +534,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── evm-rpc.ts            # EVM JSON-RPC + Etherscan proxy helpers (eth_call, storage, uint256, block headers, timestamp→block search)
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
-        ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
+        ├── auth.ts               # Admin auth helpers for ops-api Cloudflare Access JWT verification + trusted internal admin lane checks
         ├── env.ts                # Worker Env typing + CSV env parsing helper for disable/override lists
         ├── alerts.ts             # Alert sending (Discord/Slack webhook notifications on cron failures)
         ├── stablecoins-cache.ts  # Shared strict/lenient loader for canonical stablecoins cache payload

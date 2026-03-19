@@ -73,7 +73,7 @@ Token identity now resolves from shared metadata in `shared/lib/stablecoins.ts`.
 
 ### Tracked Stablecoins
 
-Current scope: **87 contract configs** across **85 stablecoin IDs** (10 critical + 77 extended).
+Current scope: **84 contract configs** across **83 stablecoin IDs** (7 critical + 77 extended).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|

@@ -43,9 +43,9 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `SELF_URL`                      | string     | No                 | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
 | `OPS_UI_ORIGIN`                 | string     | No                 | Shared operator-origin override. The worker runtime does not currently read it, but the same value is used by Pages Functions host gating (`https://ops.pharos.watch`)     |
 | `OPS_API_ORIGIN`                | string     | No                 | Shared operator-origin override. The worker runtime does not currently read it, but the same value is used by Pages Functions proxying (`https://ops-api.pharos.watch`)    |
-| `CF_ACCESS_TEAM_DOMAIN`         | string     | No                 | Reserved on the worker runtime today; used only for Cloudflare Access-related operator-origin surfaces when configured                                                     |
+| `CF_ACCESS_TEAM_DOMAIN`         | string     | No                 | Cloudflare Access team domain used by worker-side JWT verification for `ops-api.pharos.watch` admin requests (defaults to `pharos-watch` when unset)                    |
 | `CF_ACCESS_OPS_UI_AUD`          | string     | No                 | Reserved on the worker runtime today; future/operator-surface Access UI JWT audience                                                                                       |
-| `CF_ACCESS_OPS_API_AUD`         | string     | No                 | Reserved on the worker runtime today; future/operator-surface Access API JWT audience                                                                                      |
+| `CF_ACCESS_OPS_API_AUD`         | string     | No                 | Cloudflare Access audience used by `worker/src/lib/auth.ts` to verify `Cf-Access-Jwt-Assertion` on `ops-api.pharos.watch` admin requests                                 |
 | `ETHERSCAN_API_KEY`             | string     | No                 | Blacklist sync, USDS status                                                                                                                                                |
 | `TRONGRID_API_KEY`              | string     | No                 | Blacklist sync (Tron chain)                                                                                                                                                |
 | `DRPC_API_KEY`                  | string     | No                 | L2 archive node balance lookups                                                                                                                                            |
@@ -114,7 +114,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - `worker/src/handlers/http.ts` calls `checkPublicApiRateLimit(...)` for non-admin public `/api/*` traffic before router dispatch.
 - Default threshold: `300 requests / 60 seconds` per IP hash, enforced through the D1-backed `public_api_rate_limit` table.
 - If the distributed D1 path fails, `worker/src/lib/rate-limit.ts` falls back to the legacy isolate-local in-memory limiter for the same threshold/window.
-- Requests that already carry valid `ops-api.pharos.watch` Access/service-token signals bypass this limiter.
+- Requests that are already authorized for the `ops-api.pharos.watch` admin lane bypass this limiter.
 
 ### CORS Headers
 
@@ -179,14 +179,15 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **File:** `worker/src/lib/auth.ts`
 
-- Accepts only the `ops-api.pharos.watch` lane carrying Cloudflare Access user/JWT or service-token signals
+- Accepts only the `ops-api.pharos.watch` lane after Cloudflare Access has authenticated the caller and injected `Cf-Access-Jwt-Assertion`
 - Internal worker-origin admin calls (for example `status-self-check`) simulate that same lane instead of using a shared secret
 - Returns `null` if authorized, 401 Response if not
-- The worker checks header presence only. Cloudflare Access must stay in front of `ops-api.pharos.watch`; if the worker becomes reachable without Access in that path, admin routes are exposed.
+- The worker verifies `Cf-Access-Jwt-Assertion` against `CF_ACCESS_OPS_API_AUD` using the team-domain JWKS and enforces JWT claims including `aud`, `exp`, and `iss`.
+- Cloudflare Access must still stay in front of `ops-api.pharos.watch`, because the worker does not authenticate callers independently of that Access layer.
 
 ### Router-Dispatched Status Actions
 
-Status page manual/admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`). Examples:
+Operator admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`). Examples:
 
 | Endpoint                         | Auth                                         | Description                                                             |
 | -------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------- |
@@ -194,7 +195,7 @@ Status page manual/admin actions are dispatched through `worker/src/router.ts` u
 | `POST /api/reset-blacklist-sync` | `ops-api` + Access user/JWT or service token | Rolls back sync state: EVM −50,000 blocks, Tron −7 days                 |
 | `GET /api/debug-sync-state`      | `ops-api` + Access user/JWT or service token | Returns all `blacklist_sync_state` rows                                 |
 
-Additional backfill/audit actions are defined in the same registry and surfaced dynamically on `/status`. `POST /api/feedback` is router-dispatched too, but it is not part of the status action registry.
+Additional backfill/audit actions are defined in the same registry and surfaced dynamically on `/admin/`. `POST /api/feedback` is router-dispatched too, but it is not part of the status action registry.
 
 ### Idempotent Admin Actions
 
@@ -939,7 +940,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/db-cache.ts`                       | Cache CRUD: `getCache`, `setCache`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`                                                                            |
 | `worker/src/lib/cron-logger.ts`                    | `logCronRun` wrapper and `CronResult` type                                                                                                                          |
 | `worker/src/lib/cron-lease.ts`                     | Cron lease primitives: `acquireCronLease`, `runCronWithLease`, `CRON_TIMEOUT_MS`                                                                                    |
-| `worker/src/lib/auth.ts`                           | Admin auth: `ops-api` Access/service-token signal validation                                                                                                        |
+| `worker/src/lib/auth.ts`                           | Admin auth: verifies the `ops-api` Cloudflare Access JWT (`Cf-Access-Jwt-Assertion`)                                                                               |
 | `worker/src/lib/alerts.ts`                         | Webhook alerts: auto-detects Discord/Slack format                                                                                                                   |
 | `worker/src/lib/constants.ts`                      | Shared constants: API URLs, thresholds, cache profiles                                                                                                              |
 | `shared/lib/cron-jobs.ts`                          | Shared cron expressions, per-job intervals, `CRON_INTERVALS`, and status-page grouping/trigger metadata                                                             |
@@ -969,11 +970,11 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 
 ### Migration Squash Strategy
 
-Currently at 69 D1 migrations. When the count approaches ~150, perform a one-time squash:
+Currently at 75 D1 migrations. When the count approaches ~150, perform a one-time squash:
 
 1. Export current schema: `wrangler d1 export stablecoin-db --remote --output=baseline.sql`
 2. Replace all migration files with a single `0001_baseline.sql`
 3. Reset D1's internal migration tracking
 4. Verify with a fresh `wrangler d1 migrations apply --remote`
 
-See also `docs/MANIFEST.md` for the rollback runbook.
+See also [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the rollback runbook.

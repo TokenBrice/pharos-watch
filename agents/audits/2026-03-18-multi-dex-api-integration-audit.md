@@ -5,8 +5,8 @@ Date: 2026-03-18
 Scope: `Fluid`, `Balancer`, `Raydium`, and `Orca` direct-API integration across the DEX liquidity cron, price bridge into `dex_prices`, and pricing-consensus ingestion.
 
 Related design docs:
-- `docs/superpowers/plans/2026-03-18-multi-dex-api-integration.md`
-- `docs/superpowers/specs/2026-03-18-multi-dex-api-integration-design.md`
+- `agents/plans/historical/2026-03-18-multi-dex-api-integration.md`
+- `agents/specs/2026-03-18-multi-dex-api-integration-design.md`
 - `docs/dex-liquidity.md`
 
 ## Verdict

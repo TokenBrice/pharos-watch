@@ -33,6 +33,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 - status badge `experimental`
 - methodology pill wired from `CHAIN_HEALTH_METHODOLOGY_VERSION` and `CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH`
 - lead copy describing chain ranking by stablecoin supply and health
+- FAQ structured data from the route-local `CHAINS_FAQ_JSON_LD`
 - a hidden SEO nav listing every generated `/chains/[chain]/` route
 
 `src/app/chains/client.tsx` consumes `useChains()` and renders:

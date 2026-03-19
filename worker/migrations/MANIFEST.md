@@ -76,6 +76,7 @@
 | 0066 | `0066_redemption_backstops.sql` | Create redemption_backstop table |
 | 0067 | `0067_public_api_rate_limit.sql` | Create public_api_rate_limit table |
 | 0068 | `0068_dex_prices_index.sql` | Add index on dex_prices.updated_at |
+| 0069 | `0069_chain_supply_history.sql` | Create chain_supply_history table |
 
 ## Known Anomalies
 

@@ -92,6 +92,9 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `validate`
    - includes `npm run audit:deps`
+   - includes `npm run check:cron-sync`
+   - includes `npm run check:doc-counts`
+   - includes `npm run check:duplicate-exports`
 2. `deploy-worker`
    - applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`
    - runs `cd worker && npx --no-install wrangler deploy`

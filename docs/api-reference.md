@@ -115,7 +115,7 @@ All error responses use `{ "error": "message" }` JSON format.
 | Status | Meaning               | When                                                                                                                                 |
 | ------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input)                             |
-| 401    | Unauthorized          | Admin endpoint called without a valid operator credential (`ops-api` Access service token, or an allowed `ops-api` Access user path) |
+| 401    | Unauthorized          | Admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                            |
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                                                         |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                   |
@@ -139,7 +139,7 @@ This keeps endpoint metadata, router behavior, and method guards aligned from on
 
 ## Admin Auth And Idempotency
 
-Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Direct `ops-api` requests are accepted when Cloudflare Access has already attached either user/JWT headers or service-token headers; the worker itself does not validate JWT signatures or token values. Browser operators should use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
+Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloudflare Access must authenticate the caller first, then inject `Cf-Access-Jwt-Assertion` for the worker. `worker/src/lib/auth.ts` verifies that JWT against the configured Access audience (`CF_ACCESS_OPS_API_AUD`) and team domain (`CF_ACCESS_TEAM_DOMAIN`) via `worker/src/lib/jwt-verify.ts`, including signature, `aud`, `exp`, and `iss` checks. Browser operators should use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
@@ -1844,7 +1844,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 Preferred operator access now splits by surface:
 
 - Browser / human operators: use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
-- CLI / automation: call `https://ops-api.pharos.watch/api/...` with `CF-Access-Client-Id` and `CF-Access-Client-Secret` (the documented service-token path). Direct `ops-api` requests also work with Cloudflare Access user/JWT headers.
+- CLI / automation: call `https://ops-api.pharos.watch/api/...` with `CF-Access-Client-Id` and `CF-Access-Client-Secret` so Cloudflare Access can mint the request JWT the worker verifies. Direct `ops-api` requests also work with Cloudflare Access user/JWT headers.
 
 ### `GET /api/status`
 

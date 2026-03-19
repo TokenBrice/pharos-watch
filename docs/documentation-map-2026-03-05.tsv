@@ -8,8 +8,3 @@ agents/process/	dir	Operator runbooks	current	Runbooks remain outside `docs/`.
 agents/audits/	dir	Audit reports and forensic writeups	current	Audit artifacts live here instead of `docs/`.
 agents/plans/historical/	dir	Historical plans and design records	current	Non-canonical planning/history archive.
 agents/tasks/	dir	Task trackers and execution boards	current	Execution trackers remain outside `docs/`.
-agents/audits/2026-03-13-doc-corpus-audit.md	md	Documentation corpus verification audit	current	Repo-wide `/docs` verification pass against the live codebase on March 13, 2026, including route-contract coverage additions and contract wording fixes.
-agents/audits/2026-03-13-doc-corpus-audit-pass-2.md	md	Documentation corpus verification audit	current	Follow-up March 13, 2026 pass covering full `/docs` inventory, cron-runtime count verification, link-graph review, and targeted navigation cleanup.
-agents/audits/2026-03-12-doc-corpus-audit.md	md	Documentation corpus verification audit	current	Repo-wide `/docs` verification pass against the live codebase on March 12, 2026, including worker/runtime wording fixes and doc-map refresh.
-agents/audits/2026-03-11-doc-corpus-audit.md	md	Documentation corpus verification audit	current	Repo-wide `/docs` verification pass against the live codebase, plus README cross-consistency fixes.
-agents/audits/2026-03-06-full-codebase-audit.md	md	Historical full-codebase audit	historical	Closest surviving audit report after the March 5 restructuring.

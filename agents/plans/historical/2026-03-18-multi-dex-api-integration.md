@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Cloudflare Workers, D1, Vitest, REST/GraphQL APIs.
 
-**Spec:** `docs/superpowers/specs/2026-03-18-multi-dex-api-integration-design.md`
+**Spec:** `agents/specs/2026-03-18-multi-dex-api-integration-design.md`
 
 ---
 

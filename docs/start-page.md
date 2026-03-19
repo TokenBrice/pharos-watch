@@ -18,6 +18,8 @@ Route contract for `/start/`, the onboarding and route-selection surface.
 
 The route is static. It does not call worker APIs directly.
 
+`src/app/start/page.tsx` also authors route metadata through `buildPageMetadata(...)` with canonical `/start/` and `https://pharos.watch/og-start.png` as the Open Graph image.
+
 ---
 
 ## Homepage Integration
@@ -65,7 +67,7 @@ These are the canonical source of truth for route destinations, copy, and groupi
 
 `START_HERE_FACTS` currently derives its values from:
 
-- `TRACKED_STABLECOINS.length`
+- `ACTIVE_STABLECOINS.length`
 - `PEG_CURRENCY_COUNT`
 - `DEAD_STABLECOINS.length`
 - the fixed `"15m"` core-refresh label

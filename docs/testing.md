@@ -22,13 +22,13 @@ npm run test:invariants # Critical numerical/schema invariant suite
 npm run coverage:critical # Critical-suite coverage run + critical-path line-coverage gate
 npm run test:merge-gate # Delta-aware local gate before pushing merged worktree changes
 npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints
-npm run test:smoke-ops # Private ops-host and ops-api smoke checks using Access service-token headers
+npm run test:smoke-ops # Private ops-host and ops-api smoke checks through Cloudflare Access
 npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke check + mobile overflow route checks
 ```
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, and `.github/workflows/deploy-cloudflare.yml`.
+Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, and `.github/workflows/codeql.yml`.
 
 For deployment/worktree operating procedure (including the local merge gate before pushing `main`), see [Deployment Process](./deployment-process.md).
 
@@ -40,6 +40,9 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run lint`
    - `npm run check:worker-boundary`
    - `npm run check:migrations`
+   - `npm run check:cron-sync`
+   - `npm run check:doc-counts`
+   - `npm run check:duplicate-exports`
    - `npm test`
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
@@ -66,14 +69,18 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
    - Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
+8. `CodeQL`:
+   - defined in `.github/workflows/codeql.yml`
+   - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
+   - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
-This arrangement gives pull requests the same validate gate the deploy workflow depends on, prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, and then runs parallel public-site and ops-surface smoke checks after Pages deploy.
+This arrangement gives pull requests the same validate gate the deploy workflow depends on, prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, runs parallel public-site and ops-surface smoke checks after Pages deploy, and keeps security scanning on a separate CodeQL workflow.
 
-The workflow uses `actions/checkout@v5` and `actions/setup-node@v6` pinned by commit SHA so the GitHub-hosted JS actions run on Node 24. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the pipeline before deploy.
+The workflows pin `actions/checkout@v5` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the pipeline before deploy.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production.
 
-`npm run check:cron-sync` is currently a local integrity check rather than a CI gate. Run it whenever you change `worker/wrangler.toml` cron expressions or `shared/lib/cron-jobs.ts`.
+`npm run check:cron-sync` is part of the shared CI validate gate. Run it locally whenever you change `worker/wrangler.toml` cron expressions or `shared/lib/cron-jobs.ts` so you catch schedule drift before pushing.
 
 `npm run seo:check` is the static-export SEO gate. It inspects the built `out/` HTML for missing title/description/canonical/OpenGraph/Twitter tags, duplicate or missing `h1`s on indexable pages, CSR bailout markers, sitemap omissions, orphan pages, and indexable routes that are more than three clicks away from `/`.
 
@@ -502,7 +509,7 @@ Current critical file set:
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes). Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path derived from `shared/lib/api-endpoints.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
-- `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces using service-token headers. It accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/admin/`, then validates `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
+- `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces through Cloudflare Access. In service-token mode, Access consumes `CF-Access-Client-Id` / `CF-Access-Client-Secret`, injects `Cf-Access-Jwt-Assertion`, and the worker verifies that JWT before serving `ops-api` routes. The smoke test accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/admin/`, then validates `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage/empty states (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`) and on sustained horizontal overflow across tracked mobile routes.
 
 ### Tier-3 Structural Refactor Targeted Suites

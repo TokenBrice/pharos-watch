@@ -21,7 +21,7 @@ Public-facing analytics dashboard tracking 166 stablecoins (plus 2 shadow assets
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 46 configured assets
 - **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
-- **Private operator status dashboard** — Access-gated cron health, cache freshness, and system monitoring on `ops.pharos.watch`
+- **Public status page + private operator admin** — read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/`
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
 - **Research-grade data pipeline** — structural validation, concurrent write protection, depeg deduplication, and price validation guardrails
@@ -134,7 +134,7 @@ src/                              Frontend (Next.js static export)
 │   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
 │   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
-│   ├── status/                   Access-gated operator status panel
+│   ├── status/                   Public system-status dashboard (read-only, noindex)
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
 │   └── about/                    About / product overview

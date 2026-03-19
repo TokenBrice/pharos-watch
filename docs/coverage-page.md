@@ -22,8 +22,9 @@ The page is intentionally product-facing, not admin-facing. It should describe u
 - **Client implementation:** `src/app/coverage/client.tsx`
 - **Error boundary:** `src/app/coverage/error.tsx`
 - **Core helpers:** `src/lib/coverage.ts`
+- **Structured data:** `src/app/coverage/page.tsx` emits `COVERAGE_FAQ_JSON_LD` through a JSON-LD `<script>` in the page shell
 
-The page uses `FeaturePageShell` and is indexable like the rest of the public feature surfaces.
+The page uses `createClientFeaturePage(...)`, which wraps the route in the shared feature-page shell for public client-heavy surfaces. It remains indexable like the rest of the public feature routes.
 
 ---
 
@@ -55,24 +56,24 @@ Status semantics are intentionally user-facing:
 
 ## Source Of Truth Per Column
 
-The page deliberately mixes structural coverage and live dataset coverage. The implementation entrypoint is `src/hooks/use-coverage-matrix-model.ts`, which builds one `CoverageRow` per tracked stablecoin and resolves each column through `src/lib/coverage.ts`.
+The page deliberately mixes structural coverage and live dataset coverage. The implementation entrypoint is `src/hooks/use-coverage-matrix-model.ts`, which builds one `CoverageRow` per active stablecoin and resolves each column through `src/lib/coverage.ts`.
 
 | Column | Hook / field used on `/coverage/` | Notes |
 |-------|--------|-------|
-| `Price & Depeg` | `usePegSummary().data.coins[].id`, `consensusSources`, `priceConfidence` plus `TRACKED_STABLECOINS[*].flags.navToken` | `Tracked` requires a live peg-summary row. NAV tokens intentionally map to `Price only` even without depeg logic. |
+| `Price & Depeg` | `usePegSummary().data.coins[].id`, `consensusSources`, `priceConfidence` plus `ACTIVE_STABLECOINS[*].flags.navToken` | `Tracked` requires a live peg-summary row. NAV tokens intentionally map to `Price only` even without depeg logic. |
 | `Safety Score` | `useReportCards().data.cards[].overallScore` | Coverage is `Rated` only when the report card has a non-null overall score. |
 | `DEX Price` | `useDexLiquidity().data[id].coverageClass` | User-facing badge labels are mapped from liquidity `coverageClass`. |
-| `Reserves` | `TRACKED_STABLECOINS[*].liveReservesConfig` first, otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | Live reserve adapters outrank curated or estimated reserve metadata. |
+| `Reserves` | `ACTIVE_STABLECOINS[*].liveReservesConfig` first, otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | Live reserve adapters outrank curated or estimated reserve metadata. |
 | `Yield` | `useYieldRankings().data.rankings[].id` | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility. |
 | `Flows` | `useMintBurnFlows().data.coins[].coverage.status` | Mirrors the Ethereum mint/burn coverage state exposed on `/flows`. |
-| `Blacklist` | `BLACKLIST_STABLECOINS` from `@shared/types` | Structural support flag, matching the allowlist used by the blacklist route and worker handlers. |
+| `Blacklist` | `BLACKLIST_STABLECOINS` from `@shared/types` | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. Current enum values are `USDC`, `USDT`, `EURC`, `PAXG`, and `XAUT`, although only four of those currently emit cron-backed blacklist rows. |
 | `Dependency Map` | `useReportCards().data.cards` filtered to live cards, then `deriveDependencies(meta)` from `@shared/lib/reserve-templates` | This mirrors the live dependency-edge derivation used by `src/app/dependency-map/client.tsx`. |
 
 Additional page-level sources:
 
 | Page element | Source |
 |-------------|--------|
-| Base coin universe | `TRACKED_STABLECOINS` from `@shared/lib/stablecoins` |
+| Base coin universe | `ACTIVE_STABLECOINS` from `@shared/lib/stablecoins` |
 | Market-cap weights | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRaw()` on the cached list payload |
 | Peg/backing/governance labels in each row | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps |
 | Pricing-source tiles | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `useCoverageMatrixModel()` |
@@ -118,6 +119,7 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 - From `md` upward, the full comparison table renders with the first column sticky.
 - The per-coin matrix comes second and is explicitly positioned as the asset-level drill-down surface.
 - Coverage notes and the status legend live in an inline disclosure above the matrix, not in a separate explainer block.
+- Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view.
 
 The page should continue to render meaningfully when some live datasets are temporarily unavailable. In that case, the matrix still renders with structural coverage where possible and uses the shared stale-data banner to surface data-health issues.
 

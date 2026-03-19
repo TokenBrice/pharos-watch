@@ -14,7 +14,7 @@ Route contract for `/`, the main Pharos dashboard.
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
 1. An `sr-only` `h1`
-2. An `ItemList` JSON-LD payload for the top 20 tracked stablecoins
+2. An `ItemList` JSON-LD payload for the top 20 active stablecoins
 3. `SiteHeader`
 4. `KpiBar`
 5. `HomepageClient`
@@ -27,7 +27,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 `src/app/page.tsx` computes three server-side counts for the masthead:
 
-- tracked stablecoins from `TRACKED_STABLECOINS.length`
+- tracked stablecoins from `ACTIVE_STABLECOINS.length`
 - peg count from `PEG_CURRENCY_COUNT`
 - chain count from `CHAIN_META`
 
@@ -104,6 +104,7 @@ Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts
 - `peg` -> one active peg filter
 - `type` -> one active governance filter
 - `backing` -> one active backing filter
+- `grade` -> one active score-tier filter
 
 Rules:
 
@@ -148,9 +149,10 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 5. `MarketHighlights`
 6. `DailyDigest` in `preview` mode
 7. `Key Stablecoin Data` section
-8. `Core Monitoring` band
-9. `Research Surfaces` band
-10. Bottom summary / last-updated footer copy
+8. `UpcomingStablecoinsSection`
+9. `Core Monitoring` band
+10. `Research Surfaces` band
+11. Bottom summary / last-updated footer copy
 
 ### Key Stablecoin Data
 
