@@ -10,7 +10,7 @@ import {
   REDEMPTION_SETTLEMENT_LABELS,
 } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionBackstopEntry } from "@shared/types";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 function formatCapacityUsd(value: number | null): string | null {
@@ -27,6 +27,36 @@ function scoreToneClass(score: number | null): string {
   return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400";
 }
 
+function getFeeSummary(entry: RedemptionBackstopEntry): {
+  headline: string;
+  detail: string;
+} {
+  if (entry.feeBps != null && Number.isFinite(entry.feeBps)) {
+    const feeBps = Math.max(0, entry.feeBps);
+    return {
+      headline: `${feeBps} bps (${formatPercent(feeBps / 100)})`,
+      detail:
+        feeBps === 0
+          ? "No fixed redemption fee is modeled for this route."
+          : "Pharos models this route with a fixed bounded redemption fee.",
+    };
+  }
+
+  if ((entry.costScore ?? 0) <= 20) {
+    return {
+      headline: "Manual / potentially unbounded",
+      detail:
+        "Pharos does not model a bounded fixed redemption fee for this route.",
+    };
+  }
+
+  return {
+    headline: "Variable / not explicitly modeled",
+    detail:
+      "No fixed fee is configured in the current model. Actual issuer or protocol fees may vary or be undisclosed.",
+  };
+}
+
 export function RedemptionBackstopCard({
   entry,
 }: {
@@ -37,6 +67,7 @@ export function RedemptionBackstopCard({
     entry.immediateCapacityRatio != null && Number.isFinite(entry.immediateCapacityRatio)
       ? `${(entry.immediateCapacityRatio * 100).toFixed(1)}% of supply`
       : null;
+  const feeSummary = getFeeSummary(entry);
 
   return (
     <Card>
@@ -99,6 +130,14 @@ export function RedemptionBackstopCard({
               {capacityRatio ? ` · ${capacityRatio}` : ""}
             </p>
           </div>
+        </div>
+
+        <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+            Redemption Fee
+          </p>
+          <p className="mt-1 font-medium">{feeSummary.headline}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{feeSummary.detail}</p>
         </div>
 
         <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
