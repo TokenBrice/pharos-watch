@@ -1,4 +1,4 @@
-import { CardFrame, TEXT_SECONDARY, FROST_BLUE } from "./shared";
+import { CardFrame, TEXT_SECONDARY, FROST_BLUE, GRADE_COLORS, SEMANTIC_COLORS } from "./shared";
 
 export interface SafetyScoresCardData {
   gradeDistribution: Record<string, number>;
@@ -6,39 +6,82 @@ export interface SafetyScoresCardData {
   pulseScore: number;
   coverageRatio: number; // 0-1
   totalCoins: number;
+  // New fields
+  topPerformers: Array<{ symbol: string; grade: string; score: number }>;
+  bottomPerformers: Array<{ symbol: string; grade: string; score: number }>;
+  trend: number | null; // week-over-week change
+  lastUpdated?: string;
+}
+
+/** Get trend arrow and color */
+function getTrendIndicator(trend: number | null): { arrow: string; color: string } {
+  if (trend === null) return { arrow: "—", color: TEXT_SECONDARY };
+  if (trend > 0) return { arrow: "↑", color: SEMANTIC_COLORS.positive };
+  if (trend < 0) return { arrow: "↓", color: SEMANTIC_COLORS.negative };
+  return { arrow: "→", color: TEXT_SECONDARY };
 }
 
 export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
+  const trend = getTrendIndicator(data.trend);
+  
+  // Filter out zero counts for cleaner display
+  const filteredDistribution = Object.entries(data.gradeDistribution)
+    .filter(([, count]) => count > 0)
+    .slice(0, 8); // Show max 8 grades
+
   return (
-    <CardFrame title="Safety Scores" subtitle="Report Card Overview">
-      {/* Grade distribution row */}
-      <div
-        style={{
-          display: "flex",
-          gap: 28,
-          fontFamily: "Geist Mono",
-        }}
-      >
-        {Object.entries(data.gradeDistribution).map(([grade, count]) => (
-          <div
-            key={grade}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
-              {grade}
-            </span>
-            <span style={{ fontSize: 32, fontWeight: 700 }}>{count}</span>
-          </div>
-        ))}
+    <CardFrame 
+      title="Safety Scores" 
+      subtitle="Report Card Overview"
+      lastUpdated={data.lastUpdated}
+    >
+      {/* Grade distribution - horizontal layout */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <span
+          style={{
+            fontSize: 14,
+            color: TEXT_SECONDARY,
+            letterSpacing: "0.06em",
+            fontFamily: "Geist Sans",
+          }}
+        >
+          GRADE DISTRIBUTION
+        </span>
+        <div
+          style={{
+            display: "flex",
+            gap: 20,
+            fontFamily: "Geist Mono",
+          }}
+        >
+          {filteredDistribution.map(([grade, count]) => (
+            <div
+              key={grade}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6,
+                minWidth: 50,
+              }}
+            >
+              <span 
+                style={{ 
+                  fontSize: 14, 
+                  color: GRADE_COLORS[grade] || TEXT_SECONDARY,
+                  fontWeight: 600,
+                }}
+              >
+                {grade}
+              </span>
+              <span style={{ fontSize: 28, fontWeight: 700 }}>{count}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Pulse + coverage */}
-      <div style={{ display: "flex", gap: 80, fontFamily: "Geist Mono" }}>
+      {/* Middle section: Pulse + Coverage + Trend */}
+      <div style={{ display: "flex", gap: 60, fontFamily: "Geist Mono" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span
             style={{
@@ -49,12 +92,28 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
           >
             MARKET PULSE
           </span>
-          <span style={{ fontSize: 64, fontWeight: 700, color: FROST_BLUE }}>
-            {data.pulseGrade}
-          </span>
-          <span style={{ fontSize: 18, color: TEXT_SECONDARY }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 56, fontWeight: 700, color: FROST_BLUE }}>
+              {data.pulseGrade}
+            </span>
+            <span 
+              style={{ 
+                fontSize: 24, 
+                color: trend.color,
+                fontWeight: 700,
+              }}
+            >
+              {trend.arrow}
+            </span>
+          </div>
+          <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
             {data.pulseScore.toFixed(1)} / 100
           </span>
+          {data.trend !== null && (
+            <span style={{ fontSize: 14, color: trend.color }}>
+              {data.trend >= 0 ? "+" : ""}{data.trend.toFixed(1)}% vs last week
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span
@@ -66,12 +125,103 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
           >
             COVERAGE
           </span>
-          <span style={{ fontSize: 64, fontWeight: 700 }}>
+          <span style={{ fontSize: 56, fontWeight: 700 }}>
             {(data.coverageRatio * 100).toFixed(0)}%
           </span>
-          <span style={{ fontSize: 18, color: TEXT_SECONDARY }}>
+          <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
             {data.totalCoins} coins tracked
           </span>
+        </div>
+      </div>
+
+      {/* Bottom section: Top and Bottom performers */}
+      <div style={{ display: "flex", gap: 80 }}>
+        {/* Top performers */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <span
+            style={{
+              fontSize: 13,
+              color: SEMANTIC_COLORS.positive,
+              letterSpacing: "0.06em",
+              fontWeight: 600,
+            }}
+          >
+            TOP 3 SAFEST
+          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {data.topPerformers.map((coin) => (
+              <div
+                key={coin.symbol}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  fontFamily: "Geist Mono",
+                }}
+              >
+                <span style={{ fontSize: 15, fontWeight: 600, minWidth: 60 }}>
+                  {coin.symbol}
+                </span>
+                <span
+                  style={{
+                    fontSize: 14,
+                    color: GRADE_COLORS[coin.grade] || TEXT_SECONDARY,
+                    fontWeight: 700,
+                    minWidth: 30,
+                  }}
+                >
+                  {coin.grade}
+                </span>
+                <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
+                  {coin.score.toFixed(1)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom performers */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <span
+            style={{
+              fontSize: 13,
+              color: SEMANTIC_COLORS.negative,
+              letterSpacing: "0.06em",
+              fontWeight: 600,
+            }}
+          >
+            BOTTOM 3 RISKIEST
+          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {data.bottomPerformers.map((coin) => (
+              <div
+                key={coin.symbol}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  fontFamily: "Geist Mono",
+                }}
+              >
+                <span style={{ fontSize: 15, fontWeight: 600, minWidth: 60 }}>
+                  {coin.symbol}
+                </span>
+                <span
+                  style={{
+                    fontSize: 14,
+                    color: GRADE_COLORS[coin.grade] || TEXT_SECONDARY,
+                    fontWeight: 700,
+                    minWidth: 30,
+                  }}
+                >
+                  {coin.grade}
+                </span>
+                <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
+                  {coin.score.toFixed(1)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </CardFrame>
