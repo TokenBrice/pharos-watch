@@ -13,6 +13,8 @@ const KNOWN_SOURCES = [
   { key: "geckoterminal", label: "GeckoTerminal" },
   { key: "pyth", label: "Pyth Network" },
   { key: "binance", label: "Binance" },
+  { key: "kraken", label: "Kraken" },
+  { key: "bitstamp", label: "Bitstamp" },
   { key: "coinbase", label: "Coinbase" },
   { key: "redstone", label: "RedStone" },
   { key: "curve-onchain", label: "Curve on-chain" },
@@ -22,6 +24,7 @@ const KNOWN_SOURCES = [
   { key: "balancer-dex", label: "Balancer" },
   { key: "raydium-dex", label: "Raydium" },
   { key: "orca-dex", label: "Orca" },
+  { key: "jupiter", label: "Jupiter" },
 ] as const;
 
 type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
