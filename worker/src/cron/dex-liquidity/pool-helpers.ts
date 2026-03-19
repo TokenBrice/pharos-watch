@@ -5,6 +5,7 @@ import {
 } from "../../lib/dex-constants";
 import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
+import { buildChainAddressKey } from "./token-resolution";
 
 /** Parse pool symbol string into constituent token symbols */
 export function parsePoolSymbols(symbol: string): string[] {
@@ -263,6 +264,7 @@ export function isCryptoSwap(registryId: string): boolean {
 /** Build symbol → stablecoinId and address → stablecoinId lookup maps. */
 export function buildSymbolLookups(): SymbolLookups {
   const symbolToIds = new Map<string, string[]>();
+  const symbolToChainScopedIds = new Map<string, Map<string, string[]>>();
   const collidingSymbols = new Set<string>();
   for (const meta of ACTIVE_STABLECOINS) {
     const key = normalizeDexSymbol(meta.symbol);
@@ -270,18 +272,73 @@ export function buildSymbolLookups(): SymbolLookups {
     existing.push(meta.id);
     symbolToIds.set(key, existing);
     if (existing.length > 1) collidingSymbols.add(key);
+
+    for (const contract of getTrackedContracts(meta)) {
+      const chain = contract.chain.toLowerCase();
+      const scopedByChain = symbolToChainScopedIds.get(key) ?? new Map<string, string[]>();
+      const scopedIds = scopedByChain.get(chain) ?? [];
+      if (!scopedIds.includes(meta.id)) {
+        scopedIds.push(meta.id);
+      }
+      scopedByChain.set(chain, scopedIds);
+      symbolToChainScopedIds.set(key, scopedByChain);
+    }
   }
   if (collidingSymbols.size > 0) {
     console.log(`[dex-liquidity] Symbol collisions detected: ${[...collidingSymbols].join(", ")}`);
   }
 
-  // Auto-seed from all contract addresses — resolves symbol collisions automatically
   const addressToId = new Map<string, string>();
+  const chainAddressToId = new Map<string, string>();
+  const contractMetaByChainAddress = new Map<string, {
+    stablecoinId: string;
+    decimals: number | null;
+    source: "contract" | "tradedContract";
+  }>();
+  const globalAddressOwners = new Map<string, Set<string>>();
   for (const meta of ACTIVE_STABLECOINS) {
-    for (const c of getTrackedContracts(meta)) {
-      addressToId.set(c.address.toLowerCase(), meta.id);
+    for (const contract of meta.contracts ?? []) {
+      const key = buildChainAddressKey(contract.chain, contract.address);
+      chainAddressToId.set(key, meta.id);
+      contractMetaByChainAddress.set(key, {
+        stablecoinId: meta.id,
+        decimals: typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
+        source: "contract",
+      });
+      const owners = globalAddressOwners.get(contract.address.toLowerCase()) ?? new Set<string>();
+      owners.add(meta.id);
+      globalAddressOwners.set(contract.address.toLowerCase(), owners);
+    }
+    for (const contract of meta.tradedContracts ?? []) {
+      const key = buildChainAddressKey(contract.chain, contract.address);
+      chainAddressToId.set(key, meta.id);
+      if (!contractMetaByChainAddress.has(key)) {
+        contractMetaByChainAddress.set(key, {
+          stablecoinId: meta.id,
+          decimals: typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
+          source: "tradedContract",
+        });
+      }
+      const owners = globalAddressOwners.get(contract.address.toLowerCase()) ?? new Set<string>();
+      owners.add(meta.id);
+      globalAddressOwners.set(contract.address.toLowerCase(), owners);
     }
   }
 
-  return { symbolToIds, addressToId };
+  for (const meta of ACTIVE_STABLECOINS) {
+    for (const contract of getTrackedContracts(meta)) {
+      const owners = globalAddressOwners.get(contract.address.toLowerCase());
+      if (owners && owners.size === 1) {
+        addressToId.set(contract.address.toLowerCase(), meta.id);
+      }
+    }
+  }
+
+  return {
+    symbolToIds,
+    symbolToChainScopedIds,
+    addressToId,
+    chainAddressToId,
+    contractMetaByChainAddress,
+  };
 }

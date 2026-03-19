@@ -38,6 +38,34 @@ function makeCurveEntry(overrides: Partial<CurvePoolEntry>): CurvePoolEntry {
   };
 }
 
+function buildChainAddressToId(
+  addressToId: Map<string, string>,
+  chains: string[],
+): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const chain of chains) {
+    for (const [address, stablecoinId] of addressToId) {
+      result.set(`${chain.toLowerCase()}:${address.toLowerCase()}`, stablecoinId);
+    }
+  }
+  return result;
+}
+
+function buildSymbolToChainScopedIds(
+  symbolToIds: Map<string, string[]>,
+  chains: string[],
+): Map<string, Map<string, string[]>> {
+  const result = new Map<string, Map<string, string[]>>();
+  for (const [symbol, ids] of symbolToIds) {
+    const scoped = new Map<string, string[]>();
+    for (const chain of chains) {
+      scoped.set(chain.toLowerCase(), [...ids]);
+    }
+    result.set(symbol.trim().toUpperCase(), scoped);
+  }
+  return result;
+}
+
 describe("processPoolMetrics", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -56,6 +84,9 @@ describe("processPoolMetrics", () => {
       ["CUSD", ["cusd-cap", "cusd-celo"]],
     ]);
     const addressToId = new Map<string, string>([["0xusdt", "usdt-tether"]]);
+    const chains = ["ethereum", "base"];
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, chains);
+    const chainAddressToId = buildChainAddressToId(addressToId, chains);
     const dexProjects = new Set(["curve", "uniswap-v3", "aerodrome", "sushiswap"]);
 
     const curvePoolMap = new Map<string, CurvePoolEntry>([
@@ -164,14 +195,16 @@ describe("processPoolMetrics", () => {
       ],
       dexProjects,
       symbolToIds,
+      symbolToChainScopedIds,
       addressToId,
+      chainAddressToId,
       curvePoolMap,
       uniV3PoolFees,
       uniV3SymbolFees,
       aerodromeIsStable,
     );
 
-    expect(addressToId.get("0xusdc-new")).toBe("usdc-circle");
+    expect(chainAddressToId.get("ethereum:0xusdc-new")).toBe("usdc-circle");
     expect(metrics.has("cusd-cap")).toBe(false);
     expect(metrics.has("cusd-celo")).toBe(false);
 
@@ -272,6 +305,11 @@ describe("processPoolMetrics", () => {
         ["USDT", ["usdt-tether"]],
         ["USDC", ["usdc-circle"]],
       ]),
+      buildSymbolToChainScopedIds(new Map([
+        ["USDT", ["usdt-tether"]],
+        ["USDC", ["usdc-circle"]],
+      ]), ["ethereum"]),
+      new Map(),
       new Map(),
       new Map(),
       new Map(),
@@ -292,6 +330,8 @@ describe("processPoolMetrics", () => {
       [pool],
       new Set(["curve"]),
       new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]),
+      buildSymbolToChainScopedIds(new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]), ["ethereum"]),
+      new Map(),
       new Map(),
       new Map(),
       new Map(),
@@ -310,6 +350,8 @@ describe("processPoolMetrics", () => {
       [pool],
       new Set(["curve"]),
       new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]),
+      buildSymbolToChainScopedIds(new Map([["USDT", ["usdt-tether"]], ["USDC", ["usdc-circle"]]]), ["ethereum"]),
+      new Map(),
       new Map(),
       new Map(),
       new Map(),

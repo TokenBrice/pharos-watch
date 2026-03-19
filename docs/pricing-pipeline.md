@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.5`
+- **Current methodology version:** `v2.6`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -79,7 +79,7 @@ Source labels list all agreeing sources alphabetically:
 
 ### Pool Challenge (Soft-Source Guard)
 
-After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against current individual priced pools from `dex_liquidity.top_pools_json` that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from consensus beyond the threshold:
+After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from consensus beyond the threshold:
 
 1. Confidence is downgraded to `low`.
 2. The consensus price is **replaced** with the TVL-weighted mean of all qualifying individual pool prices (`source = "pool-tvl-weighted"`).
@@ -87,9 +87,10 @@ After consensus, results where all agreeing sources are **soft aggregators** (Co
 The DEX bridge and the pool challenge now deliberately read from different storage views:
 
 - `dex_prices.price_sources_json`: one aggregate per protocol, used for primary-price promotion
-- `dex_liquidity.top_pools_json`: current individual pools, used for large-pool challenge / depeg confirmation
+- `dex_price_challenger_snapshots` + `dex_price_challengers`: current individual challenger pools, published from the full retained DEX pool set for large-pool challenge / depeg confirmation
+- `dex_liquidity.top_pools_json`: display-oriented top pools for UI detail, no longer the canonical challenger source
 
-This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus — large pools carry proportional weight. Hard sources (Pyth, Binance, Kraken, Bitstamp, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
+This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus - large pools carry proportional weight. Hard sources (Pyth, Binance, Kraken, Bitstamp, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
 
 ---
 
@@ -106,9 +107,11 @@ Several live providers need normalization before their prices can safely enter c
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **RedStone freshness + transparency gate:** RedStone entries are only admitted when they carry a timestamp newer than 5 minutes and a usable per-venue price breakdown. Timestamp-less or opaque aggregate-only responses are rejected.
 - **Chainlink reference overlay:** `worker/src/cron/sync-fx-rates.ts` overlays curated Chainlink EUR/USD, GBP/USD, JPY/USD, XAU/USD, and XAG/USD feeds onto the shared `fx-rates` cache when their on-chain quotes are fresh and within 5% of the current reference stack. Frankfurter / secondary FX APIs and `gold-api.com` remain fallback sources for uncovered or divergent feeds.
+- **FX freshness semantics:** `fx-rates-meta` tracks usable cache freshness (`usableSyncAt`) separately from per-peg `sourceUpdatedAtByPeg`. Cached fallback runs keep the original source timestamps and increment `consecutiveFallbackRuns`, so non-USD and commodity validation cannot silently look fresh after an upstream outage.
 - **Circuit-breaker accounting:** for Pyth and RedStone, a transport-successful request that returns zero usable prices is still recorded as an unsuccessful outcome for breaker state. This avoids treating empty responses as healthy data.
 - **Curve on-chain sanity bound:** Implied prices from `get_dy` calls are capped at `< 10,000` (to accommodate commodity tokens like PAXG/XAUT at ~$2,900).
 - **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before they enter primary consensus, so one Balancer/Fluid/Raydium/Orca protocol can contribute at most one elevated source per asset.
+- **DEX token matching and dedupe:** direct-API, staged, and fallback DEX pools resolve tracked assets by `chain + address` first; symbol fallback is only allowed when it is unique within the same chain. Repeated observations of the same physical pool are collapsed by exact pool id or a conservative derived identity before they enter `dex_prices`.
 - **Direct-API pair conversion:** non-USD tracked stablecoin pairs use peg-reference-aware conversion rather than treating every tracked stablecoin counterparty as `$1`.
 
 These normalization rules live in code because they are provider quirks, not business-level scoring decisions.

@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stagedPoolConfidence, stagedPoolMaturityDays } from "../../dex-discovery/types";
 import { mergeStagedPools } from "../staging-merge";
+import {
+  buildPoolIdentity,
+  createKnownPoolIdentityIndex,
+  registerKnownPoolIdentity,
+  type KnownPoolIdentityIndex,
+} from "../pool-identity";
 
 function createMockDb(results: unknown[] | (() => Promise<{ results: unknown[] }>)): D1Database {
   return {
@@ -12,6 +18,33 @@ function createMockDb(results: unknown[] | (() => Promise<{ results: unknown[] }
       }),
     }),
   } as unknown as D1Database;
+}
+
+function makeKnownPoolIndex(entries: string[] = []): KnownPoolIdentityIndex {
+  const known = createKnownPoolIdentityIndex();
+  for (const entry of entries) {
+    if (entry.startsWith("derived:")) {
+      const [, chain, protocol, baseToken, quoteToken, poolType, feeTierBps, isStable] = entry.split(":");
+      registerKnownPoolIdentity(known, buildPoolIdentity({
+        chain,
+        protocol,
+        tokenAddresses: [baseToken ?? "", quoteToken ?? ""],
+        poolType: poolType === "na" ? null : poolType,
+        feeTierBps: feeTierBps === "na" ? null : Number(feeTierBps),
+        isStable: isStable === "na" ? null : isStable === "stable",
+      }));
+      continue;
+    }
+
+    const [chain, poolAddressOrId] = entry.split(":");
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain,
+      protocol: "test",
+      poolAddressOrId,
+      tokenAddresses: [],
+    }));
+  }
+  return known;
 }
 
 describe("stagedPoolConfidence", () => {
@@ -54,6 +87,12 @@ describe("stagedPoolMaturityDays", () => {
 });
 
 describe("mergeStagedPools", () => {
+  const exactPoolAddress = "0x0000000000000000000000000000000000000abc";
+  const secondExactPoolAddress = "0x0000000000000000000000000000000000000def";
+  const newPoolAddress = "0x0000000000000000000000000000000000000fed";
+  const baseToken = "0x00000000000000000000000000000000000000b1";
+  const quoteToken = "0x00000000000000000000000000000000000000c2";
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -61,13 +100,13 @@ describe("mergeStagedPools", () => {
   it("returns zero counts with empty staging table", async () => {
     const mockDb = createMockDb([]);
     const metrics = new Map();
-    const knownPoolAddrs = new Set<string>();
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolAddrs, 1710000000);
+    const knownPoolIndex = makeKnownPoolIndex();
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
 
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
-    expect(result.skippedByAddressCount).toBe(0);
-    expect(result.skippedByFingerprintCount).toBe(0);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
   });
 
   it("does not modify metrics when staging table is empty", async () => {
@@ -79,18 +118,18 @@ describe("mergeStagedPools", () => {
     });
     const originalTvl = metrics.get("test-coin")?.totalTvlUsd;
 
-    const result = await mergeStagedPools(mockDb, metrics as never, new Set(), 1710000000);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), 1710000000);
 
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
-    expect(result.skippedByAddressCount).toBe(0);
-    expect(result.skippedByFingerprintCount).toBe(0);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
     expect(metrics.get("test-coin")?.totalTvlUsd).toBe(originalTvl);
   });
 
   it("skips pools that exist in knownPoolAddrs", async () => {
     const mockDb = createMockDb([{
-      pool_id: "ethereum:0xabc",
+      pool_id: `ethereum:${exactPoolAddress}`,
       stablecoin_id: "usdt-tether",
       source: "gecko_terminal",
       chain: "ethereum",
@@ -101,8 +140,8 @@ describe("mergeStagedPools", () => {
       fee_tier: null,
       balance_ratio: null,
       is_stable: 1,
-      base_token: "0xabc",
-      quote_token: "0xdef",
+      base_token: baseToken,
+      quote_token: quoteToken,
       quote_symbol: "USDC",
       price_usd: 1,
       locked_liq_pct: null,
@@ -110,18 +149,18 @@ describe("mergeStagedPools", () => {
       refreshed_at: 1710000000,
     }]);
     const metrics = new Map();
-    const knownPoolAddrs = new Set(["ethereum:0xabc"]);
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolAddrs, 1710000000);
+    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${exactPoolAddress}`]);
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
 
     expect(result.skippedCount).toBe(1);
-    expect(result.skippedByAddressCount).toBe(1);
-    expect(result.skippedByFingerprintCount).toBe(0);
+    expect(result.skippedByExactIdentityCount).toBe(1);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
     expect(result.mergedCount).toBe(0);
   });
 
   it("skips staged pools whose token-pair fingerprint is already known", async () => {
     const mockDb = createMockDb([{
-      pool_id: "ethereum:0xnewpool",
+      pool_id: `ethereum:${newPoolAddress}`,
       stablecoin_id: "usdt-tether",
       source: "gecko_terminal",
       chain: "ethereum",
@@ -135,8 +174,8 @@ describe("mergeStagedPools", () => {
       fee_tier: null,
       balance_ratio: null,
       is_stable: 1,
-      base_token: "0xbase",
-      quote_token: "0xquote",
+      base_token: baseToken,
+      quote_token: quoteToken,
       quote_symbol: "USDC",
       price_usd: 1,
       locked_liq_pct: null,
@@ -144,13 +183,15 @@ describe("mergeStagedPools", () => {
       refreshed_at: 1710000000,
     }]);
     const metrics = new Map();
-    const knownPoolAddrs = new Set(["fp:ethereum:pancakeswap:0xbase:0xquote"]);
+    const knownPoolIndex = makeKnownPoolIndex([
+      `derived:ethereum:pancakeswap-v3:${baseToken}:${quoteToken}:gt-concentrated:na:stable`,
+    ]);
 
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolAddrs, 1710000000);
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
 
     expect(result.skippedCount).toBe(1);
-    expect(result.skippedByAddressCount).toBe(0);
-    expect(result.skippedByFingerprintCount).toBe(1);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(1);
     expect(result.mergedCount).toBe(0);
   });
 
@@ -160,13 +201,13 @@ describe("mergeStagedPools", () => {
       throw new Error("no such table: dex_pool_staging");
     });
     const metrics = new Map();
-    const knownPoolAddrs = new Set<string>();
-    const result = await mergeStagedPools(mockDb, metrics, knownPoolAddrs, 1710000000);
+    const knownPoolIndex = makeKnownPoolIndex();
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
 
     expect(result.mergedCount).toBe(0);
     expect(result.skippedCount).toBe(0);
-    expect(result.skippedByAddressCount).toBe(0);
-    expect(result.skippedByFingerprintCount).toBe(0);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
     expect(warnSpy).toHaveBeenCalledOnce();
   });
 
@@ -194,13 +235,13 @@ describe("mergeStagedPools", () => {
     }]);
     const metrics = new Map();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, new Set(), now);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
     const metric = metrics.get("usdt-tether");
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedCount).toBe(0);
-    expect(result.skippedByAddressCount).toBe(0);
-    expect(result.skippedByFingerprintCount).toBe(0);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
     expect(result.priceObservations.get("usdt-tether")).toHaveLength(1);
     expect(metric).toBeDefined();
     expect(metric.totalTvlUsd).toBe(75000);
@@ -237,13 +278,13 @@ describe("mergeStagedPools", () => {
     }]);
     const metrics = new Map();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, new Set(), now);
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
     const metric = metrics.get("usdt-tether");
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedCount).toBe(0);
-    expect(result.skippedByAddressCount).toBe(0);
-    expect(result.skippedByFingerprintCount).toBe(0);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
     expect(result.priceObservations.get("usdt-tether")).toHaveLength(1);
     expect(metric).toBeDefined();
     expect(metric.totalTvlUsd).toBe(100000);
@@ -261,7 +302,7 @@ describe("mergeStagedPools", () => {
   it("extracts price observations from pools skipped by address dedup", async () => {
     const now = 1710000000;
     const mockDb = createMockDb([{
-      pool_id: "ethereum:0xknown",
+      pool_id: `ethereum:${secondExactPoolAddress}`,
       stablecoin_id: "usdt-tether",
       source: "cg_onchain",
       chain: "ethereum",
@@ -273,8 +314,8 @@ describe("mergeStagedPools", () => {
       fee_tier: 5,
       balance_ratio: null,
       is_stable: 1,
-      base_token: "0xbase",
-      quote_token: "0xquote",
+      base_token: baseToken,
+      quote_token: quoteToken,
       quote_symbol: "USDC",
       price_usd: 0.9998,
       locked_liq_pct: null,
@@ -283,13 +324,13 @@ describe("mergeStagedPools", () => {
     }]);
     const metrics = new Map();
     // Pool address is already known (from DL yields) — will be deduped for metrics
-    const knownPoolAddrs = new Set(["ethereum:0xknown"]);
+    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`]);
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolAddrs, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
 
     // Metrics dedup still works — pool was NOT merged into metrics
     expect(result.skippedCount).toBe(1);
-    expect(result.skippedByAddressCount).toBe(1);
+    expect(result.skippedByExactIdentityCount).toBe(1);
     expect(result.mergedCount).toBe(0);
     expect(metrics.size).toBe(0);
 
@@ -304,7 +345,7 @@ describe("mergeStagedPools", () => {
   it("extracts price observations from pools skipped by fingerprint dedup", async () => {
     const now = 1710000000;
     const mockDb = createMockDb([{
-      pool_id: "ethereum:0xnewaddr",
+      pool_id: `ethereum:${newPoolAddress}`,
       stablecoin_id: "usdt-tether",
       source: "gecko_terminal",
       chain: "ethereum",
@@ -318,8 +359,8 @@ describe("mergeStagedPools", () => {
       fee_tier: null,
       balance_ratio: null,
       is_stable: 1,
-      base_token: "0xbase",
-      quote_token: "0xquote",
+      base_token: baseToken,
+      quote_token: quoteToken,
       quote_symbol: "USDC",
       price_usd: 1.0001,
       locked_liq_pct: null,
@@ -328,13 +369,15 @@ describe("mergeStagedPools", () => {
     }]);
     const metrics = new Map();
     // Fingerprint is known (from DL yields) — will be deduped for metrics
-    const knownPoolAddrs = new Set(["fp:ethereum:pancakeswap:0xbase:0xquote"]);
+    const knownPoolIndex = makeKnownPoolIndex([
+      `derived:ethereum:pancakeswap-v3:${baseToken}:${quoteToken}:gt-concentrated:na:stable`,
+    ]);
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolAddrs, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
 
     // Metrics dedup still works
     expect(result.skippedCount).toBe(1);
-    expect(result.skippedByFingerprintCount).toBe(1);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(1);
     expect(result.mergedCount).toBe(0);
     expect(metrics.size).toBe(0);
 
@@ -348,7 +391,7 @@ describe("mergeStagedPools", () => {
   it("does NOT extract price observation from deduped pool with sub-threshold TVL", async () => {
     const now = 1710000000;
     const mockDb = createMockDb([{
-      pool_id: "ethereum:0xknown",
+      pool_id: `ethereum:${secondExactPoolAddress}`,
       stablecoin_id: "usdt-tether",
       source: "cg_onchain",
       chain: "ethereum",
@@ -360,8 +403,8 @@ describe("mergeStagedPools", () => {
       fee_tier: 5,
       balance_ratio: null,
       is_stable: 1,
-      base_token: "0xbase",
-      quote_token: "0xquote",
+      base_token: baseToken,
+      quote_token: quoteToken,
       quote_symbol: "USDC",
       price_usd: 1.0,
       locked_liq_pct: null,
@@ -369,9 +412,9 @@ describe("mergeStagedPools", () => {
       refreshed_at: now,
     }]);
     const metrics = new Map();
-    const knownPoolAddrs = new Set(["ethereum:0xknown"]);
+    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`]);
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolAddrs, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
 
     expect(result.skippedCount).toBe(1);
     // TVL $30K × confidence 1.0 = $30K < $50K threshold — no price observation
@@ -403,11 +446,11 @@ describe("mergeStagedPools", () => {
     const metrics = new Map();
     // Fingerprint for this pool would be null (no tokens), so it should NOT be
     // skipped by fingerprint dedup — only exact poolId match matters
-    const knownPoolAddrs = new Set<string>();
+    const knownPoolIndex = makeKnownPoolIndex();
 
-    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolAddrs, now);
+    const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
 
     expect(result.mergedCount).toBe(1);
-    expect(result.skippedByFingerprintCount).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentityCount).toBe(0);
   });
 });

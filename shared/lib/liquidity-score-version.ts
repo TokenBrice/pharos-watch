@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "4.3",
+  currentVersion: "4.4",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "4.4",
+    title: "Chain-aware pool identity dedupe and challenger snapshot publishing",
+    date: "2026-03-19",
+    effectiveAt: 1773961394,
+    summary:
+      "DEX liquidity now resolves tracked tokens chain-aware, deduplicates pools with conservative identity keys instead of coarse fingerprints, collapses duplicate DEX price observations before aggregation, and publishes dedicated challenger snapshots from the full retained pool set.",
+    impact: [
+      "Direct API and staged/fallback pools resolve tracked assets by chain+address first, with chain-scoped symbol fallback only when unique",
+      "Cross-source pool dedupe now uses exact pool ids first and derived token-shape matches only when they are unique on both sides",
+      "Repeated sightings of the same physical pool across direct API, staged, and fallback sources now collapse before dex_prices weighting",
+      "Depeg challenger inputs publish from the full retained pool set instead of the visible top-pools subset",
+      "Fluid pools with missing token decimals now fall back to neutral balance rather than using unsafe raw reserve units",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.3",
     title: "Fluid DexReservesResolver balance integration",

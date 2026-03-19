@@ -6,6 +6,7 @@ import { dsRateLimit, fetchDsTokenPools, getDsTrackedTokenPriceUsd } from "../..
 import { CHAIN_REGISTRY, CG_CHAIN_MAP, GT_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { normalizeProtocol, getGtDexQuality } from "../dex-liquidity/pool-helpers";
 import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers";
+import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
 import { CG_TICKERS_RATE_MS, ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS } from "../dex-liquidity/constants";
 import { GT_API_BASE, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { fetchCgTokenPools, parseCgPoolVolume } from "../../lib/coingecko-onchain";
@@ -189,7 +190,7 @@ export async function crawlCoin(
 
   // Stage 2: GeckoTerminal (chains not already covered by CG)
   const gtTokens: CrawlToken[] = [];
-  const gtAddressToId = new Map<string, string>();
+  const gtChainAddressToId = new Map<string, string>();
   for (const { chain, address } of coinTargets) {
     const registry = CHAIN_REGISTRY[chain];
     const gtNetwork = GT_CHAIN_MAP[chain] ?? registry?.geckoTerminal;
@@ -201,7 +202,7 @@ export async function crawlCoin(
       address: address.toLowerCase(),
       stablecoinId,
     });
-    gtAddressToId.set(address.toLowerCase(), stablecoinId);
+    gtChainAddressToId.set(makeChainAddressKey(chain, address), stablecoinId);
   }
 
   if (gtTokens.length > 0 && !timeExceeded()) {
@@ -214,7 +215,7 @@ export async function crawlCoin(
     await crawlTokenPools<GtPool, GtNewPool & { baseToken: string; quoteToken: string; quoteSymbol: string | null }>({
       sourceLabel: "GT",
       tokens: gtTokens,
-      addressToId: gtAddressToId,
+      chainAddressToId: gtChainAddressToId,
       knownPoolAddrs: knownPoolIds,
       protocolTvlCaps: new Map(),
       newPools: gtNewPools,

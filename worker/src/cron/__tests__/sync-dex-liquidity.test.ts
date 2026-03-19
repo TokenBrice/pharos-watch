@@ -129,13 +129,13 @@ describe("syncDexLiquidity", () => {
     expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
-      stagedPoolsSkippedByAddress?: number;
-      stagedPoolsSkippedByFingerprint?: number;
+      stagedPoolsSkippedByExactIdentity?: number;
+      stagedPoolsSkippedByUniqueDerivedIdentity?: number;
       sourceCoverage?: { nearCoverageGuard?: boolean };
     };
     expect(metadata.failedSources).toEqual([]);
-    expect(metadata.stagedPoolsSkippedByAddress).toBe(0);
-    expect(metadata.stagedPoolsSkippedByFingerprint).toBe(0);
+    expect(metadata.stagedPoolsSkippedByExactIdentity).toBe(0);
+    expect(metadata.stagedPoolsSkippedByUniqueDerivedIdentity).toBe(0);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
   });
 
@@ -194,7 +194,7 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
     const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
 
     expect(result.filteredPools).toHaveLength(1);
-    expect(result.skippedByAddress).toBe(0);
-    expect(result.skippedByFingerprint).toBe(0);
+    expect(result.skippedByExactIdentity).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
   });
 });

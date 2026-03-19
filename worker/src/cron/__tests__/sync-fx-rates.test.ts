@@ -11,6 +11,15 @@ vi.mock("../../lib/fetch-retry", () => ({
 
 import { syncFxRates } from "../sync-fx-rates";
 
+function findCacheWrite(
+  db: ReturnType<typeof mockD1>,
+  key: string,
+): { sql: string; binds: unknown[] } | undefined {
+  return db.getHistory().find(
+    (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === key,
+  );
+}
+
 describe("syncFxRates", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -47,7 +56,18 @@ describe("syncFxRates", () => {
     ]);
 
     const db = mockD1([
-      { match: "cache", rows: [], first: null },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
     ]);
 
     const result = await syncFxRates(db);
@@ -57,13 +77,22 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata!);
     expect(metadata.rateCount).toBeGreaterThan(5);
     expect(metadata.sources.fawazahmed0).toBe("ok");
+    expect(metadata.mode).toBe("live");
 
-    const write = db.getHistory().find(
-      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "fx-rates",
-    );
+    const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
     expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
     expect(cachedRates.peggedCNH).not.toBe(cachedRates.peggedCNY);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      usableSyncAt: number;
+      mode: string;
+      sourceUpdatedAtByPeg: Record<string, number>;
+    };
+    expect(cachedMeta.usableSyncAt).toBe(Math.floor(Date.now() / 1000));
+    expect(cachedMeta.mode).toBe("live");
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBeGreaterThan(0);
   });
 
   it("falls back to cached rates when frankfurter.app is unavailable", async () => {
@@ -77,10 +106,32 @@ describe("syncFxRates", () => {
 
     const db = mockD1([
       {
-        match: "cache",
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
         rows: [],
         first: {
           value: JSON.stringify({ peggedEUR: 1.08, peggedRUB: 0.011 }),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
+            mode: "live",
+            sourceUpdatedAtByPeg: {
+              peggedEUR: Math.floor(Date.now() / 1000) - 3600,
+              peggedRUB: Math.floor(Date.now() / 1000) - 7200,
+            },
+            sourceModeByPeg: {
+              peggedEUR: "live",
+              peggedRUB: "live",
+            },
+            consecutiveFallbackRuns: 0,
+          }),
           updated_at: Math.floor(Date.now() / 1000) - 60,
         },
       },
@@ -88,8 +139,24 @@ describe("syncFxRates", () => {
 
     const result = await syncFxRates(db);
     expect(result.itemCount).toBe(2);
+    expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.fallbackMode).toBe("cached-fx-rates");
+    expect(metadata.mode).toBe("cached-fallback");
+    expect(metadata.consecutiveFallbackRuns).toBe(1);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      usableSyncAt: number;
+      mode: string;
+      sourceUpdatedAtByPeg: Record<string, number>;
+      consecutiveFallbackRuns: number;
+    };
+    expect(cachedMeta.usableSyncAt).toBe(Math.floor(Date.now() / 1000));
+    expect(cachedMeta.mode).toBe("cached-fallback");
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBe(Math.floor(Date.now() / 1000) - 3600);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedRUB).toBe(Math.floor(Date.now() / 1000) - 7200);
+    expect(cachedMeta.consecutiveFallbackRuns).toBe(1);
   });
 
   it("uses secondary API for CNH/RUB/UAH/ARS rates", async () => {
@@ -117,7 +184,18 @@ describe("syncFxRates", () => {
     ]);
 
     const db = mockD1([
-      { match: "cache", rows: [], first: null },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
     ]);
 
     const result = await syncFxRates(db);
@@ -168,7 +246,18 @@ describe("syncFxRates", () => {
     }));
 
     const db = mockD1([
-      { match: "cache", rows: [], first: null },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
       { match: "circuit", rows: [] },
     ]);
     const chainRpcs = new Map([
@@ -185,10 +274,66 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.sources.chainlink).toBe("ok");
 
-    const write = db.getHistory().find(
-      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "fx-rates",
-    );
+    const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
     expect(cachedRates.peggedEUR).toBeCloseTo(1.08101, 4);
+  });
+
+  it("keeps syncing when the OXR telemetry write fails", async () => {
+    mockFetch([
+      {
+        match: "frankfurter.app",
+        body: {
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        },
+      },
+      {
+        match: "currency-api",
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { price: 2900 },
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { price: 32 },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-fetch"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        matchBinds: ["fx-oxr-last-fetch", String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000)],
+        rows: [],
+        throwError: new Error("telemetry write failed"),
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    const result = await syncFxRates(db, undefined, "oxr-key");
+    expect(result.itemCount).toBeGreaterThan(0);
+    expect(findCacheWrite(db, "fx-rates")).toBeDefined();
+    expect(findCacheWrite(db, "fx-rates-meta")).toBeDefined();
   });
 });

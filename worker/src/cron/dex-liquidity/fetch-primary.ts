@@ -25,12 +25,23 @@ import {
   SUBGRAPH_PER_CHAIN_TIMEOUT_MS,
 } from "./constants";
 import {
-  normalizeProtocol, getTrackedContracts,
-  buildPoolFingerprint,
+  normalizeProtocol, getTrackedContracts, classifyPoolType, isCryptoSwap,
 } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { fetchSubgraphEntities, mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
 import type { PriceValidationReferences } from "../../lib/price-validation";
+import {
+  buildPoolIdentity,
+  createKnownPoolIdentityIndex,
+  registerKnownPoolIdentity,
+  type KnownPoolIdentityIndex,
+} from "./pool-identity";
+import {
+  getChainScopedSymbolIds,
+  getUniqueChainScopedSymbolId,
+  learnResolvedChainAddress,
+  makeChainAddressKey,
+} from "./token-resolution";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
 export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
@@ -170,7 +181,8 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
 export async function buildCurveLookups(
   curveResponses: (Response | null)[],
   symbolToIds: Map<string, string[]>,
-  addressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  chainAddressToId: Map<string, string>,
   references?: PriceValidationReferences,
 ): Promise<CurveLookups> {
   const curvePoolMap = new Map<string, CurvePoolEntry>();
@@ -183,6 +195,7 @@ export async function buildCurveLookups(
       const json = (await res.json()) as { data?: { poolData?: CurvePool[] } };
       const curvePools = json.data?.poolData ?? [];
       for (const pool of curvePools) {
+        const chain = CURVE_CHAINS[i];
         if (!pool.coins || pool.coins.length < 2) continue;
         // v2: skip broken/deprecated pools
         if (pool.isBroken) continue;
@@ -217,9 +230,9 @@ export async function buildCurveLookups(
           // Learn address→stablecoinId from unambiguous symbol matches
           if (c.address) {
             const sym = normalizeDexSymbol(c.symbol);
-            const ids = symbolToIds.get(sym);
-            if (ids && ids.length === 1) {
-              addressToId.set(c.address.toLowerCase(), ids[0]);
+            const id = getUniqueChainScopedSymbolId(sym, chain, { symbolToChainScopedIds });
+            if (id) {
+              learnResolvedChainAddress({ chainAddressToId }, chain, c.address, id);
             }
           }
           return {
@@ -258,39 +271,50 @@ export async function buildCurveLookups(
           tokenPrices,
         };
         curvePoolMap.set(
-          `${CURVE_CHAINS[i]}:${pool.address.toLowerCase()}`,
+          `${chain}:${pool.address.toLowerCase()}`,
           entry,
         );
         // Also store by symbol combo for fallback matching
         curvePoolMap.set(
-          `${CURVE_CHAINS[i]}:${coinSymbols}`,
+          `${chain}:${coinSymbols}`,
           entry,
         );
 
         // Extract per-token price observations for DEX cross-validation
         // Filter: pool TVL >= $50K, balance ratio >= 0.3, coin has valid usdPrice
         if (metapoolAdjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio >= 0.3) {
+          const identity = buildPoolIdentity({
+            chain,
+            protocol: "curve",
+            poolAddressOrId: pool.address,
+            tokenAddresses: pool.coins.map((coin) => coin.address),
+            poolType: isCryptoSwap(pool.registryId ?? "") ? "curve-cryptoswap" : "curve-stableswap",
+            isStable: true,
+          });
           for (const coin of pool.coins) {
             if (!coin.usdPrice || coin.usdPrice <= 0) continue;
             // Resolve stablecoin ID: prefer address match, fall back to symbol
             let resolvedIds: string[] | undefined;
             if (coin.address) {
-              const addrId = addressToId.get(coin.address.toLowerCase());
+              const addrId = chainAddressToId.get(makeChainAddressKey(chain, coin.address));
               if (addrId) resolvedIds = [addrId];
             }
             if (!resolvedIds) {
-              const sym = normalizeDexSymbol(coin.symbol);
-              resolvedIds = symbolToIds.get(sym);
+              resolvedIds = getChainScopedSymbolIds(coin.symbol, chain, { symbolToChainScopedIds });
             }
-            if (!resolvedIds) continue;
+            if (!resolvedIds || resolvedIds.length === 0) continue;
             for (const id of resolvedIds) {
               if (!isPlausibleDexObservationPrice(id, coin.usdPrice, references)) continue;
               const obs = priceObservations.get(id) ?? [];
               obs.push({
                 price: coin.usdPrice,
                 tvl: metapoolAdjustedTvl,
-                chain: CURVE_CHAINS[i],
+                chain,
                 protocol: "curve",
+                poolKey: identity.exactPoolKey ?? undefined,
+                derivedMatchKey: identity.derivedMatchKey ?? undefined,
+                identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+                sourceFamily: "dl",
               });
               priceObservations.set(id, obs);
             }
@@ -335,7 +359,8 @@ type AerodromeSubgraphPair = {
 export async function fetchUniV3Data(
   graphApiKey: string | null,
   symbolToIds: Map<string, string[]>,
-  addressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  chainAddressToId: Map<string, string>,
   signal?: AbortSignal,
   references?: PriceValidationReferences,
 ): Promise<UniV3Lookups> {
@@ -381,9 +406,9 @@ export async function fetchUniV3Data(
         // Learn addresses for disambiguation from Uni V3 token data
         for (const tok of [pool.token0, pool.token1]) {
           const sym = normalizeDexSymbol(tok.symbol);
-          const ids = symbolToIds.get(sym);
-          if (ids?.length === 1 && tok.id) {
-            addressToId.set(tok.id.toLowerCase(), ids[0]);
+          const id = getUniqueChainScopedSymbolId(sym, chain, { symbolToChainScopedIds });
+          if (id && tok.id) {
+            learnResolvedChainAddress({ chainAddressToId }, chain, tok.id, id);
           }
         }
 
@@ -409,18 +434,34 @@ export async function fetchUniV3Data(
         }
 
         const mapped: SubgraphPriceObservation[] = [];
+        const identity = buildPoolIdentity({
+          chain,
+          protocol: "uniswap-v3",
+          poolAddressOrId: pool.id,
+          tokenAddresses: [pool.token0.id, pool.token1.id],
+          feeTierBps: feeTier / 100,
+        });
         for (const { symbol, address, usdPrice } of pricedTokens) {
           let resolvedIds: string[] | undefined;
-          const addrId = addressToId.get(address.toLowerCase());
+          const addrId = chainAddressToId.get(makeChainAddressKey(chain, address));
           if (addrId) resolvedIds = [addrId];
-          if (!resolvedIds) resolvedIds = symbolToIds.get(symbol);
-          if (!resolvedIds) continue;
+          if (!resolvedIds) resolvedIds = getChainScopedSymbolIds(symbol, chain, { symbolToChainScopedIds });
+          if (!resolvedIds || resolvedIds.length === 0) continue;
 
           for (const stablecoinId of resolvedIds) {
             if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice, references)) continue;
             mapped.push({
               stablecoinId,
-              obs: { price: usdPrice, tvl, chain, protocol: "uniswap-v3" },
+              obs: {
+                price: usdPrice,
+                tvl,
+                chain,
+                protocol: "uniswap-v3",
+                poolKey: identity.exactPoolKey ?? undefined,
+                derivedMatchKey: identity.derivedMatchKey ?? undefined,
+                identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+                sourceFamily: "dl",
+              },
             });
           }
         }
@@ -447,7 +488,8 @@ export async function fetchUniV3Data(
 export async function fetchAerodromeData(
   graphApiKey: string | null,
   symbolToIds: Map<string, string[]>,
-  addressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  chainAddressToId: Map<string, string>,
   signal?: AbortSignal,
   references?: PriceValidationReferences,
 ): Promise<AerodromeLookups> {
@@ -506,18 +548,34 @@ export async function fetchAerodromeData(
         ];
 
         const mapped: SubgraphPriceObservation[] = [];
+        const identity = buildPoolIdentity({
+          chain,
+          protocol: "aerodrome",
+          poolAddressOrId: pair.id,
+          tokenAddresses: [pair.token0.id, pair.token1.id],
+          isStable: pair.isStable,
+        });
         for (const { symbol, address, usdPrice } of pricedTokens) {
           let resolvedIds: string[] | undefined;
-          const addrId = addressToId.get(address.toLowerCase());
+          const addrId = chainAddressToId.get(makeChainAddressKey(chain, address));
           if (addrId) resolvedIds = [addrId];
-          if (!resolvedIds) resolvedIds = symbolToIds.get(symbol);
-          if (!resolvedIds) continue;
+          if (!resolvedIds) resolvedIds = getChainScopedSymbolIds(symbol, chain, { symbolToChainScopedIds });
+          if (!resolvedIds || resolvedIds.length === 0) continue;
 
           for (const stablecoinId of resolvedIds) {
             if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice, references)) continue;
             mapped.push({
               stablecoinId,
-              obs: { price: usdPrice, tvl: reserveUSD, chain, protocol: "aerodrome" },
+              obs: {
+                price: usdPrice,
+                tvl: reserveUSD,
+                chain,
+                protocol: "aerodrome",
+                poolKey: identity.exactPoolKey ?? undefined,
+                derivedMatchKey: identity.derivedMatchKey ?? undefined,
+                identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+                sourceFamily: "dl",
+              },
             });
           }
         }
@@ -546,47 +604,71 @@ export function buildKnownPoolAddresses(
   curvePoolMap: Map<string, CurvePoolEntry>,
   uniV3PoolFees: Map<string, number>,
   aerodromeIsStable: Map<string, boolean>,
-): Set<string> {
-  const known = new Set<string>();
-  let fingerprintCount = 0;
+): KnownPoolIdentityIndex {
+  const known = createKnownPoolIdentityIndex();
+  let derivedCount = 0;
   const enforceDexProjectFilter = dexProjects.size > 0;
 
-  // DeFiLlama pools (all matched DEX pools)
+  // DeFiLlama pools are identity-poor, so only their derived keys are trustworthy.
   for (const pool of pools) {
     if (!pool.tvlUsd || pool.tvlUsd < 10_000) continue;
     if (enforceDexProjectFilter && !dexProjects.has(pool.project)) continue;
     if (pool.exposure === "single") continue;
-    // UUID-based key (DL uses UUIDs, not on-chain addresses)
-    const key = `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`;
-    known.add(key);
-    // Token-pair fingerprint so CG/GT pools (which use on-chain addresses)
-    // can match against DL pools despite the UUID/address format mismatch.
-    // Format: fp:<chain>:<normalized_protocol>:<sorted_token_addresses>
-    const fingerprint = buildPoolFingerprint(pool.chain, pool.project, pool.underlyingTokens ?? []);
-    if (fingerprint) {
-      known.add(fingerprint);
-      fingerprintCount++;
-    }
+    const identity = buildPoolIdentity({
+      chain: pool.chain,
+      protocol: pool.project,
+      poolAddressOrId: pool.pool,
+      tokenAddresses: pool.underlyingTokens ?? [],
+      poolType: classifyPoolType(pool.project),
+      isStable: pool.stablecoin,
+    });
+    if (identity.derivedMatchKey) derivedCount++;
+    registerKnownPoolIdentity(known, identity);
   }
 
   // Curve pools (keyed as chain:address in the map)
   for (const key of curvePoolMap.keys()) {
-    // curvePoolMap keys are "chain:address" or "chain:SYMBOL-COMBO"
-    // Only keep address-based keys (those containing 0x)
-    if (key.includes("0x")) known.add(key);
+    const [chain, poolAddress] = key.split(":");
+    if (!poolAddress || !poolAddress.includes("0x")) continue;
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain,
+      protocol: "curve",
+      poolAddressOrId: poolAddress,
+      tokenAddresses: [],
+      poolType: "curve-stableswap",
+      isStable: true,
+    }));
   }
 
   // UniV3 pools (keyed as chain:address in the fees map)
   for (const key of uniV3PoolFees.keys()) {
-    known.add(key);
+    const [chain, poolAddress] = key.split(":");
+    if (!poolAddress) continue;
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain,
+      protocol: "uniswap-v3",
+      poolAddressOrId: poolAddress,
+      tokenAddresses: [],
+    }));
   }
 
   // Aerodrome pools (keyed as chain:address in the isStable map)
-  for (const key of aerodromeIsStable.keys()) {
-    known.add(key);
+  for (const [key, isStable] of aerodromeIsStable.entries()) {
+    const [chain, poolAddress] = key.split(":");
+    if (!poolAddress) continue;
+    registerKnownPoolIdentity(known, buildPoolIdentity({
+      chain,
+      protocol: "aerodrome",
+      poolAddressOrId: poolAddress,
+      tokenAddresses: [],
+      isStable,
+    }));
   }
 
-  console.log(`[dex-liquidity] Built known pool set: ${known.size} entries (${fingerprintCount} token-pair fingerprints)`);
+  console.log(
+    `[dex-liquidity] Built known pool identity index: ${known.exactKeys.size} exact keys, ` +
+    `${derivedCount} derived DL keys`,
+  );
   return known;
 }
 
@@ -658,7 +740,7 @@ export async function fetchGtTokenBatch(
           const a = token.attributes;
           const addr = a.address.toLowerCase();
           const trackedToken = batch.find((t) => t.address.toLowerCase() === addr);
-          const stablecoinId = trackedToken?.stablecoinId ?? addressToId.get(addr);
+          const stablecoinId = trackedToken?.stablecoinId;
           if (!stablecoinId || !trackedToken) continue;
 
           const price = parseFloat(a.price_usd ?? "");
@@ -716,7 +798,7 @@ export async function fetchCgTokenBatchPrices(
           const a = token.attributes;
           const addr = a.address.toLowerCase();
           const trackedToken = batch.find((t) => t.address.toLowerCase() === addr);
-          const stablecoinId = trackedToken?.stablecoinId ?? addressToId.get(addr);
+          const stablecoinId = trackedToken?.stablecoinId;
           if (!stablecoinId || !trackedToken) continue;
 
           const price = parseFloat(a.price_usd ?? "");

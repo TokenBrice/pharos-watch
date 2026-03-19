@@ -92,6 +92,7 @@ describe("loadPriceValidationReferences", () => {
 
     expect(result.type).toBe("fresh");
     expect(result.rates).toEqual({ peggedEUR: 1.08, peggedJPY: 0.0067 });
+    expect(result.typeByPeg).toMatchObject({ peggedEUR: "fresh", peggedJPY: "fresh" });
   });
 
   it("returns stale cached references after the freshness window", async () => {
@@ -112,6 +113,7 @@ describe("loadPriceValidationReferences", () => {
 
     expect(result.type).toBe("stale");
     expect(result.rates).toEqual({ peggedEUR: 1.08 });
+    expect(result.typeByPeg).toMatchObject({ peggedEUR: "stale" });
   });
 
   it("falls back to provided static references when cache is missing", async () => {
@@ -130,6 +132,42 @@ describe("loadPriceValidationReferences", () => {
 
     expect(result.type).toBe("static");
     expect(result.rates).toEqual({ peggedEUR: 1.09 });
+  });
+
+  it("keeps cached-fallback references stale when source timestamps are old", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedEUR: 1.08 }),
+          updated_at: nowSec - 60,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: nowSec - 60,
+            mode: "cached-fallback",
+            sourceUpdatedAtByPeg: { peggedEUR: nowSec - (8 * 3600) },
+            sourceModeByPeg: { peggedEUR: "cached" },
+            consecutiveFallbackRuns: 2,
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+    ]);
+
+    const result = await loadPriceValidationReferences(db);
+
+    expect(result.type).toBe("stale");
+    expect(result.updatedAtByPeg).toEqual({ peggedEUR: nowSec - (8 * 3600) });
+    expect(result.typeByPeg).toEqual({ peggedEUR: "stale" });
   });
 });
 

@@ -5,11 +5,12 @@ import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs } from "./types";
-import { buildPoolFingerprint, buildSymbolLookups } from "./pool-helpers";
+import { buildSymbolLookups, classifyPoolType } from "./pool-helpers";
 import {
   fetchDataSources, buildCurveLookups, fetchUniV3Data,
   fetchAerodromeData, buildKnownPoolAddresses,
 } from "./fetch-primary";
+import { publishDexPriceChallengerSnapshots } from "./challenger-persistence";
 import { processPoolMetrics } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
 import { mergeGtPools } from "./fetch-crawlers";
@@ -23,6 +24,7 @@ import { fetchOrcaPools } from "./fetch-orca";
 import {
   convertToGtNewPools,
   extractPriceObservations,
+  hydrateDirectApiPoolMetadata,
   isEligibleDirectApiPool,
   makeDexApiFetchResult,
   type DexApiFetchResult,
@@ -30,46 +32,84 @@ import {
 } from "../../lib/dex-api-common";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+import {
+  buildPoolIdentity,
+  countDerivedMatchKeys,
+  createKnownPoolIdentityIndex,
+  getIdentityDedupReason,
+  registerKnownPoolIdentity,
+  type KnownPoolIdentityIndex,
+  type PoolIdentity,
+} from "./pool-identity";
+
+function deriveDirectApiFeeTierBps(pool: DexApiPool): number | null {
+  if (pool.feeRate == null || !Number.isFinite(pool.feeRate) || pool.feeRate <= 0) return null;
+  return Math.round(pool.feeRate * 10_000 * 100) / 100;
+}
+
+function buildDirectApiPoolIdentity(pool: DexApiPool): PoolIdentity {
+  return buildPoolIdentity({
+    chain: pool.chain,
+    protocol: pool.source,
+    poolAddressOrId: pool.poolAddress,
+    tokenAddresses: pool.tokens.map((token) => token.address),
+    poolType: pool.poolType,
+    feeTierBps: deriveDirectApiFeeTierBps(pool),
+    isStable: pool.poolType.includes("stable") || pool.poolType.includes("fluid"),
+  });
+}
 
 export function filterPrimaryPoolsPreferDirectApi(
   pools: LlamaPool[],
   directApiPools: DexApiPool[],
 ): {
   filteredPools: LlamaPool[];
-  skippedByAddress: number;
-  skippedByFingerprint: number;
+  skippedByExactIdentity: number;
+  skippedByUniqueDerivedIdentity: number;
 } {
   const eligibleDirectApiPools = directApiPools.filter((pool) => isEligibleDirectApiPool(pool));
-  const directApiAddresses = new Set(
-    eligibleDirectApiPools.map((pool) => `${pool.chain.toLowerCase()}:${pool.poolAddress.toLowerCase()}`),
+  const directApiKnown = createKnownPoolIdentityIndex();
+  for (const pool of eligibleDirectApiPools) {
+    registerKnownPoolIdentity(directApiKnown, buildDirectApiPoolIdentity(pool));
+  }
+
+  const primaryIdentities = pools.map((pool) =>
+    buildPoolIdentity({
+      chain: pool.chain,
+      protocol: pool.project,
+      poolAddressOrId: pool.pool,
+      tokenAddresses: pool.underlyingTokens ?? [],
+      poolType: classifyPoolType(pool.project),
+      isStable: pool.stablecoin,
+    }),
   );
-  const directApiFingerprints = new Set(
-    eligibleDirectApiPools
-      .map((pool) => buildPoolFingerprint(pool.chain, pool.source, pool.tokens.map((token) => token.address)))
-      .filter((fingerprint): fingerprint is string => fingerprint != null),
-  );
+  const primaryDerivedCounts = countDerivedMatchKeys(primaryIdentities);
 
   const filteredPools: LlamaPool[] = [];
-  let skippedByAddress = 0;
-  let skippedByFingerprint = 0;
+  let skippedByExactIdentity = 0;
+  let skippedByUniqueDerivedIdentity = 0;
 
-  for (const pool of pools) {
-    const poolKey = `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`;
-    if (directApiAddresses.has(poolKey)) {
-      skippedByAddress++;
+  for (let index = 0; index < pools.length; index++) {
+    const pool = pools[index]!;
+    const identity = primaryIdentities[index]!;
+    const incomingDerivedCount = identity.derivedMatchKey
+      ? (primaryDerivedCounts.get(identity.derivedMatchKey) ?? 0)
+      : 0;
+    const dedupReason = getIdentityDedupReason(identity, directApiKnown, incomingDerivedCount);
+
+    if (dedupReason === "exact") {
+      skippedByExactIdentity++;
       continue;
     }
-
-    const fingerprint = buildPoolFingerprint(pool.chain, pool.project, pool.underlyingTokens ?? []);
-    if (fingerprint != null && directApiFingerprints.has(fingerprint)) {
-      skippedByFingerprint++;
+    if (dedupReason === "derived_unique") {
+      skippedByUniqueDerivedIdentity++;
       continue;
     }
 
     filteredPools.push(pool);
   }
 
-  return { filteredPools, skippedByAddress, skippedByFingerprint };
+  return { filteredPools, skippedByExactIdentity, skippedByUniqueDerivedIdentity };
 }
 
 export async function syncDexLiquidity(
@@ -164,11 +204,22 @@ export async function syncDexLiquidity(
   );
 
   // 2. Build symbol/address lookup maps
-  const { symbolToIds, addressToId } = buildSymbolLookups();
+  const {
+    symbolToIds,
+    symbolToChainScopedIds,
+    addressToId,
+    chainAddressToId,
+    contractMetaByChainAddress,
+  } = buildSymbolLookups();
+  const initialChainAddressCount = chainAddressToId.size;
 
   // 3. Parse Curve data into pool lookups and price observations
   const { curvePoolMap, priceObservations } = await buildCurveLookups(
-    dataSources.curveResponses, symbolToIds, addressToId, validationReferences,
+    dataSources.curveResponses,
+    symbolToIds,
+    symbolToChainScopedIds,
+    chainAddressToId,
+    validationReferences,
   );
 
   // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations
@@ -177,7 +228,12 @@ export async function syncDexLiquidity(
   let uniV3PriceObs = new Map<string, DexPriceObs[]>();
   try {
     const uniV3Data = await fetchUniV3Data(
-      graphApiKey, symbolToIds, addressToId, signal, validationReferences,
+      graphApiKey,
+      symbolToIds,
+      symbolToChainScopedIds,
+      chainAddressToId,
+      signal,
+      validationReferences,
     );
     uniV3PoolFees = uniV3Data.uniV3PoolFees;
     uniV3SymbolFees = uniV3Data.uniV3SymbolFees;
@@ -187,15 +243,25 @@ export async function syncDexLiquidity(
     console.warn("[dex-liquidity] UniV3 fetch failed (non-fatal):", err);
     failedSources.push("univ3-subgraph");
   }
-  if (addressToId.size > 0) {
-    console.log(`[dex-liquidity] Learned ${addressToId.size} token addresses for disambiguation`);
+  const learnedChainAddresses = chainAddressToId.size - initialChainAddressCount;
+  if (learnedChainAddresses > 0) {
+    console.log(
+      `[dex-liquidity] Learned ${learnedChainAddresses} additional chain-aware token addresses for disambiguation`,
+    );
   }
 
   // 4b. Fetch Aerodrome subgraph data for price observations + pool stability flags
   let aerodromePriceObs = new Map<string, DexPriceObs[]>();
   let aerodromeIsStable = new Map<string, boolean>();
   try {
-    const aeroData = await fetchAerodromeData(graphApiKey, symbolToIds, addressToId, signal, validationReferences);
+    const aeroData = await fetchAerodromeData(
+      graphApiKey,
+      symbolToIds,
+      symbolToChainScopedIds,
+      chainAddressToId,
+      signal,
+      validationReferences,
+    );
     aerodromePriceObs = aeroData.aerodromePriceObs;
     aerodromeIsStable = aeroData.aerodromeIsStable;
   } catch (err) {
@@ -222,62 +288,79 @@ export async function syncDexLiquidity(
 
   const {
     filteredPools: preferredPrimaryPools,
-    skippedByAddress: primarySkippedByDirectApiAddress,
-    skippedByFingerprint: primarySkippedByDirectApiFingerprint,
+    skippedByExactIdentity: primarySkippedByDirectApiExactIdentity,
+    skippedByUniqueDerivedIdentity: primarySkippedByDirectApiDerivedIdentity,
   } = filterPrimaryPoolsPreferDirectApi(dataSources.pools, directApiPools);
-  if (primarySkippedByDirectApiAddress > 0 || primarySkippedByDirectApiFingerprint > 0) {
+  if (primarySkippedByDirectApiExactIdentity > 0 || primarySkippedByDirectApiDerivedIdentity > 0) {
     console.log(
-      `[dex-liquidity] Preferred direct API over DL for ${primarySkippedByDirectApiAddress} address matches and ` +
-      `${primarySkippedByDirectApiFingerprint} fingerprint matches`,
+      `[dex-liquidity] Preferred direct API over DL for ${primarySkippedByDirectApiExactIdentity} exact matches and ` +
+      `${primarySkippedByDirectApiDerivedIdentity} unique derived matches`,
     );
   }
 
-  // 4c. Build known pool address set from preferred primary sources (for staged/fallback dedup)
-  const knownPoolAddrs = buildKnownPoolAddresses(
+  // 4c. Build known pool identity index from preferred primary sources (for staged/fallback dedup)
+  const knownPoolIndex = buildKnownPoolAddresses(
     preferredPrimaryPools, dataSources.dexProjects,
     curvePoolMap, uniV3PoolFees, aerodromeIsStable,
   );
 
   // 5. Match pools to stablecoins and compute per-pool metrics
   const metrics = processPoolMetrics(
-    preferredPrimaryPools, dataSources.dexProjects, symbolToIds, addressToId,
+    preferredPrimaryPools,
+    dataSources.dexProjects,
+    symbolToIds,
+    symbolToChainScopedIds,
+    addressToId,
+    chainAddressToId,
     curvePoolMap, uniV3PoolFees, uniV3SymbolFees, aerodromeIsStable,
   );
 
   let directApiDedupSkippedByAddress = 0;
-  let directApiDedupSkippedByFingerprint = 0;
+  let directApiDedupSkippedByDerivedIdentity = 0;
   if (directApiPools.length > 0) {
     console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
+    hydrateDirectApiPoolMetadata(directApiPools, contractMetaByChainAddress);
+
+    const eligibleDirectApiPools = directApiPools.filter((pool) => isEligibleDirectApiPool(pool));
+    const directApiIdentities = eligibleDirectApiPools.map(buildDirectApiPoolIdentity);
+    const directApiDerivedCounts = countDerivedMatchKeys(directApiIdentities);
 
     const retainedDirectApiPools: DexApiPool[] = [];
-    for (const pool of directApiPools) {
-      const key = `${pool.chain.toLowerCase()}:${pool.poolAddress.toLowerCase()}`;
-      const fingerprint = buildPoolFingerprint(pool.chain, pool.source, pool.tokens.map((token) => token.address));
-      if (knownPoolAddrs.has(key)) {
+    for (let index = 0; index < eligibleDirectApiPools.length; index++) {
+      const pool = eligibleDirectApiPools[index]!;
+      const identity = directApiIdentities[index]!;
+      const incomingDerivedCount = identity.derivedMatchKey
+        ? (directApiDerivedCounts.get(identity.derivedMatchKey) ?? 0)
+        : 0;
+      const dedupReason = getIdentityDedupReason(identity, knownPoolIndex, incomingDerivedCount);
+      if (dedupReason === "exact") {
         directApiDedupSkippedByAddress++;
         continue;
       }
-      if (fingerprint != null && knownPoolAddrs.has(fingerprint)) {
-        directApiDedupSkippedByFingerprint++;
+      if (dedupReason === "derived_unique") {
+        directApiDedupSkippedByDerivedIdentity++;
         continue;
       }
 
-      knownPoolAddrs.add(key);
-      if (fingerprint != null) knownPoolAddrs.add(fingerprint);
+      registerKnownPoolIdentity(knownPoolIndex, identity);
       retainedDirectApiPools.push(pool);
     }
 
     if (retainedDirectApiPools.length > 0) {
       const directApiGtPools = convertToGtNewPools(
         retainedDirectApiPools,
-        addressToId,
+        chainAddressToId,
+        symbolToChainScopedIds,
         symbolToIds,
         validationReferences,
       );
       if (directApiGtPools.size > 0) mergeGtPools(metrics, directApiGtPools);
 
       const directApiPriceObs = extractPriceObservations(
-        retainedDirectApiPools, addressToId, symbolToIds, validationReferences,
+        retainedDirectApiPools,
+        chainAddressToId,
+        symbolToChainScopedIds,
+        validationReferences,
       );
       for (const [id, obs] of directApiPriceObs) {
         const existing = priceObservations.get(id) ?? [];
@@ -286,10 +369,10 @@ export async function syncDexLiquidity(
       }
     }
 
-    if (directApiDedupSkippedByAddress > 0 || directApiDedupSkippedByFingerprint > 0) {
+    if (directApiDedupSkippedByAddress > 0 || directApiDedupSkippedByDerivedIdentity > 0) {
       console.log(
-        `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} direct API pools by address and ` +
-        `${directApiDedupSkippedByFingerprint} by fingerprint`,
+        `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} direct API pools by exact identity and ` +
+        `${directApiDedupSkippedByDerivedIdentity} by unique derived identity`,
       );
     }
   }
@@ -297,11 +380,11 @@ export async function syncDexLiquidity(
   const {
     mergedCount: stagedMergedCount,
     skippedCount: stagedSkippedCount,
-    skippedByAddressCount: stagedSkippedByAddressCount,
-    skippedByFingerprintCount: stagedSkippedByFingerprintCount,
+    skippedByExactIdentityCount: stagedSkippedByExactIdentityCount,
+    skippedByUniqueDerivedIdentityCount: stagedSkippedByUniqueDerivedIdentityCount,
     priceObservations: stagedPriceObs,
   } =
-    await mergeStagedPools(db, metrics, knownPoolAddrs, syncStartSec, validationReferences);
+    await mergeStagedPools(db, metrics, knownPoolIndex, syncStartSec, validationReferences);
   for (const [id, obs] of stagedPriceObs) {
     const existing = priceObservations.get(id) ?? [];
     existing.push(...obs);
@@ -315,7 +398,7 @@ export async function syncDexLiquidity(
 
   try {
     const dsFallback = await fetchDsFallbackPools(
-      metrics, priceObservations, knownPoolAddrs, signal, fallbackDeadlineMs, validationReferences,
+      metrics, priceObservations, knownPoolIndex, signal, fallbackDeadlineMs, validationReferences,
     );
     dsFallbackCoins = dsFallback.newPools.size;
     if (dsFallback.newPools.size > 0) mergeGtPools(metrics, dsFallback.newPools);
@@ -353,7 +436,11 @@ export async function syncDexLiquidity(
   );
 
   // 6. Compute composite scores per stablecoin
-  const { scores: scoreResults, globalAgg } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
+  const {
+    scores: scoreResults,
+    globalAgg,
+    retainedPoolsByStablecoin,
+  } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
   const currentCoverage = scoreResults.size;
   const [
     previousCoverageRow,
@@ -461,6 +548,15 @@ export async function syncDexLiquidity(
 
   // 7. Persist primary tables. D1 in Workers rejects manual SQL transaction statements.
   await persistScores(db, metrics, scoreResults, globalAgg, syncStartSec);
+  const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
+    ACTIVE_STABLECOINS.map((meta) => [meta.id, criticalSourceFailures.length === 0]),
+  );
+  const challengerPublication = await publishDexPriceChallengerSnapshots(db, {
+    snapshotAt: syncStartSec,
+    retainedPoolsByStablecoin,
+    sourceCoverageCompleteByStablecoin,
+    minPoolTvlUsd: 1_000_000,
+  });
   await computeDexPrices(db, priceObservations, syncStartSec);
 
   // 8. Write daily historical snapshots
@@ -484,8 +580,8 @@ export async function syncDexLiquidity(
       rowsDropped: 0,
       stagedPoolsMerged: stagedMergedCount,
       stagedPoolsSkipped: stagedSkippedCount,
-      stagedPoolsSkippedByAddress: stagedSkippedByAddressCount,
-      stagedPoolsSkippedByFingerprint: stagedSkippedByFingerprintCount,
+      stagedPoolsSkippedByExactIdentity: stagedSkippedByExactIdentityCount,
+      stagedPoolsSkippedByUniqueDerivedIdentity: stagedSkippedByUniqueDerivedIdentityCount,
       sourceCoverage: {
         dlYieldsAvailable: dataSources.dlYieldsAvailable,
         dlProtocolsAvailable: dataSources.dlProtocolsAvailable,
@@ -505,6 +601,9 @@ export async function syncDexLiquidity(
         priceObservationCoins: priceObservations.size,
         dsFallbackCoins,
         cgTickerFallbackCoins,
+        challengerSnapshotsPublished: challengerPublication.publishedStablecoins,
+        challengerSnapshotsSkipped: challengerPublication.skippedStablecoins,
+        challengerSnapshotTablesMissing: challengerPublication.missingTables,
       },
       failedSources: [...new Set(failedSources)],
       fallbackMode: [...new Set(fallbackSignals)],

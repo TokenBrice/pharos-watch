@@ -7,6 +7,10 @@ import {
   DEX_PRICE_CHECK_UI_MIN_TVL_USD,
 } from "./constants";
 import type { DepegPrimaryTrust, PriceConfidence } from "@shared/types";
+import {
+  loadPublishedDexPoolChallengers,
+  type DexPriceChallengerLoadRow,
+} from "../cron/dex-liquidity/challenger-persistence";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {
@@ -68,8 +72,9 @@ export interface DexPoolSource {
 }
 
 /**
- * Load all qualifying individual pool prices per asset from dex_liquidity.top_pools_json.
- * Used as "pool challengers" — if ANY large pool diverges from consensus,
+ * Load all qualifying individual pool prices per asset from the published challenger snapshot,
+ * with safe legacy fallback when the challenger tables are absent.
+ * Used as "pool challengers" - if ANY large pool diverges from consensus,
  * it signals that aggregators may be picking up small misleading pools
  * while ignoring large pools showing depeg.
  */
@@ -79,82 +84,42 @@ export async function loadDexPoolChallengers(
   maxAgeSec: number,
   nowSec: number,
 ): Promise<Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string }>>> {
-  const result = new Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string }>>();
-  try {
-    const rows = await db
-      .prepare(
-        `SELECT stablecoin_id, top_pools_json, updated_at
-         FROM dex_liquidity
-         WHERE stablecoin_id != '__global__' AND top_pools_json IS NOT NULL`,
-      )
-      .all<{ stablecoin_id: string; top_pools_json: string; updated_at: number }>();
+  const { challengersByStablecoin, diagnostics } = await loadPublishedDexPoolChallengers(
+    db,
+    minPoolTvlUsd,
+    maxAgeSec,
+    nowSec,
+  );
 
-    for (const row of rows.results ?? []) {
-      if (nowSec - row.updated_at > maxAgeSec) continue;
-      let pools: Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown }>;
-      try {
-        pools = JSON.parse(row.top_pools_json);
-      } catch {
-        continue;
-      }
-      if (!Array.isArray(pools) || pools.length === 0) continue;
-
-      const qualifying: Array<{ price: number; tvlUsd: number; protocol: string; chain: string }> = [];
-      for (const pool of pools) {
-        const price = typeof pool.price === "number" ? pool.price : Number(pool.price);
-        const tvlUsd = typeof pool.tvlUsd === "number" ? pool.tvlUsd : Number(pool.tvlUsd);
-        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
-        qualifying.push({
-          price,
-          tvlUsd,
-          protocol: typeof pool.project === "string" ? pool.project : "unknown",
-          chain: typeof pool.chain === "string" ? pool.chain : "unknown",
-        });
-      }
-      if (qualifying.length > 0) {
-        result.set(row.stablecoin_id, qualifying);
-      }
+  if (diagnostics.mode !== "absent") {
+    if (diagnostics.incompletePublishedCoins.length > 0) {
+      console.warn(
+        `[depeg-helpers] Incomplete challenger snapshots fell back for: ${diagnostics.incompletePublishedCoins.join(", ")}`,
+      );
     }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
-      console.error("[depeg-helpers] Unexpected error loading dex pool challengers:", msg);
+    if (diagnostics.emptyPublishedCoins.length > 0) {
+      console.log(
+        `[depeg-helpers] Published empty challenger snapshots for: ${diagnostics.emptyPublishedCoins.join(", ")}`,
+      );
+    }
+    if (diagnostics.legacyFallbackCoins.length > 0 && diagnostics.mode !== "legacy") {
+      console.log(
+        `[depeg-helpers] Legacy challenger fallback used for: ${diagnostics.legacyFallbackCoins.join(", ")}`,
+      );
     }
   }
 
-  if (result.size > 0) return result;
-
-  try {
-    const rows = await db
-      .prepare("SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL")
-      .all<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>();
-
-    for (const row of rows.results ?? []) {
-      if (nowSec - row.updated_at > maxAgeSec) continue;
-      let sources: DexPoolSource[];
-      try {
-        sources = JSON.parse(row.price_sources_json);
-      } catch {
-        continue;
-      }
-      if (!Array.isArray(sources) || sources.length === 0) continue;
-
-      const qualifying: Array<{ price: number; tvlUsd: number; protocol: string; chain: string }> = [];
-      for (const source of sources) {
-        if (source.tvl < minPoolTvlUsd || !Number.isFinite(source.price) || source.price <= 0) continue;
-        qualifying.push({ price: source.price, tvlUsd: source.tvl, protocol: source.protocol, chain: source.chain });
-      }
-      if (qualifying.length > 0) {
-        result.set(row.stablecoin_id, qualifying);
-      }
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
-      console.error("[depeg-helpers] Unexpected error loading legacy dex pool challengers:", msg);
-    }
-  }
-  return result;
+  return new Map(
+    [...challengersByStablecoin.entries()].map(([stablecoinId, rows]) => [
+      stablecoinId,
+      rows.map((row: DexPriceChallengerLoadRow) => ({
+        price: row.priceUsd,
+        tvlUsd: row.tvlUsd,
+        protocol: row.protocol,
+        chain: row.chain,
+      })),
+    ]),
+  );
 }
 
 /** Load per-protocol price breakdowns from dex_prices.price_sources_json for trusted rows. */

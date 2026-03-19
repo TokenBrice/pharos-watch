@@ -12,7 +12,7 @@ function makeCacheRow(key: string, ageSec = 300) {
   return {
     key,
     updated_at: Math.floor(Date.now() / 1000) - ageSec,
-    value: JSON.stringify([]),
+    value: JSON.stringify(key === "fx-rates" ? { peggedEUR: 1.08 } : []),
   };
 }
 
@@ -813,6 +813,73 @@ describe("handleStatus", () => {
     // Info-level cause is emitted when monitor is unavailable (does not affect health status)
     expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(true);
     expect(body.causes.overall.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(true);
+  });
+
+  it("keeps availability degraded and emits FX fallback causes when usable FX sync is fresh but source data is old", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const jobs = Object.keys(CRON_INTERVALS);
+    const cronRows = [
+      ...jobs.map((job) => makeCronRow(job, "ok", 30)),
+      makeCronRow("sync-redemption-backstops", "ok", 30),
+    ];
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          {
+            key: "fx-rates",
+            updated_at: now - 60,
+            value: JSON.stringify({ peggedEUR: 1.08 }),
+          },
+          {
+            key: "fx-rates-meta",
+            updated_at: now - 60,
+            value: JSON.stringify({
+              usableSyncAt: now - 60,
+              mode: "cached-fallback",
+              sourceUpdatedAtByPeg: { peggedEUR: now - 8 * 3600 },
+              sourceModeByPeg: { peggedEUR: "cached" },
+              consecutiveFallbackRuns: 4,
+            }),
+          },
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      caches: Record<string, { mode?: string; sourceStatus?: string }>;
+      causes: { availability: Array<{ code: string }> };
+    };
+
+    expect(body.availabilityStatus).toBe("degraded");
+    expect(body.caches["fx-rates"]).toMatchObject({
+      mode: "cached-fallback",
+      sourceStatus: "degraded",
+    });
+    expect(body.causes.availability.some((cause) => cause.code === "fx_cached_fallback")).toBe(true);
+    expect(body.causes.availability.some((cause) => cause.code === "fx_source_degraded")).toBe(true);
   });
 
   it("keeps data quality healthy when blacklist gaps are low-ratio and not recent", async () => {

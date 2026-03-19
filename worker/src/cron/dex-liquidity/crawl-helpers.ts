@@ -5,6 +5,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, GtNewPool } from "./types";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
+import { makeChainAddressKey } from "./token-resolution";
 
 export type CrawlStats = {
   requests: number;
@@ -48,7 +49,7 @@ export type BuildNewPoolArgs<TRawPool> = {
 export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
   sourceLabel: string;
   tokens: CrawlToken[];
-  addressToId: Map<string, string>;
+  chainAddressToId: Map<string, string>;
   knownPoolAddrs: Set<string>;
   protocolTvlCaps: Map<string, number>;
   newPools: Map<string, TNewPool[]>;
@@ -72,19 +73,20 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
 export type CrawlTokenPoolsResult = { stoppedEarly: boolean };
 
 function resolveStablecoinSide(
+  chain: string,
   stablecoinAddress: string,
   stablecoinId: string,
   baseTokenAddress: string,
   quoteTokenAddress: string,
-  addressToId: Map<string, string>,
+  chainAddressToId: Map<string, string>,
 ): "base" | "quote" | null {
   const addressLower = stablecoinAddress.toLowerCase();
   if (baseTokenAddress === addressLower) return "base";
   if (quoteTokenAddress === addressLower) return "quote";
 
-  const baseId = addressToId.get(baseTokenAddress);
+  const baseId = chainAddressToId.get(makeChainAddressKey(chain, baseTokenAddress));
   if (baseId === stablecoinId) return "base";
-  const quoteId = addressToId.get(quoteTokenAddress);
+  const quoteId = chainAddressToId.get(makeChainAddressKey(chain, quoteTokenAddress));
   if (quoteId === stablecoinId) return "quote";
   return null;
 }
@@ -134,11 +136,12 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         }
 
         const side = resolveStablecoinSide(
+          token.ourChain,
           token.address,
           token.stablecoinId,
           parsed.baseTokenAddress,
           parsed.quoteTokenAddress,
-          config.addressToId,
+          config.chainAddressToId,
         );
         if (!side) continue;
 

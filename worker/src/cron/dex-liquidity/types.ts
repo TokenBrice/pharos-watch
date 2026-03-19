@@ -118,6 +118,10 @@ export interface DexPriceObs {
   tvl: number;
   chain: string;
   protocol: string;
+  poolKey?: string;
+  derivedMatchKey?: string;
+  identityConfidence?: "exact" | "derived_unique" | "derived_ambiguous" | "none";
+  sourceFamily?: string;
 }
 
 // GeckoTerminal response types
@@ -181,7 +185,14 @@ export interface CurvePoolEntry {
 
 export interface SymbolLookups {
   symbolToIds: Map<string, string[]>;
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
   addressToId: Map<string, string>;
+  chainAddressToId: Map<string, string>;
+  contractMetaByChainAddress: Map<string, {
+    stablecoinId: string;
+    decimals: number | null;
+    source: "contract" | "tradedContract";
+  }>;
 }
 
 export interface DataSources {

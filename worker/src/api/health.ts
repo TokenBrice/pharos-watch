@@ -47,14 +47,20 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
   let caches: HealthResponse["caches"] = {};
   let worstRatioMut = 0;
   if (dbHealthy) {
-    const { caches: cacheStatuses, worstRatio, failures } = await buildCacheStatuses(db, now);
+    const { caches: cacheStatuses, worstRatio, failures, statusFloor, warnings: cacheWarnings } = await buildCacheStatuses(db, now);
     caches = cacheStatuses;
     worstRatioMut = Number.isFinite(worstRatio) ? worstRatio : 99;
+    if (statusFloor === "stale" && worstRatioMut < 2.1) {
+      worstRatioMut = 2.1;
+    } else if (statusFloor === "degraded" && worstRatioMut < 1.6) {
+      worstRatioMut = 1.6;
+    }
     if (failures.length > 0) {
       warnings.push(
         `cache-freshness-query-failed: ${failures.map((failure) => failure.key).join(", ")}`,
       );
     }
+    warnings.push(...cacheWarnings);
   } else {
     worstRatioMut = 3;
   }

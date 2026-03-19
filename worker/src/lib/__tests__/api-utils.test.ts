@@ -275,4 +275,66 @@ describe("buildCacheStatuses", () => {
       },
     ]);
   });
+
+  it("uses fx-rates-meta usableSyncAt for cache freshness and exposes stale source warnings separately", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = {
+      prepare: (sql: string) => {
+        const first = async <T>() => {
+          if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+            return { age: 60 } as T;
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => {
+              if (sql.includes("cache WHERE key IN")) {
+                return {
+                  results: [
+                    { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
+                    { key: "stablecoin-charts", updated_at: nowSec - 60, value: "{}" },
+                    { key: "usds-status", updated_at: nowSec - 60, value: "{}" },
+                    { key: "fx-rates", updated_at: nowSec - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+                    {
+                      key: "fx-rates-meta",
+                      updated_at: nowSec - 60,
+                      value: JSON.stringify({
+                        usableSyncAt: nowSec - 60,
+                        mode: "cached-fallback",
+                        sourceUpdatedAtByPeg: { peggedEUR: nowSec - 8 * 3600 },
+                        sourceModeByPeg: { peggedEUR: "cached" },
+                        consecutiveFallbackRuns: 4,
+                      }),
+                    },
+                    { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
+                  ] as T[],
+                  success: true,
+                  meta: {},
+                };
+              }
+              return { results: [] as T[], success: true, meta: {} };
+            },
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches, statusFloor, warnings } = await buildCacheStatuses(db, nowSec);
+
+    expect(caches["fx-rates"]?.ageSeconds).toBe(60);
+    expect(caches["fx-rates"]?.mode).toBe("cached-fallback");
+    expect(caches["fx-rates"]?.sourceStatus).toBe("degraded");
+    expect(caches["fx-rates"]?.consecutiveFallbackRuns).toBe(4);
+    expect(statusFloor).toBe("degraded");
+    expect(warnings[0]).toContain("cached fallback FX rates");
+  });
 });

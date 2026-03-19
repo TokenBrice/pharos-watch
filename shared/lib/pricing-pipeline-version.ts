@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.5",
+  currentVersion: "2.6",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+  {
+    version: "2.6",
+    title: "Published DEX challenger snapshots and durable FX freshness metadata",
+    date: "2026-03-19",
+    effectiveAt: 1773961394,
+    summary:
+      "Pool challenge and depeg confirmation now read dedicated challenger snapshots built from the full retained DEX pool set, while FX reference freshness is tracked separately from usable cached-fallback freshness.",
+    impact: [
+      "Pool challenge no longer depends on dex_liquidity.top_pools_json, so display truncation cannot hide a large challenger pool",
+      "Published challenger snapshots are coverage-gated per stablecoin and fall back safely during migration gaps",
+      "Cached FX fallback runs preserve per-peg source timestamps and source modes instead of refreshing them implicitly",
+      "Health and status now report usable FX freshness, underlying source freshness, and consecutive fallback runs separately",
+      "Non-USD and commodity validation consumers now read shared FX state instead of inferring freshness from cache updated_at alone",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "2.5",
     title: "Kraken and Bitstamp primary pricing, Jupiter Solana fallback, Chainlink reference overlays",

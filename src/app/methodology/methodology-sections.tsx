@@ -319,8 +319,8 @@ export function MethodologySections() {
                 <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best single source</li>
                 <li>
                   <span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are soft aggregators
-                  (CG, DL-list, DEX average), check each large priced DEX pool (&ge;$100K TVL) from the current liquidity
-                  snapshot. If any diverges &ge;500 bps from consensus, downgrade to <code className="text-xs">low</code> and
+                  (CG, DL-list, DEX average), check each large priced DEX pool (&ge;$100K TVL) from the published challenger
+                  snapshot built from the full retained pool set. If any diverges &ge;500 bps from consensus, downgrade to <code className="text-xs">low</code> and
                   replace the price with a TVL-weighted mean of all qualifying individual pool prices &mdash; on-chain liquidity is a more honest signal
                   when aggregators share upstream data
                 </li>
@@ -1219,11 +1219,21 @@ export function MethodologySections() {
             replace overlapping DeFiLlama pools before staged or fallback discovery sources are merged.
           </p>
           <p>
+            Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is
+            unique on that chain. Pool dedupe uses exact ids plus conservative derived identity keys, so legitimate
+            same-pair pools are not collapsed just because their token set matches.
+          </p>
+          <p>
             When direct APIs expose pool-inventory metadata, Balancer, Raydium, and Orca now contribute measured
             balance health and fee detail instead of neutral placeholders. Balancer weighted pools are normalized
             against target token weights before the balance ratio is computed. Fluid now reads reserves and fee detail
             from the official DexReservesResolver on Ethereum, Arbitrum, Base, and Polygon; unsupported Fluid chains
             such as BSC and Plasma still fall back to neutral balance.
+          </p>
+          <p>
+            Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed
+            before DEX price aggregation. A separate challenger snapshot preserves the full retained pool set for depeg
+            checks, instead of relying on the visible top-pools subset.
           </p>
           <p>
             After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score

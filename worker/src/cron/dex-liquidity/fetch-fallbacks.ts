@@ -7,12 +7,20 @@ import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP, getDsTrackedTokenPriceUsd
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
-import { buildPoolFingerprint, getTrackedContracts } from "./pool-helpers";
+import { getTrackedContracts } from "./pool-helpers";
 import {
   CG_TICKERS_RATE_MS,
   ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS,
 } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
+import {
+  buildPoolIdentity,
+  countDerivedMatchKeys,
+  getIdentityDedupReason,
+  registerKnownPoolIdentity,
+  type KnownPoolIdentityIndex,
+  type PoolIdentity,
+} from "./pool-identity";
 
 export function getFallbackTargets(
   metrics: Map<string, LiquidityMetrics>,
@@ -36,7 +44,7 @@ export function getFallbackTargets(
 export async function fetchDsFallbackPools(
   metrics: Map<string, LiquidityMetrics>,
   priceObservations: Map<string, DexPriceObs[]>,
-  knownPoolAddrs: Set<string>,
+  knownPoolIndex: KnownPoolIdentityIndex,
   signal?: AbortSignal,
   deadlineMs?: number,
   references?: PriceValidationReferences,
@@ -44,6 +52,11 @@ export async function fetchDsFallbackPools(
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
   const nowSec = Date.now() / 1000;
+  const candidates: Array<{
+    stablecoinId: string;
+    pool: GtNewPool;
+    identity: PoolIdentity;
+  }> = [];
 
   const targetCoins = getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true });
 
@@ -98,16 +111,25 @@ export async function fetchDsFallbackPools(
           isPlausibleDexObservationPrice(meta.id, priceUsd, references) &&
           tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
         ) {
+          const identity = buildPoolIdentity({
+            chain: contract.chain,
+            protocol: pair.dexId,
+            poolAddressOrId: pair.pairAddress,
+            tokenAddresses: [baseAddr, quoteAddr],
+          });
           const obs = priceObs.get(meta.id) ?? [];
-          obs.push({ price: priceUsd, tvl, chain: contract.chain, protocol: `dexscreener-${pair.dexId}` });
+          obs.push({
+            price: priceUsd,
+            tvl,
+            chain: contract.chain,
+            protocol: pair.dexId,
+            poolKey: identity.exactPoolKey ?? undefined,
+            derivedMatchKey: identity.derivedMatchKey ?? undefined,
+            identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+            sourceFamily: "dexscreener",
+          });
           priceObs.set(meta.id, obs);
         }
-
-        // Dedup against known pool addresses + token-pair fingerprints
-        const poolKey = `${contract.chain}:${pair.pairAddress.toLowerCase()}`;
-        const fpKey = buildPoolFingerprint(contract.chain, pair.dexId, [baseAddr, quoteAddr]);
-        if (knownPoolAddrs.has(poolKey) || (fpKey != null && knownPoolAddrs.has(fpKey))) continue;
-        knownPoolAddrs.add(poolKey);
 
         // Compute maturity
         let maturityDays = 0;
@@ -128,8 +150,15 @@ export async function fetchDsFallbackPools(
 
         const symbolStr = `${pair.baseToken.symbol} / ${pair.quoteToken.symbol}`;
 
-        const poolList = newPools.get(meta.id) ?? [];
-        poolList.push({
+        candidates.push({
+          stablecoinId: meta.id,
+          identity: buildPoolIdentity({
+            chain: contract.chain,
+            protocol: pair.dexId,
+            poolAddressOrId: pair.pairAddress,
+            tokenAddresses: [baseAddr, quoteAddr],
+          }),
+          pool: {
           address: pair.pairAddress.toLowerCase(),
           chain: contract.chain,
           dexId: pair.dexId,
@@ -142,11 +171,25 @@ export async function fetchDsFallbackPools(
           price: priceUsd ?? 0,
           symbol: symbolStr,
           sourceFamily: "dexscreener",
+          },
         });
-        newPools.set(meta.id, poolList);
-        poolsFound++;
       }
     }
+  }
+
+  const derivedCounts = countDerivedMatchKeys(candidates.map((candidate) => candidate.identity));
+  for (const candidate of candidates) {
+    const incomingDerivedCount = candidate.identity.derivedMatchKey
+      ? (derivedCounts.get(candidate.identity.derivedMatchKey) ?? 0)
+      : 0;
+    const dedupReason = getIdentityDedupReason(candidate.identity, knownPoolIndex, incomingDerivedCount);
+    if (dedupReason) continue;
+
+    registerKnownPoolIdentity(knownPoolIndex, candidate.identity);
+    const poolList = newPools.get(candidate.stablecoinId) ?? [];
+    poolList.push(candidate.pool);
+    newPools.set(candidate.stablecoinId, poolList);
+    poolsFound++;
   }
 
   console.log(

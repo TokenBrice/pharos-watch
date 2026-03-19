@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  convertToGtNewPools,
-  extractPriceObservations,
+  convertToGtNewPools as convertToGtNewPoolsImpl,
+  extractPriceObservations as extractPriceObservationsImpl,
   DIRECT_API_POOL_MIN_TVL_USD,
   DIRECT_API_PRICE_MIN_TVL_USD,
   type DexApiPool,
@@ -22,6 +22,61 @@ const MOCK_POOL: DexApiPool = {
   feeRate: 0.0001,
   balances: [250_000, 250_000],
 };
+
+function buildChainAddressToId(
+  addressToId: Map<string, string>,
+  chains: string[],
+): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const chain of chains) {
+    for (const [address, stablecoinId] of addressToId) {
+      result.set(`${chain.toLowerCase()}:${address.toLowerCase()}`, stablecoinId);
+    }
+  }
+  return result;
+}
+
+function buildSymbolToChainScopedIds(
+  symbolToIds: Map<string, string[]>,
+  chains: string[],
+): Map<string, Map<string, string[]>> {
+  const result = new Map<string, Map<string, string[]>>();
+  for (const [symbol, ids] of symbolToIds) {
+    const scoped = new Map<string, string[]>();
+    for (const chain of chains) {
+      scoped.set(chain.toLowerCase(), [...ids]);
+    }
+    result.set(symbol.trim().toUpperCase(), scoped);
+  }
+  return result;
+}
+
+function convertToGtNewPools(
+  pools: DexApiPool[],
+  addressToId: Map<string, string>,
+  symbolToIds: Map<string, string[]> = new Map(),
+) {
+  const chains = [...new Set(pools.map((pool) => pool.chain.toLowerCase()))];
+  return convertToGtNewPoolsImpl(
+    pools,
+    buildChainAddressToId(addressToId, chains),
+    buildSymbolToChainScopedIds(symbolToIds, chains),
+    symbolToIds,
+  );
+}
+
+function extractPriceObservations(
+  pools: DexApiPool[],
+  addressToId: Map<string, string>,
+  symbolToIds: Map<string, string[]> = new Map(),
+) {
+  const chains = [...new Set(pools.map((pool) => pool.chain.toLowerCase()))];
+  return extractPriceObservationsImpl(
+    pools,
+    buildChainAddressToId(addressToId, chains),
+    buildSymbolToChainScopedIds(symbolToIds, chains),
+  );
+}
 
 // ---------------------------------------------------------------------------
 // convertToGtNewPools

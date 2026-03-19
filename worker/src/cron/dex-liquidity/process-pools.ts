@@ -6,13 +6,21 @@ import {
   normalizeProtocol, computePoolPairQuality, computePoolStress,
   initMetrics, isCryptoSwap,
 } from "./pool-helpers";
+import {
+  getChainScopedSymbolIds,
+  getUniqueChainScopedSymbolId,
+  learnResolvedChainAddress,
+  makeChainAddressKey,
+} from "./token-resolution";
 
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
 export function processPoolMetrics(
   pools: LlamaPool[],
   dexProjects: Set<string>,
   symbolToIds: Map<string, string[]>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   addressToId: Map<string, string>,
+  chainAddressToId: Map<string, string>,
   curvePoolMap: Map<string, CurvePoolEntry>,
   uniV3PoolFees: Map<string, number>,
   uniV3SymbolFees: Map<string, number>,
@@ -38,17 +46,21 @@ export function processPoolMetrics(
     // Step 1: Address-based matching from underlyingTokens (most reliable)
     if (pool.underlyingTokens?.length) {
       for (const addr of pool.underlyingTokens) {
-        const id = addressToId.get(addr.toLowerCase());
+        const id = chainAddressToId.get(makeChainAddressKey(pool.chain, addr));
         if (id) matchedIds.add(id);
       }
-      // Learn addresses for unambiguous symbols (enrich addressToId for future pools)
+      // Learn addresses for unambiguous symbols (enrich chainAddressToId for future pools)
       if (poolSymbols.length === pool.underlyingTokens.length) {
         // 1:1 correspondence possible — learn from unambiguous symbols
         for (let ti = 0; ti < poolSymbols.length; ti++) {
-          const sym = poolSymbols[ti].toUpperCase();
-          const ids = symbolToIds.get(sym);
-          if (ids?.length === 1) {
-            addressToId.set(pool.underlyingTokens[ti].toLowerCase(), ids[0]);
+          const id = getUniqueChainScopedSymbolId(poolSymbols[ti], pool.chain, { symbolToChainScopedIds });
+          if (id) {
+            learnResolvedChainAddress(
+              { chainAddressToId },
+              pool.chain,
+              pool.underlyingTokens[ti] ?? "",
+              id,
+            );
           }
         }
       }
@@ -56,9 +68,8 @@ export function processPoolMetrics(
 
     // Step 2: Symbol-based fallback (with collision avoidance)
     for (const sym of poolSymbols) {
-      const symKey = sym.toUpperCase();
-      const ids = symbolToIds.get(symKey);
-      if (!ids) continue;
+      const ids = getChainScopedSymbolIds(sym, pool.chain, { symbolToChainScopedIds });
+      if (ids.length === 0) continue;
       if (ids.length === 1) {
         // Unambiguous symbol → always safe to add
         matchedIds.add(ids[0]);

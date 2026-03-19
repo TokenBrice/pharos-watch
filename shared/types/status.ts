@@ -6,12 +6,24 @@ export interface CacheStatus {
   ageSeconds: number | null;
   maxAge: number;
   healthy: boolean;
+  mode?: "live" | "cached-fallback";
+  sourceUpdatedAt?: number | null;
+  sourceAgeSeconds?: number | null;
+  sourceStatus?: "fresh" | "degraded" | "stale" | "none";
+  warning?: string | null;
+  consecutiveFallbackRuns?: number;
 }
 
 const CacheStatusSchema = z.object({
   ageSeconds: z.number().nullable(),
   maxAge: z.number(),
   healthy: z.boolean(),
+  mode: z.enum(["live", "cached-fallback"]).optional(),
+  sourceUpdatedAt: z.number().nullable().optional(),
+  sourceAgeSeconds: z.number().nullable().optional(),
+  sourceStatus: z.enum(["fresh", "degraded", "stale", "none"]).optional(),
+  warning: z.string().nullable().optional(),
+  consecutiveFallbackRuns: z.number().optional(),
 });
 
 export interface CronRun {

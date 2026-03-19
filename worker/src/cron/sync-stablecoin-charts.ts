@@ -1,7 +1,8 @@
-import { getCache, setCacheIfNewer } from "../lib/db-cache";
+import { setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
+import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-state";
 
 /** Implied rate must be within 1/N to Nx of our cached FX rate.
  *  3x tolerates multi-year FX drift (e.g. ARS ~10x over 4 years won't hit
@@ -94,33 +95,30 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
   // Fix corrupted totalCirculatingUSD values (e.g. DefiLlama RUB bug Feb 2026)
   // by validating implied FX rates against known bounds and recomputing from
   // totalCirculating * cached FX rate when out of range.
-  const fxCache = await getCache(db, "fx-rates");
+  const fxState = await loadFxRateState(db);
   let fixes = 0;
-  if (fxCache) {
-    try {
-      const fxRates = JSON.parse(fxCache.value) as Record<string, number>;
-      for (const point of raw) {
-        const circ = point.totalCirculating;
-        const usd = point.totalCirculatingUSD;
-        if (!circ || !usd) continue;
-        for (const key of Object.keys(usd)) {
-          if (key === "peggedUSD") continue;
-          const rawVal = circ[key];
-          if (!rawVal || rawVal <= 0) continue;
-          const fxRate = fxRates[key];
-          if (!fxRate || fxRate <= 0) continue;
-          const impliedRate = usd[key] / rawVal;
-          if (impliedRate < fxRate / RATE_TOLERANCE || impliedRate > fxRate * RATE_TOLERANCE) {
-            usd[key] = rawVal * fxRate;
-            fixes++;
-          }
+  if (fxState) {
+    for (const point of raw) {
+      const circ = point.totalCirculating;
+      const usd = point.totalCirculatingUSD;
+      if (!circ || !usd) continue;
+      for (const key of Object.keys(usd)) {
+        if (key === "peggedUSD") continue;
+        const rawVal = circ[key];
+        if (!rawVal || rawVal <= 0) continue;
+        const referenceType = getFxReferenceTypeFromState(fxState, key, 6 * 3600);
+        if (referenceType !== "fresh" && referenceType !== "static") continue;
+        const fxRate = fxState.rates[key];
+        if (!fxRate || fxRate <= 0) continue;
+        const impliedRate = usd[key] / rawVal;
+        if (impliedRate < fxRate / RATE_TOLERANCE || impliedRate > fxRate * RATE_TOLERANCE) {
+          usd[key] = rawVal * fxRate;
+          fixes++;
         }
       }
-      if (fixes > 0) {
-        console.log(`[sync-charts] Fixed ${fixes} corrupted totalCirculatingUSD values`);
-      }
-    } catch {
-      console.warn("[sync-charts] Could not parse cached FX rates, skipping USD fix");
+    }
+    if (fixes > 0) {
+      console.log(`[sync-charts] Fixed ${fixes} corrupted totalCirculatingUSD values`);
     }
   }
 

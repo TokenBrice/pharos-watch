@@ -216,7 +216,13 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
   }
 
   // 2. Cache freshness
-  const { caches, worstRatio: rawWorstCacheRatio, failures: cacheFailures } = await buildCacheStatuses(db, now);
+  const {
+    caches,
+    worstRatio: rawWorstCacheRatio,
+    failures: cacheFailures,
+    statusFloor: cacheStatusFloor,
+    warnings: cacheWarnings,
+  } = await buildCacheStatuses(db, now);
   const worstCacheRatio = Number.isFinite(rawWorstCacheRatio) ? rawWorstCacheRatio : 99;
 
   // 3. Cron run history (batch query)
@@ -407,9 +413,9 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
 
   // 5. Raw status synthesis
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
-    worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale || anyCronError || unhealthyCrons >= 3
+    cacheStatusFloor === "stale" || anyCronError || unhealthyCrons >= 3
       ? "stale"
-      : worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded || unhealthyCrons > 0
+      : cacheStatusFloor === "degraded" || unhealthyCrons > 0
         ? "degraded"
         : "healthy";
   const availabilityStatus: StatusResponse["availabilityStatus"] = dbHealthy
@@ -479,6 +485,54 @@ async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusC
       severity: "warning",
       message: `Cache freshness diagnostics were incomplete for: ${cacheTargets}.`,
     });
+  }
+  const fxCache = caches["fx-rates"];
+  if (fxCache?.mode === "cached-fallback") {
+    pushCause(availabilityCauses, {
+      code: "fx_cached_fallback",
+      layer: "availability",
+      severity: fxCache.consecutiveFallbackRuns != null && fxCache.consecutiveFallbackRuns >= 4 ? "warning" : "info",
+      message:
+        fxCache.warning ??
+        `FX references are running in cached fallback mode (${fxCache.consecutiveFallbackRuns ?? 0} consecutive runs).`,
+      metric: "fxFallbackRuns",
+      value: fxCache.consecutiveFallbackRuns,
+      threshold: 4,
+    });
+  }
+  if (fxCache?.sourceStatus === "stale") {
+    pushCause(availabilityCauses, {
+      code: "fx_source_stale",
+      layer: "availability",
+      severity: "critical",
+      message:
+        fxCache.warning ??
+        "Non-USD FX reference source data is stale even though usable FX rates still exist.",
+      metric: "fxSourceAgeSeconds",
+      value: fxCache.sourceAgeSeconds ?? undefined,
+      threshold: 24 * 3600,
+    });
+  } else if (fxCache?.sourceStatus === "degraded") {
+    pushCause(availabilityCauses, {
+      code: "fx_source_degraded",
+      layer: "availability",
+      severity: "warning",
+      message:
+        fxCache.warning ??
+        "Non-USD FX reference source data is older than the degraded freshness window.",
+      metric: "fxSourceAgeSeconds",
+      value: fxCache.sourceAgeSeconds ?? undefined,
+      threshold: 6 * 3600,
+    });
+  } else if (cacheWarnings.length > 0) {
+    for (const warning of cacheWarnings) {
+      pushCause(availabilityCauses, {
+        code: "cache_warning",
+        layer: "availability",
+        severity: "info",
+        message: warning,
+      });
+    }
   }
   if (cronHistoryQueryFailed) {
     pushCause(availabilityCauses, {

@@ -122,4 +122,53 @@ describe("syncStablecoinCharts", () => {
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Unexpected data length"));
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
+
+  it("skips FX-based repair when the source freshness is stale even if usable sync is fresh", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([
+      {
+        match: "stablecoincharts/all",
+        body: [
+          ...makeRawChartPoints(119, nowSec),
+          {
+            date: nowSec - 60,
+            totalCirculating: { peggedEUR: 100 },
+            totalCirculatingUSD: { peggedEUR: 10_000 },
+          },
+        ],
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedEUR: 1.08 }),
+          updated_at: nowSec - 60,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: nowSec - 60,
+            mode: "cached-fallback",
+            sourceUpdatedAtByPeg: { peggedEUR: nowSec - 9 * 3600 },
+            sourceModeByPeg: { peggedEUR: "cached" },
+            consecutiveFallbackRuns: 2,
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+    ]);
+
+    const result = await syncStablecoinCharts(db);
+    expect(result.itemCount).toBeGreaterThan(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as { fxFixes: number };
+    expect(metadata.fxFixes).toBe(0);
+  });
 });

@@ -34,7 +34,7 @@ function buildCrawlTokens(chainAddresses: Map<string, ProviderChainAddress[]>): 
 /** Crawl CG onchain pools for all tracked stablecoins.
  *  Budgeted so CG + GT-only crawls still leave room for scoring/persistence. */
 export async function fetchCgPools(
-  addressToId: Map<string, string>,
+  chainAddressToId: Map<string, string>,
   knownPoolAddrs: Set<string>,
   protocolTvlCaps: Map<string, number>,
   signal?: AbortSignal,
@@ -50,7 +50,7 @@ export async function fetchCgPools(
   await crawlTokenPools({
     sourceLabel: "CG",
     tokens: allTokens,
-    addressToId,
+    chainAddressToId,
     knownPoolAddrs,
     protocolTvlCaps,
     newPools,
@@ -247,7 +247,7 @@ export function mergeCgPools(
 /** Crawl GT pools for all tracked stablecoins, dedup against known pools.
  *  Returns new pool data and price observations. */
 export async function fetchGtPools(
-  addressToId: Map<string, string>,
+  chainAddressToId: Map<string, string>,
   knownPoolAddrs: Set<string>,
   protocolTvlCaps: Map<string, number>,
   signal?: AbortSignal,
@@ -268,7 +268,7 @@ export async function fetchGtPools(
   const { stoppedEarly } = await crawlTokenPools({
     sourceLabel: "GT",
     tokens: allTokens,
-    addressToId,
+    chainAddressToId,
     knownPoolAddrs,
     protocolTvlCaps,
     newPools,

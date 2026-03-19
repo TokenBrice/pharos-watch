@@ -4,9 +4,16 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
-import { buildPoolFingerprint, getGtDexQuality } from "./pool-helpers";
+import { getGtDexQuality } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgNewPool, GtNewPool, LiquidityMetrics, DexPriceObs } from "./types";
+import {
+  buildPoolIdentity,
+  countDerivedMatchKeys,
+  getIdentityDedupReason,
+  registerKnownPoolIdentity,
+  type KnownPoolIdentityIndex,
+} from "./pool-identity";
 
 interface StagedPoolRow {
   pool_id: string;
@@ -133,14 +140,14 @@ function resolveStagedPoolProfile(stagedPool: StagedPool): {
 export async function mergeStagedPools(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
-  knownPoolAddrs: Set<string>,
+  knownPoolIndex: KnownPoolIdentityIndex,
   nowSec: number,
   references?: PriceValidationReferences,
 ): Promise<{
   mergedCount: number;
   skippedCount: number;
-  skippedByAddressCount: number;
-  skippedByFingerprintCount: number;
+  skippedByExactIdentityCount: number;
+  skippedByUniqueDerivedIdentityCount: number;
   priceObservations: Map<string, DexPriceObs[]>;
 }> {
   let rows: StagedPoolRow[];
@@ -159,8 +166,8 @@ export async function mergeStagedPools(
     return {
       mergedCount: 0,
       skippedCount: 0,
-      skippedByAddressCount: 0,
-      skippedByFingerprintCount: 0,
+      skippedByExactIdentityCount: 0,
+      skippedByUniqueDerivedIdentityCount: 0,
       priceObservations: new Map(),
     };
   }
@@ -169,18 +176,40 @@ export async function mergeStagedPools(
   const gtPoolMap = new Map<string, GtNewPool[]>();
   const stagedPriceObs = new Map<string, DexPriceObs[]>();
   let skippedCount = 0;
-  let addressSkipped = 0;
-  let fingerprintSkipped = 0;
+  let exactIdentitySkipped = 0;
+  let uniqueDerivedIdentitySkipped = 0;
 
-  for (const row of rows) {
-    const stagedPool = toStagedPool(row);
-    if (!stagedPool.poolId || !stagedPool.stablecoinId) continue;
+  const stagedEntries = rows
+    .map((row) => {
+      const stagedPool = toStagedPool(row);
+      if (!stagedPool.poolId || !stagedPool.stablecoinId) return null;
 
-    const { dexId, poolType, qualityMultiplier } = resolveStagedPoolProfile(stagedPool);
-    const fingerprint = buildPoolFingerprint(stagedPool.chain, dexId, [
-      stagedPool.baseToken ?? "",
-      stagedPool.quoteToken ?? "",
-    ]);
+      const profile = resolveStagedPoolProfile(stagedPool);
+      const poolAddressOrId = stagedPool.poolId.includes(":")
+        ? stagedPool.poolId.split(":").slice(1).join(":")
+        : stagedPool.poolId;
+      const identity = buildPoolIdentity({
+        chain: stagedPool.chain,
+        protocol: profile.dexId,
+        poolAddressOrId,
+        tokenAddresses: [stagedPool.baseToken ?? "", stagedPool.quoteToken ?? ""],
+        poolType: profile.poolType,
+        feeTierBps: stagedPool.feeTier,
+        isStable: stagedPool.isStable,
+      });
+      return {
+        stagedPool,
+        dexId: profile.dexId,
+        poolType: profile.poolType,
+        qualityMultiplier: profile.qualityMultiplier,
+        identity,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+  const stagedDerivedCounts = countDerivedMatchKeys(stagedEntries.map((entry) => entry.identity));
+
+  for (const entry of stagedEntries) {
+    const { stagedPool, dexId, poolType, qualityMultiplier, identity } = entry;
 
     // Compute confidence and adjusted TVL early — needed for price observation gate
     const ageHours = (nowSec - stagedPool.refreshedAt) / 3600;
@@ -205,27 +234,26 @@ export async function mergeStagedPools(
         price: stagedPool.priceUsd,
         tvl: adjustedTvl,
         chain: stagedPool.chain,
-        protocol: `staged-${stagedPool.source}-${dexId}`,
+        protocol: dexId,
+        poolKey: identity.exactPoolKey ?? undefined,
+        derivedMatchKey: identity.derivedMatchKey ?? undefined,
+        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+        sourceFamily: stagedPool.source,
       });
       stagedPriceObs.set(stagedPool.stablecoinId, obs);
     }
 
-    // Dedup check — skip pool metrics merge for known pools.
-    // Note: Orderbook pools (poolId starting with "orderbook:") naturally skip
-    // fingerprint dedup because they lack token addresses (fingerprint returns null
-    // from buildPoolFingerprint when normalized.length < 2). They are only deduped
-    // by exact poolId match.
-    const addressKnown = knownPoolAddrs.has(stagedPool.poolId);
-    const fingerprintKnown = fingerprint != null && knownPoolAddrs.has(fingerprint);
-    if (addressKnown || fingerprintKnown) {
+    const incomingDerivedCount = identity.derivedMatchKey
+      ? (stagedDerivedCounts.get(identity.derivedMatchKey) ?? 0)
+      : 0;
+    const dedupReason = getIdentityDedupReason(identity, knownPoolIndex, incomingDerivedCount);
+    if (dedupReason) {
       skippedCount++;
-      if (addressKnown) {
-        addressSkipped++;
-      } else if (fingerprintKnown) {
-        fingerprintSkipped++;
-      }
+      if (dedupReason === "exact") exactIdentitySkipped++;
+      if (dedupReason === "derived_unique") uniqueDerivedIdentitySkipped++;
       continue;
     }
+    registerKnownPoolIdentity(knownPoolIndex, identity);
 
     const adjustedVolume = (stagedPool.volume24h ?? 0) * confidence;
     const address = stagedPool.poolId.split(":")[1] ?? stagedPool.poolId;
@@ -273,8 +301,8 @@ export async function mergeStagedPools(
     });
   }
 
-  if (fingerprintSkipped > 0) {
-    console.log(`[dex-liquidity] Skipped ${fingerprintSkipped} staged pools via fingerprint dedup`);
+  if (uniqueDerivedIdentitySkipped > 0) {
+    console.log(`[dex-liquidity] Skipped ${uniqueDerivedIdentitySkipped} staged pools via unique derived identity`);
   }
 
   let mergedCount = 0;
@@ -287,8 +315,8 @@ export async function mergeStagedPools(
   return {
     mergedCount,
     skippedCount,
-    skippedByAddressCount: addressSkipped,
-    skippedByFingerprintCount: fingerprintSkipped,
+    skippedByExactIdentityCount: exactIdentitySkipped,
+    skippedByUniqueDerivedIdentityCount: uniqueDerivedIdentitySkipped,
     priceObservations: stagedPriceObs,
   };
 }

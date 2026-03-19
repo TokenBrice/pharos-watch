@@ -76,7 +76,7 @@ describe("handleHealth", () => {
           { key: "stablecoins", updated_at: now - 60, value: "{}" },
           { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
           { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: "{}" },
+          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
           { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
         ],
       },
@@ -153,7 +153,7 @@ describe("handleHealth", () => {
           { key: "stablecoins", updated_at: now - 60, value: "{}" },
           { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
           { key: "usds-status", updated_at: now - 60, value: "{}" },
-          { key: "fx-rates", updated_at: now - 60, value: "{}" },
+          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
           { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
         ],
       },
@@ -181,5 +181,52 @@ describe("handleHealth", () => {
 
     expect(body.status).toBe("degraded");
     expect(body.warnings.some((warning) => warning.startsWith("blacklist-query-failed:"))).toBe(true);
+  });
+
+  it("keeps health degraded rather than stale when FX is in repeated cached-fallback with fresh usable sync", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          { key: "stablecoins", updated_at: now - 60, value: "{}" },
+          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
+          { key: "usds-status", updated_at: now - 60, value: "{}" },
+          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+          {
+            key: "fx-rates-meta",
+            updated_at: now - 60,
+            value: JSON.stringify({
+              usableSyncAt: now - 60,
+              mode: "cached-fallback",
+              sourceUpdatedAtByPeg: { peggedEUR: now - 8 * 3600 },
+              sourceModeByPeg: { peggedEUR: "cached" },
+              consecutiveFallbackRuns: 4,
+            }),
+          },
+          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
+      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
+      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
+      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+    ]);
+
+    const res = await handleHealth(db);
+    const body = (await res.json()) as { status: string; warnings: string[]; caches: Record<string, { mode?: string; sourceStatus?: string }> };
+
+    expect(body.status).toBe("degraded");
+    expect(body.caches["fx-rates"]).toMatchObject({
+      mode: "cached-fallback",
+      sourceStatus: "degraded",
+    });
+    expect(body.warnings.some((warning) => warning.includes("cached fallback FX rates"))).toBe(true);
   });
 });

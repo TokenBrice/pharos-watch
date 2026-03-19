@@ -5,6 +5,7 @@ import { setCacheIfNewer, getCache } from "../../lib/db-cache";
 import type { CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PriceValidationReferences } from "../../lib/price-validation";
+import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
 
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
@@ -244,37 +245,67 @@ export function mergeSupplementalLastKnownGood(
 
 export async function loadFreshFxRates(
   db: D1Database,
-  syncStartSec: number,
+  _syncStartSec: number,
   logPrefix = "[sync-stablecoins]",
 ): Promise<{
   fxFallbackRates?: Record<string, number>;
   validationReferences?: PriceValidationReferences;
 }> {
-  const fxCache = await getCache(db, "fx-rates");
-  if (!fxCache) {
+  const fxState = await loadFxRateState(db);
+  if (!fxState) {
     return {};
   }
 
-  const fxAgeSec = Math.floor(Date.now() / 1000) - fxCache.updatedAt;
-  if (fxAgeSec > FX_REFERENCE_MAX_AGE_SEC) {
-    console.warn(`${logPrefix} Ignoring stale FX cache (${fxAgeSec}s old)`);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const typeByPeg: Record<string, PriceValidationReferences["type"]> = {};
+  const updatedAtByPeg: Record<string, number | null> = {};
+  const freshOrStaticRates: Record<string, number> = {};
+  let hasStalePeg = false;
+  let globalType: PriceValidationReferences["type"] = "none";
+  let globalUpdatedAt: number | null = null;
+
+  for (const pegKey of Object.keys(fxState.rates)) {
+    const type = getFxReferenceTypeFromState(fxState, pegKey, FX_REFERENCE_MAX_AGE_SEC, nowSec);
+    typeByPeg[pegKey] = type;
+    updatedAtByPeg[pegKey] = fxState.sourceUpdatedAtByPeg[pegKey] ?? null;
+    if (type === "fresh" || type === "static") {
+      freshOrStaticRates[pegKey] = fxState.rates[pegKey];
+      globalType = type === "fresh" ? "fresh" : globalType === "none" ? "static" : globalType;
+      if (updatedAtByPeg[pegKey] != null) {
+        globalUpdatedAt =
+          globalUpdatedAt == null
+            ? updatedAtByPeg[pegKey]
+            : Math.min(globalUpdatedAt, updatedAtByPeg[pegKey] as number);
+      }
+    } else if (type === "stale") {
+      hasStalePeg = true;
+      globalType = "stale";
+    }
+  }
+
+  if (Object.keys(freshOrStaticRates).length === 0) {
+    const ageDescriptor =
+      fxState.mode === "cached-fallback"
+        ? `${fxState.usableAgeSec}s usable age`
+        : `${Math.max(0, nowSec - fxState.usableSyncAt)}s usable age`;
+    console.warn(`${logPrefix} Ignoring FX references with no fresh source data (${ageDescriptor})`);
     return {};
   }
 
-  try {
-    const fxFallbackRates = JSON.parse(fxCache.value) as Record<string, number>;
-    return {
-      fxFallbackRates,
-      validationReferences: {
-        rates: fxFallbackRates,
-        type: "fresh",
-        updatedAt: fxCache.updatedAt ?? syncStartSec,
-      },
-    };
-  } catch (err) {
-    console.warn(`${logPrefix} Failed to parse FX cache:`, err);
-    return {};
+  if (hasStalePeg) {
+    console.warn(`${logPrefix} Excluding stale FX source entries while keeping fresh/static references`);
   }
+
+  return {
+    fxFallbackRates: freshOrStaticRates,
+    validationReferences: {
+      rates: fxState.rates,
+      type: globalType,
+      updatedAt: globalUpdatedAt,
+      updatedAtByPeg,
+      typeByPeg,
+    },
+  };
 }
 
 export { StablecoinListResponseSchema };

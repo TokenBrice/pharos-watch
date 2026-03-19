@@ -1,5 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { getCache } from "./db-cache";
+import { getFxReferenceTypeFromState, loadFxRateState } from "./fx-rate-state";
 
 export type PriceValidationMode =
   | "primary_authoritative"
@@ -25,6 +25,8 @@ export interface PriceValidationReferences {
   rates: Record<string, number>;
   type: PriceReferenceType;
   updatedAt: number | null;
+  updatedAtByPeg?: Record<string, number | null>;
+  typeByPeg?: Record<string, PriceReferenceType>;
 }
 
 export interface PriceValidationDecision {
@@ -200,8 +202,8 @@ export async function loadPriceValidationReferences(
   const staticRates = sanitizeRates(opts?.staticRates);
 
   try {
-    const cached = await getCache(db, "fx-rates");
-    if (!cached) {
+    const state = await loadFxRateState(db);
+    if (!state) {
       return {
         rates: staticRates,
         type: Object.keys(staticRates).length > 0 ? "static" : "none",
@@ -209,20 +211,46 @@ export async function loadPriceValidationReferences(
       };
     }
 
-    const rates = sanitizeRates(JSON.parse(cached.value));
+    const rates = sanitizeRates(state.rates);
     if (Object.keys(rates).length === 0) {
       return {
         rates: staticRates,
         type: Object.keys(staticRates).length > 0 ? "static" : "none",
-        updatedAt: cached.updatedAt,
+        updatedAt: state.usableSyncAt,
       };
     }
 
-    const ageSec = Math.max(0, Math.floor(Date.now() / 1000) - cached.updatedAt);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const typeByPeg: Record<string, PriceReferenceType> = {};
+    const updatedAtByPeg: Record<string, number | null> = {};
+    let globalType: PriceReferenceType = "none";
+    let globalUpdatedAt: number | null = null;
+
+    for (const pegKey of Object.keys(rates)) {
+      const type = getFxReferenceTypeFromState(state, pegKey, maxAgeSec, nowSec);
+      typeByPeg[pegKey] = type;
+      updatedAtByPeg[pegKey] = state.sourceUpdatedAtByPeg[pegKey] ?? null;
+      globalUpdatedAt =
+        updatedAtByPeg[pegKey] != null
+          ? globalUpdatedAt == null
+            ? updatedAtByPeg[pegKey]
+            : Math.min(globalUpdatedAt, updatedAtByPeg[pegKey] as number)
+          : globalUpdatedAt;
+      if (type === "stale") {
+        globalType = "stale";
+      } else if (globalType !== "stale" && type === "fresh") {
+        globalType = "fresh";
+      } else if (globalType === "none" && type === "static") {
+        globalType = "static";
+      }
+    }
+
     return {
       rates,
-      type: ageSec <= maxAgeSec ? "fresh" : "stale",
-      updatedAt: cached.updatedAt,
+      type: globalType,
+      updatedAt: globalUpdatedAt,
+      updatedAtByPeg,
+      typeByPeg,
     };
   } catch {
     return {
@@ -245,6 +273,17 @@ export function getReferencePriceForContext(
   const rate = references.rates[context.pegType];
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
   return rate * getCommodityScale(context.pegType, context.commodityOunces);
+}
+
+function getReferenceTypeForContext(
+  context: PriceValidationContext,
+  references: PriceValidationReferences | undefined,
+): PriceReferenceType {
+  if (!references) return "none";
+  if (context.pegType && references.typeByPeg?.[context.pegType]) {
+    return references.typeByPeg[context.pegType] ?? references.type;
+  }
+  return references.type;
 }
 
 function getHardcodedBounds(context: PriceValidationContext): { min: number; max: number } | null {
@@ -274,11 +313,12 @@ export function validatePriceCandidate(
   mode: PriceValidationMode,
   references?: PriceValidationReferences,
 ): PriceValidationDecision {
+  const referenceType = getReferenceTypeForContext(context, references);
   if (!Number.isFinite(price) || price <= 0) {
     return {
       accepted: false,
       reasonCode: "non_finite_or_non_positive",
-      referenceType: references?.type ?? "none",
+      referenceType,
       referencePrice: null,
       candidateRatio: null,
       boundsUsed: null,
@@ -289,7 +329,7 @@ export function validatePriceCandidate(
     return {
       accepted: false,
       reasonCode: "hard_cap_exceeded",
-      referenceType: references?.type ?? "none",
+      referenceType,
       referencePrice: null,
       candidateRatio: null,
       boundsUsed: { min: 0, max: MAX_PRICE },
@@ -300,7 +340,7 @@ export function validatePriceCandidate(
     return {
       accepted: true,
       reasonCode: "nav_positive_price",
-      referenceType: references?.type ?? "none",
+      referenceType,
       referencePrice: getReferencePriceForContext(context, references),
       candidateRatio: null,
       boundsUsed: { min: 0, max: MAX_PRICE },
@@ -311,7 +351,7 @@ export function validatePriceCandidate(
     return {
       accepted: true,
       reasonCode: "non_fixed_positive_price",
-      referenceType: references?.type ?? "none",
+      referenceType,
       referencePrice: getReferencePriceForContext(context, references),
       candidateRatio: null,
       boundsUsed: { min: 0, max: MAX_PRICE },
@@ -331,7 +371,7 @@ export function validatePriceCandidate(
       return {
         accepted: false,
         reasonCode: "reference_upper_bound_exceeded",
-        referenceType: references?.type ?? "none",
+        referenceType,
         referencePrice,
         candidateRatio,
         boundsUsed: { min: lowerBound, max: upperBound },
@@ -342,7 +382,7 @@ export function validatePriceCandidate(
       return {
         accepted: false,
         reasonCode: "reference_lower_bound_exceeded",
-        referenceType: references?.type ?? "none",
+        referenceType,
         referencePrice,
         candidateRatio,
         boundsUsed: { min: lowerBound, max: upperBound },
@@ -355,7 +395,7 @@ export function validatePriceCandidate(
         lowerBound === 0 && candidateRatio < 0.01
           ? "authoritative_downside_allowed"
           : "within_reference_band",
-      referenceType: references?.type ?? "none",
+      referenceType,
       referencePrice,
       candidateRatio,
       boundsUsed: { min: lowerBound, max: upperBound },
@@ -373,7 +413,7 @@ export function validatePriceCandidate(
       return {
         accepted: false,
         reasonCode: "hardcoded_upper_bound_exceeded",
-        referenceType: references?.type ?? "none",
+        referenceType,
         referencePrice: null,
         candidateRatio: null,
         boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
@@ -384,7 +424,7 @@ export function validatePriceCandidate(
       return {
         accepted: false,
         reasonCode: "hardcoded_lower_bound_exceeded",
-        referenceType: references?.type ?? "none",
+        referenceType,
         referencePrice: null,
         candidateRatio: null,
         boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
@@ -397,7 +437,7 @@ export function validatePriceCandidate(
         lowerBound === 0
           ? "authoritative_hardcoded_downside_allowed"
           : "within_hardcoded_band",
-      referenceType: references?.type ?? "none",
+      referenceType,
       referencePrice: null,
       candidateRatio: null,
       boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
@@ -407,7 +447,7 @@ export function validatePriceCandidate(
   return {
     accepted: true,
     reasonCode: "non_fixed_positive_price",
-    referenceType: references?.type ?? "none",
+    referenceType,
     referencePrice: null,
     candidateRatio: null,
     boundsUsed: { min: 0, max: MAX_PRICE },
@@ -528,6 +568,8 @@ export function isReasonablePrice(
           rates: fxRates,
           type: "fresh",
           updatedAt: null,
+          updatedAtByPeg: Object.fromEntries(Object.keys(fxRates).map((pegKey) => [pegKey, null])),
+          typeByPeg: Object.fromEntries(Object.keys(fxRates).map((pegKey) => [pegKey, "fresh"])),
         }
       : undefined,
   );

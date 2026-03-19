@@ -222,6 +222,60 @@ function classifyCoverage(sourceMix: LiquiditySourceMix, totalTvlUsd: number): {
   return { coverageClass: "fallback", coverageConfidence: 0.55 };
 }
 
+function getObservationIdentityKey(observation: DexPriceObs): string | null {
+  if (observation.poolKey) return `exact:${observation.poolKey}`;
+  if (observation.identityConfidence === "derived_unique" && observation.derivedMatchKey) {
+    return `derived:${observation.derivedMatchKey}`;
+  }
+  return null;
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length === 0) return 0;
+  if (sorted.length % 2 === 1) return sorted[mid] ?? 0;
+  return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
+}
+
+function collapseDuplicateObservations(
+  observations: DexPriceObs[],
+): { collapsed: DexPriceObs[]; duplicateGroups: number; duplicateObservations: number } {
+  const grouped = new Map<string, DexPriceObs[]>();
+  const passthrough: DexPriceObs[] = [];
+
+  for (const observation of observations) {
+    const key = getObservationIdentityKey(observation);
+    if (!key) {
+      passthrough.push(observation);
+      continue;
+    }
+    const existing = grouped.get(key) ?? [];
+    existing.push(observation);
+    grouped.set(key, existing);
+  }
+
+  let duplicateGroups = 0;
+  let duplicateObservations = 0;
+  for (const group of grouped.values()) {
+    if (group.length === 1) {
+      passthrough.push(group[0]!);
+      continue;
+    }
+
+    duplicateGroups++;
+    duplicateObservations += group.length - 1;
+    const representative = [...group].sort((a, b) => b.tvl - a.tvl || a.protocol.localeCompare(b.protocol))[0]!;
+    passthrough.push({
+      ...representative,
+      price: median(group.map((observation) => observation.price)),
+      tvl: Math.max(...group.map((observation) => observation.tvl)),
+    });
+  }
+
+  return { collapsed: passthrough, duplicateGroups, duplicateObservations };
+}
+
 function aggregateProtocolSources(
   observations: DexPriceObs[],
 ): Array<{ protocol: string; chain: string; price: number; tvl: number }> {
@@ -263,7 +317,11 @@ export async function computeStablecoinScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
   protocolTvlCaps: Map<string, number>,
-): Promise<{ scores: Map<string, FullScoreResult>; globalAgg: GlobalAgg }> {
+): Promise<{
+  scores: Map<string, FullScoreResult>;
+  globalAgg: GlobalAgg;
+  retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
+}> {
   let tvlStabilityMap = new Map<string, number>();
   let volumeStabilityMap = new Map<string, number>();
   try {
@@ -273,6 +331,7 @@ export async function computeStablecoinScores(
   }
 
   const results = new Map<string, FullScoreResult>();
+  const retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
 
   // Global dedup accumulators — accumulated per-coin BEFORE top-10 truncation
   const globalSeenPools = new Set<string>();
@@ -338,6 +397,10 @@ export async function computeStablecoinScores(
     }
 
     const retainedPools = [...m.topPools];
+    retainedPoolsByStablecoin.set(id, retainedPools.map((pool) => ({
+      ...pool,
+      extra: pool.extra ? { ...pool.extra } : undefined,
+    })));
     const rebuilt = rebuildMetricsFromPools(retainedPools);
 
     // Recompute aggregates from retained pools so filtered/capped pools cannot
@@ -463,7 +526,7 @@ export async function computeStablecoinScores(
     chainTvl: globalChainTvl,
   };
 
-  return { scores: results, globalAgg };
+  return { scores: results, globalAgg, retainedPoolsByStablecoin };
 }
 
 /** Compute depth stability (CV-based) from 30-day history and persist to D1. */
@@ -524,12 +587,23 @@ export async function computeDexPrices(
 
   const priceStmts: D1PreparedStatement[] = [];
   const observedIds = new Set<string>();
+  let collapsedDuplicateGroups = 0;
+  let collapsedDuplicateObservations = 0;
   for (const [id, observations] of priceObservations) {
     if (observations.length === 0) continue;
     observedIds.add(id);
 
+    const {
+      collapsed: collapsedObservations,
+      duplicateGroups,
+      duplicateObservations,
+    } = collapseDuplicateObservations(observations);
+    collapsedDuplicateGroups += duplicateGroups;
+    collapsedDuplicateObservations += duplicateObservations;
+    if (collapsedObservations.length === 0) continue;
+
     // H1: Scale TVL weights by source confidence before computing median
-    const adjustedObs = observations.map((o) => ({
+    const adjustedObs = collapsedObservations.map((o) => ({
       ...o,
       tvl: o.tvl * dexPriceConfidenceForProtocol(o.protocol),
     }));
@@ -549,7 +623,7 @@ export async function computeDexPrices(
     }
 
     // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
-    const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
+    const totalTvl = collapsedObservations.reduce((s, o) => s + o.tvl, 0);
 
     // Compute deviation from primary price
     const primaryPrice = primaryPrices.get(id);
@@ -559,7 +633,7 @@ export async function computeDexPrices(
     }
 
     // Persist one aggregate per protocol for the primary-pricing bridge.
-    const protocolSources = aggregateProtocolSources(observations);
+    const protocolSources = aggregateProtocolSources(collapsedObservations);
 
     const meta = ACTIVE_STABLECOINS.find((s) => s.id === id);
     const symbol = meta?.symbol ?? id;
@@ -586,7 +660,7 @@ export async function computeDexPrices(
           id,
           symbol,
           Math.round(medianPrice * 1e6) / 1e6, // 6 decimal places
-          observations.length,
+          collapsedObservations.length,
           Math.round(totalTvl),
           deviationBps,
           primaryPrice ?? null,
@@ -609,6 +683,9 @@ export async function computeDexPrices(
     await batchExecute(db, priceStmts);
     console.log(
       `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
+      (collapsedDuplicateGroups > 0
+        ? ` after collapsing ${collapsedDuplicateObservations} duplicate observations across ${collapsedDuplicateGroups} pool group(s)`
+        : "") +
       (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : ""),
     );
   }

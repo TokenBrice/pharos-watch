@@ -2,9 +2,10 @@ import { buildInClause, buildPaginatedQuery } from "./db";
 import { getCache } from "./db-cache";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
-import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { CacheStatus } from "@shared/types";
 import type { ZodType } from "zod";
+import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateState } from "./fx-rate-state";
 
 export type { CacheStatus };
 
@@ -74,20 +75,30 @@ const PAGINATED_ORDER_DIRECTIONS = new Set([
 export async function buildCacheStatuses(
   db: D1Database,
   now: number,
-): Promise<{ caches: Record<string, CacheStatus>; worstRatio: number; failures: CacheStatusFailure[] }> {
+): Promise<{
+  caches: Record<string, CacheStatus>;
+  worstRatio: number;
+  failures: CacheStatusFailure[];
+  statusFloor: "healthy" | "degraded" | "stale";
+  warnings: string[];
+}> {
   // Fetch rows from the generic cache table (excludes table-backed keys)
   const cacheOnlyKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS).filter(
     (k) => !(k in TABLE_FRESHNESS_QUERIES),
   );
-  let cacheRows: { results?: Array<{ key: string; updated_at: number }> } = { results: [] };
+  const fxMetaKey = getFxRatesMetaKey();
+  const cacheLookupKeys = cacheOnlyKeys.includes("fx-rates")
+    ? [...cacheOnlyKeys, fxMetaKey]
+    : cacheOnlyKeys;
+  let cacheRows: { results?: Array<{ key: string; updated_at: number; value?: string | null }> } = { results: [] };
   const failures: CacheStatusFailure[] = [];
-  if (cacheOnlyKeys.length > 0) {
+  if (cacheLookupKeys.length > 0) {
     try {
-      const inClause = buildInClause(cacheOnlyKeys);
+      const inClause = buildInClause(cacheLookupKeys);
       cacheRows = await db
-        .prepare(`SELECT key, updated_at FROM cache WHERE key IN (${inClause.sql})`)
+        .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${inClause.sql})`)
         .bind(...inClause.binds)
-        .all<{ key: string; updated_at: number }>();
+        .all<{ key: string; updated_at: number; value?: string | null }>();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       failures.push({
@@ -102,11 +113,35 @@ export async function buildCacheStatuses(
 
   const caches: Record<string, CacheStatus> = {};
   let worstRatio = 0;
+  let statusFloor: "healthy" | "degraded" | "stale" = "healthy";
+  const warnings: string[] = [];
+  const fxState = cacheOnlyKeys.includes("fx-rates")
+    ? hydrateFxRateState(
+        (() => {
+          const row = (cacheRows.results ?? []).find((entry) => entry.key === "fx-rates");
+          return row?.value != null ? { value: row.value, updatedAt: row.updated_at } : null;
+        })(),
+        (() => {
+          const row = (cacheRows.results ?? []).find((entry) => entry.key === fxMetaKey);
+          return row?.value != null ? { value: row.value, updatedAt: row.updated_at } : null;
+        })(),
+      )
+    : null;
 
   for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
     let ageSeconds: number | null;
 
-    if (key in TABLE_FRESHNESS_QUERIES) {
+    if (key === "fx-rates") {
+      const fx = buildFxCacheStatus(fxState, maxAge, now);
+      caches[key] = fx.cacheStatus;
+      ageSeconds = fx.cacheStatus.ageSeconds;
+      if (fx.warning) warnings.push(`fx-rates: ${fx.warning}`);
+      if (fx.statusFloor === "stale") {
+        statusFloor = "stale";
+      } else if (fx.statusFloor === "degraded" && statusFloor === "healthy") {
+        statusFloor = "degraded";
+      }
+    } else if (key in TABLE_FRESHNESS_QUERIES) {
       try {
         const row = await db
           .prepare(TABLE_FRESHNESS_QUERIES[key])
@@ -128,10 +163,23 @@ export async function buildCacheStatuses(
 
     const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
     if (ratio > worstRatio) worstRatio = ratio;
-    caches[key] = { ageSeconds, maxAge, healthy: ratio <= FRESHNESS_RATIOS.DEGRADED };
+    if (!caches[key]) {
+      caches[key] = { ageSeconds, maxAge, healthy: ratio <= FRESHNESS_RATIOS.DEGRADED };
+    }
   }
 
-  return { caches, worstRatio, failures };
+  if (statusFloor !== "stale") {
+    statusFloor =
+      worstRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale
+        ? "stale"
+        : worstRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded
+          ? "degraded"
+          : statusFloor;
+  } else if (worstRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
+    statusFloor = "stale";
+  }
+
+  return { caches, worstRatio, failures, statusFloor, warnings };
 }
 
 /**

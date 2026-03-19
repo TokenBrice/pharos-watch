@@ -1,4 +1,5 @@
 import type { DexPriceObs, GtNewPool } from "../cron/dex-liquidity/types";
+import type { SymbolLookups } from "../cron/dex-liquidity/types";
 import {
   buildPriceValidationContext,
   getReferencePriceForContext,
@@ -6,6 +7,12 @@ import {
 } from "./price-validation";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import { QUALITY_MULTIPLIERS, normalizeDexSymbol, isUsdReferenceSymbol } from "./dex-constants";
+import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
+import {
+  getChainScopedSymbolIds,
+  makeChainAddressKey,
+  resolveTrackedStablecoinId,
+} from "../cron/dex-liquidity/token-resolution";
 
 export interface DexApiPoolToken {
   address: string;
@@ -58,6 +65,7 @@ export const DIRECT_API_MAX_POOL_TVL_USD = 10_000_000_000;
 
 /** Min TVL for a pool to be included in liquidity scoring */
 export const DIRECT_API_POOL_MIN_TVL_USD = 10_000;
+const NATIVE_PLACEHOLDER_TOKEN = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
 export function isEligibleDirectApiPool(
   pool: Pick<DexApiPool, "tvlUsd">,
@@ -70,19 +78,62 @@ function getDisplayTokenSymbol(token: DexApiPoolToken): string {
   return normalizeDexSymbol(token.symbol) || token.address.slice(0, 10);
 }
 
-/** Resolve a token to a stablecoin ID via address match or symbol fallback. */
-function resolveStablecoinId(
+function resolvePoolTokenDecimals(
+  pool: DexApiPool,
   token: DexApiPoolToken,
-  addressToId: Map<string, string>,
-  symbolToIds: Map<string, string[]>,
+  contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"],
+): number | null {
+  if (Number.isFinite(token.decimals) && token.decimals > 0) return token.decimals;
+  if (token.address.toLowerCase() === NATIVE_PLACEHOLDER_TOKEN) return 18;
+  const contractMeta = contractMetaByChainAddress.get(makeChainAddressKey(pool.chain, token.address));
+  return contractMeta?.decimals ?? null;
+}
+
+export function hydrateDirectApiPoolMetadata(
+  pools: DexApiPool[],
+  contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"],
+): void {
+  for (const pool of pools) {
+    for (const token of pool.tokens) {
+      const resolvedDecimals = resolvePoolTokenDecimals(pool, token, contractMetaByChainAddress);
+      if (resolvedDecimals != null) {
+        token.decimals = resolvedDecimals;
+      }
+    }
+
+    if (pool.source !== "fluid" || !pool.balances || pool.balances.length !== pool.tokens.length) {
+      continue;
+    }
+
+    const normalizedBalances: number[] = [];
+    let normalizationComplete = true;
+    for (let index = 0; index < pool.tokens.length; index++) {
+      const rawBalance = pool.balances[index];
+      const token = pool.tokens[index]!;
+      const decimals = resolvePoolTokenDecimals(pool, token, contractMetaByChainAddress);
+      if (!Number.isFinite(rawBalance) || rawBalance == null || rawBalance < 0 || decimals == null) {
+        normalizationComplete = false;
+        break;
+      }
+      normalizedBalances.push(rawBalance / (10 ** decimals));
+    }
+
+    pool.balances = normalizationComplete ? normalizedBalances : null;
+  }
+}
+
+/** Resolve a token to a stablecoin ID via chain-aware address match first, then unique chain-scoped symbol fallback. */
+function resolveStablecoinId(
+  chain: string,
+  token: DexApiPoolToken,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
 ): string | undefined {
-  const addr = token.address.toLowerCase();
-  const byAddr = addressToId.get(addr);
-  if (byAddr) return byAddr;
-  // Symbol fallback (empty symbols from Fluid skip this path)
-  const sym = normalizeDexSymbol(token.symbol);
-  if (sym) return symbolToIds.get(sym)?.[0];
-  return undefined;
+  const result = resolveTrackedStablecoinId(
+    { chain, address: token.address, symbol: token.symbol },
+    { chainAddressToId, symbolToChainScopedIds },
+  );
+  return result.status === "matched" ? result.stablecoinId : undefined;
 }
 
 /**
@@ -97,7 +148,8 @@ function resolveStablecoinId(
 function deriveTokenUsdPrice(
   pool: DexApiPool,
   tokenIndex: number,
-  addressToId: Map<string, string>,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
 ): number | null {
   const token = pool.tokens[tokenIndex];
@@ -113,7 +165,13 @@ function deriveTokenUsdPrice(
 
   const otherIdx = tokenIndex === 0 ? 1 : 0;
   const otherToken = pool.tokens[otherIdx];
-  const otherUsdRef = getTokenReferenceUsdPrice(otherToken, addressToId, validationReferences);
+  const otherUsdRef = getTokenReferenceUsdPrice(
+    otherToken,
+    pool.chain,
+    chainAddressToId,
+    symbolToChainScopedIds,
+    validationReferences,
+  );
   if (otherUsdRef == null) return null;
 
   // pool.price = token[0] priced in token[1]
@@ -130,22 +188,28 @@ function derivePoolFeeTierBps(feeRate: number | null): number | null {
 
 function getTokenReferenceUsdPrice(
   token: DexApiPoolToken,
-  addressToId: Map<string, string>,
+  chain: string,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
 ): number | null {
   const symbol = normalizeDexSymbol(token.symbol);
   if (symbol && isUsdReferenceSymbol(symbol)) return 1;
 
-  const stablecoinId = addressToId.get(token.address.toLowerCase());
-  if (!stablecoinId) return null;
+  const resolved = resolveTrackedStablecoinId(
+    { chain, address: token.address, symbol: token.symbol },
+    { chainAddressToId, symbolToChainScopedIds },
+  );
+  if (resolved.status !== "matched" || !resolved.stablecoinId) return null;
 
-  const context = buildPriceValidationContext({ stablecoinId });
+  const context = buildPriceValidationContext({ stablecoinId: resolved.stablecoinId });
   return getReferencePriceForContext(context, validationReferences);
 }
 
 function derivePoolVolume24hUsd(
   pool: DexApiPool,
-  addressToId: Map<string, string>,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
 ): number {
   if (!pool.tokenVolumes24h || pool.tokenVolumes24h.length !== pool.tokens.length) {
@@ -157,13 +221,19 @@ function derivePoolVolume24hUsd(
     const rawVolume = pool.tokenVolumes24h[i];
     if (!Number.isFinite(rawVolume) || rawVolume <= 0) continue;
 
-    const ownReferencePrice = getTokenReferenceUsdPrice(pool.tokens[i], addressToId, validationReferences);
+    const ownReferencePrice = getTokenReferenceUsdPrice(
+      pool.tokens[i],
+      pool.chain,
+      chainAddressToId,
+      symbolToChainScopedIds,
+      validationReferences,
+    );
     if (ownReferencePrice != null && ownReferencePrice > 0) {
       candidates.push(rawVolume * ownReferencePrice);
       continue;
     }
 
-    const derivedPrice = deriveTokenUsdPrice(pool, i, addressToId, validationReferences);
+    const derivedPrice = deriveTokenUsdPrice(pool, i, chainAddressToId, symbolToChainScopedIds, validationReferences);
     if (derivedPrice != null && derivedPrice > 0) {
       candidates.push(rawVolume * derivedPrice);
     }
@@ -176,8 +246,9 @@ function derivePoolVolume24hUsd(
 
 function derivePoolBalanceMetrics(
   pool: DexApiPool,
-  addressToId: Map<string, string>,
+  chainAddressToId: Map<string, string>,
   symbolToIds: Map<string, string[]>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
 ): {
   balanceRatio: number;
@@ -195,11 +266,11 @@ function derivePoolBalanceMetrics(
     const balance = pool.balances?.[index];
     if (!Number.isFinite(balance) || balance == null || balance < 0) return null;
 
-    const directPrice = token.priceUsd;
-    const priceUsd = directPrice != null && Number.isFinite(directPrice) && directPrice > 0
-      ? directPrice
-      : getTokenReferenceUsdPrice(token, addressToId, validationReferences) ??
-        deriveTokenUsdPrice(pool, index, addressToId, validationReferences);
+      const directPrice = token.priceUsd;
+      const priceUsd = directPrice != null && Number.isFinite(directPrice) && directPrice > 0
+        ? directPrice
+        : getTokenReferenceUsdPrice(token, pool.chain, chainAddressToId, symbolToChainScopedIds, validationReferences) ??
+          deriveTokenUsdPrice(pool, index, chainAddressToId, symbolToChainScopedIds, validationReferences);
 
     if (priceUsd == null || !Number.isFinite(priceUsd) || priceUsd <= 0) return null;
     return balance * priceUsd;
@@ -235,11 +306,11 @@ function derivePoolBalanceMetrics(
     balanceDetails: measuredBalances.map((usdBalance, index) => {
       const token = pool.tokens[index]!;
       const symbol = normalizeDexSymbol(token.symbol);
-      const trackedBySymbol = symbol ? (symbolToIds.get(symbol)?.length ?? 0) > 0 : false;
+      const trackedBySymbol = symbol ? getChainScopedSymbolIds(symbol, pool.chain, { symbolToChainScopedIds }).length > 0 : false;
       return {
         symbol: getDisplayTokenSymbol(token),
         balancePct: Math.round((usdBalance / totalUsd) * 1000) / 10,
-        isTracked: addressToId.has(token.address.toLowerCase()) || trackedBySymbol,
+        isTracked: chainAddressToId.has(makeChainAddressKey(pool.chain, token.address)) || trackedBySymbol,
       };
     }),
   };
@@ -251,7 +322,8 @@ function derivePoolBalanceMetrics(
  */
 export function convertToGtNewPools(
   pools: DexApiPool[],
-  addressToId: Map<string, string>,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   symbolToIds: Map<string, string[]>,
   validationReferences?: PriceValidationReferences,
 ): Map<string, GtNewPool[]> {
@@ -259,13 +331,19 @@ export function convertToGtNewPools(
 
   for (const pool of pools) {
     if (!isEligibleDirectApiPool(pool)) continue;
-    const volume24hUsd = derivePoolVolume24hUsd(pool, addressToId, validationReferences);
-    const balanceMetrics = derivePoolBalanceMetrics(pool, addressToId, symbolToIds, validationReferences);
+    const volume24hUsd = derivePoolVolume24hUsd(pool, chainAddressToId, symbolToChainScopedIds, validationReferences);
+    const balanceMetrics = derivePoolBalanceMetrics(
+      pool,
+      chainAddressToId,
+      symbolToIds,
+      symbolToChainScopedIds,
+      validationReferences,
+    );
     const feeTierBps = derivePoolFeeTierBps(pool.feeRate);
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
-      const stablecoinId = resolveStablecoinId(token, addressToId, symbolToIds);
+      const stablecoinId = resolveStablecoinId(pool.chain, token, chainAddressToId, symbolToChainScopedIds);
       if (!stablecoinId) continue;
 
       const qualityMultiplier = QUALITY_MULTIPLIERS[pool.poolType] ?? QUALITY_MULTIPLIERS.generic!;
@@ -273,7 +351,7 @@ export function convertToGtNewPools(
       const symbolStr = pairSymbols.join(" / ");
 
       // Derive price for this specific stablecoin token
-      const tokenPrice = deriveTokenUsdPrice(pool, i, addressToId, validationReferences);
+      const tokenPrice = deriveTokenUsdPrice(pool, i, chainAddressToId, symbolToChainScopedIds, validationReferences);
 
       const gtPool: GtNewPool = {
         address: pool.poolAddress,
@@ -311,21 +389,30 @@ export function convertToGtNewPools(
  */
 export function extractPriceObservations(
   pools: DexApiPool[],
-  addressToId: Map<string, string>,
-  symbolToIds: Map<string, string[]>,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
 ): Map<string, DexPriceObs[]> {
   const result = new Map<string, DexPriceObs[]>();
 
   for (const pool of pools) {
     if (!isEligibleDirectApiPool(pool, DIRECT_API_PRICE_MIN_TVL_USD)) continue;
+    const identity = buildPoolIdentity({
+      chain: pool.chain,
+      protocol: pool.source,
+      poolAddressOrId: pool.poolAddress,
+      tokenAddresses: pool.tokens.map((token) => token.address),
+      poolType: pool.poolType,
+      feeTierBps: derivePoolFeeTierBps(pool.feeRate),
+      isStable: pool.poolType.includes("stable") || pool.poolType.includes("fluid"),
+    });
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
-      const stablecoinId = resolveStablecoinId(token, addressToId, symbolToIds);
+      const stablecoinId = resolveStablecoinId(pool.chain, token, chainAddressToId, symbolToChainScopedIds);
       if (!stablecoinId) continue;
 
-      const price = deriveTokenUsdPrice(pool, i, addressToId, validationReferences);
+      const price = deriveTokenUsdPrice(pool, i, chainAddressToId, symbolToChainScopedIds, validationReferences);
       if (price == null || price <= 0) continue;
 
       // Plausibility filter — matches existing code paths in fetch-primary.ts
@@ -338,6 +425,10 @@ export function extractPriceObservations(
         tvl: pool.tvlUsd,
         chain: pool.chain,
         protocol: pool.source,
+        poolKey: identity.exactPoolKey ?? undefined,
+        derivedMatchKey: identity.derivedMatchKey ?? undefined,
+        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+        sourceFamily: "direct_api",
       };
 
       const existing = result.get(stablecoinId) ?? [];

@@ -10,7 +10,7 @@ Cron result status semantics:
 - `degraded`: one or more critical non-fatal source families failed (for example DeFiLlama yields/protocol coverage), or coverage falls near the guardrail band.
 - throw/error: catastrophic source failure (for example DL+Curve hard failure) still aborts the run.
 
-Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByAddress`, `stagedPoolsSkippedByFingerprint`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`, `currentGlobalTvl`, `previousGlobalTvl`, `nearValueGuard`, `currentTop10CoveredTvl`, `previousTop10CoveredTvl`, `nearMajorCoverageGuard`, `currentCoverageClasses`, `previousCoverageClasses`, `priceObservationCoins`, `dsFallbackCoins`, `cgTickerFallbackCoins`).
+Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByExactIdentity`, `stagedPoolsSkippedByUniqueDerivedIdentity`), challenger publish counters, and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`, `currentGlobalTvl`, `previousGlobalTvl`, `nearValueGuard`, `currentTop10CoveredTvl`, `previousTop10CoveredTvl`, `nearMajorCoverageGuard`, `currentCoverageClasses`, `previousCoverageClasses`, `priceObservationCoins`, `dsFallbackCoins`, `cgTickerFallbackCoins`).
 
 | Component           | Weight | Source                     | How Computed                                                                                                           |
 | ------------------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -20,11 +20,11 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool m
 | **Durability**      | 15%    | DeFiLlama Yields + History | 35% TVL stability, 25% volume consistency, 25% maturity, 15% organic fraction (sqrt curve)                             |
 | **Pair Diversity**  | 7.5%   | DeFiLlama Yields           | Pool count, diminishing returns: min(100, poolCount x 5)                                                               |
 
-Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + four direct API fetchers (Fluid, Balancer, Raydium, Orca). The scorer prefers direct-API pools over overlapping DeFiLlama pools via address/fingerprint dedup before score computation, but only after those direct-API pools pass the shared TVL sanity gates used elsewhere in the pipeline. After the primary-source merge, the scoring cron reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
+Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + four direct API fetchers (Fluid, Balancer, Raydium, Orca). The scorer prefers direct-API pools over overlapping DeFiLlama pools via a conservative pool-identity model (exact pool id first, derived token-shape match second) before score computation, but only after those direct-API pools pass the shared TVL sanity gates used elsewhere in the pipeline. After the primary-source merge, the scoring cron reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
 
 ### Direct API Data Sources
 
-Four DEX protocols are fetched directly during the scoring cron (`syncDexLiquidity`), in parallel with existing DL/Curve/Uniswap/Aerodrome fetches. Results are normalized into a shared `DexApiPool` type (`worker/src/lib/dex-api-common.ts`), token-matched against the stablecoin contract registry, deduplicated against DL via `buildPoolFingerprint()`, and merged into the pool scoring pipeline before staged and fallback sources. Source family: `direct_api`.
+Four DEX protocols are fetched directly during the scoring cron (`syncDexLiquidity`), in parallel with existing DL/Curve/Uniswap/Aerodrome fetches. Results are normalized into a shared `DexApiPool` type (`worker/src/lib/dex-api-common.ts`), token-matched against the stablecoin contract registry via `chain + address` first (with chain-scoped symbol fallback only when unique), deduplicated against DL via exact or uniquely derived pool identities, and merged into the pool scoring pipeline before staged and fallback sources. Source family: `direct_api`.
 
 | Protocol | API Endpoint | Chains | Pool Types | Quality Multipliers | Fields Extracted |
 |----------|-------------|--------|------------|--------------------:|------------------|
@@ -33,9 +33,9 @@ Four DEX protocols are fetched directly during the scoring cron (`syncDexLiquidi
 | **Raydium** | `GET https://api-v3.raydium.io/pools/info/list` | Solana | `raydium-clmm`, `raydium-amm` | clmm 0.85x, amm 0.4x | TVL (`tvl`), volume (`day.volume`), price (`price`), balances (`mintAmountA/B`), fees (`feeRate`) |
 | **Orca** | `GET https://api.orca.so/v2/solana/pools` | Solana | `orca-whirlpool` | 0.85x | TVL (`tvlUsdc`), volume (`stats.24h.volume`), price (`price`), balances (`tokenBalanceA/B`), fees (`feeRate`) |
 
-All four fetchers now surface partial/total upstream failure explicitly to the cron, use circuit breakers (`CIRCUIT_SOURCE.FLUID_DEX_API`, `BALANCER_API`, `RAYDIUM_API`, `ORCA_API`), and apply min TVL thresholds ($10K for liquidity inclusion, $50K for price observations). When both DL and a direct API cover the same pool, the direct API data is preferred (fresher, richer metadata).
+All four fetchers now surface partial/total upstream failure explicitly to the cron, use circuit breakers (`CIRCUIT_SOURCE.FLUID_DEX_API`, `BALANCER_API`, `RAYDIUM_API`, `ORCA_API`), and apply min TVL thresholds ($10K for liquidity inclusion, $50K for price observations). When both DL and a direct API cover the same physical pool, the direct API data is preferred only when the identity match is exact or uniquely derived; ambiguous same-pair pools remain separate instead of being collapsed.
 
-Balancer, Raydium, Orca, and resolver-backed Fluid pools now preserve richer metadata through `top_pools_json`: measured `balanceRatio`, per-token `balanceDetails`, and normalized `feeTier` badges in basis points. Balancer weighted pools compare actual USD composition versus target token weights before deriving balance health; Raydium and Orca derive inventory balance from token balances plus per-token USD prices; Fluid derives inventory from the official DexReservesResolver by summing collateral and debt real reserves per token. Fluid pools on chains without that resolver deployment still fall back to neutral balance.
+Balancer, Raydium, Orca, and resolver-backed Fluid pools now preserve richer metadata through `top_pools_json`: measured `balanceRatio`, per-token `balanceDetails`, and normalized `feeTier` badges in basis points. Balancer weighted pools compare actual USD composition versus target token weights before deriving balance health; Raydium and Orca derive inventory balance from token balances plus per-token USD prices; Fluid derives inventory from the official DexReservesResolver by summing collateral and debt real reserves per token. Fluid pools on chains without that resolver deployment, or on any chain where token decimals cannot be resolved safely, fall back to neutral balance.
 
 After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates.
 
@@ -73,7 +73,7 @@ See the [Discovery Cron](#discovery-cron) section below for the full discovery p
 - **MetaPool TVL dedup**: Uses `usdTotalExcludingBasePool` to prevent double-counting base pool liquidity across ~322 Curve metapools
 - **Effective TVL**: `poolTvl x mechanismMultiplier x balanceHealth x pairQuality`, summed across all pools
 
-For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydium, Orca, and resolver-backed Fluid pools now contribute measured balance ratios when their APIs provide enough token-balance and pricing context. Fluid chains without the official DexReservesResolver deployment continue to default to `1.0` balance.
+For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydium, Orca, and resolver-backed Fluid pools now contribute measured balance ratios when their APIs provide enough token-balance and pricing context. Fluid pools still default to `1.0` balance when the official resolver is unavailable or token decimals cannot be resolved safely.
 
 ### Data Quality Filters
 
@@ -117,7 +117,7 @@ Quality gates:
 - Pool must have 24h volume > 0 or TVL > $10,000
 - Pools are accepted when the tracked token is either the base or quote asset
 - Quote-side pools still require an explicit tracked-token USD derivation before they can contribute a DEX price observation
-- Pools already discovered by the primary pipeline are deduplicated by `chainId:pairAddress`
+- Pools already discovered by the primary pipeline are deduplicated by exact or uniquely derived pool identity
 - Generic quality multiplier (0.3x) unless the DEX ID matches a known protocol (same `GT_DEX_QUALITY` lookup)
 
 DexScreener pools are merged using the same `mergeGtPools()` logic — no balance ratio data, neutral organic fraction default (0.5).
@@ -171,9 +171,18 @@ Each `PoolEntry` carries a `poolId` field formatted as `chain:address` (lowercas
 
 ### Cross-Source Deduplication
 
-DeFiLlama's yields API uses opaque UUIDs as pool identifiers (e.g., `6b6de6c7-...`), while CoinGecko/GeckoTerminal/DexScreener return on-chain pool addresses. Since these formats never match, `buildKnownPoolAddresses()` also stores **token-pair fingerprints** in the format `fp:<chain>:<normalized_protocol>:<sorted_token_addresses>`. When CG/GT/DS discover a pool, they compute the same fingerprint from their base/quote token addresses and check against the known set. This prevents the same physical pool from being counted twice across data sources.
+DeFiLlama's yields API often uses opaque UUIDs as pool identifiers (for example `6b6de6c7-...`), while CoinGecko/GeckoTerminal/DexScreener and direct protocol APIs usually expose on-chain pool addresses. The scorer therefore tracks a **pool identity** with two layers:
 
-The scoring cron applies the same fingerprint dedup during staged-pool merge, so a discovery-stage row cannot be re-counted when DeFiLlama already covers the same physical pool under a UUID. `/status` exposes this split directly via `stagedPoolsSkippedByFingerprint` versus `stagedPoolsSkippedByAddress`.
+- `exactPoolKey`: `chain:poolId` when the id is trustworthy (EVM address, Solana-style address, or orderbook-native id)
+- `derivedMatchKey`: `chain + normalized protocol + sorted tokens + pool shape + fee bucket + stable/volatile flag`
+
+Dedup rules are intentionally conservative:
+
+- exact ids always win when both sides expose the same real pool id
+- derived matches only deduplicate when the match is unique on both sides
+- ambiguous same-pair pools stay separate, so legitimate parallel pools are not collapsed
+
+The scoring cron applies the same identity logic during staged-pool merge and DexScreener fallback intake. `/status` exposes the split directly via `stagedPoolsSkippedByExactIdentity` versus `stagedPoolsSkippedByUniqueDerivedIdentity`.
 
 ### Coverage Confidence
 
@@ -267,17 +276,19 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 
 1. Collect price observations from all source families during data fetching phase
 2. Merge all observations into a single map keyed by stablecoin ID
-3. Compute TVL-weighted median per stablecoin (robust against distorted pools from any single source)
-4. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
+3. Collapse duplicate observations of the same physical pool (exact pool id or unique derived identity) so one pool only carries weight once
+4. Compute TVL-weighted median per stablecoin (robust against distorted pools from any single source)
+5. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
+6. Store in `dex_prices` with one aggregated JSON entry per protocol in `price_sources_json`
+7. Publish qualifying challenger pools from the full retained pool set into `dex_price_challenger_snapshots` and `dex_price_challengers`
+8. Retire any pre-existing `dex_prices` rows whose stablecoin has no observations in the latest successful scoring run, so the table reflects current DEX coverage rather than last-seen coverage
 
 DEX observation validation now loads the current FX / gold / silver references **once per cron entrypoint** and passes them through the scoring and discovery paths. In normal operation this means:
 
 - fiat pegs validate against live FX references, not only hardcoded fallback ranges
 - gold/silver pegs validate against live spot references, scaled by `commodityOunces` for fractional tokens
-5. Store in `dex_prices` with one aggregated JSON entry per protocol in `price_sources_json`
-6. Retire any pre-existing `dex_prices` rows whose stablecoin has no observations in the latest successful scoring run, so the table reflects current DEX coverage rather than last-seen coverage
 
-The primary-pricing bridge now reads `dex_prices.price_sources_json` as a per-protocol aggregate (`fluid`, `balancer`, `raydium`, `orca`, etc.) rather than as repeated individual pool rows. Individual pool challenge reads instead come from `dex_liquidity.top_pools_json`, so consensus promotion and pool-level depeg challenge no longer share the same storage shape.
+The primary-pricing bridge now reads `dex_prices.price_sources_json` as a per-protocol aggregate (`fluid`, `balancer`, `raydium`, `orca`, etc.) rather than as repeated individual pool rows. Individual pool challenge reads instead come from the dedicated challenger tables published from the full retained pool set, so consensus promotion, depeg confirmation, and UI top-pool display no longer share the same storage shape.
 
 Every source family now uses the same minimum liquidity rule for DEX prices: a pool must contribute at least `$50K` of liquidity at observation time. For staged discovery rows, the floor is applied after freshness confidence decay.
 

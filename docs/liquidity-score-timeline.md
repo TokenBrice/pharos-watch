@@ -1,6 +1,18 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.3` (2026-02-19 -> 2026-03-18).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.4` (2026-02-19 -> 2026-03-19).
+
+---
+
+## v4.4 - Chain-aware pool identity dedupe and challenger snapshot publishing (Mar 19, 2026)
+
+**Commit:** `unreleased`
+
+- Direct API and staged/fallback pools now resolve tracked assets by `chain + address` first, with chain-scoped symbol fallback only when unique
+- Cross-source pool dedupe now uses exact pool ids first and derived token-shape matches only when they are unique on both sides, instead of collapsing every same-pair pool through a coarse fingerprint
+- Repeated sightings of the same physical pool across direct API, staged, and fallback sources now collapse before `dex_prices` weighting
+- Depeg challenger inputs now publish from the full retained pool set instead of the visible top-pools subset
+- Fluid pools with missing token decimals fall back to neutral balance rather than using unsafe raw reserve units
 
 ---
 
