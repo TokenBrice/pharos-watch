@@ -1,3 +1,4 @@
+import * as React from "react";
 import satori, { init as initSatori } from "satori/standalone";
 import yogaWasm from "satori/yoga.wasm";
 import { Resvg, initResvg, resvgWasmModule } from "@cf-wasm/resvg/workerd";

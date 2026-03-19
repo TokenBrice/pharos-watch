@@ -1,3 +1,4 @@
+import * as React from "react";
 import { CardFrame, TEXT_SECONDARY, SEMANTIC_COLORS } from "./shared";
 import { THREAT_BAND_HEX } from "@shared/lib/classification";
 

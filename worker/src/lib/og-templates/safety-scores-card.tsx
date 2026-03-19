@@ -1,3 +1,4 @@
+import * as React from "react";
 import { CardFrame, TEXT_SECONDARY, FROST_BLUE, GRADE_COLORS, SEMANTIC_COLORS } from "./shared";
 
 export interface SafetyScoresCardData {

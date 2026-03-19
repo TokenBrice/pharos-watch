@@ -1,3 +1,4 @@
+import * as React from "react";
 import { CardFrame, Sparkline, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS } from "./shared";
 import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
 import { THREAT_BAND_HEX } from "@shared/lib/classification";

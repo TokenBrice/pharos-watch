@@ -1,3 +1,4 @@
+import * as React from "react";
 import { CardFrame, Sparkline, TEXT_SECONDARY, SEMANTIC_COLORS } from "./shared";
 import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
 
@@ -120,7 +121,7 @@ export function StabilityIndexCard({
         </span>
         
         {/* Thermometer bar */}
-        <div style={{ position: "relative", height: 32, width: "100%" }}>
+        <div style={{ display: "flex", position: "relative", height: 32, width: "100%" }}>
           {/* Gradient background bar */}
           <div
             style={{
@@ -130,13 +131,7 @@ export function StabilityIndexCard({
               right: 0,
               height: 8,
               borderRadius: 4,
-              background: `linear-gradient(to right, 
-                ${PSI_HEX_COLORS.BEDROCK} 0%, 
-                ${PSI_HEX_COLORS.STEADY} 20%, 
-                ${PSI_HEX_COLORS.TREMOR} 40%, 
-                ${PSI_HEX_COLORS.FRACTURE} 60%, 
-                ${PSI_HEX_COLORS.CRISIS} 80%, 
-                ${PSI_HEX_COLORS.MELTDOWN} 100%)`,
+              background: `linear-gradient(to right, ${PSI_HEX_COLORS.BEDROCK} 0%, ${PSI_HEX_COLORS.STEADY} 20%, ${PSI_HEX_COLORS.TREMOR} 40%, ${PSI_HEX_COLORS.FRACTURE} 60%, ${PSI_HEX_COLORS.CRISIS} 80%, ${PSI_HEX_COLORS.MELTDOWN} 100%)`,
             }}
           />
           

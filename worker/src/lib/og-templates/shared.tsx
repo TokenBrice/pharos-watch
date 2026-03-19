@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ReactNode } from "react";
 
 // Base colors
@@ -178,6 +179,7 @@ export function CardFrame({
       {lastUpdated && (
         <div
           style={{
+            display: "flex",
             position: "absolute",
             bottom: 16,
             right: 56,
