@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.3`
+- **Current methodology version:** `v2.4`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -39,7 +39,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 | Pyth Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle input with confidence intervals |
 | Binance spot | 2 | `worker/src/lib/cex-tickers.ts` | Batch venue input |
 | Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input |
-| RedStone | 1 | `worker/src/lib/redstone.ts` | Per-venue oracle snapshot |
+| RedStone | 1 | `worker/src/lib/redstone.ts` | Fresh per-venue oracle snapshot with venue-agreement gating |
 | Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
 | Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/enrich-prices.ts` | Additional primary-consensus voice for crvUSD |
 | Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only trusted DEX rows are promoted into primary pricing |
@@ -57,11 +57,18 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 1. 0 sources -> no result
 2. 1 source -> `single-source`
-3. 2+ sources -> build agreement clusters within a peg-aware threshold
+3. 2+ sources -> build fully pairwise agreement clusters within a peg-aware threshold
 4. best cluster with 2+ members -> `high` confidence and choose the highest-weight member in that cluster
 5. no 2+ cluster:
-   - fixed pegs -> choose the source closest to peg reference, mark `low`
+   - fixed pegs -> stay in fixed-peg mode even if the reference price is temporarily unavailable; choose the best fallback source and mark `low`
    - NAV tokens -> use a wider 500 bps cluster threshold first, otherwise choose the highest-weight source and mark `low`
+
+When multiple clusters have the same size, the winner is chosen deterministically by:
+
+1. larger total cluster weight
+2. tighter internal spread
+3. proximity to peg reference (when available)
+4. stable alphabetical source label as the final tie-break
 
 Source labels list all agreeing sources alphabetically:
 
@@ -93,6 +100,7 @@ Several live providers need normalization before their prices can safely enter c
 - **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup. Active pairs: USDT, DAI, PAXG, USDS, USD1, HONEY.
 - **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (36 symbols including `USDe`, `crvUSD`, `fxUSD`, `sUSDe`). Unsupported symbols are filtered out before transport. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_API_SYMBOL_MAP` and keys results by metadata symbol so callers don't need to know the mapping.
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
+- **RedStone freshness + transparency gate:** RedStone entries are only admitted when they carry a timestamp newer than 5 minutes and a usable per-venue price breakdown. Timestamp-less or opaque aggregate-only responses are rejected.
 - **Circuit-breaker accounting:** for Pyth and RedStone, a transport-successful request that returns zero usable prices is still recorded as an unsuccessful outcome for breaker state. This avoids treating empty responses as healthy data.
 - **Curve on-chain sanity bound:** Implied prices from `get_dy` calls are capped at `< 10,000` (to accommodate commodity tokens like PAXG/XAUT at ~$2,900).
 - **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before they enter primary consensus, so one Balancer/Fluid/Raydium/Orca protocol can contribute at most one elevated source per asset.
@@ -117,6 +125,8 @@ When a live override validates successfully, the cached asset is written with:
 
 - `priceSource = "protocol-redeem"`
 - `priceConfidence = "high"`
+
+These authoritative overrides are applied after the GeckoTerminal single-source probe, so a later market cross-check cannot overwrite a validated redemption price.
 
 The same registry also supports historical replay for backfills so admin rebuilds do not silently downgrade back to weaker market sources.
 

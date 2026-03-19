@@ -167,7 +167,7 @@ vi.mock("../../lib/alerts", () => ({
 
 import { syncStablecoins } from "../sync-stablecoins";
 import { stampPriceMetadata } from "../sync-stablecoins/shared";
-import { enrichMissingPrices, fetchPrimaryPrices } from "../enrich-prices";
+import { enrichMissingPrices, fetchPrimaryPrices, runGtProbePass, type PrimaryPriceResult } from "../enrich-prices";
 import type { PeggedAsset } from "../enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
@@ -319,6 +319,76 @@ describe("syncStablecoins", () => {
         { price: 0.99999266, source: "protocol-redeem", confidence: "high" },
       ],
     ]));
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
+    expect(stablecoinsWrite).toBeDefined();
+
+    const cached = JSON.parse(stablecoinsWrite!.value) as {
+      peggedAssets: Array<{
+        id: string;
+        price: number;
+        priceSource: string;
+        priceConfidence: string | null;
+      }>;
+    };
+    const cusd = cached.peggedAssets.find((asset) => asset.id === "cusd-cap");
+    expect(cusd).toMatchObject({
+      id: "cusd-cap",
+      priceSource: "protocol-redeem",
+      priceConfidence: "high",
+    });
+    expect(cusd?.price).toBeCloseTo(0.99999266, 8);
+  });
+
+  it("keeps protocol-backed overrides as the final price even when the GT probe finds a later market quote", async () => {
+    const db = makeDb();
+    const writes = trackCacheWrites(db);
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "cusd-cap",
+      name: "Cap cUSD",
+      symbol: "CUSD",
+      price: 0.9866,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      circulating: { peggedUSD: 114_000_000 },
+    };
+
+    vi.mocked(fetchAuthoritativeLivePriceOverrides).mockResolvedValue(new Map([
+      [
+        "cusd-cap",
+        { price: 0.99999266, source: "protocol-redeem", confidence: "high" },
+      ],
+    ]));
+
+    vi.mocked(runGtProbePass).mockImplementationOnce(async (
+      _assets,
+      primaryPriceResults: Map<string, PrimaryPriceResult>,
+    ) => {
+      primaryPriceResults.set("cusd-cap", {
+        price: 0.991,
+        source: "geckoterminal",
+        confidence: "high",
+        dlPrice: null,
+        cgPrice: null,
+        candidateSources: ["geckoterminal"],
+        agreeSources: ["geckoterminal"],
+      });
+      return {
+        updatedCount: 1,
+        stats: { probed: 1, pricesObtained: 1, divergences500bps: 0, skippedLowTvl: 0 },
+      };
+    });
 
     mockFetch([
       { match: "api.coingecko.com", body: {} },

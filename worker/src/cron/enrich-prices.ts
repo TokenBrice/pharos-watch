@@ -405,7 +405,9 @@ export async function fetchPrimaryPrices(
       commodityOunces: asset.commodityOunces,
     });
     const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
-    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS);
+    const consensus = computePriceConsensus(sources, pegRef, DIVERGENCE_THRESHOLD_BPS, {
+      mode: context.navToken ? "nav" : "fixed",
+    });
 
     if (!consensus) continue; // no sources
 
@@ -607,7 +609,9 @@ export async function runGtProbePass(
       commodityOunces: asset.commodityOunces,
     });
     const pegRef = context.navToken ? null : getReferencePriceForContext(context, references);
-    const consensus = computePriceConsensus(sources, pegRef, 50);
+    const consensus = computePriceConsensus(sources, pegRef, 50, {
+      mode: context.navToken ? "nav" : "fixed",
+    });
 
     if (!consensus) continue;
 

@@ -57,9 +57,11 @@ export function MethodologySections() {
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Every score Pharos computes starts with a price. The pricing pipeline collects quotes from more than a dozen
-            live voices, clusters them into agreement groups, and selects the highest-confidence result. A pool challenge
+            live voices, requires fully pairwise agreement inside each cluster, and selects the highest-confidence result.
+            A pool challenge
             guard downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools
-            diverge from aggregator consensus. Protocol-level redemption prices override market data for wrapper assets,
+            diverge from aggregator consensus. Fresh RedStone prices need timestamped venue breakdowns. Protocol-level
+            redemption prices override market data for wrapper assets,
             and a 4-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
             so downstream systems can react to data quality.
           </p>
@@ -102,7 +104,7 @@ export function MethodologySections() {
               Highest weight in cluster: Curve (w3) &rarr; price=1.0003
             </p>
             <p>
-              Result: <span className="text-foreground">price 1.0003, confidence &ldquo;high&rdquo;, source &ldquo;curve+5more&rdquo;</span>.
+              Result: <span className="text-foreground">price 1.0003, confidence &ldquo;high&rdquo;, source &ldquo;binance+coingecko+coinbase+curve+defillama+pyth&rdquo;</span>.
             </p>
           </WorkedExample>
 
@@ -138,7 +140,7 @@ export function MethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border p-3 text-center w-80">
                 <p className="text-foreground font-medium">N-Source Consensus</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Cluster within 50 bps, pick highest-weight</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Pairwise clusters, then size/weight/spread tie-breaks</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border border-orange-500/40 p-3 text-center w-80">
@@ -148,7 +150,7 @@ export function MethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border border-blue-500/40 p-3 text-center w-80">
                 <p className="text-foreground font-medium">Authoritative Overrides</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Protocol redemption (cUSD, iUSD, crvUSD)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Protocol redemption (cUSD, iUSD) after market probes</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border p-3 text-center w-80">
@@ -185,7 +187,7 @@ export function MethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium">N-Source Consensus</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Cluster within 50 bps, pick highest-weight</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Pairwise clusters, then size/weight/spread tie-breaks</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border border-orange-500/40 p-3 text-center">
@@ -195,7 +197,7 @@ export function MethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border border-blue-500/40 p-3 text-center">
                 <p className="text-foreground font-medium">Authoritative Overrides</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Protocol redemption (cUSD, iUSD, crvUSD)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Protocol redemption (cUSD, iUSD) after market probes</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border p-3 text-center">
@@ -297,11 +299,12 @@ export function MethodologySections() {
               <ol className="list-decimal list-inside space-y-1">
                 <li>Collect all source prices with non-failed circuit breakers</li>
                 <li>
-                  Find the largest cluster of sources that agree pairwise within <code className="text-xs">50 bps</code>{" "}
+                  Find the largest fully pairwise cluster of sources that agree within <code className="text-xs">50 bps</code>{" "}
                   (fixed pegs) or <code className="text-xs">500 bps</code> (NAV tokens)
                 </li>
+                <li>Break equal-size clusters by total weight, then tighter spread, then peg proximity when available</li>
                 <li>Within the winning cluster, select the source with the highest weight</li>
-                <li>If no cluster of 2+ forms, pick the source closest to the canonical peg reference</li>
+                <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best single source</li>
                 <li>
                   <span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are soft aggregators
                   (CG, DL-list, DEX average), check each large priced DEX pool (&ge;$100K TVL) from the current liquidity
@@ -325,11 +328,11 @@ export function MethodologySections() {
               <ul className="list-disc list-inside space-y-1">
                 <li><span className="text-foreground font-medium">cUSD (Cap):</span> <code className="text-xs">getBurnAmount()</code> &mdash; cUSD &rarr; USDC redemption rate</li>
                 <li><span className="text-foreground font-medium">iUSD (infiniFi):</span> <code className="text-xs">receiptToAsset()</code> &mdash; iUSD &rarr; USDC redemption rate</li>
-                <li><span className="text-foreground font-medium">crvUSD (Curve):</span> <code className="text-xs">PriceAggregator.price()</code> &mdash; crvUSD oracle price</li>
+                <li><span className="text-foreground font-medium">crvUSD (Curve):</span> <code className="text-xs">PriceAggregator.price()</code> enters primary consensus as a live market voice, not a protocol override</li>
               </ul>
               <p>
                 These overrides set <code className="text-xs">priceSource = &quot;protocol-redeem&quot;</code> and{" "}
-                <code className="text-xs">priceConfidence = &quot;high&quot;</code> when the quote validates against peg bounds.
+                <code className="text-xs">priceConfidence = &quot;high&quot;</code> when the quote validates against peg bounds, and they are applied after the GeckoTerminal probe so later market checks cannot overwrite them.
               </p>
             </div>
 

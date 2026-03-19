@@ -52,6 +52,38 @@ describe("computePriceConsensus", () => {
     expect(result!.price).toBeCloseTo(1.0001, 3);
   });
 
+  it("requires fully pairwise agreement instead of chaining through a middle source", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.0, weight: 3 },
+      { source: "defillama", price: 1.004, weight: 1 },
+      { source: "pyth", price: 1.008, weight: 2 },
+    ];
+
+    const result = computePriceConsensus(sources, 1.0, 50);
+
+    expect(result!.confidence).toBe("high");
+    expect(result!.source).toBe("coingecko+defillama");
+    expect(result!.agreeSources).toEqual(expect.arrayContaining(["coingecko", "defillama"]));
+    expect(result!.agreeSources).not.toContain("pyth");
+    expect(result!.disagreeSources).toContain("pyth");
+    expect(result!.price).toBe(1.0);
+  });
+
+  it("breaks equal-size cluster ties by total cluster weight before peg proximity", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.0, weight: 1 },
+      { source: "defillama", price: 1.0002, weight: 1 },
+      { source: "curve", price: 0.994, weight: 3 },
+      { source: "pyth", price: 0.9942, weight: 3 },
+    ];
+
+    const result = computePriceConsensus(sources, 1.0, 50);
+
+    expect(result!.confidence).toBe("high");
+    expect(result!.source).toBe("curve+pyth");
+    expect(result!.price).toBe(0.9942);
+  });
+
   it("prefers higher-weight source when multiple agree", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.0001, weight: 1 },
@@ -76,6 +108,19 @@ describe("computePriceConsensus", () => {
     expect(result!.confidence).toBe("high");
     // Equal weight — tie broken by proximity to cluster median (1.15)
     expect(result!.price).toBe(1.15);
+  });
+
+  it("keeps fixed-peg clustering rules even when peg reference is temporarily unavailable", () => {
+    const sources: SourcePrice[] = [
+      { source: "coingecko", price: 1.0, weight: 2 },
+      { source: "defillama", price: 1.008, weight: 1 },
+    ];
+
+    const result = computePriceConsensus(sources, null, 50, { mode: "fixed" });
+
+    expect(result!.confidence).toBe("low");
+    expect(result!.source).toBe("coingecko");
+    expect(result!.price).toBe(1.0);
   });
 
   it("breaks weight tie by choosing source closest to peg reference", () => {

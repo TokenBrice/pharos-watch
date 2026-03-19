@@ -16,6 +16,10 @@ export interface ConsensusResult {
   allPrices: Record<string, number>;
 }
 
+export interface ConsensusOptions {
+  mode?: "fixed" | "nav";
+}
+
 /**
  * Compute price consensus across N sources.
  *
@@ -31,6 +35,7 @@ export function computePriceConsensus(
   sources: SourcePrice[],
   pegRef: number | null,
   thresholdBps: number,
+  options?: ConsensusOptions,
 ): ConsensusResult | null {
   if (sources.length === 0) return null;
 
@@ -49,54 +54,21 @@ export function computePriceConsensus(
     };
   }
 
-  // For NAV tokens (pegRef === null), there's no peg to validate against.
-  // Use a wider threshold (500 bps = 5%) for clustering. If sources still
-  // diverge beyond that, it's a data quality issue → low confidence.
-  // NAV tokens use 500bps (5%) threshold — "high" confidence means sources agree
-  // within 5%, not the tighter 50bps used for pegged tokens. This is intentional:
-  // NAV tokens have floating prices and wider agreement is expected.
-  if (pegRef === null || pegRef <= 0) {
-    const NAV_THRESHOLD_BPS = 500;
-    const navClusters = findAgreementClusters(sources, NAV_THRESHOLD_BPS);
-    const navBestCluster = navClusters.reduce((a, b) => a.length >= b.length ? a : b, []);
+  const mode = options?.mode ?? (pegRef === null || pegRef <= 0 ? "nav" : "fixed");
+  const clusterThresholdBps = mode === "nav" ? 500 : thresholdBps;
 
-    if (navBestCluster.length >= 2) {
-      const navMedian = navBestCluster.map(s => s.price).sort((a, b) => a - b)[Math.floor(navBestCluster.length / 2)];
-      const chosen = pickBestSource(navBestCluster, navMedian);
-      const navClusterSet = new Set(navBestCluster.map((s) => s.source));
-      return {
-        price: chosen.price,
-        source: buildSourceLabel(navBestCluster),
-        confidence: "high",
-        agreeSources: navBestCluster.map((s) => s.source),
-        disagreeSources: sources.filter((s) => !navClusterSet.has(s.source)).map((s) => s.source),
-        allPrices,
-      };
-    }
-
-    // NAV sources diverge wildly — pick highest-weight, low confidence
-    const allMedian = sources.map(s => s.price).sort((a, b) => a - b)[Math.floor(sources.length / 2)];
-    const chosen = pickBestSource(sources, allMedian);
-    return {
-      price: chosen.price,
-      source: chosen.source,
-      confidence: "low",
-      agreeSources: [chosen.source],
-      disagreeSources: sources.filter((s) => s !== chosen).map((s) => s.source),
-      allPrices,
-    };
-  }
-
-  // Find largest agreeing cluster (pairwise within threshold)
-  const clusters = findAgreementClusters(sources, thresholdBps);
-  const bestCluster = clusters.reduce((a, b) => a.length >= b.length ? a : b, []);
+  // Agreement clusters must be fully pairwise, not just "close to the same anchor".
+  // That prevents transitive chains like 1.000 / 1.004 / 1.008 from being treated as
+  // one 3-source high-confidence cluster when the endpoints disagree materially.
+  const clusters = findMaximalAgreementClusters(sources, clusterThresholdBps);
+  const bestCluster = pickBestCluster(clusters, pegRef);
 
   const clusterSet = new Set(bestCluster.map((s) => s.source));
   const disagreeSources = sources.filter((s) => !clusterSet.has(s.source)).map((s) => s.source);
 
   if (bestCluster.length >= 2) {
-    // Majority agreement — high confidence
-    const chosen = pickBestSource(bestCluster, pegRef);
+    const clusterRef = pegRef != null && pegRef > 0 ? pegRef : medianPrice(bestCluster);
+    const chosen = pickBestSource(bestCluster, clusterRef);
     return {
       price: chosen.price,
       source: buildSourceLabel(bestCluster),
@@ -107,10 +79,8 @@ export function computePriceConsensus(
     };
   }
 
-  // Pick source closest to peg reference
-  const chosen = sources.reduce((a, b) =>
-    Math.abs(a.price - pegRef) <= Math.abs(b.price - pegRef) ? a : b,
-  );
+  const fallbackRef = pegRef != null && pegRef > 0 ? pegRef : medianPrice(sources);
+  const chosen = pickBestSource(sources, fallbackRef);
   return {
     price: chosen.price,
     source: chosen.source,
@@ -121,22 +91,147 @@ export function computePriceConsensus(
   };
 }
 
-function findAgreementClusters(sources: SourcePrice[], thresholdBps: number): SourcePrice[][] {
-  const clusters: SourcePrice[][] = [];
-  for (const anchor of sources) {
-    const cluster = sources.filter((s) => {
-      if (s === anchor) return true;
-      const mid = (anchor.price + s.price) / 2;
-      if (mid <= 0) return false;
-      return (Math.abs(anchor.price - s.price) / mid) * 10000 <= thresholdBps;
-    });
-    clusters.push(cluster);
+function findMaximalAgreementClusters(sources: SourcePrice[], thresholdBps: number): SourcePrice[][] {
+  const neighborMap = new Map<number, Set<number>>();
+  const maximalCliques: number[][] = [];
+
+  for (let i = 0; i < sources.length; i++) {
+    const neighbors = new Set<number>();
+    for (let j = 0; j < sources.length; j++) {
+      if (i !== j && pricesAgreeWithinBps(sources[i]!.price, sources[j]!.price, thresholdBps)) {
+        neighbors.add(j);
+      }
+    }
+    neighborMap.set(i, neighbors);
   }
-  return clusters;
+
+  bronKerbosch(
+    [],
+    new Set(sources.map((_, index) => index)),
+    new Set<number>(),
+    neighborMap,
+    maximalCliques,
+  );
+
+  if (maximalCliques.length === 0) {
+    return sources.map((source) => [source]);
+  }
+
+  return maximalCliques.map((clique) => clique.map((index) => sources[index]!));
+}
+
+function bronKerbosch(
+  clique: number[],
+  candidates: Set<number>,
+  excluded: Set<number>,
+  neighbors: Map<number, Set<number>>,
+  output: number[][],
+): void {
+  if (candidates.size === 0 && excluded.size === 0) {
+    output.push([...clique]);
+    return;
+  }
+
+  const pivot = choosePivot(candidates, excluded, neighbors);
+  const pivotNeighbors = pivot == null ? new Set<number>() : (neighbors.get(pivot) ?? new Set<number>());
+  const branchCandidates = [...candidates].filter((candidate) => !pivotNeighbors.has(candidate));
+
+  for (const candidate of branchCandidates) {
+    const candidateNeighbors = neighbors.get(candidate) ?? new Set<number>();
+    bronKerbosch(
+      [...clique, candidate],
+      intersectSets(candidates, candidateNeighbors),
+      intersectSets(excluded, candidateNeighbors),
+      neighbors,
+      output,
+    );
+    candidates.delete(candidate);
+    excluded.add(candidate);
+  }
+}
+
+function choosePivot(
+  candidates: Set<number>,
+  excluded: Set<number>,
+  neighbors: Map<number, Set<number>>,
+): number | null {
+  let best: number | null = null;
+  let bestDegree = -1;
+  for (const node of [...candidates, ...excluded]) {
+    const degree = neighbors.get(node)?.size ?? 0;
+    if (degree > bestDegree) {
+      best = node;
+      bestDegree = degree;
+    }
+  }
+  return best;
+}
+
+function intersectSets(left: Set<number>, right: Set<number>): Set<number> {
+  const result = new Set<number>();
+  for (const value of left) {
+    if (right.has(value)) result.add(value);
+  }
+  return result;
+}
+
+function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
+  const mid = (left + right) / 2;
+  if (mid <= 0) return false;
+  return (Math.abs(left - right) / mid) * 10000 <= thresholdBps;
 }
 
 function buildSourceLabel(cluster: SourcePrice[]): string {
   return cluster.map((s) => s.source).sort().join("+");
+}
+
+function medianPrice(cluster: SourcePrice[]): number {
+  const sorted = cluster.map((source) => source.price).sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)] ?? 0;
+}
+
+function clusterTotalWeight(cluster: SourcePrice[]): number {
+  return cluster.reduce((sum, source) => sum + source.weight, 0);
+}
+
+function clusterSpreadBps(cluster: SourcePrice[]): number {
+  if (cluster.length <= 1) return 0;
+  const prices = cluster.map((source) => source.price);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const mid = (minPrice + maxPrice) / 2;
+  if (mid <= 0) return Number.POSITIVE_INFINITY;
+  return (Math.abs(maxPrice - minPrice) / mid) * 10000;
+}
+
+function pickBestCluster(clusters: SourcePrice[][], pegRef: number | null): SourcePrice[] {
+  return clusters.reduce((best, candidate) => {
+    if (candidate.length !== best.length) {
+      return candidate.length > best.length ? candidate : best;
+    }
+
+    const candidateWeight = clusterTotalWeight(candidate);
+    const bestWeight = clusterTotalWeight(best);
+    if (candidateWeight !== bestWeight) {
+      return candidateWeight > bestWeight ? candidate : best;
+    }
+
+    const candidateSpread = clusterSpreadBps(candidate);
+    const bestSpread = clusterSpreadBps(best);
+    if (candidateSpread !== bestSpread) {
+      return candidateSpread < bestSpread ? candidate : best;
+    }
+
+    if (pegRef != null && pegRef > 0) {
+      const candidateDistance = Math.abs(medianPrice(candidate) - pegRef);
+      const bestDistance = Math.abs(medianPrice(best) - pegRef);
+      if (candidateDistance !== bestDistance) {
+        return candidateDistance < bestDistance ? candidate : best;
+      }
+    }
+
+    return buildSourceLabel(candidate).localeCompare(buildSourceLabel(best)) < 0 ? candidate : best;
+  });
 }
 
 /** Pick highest-weight source; break ties by proximity to reference price. */

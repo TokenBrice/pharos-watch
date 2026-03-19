@@ -23,6 +23,7 @@ import { fetchOrcaPools } from "./fetch-orca";
 import {
   convertToGtNewPools,
   extractPriceObservations,
+  isEligibleDirectApiPool,
   makeDexApiFetchResult,
   type DexApiFetchResult,
   type DexApiPool,
@@ -30,7 +31,7 @@ import {
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
 
-function filterPrimaryPoolsPreferDirectApi(
+export function filterPrimaryPoolsPreferDirectApi(
   pools: LlamaPool[],
   directApiPools: DexApiPool[],
 ): {
@@ -38,11 +39,12 @@ function filterPrimaryPoolsPreferDirectApi(
   skippedByAddress: number;
   skippedByFingerprint: number;
 } {
+  const eligibleDirectApiPools = directApiPools.filter((pool) => isEligibleDirectApiPool(pool));
   const directApiAddresses = new Set(
-    directApiPools.map((pool) => `${pool.chain.toLowerCase()}:${pool.poolAddress.toLowerCase()}`),
+    eligibleDirectApiPools.map((pool) => `${pool.chain.toLowerCase()}:${pool.poolAddress.toLowerCase()}`),
   );
   const directApiFingerprints = new Set(
-    directApiPools
+    eligibleDirectApiPools
       .map((pool) => buildPoolFingerprint(pool.chain, pool.source, pool.tokens.map((token) => token.address)))
       .filter((fingerprint): fingerprint is string => fingerprint != null),
   );

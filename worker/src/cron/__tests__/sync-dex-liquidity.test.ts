@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DexApiPool } from "../../lib/dex-api-common";
+import type { LlamaPool } from "../dex-liquidity/types";
 
 function makeDirectApiResult() {
   return Object.assign([], { ok: true, degraded: false, errors: [] as string[] });
@@ -40,6 +42,7 @@ vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () =
 import { syncDexLiquidity } from "../dex-liquidity";
 import { fetchDataSources } from "../dex-liquidity/fetch-primary";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
+import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator";
 
 const db = {
   prepare: () => ({
@@ -150,5 +153,48 @@ describe("syncDexLiquidity", () => {
     };
     expect(metadata.failedSources).toContain("raydium-api");
     expect(metadata.fallbackMode).toContain("raydium-api-unavailable");
+  });
+});
+
+describe("filterPrimaryPoolsPreferDirectApi", () => {
+  it("does not let an absurd direct-API pool suppress a healthy primary pool", () => {
+    const pools: LlamaPool[] = [{
+      pool: "0xpool",
+      chain: "Fantom",
+      project: "balancer-stable",
+      symbol: "USDC-USDT",
+      tvlUsd: 2_500_000,
+      volumeUsd1d: 250_000,
+      volumeUsd7d: 1_500_000,
+      stablecoin: true,
+      underlyingTokens: ["0xusdc", "0xusdt"],
+      apyBase: null,
+      apyReward: null,
+      apy: 0,
+      sigma: 0,
+      exposure: "multi",
+      count: 2,
+    }];
+    const directApiPools: DexApiPool[] = [{
+      source: "balancer",
+      chain: "Fantom",
+      poolAddress: "0xpool",
+      poolType: "balancer-stable",
+      tokens: [
+        { address: "0xusdc", symbol: "USDC", decimals: 6 },
+        { address: "0xusdt", symbol: "USDT", decimals: 6 },
+      ],
+      price: 1,
+      tvlUsd: 337_000_000_000,
+      volume24hUsd: 100_000,
+      feeRate: 0.0001,
+      balances: [1_000_000, 1_000_000],
+    }];
+
+    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
+
+    expect(result.filteredPools).toHaveLength(1);
+    expect(result.skippedByAddress).toBe(0);
+    expect(result.skippedByFingerprint).toBe(0);
   });
 });

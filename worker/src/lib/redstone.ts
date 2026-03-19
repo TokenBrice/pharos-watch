@@ -16,6 +16,7 @@ interface RedstoneEntry {
 
 const REDSTONE_BATCH_SIZE = 10;
 const REDSTONE_REQUEST_TIMEOUT_MS = 7_500;
+const REDSTONE_MAX_STALENESS_SEC = 300;
 
 export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = [
   "ALUSD",
@@ -123,6 +124,16 @@ async function fetchRedstoneBatch(
     const entry = normalizeEntry(data[apiSym]);
     if (!entry?.value || entry.value <= 0) continue;
 
+    const timestampSec =
+      typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+        ? Math.floor(entry.timestamp / 1000)
+        : null;
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (timestampSec == null || nowSec - timestampSec > REDSTONE_MAX_STALENESS_SEC) {
+      console.warn(`[redstone] Skipping stale or timestamp-less price for ${apiSym}`);
+      continue;
+    }
+
     const venues = new Map<string, number>();
     if (entry.source) {
       for (const [venue, price] of Object.entries(entry.source)) {
@@ -130,6 +141,10 @@ async function fetchRedstoneBatch(
           venues.set(venue, price);
         }
       }
+    }
+    if (venues.size === 0) {
+      console.warn(`[redstone] Skipping ${apiSym}: no per-venue breakdown`);
+      continue;
     }
 
     let agreeCount = 0;
@@ -148,7 +163,7 @@ async function fetchRedstoneBatch(
       venues,
       venueCount: venues.size,
       venueAgreementPct,
-      timestamp: entry.timestamp ? Math.floor(entry.timestamp / 1000) : Math.floor(Date.now() / 1000),
+      timestamp: timestampSec,
     });
   }
 

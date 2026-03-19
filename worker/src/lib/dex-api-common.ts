@@ -59,6 +59,13 @@ export const DIRECT_API_MAX_POOL_TVL_USD = 10_000_000_000;
 /** Min TVL for a pool to be included in liquidity scoring */
 export const DIRECT_API_POOL_MIN_TVL_USD = 10_000;
 
+export function isEligibleDirectApiPool(
+  pool: Pick<DexApiPool, "tvlUsd">,
+  minTvlUsd = DIRECT_API_POOL_MIN_TVL_USD,
+): boolean {
+  return pool.tvlUsd >= minTvlUsd && pool.tvlUsd <= DIRECT_API_MAX_POOL_TVL_USD;
+}
+
 function getDisplayTokenSymbol(token: DexApiPoolToken): string {
   return normalizeDexSymbol(token.symbol) || token.address.slice(0, 10);
 }
@@ -251,7 +258,7 @@ export function convertToGtNewPools(
   const result = new Map<string, GtNewPool[]>();
 
   for (const pool of pools) {
-    if (pool.tvlUsd < DIRECT_API_POOL_MIN_TVL_USD || pool.tvlUsd > DIRECT_API_MAX_POOL_TVL_USD) continue;
+    if (!isEligibleDirectApiPool(pool)) continue;
     const volume24hUsd = derivePoolVolume24hUsd(pool, addressToId, validationReferences);
     const balanceMetrics = derivePoolBalanceMetrics(pool, addressToId, symbolToIds, validationReferences);
     const feeTierBps = derivePoolFeeTierBps(pool.feeRate);
@@ -311,7 +318,7 @@ export function extractPriceObservations(
   const result = new Map<string, DexPriceObs[]>();
 
   for (const pool of pools) {
-    if (pool.tvlUsd < DIRECT_API_PRICE_MIN_TVL_USD || pool.tvlUsd > DIRECT_API_MAX_POOL_TVL_USD) continue;
+    if (!isEligibleDirectApiPool(pool, DIRECT_API_PRICE_MIN_TVL_USD)) continue;
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];

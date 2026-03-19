@@ -526,38 +526,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     }
   }
 
-  // Protocol-backed overrides supersede market-source prices when direct redemption
-  // or protocol accounting provides a more authoritative mark.
-  for (const asset of llamaData.peggedAssets) {
-    const override = protocolPriceOverrides.get(asset.id);
-    if (!override) continue;
-
-    const decision = validatePriceCandidate(
-      override.price,
-      validationContexts.get(asset),
-      "primary_authoritative",
-      validationReferences,
-    );
-    if (!decision.accepted) continue;
-
-    // Warn if protocol override diverges significantly from market consensus
-    if (asset.price != null && asset.price > 0 && override.price > 0) {
-      const divergenceBps = Math.abs(Math.round(((override.price / asset.price) - 1) * 10000));
-      if (divergenceBps > 100) {
-        console.warn(
-          `[sync] Protocol override for ${asset.symbol} diverges ${divergenceBps}bps from consensus ` +
-          `(override=$${override.price.toFixed(4)}, consensus=$${asset.price.toFixed(4)})`,
-        );
-      }
-    }
-
-    asset.price = override.price;
-    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source]);
-  }
-  if (protocolOverrideCount > 0) {
-    console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);
-  }
-
   // GT probe for single-source CG-only assets
   const gtProbeAbort = returnIfAborted(signal, "gt-probe");
   if (gtProbeAbort) return gtProbeAbort;
@@ -586,6 +554,39 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, "gt-probe");
     console.warn("[sync-stablecoins] GT probe failed (non-fatal):", err);
+  }
+
+  // Protocol-backed overrides supersede market-source prices when direct redemption
+  // or protocol accounting provides a more authoritative mark. This happens after
+  // the GT probe so later market cross-checks cannot overwrite an authoritative mark.
+  for (const asset of llamaData.peggedAssets) {
+    const override = protocolPriceOverrides.get(asset.id);
+    if (!override) continue;
+
+    const decision = validatePriceCandidate(
+      override.price,
+      validationContexts.get(asset),
+      "primary_authoritative",
+      validationReferences,
+    );
+    if (!decision.accepted) continue;
+
+    // Warn if protocol override diverges significantly from market consensus
+    if (asset.price != null && asset.price > 0 && override.price > 0) {
+      const divergenceBps = Math.abs(Math.round(((override.price / asset.price) - 1) * 10000));
+      if (divergenceBps > 100) {
+        console.warn(
+          `[sync] Protocol override for ${asset.symbol} diverges ${divergenceBps}bps from consensus ` +
+          `(override=$${override.price.toFixed(4)}, consensus=$${asset.price.toFixed(4)})`,
+        );
+      }
+    }
+
+    asset.price = override.price;
+    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source]);
+  }
+  if (protocolOverrideCount > 0) {
+    console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);
   }
 
   // Tag all DL-sourced assets with supplySource

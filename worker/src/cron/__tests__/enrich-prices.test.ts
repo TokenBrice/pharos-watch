@@ -788,7 +788,7 @@ describe("fetchPrimaryPrices", () => {
             USDe: {
               value: 1.0003,
               source: { curve: 1.0003 },
-              timestamp: 1710000000000,
+              timestamp: Date.now(),
             },
           }), { status: 200 });
         }
@@ -797,7 +797,7 @@ describe("fetchPrimaryPrices", () => {
             fxUSD: {
               value: 0.9997,
               source: { curve: 0.9997 },
-              timestamp: 1710000000000,
+              timestamp: Date.now(),
             },
           }), { status: 200 });
         }

@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.3",
+  currentVersion: "2.4",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+  {
+    version: "2.4",
+    title: "Pairwise consensus hardening, RedStone freshness gate, authoritative override ordering",
+    date: "2026-03-19",
+    effectiveAt: 1773878400,
+    summary:
+      "Hardened primary price selection so agreement requires full pairwise clustering, fixed pegs stay on fixed-peg rules when references are temporarily unavailable, RedStone requires fresh timestamped venue breakdowns, and protocol-redeem overrides remain final after GeckoTerminal probing.",
+    impact: [
+      "Transitive source chains can no longer create fake multi-source high confidence",
+      "Equal-size cluster ties now resolve deterministically by weight, spread, peg proximity, then label",
+      "Fixed-peg assets no longer silently fall back into NAV-style 500 bps clustering when peg references are missing",
+      "Stale or aggregate-only RedStone entries are excluded before consensus",
+      "Protocol-backed redemption prices can no longer be overwritten by the GeckoTerminal probe",
+      "Direct-API pools must pass shared TVL sanity gates before they suppress overlapping DeFiLlama pools",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "2.3",
     title: "Per-protocol DEX bridge aggregation and top-pool challenge source split",
