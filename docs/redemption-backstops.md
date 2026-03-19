@@ -204,7 +204,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()` with `CRON_1H`
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, component subscores, capacity, docs link, and contextual methodology hint / footer actions)
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, access/settlement/output/capacity blocks, an explicit redemption-fee summary, component subscores, docs link, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `worker/src/lib/report-cards-snapshot.ts` injects `redemptionBackstopScore`, `redemptionRouteFamily`, and immediate-capacity fields into `rawInputs`, and `shared/lib/report-cards.ts` consumes the score in `scoreLiquidity()`
 
