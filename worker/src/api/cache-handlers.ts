@@ -41,26 +41,24 @@ function hydrateYieldRankingsWithLiveSafety(
   );
 
   const rankings = payload.rankings
-    .flatMap((row) => {
+    .map((row) => {
       const card = reportCardById.get(row.id);
-      if (!card) return [];
-
-      const safetyInputScore = card.overallScore ?? DEFAULT_SAFETY_SCORE;
+      const safetyInputScore = card?.overallScore ?? DEFAULT_SAFETY_SCORE;
       const pharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
 
-      return [{
+      return {
         ...row,
         safetyScore: safetyInputScore,
-        safetyGrade: card.overallGrade,
+        safetyGrade: card?.overallGrade ?? "NR",
         pharosYieldScore,
         yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
         provenance: row.provenance
           ? {
             ...row.provenance,
-            usedDefaultSafety: card.overallScore === null,
+            usedDefaultSafety: card?.overallScore == null,
           }
           : null,
-      }];
+      };
     })
     .sort((a, b) => {
       const scoreDiff = (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) - (a.pharosYieldScore ?? Number.NEGATIVE_INFINITY);

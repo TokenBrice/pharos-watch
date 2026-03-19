@@ -1363,7 +1363,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. Includes source-selection provenance and the current risk-free rate.
+Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. Includes source-selection provenance and the current risk-free rate. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 1800 s (30 minutes).
 
@@ -1428,7 +1428,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 
 ### `GET /api/yield-history`
 
-Historical yield data for a single stablecoin.
+Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included.
 
@@ -1478,7 +1478,7 @@ Historical yield data for a single stablecoin.
 | `exchangeRate`   | `number \| null` | Exchange rate at snapshot time (e.g. sUSDe/USDe); `null` if not applicable      |
 | `sourceTvlUsd`   | `number \| null` | TVL of the yield source pool at snapshot time (USD)                             |
 | `warningSignals` | `string[]`       | Active warning-signal flags at that snapshot                                    |
-| `sourceKey`      | `string \| null` | Stable source identifier for this history row                                   |
+| `sourceKey`      | `string \| null` | Stable source identifier for this history row (for example a DL pool UUID or `onchain:<stablecoinId>`) |
 | `yieldSource`    | `string \| null` | Human-readable source label at that snapshot                                    |
 | `yieldSourceUrl` | `string \| null` | Official URL for that source when Pharos has a curated or metadata-derived link |
 | `yieldType`      | `string \| null` | Yield type classification at that snapshot                                      |

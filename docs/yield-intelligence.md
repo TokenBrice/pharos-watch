@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins.ts` enters the yield pipeline. The sync also supports deterministic custom sources for select non-yield-bearing coins, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
+Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins.ts` enters the yield pipeline. The sync also supports deterministic custom sources for select non-yield-bearing coins, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`.
 
 | Field         | Type        | Description                                                                                   |
 | ------------- | ----------- | --------------------------------------------------------------------------------------------- |
@@ -99,6 +99,14 @@ apr                  = remainingLqtyRewards * dailyIssuanceFactor * lqtyPriceUsd
 ### Tier 2: DeFiLlama Yields API (Multi-Source)
 
 Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers). Each unique pool found becomes a separate row in `yield_data`. The row with the highest `currentApy` per coin is marked `is_best = 1`; others are `is_best = 0`.
+
+Before matching, the worker now preserves any single-exposure pool that is either:
+
+- a normal DeFiLlama stablecoin pool (`stablecoin === true`), or
+- explicitly relevant via `YIELD_POOL_MAP`, or
+- explicitly relevant via a configured wrapper symbol in `YIELD_VARIANT_MAP`
+
+This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama marks them `stablecoin: false`.
 
 **Layer 1 — Static map:** `YIELD_POOL_MAP` maps Pharos ID to a DL pool UUID. Filters for `exposure === "single"`. Finds the native/primary yield source. If a mapped UUID is missing from the DL payload, the sync logs `[yield-sync] Pool UUID ... not found in DL response, falling through` and continues to Layer 2/3 fallback matching.
 
@@ -247,7 +255,9 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 
 **Stored as:** `cache` table, key `"risk_free_rate"`.
 
-**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` — written when FRED is unreachable, circuit-broken, or returns invalid data.
+**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%`.
+
+When FRED fetches fail after a previously good benchmark has been cached, the worker now prefers retaining that last-known-good rate and marks it as degraded fallback (`isFallback: true`) instead of silently publishing it as healthy. The hardcoded fallback is used when no retained benchmark is available.
 
 **Usage:** The 30-min yield sync reads the cached rate. The scatter plot renders it as a dashed reference line, and `excessYield` is computed against it.
 
@@ -292,7 +302,7 @@ This selection behavior is surfaced in row-level `provenance` metadata on `/api/
 ```sql
 CREATE TABLE yield_data (
   stablecoin_id       TEXT NOT NULL,
-  source_key          TEXT NOT NULL,  -- DL pool UUID, "price-derived", or "rate-derived"
+  source_key          TEXT NOT NULL,  -- DL pool UUID, "onchain:<stablecoin_id>", "price-derived", or "rate-derived"
   symbol              TEXT NOT NULL,
   current_apy         REAL NOT NULL,
   apy_base            REAL,
@@ -384,7 +394,7 @@ CREATE TABLE yield_history (
 **Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating FRED fetch failure with last-known-good retention), the retained last-known-good benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"`. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`. Schema-invalid runs still skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 
 Implementation stages:
-- `yield-sync/sources.ts`: DL pool loading, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers
+- `yield-sync/sources.ts` + `yield-sync/pool-filter.ts`: DL pool loading, wrapper-relevant pool filtering, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers
 - `yield-sync/resolve.ts`: per-coin source resolution and auto-discovery
 - `yield-sync/rankings.ts`: rankings row shaping, dedupe, warning parsing, TVL-weighted median helper
 - `sync-yield-data.ts`: safety snapshot handling, persistence, stale-row cleanup, and cache writes
@@ -406,7 +416,7 @@ Fetches the latest T-bill proxy rate from FRED (`DGS3MO`). Validates the rate (m
 
 ### `GET /api/yield-rankings`
 
-Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from the current report-card snapshot at API read time. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs.
+Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` hydrated from the current report-card snapshot at API read time. This keeps Yield Intelligence aligned with `/api/report-cards` even when underlying safety inputs move between yield cron runs. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
 
 **Cache profile:** Standard (`s-maxage=300, max-age=60`)
 
@@ -475,7 +485,7 @@ The response includes a `_meta` freshness object (see [Response Body Freshness](
 
 ### `GET /api/yield-history`
 
-Historical APY data points for a single coin. Reads from `yield_history` directly.
+Historical APY data points for a single coin. Reads from `yield_history` directly. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the whole request.
 
 **Cache profile:** Slow (`s-maxage=3600, max-age=300`)
 
@@ -632,8 +642,15 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 **Integration tests:** `worker/src/cron/__tests__/sync-yield-data.test.ts`
 
 - Happy path, stale/orphan cleanup, D1 chunking, cached DL pools, deterministic auto-discovery override, B.Protocol LUSD, DL API failure, circuit breaker open, schema validation, price-derived fallback, source-specific history, legacy history carry-forward, rate-derived, degraded safety coverage
-- On-chain rate expansion: verifies expanded `ON_CHAIN_RATE_CONFIGS` produce valid APY entries
-- OUSG rate-derived: verifies the OUSG rate-derived config participates in arbitration with correct spread
+- Deterministic/native coexistence: verifies on-chain rows can coexist with curated native rows without source-key collision
+- Auto-discovery labeling: verifies `defillama-auto` rows on yield-bearing coins publish protocol-derived labels and `lending-opportunity`
+- Retained benchmark degradation: verifies retained FRED fallback stays marked degraded in rankings provenance
+
+**Pool-filter tests:** `worker/src/cron/__tests__/pool-filter.test.ts`
+
+- Preserves stablecoin single-exposure pools
+- Preserves explicitly relevant wrappers like `fxSAVE` even when upstream `stablecoin` is false
+- Rejects unrelated non-stablecoin pools and non-single exposure pools
 
 **Resolve/arbitration tests:** `worker/src/cron/__tests__/yield-resolve.test.ts`
 
@@ -658,12 +675,14 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 - **First sync (no history):** `apy7d` and `apy30d` equal `currentApy`. PYS still computed.
 - **Unrated coins (no safety grade):** Safety score defaults to `DEFAULT_SAFETY_SCORE` (40, D-equivalent). Most NAV tokens hit this path since the report card framework doesn't grade them yet.
+- **Incomplete live safety hydration:** rankings rows stay published with safety fallback `40 / NR` instead of being dropped.
 - **All tiers fail:** Coin is recorded with `yield: null` and skipped in the write phase. No PYS computed. Logged as warning.
 - **Negative APY:** Stored and displayed. PYS returns 0 for `apy30d <= 0`.
 - **DL Yields circuit-broken:** Tier 2 skipped entirely. Coins with Tier 1 or Tier 3 coverage still get APY. Others get `yield: null`.
 - **Cron gaps (7d filter):** The 7d trailing average uses timestamp-based filtering (`recorded_at >= now - 7d`) rather than proportional slicing, so gaps don't shift the window.
 - **DL pool returns 0% for navToken:** When Tier 2 finds a DL pool but it reports 0% APY, Tier 3 price-derived is tried as an additional source. The `is_best` logic picks the higher APY. This covers upstream DL data staleness and spurious Layer 3 symbol matches.
 - **Dividend-distributing tokens (BUIDL, YLDS):** These maintain a fixed $1.00 NAV and distribute yield as new tokens. Price-derived returns ~0% because the price doesn't change. Resolved via Tier 4 rate-derived, which computes APY from the cached T-bill rate minus the token's management fee spread.
+- **Malformed persisted warning payloads:** `yield-history` treats them as `[]` so a single bad row cannot 500 the endpoint.
 
 ---
 
@@ -677,6 +696,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | Yield sync orchestration and stage modules: source loading, multi-source matching, PYS, safety scores, caching |
 | `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`, `RATE_DERIVED_CONFIGS`                                        |
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
+| `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
 | `worker/src/cron/fetch-tbill-rate.ts`                | Daily T-bill rate cron                                                                                                                       |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
@@ -694,6 +714,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/components/yield-scatter-plot.tsx`              | Risk-adjusted scatter visualization                                                                                                          |
 | `worker/src/cron/__tests__/yield-helpers.test.ts`    | Unit tests for all pure yield functions                                                                                                      |
 | `worker/src/cron/__tests__/sync-yield-data.test.ts`  | Integration tests for sync-yield-data orchestration (on-chain, rate-derived, DL, auto-discovery)                                             |
+| `worker/src/cron/__tests__/pool-filter.test.ts`      | Tests wrapper-preserving pre-filter behavior for cached/direct DeFiLlama pool ingestion                                                       |
 | `worker/src/cron/__tests__/yield-resolve.test.ts`    | Resolve/arbitration tests (price-derived, auto-discovery, DL source selection, warnings)                                                     |
 | `worker/src/cron/__tests__/yield-cache.test.ts`      | Cache parsing tests for DL pools and risk-free rate cache                                                                                    |
 | `worker/src/lib/__tests__/yield-source-links.test.ts` | Yield source link resolution tests (curated, protocol, metadata fallback)                                                                   |

@@ -1799,7 +1799,7 @@ export function MethodologySections() {
                 {
                   label: "Failure behavior",
                   value:
-                    "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 (safety defaults to 40 if missing), while degraded benchmark or safety inputs are surfaced in provenance",
+                    "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 (safety defaults to 40 / NR if live report-card hydration is missing), while degraded benchmark or safety inputs are surfaced in provenance",
                 },
               ]}
             />
@@ -1909,7 +1909,8 @@ export function MethodologySections() {
                 </li>
                 <li>
                   <span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a
-                  DeFiLlama yield pool via static mapping or symbol-based fallback
+                  DeFiLlama yield pool via static mapping or symbol-based fallback, while explicitly preserving wrapper
+                  pools that upstream marks as non-stablecoin when they are configured as relevant yield sources
                 </li>
                 <li>
                   <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives
@@ -1925,6 +1926,11 @@ export function MethodologySections() {
                 Deterministic and curated paths can all contribute rows, then a confidence-weighted arbitration layer
                 chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when a
                 canonical source disagrees materially.
+              </p>
+              <p>
+                Deterministic rows keep their own source identity (`onchain:&lt;stablecoinId&gt;`) rather than sharing
+                a pool UUID with curated sources, so source-aware history and previous-rate lookups stay isolated when
+                both paths coexist.
               </p>
               <p>
                 Trailing APY metrics are computed from source-specific history rather than a mixed coin-level series, so

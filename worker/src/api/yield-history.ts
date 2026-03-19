@@ -24,6 +24,15 @@ interface YieldHistoryRow {
   is_best: number | null;
 }
 
+function parseWarningSignals(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    return z.array(z.string()).catch([]).parse(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
 /**
  * GET /api/yield-history?stablecoin=<id>&days=<n>&mode=best&sourceKey=<key>
  * Returns historical yield data points for a given stablecoin.
@@ -84,7 +93,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
       apyReward: row.apy_reward,
       exchangeRate: row.exchange_rate,
       sourceTvlUsd: row.source_tvl_usd,
-      warningSignals: row.warning_signals ? z.array(z.string()).catch([]).parse(JSON.parse(row.warning_signals)) : [],
+      warningSignals: parseWarningSignals(row.warning_signals),
       sourceKey: normalizedSourceKey,
       yieldSource: row.yield_source,
       yieldSourceUrl: resolveYieldSourceUrl({

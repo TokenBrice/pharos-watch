@@ -31,6 +31,10 @@ import type { DlPool, ResolvedYieldEntry } from "./types";
 const BPROTOCOL_LQTY_ONLY_SOURCE_KEY = "bprotocol-lqty-only";
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 
+function buildOnChainSourceKey(stablecoinId: string): string {
+  return `onchain:${stablecoinId}`;
+}
+
 interface SafetyScoreSnapshot {
   score: number;
   grade: string;
@@ -82,7 +86,7 @@ export async function resolveYieldSources({
       .prepare(
         `SELECT stablecoin_id, exchange_rate, recorded_at
          FROM yield_history
-         WHERE stablecoin_id IN (${tier1InClause.sql}) AND recorded_at <= ?
+         WHERE stablecoin_id IN (${tier1InClause.sql}) AND recorded_at <= ? AND exchange_rate IS NOT NULL
          ORDER BY stablecoin_id ASC, recorded_at DESC`,
       )
       .bind(...tier1InClause.binds, sevenDaysAgoSec)
@@ -132,7 +136,7 @@ export async function resolveYieldSources({
             sourceTvlUsd: null,
             dataSource: "onchain",
             exchangeRate: rate,
-            sourceKey: nativePoolId ?? `onchain:${id}`,
+            sourceKey: buildOnChainSourceKey(id),
           },
         });
         hasAnySource = true;

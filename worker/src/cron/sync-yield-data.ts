@@ -58,6 +58,7 @@ interface YieldHistorySnapshotRow {
   data_source: string;
   yield_source: string | null;
   yield_type: string | null;
+  exchange_rate?: number | null;
 }
 
 interface EvaluatedYieldSource {
@@ -100,6 +101,10 @@ function buildHistoryKey(stablecoinId: string, sourceKey: string): string {
   return `${stablecoinId}::${sourceKey}`;
 }
 
+function buildOnChainSourceKey(stablecoinId: string): string {
+  return `onchain:${stablecoinId}`;
+}
+
 function chunkArray<T>(values: readonly T[], chunkSize: number): T[][] {
   if (values.length === 0) return [];
   const chunks: T[][] = [];
@@ -128,7 +133,7 @@ async function loadYieldHistorySnapshots(
     const [historyResult, prevTvlResult, prevBestResult] = await Promise.all([
       db
         .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type
+          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
            FROM yield_history
            WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at >= ?
            ORDER BY stablecoin_id ASC, recorded_at ASC`,
@@ -146,7 +151,7 @@ async function loadYieldHistorySnapshots(
         .all<YieldHistorySnapshotRow>(),
       db
         .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type
+          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
            FROM yield_history
            WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND is_best = 1 AND recorded_at < ?
            ORDER BY stablecoin_id ASC, recorded_at DESC`,
@@ -263,11 +268,10 @@ function resolveYieldSourceLabel(params: {
   const yieldConfig = meta?.yieldConfig;
   return (
     params.explicitSource ??
-    yieldConfig?.yieldSource ??
     (params.dataSource === "defillama-auto" && params.project
       ? (LENDING_PROTOCOL_LABELS[params.project] ??
         params.project.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
-      : "Unknown")
+      : (yieldConfig?.yieldSource ?? "Unknown"))
   );
 }
 
@@ -280,8 +284,9 @@ function resolveYieldTypeLabel(params: {
   const yieldConfig = meta?.yieldConfig;
   return (
     params.explicitType ??
-    yieldConfig?.yieldType ??
-    (params.dataSource === "defillama-auto" ? "lending-opportunity" : "nav-appreciation")
+    (params.dataSource === "defillama-auto"
+      ? "lending-opportunity"
+      : (yieldConfig?.yieldType ?? "nav-appreciation"))
   );
 }
 
@@ -290,6 +295,7 @@ function pickHistoryRowsForSource(
   sourceKey: string,
   dataSource: string,
   sourceHistory: Map<string, YieldHistorySnapshotRow[]>,
+  onChainCompatibilityHistoryById: Map<string, YieldHistorySnapshotRow[]>,
   legacyHistoryById: Map<string, YieldHistorySnapshotRow[]>,
   resolvedCountByCoin: Map<string, number>,
   startSec: number,
@@ -297,6 +303,13 @@ function pickHistoryRowsForSource(
   const directRows = sourceHistory.get(buildHistoryKey(stablecoinId, sourceKey)) ?? [];
   if (directRows.length > 0) {
     return { rows: directRows, usedLegacyHistory: false };
+  }
+
+  if (dataSource === "onchain" && sourceKey === buildOnChainSourceKey(stablecoinId)) {
+    const compatibilityRows = onChainCompatibilityHistoryById.get(stablecoinId) ?? [];
+    if (compatibilityRows.length > 0) {
+      return { rows: compatibilityRows, usedLegacyHistory: false };
+    }
   }
 
   const legacyRows = legacyHistoryById.get(stablecoinId) ?? [];
@@ -433,6 +446,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
   }
 
   const sourceHistory = new Map<string, YieldHistorySnapshotRow[]>();
+  const onChainCompatibilityHistoryById = new Map<string, YieldHistorySnapshotRow[]>();
   const legacyHistoryById = new Map<string, YieldHistorySnapshotRow[]>();
   const prevTvlBySource = new Map<string, number | null>();
   const legacyPrevTvlById = new Map<string, number | null>();
@@ -447,15 +461,22 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
 
     for (const row of historyRows) {
       const sourceKey = row.source_key ?? "legacy-best";
+      const normalizedRow = { ...row, source_key: sourceKey };
       if (sourceKey === "legacy-best") {
         const list = legacyHistoryById.get(row.stablecoin_id) ?? [];
-        list.push({ ...row, source_key: sourceKey });
+        list.push(normalizedRow);
         legacyHistoryById.set(row.stablecoin_id, list);
       } else {
         const key = buildHistoryKey(row.stablecoin_id, sourceKey);
         const list = sourceHistory.get(key) ?? [];
-        list.push({ ...row, source_key: sourceKey });
+        list.push(normalizedRow);
         sourceHistory.set(key, list);
+      }
+
+      if (row.data_source === "onchain" && row.exchange_rate != null) {
+        const list = onChainCompatibilityHistoryById.get(row.stablecoin_id) ?? [];
+        list.push(normalizedRow);
+        onChainCompatibilityHistoryById.set(row.stablecoin_id, list);
       }
     }
 
@@ -475,7 +496,12 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
 
     for (const row of prevBestRows) {
       if (!prevBestSourceKeyByCoin.has(row.stablecoin_id)) {
-        prevBestSourceKeyByCoin.set(row.stablecoin_id, row.source_key ?? "legacy-best");
+        prevBestSourceKeyByCoin.set(
+          row.stablecoin_id,
+          row.data_source === "onchain" && row.exchange_rate != null
+            ? buildOnChainSourceKey(row.stablecoin_id)
+            : (row.source_key ?? "legacy-best"),
+        );
       }
     }
   }
@@ -514,6 +540,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
         sourceKey,
         y.dataSource,
         sourceHistory,
+        onChainCompatibilityHistoryById,
         legacyHistoryById,
         resolvedCountByCoin,
         startSec,

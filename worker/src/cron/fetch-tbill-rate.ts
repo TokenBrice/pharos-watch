@@ -97,7 +97,7 @@ async function handleDegradedFallback(
       recordDate: previous.recordDate,
       fetchedAt: previous.fetchedAt,
       source: previous.source,
-      isFallback: false,
+      isFallback: true,
       fallbackMode: `${fallbackMode}-retained`,
     });
     return {

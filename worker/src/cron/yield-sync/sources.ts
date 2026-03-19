@@ -16,6 +16,7 @@ import {
   parseDlStablecoinPoolsCache,
   parseRiskFreeRateCache,
 } from "./cache";
+import { isYieldRelevantDlPool } from "./pool-filter";
 import type { DlPool, ResolvedYield } from "./types";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
@@ -68,7 +69,7 @@ export async function loadDlStablecoinPools(
       });
       if (res?.ok) {
         const body = (await res.json()) as { data: DlPool[] };
-        dlPools = (body.data ?? []).filter((pool) => pool.stablecoin);
+        dlPools = (body.data ?? []).filter(isYieldRelevantDlPool);
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
         return {
           pools: dlPools,
