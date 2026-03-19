@@ -1073,7 +1073,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "f(x) Protocol Stability Pool", yieldType: "governance-set" },
     collateral: "WBTC (majority) and wstETH deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized; WBTC custody by BitGo/Coinbase introduces centralized dependency",
-    pegMechanism: "CDP-style with overcollateralization and liquidations; USDC/fxUSD Stability Pool Gauge on Curve acts as peg keeper (buys fxUSD below peg); fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",
+    pegMechanism: "CDP-style with overcollateralization and liquidations; f(x) Protocol Stability Pool (~25M USDC) arbitrages the USDC/fxUSD Curve pool to defend the peg; two yield strategies: (1) Curve LP with FXN gauge, (2) Stability Pool with wstETH real yield, fxSAVE autocompound, or FXN gauge; fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",
     proofOfReserves: { type: "independent-audit", url: "https://www.openzeppelin.com/news/fx-v2-audit", provider: "OpenZeppelin" },
     links: [
       { label: "Website", url: "https://fx.aladdin.club" },
