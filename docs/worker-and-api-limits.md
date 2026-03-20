@@ -49,6 +49,8 @@ The scheduler is deliberately structured around the repo's six-connection-per-tr
 
 Treat any new fetch-heavy work added to an existing trigger slot as competing for the same trigger-wide outbound connection budget.
 
+For `sync-stablecoins`, failed upstream responses must be consumed or canceled before later passes start. Leaving non-OK bodies unread can strand the same trigger-local connection slots and starve the late fallback phase (`CoinMarketCap` -> `Jupiter` -> `DexScreener`).
+
 ---
 
 ## Cron Budgeting

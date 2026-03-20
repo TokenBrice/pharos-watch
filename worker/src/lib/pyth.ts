@@ -5,6 +5,14 @@ const HERMES_BASE = "https://hermes.pyth.network";
 /** Maximum age (seconds) of a Pyth price feed before it's considered stale */
 const PYTH_MAX_STALENESS_SEC = 300; // 5 minutes
 
+async function cancelFailedResponseBody(res: Response): Promise<void> {
+  try {
+    await res.body?.cancel();
+  } catch {
+    // Best-effort: failed bodies still must not block the caller path.
+  }
+}
+
 function normalizeFeedId(feedId: string): string {
   return feedId.toLowerCase().replace(/^0x/, "");
 }
@@ -55,6 +63,7 @@ export async function fetchPythPrices(
       { signal, headers: { Accept: "application/json" } },
     );
     if (!res.ok) {
+      await cancelFailedResponseBody(res);
       console.warn(`[pyth] Hermes API returned ${res.status}`);
       return results;
     }

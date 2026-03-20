@@ -50,10 +50,12 @@ describe("fetchPythPrices", () => {
   });
 
   it("returns empty map on API failure", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, body: { cancel } }));
     const feedIds = new Map([["usdt-tether", "0xabc"]]);
     const results = await fetchPythPrices(feedIds);
     expect(results.size).toBe(0);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it("skips feeds with non-positive price", async () => {

@@ -5,6 +5,14 @@
 
 import { USER_AGENT } from "./constants";
 
+async function cancelFailedResponseBody(res: Response): Promise<void> {
+  try {
+    await res.body?.cancel();
+  } catch {
+    // Best-effort: failed bodies still must not block the caller path.
+  }
+}
+
 /**
  * Explicit mapping from Binance pair symbol to the stablecoin ticker.
  * This avoids broken string-replacement logic (e.g., "USDTUSD".replace("USD","") → "TUSD").
@@ -87,6 +95,7 @@ export async function fetchBinancePrices(
       { signal, headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
     );
     if (!res.ok) {
+      await cancelFailedResponseBody(res);
       console.warn(`[cex-binance] API returned ${res.status}`);
       return results;
     }
@@ -125,6 +134,7 @@ export async function fetchKrakenPrices(
       { signal, headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
     );
     if (!res.ok) {
+      await cancelFailedResponseBody(res);
       console.warn(`[cex-kraken] API returned ${res.status}`);
       return results;
     }
@@ -165,6 +175,7 @@ export async function fetchBitstampPrices(
       { signal, headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
     );
     if (!res.ok) {
+      await cancelFailedResponseBody(res);
       console.warn(`[cex-bitstamp] API returned ${res.status}`);
       return results;
     }
@@ -207,6 +218,7 @@ export async function fetchCoinbasePrices(
         { signal, headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
       );
       if (!res.ok) {
+        await cancelFailedResponseBody(res);
         console.warn(`[cex-coinbase] ${symbol}-USD returned ${res.status}`);
         continue;
       }
@@ -216,6 +228,7 @@ export async function fetchCoinbasePrices(
         if (price > 0) results.set(symbol, price);
       }
     } catch (err) {
+      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
       console.warn(`[cex-coinbase] ${symbol}-USD fetch failed:`, err);
     }
   }

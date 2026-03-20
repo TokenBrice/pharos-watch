@@ -28,9 +28,11 @@ describe("fetchBinancePrices", () => {
   });
 
   it("returns empty map on failure", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, body: { cancel } }));
     const results = await fetchBinancePrices();
     expect(results.size).toBe(0);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it("returns empty map when Binance returns no stablecoin pairs", async () => {
@@ -59,6 +61,16 @@ describe("fetchCoinbasePrices", () => {
     expect(results.get("USDT")).toBeCloseTo(0.9998, 4);
     expect(results.get("DAI")).toBeCloseTo(1.0, 4);
     expect(results.has("XYZFAKE")).toBe(false);
+  });
+
+  it("cancels failed product responses before continuing", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404, body: { cancel } }));
+
+    const results = await fetchCoinbasePrices(["USDT"]);
+
+    expect(results.size).toBe(0);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -93,6 +105,16 @@ describe("fetchKrakenPrices", () => {
     const results = await fetchKrakenPrices(["USDT"]);
     expect(results.size).toBe(0);
   });
+
+  it("cancels failed HTTP responses", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, body: { cancel } }));
+
+    const results = await fetchKrakenPrices(["USDT"]);
+
+    expect(results.size).toBe(0);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("fetchBitstampPrices", () => {
@@ -110,6 +132,16 @@ describe("fetchBitstampPrices", () => {
     expect(results.get("USDT")).toBeCloseTo(1.0001, 4);
     expect(results.get("USDC")).toBeCloseTo(0.9999, 4);
     expect(results.has("BTC")).toBe(false);
+  });
+
+  it("cancels failed HTTP responses", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, body: { cancel } }));
+
+    const results = await fetchBitstampPrices();
+
+    expect(results.size).toBe(0);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 });
 
