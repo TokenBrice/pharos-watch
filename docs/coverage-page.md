@@ -1,6 +1,6 @@
-# Coverage Page
+# Coverage Page Contract
 
-Contract for the public `/coverage/` route. This page explains which Pharos features are available per tracked stablecoin and gives users both count coverage and market-cap coverage.
+Contract for the public `/coverage/` route. This page explains which Pharos features are available per active stablecoin and gives users both count coverage and market-cap coverage.
 
 ---
 
@@ -35,7 +35,8 @@ The matrix currently exposes these columns:
 - `Price & Depeg`
 - `Safety Score`
 - `DEX Price`
-- `Reserves`
+- `Live Reserves Sync`
+- `Redemption Backstop`
 - `Yield`
 - `Flows`
 - `Blacklist`
@@ -46,7 +47,8 @@ Status semantics are intentionally user-facing:
 - `Price & Depeg`: `Tracked`, `Price only` (NAV-priced assets), or `Missing`
 - `Safety Score`: `Rated` or `NR`
 - `DEX Price`: `Primary`, `Mixed`, `Fallback`, `Legacy`, `NR`, or `Unknown`
-- `Reserves`: `Live`, `Curated`, `Estimated`, or `None`
+- `Live Reserves Sync`: `Live`, `Curated`, `Estimated`, or `None`
+- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Modeled`, or `—`
 - `Yield`: `Ranked` or `—`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.` , `Disabled`, or `—`
 - `Blacklist`: `Tracked` or `—`
@@ -63,7 +65,8 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Price & Depeg` | `usePegSummary().data.coins[].id`, `consensusSources`, `priceConfidence` plus `ACTIVE_STABLECOINS[*].flags.navToken` | `Tracked` requires a live peg-summary row. NAV tokens intentionally map to `Price only` even without depeg logic. |
 | `Safety Score` | `useReportCards().data.cards[].overallScore` | Coverage is `Rated` only when the report card has a non-null overall score. |
 | `DEX Price` | `useDexLiquidity().data[id].coverageClass` | User-facing badge labels are mapped from liquidity `coverageClass`. |
-| `Reserves` | `ACTIVE_STABLECOINS[*].liveReservesConfig` first, otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | Live reserve adapters outrank curated or estimated reserve metadata. |
+| `Live Reserves Sync` | `ACTIVE_STABLECOINS[*].liveReservesConfig` first, otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | Live reserve adapters outrank curated or estimated reserve metadata. |
+| `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]` | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. |
 | `Yield` | `useYieldRankings().data.rankings[].id` | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility. |
 | `Flows` | `useMintBurnFlows().data.coins[].coverage.status` | Mirrors the Ethereum mint/burn coverage state exposed on `/flows`. |
 | `Blacklist` | `BLACKLIST_STABLECOINS` from `@shared/types` | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. Current enum values are `USDC`, `USDT`, `EURC`, `PAXG`, and `XAUT`, although only four of those currently emit cron-backed blacklist rows. |
@@ -93,12 +96,13 @@ Every row shows:
 - a short per-feature breakdown
 - direct link to the underlying surface when one exists
 
-For `Reserves`, the headline metric intentionally emphasizes `Live` reserve tracking. Curated and estimated reserve views still appear in the breakdown so the row distinguishes true live coverage from metadata-only reserve composition.
+For `Live Reserves Sync`, the headline metric intentionally emphasizes `Live` reserve tracking. Curated and estimated reserve views still appear in the breakdown so the row distinguishes true live coverage from metadata-only reserve composition.
 
 Breakdowns are intentionally dense and should stay short:
 
 - DEX: `primary / mixed / fallback`
-- Reserves: `live / curated / estimated`
+- Live reserves: `live / curated / estimated`
+- Redemption: `issuer / psm / queue / collateral / stable / basket`
 - Flows: `full / partial / bootstrapping`
 - Price: `tracked / price-only`
 
@@ -119,7 +123,7 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 - From `md` upward, the full comparison table renders with the first column sticky.
 - The per-coin matrix comes second and is explicitly positioned as the asset-level drill-down surface.
 - Coverage notes and the status legend live in an inline disclosure above the matrix, not in a separate explainer block.
-- Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view.
+- Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, redemption-backstops, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view.
 
 The page should continue to render meaningfully when some live datasets are temporarily unavailable. In that case, the matrix still renders with structural coverage where possible and uses the shared stale-data banner to surface data-health issues.
 

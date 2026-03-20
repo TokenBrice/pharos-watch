@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 166 stablecoins (plus 2 shadow assets for PSI) across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 166 stablecoins in repo metadata, including 158 active assets on public data surfaces, 8 pre-launch entries, and 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -19,7 +19,7 @@ Public-facing analytics dashboard tracking 166 stablecoins (plus 2 shadow assets
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 82 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 46 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 66 configured assets
 - **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
 - **Public status page + private operator admin** — read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/`
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
@@ -156,7 +156,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migration files (77 total)
+└── migrations/                   D1 SQL migration files (76) plus `MANIFEST.md`
 ```
 
 ## Documentation
