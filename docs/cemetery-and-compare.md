@@ -33,15 +33,15 @@ Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`.
 
 ### Telegram channel notifications
 
-The cemetery dataset now has a worker-side notification path:
+The cemetery dataset now has a worker-side Telegram notification path:
 
-- `worker/src/cron/announce-cemetery-additions.ts`
-- runs on the dedicated 5-minute Telegram trigger
+- `worker/src/lib/telegram-digest-appendices.ts`
+- runs as part of daily Telegram digest delivery
 - diffs the deployed `DEAD_STABLECOINS` list against a cached snapshot in D1
 - seeds silently on first run so existing graves do not backfill into Telegram
-- posts one consolidated channel message when a deploy adds one or more new cemetery entries
+- appends one consolidated cemetery section to the next Telegram daily digest when a deploy adds one or more new entries
 
-Each notification includes the epitaph for every newly added coin, plus a rotating darkly editorial footer line and a link to `/cemetery/`.
+Each appendix includes the epitaph for every newly added coin plus a rotating darkly editorial footer line.
 
 ### UI behavior
 
@@ -117,5 +117,5 @@ That pattern is used in both the stacked mobile cards and the desktop comparison
 
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/lib/dead-stablecoins.ts`).
-- Cemetery channel notifications depend on the 5-minute Telegram cron plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
+- Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
 - Compare reliability depends on six independent API datasets plus per-coin supply-history and flow queries; partial failures are surfaced via query error/stale-data UI components.

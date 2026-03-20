@@ -57,7 +57,7 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "five-minute",
     title: "5-minute slot",
     badge: "~5 min",
-    description: "Telegram alert dispatch plus cemetery-announcement sidecar work, with a dedicated connection pool and pending-queue drain.",
+    description: "Telegram alert dispatch with a dedicated connection pool and pending-queue drain.",
   },
   {
     key: "twenty-minute",

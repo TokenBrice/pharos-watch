@@ -409,7 +409,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `confirm-pending-depegs.test.ts`        | `confirm-pending-depegs.ts`        | Pending depeg state-machine decisions, secondary confirmation paths, missing dex table handling, abort propagation                                              |
 | `dex-liquidity-persistence.test.ts`     | `dex-liquidity/persistence.ts`     | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior              |
 | `sync-mint-burn.test.ts`                | `sync-mint-burn.ts`                | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior                                                             |
-| `announce-cemetery-additions.test.ts`   | `announce-cemetery-additions.ts`   | Cemetery dataset diffing, first-run seeding, and Telegram announcement behavior                                                                                 |
+| `telegram-digest-appendices.test.ts`    | `telegram-digest-appendices.ts`    | Cemetery/tracked snapshot diffing, first-run seeding, and deferred appendix snapshot commits after successful Telegram digest delivery                         |
 | `discovery-scan.test.ts`                | `discovery-scan.ts`                | Daily CoinGecko residual scan, candidate upserts, and dismiss-state preservation                                                                                |
 
 ## Conventions

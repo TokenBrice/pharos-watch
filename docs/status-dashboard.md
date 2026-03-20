@@ -92,7 +92,7 @@ The active frontend operator mode is now:
   - Renders Telegram subscriber adoption metrics, top subscribed coins, custom-preference / quiet-hour counts, and the latest `dispatch-telegram-alerts` delivery summary
 - Cron cards are grouped by trigger slot on the page:
   - 15-minute core ingestion / score recompute
-  - 5-minute Telegram dispatch lane, with cemetery-announcement sidecar work on the same trigger
+  - 5-minute Telegram dispatch lane for subscriber alerts
   - 20-minute on-chain intake jobs shown together, but labeled as isolated triggers (`sync-blacklist`, `sync-mint-burn`, `sync-mint-burn-extended`); `sync-dex-discovery` is in the half-hourly group on its own dedicated 30-minute trigger
   - 30-minute charts / liquidity / yield jobs
   - hourly reserve / redemption lane (`sync-live-reserves`, `sync-redemption-backstops`)

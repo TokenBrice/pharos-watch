@@ -124,6 +124,10 @@ vi.mock("../../lib/telegram", () => ({
   postDigestToTelegram: vi.fn(),
 }));
 
+vi.mock("../../lib/telegram-digest-appendices", () => ({
+  prepareTelegramDigestAppendices: vi.fn(),
+}));
+
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => {}),
@@ -149,6 +153,7 @@ import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestTweet } from "../../lib/twitter";
 import { postDigestToTelegram } from "../../lib/telegram";
+import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 
 const ANTHROPIC_OK_RESPONSE = {
@@ -164,6 +169,8 @@ const ANTHROPIC_OK_RESPONSE = {
   ],
 };
 
+const commitTelegramAppendices = vi.fn(async () => undefined);
+
 function makeBaseTables(): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
@@ -178,6 +185,11 @@ function makeBaseTables(): MockTableConfig[] {
     {
       match: "SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
       rows: [],
+    },
+    {
+      match: "SELECT COUNT(*) as cnt FROM daily_digest WHERE",
+      rows: [{ cnt: 1 }],
+      first: { cnt: 1 },
     },
     {
       match: "FROM depeg_events WHERE ended_at IS NULL",
@@ -279,6 +291,21 @@ describe("generateDailyDigest", () => {
 
     vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
     vi.mocked(postDigestToTelegram).mockReset().mockResolvedValue(undefined);
+    commitTelegramAppendices.mockReset().mockResolvedValue(undefined);
+    vi.mocked(prepareTelegramDigestAppendices).mockReset().mockResolvedValue({
+      appendixHtml: null,
+      metadata: {
+        hasAppendix: false,
+        cemeteryDetected: 0,
+        trackedDetected: 0,
+        preLaunchDetected: 0,
+        cemeterySymbols: [],
+        trackedSymbols: [],
+        preLaunchSymbols: [],
+        seededSnapshots: [],
+      },
+      commitSuccess: commitTelegramAppendices,
+    });
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
 
@@ -326,6 +353,7 @@ describe("generateDailyDigest", () => {
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
+    expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.anthropic.com/v1/messages",
       expect.objectContaining({
@@ -661,7 +689,81 @@ describe("generateDailyDigest", () => {
     expect(result.itemCount).toBe(1);
     expect(result.metadata).toContain("tweet: failed:");
     expect(result.metadata).toContain("telegram: failed:");
+    expect(commitTelegramAppendices).not.toHaveBeenCalled();
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
+  });
+
+  it("passes digest appendices to Telegram and commits appendix state after a successful send", async () => {
+    vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
+      appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
+      metadata: {
+        hasAppendix: true,
+        cemeteryDetected: 0,
+        trackedDetected: 1,
+        preLaunchDetected: 0,
+        cemeterySymbols: [],
+        trackedSymbols: ["USDX"],
+        preLaunchSymbols: [],
+        seededSnapshots: [],
+      },
+      commitSuccess: commitTelegramAppendices,
+    });
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      null,
+      false,
+      {
+        botToken: "tg-token",
+        chatId: "tg-chat",
+      },
+    );
+
+    expect(result.metadata).toContain("telegram: ok+appendix(");
+    expect(postDigestToTelegram).toHaveBeenCalledWith(
+      "Calm Drift",
+      "PSI held firm.\n\nUSDT and USDC stayed in range.",
+      "2026-03-06",
+      { botToken: "tg-token", chatId: "tg-chat" },
+      1,
+      "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
+    );
+    expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not commit appendix state when Telegram delivery fails", async () => {
+    vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
+      appendixHtml: "<b>New Cemetery Entries</b>\n\n<code>UST</code> TerraUSD",
+      metadata: {
+        hasAppendix: true,
+        cemeteryDetected: 1,
+        trackedDetected: 0,
+        preLaunchDetected: 0,
+        cemeterySymbols: ["UST"],
+        trackedSymbols: [],
+        preLaunchSymbols: [],
+        seededSnapshots: [],
+      },
+      commitSuccess: commitTelegramAppendices,
+    });
+    vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(
+      db,
+      "anthropic-key",
+      null,
+      false,
+      {
+        botToken: "tg-token",
+        chatId: "tg-chat",
+      },
+    );
+
+    expect(result.metadata).toContain("telegram: failed:");
+    expect(commitTelegramAppendices).not.toHaveBeenCalled();
   });
 });
 

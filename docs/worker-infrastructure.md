@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 26 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track 25 of them; `announce-cemetery-additions` runs on the Telegram trigger but is intentionally excluded from the shared status metadata set.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 25 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 25 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -356,9 +356,8 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | Job                           | Function                      | File                                             | Documentation                                                                                 |
 | ----------------------------- | ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
 | `dispatch-telegram-alerts`    | `dispatchTelegramAlerts()`    | `worker/src/cron/dispatch-telegram-alerts.ts`    | [Telegram Alert Bot](./telegram-alerts.md)                                                    |
-| `announce-cemetery-additions` | `announceCemeteryAdditions()` | `worker/src/cron/announce-cemetery-additions.ts` | [Telegram Alert Bot](./telegram-alerts.md), [Cemetery and Compare](./cemetery-and-compare.md) |
 
-Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out and channel posting get their own 6-connection pool and CPU budget. The scheduled handler runs the two jobs sequentially: subscriber alerts first, cemetery channel diff second. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
+Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
 ### Trigger 9: `0 8 * * *` (daily at 08:00 UTC — snapshots & lightweight fetchers)
 
@@ -423,7 +422,7 @@ All cron jobs follow a 4-tier error classification:
 
 - Webhook ingress (`POST /api/telegram-webhook`) receives Telegram commands and writes subscriber/subscription state into D1.
 - `dispatch-telegram-alerts` diffs DEWS/depeg/safety state against cached snapshots before fan-out on a dedicated 5-minute cron slot.
-- `announce-cemetery-additions` diffs the static cemetery dataset against a cached snapshot and posts one channel message when a deploy adds new entries.
+- `daily-digest` now appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
 - Telegram sends are gated by the `telegram-api` circuit breaker to avoid hammering the Bot API during upstream issues.
 - Each dispatch run sends up to 200 Telegram message attempts in parallel batches of 5. Overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` for subsequent runs.
 - Subscriber state now supports quiet hours plus per-subscription controls such as `dews_min_band`, `safety_mode`, and `depeg_worsening_bps_step`.

@@ -11,6 +11,10 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import {
+  prepareTelegramDigestAppendices,
+  type PreparedTelegramDigestAppendices,
+} from "../lib/telegram-digest-appendices";
 import { DigestResponseSchema } from "../lib/schemas";
 import {
   collectActiveDepegs,
@@ -693,11 +697,37 @@ export async function generateDailyDigest(
     if (!telegramAllowed) {
       telegramStatus = "skipped: circuit-open";
     } else {
+      let telegramAppendices: PreparedTelegramDigestAppendices | null = null;
+      try {
+        telegramAppendices = await prepareTelegramDigestAppendices(db);
+      } catch (err) {
+        degradedReasons.push("telegram-appendix-state");
+        console.error("[daily-digest] Failed to prepare Telegram digest appendices:", err);
+      }
+
       try {
         const date = new Date(now * 1000).toISOString().slice(0, 10);
-        await postDigestToTelegram(digestTitle, digestExtended, date, telegramCreds, editionNumber);
+        await postDigestToTelegram(
+          digestTitle,
+          digestExtended,
+          date,
+          telegramCreds,
+          editionNumber,
+          telegramAppendices?.appendixHtml ?? null,
+        );
+        if (telegramAppendices) {
+          try {
+            await telegramAppendices.commitSuccess();
+          } catch (err) {
+            degradedReasons.push("telegram-appendix-commit");
+            console.error("[daily-digest] Failed to commit Telegram digest appendix state:", err);
+          }
+        }
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
-        telegramStatus = "ok";
+        const appendixSuffix = telegramAppendices?.metadata.hasAppendix
+          ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
+          : "";
+        telegramStatus = `ok${appendixSuffix}`;
       } catch (err) {
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
         console.error("[daily-digest] Failed to post to Telegram (non-fatal):", err);

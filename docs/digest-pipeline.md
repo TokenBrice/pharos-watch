@@ -163,6 +163,13 @@ If any of the four are absent, Twitter posting is skipped silently.
 
 The `extended` field is used (not `text`) because Telegram's 4096-char limit removes the need for truncation, and the longer copy reads better in a channel context.
 
+Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram-digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body:
+
+- `New Cemetery Entries` for newly added cemetery rows
+- `Tracking Changes` for newly tracked coins, split into live tracked vs pre-launch
+
+Appendix snapshots advance only after Telegram accepts the digest post, so a failed channel delivery does not lose pending additions.
+
 **Required secrets:**
 
 | Variable | Description |

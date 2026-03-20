@@ -469,7 +469,6 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── discovery-scan.ts     # Daily stablecoin coverage discovery → D1 (daily, 08:05 UTC)
     │   ├── compute-dews.ts       # DEWS computation cron (every 15min, after sync-stablecoins)
     │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety transitions (dedicated every-5-minute trigger)
-    │   ├── announce-cemetery-additions.ts # Telegram channel announcement when a deploy adds new cemetery entries
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
@@ -575,6 +574,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── dexscreener.ts        # DexScreener API client (token price + pool search)
         ├── resolve-market-cap.ts # Multi-source market cap resolution (DL → CG → CMC → DexScreener)
         ├── telegram-alerts.ts    # Telegram alert subscription parsing, filtering, and message formatting helpers
+        ├── telegram-digest-appendices.ts # Pending cemetery / tracking notices appended to the next Telegram daily digest
         └── telegram.ts           # Telegram Bot API client for digest delivery and direct bot chat replies
 
 data/
