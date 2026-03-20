@@ -1,0 +1,24 @@
+# FX / Yield Status Remediation Plan
+
+Date: 2026-03-20
+
+## Scope
+
+- Investigate the stale public status state around `sync-fx-rates` and `sync-yield-data`
+- Fix the root cause in the worker with minimal surface-area change
+- Verify locally, deploy, and observe two successful production runs for each affected job
+
+## Findings So Far
+
+- Public `/api/health` is currently `degraded`
+- The active public warning is `fx-rates: using cached fallback FX rates (10 consecutive runs)`
+- `yield-rankings` is currently serving fresh public data, so the urgent production issue is concentrated in the FX cron path
+- Frankfurter and the existing secondary `currency-api` mirrors are reachable from this shell, which points to a worker fallback-path gap rather than a permanently dead upstream
+
+## Fix Strategy
+
+1. Extend `sync-fx-rates` so the existing secondary `fawazahmed0/currency-api` mirror can backstop the full fiat FX set, not just CNH/RUB/UAH/ARS, when Frankfurter is unavailable or invalid.
+2. Preserve cadence-aware FX metadata so health/status semantics stay correct.
+3. Add regression coverage for the new live-secondary fallback path.
+4. Update pricing methodology/docs to reflect the wider secondary fallback behavior.
+5. Validate locally, then push/deploy and watch live telemetry until two successful runs are observed.

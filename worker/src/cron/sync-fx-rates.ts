@@ -118,6 +118,8 @@ interface SecondaryCurrencyCandidate {
   payload: SecondaryCurrencyPayload;
 }
 
+type SecondaryFxMappings = ReadonlyArray<readonly [string, string]>;
+
 const MetalPriceSchema = z.object({
   price: z.number(),
 });
@@ -184,6 +186,34 @@ function chooseSecondaryCurrencyCandidate(
     : primary;
 }
 
+async function loadSecondaryCurrencyCandidate(signal?: AbortSignal): Promise<SecondaryCurrencyCandidate | null> {
+  const primaryCandidate = await fetchSecondaryCurrencyCandidate(
+    "jsdelivr",
+    SECONDARY_FX_PRIMARY_URL,
+    signal,
+  );
+  const fallbackCandidate = await fetchSecondaryCurrencyCandidate(
+    "pages.dev",
+    SECONDARY_FX_FALLBACK_URL,
+    signal,
+  );
+
+  const secondaryCandidate = chooseSecondaryCurrencyCandidate(primaryCandidate, fallbackCandidate);
+  if (
+    primaryCandidate &&
+    fallbackCandidate &&
+    secondaryCandidate &&
+    secondaryCandidate.endpoint !== primaryCandidate.endpoint
+  ) {
+    console.log(
+      `[sync-fx-rates] Using fresher secondary FX mirror (${secondaryCandidate.endpoint} date=${secondaryCandidate.payload.date ?? "unknown"}, ` +
+        `jsdelivr=${primaryCandidate.payload.date ?? "unknown"})`,
+    );
+  }
+
+  return secondaryCandidate;
+}
+
 export async function syncFxRates(
   db: D1Database,
   signal?: AbortSignal,
@@ -246,6 +276,36 @@ export async function syncFxRates(
       sourceCadenceByPeg[pegKey] = "intraday";
       sourceDateByPeg[pegKey] = null;
     };
+    const applySecondaryRates = (
+      candidate: SecondaryCurrencyCandidate,
+      mappings: SecondaryFxMappings,
+      { includeMissingPrevious = false }: { includeMissingPrevious?: boolean } = {},
+    ) => {
+      const sourceDate =
+        typeof candidate.payload.date === "string" && candidate.payload.date.length > 0
+          ? candidate.payload.date
+          : null;
+      const secondaryUpdatedAt = sourceDate
+        ? resolveDatedSourceUpdatedAt(sourceDate, syncStartSec)
+        : syncStartSec;
+
+      for (const [currency, pegKey] of mappings) {
+        const perUsd = candidate.payload.usd?.[currency.toLowerCase()];
+        if (typeof perUsd === "number" && perUsd > 0) {
+          const rate = Number((1 / perUsd).toFixed(6));
+          if (isValidRate(pegKey, rate, prevRates[pegKey])) {
+            usableRates[pegKey] = rate;
+            markLive(pegKey, secondaryUpdatedAt, "calendar-daily", sourceDate);
+          } else if (prevRates[pegKey]) {
+            usableRates[pegKey] = prevRates[pegKey];
+            inheritPrevious(pegKey);
+          }
+        } else if (includeMissingPrevious && prevRates[pegKey]) {
+          usableRates[pegKey] = prevRates[pegKey];
+          inheritPrevious(pegKey);
+        }
+      }
+    };
 
     const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
     const res = await fetchWithRetry(url, {
@@ -255,7 +315,25 @@ export async function syncFxRates(
 
     if (!res || !res.ok) {
       const cachedRateCount = Object.keys(prevRates).length;
-      if (cachedRateCount > 0) {
+      const secondaryCandidate = await loadSecondaryCurrencyCandidate(signal);
+      if (secondaryCandidate) {
+        usableRates = {};
+        applySecondaryRates(
+          secondaryCandidate,
+          Object.entries(CURRENCY_TO_PEG),
+          { includeMissingPrevious: true },
+        );
+        applySecondaryRates(secondaryCandidate, Object.entries(SECONDARY_CURRENCY_TO_PEG));
+        fallbackMode = "secondary-live-fallback";
+        sources = {
+          ...sources,
+          frankfurter: "error",
+          fawazahmed0:
+            Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in usableRates)
+              ? "ok"
+              : "partial",
+        };
+      } else if (cachedRateCount > 0) {
         console.warn(
           `[sync-fx-rates] frankfurter.app unavailable (${res?.status ?? "no response"}), using ${cachedRateCount} cached rates`,
         );
@@ -268,115 +346,94 @@ export async function syncFxRates(
           cache: "ok",
         };
       }
-      if (mode !== "cached-fallback") {
+      if (mode !== "cached-fallback" && Object.keys(usableRates).length === 0) {
         throw new Error(`frankfurter.app returned ${res?.status ?? "no response"}`);
       }
     }
     if (mode !== "cached-fallback") {
-      const frankfurterPayload = await res!.json();
-      const frankfurterValidation = validatePayloadWithSchema(
-        FrankfurterResponseSchema,
-        frankfurterPayload,
-        "sync-fx-rates:frankfurter",
-      );
-      if (!frankfurterValidation.ok) {
-        const cachedRateCount = Object.keys(prevRates).length;
-        if (cachedRateCount > 0) {
-          console.warn(`[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
-          usableRates = { ...prevRates };
-          mode = "cached-fallback";
-          fallbackMode = "cached-fx-rates";
+      if (res?.ok) {
+        const frankfurterPayload = await res.json();
+        const frankfurterValidation = validatePayloadWithSchema(
+          FrankfurterResponseSchema,
+          frankfurterPayload,
+          "sync-fx-rates:frankfurter",
+        );
+        if (!frankfurterValidation.ok) {
+          const cachedRateCount = Object.keys(prevRates).length;
+          const secondaryCandidate = await loadSecondaryCurrencyCandidate(signal);
           validationIssues = frankfurterValidation.issues;
-          sources = {
-            ...sources,
-            frankfurter: "invalid-payload",
-            cache: "ok",
-          };
-        } else {
-          throw new Error(`frankfurter.app payload validation failed: ${frankfurterValidation.issues}`);
-        }
-      } else {
-        const data = frankfurterValidation.data;
-        usableRates = {};
-        ecbDate = data.date;
-
-        const ecbDateObj = new Date(data.date + "T16:00:00Z");
-        const ecbUpdatedAt = resolveDatedSourceUpdatedAt(data.date, syncStartSec, 16);
-        const ecbAgeSec = (Date.now() - ecbDateObj.getTime()) / 1000;
-        if (ecbAgeSec > 86400) {
-          console.warn(
-            `[sync-fx-rates] ECB rates are ${Math.round(ecbAgeSec / 3600)}h stale (date=${data.date}). ` +
-            `Weekend/holiday — non-USD pegs using last published rates.`,
-          );
-        }
-
-        for (const [currency, unitsPerUsd] of Object.entries(data.rates)) {
-          const pegKey = CURRENCY_TO_PEG[currency];
-          if (!pegKey || unitsPerUsd <= 0) continue;
-          const rate = Number((1 / unitsPerUsd).toFixed(6));
-          if (isValidRate(pegKey, rate, prevRates[pegKey])) {
-            usableRates[pegKey] = rate;
-            markLive(pegKey, ecbUpdatedAt, "business-daily", data.date);
-          } else if (prevRates[pegKey]) {
-            usableRates[pegKey] = prevRates[pegKey];
-            inheritPrevious(pegKey);
-          }
-        }
-
-        try {
-          const primaryCandidate = await fetchSecondaryCurrencyCandidate(
-            "jsdelivr",
-            SECONDARY_FX_PRIMARY_URL,
-            signal,
-          );
-          const fallbackCandidate = await fetchSecondaryCurrencyCandidate(
-            "pages.dev",
-            SECONDARY_FX_FALLBACK_URL,
-            signal,
-          );
-
-          const secondaryCandidate = chooseSecondaryCurrencyCandidate(primaryCandidate, fallbackCandidate);
           if (secondaryCandidate) {
-            if (
-              primaryCandidate &&
-              fallbackCandidate &&
-              secondaryCandidate.endpoint !== primaryCandidate.endpoint
-            ) {
-              console.log(
-                `[sync-fx-rates] Using fresher secondary FX mirror (${secondaryCandidate.endpoint} date=${secondaryCandidate.payload.date ?? "unknown"}, ` +
-                  `jsdelivr=${primaryCandidate.payload.date ?? "unknown"})`,
-              );
-            }
-
-            const erData = secondaryCandidate.payload;
-            const secondaryUpdatedAt =
-              typeof erData.date === "string" && erData.date.length > 0
-                ? resolveDatedSourceUpdatedAt(erData.date, syncStartSec)
-                : syncStartSec;
-            for (const [currency, pegKey] of Object.entries(SECONDARY_CURRENCY_TO_PEG)) {
-              const perUsd = erData.usd?.[currency];
-              if (typeof perUsd === "number" && perUsd > 0) {
-                const rate = Number((1 / perUsd).toFixed(6));
-                if (isValidRate(pegKey, rate, prevRates[pegKey])) {
-                  usableRates[pegKey] = rate;
-                  markLive(
-                    pegKey,
-                    secondaryUpdatedAt,
-                    "calendar-daily",
-                    typeof erData.date === "string" && erData.date.length > 0 ? erData.date : null,
-                  );
-                } else if (prevRates[pegKey]) {
-                  usableRates[pegKey] = prevRates[pegKey];
-                  inheritPrevious(pegKey);
-                }
-              }
-            }
-            sources["fawazahmed0"] = Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in usableRates) ? "ok" : "partial";
+            console.warn("[sync-fx-rates] Invalid Frankfurter payload, using secondary FX live fallback");
+            usableRates = {};
+            applySecondaryRates(
+              secondaryCandidate,
+              Object.entries(CURRENCY_TO_PEG),
+              { includeMissingPrevious: true },
+            );
+            applySecondaryRates(secondaryCandidate, Object.entries(SECONDARY_CURRENCY_TO_PEG));
+            fallbackMode = "secondary-live-fallback";
+            sources = {
+              ...sources,
+              frankfurter: "invalid-payload",
+              fawazahmed0:
+                Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in usableRates)
+                  ? "ok"
+                  : "partial",
+            };
+          } else if (cachedRateCount > 0) {
+            console.warn(`[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
+            usableRates = { ...prevRates };
+            mode = "cached-fallback";
+            fallbackMode = "cached-fx-rates";
+            sources = {
+              ...sources,
+              frankfurter: "invalid-payload",
+              cache: "ok",
+            };
+          } else {
+            throw new Error(`frankfurter.app payload validation failed: ${frankfurterValidation.issues}`);
           }
-        } catch (e) {
-          console.warn("[sync-fx-rates] Secondary FX API (CNH/RUB/UAH/ARS) failed:", e);
-        }
+        } else {
+          const data = frankfurterValidation.data;
+          usableRates = {};
+          ecbDate = data.date;
 
+          const ecbDateObj = new Date(data.date + "T16:00:00Z");
+          const ecbUpdatedAt = resolveDatedSourceUpdatedAt(data.date, syncStartSec, 16);
+          const ecbAgeSec = (Date.now() - ecbDateObj.getTime()) / 1000;
+          if (ecbAgeSec > 86400) {
+            console.warn(
+              `[sync-fx-rates] ECB rates are ${Math.round(ecbAgeSec / 3600)}h stale (date=${data.date}). ` +
+              `Weekend/holiday — non-USD pegs using last published rates.`,
+            );
+          }
+
+          for (const [currency, unitsPerUsd] of Object.entries(data.rates)) {
+            const pegKey = CURRENCY_TO_PEG[currency];
+            if (!pegKey || unitsPerUsd <= 0) continue;
+            const rate = Number((1 / unitsPerUsd).toFixed(6));
+            if (isValidRate(pegKey, rate, prevRates[pegKey])) {
+              usableRates[pegKey] = rate;
+              markLive(pegKey, ecbUpdatedAt, "business-daily", data.date);
+            } else if (prevRates[pegKey]) {
+              usableRates[pegKey] = prevRates[pegKey];
+              inheritPrevious(pegKey);
+            }
+          }
+
+          try {
+            const secondaryCandidate = await loadSecondaryCurrencyCandidate(signal);
+            if (secondaryCandidate) {
+              applySecondaryRates(secondaryCandidate, Object.entries(SECONDARY_CURRENCY_TO_PEG));
+              sources["fawazahmed0"] = Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in usableRates) ? "ok" : "partial";
+            }
+          } catch (e) {
+            console.warn("[sync-fx-rates] Secondary FX API (CNH/RUB/UAH/ARS) failed:", e);
+          }
+        }
+      }
+
+      if (mode !== "cached-fallback") {
         let oxrSource: "ok" | "partial" | "rate-limited" | "unavailable" = "unavailable";
         if (openExchangeRatesKey) {
           const OXR_CACHE_KEY = "fx-oxr-last-fetch";

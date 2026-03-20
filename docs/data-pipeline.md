@@ -160,6 +160,8 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 - **Validation**: Same `isValidRate()` bounds + delta checks as FX rates (gold: $500-$10,000/oz, silver: $5-$500/oz, max 20% change from previous value).
 - **Fallback**: If the gold-api.com live fetch fails, previously cached rates are used. The peer median serves as a last-resort reference if no cached rates exist.
 
+For fiat FX, Frankfurter remains the preferred ECB-backed source for the business-day set. The existing `fawazahmed0/currency-api` mirror still owns CNH/RUB/UAH/ARS, and it can now also backstop the wider fiat set when Frankfurter is temporarily unavailable so the cron can keep publishing live dated FX references instead of immediately dropping to a cached-only run.
+
 ### Backfill (backfill-depegs.ts)
 
 - `backfill-depegs.ts` now asks the same authoritative-price registry used by live sync for historical series first. If a coin has an authoritative historical provider and that provider cannot return enough coverage, the backfill preserves existing `source='backfill'` rows instead of rebuilding from a known-weaker fallback source.

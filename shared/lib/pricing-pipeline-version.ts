@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.6",
+  currentVersion: "2.7",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+  {
+    version: "2.7",
+    title: "Secondary FX full-set live fallback for Frankfurter outages",
+    date: "2026-03-20",
+    effectiveAt: 1774011900,
+    summary:
+      "Expanded the existing dated secondary FX mirror path so it can temporarily backstop the wider fiat reference set when Frankfurter is unavailable, preventing repeated cached-only FX runs.",
+    impact: [
+      "CNH/RUB/UAH/ARS still use the secondary daily feed as their normal source path",
+      "When Frankfurter fails, the fresher `fawazahmed0/currency-api` mirror can now populate the broader fiat FX set instead of forcing an immediate cached-fallback run",
+      "Per-peg FX metadata preserves calendar-daily cadence and source-date semantics during this live fallback path",
+      "Public health no longer needs to report long consecutive cached-fallback FX runs for a Frankfurter-only outage when the secondary feed is healthy",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "2.6",
     title: "Published DEX challenger snapshots and durable FX freshness metadata",

@@ -62,7 +62,8 @@ export function MethodologySections() {
             guard downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools
             diverge from aggregator consensus. Fresh RedStone prices need timestamped venue breakdowns. Protocol-level
             redemption prices override market data for wrapper assets, Chainlink refreshes supported FX and commodity
-            reference rates, and a 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
+            reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack when
+            Frankfurter is unavailable. A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
             so downstream systems can react to data quality.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
