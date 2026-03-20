@@ -156,6 +156,8 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`.
 
+The `/admin/` UI now sends an `Idempotency-Key` automatically for supported manual actions so double-submits from the operator surface replay safely.
+
 ---
 
 ## Public Endpoints
@@ -1022,7 +1024,10 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
   },
   "blacklist": {
     "totalEvents": 13422,
-    "missingAmounts": 0
+    "missingAmounts": 0,
+    "recentMissingAmounts": 0,
+    "recentWindowSec": 86400,
+    "missingRatio": 0
   },
   "mintBurn": {
     "totalEvents": 112345,
@@ -1054,6 +1059,9 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `caches["fx-rates"]`                 | `CacheStatus`                      | FX cache freshness plus source-cadence diagnostics (`mode`, `sourceUpdatedAt`, `sourceAgeSeconds`, `sourceStatus`, `warning`, `consecutiveFallbackRuns`)                                                                                                                                                                                                                             |
 | `blacklist.totalEvents`              | `number`                           | Total events in blacklist table                                                                                                                                                                                                                                                                                                                                                        |
 | `blacklist.missingAmounts`           | `number`                           | Events where `amount` is null (should be 0)                                                                                                                                                                                                                                                                                                                                            |
+| `blacklist.recentMissingAmounts`     | `number`                           | Missing-amount events inside the recent monitoring window used by status logic                                                                                                                                                                                                                                                                                                         |
+| `blacklist.recentWindowSec`          | `number`                           | Size of the recent monitoring window in seconds                                                                                                                                                                                                                                                                                                                                        |
+| `blacklist.missingRatio`             | `number`                           | `missingAmounts / totalEvents` (0 when no blacklist rows exist yet)                                                                                                                                                                                                                                                                                                                   |
 | `mintBurn.totalEvents`               | `number`                           | Total mint+burn event count (aggregated from `mint_burn_hourly`)                                                                                                                                                                                                                                                                                                                       |
 | `mintBurn.latestEventTs`             | `number \| null`                   | Latest raw event timestamp from `mint_burn_events` (observability only; does not drive endpoint health on its own)                                                                                                                                                                                                                                                                     |
 | `mintBurn.latestHourlyTs`            | `number \| null`                   | Latest hourly bucket timestamp from `mint_burn_hourly`                                                                                                                                                                                                                                                                                                                                 |
@@ -1080,6 +1088,8 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `sourceStatus`           | `"fresh" \| "degraded" \| "stale" \| "none"`      | FX cache only: cadence-aware source freshness status                                          |
 | `warning`                | `string \| null \| undefined`                     | FX cache only: human-readable warning for fallback mode, stale source cadence, or hardcoding  |
 | `consecutiveFallbackRuns`| `number \| undefined`                             | FX cache only: number of back-to-back cached-fallback runs                                    |
+
+The `/status/` page consumes the richer blacklist fields directly so it can distinguish long-tail historical cleanup from fresh incoming amount gaps.
 
 **Overall status logic:**
 

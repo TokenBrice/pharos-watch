@@ -16,6 +16,7 @@ import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { LiquidityHealthCard } from "@/components/status/liquidity-health";
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
+import { MetadataIntegrityCard } from "@/components/status/metadata-integrity-card";
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
@@ -32,7 +33,6 @@ import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
 import { isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
 import {
   type DashboardSectionId,
-  formatTimestampMs,
   formatTimestampSeconds,
   formatTransitionLabel,
   getStatusTone,
@@ -202,6 +202,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
     notices,
     overallCauseCount,
     overallTone,
+    querySyncs,
     recommendedActions,
     runningCrons,
     sections,
@@ -211,6 +212,9 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
   const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
   const statusEvaluatedAt = data.state.lastEvaluatedAt;
   const isRecoveryHold = isRecoveryHoldState(data.overallStatus, data.rawOverallStatus);
+  const statusSync = querySyncs.find((sync) => sync.key === "status") ?? null;
+  const publicHealthSync = querySyncs.find((sync) => sync.key === "health") ?? null;
+  const browserProbeSync = querySyncs.find((sync) => sync.key === "probes") ?? null;
   const operationalSections = sections.filter((section) => section.id !== "overview" && section.id !== "history");
   const sortedCronGroups = cronGroups
     .map((group) => ({
@@ -307,6 +311,8 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
             />
             <SummaryBadge label="Missing Prices" value={String(data.dataQuality.missingPrices)} />
             <SummaryBadge label="Stale On-chain" value={String(data.dataQuality.staleOnchainSupply)} />
+            <SummaryBadge label="Reserve Drift" value={String(data.reserveDrift?.length ?? 0)} />
+            <SummaryBadge label="Class Warnings" value={String(data.classificationWarnings?.length ?? 0)} />
           </>
         }
       >
@@ -341,12 +347,20 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
           <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
           <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
         </div>
-        <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
+
+        <div className="grid gap-5 xl:grid-cols-2">
+          <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
+          <MetadataIntegrityCard
+            reserveDrift={data.reserveDrift}
+            classificationWarnings={data.classificationWarnings}
+          />
+        </div>
 
         <DiscoveryCandidatesCard
           candidates={data.discoveryCandidates}
           adminAccess={adminAccess}
           nowSeconds={data.timestamp}
+          onDismissed={handleRefresh}
         />
       </StatusSection>
     ),
@@ -524,10 +538,12 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
             <div className="flex flex-wrap items-center gap-2">
               <p className={cn("pharos-kicker", topFoldCopy.kicker)}>Operator Triage</p>
               <SummaryBadge label="State Eval" value={formatTimestampSeconds(statusEvaluatedAt)} />
-              <SummaryBadge label="Status API" value={formatTimestampSeconds(data.timestamp)} />
-              <SummaryBadge label="Client Sync" value={formatTimestampMs(lastUpdated)} />
+              <SummaryBadge label="Status Payload" value={formatTimestampSeconds(data.timestamp)} />
+              <SummaryBadge label="Status Fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
+              <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(publicHealthSync?.updatedAtSec)} />
+              <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(browserProbeSync?.updatedAtSec)} />
               <SummaryBadge
-                label="Client Age"
+                label="Sync Floor"
                 value={`${clientDataAgeSec}s`}
                 className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
               />
@@ -601,6 +617,24 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                       : undefined
                   }
                 />
+                <SummaryBadge
+                  label="Reserve Drift"
+                  value={String(data.reserveDrift?.length ?? 0)}
+                  className={
+                    (data.reserveDrift?.length ?? 0) > 0
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      : undefined
+                  }
+                />
+                <SummaryBadge
+                  label="Class Warnings"
+                  value={String(data.classificationWarnings?.length ?? 0)}
+                  className={
+                    (data.classificationWarnings?.length ?? 0) > 0
+                      ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+                      : undefined
+                  }
+                />
               </div>
 
               <div className="rounded-[1.55rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] p-4 shadow-[0_18px_48px_oklch(0_0_0_/0.18)]">
@@ -654,6 +688,31 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                     }
                   />
                 </div>
+
+                {(data.reserveDrift?.length ?? 0) > 0 || (data.classificationWarnings?.length ?? 0) > 0 ? (
+                  <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-2">
+                    <div className="rounded-[1rem] border border-white/10 bg-black/18 p-3">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                        Reserve Metadata Watch
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-foreground">
+                        {(data.reserveDrift?.length ?? 0) > 0
+                          ? `${data.reserveDrift?.length} coin(s) show >5pt drift between live reserve slices and curated reserve metadata.`
+                          : "No reserve drift watch items."}
+                      </div>
+                    </div>
+                    <div className="rounded-[1rem] border border-white/10 bg-black/18 p-3">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                        Classification Watch
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-foreground">
+                        {(data.classificationWarnings?.length ?? 0) > 0
+                          ? `${data.classificationWarnings?.length} decentralized classifications exceed the centralized custody watch threshold.`
+                          : "No classification watch items."}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 

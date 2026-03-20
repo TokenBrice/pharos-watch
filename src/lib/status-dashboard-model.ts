@@ -1,4 +1,4 @@
-import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/types";
+import type { EndpointProbeResult, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
 import { deriveStatusActionRecommendations } from "@/components/status/action-recommendations";
 import { getStatusCronDisplay } from "@/components/status/cron-config";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
@@ -23,6 +23,15 @@ export interface DashboardNotice {
   title: string;
   detail: string;
   tone: "neutral" | "warning" | "critical";
+}
+
+export interface DashboardQuerySync {
+  key: "status" | "health" | "probes" | "history";
+  label: string;
+  updatedAtMs: number;
+  updatedAtSec: number | null;
+  ageSec: number | null;
+  stale: boolean;
 }
 
 const STATUS_TONE = {
@@ -62,19 +71,81 @@ function percentile(values: number[], p: number): number | null {
   return sorted[index] ?? null;
 }
 
+function getProbeDisplayStatus(
+  probe: EndpointProbeResult,
+): "healthy" | "degraded" | "stale" {
+  if (probe.status == null || probe.status >= 400) return "stale";
+  if (probe.semanticStatus) return probe.semanticStatus;
+  return probe.status >= 200 && probe.status < 300 ? "healthy" : "stale";
+}
+
+export function isProbePassing(probe: EndpointProbeResult): boolean {
+  return getProbeDisplayStatus(probe) === "healthy";
+}
+
+export function getProbeStatusLabel(probe: EndpointProbeResult): string {
+  if (probe.status == null) return "unreachable";
+  if (probe.semanticStatus) return probe.semanticStatus;
+  return `http ${probe.status}`;
+}
+
+export function getProbeStatusDetail(probe: EndpointProbeResult): string | null {
+  if (probe.error) return probe.error;
+  if (probe.semanticDetail) return probe.semanticDetail;
+  if (probe.status == null) return "No HTTP response from this browser session.";
+  return `HTTP ${probe.status}`;
+}
+
+function buildQuerySync(
+  key: DashboardQuerySync["key"],
+  label: DashboardQuerySync["label"],
+  updatedAtMs: number,
+  nowMs: number,
+): DashboardQuerySync {
+  const safeUpdatedAtMs = Number.isFinite(updatedAtMs) ? updatedAtMs : 0;
+  const ageSec = safeUpdatedAtMs > 0 ? Math.max(0, Math.floor((nowMs - safeUpdatedAtMs) / 1000)) : null;
+
+  return {
+    key,
+    label,
+    updatedAtMs: safeUpdatedAtMs,
+    updatedAtSec: safeUpdatedAtMs > 0 ? Math.floor(safeUpdatedAtMs / 1000) : null,
+    ageSec,
+    stale: ageSec != null && ageSec > 120,
+  };
+}
+
 export function buildBrowserProbeSummary(
   probes: EndpointProbeResult[] | undefined,
   updatedAtMs: number,
 ) {
   if (!probes || probes.length === 0) return null;
-  const passCount = probes.filter((probe) => probe.status != null && probe.status >= 200 && probe.status < 300).length;
+  let passCount = 0;
+  let degradedCount = 0;
+  let staleCount = 0;
+  for (const probe of probes) {
+    const status = getProbeDisplayStatus(probe);
+    if (status === "healthy") {
+      passCount += 1;
+    } else if (status === "degraded") {
+      degradedCount += 1;
+    } else {
+      staleCount += 1;
+    }
+  }
   const latencies = probes.map((probe) => probe.latencyMs).filter((latency) => Number.isFinite(latency));
+  const failCount = degradedCount + staleCount;
+  const status: "healthy" | "degraded" | "stale" =
+    staleCount > 0 ? "stale" : degradedCount > 0 ? "degraded" : "healthy";
 
   return {
     sampleCount: probes.length,
     passCount,
-    failCount: probes.length - passCount,
+    failCount,
+    degradedCount,
+    staleCount,
     p95LatencyMs: percentile(latencies, 95),
+    status,
     updatedAt: updatedAtMs > 0 ? Math.floor(updatedAtMs / 1000) : null,
   };
 }
@@ -131,21 +202,14 @@ export function getTopCauses(causes: StatusResponse["causes"], limit: number): S
 
 interface BuildStatusDashboardOptions {
   data: StatusResponse;
-  healthData: StatusResponse["overallStatus"] extends never ? never : {
-    status: "healthy" | "degraded" | "stale";
-    blacklist: { missingAmounts: number };
-    mintBurn: {
-      sync: {
-        warning: string | null;
-        lastSuccessfulSyncAt: number | null;
-      };
-      majorStaleCount: number;
-      staleMajorSymbols: string[];
-    };
-  } | null | undefined;
+  healthData: HealthResponse | null | undefined;
   probes: EndpointProbeResult[] | undefined;
-  probesUpdatedAt: number;
-  lastUpdated: number;
+  querySyncs: {
+    statusUpdatedAt: number;
+    healthUpdatedAt: number;
+    probesUpdatedAt: number;
+    historyUpdatedAt: number;
+  };
   nowMs: number;
   healthError: Error | null;
   probesError: Error | null;
@@ -157,16 +221,27 @@ export function buildStatusDashboardData({
   data,
   healthData,
   probes,
-  probesUpdatedAt,
-  lastUpdated,
+  querySyncs,
   nowMs,
   healthError,
   probesError,
   historyError,
   historyTransitions,
 }: BuildStatusDashboardOptions) {
-  const clientDataAgeSec = Math.max(0, Math.floor((nowMs - lastUpdated) / 1000));
-  const browserProbeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt);
+  const syncDetails = [
+    buildQuerySync("status", "Status API", querySyncs.statusUpdatedAt, nowMs),
+    buildQuerySync("health", "Public health", querySyncs.healthUpdatedAt, nowMs),
+    buildQuerySync("probes", "Browser probes", querySyncs.probesUpdatedAt, nowMs),
+    buildQuerySync("history", "Status history", querySyncs.historyUpdatedAt, nowMs),
+  ];
+  const criticalSyncs = syncDetails.filter((sync) => sync.key !== "history" && sync.updatedAtMs > 0);
+  const freshnessFloorMs =
+    criticalSyncs.length > 0
+      ? Math.min(...criticalSyncs.map((sync) => sync.updatedAtMs))
+      : 0;
+  const clientDataAgeSec =
+    freshnessFloorMs > 0 ? Math.max(0, Math.floor((nowMs - freshnessFloorMs) / 1000)) : 0;
+  const browserProbeSummary = buildBrowserProbeSummary(probes, querySyncs.probesUpdatedAt);
   const cronEntries = Object.entries(data.crons);
   const cronGroups = CRON_GROUPS.map((group) => ({
     ...group,
@@ -183,14 +258,16 @@ export function buildStatusDashboardData({
   const overallCauseCount = data.causes.availability.length + data.causes.dataQuality.length;
   const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);
   const overallTone = getStatusTone(data.overallStatus);
-  const clientDataStale = lastUpdated > 0 && nowMs - lastUpdated > 120_000;
+  const staleQuerySyncs = criticalSyncs.filter((sync) => sync.stale);
+  const clientDataStale = staleQuerySyncs.length > 0;
 
   const notices: DashboardNotice[] = [];
   if (clientDataStale) {
+    const staleLabels = staleQuerySyncs.map((sync) => sync.label).join(", ");
     notices.push({
       id: "client-stale",
       title: "Client view is lagging",
-      detail: `This browser is ${clientDataAgeSec}s behind the last fetch cycle. Refresh before treating the dashboard as current.`,
+      detail: `${staleLabels} are older than 120s in this browser. Refresh before treating the dashboard as current.`,
       tone: "warning",
     });
   }
@@ -345,12 +422,14 @@ export function buildStatusDashboardData({
     clientDataAgeSec,
     clientDataStale,
     cronGroups,
+    freshnessFloorMs,
     healthDiffersFromStatus,
     latestTransition,
     notices,
     overallCauseCount,
     overallTone,
     publicHealthNeedsCallout,
+    querySyncs: syncDetails,
     recommendedActions,
     runningCrons,
     sections,

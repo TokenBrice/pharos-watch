@@ -374,7 +374,13 @@ export interface HealthResponse {
   timestamp: number;
   warnings: string[];
   caches: Record<string, CacheStatus>;
-  blacklist: { totalEvents: number; missingAmounts: number };
+  blacklist: {
+    totalEvents: number;
+    missingAmounts: number;
+    recentMissingAmounts: number;
+    recentWindowSec: number;
+    missingRatio: number;
+  };
   mintBurn: {
     totalEvents: number;
     latestEventTs: number | null;
@@ -400,6 +406,9 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
   blacklist: z.object({
     totalEvents: z.number(),
     missingAmounts: z.number(),
+    recentMissingAmounts: z.number(),
+    recentWindowSec: z.number(),
+    missingRatio: z.number(),
   }),
   mintBurn: z.object({
     totalEvents: z.number(),
@@ -423,4 +432,7 @@ export interface EndpointProbeResult {
   status: number | null;
   latencyMs: number;
   error?: string;
+  semanticStatus?: "healthy" | "degraded" | "stale";
+  semanticDetail?: string | null;
+  semanticScope?: "health" | "status";
 }

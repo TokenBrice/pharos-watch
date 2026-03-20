@@ -48,9 +48,17 @@ export function AdminActionButton({
     setError(null);
 
     try {
+      const requestInit = buildAdminFetchInit({ method: action.method });
+      const headers = new Headers(requestInit.headers);
+      headers.set(
+        "Idempotency-Key",
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${action.path}:${Date.now()}`,
+      );
       const res = await fetch(buildRequestUrl(buildAdminApiPath(action.path, adminAccess)), {
-        method: action.method,
-        ...buildAdminFetchInit(),
+        ...requestInit,
+        headers,
       });
       const text = await res.text();
 

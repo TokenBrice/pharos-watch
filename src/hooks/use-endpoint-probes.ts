@@ -27,6 +27,83 @@ const PUBLIC_ENDPOINTS = [
 
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 
+function isSemanticStatus(value: unknown): value is NonNullable<EndpointProbeResult["semanticStatus"]> {
+  return value === "healthy" || value === "degraded" || value === "stale";
+}
+
+function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult> | null {
+  if (!body || typeof body !== "object") return null;
+
+  const status = "status" in body ? body.status : null;
+  if (!isSemanticStatus(status)) return null;
+
+  const warnings = "warnings" in body && Array.isArray(body.warnings)
+    ? body.warnings.filter((warning): warning is string => typeof warning === "string")
+    : [];
+  const blacklist = "blacklist" in body && body.blacklist && typeof body.blacklist === "object"
+    ? body.blacklist
+    : null;
+  const mintBurn = "mintBurn" in body && body.mintBurn && typeof body.mintBurn === "object"
+    ? body.mintBurn
+    : null;
+  const missingAmounts =
+    blacklist && "missingAmounts" in blacklist && typeof blacklist.missingAmounts === "number"
+      ? blacklist.missingAmounts
+      : 0;
+  const mintBurnWarning =
+    mintBurn &&
+    "sync" in mintBurn &&
+    mintBurn.sync &&
+    typeof mintBurn.sync === "object" &&
+    "warning" in mintBurn.sync &&
+    typeof mintBurn.sync.warning === "string"
+      ? mintBurn.sync.warning
+      : null;
+
+  return {
+    semanticStatus: status,
+    semanticScope: "health",
+    semanticDetail:
+      warnings[0] ??
+      mintBurnWarning ??
+      (missingAmounts > 0 ? `Blacklist gaps missing amounts: ${missingAmounts}.` : null),
+  };
+}
+
+function extractStatusProbeSemantics(body: unknown): Partial<EndpointProbeResult> | null {
+  if (!body || typeof body !== "object") return null;
+
+  const status = "overallStatus" in body ? body.overallStatus : null;
+  if (!isSemanticStatus(status)) return null;
+
+  const firstCause =
+    "causes" in body &&
+    body.causes &&
+    typeof body.causes === "object" &&
+    "overall" in body.causes &&
+    Array.isArray(body.causes.overall)
+      ? body.causes.overall.find(
+          (cause): cause is { message?: string } =>
+            !!cause && typeof cause === "object" && ("message" in cause),
+        )
+      : null;
+  const message = firstCause?.message;
+
+  return {
+    semanticStatus: status,
+    semanticScope: "status",
+    semanticDetail: typeof message === "string" ? message : null,
+  };
+}
+
+const SEMANTIC_PROBE_PARSERS = new Map<
+  string,
+  (body: unknown) => Partial<EndpointProbeResult> | null
+>([
+  ["/api/health", extractHealthProbeSemantics],
+  ["/api/status", extractStatusProbeSemantics],
+]);
+
 async function probeEndpoint(
   path: string,
   adminAccess?: AdminAccess,
@@ -47,7 +124,18 @@ async function probeEndpoint(
       headers: requestInit?.headers,
     });
     const latencyMs = Math.round(performance.now() - start);
-    return { path, status: res.status, latencyMs };
+    const parser = SEMANTIC_PROBE_PARSERS.get(path);
+    let semanticFields: Partial<EndpointProbeResult> | undefined;
+
+    if (parser && res.ok && typeof res.json === "function") {
+      try {
+        semanticFields = parser(await res.json()) ?? undefined;
+      } catch {
+        semanticFields = undefined;
+      }
+    }
+
+    return { path, status: res.status, latencyMs, ...semanticFields };
   } catch (err) {
     const latencyMs = Math.round(performance.now() - start);
     return {

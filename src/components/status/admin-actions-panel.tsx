@@ -10,6 +10,32 @@ import { AdminActionButton, type AdminActionExecution } from "./admin-action-but
 import { formatElapsedSeconds } from "@shared/lib/format";
 
 const ADMIN_ACTIONS = getStatusPageActions();
+type AdminAction = (typeof ADMIN_ACTIONS)[number];
+
+const ACTION_GROUP_ORDER = ["recovery", "audit", "communications"] as const;
+
+function getActionGroup(action: AdminAction): typeof ACTION_GROUP_ORDER[number] {
+  if (action.path === "/api/trigger-digest") return "communications";
+  if (action.path === "/api/debug-sync-state" || action.path.includes("audit") || action.path.includes("reclassify")) {
+    return "audit";
+  }
+  return "recovery";
+}
+
+const ACTION_GROUP_COPY: Record<typeof ACTION_GROUP_ORDER[number], { title: string; description: string }> = {
+  recovery: {
+    title: "Recovery and backfills",
+    description: "Use when a data lane or cron needs intervention to restore freshness.",
+  },
+  audit: {
+    title: "Audits and diagnostics",
+    description: "Read-only or inspection-heavy tools for validating assumptions before intervening.",
+  },
+  communications: {
+    title: "Operator comms",
+    description: "Manual outbound or coordination actions that intentionally affect user-facing messaging.",
+  },
+};
 
 interface AdminActionsPanelProps {
   adminAccess: AdminAccess;
@@ -32,6 +58,20 @@ export function AdminActionsPanel({
     () => deriveStatusActionRecommendations(status),
     [status],
   );
+  const groupedActions = useMemo(() => {
+    const groups = new Map<typeof ACTION_GROUP_ORDER[number], AdminAction[]>();
+    for (const action of ADMIN_ACTIONS) {
+      const group = getActionGroup(action);
+      groups.set(group, [...(groups.get(group) ?? []), action]);
+    }
+    return ACTION_GROUP_ORDER
+      .map((group) => ({
+        key: group,
+        ...ACTION_GROUP_COPY[group],
+        actions: groups.get(group) ?? [],
+      }))
+      .filter((group) => group.actions.length > 0);
+  }, []);
 
   const handleFinished = (execution: AdminActionExecution) => {
     setExecutions((prev) => [execution, ...prev].slice(0, 6));
@@ -92,14 +132,24 @@ export function AdminActionsPanel({
               Manual tools exposed by the worker router for backfills, audits, and recovery flows.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {ADMIN_ACTIONS.map((action) => (
-              <AdminActionButton
-                key={action.path}
-                action={action}
-                adminAccess={adminAccess}
-                onFinished={handleFinished}
-              />
+          <div className="space-y-4">
+            {groupedActions.map((group) => (
+              <div key={group.key} className="space-y-3 rounded-lg border border-border/60 p-3">
+                <div>
+                  <h4 className="text-sm font-medium">{group.title}</h4>
+                  <p className="text-xs text-muted-foreground">{group.description}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {group.actions.map((action) => (
+                    <AdminActionButton
+                      key={action.path}
+                      action={action}
+                      adminAccess={adminAccess}
+                      onFinished={handleFinished}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

@@ -40,7 +40,10 @@ interface SystemDiagnosticsProps {
     sampleCount: number;
     passCount: number;
     failCount: number;
+    degradedCount?: number;
+    staleCount?: number;
     p95LatencyMs: number | null;
+    status?: "healthy" | "degraded" | "stale";
     updatedAt: number | null;
   } | null;
   nowSeconds: number;
@@ -105,7 +108,7 @@ export function SystemDiagnostics({
         <CardContent className="pt-4">
           <div className="text-xs text-muted-foreground">Browser Probe Loop</div>
           <div className="font-mono text-sm">
-            {browserProbe ? `${browserProbe.passCount}/${browserProbe.sampleCount}` : "—"}
+            {browserProbe ? `${browserProbe.passCount}/${browserProbe.sampleCount} (${browserProbe.status ?? "—"})` : "—"}
           </div>
           <div className="text-xs text-muted-foreground">
             p95 {browserProbe?.p95LatencyMs != null ? `${browserProbe.p95LatencyMs}ms` : "—"}
@@ -114,7 +117,12 @@ export function SystemDiagnostics({
             {browserProbeAgeSeconds != null ? `${formatElapsedSeconds(browserProbeAgeSeconds)} ago` : "not sampled yet"}
           </div>
           {browserProbe && browserProbe.failCount > 0 && (
-            <div className="text-xs text-muted-foreground">failures {browserProbe.failCount}</div>
+            <div className="text-xs text-muted-foreground">
+              failures {browserProbe.failCount}
+              {browserProbe.degradedCount != null || browserProbe.staleCount != null
+                ? ` (${browserProbe.degradedCount ?? 0} degraded, ${browserProbe.staleCount ?? 0} stale)`
+                : ""}
+            </div>
           )}
         </CardContent>
       </Card>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { STATUS_BLACKLIST_THRESHOLDS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import type { HealthResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
@@ -36,6 +37,90 @@ function getMintBurnStatus(
   if (freshnessStatus === "stale") return "stale";
   if (freshnessStatus === "degraded") return "degraded";
   return "healthy";
+}
+
+const CACHE_IMPACT_COPY: Partial<Record<string, { title: string; detail: string }>> = {
+  stablecoins: {
+    title: "Core market listings",
+    detail: "Homepage rankings, comparison tables, and market-cap driven views rely on the core stablecoin cache.",
+  },
+  "stablecoin-charts": {
+    title: "Historical chart lanes",
+    detail: "Stablecoin detail charts and historical trend panels can lag when chart snapshots fall behind.",
+  },
+  "usds-status": {
+    title: "USDS status surface",
+    detail: "USDS-specific status and reserve context can drift when this cache is stale.",
+  },
+  "fx-rates": {
+    title: "Non-USD normalization",
+    detail: "FX normalization affects non-USD peg interpretation and any view that translates source values into USD terms.",
+  },
+  "bluechip-ratings": {
+    title: "Safety overlays",
+    detail: "Bluechip-derived safety context and dependent report-card inputs can lag.",
+  },
+  "dex-liquidity": {
+    title: "Liquidity analytics",
+    detail: "Liquidity scores and related route panels depend on fresh DEX liquidity snapshots.",
+  },
+  "yield-data": {
+    title: "Yield monitoring",
+    detail: "Yield rankings and per-coin yield history can lag when yield snapshots are stale.",
+  },
+  dews: {
+    title: "Stress and depeg warnings",
+    detail: "DEWS and stress-warning surfaces can lag when the stress lane falls behind.",
+  },
+};
+
+function getImpactedSurfaceStatus(cache: HealthResponse["caches"][string]): "healthy" | "degraded" | "stale" {
+  if (!cache.healthy || cache.sourceStatus === "stale") return "stale";
+  if (cache.mode === "cached-fallback" || cache.sourceStatus === "degraded") return "degraded";
+  return "healthy";
+}
+
+function getImpactedPublicSurfaces(healthData: HealthResponse) {
+  const items: Array<{ id: string; title: string; detail: string; tone: "degraded" | "stale" }> = [];
+
+  if (healthData.mintBurn.sync.freshnessStatus !== "fresh" || healthData.mintBurn.majorStaleCount > 0) {
+    items.push({
+      id: "mint-burn",
+      title: "Mint and burn flow surfaces",
+      detail:
+        "Mint/burn flows, event timelines, and any downstream checks that compare recent issuance or redemption activity can lag while the writer is degraded.",
+      tone: healthData.mintBurn.sync.freshnessStatus === "stale" ? "stale" : "degraded",
+    });
+  }
+
+  if (healthData.blacklist.missingAmounts > 0) {
+    items.push({
+      id: "blacklist",
+      title: "Blacklist risk context",
+      detail:
+        "Blacklist event totals and amount-aware risk context are incomplete until missing blacklist amounts are backfilled.",
+      tone:
+        healthData.blacklist.missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
+          ? "stale"
+          : "degraded",
+    });
+  }
+
+  for (const [key, cache] of Object.entries(healthData.caches)) {
+    const copy = CACHE_IMPACT_COPY[key];
+    if (!copy) continue;
+    const tone = getImpactedSurfaceStatus(cache);
+    if (tone === "healthy") continue;
+
+    items.push({
+      id: `cache-${key}`,
+      title: copy.title,
+      detail: copy.detail,
+      tone,
+    });
+  }
+
+  return items;
 }
 
 function PublicSignalCard({
@@ -89,7 +174,8 @@ export default function StatusClient() {
     void refetchProbes();
   };
 
-  const lastUpdated = Math.max(healthUpdatedAt ?? 0, probesUpdatedAt ?? 0);
+  const syncFloorCandidates = [healthUpdatedAt ?? 0, probesUpdatedAt ?? 0].filter((value) => value > 0);
+  const lastUpdated = syncFloorCandidates.length > 0 ? Math.min(...syncFloorCandidates) : 0;
   const notices = useMemo(() => {
     if (!healthData) return [];
 
@@ -184,6 +270,14 @@ export default function StatusClient() {
     healthData.mintBurn.sync.lastSuccessfulSyncAt != null
       ? formatElapsedSeconds(Math.max(0, healthData.timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))
       : "—";
+  const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
+  const blacklistStatus =
+    healthData.blacklist.missingAmounts === 0
+      ? "healthy"
+      : healthData.blacklist.missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
+        ? "stale"
+        : "degraded";
+  const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
 
   return (
     <FeaturePageShell
@@ -219,7 +313,11 @@ export default function StatusClient() {
           summary={
             <>
               <SummaryBadge label="Status" value={statusTone.label} className={statusTone.badgeClassName} />
-              <SummaryBadge label="Blacklist Gaps" value={String(healthData.blacklist.missingAmounts)} />
+              <SummaryBadge
+                label="Blacklist Gaps"
+                value={String(healthData.blacklist.missingAmounts)}
+                className={healthData.blacklist.missingAmounts > 0 ? getStatusTone(blacklistStatus).badgeClassName : undefined}
+              />
               <SummaryBadge label="Major Mint/Burn Stale" value={String(healthData.mintBurn.majorStaleCount)} />
             </>
           }
@@ -273,9 +371,10 @@ export default function StatusClient() {
                   <SummaryBadge
                     label="Missing Amounts"
                     value={String(healthData.blacklist.missingAmounts)}
-                    className={healthData.blacklist.missingAmounts > 0 ? getStatusTone("degraded").badgeClassName : undefined}
+                    className={healthData.blacklist.missingAmounts > 0 ? getStatusTone(blacklistStatus).badgeClassName : undefined}
                   />
                   <SummaryBadge label="Tracked Events" value={String(healthData.blacklist.totalEvents)} />
+                  <SummaryBadge label="Recent Window" value={`${blacklistWindowHours}h`} />
                 </div>
               }
             >
@@ -286,12 +385,52 @@ export default function StatusClient() {
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Public Health Interpretation</div>
                 <div className="mt-2 leading-relaxed text-foreground">
                   {healthData.blacklist.missingAmounts > 0
-                    ? "Recent blacklist events are missing amount data and need follow-up."
+                    ? healthData.blacklist.recentMissingAmounts > 0
+                      ? `${healthData.blacklist.recentMissingAmounts} recent blacklist event(s) in the last ${blacklistWindowHours}h are still missing amounts.`
+                      : `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but no new gaps were recorded in the last ${blacklistWindowHours}h.`
                     : "No current blacklist amount gaps are affecting the public health signal."}
                 </div>
+                {healthData.blacklist.missingAmounts > 0 ? (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Missing ratio {(healthData.blacklist.missingRatio * 100).toFixed(2)}% of {healthData.blacklist.totalEvents} tracked events.
+                  </div>
+                ) : null}
               </div>
             </PublicSignalCard>
           </div>
+
+          <PublicSignalCard
+            kicker="Surface Impact"
+            title="Which public surfaces are affected"
+            description="This translates the raw health signals into the public routes and read paths most likely to be misleading right now."
+            badges={
+              <div className="flex flex-wrap gap-2">
+                <SummaryBadge label="Impacted Surfaces" value={String(impactedPublicSurfaces.length)} />
+              </div>
+            }
+          >
+            {impactedPublicSurfaces.length > 0 ? (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {impactedPublicSurfaces.map((surface) => (
+                  <div key={surface.id} className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-sm font-medium text-foreground">{surface.title}</div>
+                      <SummaryBadge
+                        label="Impact"
+                        value={surface.tone}
+                        className={getStatusTone(surface.tone).badgeClassName}
+                      />
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{surface.detail}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 text-sm leading-relaxed text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                No current public surface impact flags are active beyond the hero summary.
+              </div>
+            )}
+          </PublicSignalCard>
         </StatusSection>
 
         <StatusSection

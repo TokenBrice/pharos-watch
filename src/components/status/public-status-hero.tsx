@@ -9,7 +9,10 @@ interface PublicProbeSummary {
   sampleCount: number;
   passCount: number;
   failCount: number;
+  degradedCount: number;
+  staleCount: number;
   p95LatencyMs: number | null;
+  status: "healthy" | "degraded" | "stale";
   updatedAt: number | null;
 }
 
@@ -156,7 +159,7 @@ export function PublicStatusHero({
   const probeValue = probeSummary ? `${probeSummary.passCount}/${probeSummary.sampleCount}` : "—";
   const probeDetail = probeSummary
     ? probeSummary.failCount > 0
-      ? `${probeSummary.failCount} public canary route(s) failed or were unreachable.`
+      ? `${probeSummary.degradedCount} degraded and ${probeSummary.staleCount} stale or unreachable public canary route(s).`
       : probeSummary.p95LatencyMs != null
         ? `All sampled public routes passed. P95 latency ${probeSummary.p95LatencyMs}ms.`
         : "All sampled public routes passed."
@@ -265,7 +268,7 @@ export function PublicStatusHero({
             <MetaRow
               label="Client Sync"
               value={formatTimestampMs(lastUpdated)}
-              detail="Latest time this page refreshed any public status query."
+              detail="Oldest current refresh across the public health payload and browser probe loop."
             />
             <MetaRow label="Browser Probes" value={probeValue} detail={probeDetail} />
             <MetaRow label="Circuit Breakers" value={circuitValue} detail={circuitDetail} />

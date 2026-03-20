@@ -65,11 +65,23 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
     worstRatioMut = 3;
   }
 
-  let blacklist = { totalEvents: 0, missingAmounts: 0 };
+  let blacklist: HealthResponse["blacklist"] = {
+    totalEvents: 0,
+    missingAmounts: 0,
+    recentMissingAmounts: 0,
+    recentWindowSec: 0,
+    missingRatio: 0,
+  };
   if (dbHealthy) {
     try {
       const counts = await queryBlacklistGapMetrics(db, now);
-      blacklist = { totalEvents: counts.totalEvents, missingAmounts: counts.missingAmounts };
+      blacklist = {
+        totalEvents: counts.totalEvents,
+        missingAmounts: counts.missingAmounts,
+        recentMissingAmounts: counts.recentMissingAmounts,
+        recentWindowSec: counts.recentWindowSec,
+        missingRatio: counts.missingRatio,
+      };
     } catch (err) {
       warnings.push(`blacklist-query-failed: ${err instanceof Error ? err.message : String(err)}`);
       console.error("[health] Failed to query blacklist counts:", err);

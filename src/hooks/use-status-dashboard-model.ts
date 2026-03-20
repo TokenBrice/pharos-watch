@@ -24,6 +24,7 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
     isLoading: historyLoading,
     error: historyError,
     refetch: refetchHistory,
+    dataUpdatedAt: historyUpdatedAt,
   } = useStatusHistory(adminAccess, historyWindow);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -39,7 +40,9 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
     refetchHistory();
   }, [refetchHealth, refetchHistory, refetchProbes, refetchStatus]);
 
-  const lastUpdated = Math.max(statusUpdatedAt ?? 0, healthUpdatedAt ?? 0, probesUpdatedAt ?? 0);
+  const criticalUpdatedAts = [statusUpdatedAt ?? 0, healthUpdatedAt ?? 0, probesUpdatedAt ?? 0]
+    .filter((value) => value > 0);
+  const lastUpdated = criticalUpdatedAts.length > 0 ? Math.min(...criticalUpdatedAts) : 0;
 
   if (!data) {
     return {
@@ -78,8 +81,12 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
       data,
       healthData,
       probes,
-      probesUpdatedAt: probesUpdatedAt ?? 0,
-      lastUpdated,
+      querySyncs: {
+        statusUpdatedAt: statusUpdatedAt ?? 0,
+        healthUpdatedAt: healthUpdatedAt ?? 0,
+        probesUpdatedAt: probesUpdatedAt ?? 0,
+        historyUpdatedAt: historyUpdatedAt ?? 0,
+      },
       nowMs,
       healthError: healthError instanceof Error ? healthError : null,
       probesError: probesError instanceof Error ? probesError : null,

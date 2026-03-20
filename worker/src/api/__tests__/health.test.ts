@@ -19,7 +19,13 @@ describe("handleHealth", () => {
       timestamp: number;
       warnings: string[];
       caches: Record<string, unknown>;
-      blacklist: { totalEvents: number; missingAmounts: number };
+      blacklist: {
+        totalEvents: number;
+        missingAmounts: number;
+        recentMissingAmounts: number;
+        recentWindowSec: number;
+        missingRatio: number;
+      };
       mintBurn: {
         totalEvents: number;
         latestEventTs: number | null;
@@ -43,6 +49,12 @@ describe("handleHealth", () => {
     expect(body).toHaveProperty("blacklist");
     expect(body).toHaveProperty("mintBurn");
     expect(body).toHaveProperty("circuits");
+    expect(body.blacklist).toMatchObject({
+      totalEvents: 0,
+      missingAmounts: 0,
+      recentMissingAmounts: 0,
+      missingRatio: 0,
+    });
     expect(body.mintBurn.totalEvents).toBe(1234);
     expect(body.warnings).toEqual([]);
     expect(body.mintBurn).toHaveProperty("latestEventTs");

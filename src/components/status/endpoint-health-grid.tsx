@@ -2,6 +2,7 @@ import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import type { EndpointProbeResult } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getProbeStatusDetail, getProbeStatusLabel, isProbePassing } from "@/lib/status-dashboard-model";
 
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
   { key: "public", label: "Public" },
@@ -20,7 +21,7 @@ interface EndpointHealthGridProps {
 export function EndpointHealthGrid({
   probes,
   isLoading,
-  groups = ["public", "admin", "manual"],
+  groups = ["public", "admin"],
   description,
   footnote,
 }: EndpointHealthGridProps) {
@@ -43,8 +44,11 @@ export function EndpointHealthGrid({
   }
 
   const probeList = probes ?? [];
-  const passCount = probeList.filter((probe) => probe.status != null && probe.status >= 200 && probe.status < 300).length;
-  const failCount = probeList.filter((probe) => probe.status == null || probe.status >= 400).length;
+  const passCount = probeList.filter((probe) => isProbePassing(probe)).length;
+  const degradedCount = probeList.filter((probe) => probe.semanticStatus === "degraded").length;
+  const staleCount = probeList.filter(
+    (probe) => probe.semanticStatus === "stale" || probe.status == null || probe.status >= 400,
+  ).length;
   const isAdminView = groups.includes("admin");
   const summaryText =
     footnote ??
@@ -61,11 +65,14 @@ export function EndpointHealthGrid({
         <p className="text-xs text-muted-foreground">
           {description ??
             (isAdminView
-              ? "Browser-origin probe loop from this admin session. Compare it with the worker self-check above when diagnosing divergence."
+              ? "Browser-origin probe loop from this admin session. `/api/health` and `/api/status` are interpreted semantically, not just by transport reachability."
               : "Browser-origin probe loop from this session against the public API surface.")}
         </p>
         <p className="text-xs text-muted-foreground">
-          {probeList.length > 0 ? `${passCount}/${probeList.length} passing, ${failCount} failing or unreachable.` : "No browser probe samples yet."} {summaryText}
+          {probeList.length > 0
+            ? `${passCount}/${probeList.length} semantically healthy, ${degradedCount} degraded, ${staleCount} stale or unreachable.`
+            : "No browser probe samples yet."}{" "}
+          {summaryText}
         </p>
         {GROUP_LABELS.filter(({ key }) => groups.includes(key)).map(({ key, label }) => {
           const paths = [...ENDPOINT_GROUPS[key]];
@@ -75,8 +82,8 @@ export function EndpointHealthGrid({
             paths.sort((a, b) => {
               const pa = probeMap.get(a);
               const pb = probeMap.get(b);
-              const aErr = pa ? (pa.status === null || pa.status >= 400 ? 0 : 1) : 1;
-              const bErr = pb ? (pb.status === null || pb.status >= 400 ? 0 : 1) : 1;
+              const aErr = pa ? (isProbePassing(pa) ? 1 : 0) : 1;
+              const bErr = pb ? (isProbePassing(pb) ? 1 : 0) : 1;
               if (aErr !== bErr) return aErr - bErr;
               return a.localeCompare(b);
             });
@@ -99,28 +106,43 @@ export function EndpointHealthGrid({
                     );
                   }
 
-                  const isOk = probe?.status != null && probe.status >= 200 && probe.status < 300;
-                  const isError = probe?.status != null && probe.status >= 400;
+                  const isOk = probe ? isProbePassing(probe) : false;
+                  const isSemanticDegraded = probe?.semanticStatus === "degraded";
+                  const isError = probe?.status == null || probe.status >= 400 || probe?.semanticStatus === "stale";
+                  const statusLabel = probe ? getProbeStatusLabel(probe) : "—";
+                  const statusDetail = probe ? getProbeStatusDetail(probe) : null;
 
                   return (
-                    <div key={path} className="flex items-center justify-between py-1">
-                      <span className="font-mono text-xs">{display}</span>
-                      <div className="flex items-center gap-2">
+                    <div key={path} className="flex items-start justify-between gap-3 py-1">
+                      <div className="min-w-0">
+                        <div className="font-mono text-xs">{display}</div>
+                        {statusDetail ? (
+                          <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                            {statusDetail}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
                         {probe ? (
                           <>
                             {isOk && (
                               <Badge className="bg-green-500/15 text-xs text-green-700 dark:text-green-400">
-                                {probe.status}
+                                {statusLabel}
+                              </Badge>
+                            )}
+                            {isSemanticDegraded && (
+                              <Badge className="bg-amber-500/15 text-xs text-amber-700 dark:text-amber-400">
+                                {statusLabel}
                               </Badge>
                             )}
                             {isError && (
                               <Badge className="bg-red-500/15 text-xs text-red-700 dark:text-red-400">
-                                {probe.status}
+                                {statusLabel}
                               </Badge>
                             )}
-                            {probe.status === null && (
-                              <Badge className="bg-muted text-xs text-muted-foreground">—</Badge>
-                            )}
+                            <span className="text-xs tabular-nums text-muted-foreground">
+                              {probe.status != null ? `HTTP ${probe.status}` : "No HTTP"}
+                            </span>
                             <span className="text-xs tabular-nums text-muted-foreground">{probe.latencyMs}ms</span>
                           </>
                         ) : (

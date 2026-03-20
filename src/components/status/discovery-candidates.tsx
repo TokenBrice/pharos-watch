@@ -33,10 +33,12 @@ export function DiscoveryCandidatesCard({
   candidates,
   adminAccess,
   nowSeconds,
+  onDismissed,
 }: {
   candidates: DiscoveryCandidate[] | null;
   adminAccess: AdminAccess;
   nowSeconds: number;
+  onDismissed?: () => void;
 }) {
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const [dismissError, setDismissError] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export function DiscoveryCandidatesCard({
       });
       if (res.ok) {
         setDismissed((prev) => new Set([...prev, id]));
+        onDismissed?.();
       } else {
         const text = await res.text();
         setDismissError(`${res.status}: ${text}`);

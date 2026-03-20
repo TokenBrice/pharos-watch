@@ -43,7 +43,7 @@ The active frontend operator mode is now:
 - Pure derived-data helpers: `src/lib/status-dashboard-model.ts`
 - Decomposed UI components: `src/components/status/*`
 - The `/admin/` page shell adds a command-center top fold above the widget stack:
-  - a compact triage utility bar for refresh/auth state (`RefreshCountdown`, sign-out, state-evaluation/API/client timestamp chips)
+  - a compact triage utility bar for refresh/auth state (`RefreshCountdown`, sign-out, state-evaluation/status-payload/per-lane fetch chips, and a sync-floor age chip based on the oldest critical query)
   - consolidated overall-status hero (`StatusBanner`) + a short blocker watchlist
   - when hysteresis is still holding `overallStatus` above `rawOverallStatus`, the hero switches into recovery-hold copy instead of reusing the active-incident stale headline
   - a promoted `Recommended now` action strip derived from active causes / unhealthy cron lanes
@@ -56,8 +56,8 @@ The active frontend operator mode is now:
   - Renders the public-monitor hero with:
     - a status narrative headline instead of the old single-word + four-card metric template
     - a lead-signal panel for the first public warning or steady-state watch note
-    - a live-watch side panel for health sample time, client sync time, browser probe summary, circuit-breaker posture, refresh control, and operator-handoff note
-- The public `Overview` lane now uses flatter signal cards for mint/burn sync and blacklist ingestion rather than nesting generic `Card` shells inside the section wrapper
+    - a live-watch side panel for health sample time, public-query sync floor, browser probe summary, circuit-breaker posture, refresh control, and operator-handoff note
+- The public `Overview` lane now uses flatter signal cards for mint/burn sync, blacklist ingestion, and a dedicated impacted-surfaces card that translates raw health flags into the public routes most likely to mislead readers
 - Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
 
 ### Data hooks
@@ -73,6 +73,7 @@ The active frontend operator mode is now:
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
   - Public probes still hit the public API origin; admin probes switch to same-origin `/api/admin/*` on the ops host
   - Manual/admin mutation actions are listed but intentionally not auto-probed
+  - `/api/health` and `/api/status` are parsed semantically, so `200` responses with `status/overallStatus = degraded|stale` count as unhealthy in the browser probe summaries
   - Also exports `usePublicEndpointProbes()` for the public `/status/` page, which probes only the public endpoint group
 - `src/hooks/use-status-history.ts`
   - Calls `GET /api/status-history` through same-origin `/api/admin/status-history` on `ops.pharos.watch`
@@ -84,7 +85,7 @@ The active frontend operator mode is now:
   - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
 - `src/hooks/use-status-dashboard-model.ts`
   - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
-  - Derives the operational lane summaries, severity-ranked section order, notice rail entries, and cross-surface status deltas used by the page shell
+  - Derives the operational lane summaries, severity-ranked section order, notice rail entries, cross-surface status deltas, and the sync-floor freshness view used by the page shell
 - `src/components/longform-scrollspy-nav.tsx`
   - Applies sticky section navigation without re-running hash alignment on every live refresh, so polling does not snap operators back to an anchored section mid-scroll
 - `src/components/status/telegram-bot-stats.tsx`
@@ -103,9 +104,9 @@ The active frontend operator mode is now:
 - The client now groups widgets into six operational lanes instead of one flat vertical list:
   - `Overview`: incident detail first, with the state-machine / probe diagnostics moved behind a secondary disclosure block
   - `Actions`: manual response tools promoted upward when recommendations exist; Telegram delivery telemetry is now secondary and collapsible
-  - `Pipeline`: data-quality threshold board, price-source health, liquidity health, pipeline freshness, live reserve sync health, a full-width mint/burn reconciliation grid, and discovery backlog
+  - `Pipeline`: data-quality threshold board, price-source health, liquidity health, pipeline freshness, live reserve sync health, mint/burn reconciliation, metadata-integrity watchlists (`reserveDrift`, `classificationWarnings`), and discovery backlog
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
-  - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, and cache freshness
+  - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, and cache freshness; manual action routes are no longer rendered as default `Not probed` noise
   - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers; unhealthy/degraded groups sort first and fully healthy groups collapse by default
   - `History`: filtered incident timeline windows
 - Lane order below `Overview` is no longer fixed; `Actions`, `Pipeline`, `Cron Lanes`, and `Reliability` are ranked from current incident severity so the scroll order tapers from urgent action into broader telemetry.
@@ -312,7 +313,7 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
    - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising the real handler/auth path
    - explicit non-default `SELF_URL`: real HTTPS `fetch()` probes with a 10s timeout per endpoint
    - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency
-   - `/api/health` is parsed semantically: a `200` response with body `status: degraded|stale` downgrades the synthetic probe instead of counting as healthy-on-transport
+   - `/api/health` and `/api/status` are parsed semantically: a `200` response with body `status/overallStatus: degraded|stale` downgrades the synthetic probe instead of counting as healthy-on-transport
    - cache-backed bootstrap probes (`/api/usds-status`, `/api/bluechip-ratings`, `/api/yield-rankings`) are treated as bootstrap misses rather than hard failures only while their producing cron has never recorded a run
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
@@ -397,7 +398,9 @@ The UI now uses these actions in two ways:
 - a complete operator tool shelf (`All actions`)
 - contextual recommendations derived from active causes and unhealthy cron lanes (`Recommended now`)
 
-Each action execution is confirmed, logged locally in the page, and triggers a status/probe/history refresh on completion.
+The complete operator tool shelf is grouped into recovery/backfill, audit/diagnostic, and communication actions.
+
+Each action execution is confirmed, sent with an `Idempotency-Key` when supported by the worker, logged locally in the page, and triggers a status/probe/history refresh on completion.
 
 `POST /api/backfill-mint-burn` is operator-safe from the status page even without an explicit `configKey`: the worker auto-selects the most behind Ethereum config with a critical-first / major-symbol-first policy and returns the selected config in the response payload.
 
