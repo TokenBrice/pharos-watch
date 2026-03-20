@@ -87,12 +87,20 @@ export async function fetchDsFallbackPools(
       if (requests > 0) await dsRateLimit(signal);
       requests++;
 
-      const pairs = await fetchDsTokenPools(contract.chain, contract.address, signal);
+      let pairs: Awaited<ReturnType<typeof fetchDsTokenPools>>;
+      try {
+        pairs = await fetchDsTokenPools(contract.chain, contract.address, signal);
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        console.warn(`[dex-liquidity] DexScreener fallback error for ${meta.symbol} on ${contract.chain}:`, err);
+        continue;
+      }
       if (pairs.length === 0) continue;
 
       for (const pair of pairs) {
         // Guard against malformed DexScreener responses (missing token fields)
-        if (!pair.baseToken?.address || !pair.quoteToken?.address || !pair.pairAddress) continue;
+        if (!pair?.baseToken?.address || !pair?.quoteToken?.address || !pair?.pairAddress) continue;
+        if (!pair.dexId) continue;
 
         // Quality gates
         const tvl = pair.liquidity?.usd ?? 0;
@@ -151,7 +159,7 @@ export async function fetchDsFallbackPools(
         if (pair.labels?.includes("CLMM") || pair.labels?.includes("V3")) poolType = "concentrated";
         else if (pair.labels?.includes("StableSwap")) poolType = "stableswap";
 
-        const symbolStr = `${pair.baseToken.symbol} / ${pair.quoteToken.symbol}`;
+        const symbolStr = `${pair.baseToken.symbol ?? "?"} / ${pair.quoteToken.symbol ?? "?"}`;
 
         candidates.push({
           stablecoinId: meta.id,
