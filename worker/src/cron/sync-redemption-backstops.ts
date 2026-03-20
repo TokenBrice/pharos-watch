@@ -1,11 +1,17 @@
-import { getConfiguredRedemptionBackstopIds } from "@shared/lib/redemption-backstops";
+import {
+  getConfiguredRedemptionBackstopIds,
+  getRedemptionBackstopConfig,
+} from "@shared/lib/redemption-backstops";
 import type { CronResult } from "../lib/cron-logger";
 import { buildInClause } from "../lib/db";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import {
   upsertRedemptionBackstopSnapshots,
 } from "../lib/redemption-backstops-store";
-import { resolveRedemptionBackstopEntry } from "../lib/redemption-backstop-sources";
+import {
+  buildRedemptionBackstopEntry,
+  resolveRedemptionBackstopEntry,
+} from "../lib/redemption-backstop-sources";
 import {
   hasUsableStablecoinsPayload,
   loadStablecoinsCache,
@@ -29,9 +35,8 @@ export async function syncRedemptionBackstops(
   }
 
   const configuredIds = getConfiguredRedemptionBackstopIds();
-  const configuredIdSet = new Set(configuredIds);
-  const stablecoinAssets = stablecoinsCache.payload.peggedAssets.filter((asset) =>
-    configuredIdSet.has(asset.id),
+  const stablecoinAssetById = new Map(
+    stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]),
   );
   const dexLiquidityMap = await loadDexLiquidityMap(db);
   const now = Math.floor(Date.now() / 1000);
@@ -55,25 +60,44 @@ export async function syncRedemptionBackstops(
   const snapshots = [];
   const failedIds: string[] = [];
 
-  for (const asset of stablecoinAssets) {
+  for (const stablecoinId of configuredIds) {
     if (signal.aborted) {
       throw signal.reason ?? new Error("sync-redemption-backstops aborted");
     }
 
     try {
-      const resolved = await resolveRedemptionBackstopEntry(
-        db,
-        asset,
-        dexLiquidityMap[asset.id]?.liquidityScore ?? null,
-        now,
-      );
+      const asset = stablecoinAssetById.get(stablecoinId);
+      const dexLiquidityScore = dexLiquidityMap[stablecoinId]?.liquidityScore ?? null;
+      let resolved = null;
+
+      if (asset) {
+        resolved = await resolveRedemptionBackstopEntry(
+          db,
+          asset,
+          dexLiquidityScore,
+          now,
+        );
+      } else {
+        const config = getRedemptionBackstopConfig(stablecoinId);
+        if (config) {
+          resolved = await buildRedemptionBackstopEntry(
+            db,
+            stablecoinId,
+            config,
+            null,
+            dexLiquidityScore,
+            now,
+          );
+        }
+      }
+
       if (resolved) snapshots.push(resolved);
     } catch (error) {
       console.error(
-        `[sync-redemption-backstops] Failed for ${asset.id}:`,
+        `[sync-redemption-backstops] Failed for ${stablecoinId}:`,
         error,
       );
-      failedIds.push(asset.id);
+      failedIds.push(stablecoinId);
     }
   }
 
@@ -100,7 +124,7 @@ export async function syncRedemptionBackstops(
     (entry) => entry.sourceMode === "static",
   ).length;
   const missingFromCache = configuredIds.filter(
-    (stablecoinId) => !stablecoinAssets.some((asset) => asset.id === stablecoinId),
+    (stablecoinId) => !stablecoinAssetById.has(stablecoinId),
   );
 
   const status: CronResult["status"] =
