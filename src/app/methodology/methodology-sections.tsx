@@ -64,7 +64,9 @@ export function MethodologySections() {
             redemption prices override market data for wrapper assets, Chainlink refreshes supported FX and commodity
             reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack when
             Frankfurter is unavailable, with ExchangeRate-API as a tertiary daily fallback if both primary FX paths are down.
-            A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
+            If those live FX fetches still fail but the last published daily references remain within cadence, Pharos
+            carries those dated references forward as a healthy refresh. A 5-pass enrichment pipeline fills gaps for
+            long-tail coins. Each asset is tagged with a confidence level
             so downstream systems can react to data quality.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">

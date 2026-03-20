@@ -334,6 +334,132 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
   });
 
+  it("treats cadence-valid carry-forward rates as a live run when live FX fetches fail", async () => {
+    mockFetch([
+      {
+        match: "frankfurter.app",
+        body: { error: "Service unavailable" },
+        status: 503,
+      },
+      {
+        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
+        body: { error: "Service unavailable" },
+        status: 503,
+      },
+      {
+        match: "latest.currency-api.pages.dev",
+        body: { error: "Service unavailable" },
+        status: 503,
+      },
+      {
+        match: "open.er-api.com/v6/latest/USD",
+        body: { error: "Service unavailable" },
+        status: 503,
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { price: 2900 },
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { price: 32 },
+      },
+    ]);
+
+    const fullPrevRates: Record<string, number> = {
+      peggedEUR: 1 / 0.925,
+      peggedGBP: 1 / 0.79,
+      peggedCHF: 1 / 0.88,
+      peggedREAL: 1 / 5.0,
+      peggedJPY: 1 / 149.5,
+      peggedIDR: 1 / 15800,
+      peggedSGD: 1 / 1.35,
+      peggedTRY: 1 / 36,
+      peggedAUD: 1 / 1.55,
+      peggedZAR: 1 / 18.3,
+      peggedCAD: 1 / 1.37,
+      peggedCNY: 1 / 7.25,
+      peggedPHP: 1 / 56,
+      peggedMXN: 1 / 17.2,
+      peggedCNH: 1 / 7.28,
+      peggedRUB: 1 / 90,
+      peggedUAH: 1 / 41,
+      peggedARS: 1 / 1400,
+    };
+    const calendarDailyPegs = new Set(["peggedCNH", "peggedRUB", "peggedUAH", "peggedARS"]);
+    const sourceUpdatedAtByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [
+        pegKey,
+        calendarDailyPegs.has(pegKey)
+          ? Math.floor(Date.parse("2025-06-15T00:02:31Z") / 1000)
+          : Math.floor(Date.parse("2025-06-13T16:00:00Z") / 1000),
+      ]),
+    );
+    const sourceCadenceByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [
+        pegKey,
+        calendarDailyPegs.has(pegKey) ? "calendar-daily" : "business-daily",
+      ]),
+    );
+    const sourceDateByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [
+        pegKey,
+        calendarDailyPegs.has(pegKey) ? "2025-06-15" : "2025-06-13",
+      ]),
+    );
+    const sourceModeByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "live"]),
+    );
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify(fullPrevRates),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
+            mode: "live",
+            sourceUpdatedAtByPeg,
+            sourceModeByPeg,
+            sourceCadenceByPeg,
+            sourceDateByPeg,
+            consecutiveFallbackRuns: 14,
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+    ]);
+
+    const result = await syncFxRates(db);
+    expect(result.status).toBeUndefined();
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.mode).toBe("live");
+    expect(metadata.fallbackMode).toBe("cadence-valid-carry-forward");
+    expect(metadata.consecutiveFallbackRuns).toBe(0);
+    expect(metadata.sources.cache).toBe("carry-forward");
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      mode: string;
+      sourceDateByPeg: Record<string, string | null>;
+      consecutiveFallbackRuns: number;
+    };
+    expect(cachedMeta.mode).toBe("live");
+    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-13");
+    expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
+    expect(cachedMeta.consecutiveFallbackRuns).toBe(0);
+  });
+
   it("uses secondary API for CNH/RUB/UAH/ARS rates", async () => {
     mockFetch([
       {

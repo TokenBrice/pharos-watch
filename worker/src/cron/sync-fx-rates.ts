@@ -7,7 +7,7 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { fetchChainlinkReferenceQuotes } from "../lib/chainlink-feeds";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { FxRateSourceMode, FxRateSyncMode, FxSourceCadence } from "../lib/fx-rate-state";
-import { loadFxRateState, persistFxRateState } from "../lib/fx-rate-state";
+import { getFxSourceStatus, loadFxRateState, persistFxRateState } from "../lib/fx-rate-state";
 import { z } from "zod";
 
 /**
@@ -315,6 +315,25 @@ export async function syncFxRates(
       sourceCadenceByPeg[pegKey] = "intraday";
       sourceDateByPeg[pegKey] = null;
     };
+    const canCarryForwardPreviousRates = (): boolean => {
+      if (!prevState) return false;
+      return EXPECTED_FX_PEG_KEYS.every((pegKey) => {
+        const prevRate = prevRates[pegKey];
+        if (typeof prevRate !== "number" || !Number.isFinite(prevRate) || prevRate <= 0) {
+          return false;
+        }
+        return getFxSourceStatus(
+          prevState.sourceUpdatedAtByPeg[pegKey] ?? null,
+          prevState.sourceModeByPeg[pegKey],
+          syncStartSec,
+          {
+            pegKey,
+            cadence: prevState.sourceCadenceByPeg[pegKey],
+            sourceDate: prevState.sourceDateByPeg[pegKey] ?? null,
+          },
+        ) === "fresh";
+      });
+    };
     const applySecondaryRates = (
       candidate: SecondaryCurrencyCandidate,
       mappings: SecondaryFxMappings,
@@ -428,6 +447,18 @@ export async function syncFxRates(
         frankfurter: frankfurterSource,
         fawazahmed0: "error",
       };
+      if (canCarryForwardPreviousRates()) {
+        usableRates = { ...prevRates };
+        for (const pegKey of Object.keys(usableRates)) {
+          inheritPrevious(pegKey);
+        }
+        fallbackMode = "cadence-valid-carry-forward";
+        sources = {
+          ...sources,
+          cache: "carry-forward",
+        };
+        return true;
+      }
       return false;
     };
 

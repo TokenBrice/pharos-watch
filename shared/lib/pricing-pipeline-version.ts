@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.9",
+  currentVersion: "2.10",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.10",
+      title: "Cadence-valid FX carry-forward semantics",
+      date: "2026-03-20",
+      effectiveAt: 1774014900,
+      summary:
+        "Adjusted FX refresh semantics so previously published daily references are treated as a successful live carry-forward when they are still within their expected freshness cadence, instead of automatically incrementing cached-fallback status.",
+      impact: [
+        "Quarter-hour FX runs no longer poison status simply because Frankfurter and mirror transports failed to re-deliver an already-current daily source snapshot",
+        "Carry-forward runs preserve per-peg source dates and cadence metadata, so status still degrades normally once the underlying daily references actually age out",
+        "Operator metadata still records the failed live transport path, but public health now aligns with source freshness rather than transport availability alone",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.9",
       title: "Jupiter V3 freshness fix and exact DexScreener address fallback",
