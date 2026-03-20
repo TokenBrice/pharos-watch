@@ -444,7 +444,7 @@ export async function runCmcPass(
   return { resolved, failures: [] };
 }
 
-// ── Pass 3: DexScreener ─────────────────────────────────────────────
+// ── Pass 4: DexScreener ─────────────────────────────────────────────
 
 /**
  * Best-effort fallback: try exact DexScreener token-pair lookups when the

@@ -90,7 +90,7 @@ export function applyResolvedPrice(
 }
 
 /**
- * Enrich assets that are missing prices via a 5-pass pipeline:
+ * Enrich assets that are missing prices via a 4-pass pipeline:
  *   1. Contract addresses via DefiLlama coins API
  *   1b. Multi-chain contract fallback
  *   2. CoinMarketCap API (rate-limited)
@@ -586,7 +586,7 @@ export function applyPoolChallenge(
 
 /** Sources that are independent exchanges/oracles — NOT aggregators that may share upstream data */
 const HARD_SOURCES = new Set([
-  "pyth", "binance", "coinbase", "curve-onchain", "curve-oracle", "redstone", "protocol-redeem",
+  "pyth", "binance", "kraken", "bitstamp", "coinbase", "curve-onchain", "curve-oracle", "redstone", "protocol-redeem",
   "fluid-dex", "balancer-dex", "raydium-dex", "orca-dex",
 ]);
 

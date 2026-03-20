@@ -631,7 +631,7 @@ export async function syncFxRates(
           console.log(`[sync-fx-rates] Using cached CNH rate: ${usableRates["peggedCNH"]}`);
         }
 
-        let metalsSource: "gold-api.com" | "cached" = "cached";
+        let metalsSource: "ok" | "cached" = "cached";
         try {
           const [goldRes, silverRes] = await Promise.all([
             fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT }, signal }),
@@ -652,7 +652,7 @@ export async function syncFxRates(
             if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
               usableRates["peggedGOLD"] = goldPrice;
               markLive("peggedGOLD", syncStartSec);
-              metalsSource = "gold-api.com";
+              metalsSource = "ok";
             } else if (prevRates["peggedGOLD"]) {
               usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
               inheritPrevious("peggedGOLD");
@@ -666,7 +666,7 @@ export async function syncFxRates(
             if (isValidRate("peggedSILVER", silverPrice, prevRates["peggedSILVER"])) {
               usableRates["peggedSILVER"] = silverPrice;
               markLive("peggedSILVER", syncStartSec);
-              metalsSource = "gold-api.com";
+              metalsSource = "ok";
             } else if (prevRates["peggedSILVER"]) {
               usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
               inheritPrevious("peggedSILVER");
