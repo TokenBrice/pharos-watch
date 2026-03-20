@@ -255,6 +255,85 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
   });
 
+  it("uses ExchangeRate-API as a live full-set fallback when frankfurter and the secondary mirrors are unavailable", async () => {
+    const exchangeRateUpdatedAt = Math.floor(Date.parse("2025-06-15T00:02:31Z") / 1000);
+
+    mockFetch([
+      {
+        match: "frankfurter.app",
+        body: { error: "Service unavailable" },
+        status: 503,
+      },
+      {
+        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
+        body: { error: "Service unavailable" },
+        status: 503,
+      },
+      {
+        match: "latest.currency-api.pages.dev",
+        body: { error: "Service unavailable" },
+        status: 503,
+      },
+      {
+        match: "open.er-api.com/v6/latest/USD",
+        body: {
+          result: "success",
+          time_last_update_unix: exchangeRateUpdatedAt,
+          rates: {
+            EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
+            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90, UAH: 41, ARS: 1400,
+          },
+        },
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { price: 2900 },
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { price: 32 },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const result = await syncFxRates(db);
+    expect(result.status).toBeUndefined();
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.mode).toBe("live");
+    expect(metadata.fallbackMode).toBe("exchange-rate-api-live-fallback");
+    expect(metadata.sources.frankfurter).toBe("error");
+    expect(metadata.sources.exchangeRateApi).toBe("ok");
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedEUR).toBeCloseTo(1 / 0.925, 6);
+    expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      mode: string;
+      sourceCadenceByPeg: Record<string, string>;
+      sourceDateByPeg: Record<string, string | null>;
+    };
+    expect(cachedMeta.mode).toBe("live");
+    expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("calendar-daily");
+    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
+  });
+
   it("uses secondary API for CNH/RUB/UAH/ARS rates", async () => {
     mockFetch([
       {

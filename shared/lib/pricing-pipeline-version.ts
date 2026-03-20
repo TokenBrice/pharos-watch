@@ -3,25 +3,41 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.7",
+  currentVersion: "2.8",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
-  {
-    version: "2.7",
-    title: "Secondary FX full-set live fallback for Frankfurter outages",
-    date: "2026-03-20",
-    effectiveAt: 1774011900,
-    summary:
-      "Expanded the existing dated secondary FX mirror path so it can temporarily backstop the wider fiat reference set when Frankfurter is unavailable, preventing repeated cached-only FX runs.",
-    impact: [
-      "CNH/RUB/UAH/ARS still use the secondary daily feed as their normal source path",
-      "When Frankfurter fails, the fresher `fawazahmed0/currency-api` mirror can now populate the broader fiat FX set instead of forcing an immediate cached-fallback run",
-      "Per-peg FX metadata preserves calendar-daily cadence and source-date semantics during this live fallback path",
-      "Public health no longer needs to report long consecutive cached-fallback FX runs for a Frankfurter-only outage when the secondary feed is healthy",
-    ],
-    commits: [],
-    reconstructed: false,
-  },
+    {
+      version: "2.8",
+      title: "Tertiary full-set FX fallback for multi-source outages",
+      date: "2026-03-20",
+      effectiveAt: 1774013100,
+      summary:
+        "Added ExchangeRate-API as a tertiary live full-set FX fallback so production can keep publishing dated fiat references when both Frankfurter and the existing secondary mirrors are unavailable.",
+      impact: [
+        "Frankfurter remains the preferred ECB-backed business-day source for the core fiat set",
+        "The existing `fawazahmed0/currency-api` mirrors still serve CNH/RUB/UAH/ARS and can backstop the wider fiat set when Frankfurter is unavailable",
+        "When both current FX paths fail, ExchangeRate-API can now publish a daily full-set fiat snapshot instead of forcing an immediate cached-fallback run",
+        "The About page and pricing methodology now disclose ExchangeRate-API as an externally visible FX reference source",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "2.7",
+      title: "Secondary FX full-set live fallback for Frankfurter outages",
+      date: "2026-03-20",
+      effectiveAt: 1774011900,
+      summary:
+        "Expanded the existing dated secondary FX mirror path so it can temporarily backstop the wider fiat reference set when Frankfurter is unavailable, preventing repeated cached-only FX runs.",
+      impact: [
+        "CNH/RUB/UAH/ARS still use the secondary daily feed as their normal source path",
+        "When Frankfurter fails, the fresher `fawazahmed0/currency-api` mirror can now populate the broader fiat FX set instead of forcing an immediate cached-fallback run",
+        "Per-peg FX metadata preserves calendar-daily cadence and source-date semantics during this live fallback path",
+        "Public health no longer needs to report long consecutive cached-fallback FX runs for a Frankfurter-only outage when the secondary feed is healthy",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
   {
     version: "2.6",
     title: "Published DEX challenger snapshots and durable FX freshness metadata",

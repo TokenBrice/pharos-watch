@@ -50,8 +50,11 @@ const SECONDARY_CURRENCY_TO_PEG = {
   ars: "peggedARS",
 } as const;
 
+const EXPECTED_FX_PEG_KEYS = [...Object.values(CURRENCY_TO_PEG), ...Object.values(SECONDARY_CURRENCY_TO_PEG)];
+
 const SECONDARY_FX_PRIMARY_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json";
 const SECONDARY_FX_FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
+const TERTIARY_FX_URL = "https://open.er-api.com/v6/latest/USD";
 
 /** Generous bounds for USD-per-unit rates (~50%-200% of typical values).
  *  Any rate outside these bounds is almost certainly corrupted API data. */
@@ -119,6 +122,15 @@ interface SecondaryCurrencyCandidate {
 }
 
 type SecondaryFxMappings = ReadonlyArray<readonly [string, string]>;
+
+const ExchangeRateApiResponseSchema = z.object({
+  result: z.string().optional(),
+  time_last_update_unix: z.number().optional(),
+  time_last_update_utc: z.string().optional(),
+  rates: z.record(z.string(), z.number()),
+});
+
+type ExchangeRateApiPayload = z.infer<typeof ExchangeRateApiResponseSchema>;
 
 const MetalPriceSchema = z.object({
   price: z.number(),
@@ -214,6 +226,32 @@ async function loadSecondaryCurrencyCandidate(signal?: AbortSignal): Promise<Sec
   return secondaryCandidate;
 }
 
+async function loadExchangeRateApiPayload(signal?: AbortSignal): Promise<ExchangeRateApiPayload | null> {
+  const res = await fetchWithRetry(TERTIARY_FX_URL, {
+    headers: { "User-Agent": USER_AGENT },
+    signal,
+  });
+  if (!res || !res.ok) {
+    return null;
+  }
+
+  const payload = await res.json();
+  const validation = validatePayloadWithSchema(
+    ExchangeRateApiResponseSchema,
+    payload,
+    "sync-fx-rates:exchange-rate-api",
+  );
+  if (!validation.ok) {
+    console.warn(`[sync-fx-rates] ExchangeRate-API payload invalid: ${validation.issues}`);
+    return null;
+  }
+  if (validation.data.result && validation.data.result !== "success") {
+    console.warn(`[sync-fx-rates] ExchangeRate-API returned result=${validation.data.result}`);
+    return null;
+  }
+  return validation.data;
+}
+
 export async function syncFxRates(
   db: D1Database,
   signal?: AbortSignal,
@@ -244,6 +282,7 @@ export async function syncFxRates(
     let sources: Record<string, string> = {
       frankfurter: "ok",
       fawazahmed0: "fallback",
+      exchangeRateApi: "unavailable",
       "gold-api.com": "cached",
       chainlink: "unavailable",
       openExchangeRates: "unavailable",
@@ -306,15 +345,39 @@ export async function syncFxRates(
         }
       }
     };
+    const applyExchangeRateApiRates = (
+      payload: ExchangeRateApiPayload,
+      mappings: SecondaryFxMappings,
+      { includeMissingPrevious = false }: { includeMissingPrevious?: boolean } = {},
+    ) => {
+      const sourceUpdatedAt =
+        typeof payload.time_last_update_unix === "number" &&
+        Number.isFinite(payload.time_last_update_unix) &&
+        payload.time_last_update_unix > 0
+          ? Math.min(syncStartSec, Math.floor(payload.time_last_update_unix))
+          : syncStartSec;
+      const sourceDate = new Date(sourceUpdatedAt * 1000).toISOString().slice(0, 10);
 
-    const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
-    const res = await fetchWithRetry(url, {
-      headers: { "User-Agent": USER_AGENT },
-      signal,
-    });
-
-    if (!res || !res.ok) {
-      const cachedRateCount = Object.keys(prevRates).length;
+      for (const [currency, pegKey] of mappings) {
+        const perUsd = payload.rates[currency.toUpperCase()];
+        if (typeof perUsd === "number" && perUsd > 0) {
+          const rate = Number((1 / perUsd).toFixed(6));
+          if (isValidRate(pegKey, rate, prevRates[pegKey])) {
+            usableRates[pegKey] = rate;
+            markLive(pegKey, sourceUpdatedAt, "calendar-daily", sourceDate);
+          } else if (prevRates[pegKey]) {
+            usableRates[pegKey] = prevRates[pegKey];
+            inheritPrevious(pegKey);
+          }
+        } else if (includeMissingPrevious && prevRates[pegKey]) {
+          usableRates[pegKey] = prevRates[pegKey];
+          inheritPrevious(pegKey);
+        }
+      }
+    };
+    const tryLiveFullSetFallback = async (
+      frankfurterSource: "error" | "invalid-payload",
+    ): Promise<boolean> => {
       const secondaryCandidate = await loadSecondaryCurrencyCandidate(signal);
       if (secondaryCandidate) {
         usableRates = {};
@@ -327,13 +390,57 @@ export async function syncFxRates(
         fallbackMode = "secondary-live-fallback";
         sources = {
           ...sources,
-          frankfurter: "error",
-          fawazahmed0:
-            Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in usableRates)
-              ? "ok"
-              : "partial",
+          frankfurter: frankfurterSource,
+          fawazahmed0: EXPECTED_FX_PEG_KEYS.every((pegKey) => pegKey in usableRates)
+            ? "ok"
+            : "partial",
         };
-      } else if (cachedRateCount > 0) {
+        return true;
+      }
+
+      const exchangeRateApiPayload = await loadExchangeRateApiPayload(signal);
+      if (exchangeRateApiPayload) {
+        usableRates = {};
+        applyExchangeRateApiRates(
+          exchangeRateApiPayload,
+          Object.entries(CURRENCY_TO_PEG),
+          { includeMissingPrevious: true },
+        );
+        applyExchangeRateApiRates(
+          exchangeRateApiPayload,
+          Object.entries(SECONDARY_CURRENCY_TO_PEG),
+          { includeMissingPrevious: true },
+        );
+        fallbackMode = "exchange-rate-api-live-fallback";
+        sources = {
+          ...sources,
+          frankfurter: frankfurterSource,
+          fawazahmed0: "error",
+          exchangeRateApi: EXPECTED_FX_PEG_KEYS.every((pegKey) => pegKey in usableRates)
+            ? "ok"
+            : "partial",
+        };
+        return true;
+      }
+
+      sources = {
+        ...sources,
+        frankfurter: frankfurterSource,
+        fawazahmed0: "error",
+      };
+      return false;
+    };
+
+    const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
+    const res = await fetchWithRetry(url, {
+      headers: { "User-Agent": USER_AGENT },
+      signal,
+    });
+
+    if (!res || !res.ok) {
+      const cachedRateCount = Object.keys(prevRates).length;
+      const appliedLiveFallback = await tryLiveFullSetFallback("error");
+      if (!appliedLiveFallback && cachedRateCount > 0) {
         console.warn(
           `[sync-fx-rates] frankfurter.app unavailable (${res?.status ?? "no response"}), using ${cachedRateCount} cached rates`,
         );
@@ -360,26 +467,10 @@ export async function syncFxRates(
         );
         if (!frankfurterValidation.ok) {
           const cachedRateCount = Object.keys(prevRates).length;
-          const secondaryCandidate = await loadSecondaryCurrencyCandidate(signal);
           validationIssues = frankfurterValidation.issues;
-          if (secondaryCandidate) {
-            console.warn("[sync-fx-rates] Invalid Frankfurter payload, using secondary FX live fallback");
-            usableRates = {};
-            applySecondaryRates(
-              secondaryCandidate,
-              Object.entries(CURRENCY_TO_PEG),
-              { includeMissingPrevious: true },
-            );
-            applySecondaryRates(secondaryCandidate, Object.entries(SECONDARY_CURRENCY_TO_PEG));
-            fallbackMode = "secondary-live-fallback";
-            sources = {
-              ...sources,
-              frankfurter: "invalid-payload",
-              fawazahmed0:
-                Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in usableRates)
-                  ? "ok"
-                  : "partial",
-            };
+          const appliedLiveFallback = await tryLiveFullSetFallback("invalid-payload");
+          if (appliedLiveFallback) {
+            console.warn("[sync-fx-rates] Invalid Frankfurter payload, using live FX fallback");
           } else if (cachedRateCount > 0) {
             console.warn(`[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
             usableRates = { ...prevRates };
@@ -632,11 +723,13 @@ export async function syncFxRates(
       if (sources["fawazahmed0"] === "fallback") {
         sources["fawazahmed0"] = prevState?.sources?.["fawazahmed0"] ?? "fallback";
       }
+      if (sources.exchangeRateApi === "unavailable") {
+        sources.exchangeRateApi = prevState?.sources?.exchangeRateApi ?? "unavailable";
+      }
       ecbDate = prevState?.ecbDate ?? null;
     }
 
-    const expected = [...Object.values(CURRENCY_TO_PEG), ...Object.values(SECONDARY_CURRENCY_TO_PEG)];
-    const missing = expected.filter((k) => !(k in usableRates));
+    const missing = EXPECTED_FX_PEG_KEYS.filter((k) => !(k in usableRates));
     if (Object.keys(usableRates).length === 0) {
       throw new Error("sync-fx-rates produced zero usable rates");
     }
