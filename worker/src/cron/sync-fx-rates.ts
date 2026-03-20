@@ -50,6 +50,9 @@ const SECONDARY_CURRENCY_TO_PEG = {
   ars: "peggedARS",
 } as const;
 
+const SECONDARY_FX_PRIMARY_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json";
+const SECONDARY_FX_FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
+
 /** Generous bounds for USD-per-unit rates (~50%-200% of typical values).
  *  Any rate outside these bounds is almost certainly corrupted API data. */
 const FX_RATE_BOUNDS: Record<string, [number, number]> = {
@@ -107,6 +110,14 @@ const SecondaryCurrencyResponseSchema = z.object({
   usd: z.record(z.string(), z.number()),
 });
 
+type SecondaryCurrencyPayload = z.infer<typeof SecondaryCurrencyResponseSchema>;
+type SecondaryCurrencyEndpoint = "jsdelivr" | "pages.dev";
+
+interface SecondaryCurrencyCandidate {
+  endpoint: SecondaryCurrencyEndpoint;
+  payload: SecondaryCurrencyPayload;
+}
+
 const MetalPriceSchema = z.object({
   price: z.number(),
 });
@@ -123,6 +134,54 @@ function resolveDatedSourceUpdatedAt(
   const parsed = Date.parse(`${dateText}${timeSuffix}`);
   if (!Number.isFinite(parsed)) return syncStartSec;
   return Math.min(syncStartSec, Math.floor(parsed / 1000));
+}
+
+function rankIsoDate(dateText: string | null | undefined): number {
+  if (!dateText) return Number.NEGATIVE_INFINITY;
+  const parsed = Date.parse(`${dateText}T00:00:00Z`);
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+}
+
+async function fetchSecondaryCurrencyCandidate(
+  endpoint: SecondaryCurrencyEndpoint,
+  url: string,
+  signal?: AbortSignal,
+): Promise<SecondaryCurrencyCandidate | null> {
+  const res = await fetchWithRetry(url, {
+    headers: { "User-Agent": USER_AGENT },
+    signal,
+  });
+  if (!res || !res.ok) {
+    return null;
+  }
+
+  const payload = await res.json();
+  const validation = validatePayloadWithSchema(
+    SecondaryCurrencyResponseSchema,
+    payload,
+    `sync-fx-rates:secondary:${endpoint}`,
+  );
+  if (!validation.ok) {
+    console.warn(`[sync-fx-rates] Secondary FX payload invalid (${endpoint}): ${validation.issues}`);
+    return null;
+  }
+
+  return {
+    endpoint,
+    payload: validation.data,
+  };
+}
+
+function chooseSecondaryCurrencyCandidate(
+  primary: SecondaryCurrencyCandidate | null,
+  fallback: SecondaryCurrencyCandidate | null,
+): SecondaryCurrencyCandidate | null {
+  if (!primary) return fallback;
+  if (!fallback) return primary;
+
+  return rankIsoDate(fallback.payload.date) > rankIsoDate(primary.payload.date)
+    ? fallback
+    : primary;
 }
 
 export async function syncFxRates(
@@ -265,54 +324,54 @@ export async function syncFxRates(
         }
 
         try {
-          const PRIMARY_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json";
-          const FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
-          let erRes = await fetchWithRetry(PRIMARY_URL, {
-            headers: { "User-Agent": USER_AGENT },
+          const primaryCandidate = await fetchSecondaryCurrencyCandidate(
+            "jsdelivr",
+            SECONDARY_FX_PRIMARY_URL,
             signal,
-          });
-          if (!erRes || !erRes.ok) {
-            erRes = await fetchWithRetry(FALLBACK_URL, {
-              headers: { "User-Agent": USER_AGENT },
-              signal,
-            });
-          }
-          if (erRes && erRes.ok) {
-            const secondaryPayload = await erRes.json();
-            const secondaryValidation = validatePayloadWithSchema(
-              SecondaryCurrencyResponseSchema,
-              secondaryPayload,
-              "sync-fx-rates:secondary",
-            );
-            if (!secondaryValidation.ok) {
-              console.warn(`[sync-fx-rates] Secondary FX payload invalid: ${secondaryValidation.issues}`);
-              sources["fawazahmed0"] = "invalid-payload";
-            } else {
-              const erData = secondaryValidation.data;
-              const secondaryUpdatedAt =
-                typeof erData.date === "string" && erData.date.length > 0
-                  ? resolveDatedSourceUpdatedAt(erData.date, syncStartSec)
-                  : syncStartSec;
-              for (const [currency, pegKey] of Object.entries(SECONDARY_CURRENCY_TO_PEG)) {
-                const perUsd = erData.usd?.[currency];
-                if (typeof perUsd === "number" && perUsd > 0) {
-                  const rate = Number((1 / perUsd).toFixed(6));
-                  if (isValidRate(pegKey, rate, prevRates[pegKey])) {
-                    usableRates[pegKey] = rate;
-                    markLive(
-                      pegKey,
-                      secondaryUpdatedAt,
-                      "calendar-daily",
-                      typeof erData.date === "string" && erData.date.length > 0 ? erData.date : null,
-                    );
-                  } else if (prevRates[pegKey]) {
-                    usableRates[pegKey] = prevRates[pegKey];
-                    inheritPrevious(pegKey);
-                  }
+          );
+          const fallbackCandidate = await fetchSecondaryCurrencyCandidate(
+            "pages.dev",
+            SECONDARY_FX_FALLBACK_URL,
+            signal,
+          );
+
+          const secondaryCandidate = chooseSecondaryCurrencyCandidate(primaryCandidate, fallbackCandidate);
+          if (secondaryCandidate) {
+            if (
+              primaryCandidate &&
+              fallbackCandidate &&
+              secondaryCandidate.endpoint !== primaryCandidate.endpoint
+            ) {
+              console.log(
+                `[sync-fx-rates] Using fresher secondary FX mirror (${secondaryCandidate.endpoint} date=${secondaryCandidate.payload.date ?? "unknown"}, ` +
+                  `jsdelivr=${primaryCandidate.payload.date ?? "unknown"})`,
+              );
+            }
+
+            const erData = secondaryCandidate.payload;
+            const secondaryUpdatedAt =
+              typeof erData.date === "string" && erData.date.length > 0
+                ? resolveDatedSourceUpdatedAt(erData.date, syncStartSec)
+                : syncStartSec;
+            for (const [currency, pegKey] of Object.entries(SECONDARY_CURRENCY_TO_PEG)) {
+              const perUsd = erData.usd?.[currency];
+              if (typeof perUsd === "number" && perUsd > 0) {
+                const rate = Number((1 / perUsd).toFixed(6));
+                if (isValidRate(pegKey, rate, prevRates[pegKey])) {
+                  usableRates[pegKey] = rate;
+                  markLive(
+                    pegKey,
+                    secondaryUpdatedAt,
+                    "calendar-daily",
+                    typeof erData.date === "string" && erData.date.length > 0 ? erData.date : null,
+                  );
+                } else if (prevRates[pegKey]) {
+                  usableRates[pegKey] = prevRates[pegKey];
+                  inheritPrevious(pegKey);
                 }
               }
-              sources["fawazahmed0"] = Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in usableRates) ? "ok" : "partial";
             }
+            sources["fawazahmed0"] = Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in usableRates) ? "ok" : "partial";
           }
         } catch (e) {
           console.warn("[sync-fx-rates] Secondary FX API (CNH/RUB/UAH/ARS) failed:", e);

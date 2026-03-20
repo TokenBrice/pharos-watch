@@ -225,6 +225,62 @@ describe("syncFxRates", () => {
     expect(metadata.secondaryCoverage).toBe(4);
   });
 
+  it("prefers the fresher secondary FX mirror when the CDN payload lags a day behind", async () => {
+    mockFetch([
+      {
+        match: "frankfurter.app",
+        body: {
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        },
+      },
+      {
+        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
+        body: { date: "2025-06-14", usd: { cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401 } },
+      },
+      {
+        match: "latest.currency-api.pages.dev",
+        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { price: 2900 },
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { price: 32 },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    await syncFxRates(db);
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceDateByPeg: Record<string, string | null>;
+    };
+    expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
+  });
+
   it("overlays fresh Chainlink reference feeds when they agree with current references", async () => {
     const decimalsHex = "0x0000000000000000000000000000000000000000000000000000000000000008";
     const latestRoundDataHex =
