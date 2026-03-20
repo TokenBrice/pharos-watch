@@ -1450,7 +1450,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { name: "ETH & LSTs (via CDPs)", pct: 15, risk: "low" },
     ],
   }),
-  usd("meusd-mezo", "Mezo USD", "meUSD", "crypto-backed", "decentralized", {
+  usd("meusd-mezo", "Mezo USD", "meUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "303",
     geckoId: "mezo-usd",
     pythFeedId: "0x0617a9b725011a126a2b9fd53563f4236501f32cf76d877644b943394606c6de",
@@ -1946,7 +1946,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { name: "ETH", pct: 1, risk: CANONICAL_ETH_RESERVE_RISK },
     ],
   }),
-  usd("alusd-alchemix", "Alchemix USD", "ALUSD", "crypto-backed", "decentralized", {
+  usd("alusd-alchemix", "Alchemix USD", "ALUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "20",
     geckoId: "alchemix-usd",
     deploymentModel: "third-party-bridge",
@@ -2306,7 +2306,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     // /api/v2/ousd/collateral endpoint (returns 404). Re-enable when a
     // replacement API is available.
   }),
-  usd("btcusd-btcfi", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
+  usd("btcusd-btcfi", "Bitcoin USD", "BtcUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "183",
     geckoId: "bitcoin-usd-btcfi",
     tags: ["Liquity v1 fork"],

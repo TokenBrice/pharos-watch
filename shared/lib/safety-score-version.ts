@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "5.8",
+  currentVersion: "5.9",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "5.9",
+      title: "Classification corrections: centralized-custody DeFi coins",
+      date: "2026-03-20",
+      effectiveAt: 1742428800,
+      summary:
+        "Three DeFi-classified coins with >50% centralized custody exposure reclassified to centralized-dependent based on live reserve data.",
+      impact: [
+        "meUSD, ALUSD, BtcUSD reclassified from decentralized to centralized-dependent",
+        "ALUSD correction: 65% USDC+USDT direct exposure (reverts erroneous v4.1 reclassification)",
+        "meUSD and BtcUSD: live reserves confirm 100% custodial BTC variants (WBTC, BTCB, cbBTC, SolvBTC)",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.8",
       title: "Live reserve passthrough for collateral quality",
