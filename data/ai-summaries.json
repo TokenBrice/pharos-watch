@@ -818,5 +818,10 @@
     "title": "Buy Now, Settle On-Chain Later",
     "text": "Klarna \u2014 the Swedish fintech with 114 million customers and $112B in annual GMV \u2014 is building a stablecoin via Stripe's Bridge infrastructure on the Tempo L1 (backed by a $500M Stripe/Paradigm raise). The initial use case is mundane by crypto standards but massive by payments standards: reducing Klarna's own cross-border settlement costs before expanding to consumer and merchant flows. Tempo testnet has been live since November 2025, though no official ticker has been disclosed. The interesting dynamic is that Klarna doesn't need external adoption for KlarnaUSD to succeed; its own payment volume is large enough to justify the infrastructure, making external DeFi liquidity a bonus rather than a requirement.",
     "updatedAt": "2026-03-17"
+  },
+  "ussd-sonic-labs": {
+    "title": "Yield Without the Yield",
+    "text": "USSD is Sonic Labs' answer to why a fast EVM chain should depend on Circle and Tether to denominate everything \u2014 a permissionless, zero-fee stablecoin backed entirely by tokenized T-bills (BlackRock BUIDL, Superstate USTB, WisdomTree WTGXX) and built on Frax's frxUSD smart contract infrastructure. The design choice that distinguishes it from every other T-bill-backed stablecoin is also its most pointed: the Treasury yield flows to the Sonic ecosystem as buybacks and incentives, not to USSD holders, meaning every dollar sitting in USSD generates a return that benefits the protocol's treasury while the holder earns exactly $1. At roughly $2M in circulation at launch, this subsidy is trivial; at meaningful scale, it becomes a permanent off-balance-sheet revenue stream funded by users who chose the zero-yield option. The GENIUS Act-compatible framing and U.S. jurisdiction signal suggest Sonic Labs is building for a regulatory environment that hasn't fully arrived yet, which will look prescient or premature depending entirely on how fast Washington moves.",
+    "updatedAt": "2026-03-20"
   }
 }
