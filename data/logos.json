@@ -271,6 +271,7 @@
   "usnd-nerite": "/logos/287-usnd.png",
   "usdaf-asymmetry": "/logos/295-usdaf.png",
   "dusd-dtrinity": "/logos/dusd-dtrinity.png",
+  "dusd-alto": "/logos/dusd-alto.png",
   "thbill-theo": "/logos/thbill-theo.png",
   "usdp-parallel": "/logos/cg-parallel-usdp.png",
   "pusd-polaris": "/logos/pusd-polaris.svg",
@@ -279,5 +280,6 @@
   "roughrider-bnd": "/logos/roughrider-bnd.png",
   "fiusd-fiserv": "/logos/fiusd-fiserv.png",
   "usg-tangent": "/logos/usg-tangent.svg",
-  "klarnausd-klarna": "/logos/klarnausd-klarna.jpg"
+  "klarnausd-klarna": "/logos/klarnausd-klarna.jpg",
+  "ussd-sonic-labs": "/logos/ussd-sonic-labs.jpg"
 }

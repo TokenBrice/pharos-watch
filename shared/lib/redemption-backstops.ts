@@ -366,6 +366,19 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     ),
     notes: ["Docs also publish a 500,000 lisUSD daily redemption limit for PSM exits"],
   },
+  "dusd-alto": {
+    version: 1,
+    routeFamily: "psm-swap",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-full" },
+    costModel: fixedFee(
+      20,
+      "Alto docs describe a 0.20% (20 bps) fee on both PSM swap directions; PSM capacity is capped at 5M USDC which currently exceeds total DUSD supply",
+    ),
+  },
   "dusd-dtrinity": {
     version: 1,
     routeFamily: "stablecoin-redeem",
@@ -571,6 +584,16 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     ...queueRedeemBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.20 },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  },
+  "ussd-sonic-labs": {
+    version: 1,
+    routeFamily: "collateral-redeem",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-full" },
+    costModel: fixedFee(0, "Zero minting and redemption fees per Sonic Labs documentation"),
   },
 };
 
