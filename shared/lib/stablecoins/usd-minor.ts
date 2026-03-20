@@ -2506,13 +2506,10 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     collateralQuality: "exotic",
     custodyModel: "onchain",
     governanceQuality: "dao-governance",
-    dependencies: [
-      { id: "usdc-circle", weight: 0.1, type: "mechanism" },
-    ],
     reserves: [
       { name: "WETH / wstETH / rETH / mETH (ETH and ETH LSTs, mint markets)", pct: 55, risk: "medium" },
       { name: "cbBTC / WBTC / tBTC (BTC tokens, borrow markets)", pct: 20, risk: "medium" },
-      { name: "sUSDe (Ethena, mint & borrow markets)", pct: 15, risk: "high" },
+      { name: "sUSDe (Ethena, mint & borrow markets)", pct: 15, risk: "high", coinId: "usde-ethena" },
       { name: "Syrup USDC (yield-bearing USDC wrapper, mint & borrow markets)", pct: 5, risk: "medium" },
       { name: "USDC (PSM backstop, 5M cap)", pct: 5, risk: "low", coinId: "usdc-circle" },
     ],

@@ -173,6 +173,7 @@ const CANONICAL_ORDER: string[] = [
   "yousd-yield-optimizer",
   "aid-gaib",
   "apxusd-apyx",
+  "ussd-sonic-labs",
   // Pre-launch
   "usdpt-western-union",
   "roughrider-bnd",
