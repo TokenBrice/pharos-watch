@@ -296,7 +296,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
   }
 
   const { pools: dlPools, meta: dlPoolsMeta } = await loadDlStablecoinPools(db, signal);
-  const onChainRates = await fetchOnChainRates(signal, chainRpcs);
+  const { rates: onChainRates, failureBreakdown: onChainFailures } = await fetchOnChainRates(signal, chainRpcs);
   const riskFreeRateMeta = await loadRiskFreeRateSnapshot(db);
   const riskFreeRate = riskFreeRateMeta.rate;
 
@@ -919,6 +919,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
         dlPoolCount: dlPoolsMeta.poolCount,
         onChainRatesResolved: onChainRates.size,
         onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
+        onChainFailures: onChainFailures,
       },
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       validationFailures,

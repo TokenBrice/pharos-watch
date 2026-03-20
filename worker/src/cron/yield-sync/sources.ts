@@ -106,13 +106,18 @@ export async function loadDlStablecoinPools(
   };
 }
 
+export interface OnChainRateResult {
+  rates: Map<string, { rate: number }>;
+  failureBreakdown: Record<string, number> | null;
+}
+
 export async function fetchOnChainRates(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<Map<string, { rate: number }>> {
+): Promise<OnChainRateResult> {
   if (!chainRpcs) {
     console.warn("[yield] No chain RPCs configured, skipping all on-chain rate fetches");
-    return new Map();
+    return { rates: new Map(), failureBreakdown: { "no-chain-rpcs": ON_CHAIN_RATE_CONFIGS.length } };
   }
 
   // Fetch all vault exchange rates in parallel. The Workers runtime queues
@@ -157,7 +162,7 @@ export async function fetchOnChainRates(
     console.warn(`[yield] On-chain rates: ${rates.size}/${ON_CHAIN_RATE_CONFIGS.length} ok (${breakdown})`);
   }
 
-  return rates;
+  return { rates, failureBreakdown: totalFailures > 0 ? failureCounts : null };
 }
 
 async function fetchEthCallUint256(

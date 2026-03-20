@@ -1150,9 +1150,10 @@ describe("on-chain rate bootstrapping seed", () => {
     });
 
     // Mock fetchOnChainRates to return a rate for usde-ethena
-    vi.spyOn(yieldSourcesModule, "fetchOnChainRates").mockResolvedValue(
-      new Map([["usde-ethena", { rate: 1.05 }]]),
-    );
+    vi.spyOn(yieldSourcesModule, "fetchOnChainRates").mockResolvedValue({
+      rates: new Map([["usde-ethena", { rate: 1.05 }]]),
+      failureBreakdown: null,
+    });
 
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
