@@ -166,7 +166,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { name: "Morpho infiniFi Ecosystem (steakUSDCinfinifi, illiquid)", pct: 4, risk: "medium" },
       { name: "Cap stcUSD (illiquid vault)", pct: 3, risk: "medium" },
       { name: "Aave Horizon USDC/RLUSD (institutional pools)", pct: 2, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
-      { name: "sGHO (Aave GHO staking)", pct: 1, risk: "medium" },
+      { name: "sGHO (Aave GHO staking)", pct: 1, risk: "medium", coinId: "gho-aave" },
     ],
   }),
   usd("usdf-astherus", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
