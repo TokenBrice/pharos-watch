@@ -59,8 +59,10 @@ const DEX_SYMBOL_ALIASES: Record<string, string> = {
   "USDT.E": "USDT",
 };
 
-export function normalizeDexSymbol(symbol: string): string {
+export function normalizeDexSymbol(symbol: string | null | undefined): string {
+  if (typeof symbol !== "string") return "";
   const normalized = symbol.trim().toUpperCase();
+  if (!normalized) return "";
   return DEX_SYMBOL_ALIASES[normalized] ?? normalized;
 }
 

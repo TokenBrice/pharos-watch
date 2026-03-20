@@ -170,6 +170,23 @@ describe("convertToGtNewPools", () => {
     expect(gtPool.symbol).toContain("0xA0b86991");
   });
 
+  it("tolerates null direct-API token symbols without crashing", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      tokens: [
+        { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: null as unknown as string, decimals: 6 },
+        { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "USDT", decimals: 6 },
+      ],
+    };
+    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+
+    const result = convertToGtNewPools([pool], addressToId, new Map());
+    const gtPool = result.get("usdc")![0];
+
+    expect(gtPool.symbol).toContain("0xA0b86991");
+    expect(gtPool.price).toBeGreaterThan(0);
+  });
+
   it("applies correct quality multiplier for pool type", () => {
     const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
     const result = convertToGtNewPools([MOCK_POOL], addressToId, new Map());
