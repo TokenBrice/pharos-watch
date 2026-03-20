@@ -81,8 +81,8 @@ Source labels list all agreeing sources alphabetically:
 
 After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from consensus beyond the threshold:
 
-1. Confidence is downgraded to `low`.
-2. The consensus price is **replaced** with the TVL-weighted mean of all qualifying individual pool prices (`source = "pool-tvl-weighted"`).
+1. Confidence is always downgraded to `low`.
+2. The consensus price is **replaced** with the TVL-weighted mean only when diverging pools span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs). When only one protocol diverges, the original consensus price is preserved but confidence stays `low`.
 
 The DEX bridge and the pool challenge now deliberately read from different storage views:
 

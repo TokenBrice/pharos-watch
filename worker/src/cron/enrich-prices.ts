@@ -553,31 +553,42 @@ export function applyPoolChallenge(
       ? 500
       : Math.min(getDepegThresholdBps(pegType) * 2, 500);
 
-    let challenged = false;
+    // Count how many pools diverge beyond the threshold AND how many
+    // independent protocols those diverging pools span. A single pool
+    // (or pools from a single protocol) can have data-quality issues
+    // (e.g., vault-token counterparties producing misleading prices).
+    // Require diverging pools from ≥2 independent protocols before
+    // overriding consensus; otherwise only downgrade confidence.
+    const divergingProtocols = new Set<string>();
     for (const pool of pools) {
       const mid = (result.price + pool.price) / 2;
       if (mid <= 0) continue;
       const bps = Math.abs(result.price - pool.price) / mid * 10_000;
       if (bps >= poolChallengeBps) {
-        challenged = true;
-        break;
+        divergingProtocols.add(pool.protocol);
       }
     }
-    if (challenged) {
+    if (divergingProtocols.size > 0) {
+      // Always downgrade confidence when any pool diverges
       result.confidence = "low";
       stats.high--;
       stats.low++;
       downgrades++;
 
-      let tvlWeightedSum = 0;
-      let tvlSum = 0;
-      for (const pool of pools) {
-        tvlWeightedSum += pool.price * pool.tvlUsd;
-        tvlSum += pool.tvlUsd;
-      }
-      if (tvlSum > 0) {
-        result.price = tvlWeightedSum / tvlSum;
-        result.source = "pool-tvl-weighted";
+      // Only replace the price when ≥2 independent protocols corroborate
+      // the divergence — a single protocol's pools may share the same
+      // data-quality issue (vault tokens, misconfigured pairs).
+      if (divergingProtocols.size >= 2) {
+        let tvlWeightedSum = 0;
+        let tvlSum = 0;
+        for (const pool of pools) {
+          tvlWeightedSum += pool.price * pool.tvlUsd;
+          tvlSum += pool.tvlUsd;
+        }
+        if (tvlSum > 0) {
+          result.price = tvlWeightedSum / tvlSum;
+          result.source = "pool-tvl-weighted";
+        }
       }
     }
   }

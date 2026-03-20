@@ -1011,10 +1011,9 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     ]);
   }
 
-  it("downgrades soft-only high confidence when ANY large pool diverges >500bps", async () => {
+  it("replaces price when ≥2 protocols diverge from soft consensus", async () => {
     // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
-    // But one large DEX pool shows $0.80 → >500bps divergence → downgrade to low
-    // (even though another large pool shows $1.00 which is near-peg)
+    // Two protocols (curve and balancer) show diverging prices → replace with TVL-weighted mean
     const assets: PeggedAsset[] = [
       { id: "dusd-dtrinity", name: "dUSD", symbol: "dUSD", geckoId: "dtrinity-usd", pegType: "peggedUSD", circulating: {} },
     ];
@@ -1031,8 +1030,8 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       stablecoin_id: "dusd-dtrinity",
       price_sources_json: JSON.stringify([
         { protocol: "uniswap-v3", chain: "ethereum", price: 1.00, tvl: 1_480_000 },
-        { protocol: "curve", chain: "ethereum", price: 0.999, tvl: 967_000 },
         { protocol: "curve", chain: "ethereum", price: 0.80, tvl: 849_000 },
+        { protocol: "balancer", chain: "ethereum", price: 0.82, tvl: 967_000 },
       ]),
       updated_at: nowSec - 60,
     }]);
@@ -1046,10 +1045,44 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     expect(stats.low).toBe(1);
     expect(stats.high).toBe(0);
 
-    // Price should be TVL-weighted mean of individual pools, not soft consensus
-    // (1.00*1480000 + 0.999*967000 + 0.80*849000) / (1480000 + 967000 + 849000) ≈ 0.9482
-    expect(result.price).toBeCloseTo(0.9482, 3);
+    // ≥2 protocols (curve + balancer) diverge → price replaced with TVL-weighted mean
+    // (1.00*1480000 + 0.80*849000 + 0.82*967000) / (1480000 + 849000 + 967000) ≈ 0.8959
     expect(result.source).toBe("pool-tvl-weighted");
+    expect(result.price).toBeCloseTo(0.8959, 3);
+  });
+
+  it("downgrades but preserves price when only single protocol diverges", async () => {
+    // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
+    // Only one protocol (curve) diverges → downgrade confidence but keep consensus price
+    const assets: PeggedAsset[] = [
+      { id: "dusd-dtrinity", name: "dUSD", symbol: "dUSD", geckoId: "dtrinity-usd", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makePoolChallengeDb([{
+      stablecoin_id: "dusd-dtrinity",
+      price_sources_json: JSON.stringify([
+        { protocol: "uniswap-v3", chain: "ethereum", price: 1.00, tvl: 1_480_000 },
+        { protocol: "curve", chain: "ethereum", price: 0.80, tvl: 849_000 },
+      ]),
+      updated_at: nowSec - 60,
+    }]);
+
+    const dlListPrices = new Map([["dusd-dtrinity", 0.994]]);
+    const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
+
+    expect(results.size).toBe(1);
+    const result = results.get("dusd-dtrinity")!;
+    expect(result.confidence).toBe("low");
+    // Single protocol diverges → price preserved (not replaced)
+    expect(result.source).not.toBe("pool-tvl-weighted");
   });
 
   it("does NOT downgrade when consensus includes a hard source", async () => {
@@ -1127,7 +1160,7 @@ describe("applyPoolChallenge", () => {
     return { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
   }
 
-  it("fires for non-USD peg at 300 bps divergence", () => {
+  it("fires for non-USD peg at 300 bps divergence (single protocol: downgrade only, no price replace)", () => {
     const results = new Map<string, PrimaryPriceResult>([
       ["jpyc-jpyc", {
         price: 0.00682, source: "coingecko+defillama-list+dex-promoted",
@@ -1146,6 +1179,9 @@ describe("applyPoolChallenge", () => {
 
     expect(downgrades).toBe(1);
     expect(results.get("jpyc-jpyc")!.confidence).toBe("low");
+    // Single protocol → confidence downgraded but price preserved
+    expect(results.get("jpyc-jpyc")!.price).toBe(0.00682);
+    expect(results.get("jpyc-jpyc")!.source).not.toBe("pool-tvl-weighted");
   });
 
   it("does NOT fire for USD peg at 300 bps divergence", () => {
@@ -1169,7 +1205,7 @@ describe("applyPoolChallenge", () => {
     expect(results.get("usdt-tether")!.confidence).toBe("high");
   });
 
-  it("fires for USD peg at 500+ bps divergence", () => {
+  it("downgrades but does NOT replace price when only one protocol diverges (500+ bps)", () => {
     const results = new Map<string, PrimaryPriceResult>([
       ["dusd-test", {
         price: 1.0, source: "coingecko+defillama-list",
@@ -1188,7 +1224,63 @@ describe("applyPoolChallenge", () => {
 
     expect(downgrades).toBe(1);
     expect(results.get("dusd-test")!.confidence).toBe("low");
+    // Single protocol → price preserved, only confidence downgraded
+    expect(results.get("dusd-test")!.price).toBe(1.0);
+    expect(results.get("dusd-test")!.source).not.toBe("pool-tvl-weighted");
+  });
+
+  it("replaces price when ≥2 independent protocols diverge", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [
+        { price: 0.80, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(1);
+    expect(results.get("dusd-test")!.confidence).toBe("low");
     expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
+    // TVL-weighted: (0.80*500000 + 0.82*300000) / (500000+300000) = 0.8075
+    expect(results.get("dusd-test")!.price).toBeCloseTo(0.8075, 3);
+  });
+
+  it("does NOT replace price when multiple pools from SAME protocol diverge", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["xusd-test", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["xusd-test", [
+        { price: 0.006, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
+        { price: 0.005, tvlUsd: 12_000_000, protocol: "balancer", chain: "ethereum" },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["xusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(1);
+    expect(results.get("xusd-test")!.confidence).toBe("low");
+    // Same protocol (balancer) → price preserved despite massive TVL
+    expect(results.get("xusd-test")!.price).toBe(1.0);
+    expect(results.get("xusd-test")!.source).not.toBe("pool-tvl-weighted");
   });
 
   it("skips results with hard sources in agreeSources", () => {
