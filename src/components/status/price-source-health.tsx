@@ -2,7 +2,7 @@
 
 import { STATUS_PRICE_CONFIDENCE_BANDS } from "@shared/lib/status-thresholds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { PriceSourceHealth } from "@shared/types";
+import type { PriceSourceHealth, StatusSectionError } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 
 function MetricCard({ label, value, pct, severity }: { label: string; value: number; pct: string; severity: string }) {
@@ -33,9 +33,11 @@ function confidenceSeverity(label: string, value: number, total: number): string
 
 export function PriceSourceHealthCard({
   health,
+  error,
   nowSeconds,
 }: {
   health: PriceSourceHealth | null;
+  error?: StatusSectionError;
   nowSeconds: number;
 }) {
   if (!health) {
@@ -45,7 +47,9 @@ export function PriceSourceHealthCard({
           <CardTitle className="text-base">Price Source Health</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No price source data available yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {error ? `Price source health loader failed: ${error.message}` : "No price source data available yet."}
+          </p>
         </CardContent>
       </Card>
     );

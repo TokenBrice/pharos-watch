@@ -84,6 +84,7 @@ const BASE_STATUS: StatusResponse = {
     onchainStaleRatio: 0,
   },
   telegramBot: null,
+  sectionErrors: {},
   datasetFreshness: {
     stablecoins: null,
     blacklist: null,

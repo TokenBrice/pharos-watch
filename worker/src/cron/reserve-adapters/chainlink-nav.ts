@@ -1,5 +1,6 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
+import { parseChainlinkLatestRoundData } from "./chainlink";
 import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
 
 const DECIMALS_SELECTOR = "0x313ce567";
@@ -46,19 +47,6 @@ function readParams(config: LiveReservesConfig): ChainlinkNavParams {
     );
   }
   return params as ChainlinkNavParams;
-}
-
-/** Parse a raw Chainlink latestRoundData() response into structured data. */
-function parseLatestRoundData(hex: string): { roundId: bigint; answer: bigint; updatedAt: number } {
-  const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  if (stripped.length < 160) {
-    throw new Error(`chainlink-nav: latestRoundData response too short (${stripped.length} hex chars)`);
-  }
-  const roundId = BigInt("0x" + stripped.slice(0, 64));
-  const answer = BigInt("0x" + stripped.slice(64, 128));
-  // word 2 = startedAt (skip)
-  const updatedAt = Number(BigInt("0x" + stripped.slice(192, 256)));
-  return { roundId, answer, updatedAt };
 }
 
 /** Pure transformation from decoded NAV oracle data + params → AdapterResult. Exported for testing. */
@@ -154,7 +142,7 @@ export async function fetchChainlinkNavReserves(
     if (rawRoundData == null) {
       throw new Error("chainlink-nav: latestRoundData() call failed");
     }
-    const parsed = parseLatestRoundData(rawRoundData);
+    const parsed = parseChainlinkLatestRoundData(rawRoundData, "chainlink-nav");
     navPerToken = parsed.answer;
     roundId = parsed.roundId;
     updatedAt = parsed.updatedAt;

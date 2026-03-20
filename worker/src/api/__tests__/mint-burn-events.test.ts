@@ -151,6 +151,16 @@ describe("handleMintBurnEvents", () => {
     expect(countQuery?.sql).not.toContain("COALESCE(amount_usd, amount)");
   });
 
+  it("rejects malformed minAmount with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&minAmount=oops"),
+    );
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid minAmount: must be a number" });
+  });
+
   it("includes X-Data-Age header", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },

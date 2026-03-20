@@ -297,6 +297,23 @@ export interface ClassificationWarning {
   threshold: number;
 }
 
+export type StatusSectionKey =
+  | "telegramBot"
+  | "reserveComposition"
+  | "liquidityHealth"
+  | "priceSourceHealth"
+  | "discoveryCandidates"
+  | "mintBurnReconciliation"
+  | "reserveDrift"
+  | "classificationWarnings";
+
+export interface StatusSectionError {
+  code: string;
+  message: string;
+}
+
+export type StatusSectionErrors = Partial<Record<StatusSectionKey, StatusSectionError>>;
+
 export interface StatusResponse {
   timestamp: number;
   dbHealthy: boolean;
@@ -319,6 +336,7 @@ export interface StatusResponse {
   crons: Record<string, CronStatus>;
   dataQuality: DataQuality;
   telegramBot: TelegramBotStats | null;
+  sectionErrors: StatusSectionErrors;
   datasetFreshness: DatasetFreshness;
   summary: {
     unhealthyCrons: number;

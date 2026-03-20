@@ -1,6 +1,7 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { toFiniteNumber } from "../../lib/number-utils";
 
 interface AccountableDashboardResponse {
   res: string;
@@ -74,17 +75,8 @@ function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
   };
 }
 
-function toNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
 function extractNestedNumericValue(value: unknown): number | null {
-  const direct = toNumber(value);
+  const direct = toFiniteNumber(value);
   if (direct != null) return direct;
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 

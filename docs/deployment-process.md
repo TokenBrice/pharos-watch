@@ -59,20 +59,25 @@ Hook behavior:
 
 Default policy:
 
-1. Critical API/shared contract changes:
+1. Documentation changes:
+   - `npm run check:doc-counts`
+2. Critical API/shared contract changes:
    - `npm run test:critical-contracts`
    - `npm run coverage:critical`
-2. Cron/worker-lib changes:
+3. Cron/worker-lib changes:
    - `npm run test:invariants`
    - `npm run coverage:critical`
-3. Workflow/gate infra changes:
+4. Workflow/gate infra changes:
    - `npm test`
    - `npm run coverage:critical`
-4. TypeScript/JavaScript changes additionally run:
+5. TypeScript/JavaScript changes additionally run:
    - `npm run lint`
    - `cd worker && npx tsc --noEmit`
+6. Frontend export / SEO-critical changes additionally run:
+   - `npm run build`
+   - `npm run seo:check`
 
-Docs-only changes are skipped.
+The gate stays lighter than CI on purpose: it is still diff-driven and does not run the deploy-time smoke suites locally by default.
 
 Useful merge-gate controls:
 
@@ -102,6 +107,8 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 3. `smoke-api`
 4. `deploy-pages`
    - runs `npm run sync:digests`
+   - runs `npm run build`
+   - runs `npm run seo:check`
    - uses the workspace-installed Wrangler CLI (`npx --no-install wrangler`) with explicit retries for transient Pages API failures during `pages deploy`
 5. `smoke-ui`
 6. `smoke-ops`

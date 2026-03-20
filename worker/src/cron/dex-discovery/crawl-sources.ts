@@ -6,9 +6,10 @@ import { dsRateLimit, fetchDsTokenPools, getDsTrackedTokenPriceUsd } from "../..
 import { CHAIN_REGISTRY, CG_CHAIN_MAP, GT_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { normalizeProtocol, getGtDexQuality } from "../dex-liquidity/pool-helpers";
 import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers";
+import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/geckoterminal-shared";
 import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
 import { CG_TICKERS_RATE_MS, ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS } from "../dex-liquidity/constants";
-import { GT_API_BASE, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { fetchCgTokenPools, parseCgPoolVolume } from "../../lib/coingecko-onchain";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -236,32 +237,8 @@ export async function crawlCoin(
         if (requestCount > 0) await sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, signal);
         return true;
       },
-      fetchPools: async (tokenAddress, gtChain, abortSignal) => {
-        const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=1`;
-        const res = await fetchWithRetry(
-          url,
-          { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: abortSignal },
-          0,
-        );
-        if (!res?.ok) return [];
-        const json = (await res.json()) as { data?: GtPool[] };
-        return json.data ?? [];
-      },
-      parsePool: (pool) => {
-        const a = pool.attributes;
-        return {
-          dexId: pool.relationships.dex.data.id,
-          poolAddress: a.address.toLowerCase(),
-          tvlUsd: parseFloat(a.reserve_in_usd ?? ""),
-          volume24hUsd: parseFloat(a.volume_usd?.h24 ?? "0"),
-          baseTokenAddress: pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "",
-          quoteTokenAddress: pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "",
-          baseTokenPriceUsd: parseFloat(a.base_token_price_usd ?? ""),
-          quoteTokenPriceUsd: parseFloat(a.quote_token_price_usd ?? ""),
-          createdAt: a.pool_created_at,
-          poolName: a.name,
-        };
-      },
+      fetchPools: fetchGtTokenPools,
+      parsePool: parseGtPool,
       buildNewPool: ({ parsed, chain, price, cappedTvlUsd, maturityDays }) => ({
         address: parsed.poolAddress,
         chain,
@@ -271,12 +248,7 @@ export async function crawlCoin(
         volume24hUsd: parsed.volume24hUsd,
         qualityMultiplier: getGtDexQuality(parsed.dexId),
         maturityDays,
-        poolType:
-          parsed.dexId.includes("v3") || parsed.dexId.includes("v4")
-            ? "gt-concentrated"
-            : parsed.dexId.includes("stable")
-              ? "gt-stable-amm"
-              : "gt-amm",
+        poolType: getGtPoolType(parsed.dexId),
         price,
         symbol: parsed.poolName,
         baseToken: parsed.baseTokenAddress,

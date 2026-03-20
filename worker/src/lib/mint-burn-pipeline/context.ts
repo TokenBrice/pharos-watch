@@ -1,16 +1,8 @@
 import type { MintBurnPriceContext } from "./types";
 import { buildInClause } from "../db";
+import { chunkArray } from "../collections";
 
 const DEFAULT_SQL_IN_CHUNK_SIZE = 90;
-
-function chunkArray<T>(values: T[], chunkSize: number): T[][] {
-  if (values.length === 0) return [];
-  const chunks: T[][] = [];
-  for (let i = 0; i < values.length; i += chunkSize) {
-    chunks.push(values.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
 
 export async function loadMintBurnPriceContext(
   db: D1Database,

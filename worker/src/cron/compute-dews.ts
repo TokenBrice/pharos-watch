@@ -11,6 +11,7 @@ import { computeDEWS } from "../lib/dews";
 import type { DEWSInput, PoolEntry } from "../lib/dews";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
+import { chunkArray } from "../lib/collections";
 
 // Map blacklist symbol → stablecoin IDs
 const BLACKLIST_SYMBOL_TO_IDS: Record<string, string[]> = {
@@ -40,15 +41,6 @@ interface SourceFailure {
 
 function isMissingTableError(error: unknown): boolean {
   return String(error).toLowerCase().includes("no such table");
-}
-
-function chunkArray<T>(values: T[], chunkSize: number): T[][] {
-  if (values.length === 0) return [];
-  const chunks: T[][] = [];
-  for (let i = 0; i < values.length; i += chunkSize) {
-    chunks.push(values.slice(i, i + chunkSize));
-  }
-  return chunks;
 }
 
 async function deleteOrphansForTable(

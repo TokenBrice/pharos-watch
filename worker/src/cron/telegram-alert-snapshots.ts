@@ -1,5 +1,5 @@
 import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram-alerts";
-import { getCache, setCache } from "../lib/db-cache";
+import { setCache } from "../lib/db-cache";
 
 // ---------- Constants ----------
 

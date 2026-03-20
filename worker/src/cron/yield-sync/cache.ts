@@ -1,5 +1,6 @@
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
+import { toFiniteNumber } from "../../lib/number-utils";
 import type { DlPool } from "./types";
 
 interface RiskFreeRateCachePayload {
@@ -20,15 +21,6 @@ interface DlStablecoinPoolsCachePayload {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function toFiniteNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
 }
 
 function toNullableString(value: unknown): string | null {

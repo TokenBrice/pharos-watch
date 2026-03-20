@@ -339,8 +339,15 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
         </div>
 
         <div className="grid gap-5 xl:grid-cols-2">
-          <PriceSourceHealthCard health={data.priceSourceHealth} nowSeconds={data.timestamp} />
-          <LiquidityHealthCard health={data.liquidityHealth} />
+          <PriceSourceHealthCard
+            health={data.priceSourceHealth}
+            error={data.sectionErrors.priceSourceHealth}
+            nowSeconds={data.timestamp}
+          />
+          <LiquidityHealthCard
+            health={data.liquidityHealth}
+            error={data.sectionErrors.liquidityHealth}
+          />
         </div>
 
         <div className="grid gap-5 xl:grid-cols-2">
@@ -349,15 +356,21 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
         </div>
 
         <div className="grid gap-5 xl:grid-cols-2">
-          <MintBurnReconciliationCard summary={data.mintBurnReconciliation} />
+          <MintBurnReconciliationCard
+            summary={data.mintBurnReconciliation}
+            error={data.sectionErrors.mintBurnReconciliation}
+          />
           <MetadataIntegrityCard
             reserveDrift={data.reserveDrift}
             classificationWarnings={data.classificationWarnings}
+            reserveDriftError={data.sectionErrors.reserveDrift}
+            classificationWarningsError={data.sectionErrors.classificationWarnings}
           />
         </div>
 
         <DiscoveryCandidatesCard
           candidates={data.discoveryCandidates}
+          error={data.sectionErrors.discoveryCandidates}
           adminAccess={adminAccess}
           nowSeconds={data.timestamp}
           onDismissed={handleRefresh}
@@ -474,6 +487,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
             <TelegramBotStats
               telegramBot={data.telegramBot}
               dispatchCron={data.crons["dispatch-telegram-alerts"]}
+              error={data.sectionErrors.telegramBot}
               nowSeconds={data.timestamp}
             />
           </div>

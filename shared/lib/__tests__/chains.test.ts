@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
+import { CHAIN_META, getActiveChainIds, resolveChainId } from "@shared/lib/chains";
 
 describe("CHAIN_META", () => {
   it("exposes only lowercase chain keys", () => {
@@ -47,5 +47,12 @@ describe("getActiveChainIds", () => {
     const sorted = [...ids].sort();
     expect(ids).toEqual(sorted);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("resolveChainId", () => {
+  it("deduplicates the Hyperliquid alias to the canonical key", () => {
+    expect(resolveChainId("hyperliquid")).toBe("hyperliquid");
+    expect(resolveChainId("hyperliquid-l1")).toBe("hyperliquid");
   });
 });

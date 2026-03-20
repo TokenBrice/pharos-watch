@@ -1,17 +1,17 @@
-import { route } from "../router";
+import { getRouteDependencies, route } from "../router";
 import type { FullRouteContext } from "../route-registry";
 import { normalizeCgApiKey } from "../lib/coingecko";
-import { buildChainRpcs } from "../lib/chain-registry";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { checkPublicApiRateLimit } from "../lib/rate-limit";
 import { errorResponse } from "../lib/api-utils";
 import { hasValidAdminCredential } from "../lib/auth";
-import { parseCsvEnv } from "../lib/env";
+import { parseCsvEnv, resolvePublicApiRateLimitSalt, validateWorkerEnvContract } from "../lib/env";
 import { buildTelegramCreds } from "../lib/runtime-credentials";
 import { isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
 
 const DEFAULT_CORS_ORIGIN = "https://pharos.watch";
+const LOGGED_ENV_ISSUES = new Set<string>();
 
 function resolveAllowedCorsOrigins(configured: string): string[] {
   const parsed = parseCsvEnv(configured);
@@ -62,20 +62,22 @@ function getClientIp(request: Request): string {
   return forwardedIp || "unknown";
 }
 
+function warnWorkerEnvIssuesOnce(env: Env): void {
+  for (const issue of validateWorkerEnvContract(env)) {
+    if (LOGGED_ENV_ISSUES.has(issue.code)) continue;
+    LOGGED_ENV_ISSUES.add(issue.code);
+    console.warn(`[env] ${issue.message}`);
+  }
+}
+
 export async function handleHttpRequest(
   request: Request,
   env: Env,
   ctx: ExecutionContext,
 ): Promise<Response> {
+  warnWorkerEnvIssuesOnce(env);
   const origin = resolveCorsOrigin(request, env.CORS_ORIGIN);
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
-  const feedbackEnv = {
-    GITHUB_PAT: env.GITHUB_PAT,
-    GITHUB_REPO_NODE_ID: env.GITHUB_REPO_NODE_ID,
-    GITHUB_DISCUSSION_CATEGORY_ID: env.GITHUB_DISCUSSION_CATEGORY_ID,
-    FEEDBACK_IP_SALT: env.FEEDBACK_IP_SALT,
-  };
-  const telegramCreds = buildTelegramCreds(env);
 
   // Handle CORS preflight
   if (request.method === "OPTIONS") {
@@ -96,10 +98,11 @@ export async function handleHttpRequest(
   const url = new URL(request.url);
   const isAdmin = await hasValidAdminCredential(request, undefined, env);
   if (url.pathname.startsWith("/api/") && url.pathname !== "/api/telegram-webhook" && !isAdmin) {
+    const publicApiRateLimit = resolvePublicApiRateLimitSalt(env);
     const rateLimitResponse = await checkPublicApiRateLimit(
       env.DB,
       getClientIp(request),
-      env.PUBLIC_API_RATE_LIMIT_SALT ?? env.FEEDBACK_IP_SALT,
+      publicApiRateLimit.salt,
       300,
     );
     if (rateLimitResponse) {
@@ -121,22 +124,48 @@ export async function handleHttpRequest(
     }
   }
 
+  const routeDependencies = getRouteDependencies(url);
+  if (routeDependencies == null) {
+    return addCorsHeaders(
+      errorResponse(404, "Not found"),
+      origin,
+    );
+  }
+
   const routeCtx: FullRouteContext = {
     url,
     db: env.DB,
     execCtx: ctx,
     request,
     trustedAdmin: isAdmin,
-    alchemyApiKey: env.ALCHEMY_API_KEY ?? null,
-    coingeckoApiKey: normalizeCgApiKey(env.COINGECKO_API_KEY),
-    chainRpcs: buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY),
-    mintBurnFreshnessConfig,
-    feedbackEnv,
-    anthropicApiKey: env.ANTHROPIC_API_KEY ?? null,
-    telegramCreds,
-    telegramWebhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
-    telegramBotToken: env.TELEGRAM_BOT_TOKEN,
   };
+
+  if (routeDependencies.includes("alchemyApiKey")) {
+    routeCtx.alchemyApiKey = env.ALCHEMY_API_KEY ?? null;
+  }
+  if (routeDependencies.includes("coingeckoApiKey")) {
+    routeCtx.coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
+  }
+  if (routeDependencies.includes("mintBurnFreshnessConfig")) {
+    routeCtx.mintBurnFreshnessConfig = mintBurnFreshnessConfig;
+  }
+  if (routeDependencies.includes("feedbackEnv")) {
+    routeCtx.feedbackEnv = {
+      GITHUB_PAT: env.GITHUB_PAT,
+      GITHUB_REPO_NODE_ID: env.GITHUB_REPO_NODE_ID,
+      GITHUB_DISCUSSION_CATEGORY_ID: env.GITHUB_DISCUSSION_CATEGORY_ID,
+      FEEDBACK_IP_SALT: env.FEEDBACK_IP_SALT,
+    };
+  }
+  if (routeDependencies.includes("anthropicApiKey")) {
+    routeCtx.anthropicApiKey = env.ANTHROPIC_API_KEY ?? null;
+  }
+  if (routeDependencies.includes("telegram")) {
+    routeCtx.telegramCreds = buildTelegramCreds(env);
+    routeCtx.telegramWebhookSecret = env.TELEGRAM_WEBHOOK_SECRET;
+    routeCtx.telegramBotToken = env.TELEGRAM_BOT_TOKEN;
+  }
+
   const response = await route(routeCtx);
 
   if (!response) {

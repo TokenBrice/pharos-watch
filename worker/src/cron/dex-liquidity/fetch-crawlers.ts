@@ -1,19 +1,17 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { USER_AGENT } from "../../lib/constants";
 import {
   onchainRateLimit, fetchCgTokenPools, parseCgPoolVolume, CG_CHAIN_MAP,
 } from "../../lib/coingecko-onchain";
 import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS, CRAWL_BUDGETS } from "../../lib/rate-limit";
-import { GT_API_BASE, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import { sleepWithSignal } from "../../lib/abort";
 import type {
-  LiquidityMetrics, DexPriceObs, GtPool,
-  GtCrawlResult, GtNewPool, CgNewPool,
+  LiquidityMetrics, DexPriceObs, GtCrawlResult, GtNewPool, CgNewPool,
 } from "./types";
+import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "./geckoterminal-shared";
 import {
   normalizeProtocol, getGtDexQuality,
   computePoolPairQuality, computePoolStress, initMetrics,
@@ -294,36 +292,9 @@ export async function fetchGtPools(
       }
       return true;
     },
-    fetchPools: async (tokenAddress, gtChain, abortSignal) => {
-      // maxRetries=0: single attempt per request to keep wall time predictable.
-      // fetchWithRetry's internal 429 handling (5s+ delays) would make total time unbounded.
-      const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=1`;
-      const res = await fetchWithRetry(url, {
-        headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-        signal: abortSignal,
-      }, 0);
-      if (!res?.ok) return [];
-      const json = (await res.json()) as { data?: GtPool[] };
-      return json.data ?? [];
-    },
-    parsePool: (pool) => {
-      const a = pool.attributes;
-      return {
-        dexId: pool.relationships.dex.data.id,
-        poolAddress: a.address.toLowerCase(),
-        tvlUsd: parseFloat(a.reserve_in_usd ?? ""),
-        volume24hUsd: parseFloat(a.volume_usd?.h24 ?? "0"),
-        baseTokenAddress: pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "",
-        quoteTokenAddress: pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "",
-        baseTokenPriceUsd: parseFloat(a.base_token_price_usd ?? ""),
-        quoteTokenPriceUsd: parseFloat(a.quote_token_price_usd ?? ""),
-        createdAt: a.pool_created_at,
-        poolName: a.name,
-      };
-    },
+    fetchPools: fetchGtTokenPools,
+    parsePool: parseGtPool,
     buildNewPool: ({ parsed, chain, price, cappedTvlUsd, maturityDays }) => {
-      const poolType = parsed.dexId.includes("v3") || parsed.dexId.includes("v4")
-        ? "concentrated" : parsed.dexId.includes("stable") ? "stable-amm" : "amm";
       return {
         address: parsed.poolAddress,
         chain,
@@ -333,7 +304,7 @@ export async function fetchGtPools(
         volume24hUsd: parsed.volume24hUsd,
         qualityMultiplier: getGtDexQuality(parsed.dexId),
         maturityDays,
-        poolType: `gt-${poolType}`,
+        poolType: getGtPoolType(parsed.dexId),
         price,
         symbol: parsed.poolName,
         sourceFamily: "gecko_terminal",

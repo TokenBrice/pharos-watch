@@ -1,13 +1,17 @@
 import { jsonResponse, errorResponse, parseIntParam, withErrorHandler } from "../lib/api-utils";
 import type { DiscoveryCandidate } from "@shared/types";
 
-function parseDiscoveryStatus(value: string | null): "active" | "dismissed" | "all" {
+function parseDiscoveryStatus(value: string | null): "active" | "dismissed" | "all" | Response {
+  if (value == null) {
+    return "active";
+  }
   switch (value) {
+    case "active":
     case "dismissed":
     case "all":
       return value;
     default:
-      return "active";
+      return errorResponse(400, "Invalid status parameter");
   }
 }
 
@@ -15,8 +19,10 @@ export const handleDiscoveryCandidates = withErrorHandler("discovery-candidates"
   db: D1Database,
   url: URL,
 ): Promise<Response> => {
-  const status = url.searchParams.get("status") ?? "active";
-  const parsedStatus = parseDiscoveryStatus(status);
+  const parsedStatus = parseDiscoveryStatus(url.searchParams.get("status"));
+  if (parsedStatus instanceof Response) {
+    return parsedStatus;
+  }
   const limit = parseIntParam(url.searchParams.get("limit"), 50, 1, 200, "limit");
   if (limit instanceof Response) {
     return limit;

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@shared/lib/format";
 import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
-import type { MintBurnReconciliationSummary } from "@shared/types";
+import type { MintBurnReconciliationSummary, StatusSectionError } from "@shared/types";
 import { cn } from "@/lib/utils";
 
 const COLLAPSED_ROW_COUNT = 6;
@@ -41,7 +41,13 @@ function formatStatusLabel(status: "ok" | "warn" | "critical" | "insufficient-so
   return status;
 }
 
-export function MintBurnReconciliationCard({ summary }: { summary: MintBurnReconciliationSummary | null }) {
+export function MintBurnReconciliationCard({
+  summary,
+  error,
+}: {
+  summary: MintBurnReconciliationSummary | null;
+  error?: StatusSectionError;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!summary) {
@@ -51,7 +57,9 @@ export function MintBurnReconciliationCard({ summary }: { summary: MintBurnRecon
           <CardTitle className="text-base">Mint/Burn Reconciliation</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No reconciliation signal available yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {error ? `Mint/burn reconciliation loader failed: ${error.message}` : "No reconciliation signal available yet."}
+          </p>
         </CardContent>
       </Card>
     );

@@ -252,14 +252,14 @@ export async function handleFeedback(
 
   let canonicalStablecoinId: string | undefined;
 
-  // Validate stablecoinId if provided (strip invalid IDs, preserve original submitted value in payload).
+  // Validate stablecoinId if provided.
   if (fb.stablecoinId) {
     const resolved = resolveStablecoinId(fb.stablecoinId);
     if (!resolved) {
-      fb.stablecoinId = undefined;
-    } else {
-      canonicalStablecoinId = resolved.canonicalId;
+      return errorResponse(400, "Invalid stablecoinId");
     }
+    canonicalStablecoinId = resolved.canonicalId;
+    fb.stablecoinId = resolved.canonicalId;
   }
 
   // Rate limiting

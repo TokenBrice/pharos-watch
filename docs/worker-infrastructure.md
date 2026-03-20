@@ -36,15 +36,24 @@ invocation_logs = true
 
 The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus `worker/src/handlers/http.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
 
+`worker/src/lib/env.ts` is now the canonical worker binding contract and exports four groupings:
+
+- `WORKER_REQUIRED_ENV_KEYS`
+- `WORKER_OPTIONAL_ENV_KEYS`
+- `WORKER_RESERVED_ENV_KEYS`
+- `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
+
+The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract warnings when Access bindings are only partially configured or when public API rate limiting falls back to the built-in salt.
+
 | Binding                         | Type       | Required           | Used by                                                                                                                                                                    |
 | ------------------------------- | ---------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DB`                            | D1Database | Yes                | All crons and API handlers                                                                                                                                                 |
 | `CORS_ORIGIN`                   | string     | Yes                | Comma-separated CORS allowlist. Repo default: `https://pharos.watch,https://ops.pharos.watch`                                                                              |
 | `SELF_URL`                      | string     | No                 | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
-| `OPS_UI_ORIGIN`                 | string     | No                 | Shared operator-origin override. The worker runtime does not currently read it, but the same value is used by Pages Functions host gating (`https://ops.pharos.watch`)     |
-| `OPS_API_ORIGIN`                | string     | No                 | Shared operator-origin override. The worker runtime does not currently read it, but the same value is used by Pages Functions proxying (`https://ops-api.pharos.watch`)    |
+| `OPS_UI_ORIGIN`                 | string     | No                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions host gating (`https://ops.pharos.watch`)                                 |
+| `OPS_API_ORIGIN`                | string     | No                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions proxying (`https://ops-api.pharos.watch`)                                |
 | `CF_ACCESS_TEAM_DOMAIN`         | string     | No                 | Cloudflare Access team domain used by worker-side JWT verification for `ops-api.pharos.watch` admin requests (defaults to `pharos-watch` when unset)                    |
-| `CF_ACCESS_OPS_UI_AUD`          | string     | No                 | Reserved on the worker runtime today; future/operator-surface Access UI JWT audience                                                                                       |
+| `CF_ACCESS_OPS_UI_AUD`          | string     | No                 | Reserved on the worker runtime today; active only in the Pages contract once Pages-side UI JWT validation is introduced                                                    |
 | `CF_ACCESS_OPS_API_AUD`         | string     | No                 | Cloudflare Access audience used by `worker/src/lib/auth.ts` to verify `Cf-Access-Jwt-Assertion` on `ops-api.pharos.watch` admin requests                                 |
 | `ETHERSCAN_API_KEY`             | string     | No                 | Blacklist sync, USDS status                                                                                                                                                |
 | `TRONGRID_API_KEY`              | string     | No                 | Blacklist sync (Tron chain)                                                                                                                                                |
@@ -88,7 +97,7 @@ Three modules derive runtime configuration from `Env` bindings via pure function
 | `buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
 | `normalizeWebhookUrl(env.ALERT_WEBHOOK_URL)`             | `scheduled`           | Returns normalized webhook URL for error alerts      |
 
-These are pure functions (no module-level mutable state). `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory.
+These are pure functions. `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory. The notable exception is `worker/src/lib/jwt-verify.ts`, which intentionally keeps an in-memory JWKS cache (`cachedJwks`, 1-hour TTL) at module scope to avoid refetching Cloudflare Access signing keys on every admin request.
 
 ## Public API Rate Limiting
 
@@ -903,6 +912,8 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `discovery-scan`                | 86,400s (24h)  | `5 8 * * *`                                 |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating.
+
+The status handler now surfaces per-subsection loader failures through `sectionErrors` instead of silently swallowing them. When a subsection query fails, the affected field degrades to `null`/empty and the response still returns `200` with a machine-readable error entry for that subsection.
 
 ### GET /api/status-history
 

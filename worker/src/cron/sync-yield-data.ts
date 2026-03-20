@@ -3,10 +3,9 @@ import {
   ACTIVE_STABLECOINS,
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins";
-import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { YieldRankingsResponseSchema, type AltYieldSource } from "@shared/types";
-import { batchExecute, buildInClause } from "../lib/db";
+import { batchExecute } from "../lib/db";
 import { setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
@@ -37,30 +36,22 @@ import {
   dedupeLatestBestRows,
   rowToRanking,
 } from "./yield-sync/rankings";
+import {
+  deleteOrphanYieldRows,
+  deleteStaleYieldRows,
+  loadYieldHistorySnapshots,
+  type YieldHistorySnapshotRow,
+} from "./yield-sync/history";
 
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
 const LOW_SOURCE_TVL_USD = 250_000;
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = SECONDS.TWO_DAYS;
-const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
 /** 30-day history window + 5-day buffer for legacy source-unaware rows. */
 const LEGACY_HISTORY_MAX_AGE_SEC = SECONDS.THIRTY_DAYS + 5 * SECONDS.ONE_DAY;
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
 
 type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
-
-interface YieldHistorySnapshotRow {
-  stablecoin_id: string;
-  source_key: string | null;
-  recorded_at: number;
-  is_best: number | null;
-  apy: number;
-  source_tvl_usd: number | null;
-  data_source: string;
-  yield_source: string | null;
-  yield_type: string | null;
-  exchange_rate?: number | null;
-}
 
 interface EvaluatedYieldSource {
   id: string;
@@ -121,110 +112,6 @@ function shouldNormalizeOnChainSourceKey(row: {
 }): boolean {
   return row.data_source === "onchain"
     && (row.exchange_rate != null || isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, row.source_key));
-}
-
-function chunkArray<T>(values: readonly T[], chunkSize: number): T[][] {
-  if (values.length === 0) return [];
-  const chunks: T[][] = [];
-  for (let i = 0; i < values.length; i += chunkSize) {
-    chunks.push(values.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
-
-async function loadYieldHistorySnapshots(
-  db: D1Database,
-  resolvedIds: string[],
-  startSec: number,
-  sevenDaysAgoSec: number,
-): Promise<{
-  historyRows: YieldHistorySnapshotRow[];
-  prevTvlRows: YieldHistorySnapshotRow[];
-  prevBestRows: YieldHistorySnapshotRow[];
-}> {
-  const historyRows: YieldHistorySnapshotRow[] = [];
-  const prevTvlRows: YieldHistorySnapshotRow[] = [];
-  const prevBestRows: YieldHistorySnapshotRow[] = [];
-
-  for (const idChunk of chunkArray(resolvedIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
-    const resolvedIdInClause = buildInClause(idChunk);
-    const [historyResult, prevTvlResult, prevBestResult] = await Promise.all([
-      db
-        .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
-           FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at >= ?
-           ORDER BY stablecoin_id ASC, recorded_at ASC`,
-        )
-        .bind(...resolvedIdInClause.binds, startSec - THIRTY_DAYS_SECONDS)
-        .all<YieldHistorySnapshotRow>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id, source_key, source_tvl_usd, recorded_at
-           FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at <= ? AND source_tvl_usd IS NOT NULL
-           ORDER BY stablecoin_id ASC, source_key ASC, recorded_at DESC`,
-        )
-        .bind(...resolvedIdInClause.binds, sevenDaysAgoSec)
-        .all<YieldHistorySnapshotRow>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
-           FROM yield_history
-           WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND is_best = 1 AND recorded_at < ?
-           ORDER BY stablecoin_id ASC, recorded_at DESC`,
-        )
-        .bind(...resolvedIdInClause.binds, startSec)
-        .all<YieldHistorySnapshotRow>(),
-    ]);
-
-    historyRows.push(...(historyResult.results ?? []));
-    prevTvlRows.push(...(prevTvlResult.results ?? []));
-    prevBestRows.push(...(prevBestResult.results ?? []));
-  }
-
-  return { historyRows, prevTvlRows, prevBestRows };
-}
-
-async function deleteStaleYieldRows(
-  db: D1Database,
-  managedYieldIds: string[],
-  startSec: number,
-): Promise<void> {
-  for (const idChunk of chunkArray(managedYieldIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
-    const staleRowInClause = buildInClause(idChunk);
-    await db
-      .prepare(
-        `DELETE FROM yield_data
-         WHERE stablecoin_id IN (${staleRowInClause.sql}) AND updated_at < ?`,
-      )
-      .bind(...staleRowInClause.binds, startSec)
-      .run();
-  }
-}
-
-async function deleteOrphanYieldRows(
-  db: D1Database,
-  managedYieldIds: string[],
-): Promise<void> {
-  const managedYieldIdSet = new Set(managedYieldIds);
-  const existingIds = await db
-    .prepare("SELECT DISTINCT stablecoin_id FROM yield_data")
-    .all<{ stablecoin_id: string }>();
-  const orphanIds = (existingIds.results ?? [])
-    .map((row) => row.stablecoin_id)
-    .filter((id) => !managedYieldIdSet.has(id));
-
-  for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
-    const orphanInClause = buildInClause(idChunk);
-    await db
-      .prepare(
-        `DELETE FROM yield_data
-         WHERE stablecoin_id IN (${orphanInClause.sql})`,
-      )
-      .bind(...orphanInClause.binds)
-      .run();
-  }
 }
 
 function computeMedian(values: number[]): number {

@@ -1,14 +1,12 @@
 "use client";
 
-import { useMemo, useCallback, useRef, useEffect, useState } from "react";
+import { useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { TableBody, TableCell, TableHead, TableCaption, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download } from "lucide-react";
 import { TableToolbar } from "./table-toolbar";
 import { useTableDensity, DENSITY_CONFIGS } from "@/hooks/use-table-density";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
@@ -30,8 +28,13 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
-import { usePreference, DEFAULT_VISIBLE_COLUMNS, MOBILE_DEFAULT_COLUMNS, type ColumnId } from "@/hooks/use-preferences";
-import { ColumnVisibilityDropdown } from "@/components/stablecoin-table-column-visibility";
+import {
+  usePreference,
+  DEFAULT_VISIBLE_COLUMNS,
+  MOBILE_DEFAULT_COLUMNS,
+  normalizeVisibleColumns,
+  type ColumnId,
+} from "@/hooks/use-preferences";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import {
@@ -44,7 +47,6 @@ import {
 } from "@/components/stablecoin-table-logic";
 
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
-const ROW_HEIGHT = 40;
 const OVERSCAN = 12;
 
 interface StablecoinHeaderDef {
@@ -199,6 +201,9 @@ export function StablecoinTable({
   const [visibleColumns, setVisibleColumns, resetColumns] = usePreference<ColumnId[]>(
     "pharos-table-columns",
     deviceDefault,
+    {
+      decode: (raw) => normalizeVisibleColumns(raw, deviceDefault),
+    },
   );
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);

@@ -182,6 +182,7 @@ describe("handleStatus", () => {
       crons: Record<string, unknown>;
       dataQuality: Record<string, unknown>;
       telegramBot: Record<string, unknown> | null;
+      sectionErrors: Record<string, { code: string; message: string } | undefined>;
       datasetFreshness: Record<string, number | null>;
       priceSourceHealth: Record<string, unknown> | null;
       liquidityHealth: Record<string, unknown> | null;
@@ -197,6 +198,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("crons");
     expect(body).toHaveProperty("dataQuality");
     expect(body).toHaveProperty("telegramBot");
+    expect(body).toHaveProperty("sectionErrors");
     expect(body).toHaveProperty("datasetFreshness");
     expect(body).toHaveProperty("priceSourceHealth");
     expect(body).toHaveProperty("liquidityHealth");
@@ -647,6 +649,50 @@ describe("handleStatus", () => {
 
     expect(res.status).toBe(200);
     expect(body.telegramBot).toBeNull();
+  });
+
+  it("surfaces subsection loader failures through sectionErrors", async () => {
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 100)] },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      {
+        match: "FROM discovery_candidates WHERE dismissed = 0",
+        rows: [],
+        throwError: "discovery query exploded",
+      },
+      {
+        match: "FROM telegram_subscribers s",
+        rows: [],
+        throwError: "no such table: telegram_subscribers",
+      },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      sectionErrors: Record<string, { code: string; message: string } | undefined>;
+      discoveryCandidates: unknown;
+      telegramBot: unknown;
+    };
+
+    expect(body.discoveryCandidates).toBeNull();
+    expect(body.telegramBot).toBeNull();
+    expect(body.sectionErrors.discoveryCandidates).toEqual({
+      code: "discovery_candidates_query_failed",
+      message: "discovery query exploded",
+    });
+    expect(body.sectionErrors.telegramBot).toEqual({
+      code: "telegram_bot_stats_query_failed",
+      message: "no such table: telegram_subscribers",
+    });
   });
 
   it("marks status degraded and skips data-quality queries when DB sentinel fails", async () => {

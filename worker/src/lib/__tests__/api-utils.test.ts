@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import {
   errorResponse,
+  parseFloatParam,
   parseIntParam,
   parseStablecoinHistoryQuery,
   jsonResponse,
@@ -59,6 +60,24 @@ describe("parseIntParam", () => {
     const response = result as Response;
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid offset: must be a number" });
+  });
+});
+
+describe("parseFloatParam", () => {
+  it("returns default for null input", () => {
+    expect(parseFloatParam(null, 1.5, 0, 10)).toBe(1.5);
+  });
+
+  it("parses valid floats", () => {
+    expect(parseFloatParam("25.75", 0, 0, 100, "minAmount")).toBe(25.75);
+  });
+
+  it("returns 400 for malformed float input", async () => {
+    const result = parseFloatParam("oops", 0, 0, 100, "minAmount");
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid minAmount: must be a number" });
   });
 });
 

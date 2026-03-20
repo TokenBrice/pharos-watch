@@ -1,5 +1,5 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
-import type { ClassificationWarning, ReserveDriftEntry } from "@shared/types";
+import type { ClassificationWarning, ReserveDriftEntry, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function getCoinLabel(coinId: string): string {
@@ -11,9 +11,13 @@ function getCoinLabel(coinId: string): string {
 export function MetadataIntegrityCard({
   reserveDrift,
   classificationWarnings,
+  reserveDriftError,
+  classificationWarningsError,
 }: {
   reserveDrift: ReserveDriftEntry[] | undefined;
   classificationWarnings: ClassificationWarning[] | undefined;
+  reserveDriftError?: StatusSectionError;
+  classificationWarningsError?: StatusSectionError;
 }) {
   const hasReserveDrift = (reserveDrift?.length ?? 0) > 0;
   const hasClassificationWarnings = (classificationWarnings?.length ?? 0) > 0;
@@ -49,7 +53,9 @@ export function MetadataIntegrityCard({
             </div>
           ) : (
             <div className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
-              No reserve-score drift above the 5-point watch threshold.
+              {reserveDriftError
+                ? `Reserve drift loader failed: ${reserveDriftError.message}`
+                : "No reserve-score drift above the 5-point watch threshold."}
             </div>
           )}
         </div>
@@ -79,7 +85,9 @@ export function MetadataIntegrityCard({
             </div>
           ) : (
             <div className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
-              No governance classification warnings are active.
+              {classificationWarningsError
+                ? `Classification warning loader failed: ${classificationWarningsError.message}`
+                : "No governance classification warnings are active."}
             </div>
           )}
         </div>

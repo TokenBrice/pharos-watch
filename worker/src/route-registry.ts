@@ -96,6 +96,14 @@ export interface ChainRpcRouteFields {
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
+export type RouteDependency =
+  | "alchemyApiKey"
+  | "anthropicApiKey"
+  | "feedbackEnv"
+  | "mintBurnFreshnessConfig"
+  | "coingeckoApiKey"
+  | "telegram";
+
 /** Full context built by handleHttpRequest — union of core + all domain bags. */
 export type FullRouteContext = RouteContext &
   TelegramRouteFields &
@@ -107,6 +115,16 @@ export type FullRouteContext = RouteContext &
 export type StaticRouteHandler = (context: FullRouteContext) => Promise<Response>;
 
 type StaticRouteHandlerMap = Partial<Record<EndpointKey, StaticRouteHandler>>;
+
+export const ROUTE_DEPENDENCIES_BY_KEY: Partial<Record<EndpointKey, readonly RouteDependency[]>> = {
+  "stablecoin-detail-canary": ["coingeckoApiKey"],
+  health: ["mintBurnFreshnessConfig"],
+  "backfill-cg-prices": ["coingeckoApiKey"],
+  "backfill-mint-burn": ["alchemyApiKey"],
+  feedback: ["feedbackEnv"],
+  "telegram-webhook": ["telegram"],
+  "trigger-digest": ["anthropicApiKey", "telegram"],
+};
 
 const STATIC_ROUTE_HANDLERS_BY_KEY = {
   stablecoins: withErrorHandler("stablecoins", ({ db }) => handleStablecoins(db)),

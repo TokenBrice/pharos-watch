@@ -266,6 +266,25 @@ export function parseIntParam(
   return Math.min(max, Math.max(min, parsed));
 }
 
+export function parseFloatParam(
+  value: string | null | undefined,
+  defaultVal: number,
+  min: number,
+  max: number,
+  name = "parameter",
+): number | Response {
+  if (value == null) return defaultVal;
+  const trimmed = value.trim();
+  if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(trimmed)) {
+    return errorResponse(400, `Invalid ${name}: must be a number`);
+  }
+  const parsed = Number.parseFloat(trimmed);
+  if (!Number.isFinite(parsed)) {
+    return errorResponse(400, `Invalid ${name}: must be a number`);
+  }
+  return Math.min(max, Math.max(min, parsed));
+}
+
 export interface MethodologyEnvelopeInput {
   version: string;
   versionLabel: string;
@@ -527,8 +546,13 @@ export function createCacheHandler(
         (parsed as Record<string, unknown>)._meta = buildFreshnessMeta(cached.updatedAt, maxAgeSec);
         return new Response(JSON.stringify(parsed), { headers });
       }
+      if (Array.isArray(parsed)) {
+        return new Response(cached.value, { headers });
+      }
     } catch (err) {
-      console.warn(`[cache] Failed to inject _meta into ${endpoint}:`, err instanceof Error ? err.message : err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[cache] Failed to inject _meta into ${endpoint}:`, message);
+      return errorResponse(503, `Cached ${cacheKey} payload is malformed`);
     }
 
     return new Response(cached.value, { headers });

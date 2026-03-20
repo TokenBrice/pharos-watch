@@ -66,6 +66,13 @@ Reserved but not yet consumed:
 
 - `CF_ACCESS_OPS_UI_AUD`
 
+Canonical runtime groupings now live in code:
+
+- Worker: `worker/src/lib/env.ts` (`WORKER_REQUIRED_ENV_KEYS`, `WORKER_OPTIONAL_ENV_KEYS`, `WORKER_RESERVED_ENV_KEYS`, `WORKER_ACTIVE_ENV_KEYS`)
+- Pages Functions: `functions/lib/ops-env.ts` (`PAGES_FUNCTIONS_REQUIRED_ENV_KEYS`, `PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS`, `PAGES_FUNCTIONS_RESERVED_ENV_KEYS`, `PAGES_FUNCTIONS_ACTIVE_ENV_KEYS`)
+
+Use those exports as the source of truth when auditing Cloudflare bindings before deploy. The same binding name can be reserved on one runtime and active on the other; for example `OPS_API_ORIGIN` is worker-reserved but Pages-active.
+
 ---
 
 ## Pages Functions Proxy
@@ -79,17 +86,17 @@ The current proxy trusts the Cloudflare Access-protected `ops.pharos.watch` host
 
 ### Pages project bindings needed now
 
-Required:
+Required active bindings:
 
 - `OPS_API_SERVICE_TOKEN_ID`
 - `OPS_API_SERVICE_TOKEN_SECRET`
 
-Optional overrides (the proxy has production defaults for these already):
+Optional active overrides (the proxy has production defaults for these already):
 
 - `OPS_UI_ORIGIN`
 - `OPS_API_ORIGIN`
 
-Reserved but currently unused by the proxy/runtime:
+Reserved but currently unused by the Pages proxy/runtime:
 
 - `CF_ACCESS_TEAM_DOMAIN`
 - `CF_ACCESS_OPS_UI_AUD`

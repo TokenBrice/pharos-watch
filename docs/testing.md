@@ -78,7 +78,7 @@ This arrangement gives pull requests the same validate gate the deploy workflow 
 
 The workflows pin `actions/checkout@v5` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the pipeline before deploy.
 
-`npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production.
+`npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker now fails only on new undeclared duplicates and keeps the current allowlist visible in review.
 
 `npm run check:cron-sync` is part of the shared CI validate gate. Run it locally whenever you change `worker/wrangler.toml` cron expressions or `shared/lib/cron-jobs.ts` so you catch schedule drift before pushing.
 
@@ -118,6 +118,7 @@ When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob
 - `worker/src/api/__tests__/` — API handler contract tests
 - `worker/src/cron/__tests__/` — cron job tests (with degraded-mode scenarios)
 - `shared/lib/__tests__/` — shared library tests (format, classification invariants, peg rates, stablecoin registry)
+- `scripts/__tests__/` — repo policy / guardrail tests for CI and developer tooling
 - `src/components/stablecoin-detail/__tests__/` — stablecoin detail component tests
 - `worker/src/cron/reserve-adapters/__tests__/` — reserve adapter tests (20+ adapters)
 - `worker/src/cron/dex-discovery/__tests__/` — DEX discovery module tests
@@ -512,7 +513,7 @@ Current critical file set:
 
 - `npm run test:critical-contracts` covers the explicitly enumerated critical handler suites (`peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus shared strict-path registry tests and router mapping tests.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
-- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes). Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
+- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It now also runs `check:doc-counts` for doc changes and `build` + `seo:check` for frontend export / SEO-critical paths, in addition to the contract/invariant/coverage/lint/type-check buckets. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path derived from `shared/lib/api-endpoints.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
 - `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces through Cloudflare Access. In service-token mode, Access consumes `CF-Access-Client-Id` / `CF-Access-Client-Secret`, injects `Cf-Access-Jwt-Assertion`, and the worker verifies that JWT before serving `ops-api` routes. The smoke test accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/admin/`, then validates `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage/empty states (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`) and on sustained horizontal overflow across tracked mobile routes.

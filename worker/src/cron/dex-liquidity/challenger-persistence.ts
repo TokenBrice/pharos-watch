@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
+import { requireFiniteNumber } from "../../lib/number-utils";
 import type { PoolEntry } from "./types";
 
 export interface DexPriceChallengerPoolRow {
@@ -100,13 +101,6 @@ function toLowerString(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function toFiniteNumber(value: number, label: string): number {
-  if (!Number.isFinite(value)) {
-    throw new Error(`dex-price-challengers: invalid ${label}`);
-  }
-  return value;
-}
-
 export async function detectDexPriceChallengerTableState(db: D1Database): Promise<DexPriceChallengerTableState> {
   try {
     const rows = await db
@@ -130,7 +124,7 @@ export function buildDexPriceChallengerPublicationPlan(
   input: DexPriceChallengerPublicationInput,
 ): DexPriceChallengerPublicationPlan {
   const stablecoinId = toLowerString(input.stablecoinId);
-  const snapshotAt = Math.floor(toFiniteNumber(input.snapshotAt, "snapshotAt"));
+  const snapshotAt = Math.floor(requireFiniteNumber(input.snapshotAt, "dex-price-challengers: snapshotAt"));
   const publishedAt = Math.floor(input.publishedAt ?? snapshotAt);
   const sourceCoverageComplete = !!input.sourceCoverageComplete;
   const hasRows = input.rows.length > 0;

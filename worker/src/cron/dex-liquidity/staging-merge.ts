@@ -2,6 +2,7 @@ import type { StagedPool } from "../dex-discovery/types";
 import { stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import { getGtDexQuality } from "./pool-helpers";
@@ -39,15 +40,6 @@ interface StagedPoolRow {
   refreshed_at: number;
 }
 
-function toNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
 function toBoolean(value: number | boolean | null): boolean | null {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -63,21 +55,21 @@ function toStagedPool(row: StagedPoolRow): StagedPool {
     protocol: row.protocol,
     dexId: row.dex_id,
     symbol: row.symbol,
-    tvlUsd: toNumber(row.tvl_usd),
-    volume24h: toNumber(row.volume_24h),
-    qualityMultiplier: toNumber(row.quality_multiplier),
+    tvlUsd: toFiniteNumber(row.tvl_usd),
+    volume24h: toFiniteNumber(row.volume_24h),
+    qualityMultiplier: toFiniteNumber(row.quality_multiplier),
     poolType: row.pool_type,
-    feeTier: toNumber(row.fee_tier),
-    balanceRatio: toNumber(row.balance_ratio),
+    feeTier: toFiniteNumber(row.fee_tier),
+    balanceRatio: toFiniteNumber(row.balance_ratio),
     isStable: toBoolean(row.is_stable),
     baseToken: row.base_token,
     quoteToken: row.quote_token,
     quoteSymbol: row.quote_symbol,
-    priceUsd: toNumber(row.price_usd),
-    lockedLiqPct: toNumber(row.locked_liq_pct),
+    priceUsd: toFiniteNumber(row.price_usd),
+    lockedLiqPct: toFiniteNumber(row.locked_liq_pct),
     rawJson: null,
-    discoveredAt: toNumber(row.discovered_at) ?? 0,
-    refreshedAt: toNumber(row.refreshed_at) ?? 0,
+    discoveredAt: toFiniteNumber(row.discovered_at) ?? 0,
+    refreshedAt: toFiniteNumber(row.refreshed_at) ?? 0,
   };
 }
 

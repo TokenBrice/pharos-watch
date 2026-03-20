@@ -1,3 +1,5 @@
+import { PUBLIC_API_RATE_LIMIT_SALT_FALLBACK } from "./env";
+
 interface RateLimitEntry {
   count: number;
   resetAt: number;
@@ -20,7 +22,6 @@ interface RateLimitDb {
 const ipCounts = new Map<string, RateLimitEntry>();
 const MAX_IP_ENTRIES = 10_000;
 const PRUNE_EVERY_REQUESTS = 1000;
-const PUBLIC_API_RATE_LIMIT_SALT_FALLBACK = "pharos-public-api-rate-limit";
 const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
 let requestCount = 0;
 let lastPublicApiPruneBucket: number | null = null;

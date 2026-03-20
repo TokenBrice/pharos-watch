@@ -1,5 +1,6 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
+import { parseChainlinkLatestRoundData } from "./chainlink";
 import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
 
 const DECIMALS_SELECTOR = "0x313ce567";
@@ -26,20 +27,6 @@ function readParams(config: LiveReservesConfig): ChainlinkPorParams {
     throw new Error("chainlink-por adapter requires params.porFeedAddress, assetLabel, and assetRisk");
   }
   return params as ChainlinkPorParams;
-}
-
-/** Parse a raw Chainlink latestRoundData() response into structured data. */
-function parseLatestRoundData(hex: string): { roundId: bigint; answer: bigint; updatedAt: number } {
-  // Strip 0x prefix; latestRoundData returns 5 words (160 hex chars)
-  const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  if (stripped.length < 160) {
-    throw new Error(`chainlink-por: latestRoundData response too short (${stripped.length} hex chars)`);
-  }
-  const roundId = BigInt("0x" + stripped.slice(0, 64));
-  const answer = BigInt("0x" + stripped.slice(64, 128));
-  // word 2 = startedAt (skip)
-  const updatedAt = Number(BigInt("0x" + stripped.slice(192, 256)));
-  return { roundId, answer, updatedAt };
 }
 
 /** Pure transformation from decoded Chainlink data + params → AdapterResult. Exported for testing. */
@@ -103,7 +90,7 @@ export async function fetchChainlinkPorReserves(
     throw new Error("chainlink-por: latestRoundData() call failed");
   }
 
-  const { roundId, answer, updatedAt } = parseLatestRoundData(rawRoundData);
+  const { roundId, answer, updatedAt } = parseChainlinkLatestRoundData(rawRoundData, "chainlink-por");
 
   return adaptChainlinkPorResponse(
     { reserves: answer, decimals, roundId, updatedAt },

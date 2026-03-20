@@ -1,66 +1,61 @@
 #!/usr/bin/env node
 import { execSync, spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-const args = new Set(process.argv.slice(2));
-const stagedMode = args.has("--staged");
-const baseRef = process.env.MERGE_GATE_BASE_REF ?? "origin/main";
-const dryRun = process.env.MERGE_GATE_DRY_RUN === "1";
-
-function normalizePath(p) {
-  return p.replaceAll("\\", "/");
+export function normalizePath(path) {
+  return path.replaceAll("\\", "/");
 }
 
-function getChangedFiles() {
-  if (stagedMode) {
-    const raw = execSync("git diff --name-only --cached", { encoding: "utf8" });
-    return raw.split(/\r?\n/g).map((line) => normalizePath(line.trim())).filter(Boolean);
-  }
-
-  let mergeBase;
-  try {
-    mergeBase = execSync(`git merge-base ${baseRef} HEAD`, { encoding: "utf8" }).trim();
-  } catch {
-    throw new Error(`[merge-gate] Could not resolve merge-base with ${baseRef}. Set MERGE_GATE_BASE_REF explicitly.`);
-  }
-
-  const raw = execSync(`git diff --name-only ${mergeBase}...HEAD`, { encoding: "utf8" });
-  return raw.split(/\r?\n/g).map((line) => normalizePath(line.trim())).filter(Boolean);
-}
-
-function isMarkdown(path) {
+export function isMarkdown(path) {
   return path === "README.md" || path.startsWith("docs/") || path.endsWith(".md");
 }
 
-function hasTypeScriptOrJsChange(files) {
-  return files.some((f) => /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f));
+export function hasDocsChange(files) {
+  return files.some((file) => isMarkdown(file));
 }
 
-function hasCriticalApiContractChange(files) {
-  return files.some((f) =>
-    f.startsWith("worker/src/api/")
-    || f === "src/lib/api.ts"
-    || f === "shared/lib/api-endpoints.ts"
-    || f === "shared/lib/strict-contract-paths.ts"
-    || f === "shared/types/index.ts"
+export function hasTypeScriptOrJsChange(files) {
+  return files.some((file) => /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file));
+}
+
+export function hasCriticalApiContractChange(files) {
+  return files.some((file) =>
+    file.startsWith("worker/src/api/")
+    || file === "src/lib/api.ts"
+    || file === "shared/lib/api-endpoints.ts"
+    || file === "shared/lib/strict-contract-paths.ts"
+    || file === "shared/types/index.ts",
   );
 }
 
-function hasCronOrWorkerLibChange(files) {
-  return files.some((f) =>
-    f.startsWith("worker/src/cron/")
-    || f.startsWith("worker/src/lib/")
-    || f.startsWith("shared/lib/")
+export function hasCronOrWorkerLibChange(files) {
+  return files.some((file) =>
+    file.startsWith("worker/src/cron/")
+    || file.startsWith("worker/src/lib/")
+    || file.startsWith("shared/lib/"),
   );
 }
 
-function hasGateInfraChange(files) {
-  return files.some((f) =>
-    f.startsWith(".github/workflows/")
-    || f === "scripts/check-critical-coverage.mjs"
-    || f === "scripts/test-merge-gate.mjs"
-    || f === "package.json"
-    || f === "package-lock.json"
-    || f.startsWith(".ci/")
+export function hasGateInfraChange(files) {
+  return files.some((file) =>
+    file.startsWith(".github/workflows/")
+    || file === "scripts/check-critical-coverage.mjs"
+    || file === "scripts/test-merge-gate.mjs"
+    || file === "package.json"
+    || file === "package-lock.json"
+    || file.startsWith(".ci/"),
+  );
+}
+
+export function hasBuildOrSeoImpact(files) {
+  return files.some((file) =>
+    file.startsWith("src/app/")
+    || file.startsWith("src/components/")
+    || file.startsWith("public/")
+    || file === "next.config.ts"
+    || file === "next.config.mjs"
+    || file === "scripts/check-seo-static.mjs"
+    || file === "scripts/generate-redirects.ts",
   );
 }
 
@@ -73,6 +68,66 @@ function addCommand(plan, cmd, reason) {
   plan.push({ cmd, reasons: [reason] });
 }
 
+export function buildCommandPlan(changedFiles) {
+  const plan = [];
+
+  if (hasDocsChange(changedFiles)) {
+    addCommand(plan, "npm run check:doc-counts", "Documentation files changed");
+  }
+
+  if (hasTypeScriptOrJsChange(changedFiles)) {
+    addCommand(plan, "npm run lint", "TypeScript/JavaScript files changed");
+    addCommand(plan, "cd worker && npx tsc --noEmit", "Worker/shared TypeScript compatibility check");
+  }
+
+  if (hasCriticalApiContractChange(changedFiles)) {
+    addCommand(plan, "npm run test:critical-contracts", "Critical API/shared contract files changed");
+    addCommand(plan, "npm run coverage:critical", "Critical API/shared contract files changed");
+  }
+
+  if (hasCronOrWorkerLibChange(changedFiles)) {
+    addCommand(plan, "npm run test:invariants", "Cron or worker library files changed");
+    addCommand(plan, "npm run coverage:critical", "Cron or worker library files changed");
+  }
+
+  if (hasGateInfraChange(changedFiles)) {
+    addCommand(plan, "npm test", "Workflow/gating infrastructure changed");
+    addCommand(plan, "npm run coverage:critical", "Workflow/gating infrastructure changed");
+  }
+
+  if (hasBuildOrSeoImpact(changedFiles)) {
+    addCommand(plan, "npm run build", "Frontend export or SEO-critical files changed");
+    addCommand(plan, "npm run seo:check", "Frontend export or SEO-critical files changed");
+  }
+
+  if (plan.length === 0) {
+    addCommand(plan, "npm test", "Fallback for non-doc changes");
+  }
+
+  return plan;
+}
+
+export function getChangedFiles({
+  stagedMode = false,
+  baseRef = "origin/main",
+  exec = execSync,
+} = {}) {
+  if (stagedMode) {
+    const raw = exec("git diff --name-only --cached", { encoding: "utf8" });
+    return raw.split(/\r?\n/g).map((line) => normalizePath(line.trim())).filter(Boolean);
+  }
+
+  let mergeBase;
+  try {
+    mergeBase = exec(`git merge-base ${baseRef} HEAD`, { encoding: "utf8" }).trim();
+  } catch {
+    throw new Error(`[merge-gate] Could not resolve merge-base with ${baseRef}. Set MERGE_GATE_BASE_REF explicitly.`);
+  }
+
+  const raw = exec(`git diff --name-only ${mergeBase}...HEAD`, { encoding: "utf8" });
+  return raw.split(/\r?\n/g).map((line) => normalizePath(line.trim())).filter(Boolean);
+}
+
 function runCommand(cmd) {
   const result = spawnSync("bash", ["-lc", cmd], { stdio: "inherit" });
   if (result.status !== 0) {
@@ -80,64 +135,51 @@ function runCommand(cmd) {
   }
 }
 
-const changedFiles = getChangedFiles();
-console.log(`[merge-gate] Base ref: ${baseRef}`);
-console.log(`[merge-gate] Mode: ${stagedMode ? "staged" : "merged-diff"}`);
-console.log(`[merge-gate] Changed files: ${changedFiles.length}`);
-for (const file of changedFiles) {
-  console.log(`  - ${file}`);
-}
+export function runMergeGate({
+  argv = process.argv.slice(2),
+  env = process.env,
+} = {}) {
+  const args = new Set(argv);
+  const stagedMode = args.has("--staged");
+  const baseRef = env.MERGE_GATE_BASE_REF ?? "origin/main";
+  const dryRun = env.MERGE_GATE_DRY_RUN === "1";
+  const changedFiles = getChangedFiles({ stagedMode, baseRef });
 
-if (changedFiles.length === 0) {
-  console.log("[merge-gate] No changes detected; gate skipped.");
-  process.exit(0);
-}
-
-const plan = [];
-
-if (hasTypeScriptOrJsChange(changedFiles)) {
-  addCommand(plan, "npm run lint", "TypeScript/JavaScript files changed");
-  addCommand(plan, "cd worker && npx tsc --noEmit", "Worker/shared TypeScript compatibility check");
-}
-
-if (hasCriticalApiContractChange(changedFiles)) {
-  addCommand(plan, "npm run test:critical-contracts", "Critical API/shared contract files changed");
-  addCommand(plan, "npm run coverage:critical", "Critical API/shared contract files changed");
-}
-
-if (hasCronOrWorkerLibChange(changedFiles)) {
-  addCommand(plan, "npm run test:invariants", "Cron or worker library files changed");
-  addCommand(plan, "npm run coverage:critical", "Cron or worker library files changed");
-}
-
-if (hasGateInfraChange(changedFiles)) {
-  addCommand(plan, "npm test", "Workflow/gating infrastructure changed");
-  addCommand(plan, "npm run coverage:critical", "Workflow/gating infrastructure changed");
-}
-
-if (plan.length === 0) {
-  if (changedFiles.every(isMarkdown)) {
-    console.log("[merge-gate] Docs-only change detected; no test commands required.");
-    process.exit(0);
+  console.log(`[merge-gate] Base ref: ${baseRef}`);
+  console.log(`[merge-gate] Mode: ${stagedMode ? "staged" : "merged-diff"}`);
+  console.log(`[merge-gate] Changed files: ${changedFiles.length}`);
+  for (const file of changedFiles) {
+    console.log(`  - ${file}`);
   }
-  addCommand(plan, "npm test", "Fallback for non-doc changes");
+
+  if (changedFiles.length === 0) {
+    console.log("[merge-gate] No changes detected; gate skipped.");
+    return;
+  }
+
+  const plan = buildCommandPlan(changedFiles);
+
+  console.log("[merge-gate] Command plan:");
+  for (let i = 0; i < plan.length; i++) {
+    const item = plan[i];
+    console.log(`${i + 1}. ${item.cmd}`);
+    console.log(`   reasons: ${item.reasons.join("; ")}`);
+  }
+
+  if (dryRun) {
+    console.log("[merge-gate] Dry run enabled; commands not executed.");
+    return;
+  }
+
+  for (const item of plan) {
+    console.log(`[merge-gate] Running: ${item.cmd}`);
+    runCommand(item.cmd);
+  }
+
+  console.log("[merge-gate] All checks passed.");
 }
 
-console.log("[merge-gate] Command plan:");
-for (let i = 0; i < plan.length; i++) {
-  const item = plan[i];
-  console.log(`${i + 1}. ${item.cmd}`);
-  console.log(`   reasons: ${item.reasons.join("; ")}`);
+const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isCliEntrypoint) {
+  runMergeGate();
 }
-
-if (dryRun) {
-  console.log("[merge-gate] Dry run enabled; commands not executed.");
-  process.exit(0);
-}
-
-for (const item of plan) {
-  console.log(`[merge-gate] Running: ${item.cmd}`);
-  runCommand(item.cmd);
-}
-
-console.log("[merge-gate] All checks passed.");

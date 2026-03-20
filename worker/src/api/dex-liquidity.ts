@@ -5,7 +5,6 @@ import {
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
-import { CACHE_PROFILES } from "../lib/constants";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 import type { LiquidityPoolSourceFamily } from "@shared/types";
 import { DexLiquidityCronMetadataSchema } from "../lib/schemas";

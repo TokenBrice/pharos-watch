@@ -38,6 +38,13 @@ import {
 import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipeline/types";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
+import {
+  getMintBurnRunState,
+  normalizeDisabledConfigIdSet,
+  normalizeDisabledSymbolSet,
+  rotateArray,
+  setMintBurnRunState,
+} from "./mint-burn/run-state";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
 const MAX_SCAN_RANGE = 50_000;
@@ -102,11 +109,6 @@ interface MintBurnConfigSummary {
   requestBudgetUsed: number;
 }
 
-interface MintBurnRunStateRow {
-  nextConfigIndex: number;
-  degradedStreak: number;
-}
-
 function configKey(config: MintBurnContractConfig): string {
   return mintBurnConfigKey(config);
 }
@@ -145,88 +147,6 @@ function normalizeSyncMintBurnOptions(
     return { signal: signalOrOptions as AbortSignal };
   }
   return signalOrOptions ?? {};
-}
-
-function normalizeDisabledConfigIdSet(values?: Iterable<string>): Set<string> {
-  const set = new Set<string>();
-  if (!values) return set;
-  for (const value of values) {
-    const normalized = value.trim().toLowerCase();
-    if (normalized.length > 0) set.add(normalized);
-  }
-  return set;
-}
-
-function normalizeDisabledSymbolSet(values?: Iterable<string>): Set<string> {
-  const set = new Set<string>();
-  if (!values) return set;
-  for (const value of values) {
-    const normalized = value.trim().toUpperCase();
-    if (normalized.length > 0) set.add(normalized);
-  }
-  return set;
-}
-
-function rotateArray<T>(values: T[], start: number): T[] {
-  if (values.length === 0) return [];
-  const idx = ((start % values.length) + values.length) % values.length;
-  return [...values.slice(idx), ...values.slice(0, idx)];
-}
-
-async function getMintBurnRunState(
-  db: D1Database,
-  jobName: string,
-): Promise<{ state: MintBurnRunStateRow; persistenceFailed: boolean }> {
-  try {
-    const row = await db
-      .prepare(
-        "SELECT next_config_index, degraded_streak FROM mint_burn_run_state WHERE job = ?",
-      )
-      .bind(jobName)
-      .first<{ next_config_index: number; degraded_streak: number }>();
-
-    return {
-      state: {
-        nextConfigIndex: row?.next_config_index ?? 0,
-        degradedStreak: row?.degraded_streak ?? 0,
-      },
-      persistenceFailed: false,
-    };
-  } catch (error) {
-    console.warn("[sync-mint-burn] Failed to load run-state; using defaults:", error);
-    // Migration may not exist in local/unit tests.
-    return {
-      state: { nextConfigIndex: 0, degradedStreak: 0 },
-      persistenceFailed: true,
-    };
-  }
-}
-
-async function setMintBurnRunState(
-  db: D1Database,
-  jobName: string,
-  nextConfigIndex: number,
-  degradedStreak: number,
-): Promise<boolean> {
-  try {
-    const now = Math.floor(Date.now() / 1000);
-    await db
-      .prepare(
-        `INSERT INTO mint_burn_run_state (job, next_config_index, degraded_streak, updated_at)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(job) DO UPDATE SET
-           next_config_index = excluded.next_config_index,
-           degraded_streak = excluded.degraded_streak,
-           updated_at = excluded.updated_at`,
-      )
-      .bind(jobName, nextConfigIndex, degradedStreak, now)
-      .run();
-    return true;
-  } catch (error) {
-    console.warn("[sync-mint-burn] Failed to persist run-state:", error);
-    // Non-fatal in environments where migrations are behind.
-    return false;
-  }
 }
 
 export async function syncMintBurn(

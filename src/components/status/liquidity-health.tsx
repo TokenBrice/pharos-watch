@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { LiquidityHealth } from "@shared/types";
+import type { LiquidityHealth, StatusSectionError } from "@shared/types";
 import { formatCurrency } from "@shared/lib/format";
 
 function guardTone(active: boolean): string {
@@ -26,7 +26,13 @@ function Metric({
   );
 }
 
-export function LiquidityHealthCard({ health }: { health: LiquidityHealth | null }) {
+export function LiquidityHealthCard({
+  health,
+  error,
+}: {
+  health: LiquidityHealth | null;
+  error?: StatusSectionError;
+}) {
   if (!health) {
     return (
       <Card>
@@ -34,7 +40,9 @@ export function LiquidityHealthCard({ health }: { health: LiquidityHealth | null
           <CardTitle className="text-base">Liquidity Health</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No liquidity health data available yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {error ? `Liquidity health loader failed: ${error.message}` : "No liquidity health data available yet."}
+          </p>
         </CardContent>
       </Card>
     );

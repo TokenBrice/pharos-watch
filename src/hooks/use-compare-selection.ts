@@ -11,6 +11,15 @@ import {
 } from "@/lib/compare-config";
 import type { CoinOption } from "@/components/coin-selector";
 
+const VALID_COMPARE_RANGES = new Set<TimeRangeOption>(["7d", "30d", "90d", "1y", "all"]);
+
+export function normalizeCompareRange(value: string | null): TimeRangeOption {
+  if (value && VALID_COMPARE_RANGES.has(value as TimeRangeOption)) {
+    return value as TimeRangeOption;
+  }
+  return "all";
+}
+
 export function useCompareSelection() {
   const { searchParams, replaceParams } = useUrlFilters();
 
@@ -19,7 +28,7 @@ export function useCompareSelection() {
     [searchParams],
   );
 
-  const range = (searchParams.get("range") as TimeRangeOption) || "all";
+  const range = normalizeCompareRange(searchParams.get("range"));
   const [flowHours, setFlowHours] = useState<24 | 168 | 720>(24);
 
   const setRange = useCallback(

@@ -80,7 +80,8 @@
 
 ## Known Anomalies
 
-- `0031` and `0031a` share a sequence number; three files share `0056`; four files share `0061`. Wrangler tracks applied migrations by filename, not sequence number, so this is safe but confusing.
+- Duplicate-prefix allowlist: `0056`, `0061`
+- `0031` and `0031a` share a numeric stem but not the same full alphanumeric prefix. Wrangler tracks applied migrations by filename, not sequence number, so the historical `0056` / `0061` duplicates are safe but confusing and must not expand.
 
 ## Rollback Procedure
 

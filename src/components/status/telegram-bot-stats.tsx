@@ -1,11 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse, StatusSectionError } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 
 interface TelegramBotStatsProps {
   telegramBot: StatusResponse["telegramBot"];
   dispatchCron?: StatusResponse["crons"][string];
+  error?: StatusSectionError;
   nowSeconds: number;
 }
 
@@ -93,13 +94,14 @@ function renderDelta(label: string, value: number | null) {
   );
 }
 
-export function TelegramBotStats({ telegramBot, dispatchCron, nowSeconds }: TelegramBotStatsProps) {
+export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds }: TelegramBotStatsProps) {
   if (!telegramBot) {
     return (
       <Card>
         <CardContent className="py-6 text-sm text-muted-foreground">
-          Telegram bot metrics are unavailable. This usually means the Telegram tables have not been migrated in the
-          current environment yet.
+          {error
+            ? `Telegram bot metrics query failed: ${error.message}`
+            : "Telegram bot metrics are unavailable. This usually means the Telegram tables have not been migrated in the current environment yet."}
         </CardContent>
       </Card>
     );

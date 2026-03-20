@@ -4,6 +4,7 @@ import {
   resolveOrReject,
   errorResponse,
   parseIntParam,
+  parseFloatParam,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
   fetchPaginatedEvents,
@@ -67,8 +68,17 @@ export const handleMintBurnEvents = withErrorHandler(
     if (!VALID_SCOPES.has(scope)) {
       return errorResponse(400, "Invalid scope parameter");
     }
-    const minAmountRaw = params.get("minAmount");
-    const minAmount = minAmountRaw !== null ? parseFloat(minAmountRaw) : null;
+    const parsedMinAmount = parseFloatParam(
+      params.get("minAmount"),
+      0,
+      0,
+      Number.MAX_SAFE_INTEGER,
+      "minAmount",
+    );
+    if (parsedMinAmount instanceof Response) {
+      return parsedMinAmount;
+    }
+    const minAmount = parsedMinAmount;
 
     const limit = parseIntParam(params.get("limit"), 50, 1, 500, "limit");
     if (limit instanceof Response) {
@@ -95,7 +105,7 @@ export const handleMintBurnEvents = withErrorHandler(
       conditions.push("flow_type = 'standard'");
       conditions.push("(direction = 'mint' OR burn_type = 'effective_burn')");
     }
-    if (minAmount !== null && !isNaN(minAmount) && minAmount > 0) {
+    if (minAmount > 0) {
       conditions.push("amount_usd IS NOT NULL AND amount_usd >= ?");
       filterBindings.push(minAmount);
     }

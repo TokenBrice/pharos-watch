@@ -2,16 +2,28 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+interface UsePreferenceOptions<T> {
+  decode?: (raw: unknown) => T;
+}
+
 /**
  * Generic hook that persists a value to localStorage.
  * SSR-safe: returns defaultValue during hydration, syncs after mount.
  */
-export function usePreference<T>(key: string, defaultValue: T): [T, (value: T | ((prev: T) => T)) => void, () => void] {
+export function usePreference<T>(
+  key: string,
+  defaultValue: T,
+  options: UsePreferenceOptions<T> = {},
+): [T, (value: T | ((prev: T) => T)) => void, () => void] {
   const [value, setValue] = useState<T>(() => {
     if (typeof window === "undefined") return defaultValue;
     try {
       const stored = localStorage.getItem(key);
-      return stored !== null ? (JSON.parse(stored) as T) : defaultValue;
+      if (stored === null) {
+        return defaultValue;
+      }
+      const parsed = JSON.parse(stored) as unknown;
+      return options.decode ? options.decode(parsed) : (parsed as T);
     } catch {
       return defaultValue;
     }
@@ -87,3 +99,26 @@ export const MOBILE_DEFAULT_COLUMNS: ColumnId[] = ALL_COLUMNS.filter((c) => !c.h
 export const LOCKED_COLUMNS: Set<ColumnId> = new Set(
   ALL_COLUMNS.filter((c) => c.locked).map((c) => c.id)
 );
+
+const COLUMN_IDS = new Set<ColumnId>(ALL_COLUMNS.map((c) => c.id));
+
+export function isColumnId(value: unknown): value is ColumnId {
+  return typeof value === "string" && COLUMN_IDS.has(value as ColumnId);
+}
+
+export function normalizeVisibleColumns(raw: unknown, fallback: readonly ColumnId[]): ColumnId[] {
+  if (!Array.isArray(raw)) {
+    return [...fallback];
+  }
+
+  const selected = new Set<ColumnId>(LOCKED_COLUMNS);
+  for (const value of raw) {
+    if (isColumnId(value)) {
+      selected.add(value);
+    }
+  }
+
+  return ALL_COLUMNS
+    .map((column) => column.id)
+    .filter((id) => selected.has(id));
+}

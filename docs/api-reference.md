@@ -114,15 +114,15 @@ All error responses use `{ "error": "message" }` JSON format.
 
 | Status | Meaning               | When                                                                                                                                 |
 | ------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input)                             |
+| 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input, or rejected filter values that no longer coerce silently) |
 | 401    | Unauthorized          | Admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                            |
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                                                         |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                   |
 | 502    | Bad Gateway           | Upstream (DefiLlama / CoinGecko) fetch failed                                                                                        |
-| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
+| 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, where the cached payload is corrupt / rejected by validation, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
 
-**Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations.
+**Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations.
 
 ---
 
@@ -1959,6 +1959,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "staleOnchainSupply": 0,
     "onchainStaleRatio": 0
   },
+  "sectionErrors": {},
   "telegramBot": {
     "totalChats": 128,
     "alertEnabledChats": 123,
@@ -2088,6 +2089,8 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 `dbHealthy=false` means the DB sentinel failed (`SELECT 1`), so status is forced to at least degraded and data-quality/database freshness queries are skipped.
 
 `telegramBot` is `null` when the Telegram tables are unavailable in the current environment (for example, migrations not yet applied in dev/staging). The rest of `/api/status` still resolves normally.
+
+`sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing `message`.
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `suppressedMethodologyChanges`).
 

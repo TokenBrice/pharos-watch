@@ -127,6 +127,19 @@ describe("handleFeedback", () => {
     expect(body.error).toMatch(/pageUrl/i);
   });
 
+  it("returns 400 when stablecoinId is invalid", async () => {
+    const db = mockD1([]);
+    const res = await handleFeedback(
+      db,
+      makeRequest(makeFeedbackBody({ stablecoinId: "not-a-real-coin" })),
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid stablecoinId" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("silently accepts honeypot submissions", async () => {
     const db = mockD1([]);
     const res = await handleFeedback(

@@ -42,6 +42,14 @@ describe("handleDiscoveryCandidates", () => {
     await expect(res.json()).resolves.toEqual({ error: "Invalid offset: must be a number" });
   });
 
+  it("returns 400 for invalid status", async () => {
+    const db = mockD1([]);
+    const url = new URL("https://api.pharos.watch/api/discovery-candidates?status=paused");
+    const res = await handleDiscoveryCandidates(db, url);
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid status parameter" });
+  });
+
   it("returns 500 through the shared error wrapper when the query throws", async () => {
     const db = mockD1([
       { match: "discovery_candidates", rows: [], throwError: new Error("query failed") },

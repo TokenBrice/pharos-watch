@@ -1,7 +1,10 @@
 import { getEndpointDefinition, validateEndpointMethod } from "@shared/lib/api-endpoints";
-import { normalizeOrigin, resolveOpsUiOrigin } from "../../lib/ops-origin";
-
-const DEFAULT_OPS_API_ORIGIN = "https://ops-api.pharos.watch";
+import { resolveOpsUiOrigin } from "../../lib/ops-origin";
+import {
+  resolveOpsApiOrigin,
+  validatePagesOpsProxyEnv,
+  type OpsAdminProxyEnv,
+} from "../../lib/ops-env";
 
 const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/\d+\/dismiss$/;
 const FORWARDED_REQUEST_HEADERS = [
@@ -19,15 +22,6 @@ const FORWARDED_RESPONSE_HEADERS = [
   "X-Idempotent-Replay",
 ] as const;
 
-interface OpsAdminProxyEnv {
-  OPS_UI_ORIGIN?: string;
-  OPS_API_ORIGIN?: string;
-  CF_ACCESS_TEAM_DOMAIN?: string;
-  CF_ACCESS_OPS_UI_AUD?: string;
-  OPS_API_SERVICE_TOKEN_ID?: string;
-  OPS_API_SERVICE_TOKEN_SECRET?: string;
-}
-
 interface OpsAdminProxyContext {
   request: Request;
   env: OpsAdminProxyEnv;
@@ -44,10 +38,6 @@ function jsonError(status: number, message: string): Response {
       "Content-Type": "application/json",
     },
   });
-}
-
-function resolveOpsApiOrigin(env: OpsAdminProxyEnv): string {
-  return normalizeOrigin(env.OPS_API_ORIGIN?.trim() || DEFAULT_OPS_API_ORIGIN);
 }
 
 function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
@@ -116,6 +106,10 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     return jsonError(404, "Not found");
   }
 
+  for (const issue of validatePagesOpsProxyEnv(env)) {
+    console.warn(`[ops-proxy] ${issue.message}`);
+  }
+
   const upstreamPath = resolveUpstreamPath(params);
   if (!upstreamPath || !isAllowedAdminPath(upstreamPath)) {
     return jsonError(404, "Not found");
@@ -134,12 +128,17 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     return upstreamHeaders;
   }
 
-  const upstreamResponse = await fetch(upstreamUrl.toString(), {
-    method: request.method,
-    headers: upstreamHeaders,
-    body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
-    redirect: "manual",
-  });
+  let upstreamResponse: Response;
+  try {
+    upstreamResponse = await fetch(upstreamUrl.toString(), {
+      method: request.method,
+      headers: upstreamHeaders,
+      body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+      redirect: "manual",
+    });
+  } catch {
+    return jsonError(502, "Operator API upstream fetch failed");
+  }
 
   const redirectLocation = upstreamResponse.headers.get("Location");
   if (
