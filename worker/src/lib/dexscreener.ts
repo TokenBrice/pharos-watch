@@ -33,6 +33,11 @@ export interface DsTrackedTokenPrice {
   priceUsd: number | null;
 }
 
+export interface DsFetchPoolsResult {
+  ok: boolean;
+  pairs: DsPair[];
+}
+
 /**
  * Resolve the tracked token side and, when possible, its USD price.
  *
@@ -80,22 +85,32 @@ export async function fetchDsTokenPools(
   tokenAddress: string,
   signal?: AbortSignal,
 ): Promise<DsPair[]> {
+  const result = await fetchDsTokenPoolsWithStatus(chain, tokenAddress, signal);
+  return result.pairs;
+}
+
+export async function fetchDsTokenPoolsWithStatus(
+  chain: string,
+  tokenAddress: string,
+  signal?: AbortSignal,
+  timeoutMs = 10_000,
+): Promise<DsFetchPoolsResult> {
   const dsChain = DS_CHAIN_MAP[chain];
-  if (!dsChain) return [];
+  if (!dsChain) return { ok: false, pairs: [] };
 
   const url = `${DS_TOKEN_API}/${dsChain}/${tokenAddress}`;
-  const timeout = AbortSignal.timeout(10_000);
+  const timeout = AbortSignal.timeout(timeoutMs);
   const res = await fetchWithRetry(url, {
     headers: { "User-Agent": USER_AGENT },
     signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
   });
-  if (!res?.ok) return [];
+  if (!res?.ok) return { ok: false, pairs: [] };
 
   try {
     const data = (await res.json()) as DsPair[] | null;
-    return Array.isArray(data) ? data : [];
+    return { ok: true, pairs: Array.isArray(data) ? data : [] };
   } catch {
-    return [];
+    return { ok: false, pairs: [] };
   }
 }
 

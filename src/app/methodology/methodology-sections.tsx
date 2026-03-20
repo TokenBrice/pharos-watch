@@ -361,7 +361,7 @@ export function MethodologySections() {
                 <li><span className="text-foreground font-medium">Pass 1b:</span> Multi-chain contract fallback (alternate chain addresses via DefiLlama)</li>
                 <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (symbol match, rate-limited to 1 call/hour)</li>
                 <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (liquidity-gated)</li>
-                <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener search (filtered by &gt;$50K liquidity, capped at 10 searches per run)</li>
+                <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first, then symbol search (filtered by &gt;$50K liquidity, capped at 10 requests per run)</li>
               </ol>
             </div>
 

@@ -77,7 +77,7 @@ Treat any new fetch-heavy work added to an existing trigger slot as competing fo
 | GeckoTerminal crawl budget | `3 minutes` | `worker/src/lib/rate-limit.ts` | Per-source crawl budget |
 | DexScreener discovery fallback budget | `2 minutes` shared fallback window | `worker/src/lib/rate-limit.ts` | Shared with other late-stage discovery fallbacks |
 | Jupiter price fallback | `50` ids/request, `5 s` timeout/request, `0` retries | `worker/src/cron/enrich-prices-passes.ts` | Solana-only enrichment pass between CMC and DexScreener |
-| DexScreener price-enrichment pass | `10` searches, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/enrich-prices.ts` | Best-effort final fallback for missing prices |
+| DexScreener price-enrichment pass | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/enrich-prices.ts` | Best-effort final fallback for missing prices; exact token-address lookups run before symbol search when available |
 | CoinMarketCap fallback | `1 call / hour`, `10 s` timeout, `0` retries | `worker/src/cron/enrich-prices.ts` | Rate-limited through cache key `cmc_last_fetch` |
 | Generic circuit breaker | opens after `3` consecutive failures, probes every `30 minutes` | `worker/src/lib/circuit-breaker.ts` | Used to stop hammering degraded upstreams |
 
@@ -95,7 +95,7 @@ Treat any new fetch-heavy work added to an existing trigger slot as competing fo
 |---|---|---|
 | CoinMarketCap price fallback | `10_000 ms` | `worker/src/cron/enrich-prices.ts` |
 | Jupiter price fallback | `5_000 ms` | `worker/src/cron/enrich-prices-passes.ts` |
-| DexScreener search fallback | up to `5_000 ms` per request | `worker/src/cron/enrich-prices.ts` |
+| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/enrich-prices.ts` |
 | Blacklist explorer / RPC reads | `15_000 ms` | `worker/src/lib/fetch-retry.ts` (default timeout) |
 | Daily digest LLM call | `120_000 ms` | `worker/src/cron/daily-digest.ts` |
 

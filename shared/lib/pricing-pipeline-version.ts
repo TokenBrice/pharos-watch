@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.8",
+  currentVersion: "2.9",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.9",
+      title: "Jupiter V3 freshness fix and exact DexScreener address fallback",
+      date: "2026-03-20",
+      effectiveAt: 1774013540,
+      summary:
+        "Stopped rejecting Jupiter V3 fallback quotes based on optional createdAt metadata and upgraded DexScreener enrichment to prefer exact token-address pool lookups before symbol search.",
+      impact: [
+        "Jupiter fallback now relies on V3 liquidity gates and peg-aware validation instead of treating optional `createdAt` metadata as a hard freshness cutoff",
+        "Tracked Solana assets can recover through Jupiter even when V3 responses include old createdAt values alongside current block-level pricing",
+        "DexScreener fallback now prefers exact chain+address pool lookups when an asset has a resolvable token address, reducing dependence on noisy symbol search results",
+        "DexScreener search remains as the last fallback path, still capped by the shared request budget and liquidity sanity gates",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.8",
       title: "Tertiary full-set FX fallback for multi-source outages",

@@ -95,7 +95,7 @@ export function applyResolvedPrice(
  *   1b. Multi-chain contract fallback
  *   2. CoinMarketCap API (rate-limited)
  *   3. Jupiter Price API for supported Solana assets
- *   4. DexScreener search API (best-effort)
+ *   4. DexScreener exact token-address pools, then symbol search (best-effort)
  *
  * Individual pass logic lives in ./enrich-prices-passes.ts.
  */

@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.6`
+- **Current methodology version:** `v2.9`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -152,7 +152,7 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 2. **Pass 1b:** alternate-chain contract fallback via DefiLlama
 3. **Pass 2:** CoinMarketCap `listings/latest` batch — prefers `cmcSlug`-based matching over symbol to avoid cross-contamination in collision groups (e.g., two coins sharing "GUSD"). Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation
-5. **Pass 4:** DexScreener search fallback with liquidity and peg-aware validation gates
+5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available, falling back to symbol search under the same liquidity and peg-aware validation gates
 
 The enrichment path is intentionally narrower than primary pricing:
 

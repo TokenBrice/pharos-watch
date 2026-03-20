@@ -96,14 +96,15 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 
 ### Enrichment Pipeline
 
-`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 4-pass system for assets still missing prices after primary fetch:
+`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 5-pass system for assets still missing prices after primary fetch:
 
 1. **Pass 1:** Contract address -> DefiLlama coins API
 2. **Pass 1b:** Multi-chain contract address fallback (tries alternate chain addresses via DefiLlama coins API)
-3. **Pass 2:** CoinMarketCap category batch (`cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — matches by symbol instead of per-slug, covering all CMC-listed stablecoins in one call (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt)
-4. **Pass 3:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-aware fallback validation. Primary sync paths now allow deep downside failures for fixed pegs when the move is being evaluated as an authoritative price, while fallback enrichment still rejects isolated bad prints below the lower bound. Commodity tokens still scale gold/silver references by `commodityOunces` for gram- and 1/1000-ounce assets; capped at 10 searches per run, no retries, 5s per-request timeout, 45s total pass budget)
+3. **Pass 2:** CoinMarketCap category batch (`cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers per-asset `cmcSlug` matching before symbol fallback, covering all CMC-listed stablecoins in one call (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt)
+4. **Pass 3:** Jupiter Price API for tracked Solana mints (liquidity-gated and peg-aware; V3 responses are not rejected solely because optional `createdAt` metadata is old)
+5. **Pass 4:** DexScreener exact token-address pool lookups when a resolvable chain+address exists, falling back to symbol search under the same >$50K liquidity and peg-aware validation gates; capped at 10 total requests per run, no retries, 5s per-request timeout, 45s total pass budget
 
-Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
+Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations. Price enrichment now reuses the same exact-address surface before falling back to search.
 
 **Price validation ordering:** sync-time price validation runs **before** `savePriceCache()` so that unreasonable enriched prices never enter the 24-hour cache. This prevents a single bad API response from poisoning the cache across multiple sync cycles. The worker now distinguishes between authoritative primary validation, fallback enrichment validation, DEX observation validation, and historical-backfill validation instead of using one identical rule for every context. The DefiLlama-down CoinGecko full-supply fallback path now follows the same price guardrails: authoritative live overrides run before enrichment, invalid CoinGecko spot prices are pre-rejected, valid fallback-run prices refresh `price_cache`, cached-price fallback can heal newly missing prices, and pending-depeg confirmation still runs after fallback detection.
 

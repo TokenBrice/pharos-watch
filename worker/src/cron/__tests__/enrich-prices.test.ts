@@ -426,6 +426,55 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0.0005);
   });
 
+  it("prefers exact DexScreener token-address lookups before symbol search", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "mystery-usd",
+        name: "Mystery USD",
+        symbol: "MUSD",
+        price: 0,
+        address: "0xabc",
+        chains: ["Base"],
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("coins.llama.fi")) {
+        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
+      }
+      if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
+        return new Response(JSON.stringify([
+          {
+            chainId: "base",
+            dexId: "aerodrome",
+            pairAddress: "0xpair",
+            baseToken: { address: "0xabc", name: "Mystery USD", symbol: "MUSD" },
+            quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+            priceUsd: "1.0004",
+            priceNative: "1.0004",
+            liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
+            volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
+            pairCreatedAt: Date.now(),
+          },
+        ]), { status: 200 });
+      }
+      if (url.includes("dexscreener.com/latest/dex/search")) {
+        return new Response(JSON.stringify({ pairs: [] }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const stats = await enrichMissingPrices(assets);
+
+    expect(stats.passDex).toBe(1);
+    expect(assets[0].price).toBe(1.0004);
+    expect(assets[0].priceSource).toBe("dexscreener");
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
+  });
+
   it("does not retry failing DexScreener fallback searches", async () => {
     const assets: PeggedAsset[] = [
       {
@@ -467,7 +516,6 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -528,6 +576,36 @@ describe("enrichMissingPrices", () => {
 
     expect(stats.passJupiter).toBe(1);
     expect(assets[0].price).toBe(1.0002);
+    expect(assets[0].priceSource).toBe("jupiter");
+    expect(stats.finalMissing).toBe(0);
+  });
+
+  it("does not reject Jupiter V3 quotes solely because createdAt is old", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      { match: "coins.llama.fi", body: { coins: {} } },
+      {
+        match: "lite-api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 0.9998,
+            liquidity: 250_000,
+            createdAt: "2025-01-06T18:38:31Z",
+          },
+        },
+      },
+    ]);
+
+    const stats = await enrichMissingPrices(assets);
+
+    expect(stats.passJupiter).toBe(1);
+    expect(assets[0].price).toBe(0.9998);
     expect(assets[0].priceSource).toBe("jupiter");
     expect(stats.finalMissing).toBe(0);
   });

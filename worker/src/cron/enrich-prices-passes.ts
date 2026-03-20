@@ -12,6 +12,7 @@ import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { getCache, setCache } from "../lib/db-cache";
 import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import { DLPriceResponseSchema } from "../lib/schemas";
+import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../lib/dexscreener";
 import {
   buildPriceReasonablenessOptions,
   isReasonablePrice,
@@ -22,12 +23,14 @@ import {
   type PeggedAsset,
 } from "./enrich-prices";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { resolveChainId } from "@shared/lib/chains";
+import { DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
 
 // ── Shared constants ────────────────────────────────────────────────
 
 const CMC_REQUEST_TIMEOUT_MS = 10_000;
 const CMC_MAX_RETRIES = 0;
-const DEXSCREENER_MAX_SEARCHES = 10;
+const DEXSCREENER_MAX_REQUESTS = 10;
 const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
 const DEXSCREENER_MAX_RETRIES = 0;
 const DEXSCREENER_PASS_BUDGET_MS = 45_000;
@@ -36,7 +39,6 @@ const JUPITER_MAX_IDS_PER_REQUEST = 50;
 const JUPITER_REQUEST_TIMEOUT_MS = 5_000;
 const JUPITER_MAX_RETRIES = 0;
 const JUPITER_MIN_LIQUIDITY_USD = 50_000;
-const JUPITER_MAX_AGE_SEC = 3600;
 
 /** Map DL stablecoins API chain names → DL coins API prefixes */
 const CHAIN_PREFIX_MAP: Record<string, string> = {
@@ -135,6 +137,11 @@ interface JupiterPriceEntry {
   createdAt?: string | number;
 }
 
+interface DexScreenerTarget {
+  chain: string;
+  address: string;
+}
+
 const SOLANA_MINT_BY_ID = new Map<string, string>();
 for (const [id, meta] of ACTIVE_META_BY_ID) {
   const deployments = [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
@@ -142,6 +149,82 @@ for (const [id, meta] of ACTIVE_META_BY_ID) {
   if (solanaDeployment?.address) {
     SOLANA_MINT_BY_ID.set(id, solanaDeployment.address);
   }
+}
+
+const ADDRESS_CHAIN_ALIASES: Record<string, string> = {
+  avax: "avalanche",
+};
+
+function resolveDexTargetChain(rawChain: string): string | null {
+  const normalized = rawChain.trim().toLowerCase();
+  return resolveChainId(ADDRESS_CHAIN_ALIASES[normalized] ?? normalized);
+}
+
+function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
+  const rawAddress = asset.address?.trim();
+  if (!rawAddress) return [];
+
+  const targets: DexScreenerTarget[] = [];
+  const seen = new Set<string>();
+  const pushTarget = (chain: string | null, address: string) => {
+    if (!chain || !DS_CHAIN_MAP[chain]) return;
+    const normalizedAddress = address.trim();
+    if (!normalizedAddress) return;
+    const key = `${chain}:${normalizedAddress.toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    targets.push({ chain, address: normalizedAddress });
+  };
+
+  if (rawAddress.includes(":")) {
+    const [rawChain, ...rest] = rawAddress.split(":");
+    const tokenAddress = rest.join(":").trim();
+    pushTarget(resolveDexTargetChain(rawChain), tokenAddress);
+    return targets;
+  }
+
+  for (const rawChain of asset.chains ?? []) {
+    pushTarget(resolveChainId(rawChain), rawAddress);
+  }
+
+  if (targets.length === 0) {
+    pushTarget(rawAddress.startsWith("0x") ? "ethereum" : "solana", rawAddress);
+  }
+
+  return targets;
+}
+
+function medianDexPrice(prices: number[]): number | null {
+  if (prices.length === 0) return null;
+  const sorted = [...prices].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)] ?? null;
+}
+
+function resolveDexScreenerAddressPrice(
+  asset: PeggedAsset,
+  trackedAddress: string,
+  pairs: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>["pairs"],
+  fxRates: Record<string, number> | undefined,
+): number | null {
+  const prices = pairs
+    .map((pair) => {
+      const tvl = pair.liquidity?.usd ?? 0;
+      if (tvl < DEXSCREENER_MIN_LIQUIDITY_USD) return null;
+      return getDsTrackedTokenPriceUsd(pair, trackedAddress).priceUsd;
+    })
+    .filter((price): price is number => typeof price === "number" && Number.isFinite(price) && price > 0);
+
+  const price = medianDexPrice(prices);
+  if (price == null) return null;
+
+  return isReasonablePrice(
+    price,
+    asset.pegType as string | undefined,
+    fxRates,
+    buildPriceReasonablenessOptions(asset),
+  )
+    ? price
+    : null;
 }
 
 // ── Pass 1 + 1b: DefiLlama contract addresses ──────────────────────
@@ -364,9 +447,10 @@ export async function runCmcPass(
 // ── Pass 3: DexScreener ─────────────────────────────────────────────
 
 /**
- * Best-effort fallback: search DexScreener for remaining unpriced
- * assets. Capped at {@link DEXSCREENER_MAX_SEARCHES} requests with a
- * total pass budget of 45 seconds.
+ * Best-effort fallback: try exact DexScreener token-pair lookups when the
+ * asset has a usable chain+address, then fall back to symbol search.
+ * Capped at {@link DEXSCREENER_MAX_REQUESTS} total requests with a total
+ * pass budget of 45 seconds.
  *
  * Like {@link runCmcPass}, this does NOT catch errors — the caller
  * wraps it in the shared "passes-2-3" try/catch.
@@ -383,8 +467,8 @@ export async function runDexScreenerPass(
     .map((a, i) => ({ asset: a, index: i }))
     .filter((m) => hasMissingPrice(m.asset));
 
-  if (stillMissing.length > DEXSCREENER_MAX_SEARCHES) {
-    console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_SEARCHES}`);
+  if (stillMissing.length > DEXSCREENER_MAX_REQUESTS) {
+    console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_REQUESTS} requests`);
   }
 
   const dexscreenerAllowed =
@@ -392,31 +476,72 @@ export async function runDexScreenerPass(
   let dexAttempts = 0;
   let dexSuccessfulCalls = 0;
   if (dexscreenerAllowed) {
-    const dexCandidates = stillMissing.slice(0, DEXSCREENER_MAX_SEARCHES);
+    const dexCandidates = stillMissing.slice(0, DEXSCREENER_MAX_REQUESTS);
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
-    for (const [idx, m] of dexCandidates.entries()) {
+    for (const m of dexCandidates) {
+      if (dexAttempts >= DEXSCREENER_MAX_REQUESTS) break;
       try {
         // DexScreener is the last, best-effort fallback. Keep the whole pass
         // time-bounded so a wave of missing prices cannot exhaust the cron slot.
         const remainingBudgetMs = dexBudgetDeadlineMs - Date.now();
         if (remainingBudgetMs <= 0) {
           console.warn(
-            `[enrich] DexScreener pass budget exhausted after ${dexAttempts}/${dexCandidates.length} searches`,
+            `[enrich] DexScreener pass budget exhausted after ${dexAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
           );
           break;
         }
 
-        if (idx > 0) {
+        let resolvedFromDex = false;
+        const exactTargets = buildDexScreenerTargets(m.asset);
+        for (const target of exactTargets) {
+          if (dexAttempts >= DEXSCREENER_MAX_REQUESTS) break;
+          const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
+          if (exactRemainingBudgetMs <= 0) break;
+
+          if (dexAttempts > 0) {
+            await sleepWithSignal(200, signal);
+          }
+
+          dexAttempts++;
+          const { ok, pairs } = await fetchDsTokenPoolsWithStatus(
+            target.chain,
+            target.address,
+            signal,
+            Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
+          );
+          if (ok) dexSuccessfulCalls++;
+
+          const exactPrice = resolveDexScreenerAddressPrice(m.asset, target.address, pairs, fxRates);
+          if (exactPrice == null) continue;
+
+          applyResolvedPrice(assets[m.index], exactPrice, "dexscreener", "fallback");
+          resolved++;
+          resolvedFromDex = true;
+          break;
+        }
+
+        if (resolvedFromDex || dexAttempts >= DEXSCREENER_MAX_REQUESTS) {
+          continue;
+        }
+
+        const searchRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
+        if (searchRemainingBudgetMs <= 0) {
+          console.warn(
+            `[enrich] DexScreener pass budget exhausted after ${dexAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
+          );
+          break;
+        }
+
+        if (dexAttempts > 0) {
           await sleepWithSignal(200, signal);
         }
 
         dexAttempts++;
-        const timeoutMs = Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, remainingBudgetMs);
         const res = await fetchWithRetry(
           `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
-          { headers: { "User-Agent": USER_AGENT }, signal },
+          { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
           DEXSCREENER_MAX_RETRIES,
-          { timeoutMs },
+          { timeoutMs: Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, searchRemainingBudgetMs) },
         );
         if (!res) {
           console.warn(`[enrich] DexScreener returned no response for ${m.asset.symbol}`);
@@ -441,12 +566,12 @@ export async function runDexScreenerPass(
         if (candidates.length === 0) continue;
 
         // Take median price across qualifying pools (more robust than single max-liquidity pool)
-        const candidatePrices = candidates
+        const price = medianDexPrice(
+          candidates
           .map((c) => parseFloat(c.priceUsd))
           .filter((p) => !isNaN(p) && isFinite(p) && p > 0)
-          .sort((a, b) => a - b);
-        if (candidatePrices.length === 0) continue;
-        const price = candidatePrices[Math.floor(candidatePrices.length / 2)];
+        );
+        if (price == null) continue;
         // Sanity check: peg-type-aware range
         if (isReasonablePrice(
           price,
@@ -519,12 +644,6 @@ export async function runJupiterPass(
       if (usdPrice == null || !Number.isFinite(usdPrice) || usdPrice <= 0) continue;
       if (liquidity == null || !Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD) continue;
 
-      const createdAt = payload.createdAt != null ? new Date(payload.createdAt).getTime() : null;
-      if (createdAt != null && Number.isFinite(createdAt)) {
-        const ageSec = (Date.now() - createdAt) / 1000;
-        if (ageSec > JUPITER_MAX_AGE_SEC) continue;
-      }
-
       if (!isReasonablePrice(
         usdPrice,
         entry.asset.pegType as string | undefined,
@@ -534,6 +653,9 @@ export async function runJupiterPass(
         continue;
       }
 
+      // Jupiter Price API V3 documents blockId as the recency signal. Live
+      // responses may still include createdAt metadata, but it is not a
+      // reliable freshness guard for these fallback quotes.
       applyResolvedPrice(assets[entry.index], usdPrice, "jupiter", "fallback");
       resolved++;
     }

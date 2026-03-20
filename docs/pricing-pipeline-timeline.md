@@ -1,6 +1,38 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.6` (2026-02-01 -> 2026-03-19).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.9` (2026-02-01 -> 2026-03-20).
+
+---
+
+## v2.9 - Jupiter V3 freshness fix and exact DexScreener address fallback (Mar 20, 2026)
+
+**Commit:** `unreleased`
+
+- Jupiter fallback no longer rejects V3 quotes solely because optional `createdAt` metadata is old
+- Jupiter recovery continues to rely on liquidity gating and peg-aware validation
+- DexScreener enrichment now prefers exact chain+address pool lookups before falling back to symbol search
+- DexScreener search remains as the last fallback path under the same bounded request budget
+
+---
+
+## v2.8 - Tertiary full-set FX fallback for multi-source outages (Mar 20, 2026)
+
+**Commit:** `unreleased`
+
+- Added ExchangeRate-API as a tertiary live full-set FX fallback
+- Frankfurter remains preferred for the core fiat set
+- The secondary `fawazahmed0/currency-api` mirrors still cover CNH/RUB/UAH/ARS and can backstop the wider fiat set
+- Pricing methodology and About page now disclose ExchangeRate-API as an externally visible FX reference source
+
+---
+
+## v2.7 - Secondary FX full-set live fallback for Frankfurter outages (Mar 20, 2026)
+
+**Commit:** `unreleased`
+
+- Expanded the dated secondary FX mirror path so it can backstop the wider fiat reference set
+- Prevents immediate cached-only FX runs during Frankfurter outages when the secondary feed is healthy
+- Preserves daily source-date semantics in per-peg FX metadata during that live fallback path
 
 ---
 
