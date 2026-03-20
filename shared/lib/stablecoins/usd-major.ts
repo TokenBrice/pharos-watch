@@ -280,6 +280,18 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
       { chain: "aptos", address: "0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2", decimals: 6 },
       { chain: "abcore", address: "0x111111d2bf19e43c34263401e0cad979ed1cdb61", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "usd1-world-liberty-financial",
+      display: { url: "https://por.worldlibertyfinancial.com", label: "USD1 Proof of Reserves" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        label: "U.S. Treasury Bills, Money Market Funds & Cash",
+        risk: "very-low",
+      },
+    },
     reserves: [
       // Source: BitGo monthly attestation reports (AICPA criteria). Exact % not published; estimated from collateral description.
       { name: "U.S. Treasury Bills", pct: 60, risk: "very-low" },
@@ -355,6 +367,18 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
       { chain: "stellar", address: "PYUSD-GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5", decimals: 7 },
       { chain: "flow", address: "0x99af3eea856556646c98c8b9b2548fe815240750", decimals: 6 },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "pyusd-paypal",
+      display: { url: "https://www.paxos.com/pyusd-transparency", label: "Paxos Transparency" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        label: "USD deposits, U.S. Treasuries & reverse repos",
+        risk: "very-low",
+      },
+    },
     reserves: [
       // Source: Paxos KPMG Feb 2025 attestation ($744.6M repos, $25.6M cash of $770.1M total)
       { name: "U.S. Treasury Reverse Repos", pct: 97, risk: "very-low" },
@@ -647,6 +671,18 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0xc708b6887db46005da033501f8aebee72d191a5d", decimals: 18 },
       { chain: "base",     address: "0xc708b6887db46005da033501f8aebee72d191a5d", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "usdtb-ethena",
+      display: { url: "https://www.anchorage.com/platform/usdtb-reserve-attestations", label: "Anchorage Attestations" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        label: "BlackRock BUIDL (U.S. T-Bills, cash, repos) & USDC reserve",
+        risk: "low",
+      },
+    },
     reserves: [
       // Source: Ethena docs, The Block, CoinDesk Mar 2025. Confidence: High
       { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 90, risk: "low", coinId: "buidl-blackrock" },

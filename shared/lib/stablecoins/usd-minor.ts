@@ -748,6 +748,18 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd", decimals: 2 },
       { chain: "near", address: "056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near", decimals: 2 },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "gusd-gemini",
+      display: { url: "https://www.gemini.com/dollar", label: "Gemini Transparency" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        label: "U.S. Treasury bills & cash deposits",
+        risk: "very-low",
+      },
+    },
     reserves: [
       { name: "U.S. Treasury bills (<=3 month maturity)", pct: 62, risk: "very-low" },
       { name: "Cash deposits (State Street, Western Alliance Bank)", pct: 38, risk: "very-low" },
@@ -773,6 +785,18 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { chain: "solana", address: "HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM", decimals: 6 },
       { chain: "bsc", address: "0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "usdp-paxos",
+      display: { url: "https://www.paxos.com/usdp-transparency", label: "Paxos Transparency" },
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        label: "U.S. Treasury bills, reverse repos & cash deposits",
+        risk: "very-low",
+      },
+    },
     reserves: [
       { name: "U.S. Treasury bills (<90 day maturity)", pct: 60, risk: "very-low" },
       { name: "Overnight reverse repos (secured by Treasuries)", pct: 20, risk: "very-low" },
@@ -2385,6 +2409,42 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     ],
   }),
 
+  // Supply ~$2.14M (Mar 2026) — below $5M soft threshold, but native stablecoin of Sonic ecosystem (strategic importance)
+  usd("ussd-sonic-labs", "US Sonic Dollar", "USSD", "rwa-backed", "centralized", {
+    detailProvider: "coingecko",
+    geckoId: "us-sonic-dollar",
+    rwa: true,
+    yieldBearing: false,
+    navToken: false,
+    canBeBlacklisted: true,
+    deploymentModel: "native-multichain",
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "single-entity",
+    collateral: "Short-duration tokenized U.S. Treasury products held by approved custodians: BlackRock BUIDL (USD Institutional Digital Liquidity Fund), Superstate USTB (Short Duration U.S. Government Securities Fund), and WisdomTree WTGXX (Government Money Market Digital Fund); supported minting collateral also includes USDC, USDT, PYUSD, and USDB",
+    pegMechanism: "1:1 permissionless mint and redemption via non-custodial smart contracts built on Frax's frxUSD infrastructure; users mint with any approved USD asset (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX) at zero fee; redeem into any supported USD asset at any time with no lockup or withdrawal delay; cross-chain via CCTP; yield from Treasury reserves flows to the Sonic ecosystem rather than to USSD holders",
+    jurisdiction: { country: "United States" },
+    proofOfReserves: { type: "real-time", url: "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf", provider: "Frax Finance" },
+    links: [
+      { label: "Website", url: "https://soniclabs.com/ussd" },
+      { label: "Twitter", url: "https://x.com/SonicLabs" },
+      { label: "Docs", url: "https://docs.soniclabs.com/sonic/ussd" },
+    ],
+    contracts: [
+      { chain: "sonic",    address: "0x000000000eccff26b795f73fb0a70d48da657fef", decimals: 18 },
+      { chain: "ethereum", address: "0x000000000eccff26b795f73fb0a70d48da657fef", decimals: 18 },
+      { chain: "base",     address: "0x000000000eccff26b795f73fb0a70d48da657fef", decimals: 18 },
+      { chain: "arbitrum", address: "0x000000000eccff26b795f73fb0a70d48da657fef", decimals: 18 },
+      { chain: "optimism", address: "0x000000000eccff26b795f73fb0a70d48da657fef", decimals: 18 },
+      { chain: "scroll",   address: "0x000000000eccff26b795f73fb0a70d48da657fef", decimals: 18 },
+    ],
+    reserves: [
+      { name: "BlackRock BUIDL (USD Institutional Digital Liquidity Fund)", pct: 50, risk: "low", coinId: "buidl-blackrock" },
+      { name: "Superstate USTB (Short Duration U.S. Government Securities Fund)", pct: 30, risk: "low", coinId: "ustb-superstate" },
+      { name: "WisdomTree WTGXX (Government Money Market Digital Fund)", pct: 20, risk: "low" },
+    ],
+  }),
+
   // ── dTRINITY ──────────────────────────────────────────────────────
   usd("dusd-dtrinity", "dTRINITY dUSD", "dUSD", "crypto-backed", "centralized-dependent", {
     detailProvider: "coingecko",
@@ -2425,6 +2485,36 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     notices: [
       { type: "danger", title: "Recent Exploit", message: "dTRINITY protocol was exploited on March 17 2026, dUSD should be considered at risk. https://x.com/DefimonAlerts/status/2033868831504965995" },
       { type: "warning", title: "Sonic deployment paused", message: "dUSD minting and redemption on Sonic is currently paused per the dTRINITY app." },
+    ],
+  }),
+
+  usd("dusd-alto", "Alto DUSD", "DUSD", "crypto-backed", "decentralized", {
+    detailProvider: "coingecko",
+    geckoId: "alto-dusd",
+    yieldBearing: false, rwa: false, navToken: false,
+    canBeBlacklisted: "possible",
+    collateral: "Over-collateralized on-chain assets in isolated lending markets on Ethereum: mint markets accept WETH, wstETH (Lido), rETH (Rocket Pool), mETH (Mantle LST), sUSDe (Ethena), and Syrup USDC; borrow markets accept cbBTC, WBTC, tBTC, sUSDe, Syrup USDC, and PAXG; each market is independently isolated with per-asset risk parameters; a Peg Stability Module enables 1:1 USDC↔DUSD swaps capped at 5M USDC",
+    pegMechanism: "Overcollateralized minting via isolated lending markets (mint and borrow); peg backstopped by a PSM enabling 1:1 USDC↔DUSD swaps at 0.20% fee (5M USDC cap); arbitrageurs exploit the PSM rate vs. market price to restore peg; all markets governed by ALTO token holder votes",
+    links: [
+      { label: "Website", url: "https://altofoundation.org/" },
+      { label: "Twitter", url: "https://x.com/alto_money" },
+      { label: "Docs", url: "https://docs.alto.money/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x63d74d22e689c715a04f2c13962b1f77f443d35b", decimals: 18 },
+    ],
+    collateralQuality: "exotic",
+    custodyModel: "onchain",
+    governanceQuality: "dao-governance",
+    dependencies: [
+      { id: "usdc-circle", weight: 0.1, type: "mechanism" },
+    ],
+    reserves: [
+      { name: "WETH / wstETH / rETH / mETH (ETH and ETH LSTs, mint markets)", pct: 55, risk: "medium" },
+      { name: "cbBTC / WBTC / tBTC (BTC tokens, borrow markets)", pct: 20, risk: "medium" },
+      { name: "sUSDe (Ethena, mint & borrow markets)", pct: 15, risk: "high" },
+      { name: "Syrup USDC (yield-bearing USDC wrapper, mint & borrow markets)", pct: 5, risk: "medium" },
+      { name: "USDC (PSM backstop, 5M cap)", pct: 5, risk: "low", coinId: "usdc-circle" },
     ],
   }),
 
