@@ -8,7 +8,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Current coverage:** 49 live-enabled stablecoins across 25 registered adapters
+- **Current coverage:** 54 live-enabled stablecoins across 25 registered adapters
 - **Storage:** `reserve_composition`, `reserve_sync_state`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health

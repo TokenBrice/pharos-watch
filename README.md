@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 166 stablecoins in repo metadata, including 158 active assets on public data surfaces, 8 pre-launch entries, and 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 167 stablecoins in repo metadata, including 159 active assets on public data surfaces, 8 pre-launch entries, and 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
