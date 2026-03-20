@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 import {
   onchainRateLimit, fetchCgTokenPools, parseCgPoolVolume, CG_CHAIN_MAP,
@@ -156,7 +156,7 @@ export function mergeCgPools(
   let withBalance = 0;
 
   for (const [stablecoinId, pools] of cgNewPools) {
-    const meta = ACTIVE_STABLECOINS.find((s) => s.id === stablecoinId);
+    const meta = TRACKED_META_BY_ID.get(stablecoinId);
     if (!meta) continue;
 
     let m = metrics.get(stablecoinId);
@@ -331,7 +331,7 @@ export function mergeGtPools(
   let merged = 0;
 
   for (const [stablecoinId, pools] of gtNewPools) {
-    const meta = ACTIVE_STABLECOINS.find((s) => s.id === stablecoinId);
+    const meta = TRACKED_META_BY_ID.get(stablecoinId);
     if (!meta) continue;
 
     let m = metrics.get(stablecoinId);

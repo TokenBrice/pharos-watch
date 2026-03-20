@@ -440,6 +440,7 @@ export async function syncDexLiquidity(
     scores: scoreResults,
     globalAgg,
     retainedPoolsByStablecoin,
+    tvlStabilityMap,
   } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
   const currentCoverage = scoreResults.size;
   const [
@@ -562,8 +563,8 @@ export async function syncDexLiquidity(
   // 8. Write daily historical snapshots
   await writeHistoricalSnapshots(db, scoreResults);
 
-  // 9. Compute and persist depth stability from 30-day history
-  await computeDepthStability(db);
+  // 9. Compute and persist depth stability (reuses data already loaded during scoring)
+  await computeDepthStability(db, tvlStabilityMap);
 
   const degraded =
     criticalSourceFailures.length > 0 ||

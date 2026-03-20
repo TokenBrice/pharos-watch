@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type {
@@ -321,6 +321,7 @@ export async function computeStablecoinScores(
   scores: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
+  tvlStabilityMap: Map<string, number>;
 }> {
   let tvlStabilityMap = new Map<string, number>();
   let volumeStabilityMap = new Map<string, number>();
@@ -526,13 +527,16 @@ export async function computeStablecoinScores(
     chainTvl: globalChainTvl,
   };
 
-  return { scores: results, globalAgg, retainedPoolsByStablecoin };
+  return { scores: results, globalAgg, retainedPoolsByStablecoin, tvlStabilityMap };
 }
 
-/** Compute depth stability (CV-based) from 30-day history and persist to D1. */
-export async function computeDepthStability(db: D1Database): Promise<void> {
+/** Compute depth stability (CV-based) and persist to D1. Accepts pre-loaded data to avoid redundant DB scan. */
+export async function computeDepthStability(
+  db: D1Database,
+  preloadedTvlStabilityMap?: Map<string, number>,
+): Promise<void> {
   try {
-    const { tvlStabilityMap } = await loadConfidentHistoryStability(db);
+    const tvlStabilityMap = preloadedTvlStabilityMap ?? (await loadConfidentHistoryStability(db)).tvlStabilityMap;
 
     const stabilityStmts: D1PreparedStatement[] = [];
     stabilityStmts.push(
@@ -635,7 +639,7 @@ export async function computeDexPrices(
     // Persist one aggregate per protocol for the primary-pricing bridge.
     const protocolSources = aggregateProtocolSources(collapsedObservations);
 
-    const meta = ACTIVE_STABLECOINS.find((s) => s.id === id);
+    const meta = TRACKED_META_BY_ID.get(id);
     const symbol = meta?.symbol ?? id;
 
     priceStmts.push(

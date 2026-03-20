@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { BLOCKED_DEX_IDS, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
 import {
@@ -172,7 +172,7 @@ export function processPoolMetrics(
     }
 
     for (const id of matchedIds) {
-      const meta = ACTIVE_STABLECOINS.find((s) => s.id === id);
+      const meta = TRACKED_META_BY_ID.get(id);
       if (!meta) continue;
 
       let m = metrics.get(id);

@@ -91,6 +91,9 @@ export async function fetchDsFallbackPools(
       if (pairs.length === 0) continue;
 
       for (const pair of pairs) {
+        // Guard against malformed DexScreener responses (missing token fields)
+        if (!pair.baseToken?.address || !pair.quoteToken?.address || !pair.pairAddress) continue;
+
         // Quality gates
         const tvl = pair.liquidity?.usd ?? 0;
         if (tvl < 1_000) continue;

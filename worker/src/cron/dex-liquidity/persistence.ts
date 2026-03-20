@@ -167,6 +167,25 @@ export async function persistScores(
       ),
   );
 
+  // Clean up orphaned rows from stablecoins no longer in the tracked set.
+  // These can accumulate when coins are removed from ACTIVE_STABLECOINS.
+  const validIds = new Set(ACTIVE_STABLECOINS.map((m) => m.id));
+  validIds.add("__global__");
+  try {
+    const existingRows = await db
+      .prepare("SELECT stablecoin_id FROM dex_liquidity")
+      .all<{ stablecoin_id: string }>();
+    for (const row of existingRows.results ?? []) {
+      if (!validIds.has(row.stablecoin_id)) {
+        stmts.push(
+          db.prepare("DELETE FROM dex_liquidity WHERE stablecoin_id = ?").bind(row.stablecoin_id),
+        );
+      }
+    }
+  } catch (err) {
+    console.warn("[dex-liquidity] Failed to check for orphaned rows:", err);
+  }
+
   // D1 batch limit — chunk
   await batchExecute(db, stmts);
 
