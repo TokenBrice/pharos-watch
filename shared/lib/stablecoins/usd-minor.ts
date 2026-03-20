@@ -34,6 +34,14 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       { chain: "aurora", address: "0xe4b9e004389d91e4134a28f19bd833cba1d994b6", decimals: 18 },
       { chain: "fraxtal", address: "0xfc00000000000000000000000000000000000002", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "frax",
+      version: 1,
+      semantics: "attestation-mix",
+      breakerScope: "frax-frax",
+      display: { url: "https://frax.com/transparency", label: "Frax Transparency" },
+      inputs: { primary: { kind: "http-json", url: "https://api.frax.finance/combineddata/" } },
+    },
     reserves: [
       // Source: LlamaRisk Jul 2025, Chaos Labs, Frax docs. Confidence: Medium
       { name: "USTB (Superstate tokenized T-bills)", pct: 50, risk: "low" },
@@ -311,6 +319,7 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
       adapter: "frax",
       version: 1,
       semantics: "attestation-mix",
+      breakerScope: "frxusd-frax",
       display: { url: "https://frax.com/transparency", label: "Frax Transparency" },
       inputs: { primary: { kind: "http-json", url: "https://api.frax.finance/combineddata/" } },
     },
@@ -1222,6 +1231,21 @@ export const USD_MINOR_COINS: StablecoinMeta[] = [
     contracts: [
       { chain: "blast", address: "0x4300000000000000000000000000000000000003", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "usdb-blast",
+      display: { url: "https://blast.io/", label: "Blast" },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "blast", rpcMode: "public-rpc" },
+      },
+      params: {
+        label: "DAI / sDAI and bridged stablecoin reserve basket",
+        risk: "low",
+        rpcUrl: "https://rpc.blast.io",
+      },
+    },
     reserves: [
       { name: "DAI / sDAI (via MakerDAO DSR)", pct: 60, risk: "low", coinId: "dai-makerdao" },
       { name: "USDC (bridged)", pct: 25, risk: "low", coinId: "usdc-circle" },

@@ -42,6 +42,20 @@ export const COMMODITY_COINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x45804880de22913dafe09f4980848ece6ecbaf78", decimals: 18 },
     ],
+    liveReservesConfig: {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      breakerScope: "paxg-paxos",
+      display: { url: "https://www.paxos.com/paxg-transparency", label: "Paxos Transparency" },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        label: "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
+        risk: "very-low",
+      },
+    },
     reserves: [
       { name: "Physical gold bars (LBMA Good Delivery, Brink's London vaults)", pct: 100, risk: "very-low" },
     ],

@@ -128,6 +128,19 @@ export const NON_USD_COINS: StablecoinMeta[] = [
       { chain: "stellar", address: "GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G", decimals: 7 },
       { chain: "solana", address: "DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52", decimals: 2 },
     ],
+    liveReservesConfig: {
+      adapter: "sgforge-coinvertible",
+      version: 1,
+      semantics: "attestation-mix",
+      breakerScope: "eurcv-societe-generale-forge",
+      display: { url: "https://www.sgforge.com/product/coinvertible/", label: "SG Forge CoinVertible" },
+      inputs: {
+        primary: { kind: "http-html", url: "https://www.sgforge.com/product/coinvertible/" },
+      },
+      params: {
+        coinType: "eur",
+      },
+    },
     reserves: [
       { name: "Euro cash deposits at Societe Generale", pct: 100, risk: "very-low" },
     ],

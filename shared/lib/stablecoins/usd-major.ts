@@ -777,9 +777,45 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
       { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low", coinId: "ousg-ondo-finance" },
       { name: "USDC (Circle)", pct: 2, risk: "low", coinId: "usdc-circle" },
     ],
-    // liveReservesConfig disabled 2026-03-15: UsualM token lacks a DefiLlama
-    // price feed, causing the evm-branch-balances adapter to fail permanently.
-    // Re-enable once coins.llama.fi covers the UsualM token (0x4Cbc…6470).
+    liveReservesConfig: {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "usd0-usual",
+      display: { url: "https://usual.money/", label: "Usual" },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "etherscan-proxy" },
+      },
+      params: {
+        branches: [
+          {
+            name: "Hashnote USYC",
+            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+            token: { chain: "ethereum", address: "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b", decimals: 6 },
+            risk: "low",
+            coinId: "usyc-hashnote",
+          },
+          {
+            name: "M by M^0 (via UsualM wrapper)",
+            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+            token: { chain: "ethereum", address: "0x4Cbc25559DbBD1272EC5B64c7b5F48a2405e6470", decimals: 18 },
+            risk: "low",
+            coinId: "m-m0",
+            depType: "wrapper",
+            priceUsd: 1,
+          },
+          {
+            name: "USDtb by Ethena (via UsualUSDtb wrapper)",
+            holder: "0xdd82875f0840AAD58a455A70B88eEd9F59ceC7c7",
+            token: { chain: "ethereum", address: "0x58073531a2809744D1bF311D30FD76B27D662abB", decimals: 18 },
+            risk: "low",
+            coinId: "usdtb-ethena",
+            depType: "wrapper",
+            priceUsd: 1,
+          },
+        ],
+      },
+    },
   }),
   usd("gho-aave", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     llamaId: "118",
@@ -887,6 +923,16 @@ export const USD_MAJOR_COINS: StablecoinMeta[] = [
       { chain: "ton", address: "EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89", decimals: 6 },
       { chain: "solana", address: "9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u", decimals: 6 },
     ],
+    liveReservesConfig: {
+      adapter: "fdusd-transparency",
+      version: 1,
+      semantics: "attestation-mix",
+      breakerScope: "fdusd-first-digital",
+      display: { url: "https://www.firstdigitallabs.com/transparency", label: "First Digital Labs Transparency" },
+      inputs: {
+        primary: { kind: "http-html", url: "https://www.firstdigitallabs.com/transparency" },
+      },
+    },
     reserves: [
       // Source: First Digital Labs transparency, Prescient Jan 31, 2026. Confidence: High
       { name: "U.S. Treasury Bills", pct: 74, risk: "very-low" },

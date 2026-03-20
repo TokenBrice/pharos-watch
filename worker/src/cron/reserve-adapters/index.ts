@@ -9,6 +9,7 @@ import { fetchCrvUsdReserves } from "./crvusd";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
 import { fetchFalconReserves } from "./falcon";
+import { fetchFdusdTransparencyReserves } from "./fdusd-transparency";
 import { fetchFraxReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
@@ -18,6 +19,7 @@ import { fetchMentoReserves } from "./mento";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
+import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchTetherReserves } from "./tether";
@@ -57,6 +59,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
   ethena: fetchEthenaReserves,
   falcon: fetchFalconReserves,
+  "fdusd-transparency": fetchFdusdTransparencyReserves,
   frax: fetchFraxReserves,
   fx: fetchFxReserves,
   gho: fetchGhoReserves,
@@ -65,6 +68,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   mento: fetchMentoReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   reservoir: fetchReservoirReserves,
+  "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
   tether: fetchTetherReserves,

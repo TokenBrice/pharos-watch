@@ -18,6 +18,7 @@ interface BranchConfig {
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
+  priceUsd?: number;
 }
 
 interface BranchBalanceParams {
@@ -30,6 +31,12 @@ function readParams(config: LiveReservesConfig): BranchBalanceParams {
   const params = (config.params ?? {}) as Partial<BranchBalanceParams>;
   if (!Array.isArray(params.branches) || params.branches.length === 0) {
     throw new Error("evm-branch-balances adapter requires params.branches");
+  }
+  for (const branch of params.branches) {
+    if (!branch || branch.priceUsd == null) continue;
+    if (!Number.isFinite(branch.priceUsd) || branch.priceUsd <= 0) {
+      throw new Error(`evm-branch-balances adapter received invalid priceUsd for ${branch.name}`);
+    }
   }
   return params as BranchBalanceParams;
 }
@@ -66,8 +73,9 @@ export async function fetchEvmBranchBalancesReserves(
     throw new Error("evm-branch-balances adapter found no non-zero balances");
   }
 
+  const branchesNeedingPrices = pricedBranches.filter(({ branch }) => branch.priceUsd == null);
   const priceMap = await fetchDefiLlamaPrices(
-    pricedBranches.map(({ branch }) => ({
+    branchesNeedingPrices.map(({ branch }) => ({
       key: branch.name,
       chain: branch.token.chain,
       address: branch.token.address,
@@ -77,7 +85,7 @@ export async function fetchEvmBranchBalancesReserves(
 
   const slices = slicesFromValues(
     pricedBranches.map(({ branch, balance }) => {
-      const price = priceMap.get(branch.name);
+      const price = branch.priceUsd ?? priceMap.get(branch.name);
       if (price == null) {
         throw new Error(`Missing DefiLlama price for ${branch.name}`);
       }

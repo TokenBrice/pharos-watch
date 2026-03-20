@@ -246,6 +246,58 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.slices[0].depType).toBe("wrapper");
   });
 
+  it("uses fixed price overrides for branches without DefiLlama pricing", async () => {
+    vi.mocked(fetchErc20Balance)
+      .mockResolvedValueOnce(1_000_000n) // 1 USYC (6 dec)
+      .mockResolvedValueOnce(2_000_000_000_000_000_000n); // 2 wrapper tokens (18 dec)
+
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
+      new Map([["USYC", 1.12]]),
+    );
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "USYC",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+            risk: "low",
+          },
+          {
+            name: "Wrapped stable",
+            holder: "0xCCC",
+            token: { chain: "ethereum", address: "0xDDD", decimals: 18 },
+            risk: "low",
+            priceUsd: 1,
+          },
+        ],
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.slices).toEqual([
+      { name: "USYC", pct: 35.9, risk: "low" },
+      { name: "Wrapped stable", pct: 64.1, risk: "low" },
+    ]);
+    expect(fetchDefiLlamaPrices).toHaveBeenCalledWith(
+      [
+        {
+          key: "USYC",
+          chain: "ethereum",
+          address: "0xBBB",
+        },
+      ],
+      signal,
+    );
+  });
+
   it("throws when params.branches is missing", async () => {
     const config: LiveReservesConfig = {
       adapter: "evm-branch-balances",
@@ -275,6 +327,32 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
       "requires params.branches",
+    );
+  });
+
+  it("throws on invalid fixed price overrides", async () => {
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "USYC",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+            risk: "low",
+            priceUsd: 0,
+          },
+        ],
+      },
+    };
+
+    await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
+      "invalid priceUsd",
     );
   });
 });

@@ -8,7 +8,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Current coverage:** 43 live-enabled stablecoins across 23 registered adapters
+- **Current coverage:** 49 live-enabled stablecoins across 25 registered adapters
 - **Storage:** `reserve_composition`, `reserve_sync_state`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -205,14 +205,15 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `btcfi` | `http-json` | `collateral-mix` | 1 |
 | `chainlink-nav` | `onchain-evm` | `single-asset` | 3 |
 | `chainlink-por` | `onchain-evm` | `attestation-mix` | 1 |
-| `circle-transparency` | `http-json` | `attestation-mix` | 2 |
+| `circle-transparency` | `http-html` | `attestation-mix` | 2 |
 | `collateral-positions-api` | `http-json` | `collateral-mix` | 2 |
 | `crvusd` | `http-json` | `collateral-mix` | 1 |
 | `erc4626-single-asset` | `onchain-evm` | `single-asset` | 2 |
 | `ethena` | `http-json` | `collateral-mix` | 1 |
-| `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 2 |
+| `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 3 |
 | `falcon` | `http-json` | `collateral-mix` | 1 |
-| `frax` | `http-json` | `attestation-mix` | 1 |
+| `fdusd-transparency` | `http-html` | `attestation-mix` | 1 |
+| `frax` | `http-json` | `attestation-mix` | 2 |
 | `gho` | `onchain-evm` | `protocol-reserve` | 1 |
 | `fx` | `http-json` | `collateral-mix` | 1 |
 | `infinifi` | `http-json` | `collateral-mix` | 1 |
@@ -220,14 +221,15 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `mento` | `http-html` | `collateral-mix` | 2 |
 | `openeden-usdo` | `http-json` | `collateral-mix` | 1 |
 | `reservoir` | `http-json` | `protocol-reserve` | 1 |
-| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 6 |
+| `sgforge-coinvertible` | `http-html` | `attestation-mix` | 1 |
+| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 8 |
 | `sky-makercore` | `http-json` | `collateral-mix` | 2 |
 | `tether` | `http-json` | `attestation-mix` | 1 |
 
 Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`:
 
 - HTTP JSON / HTML fetch wrappers (`fetchJsonWithRetry`, `fetchTextWithRetry`)
-- DefiLlama spot-price loading for valuation (`fetchDefiLlamaPrices`)
+- DefiLlama spot-price loading for valuation (`fetchDefiLlamaPrices`), with fixed-price overrides supported for wrapper branches in `evm-branch-balances`
 - EVM balance, total-supply, and hex-call reads (`fetchErc20Balance`, `fetchErc20TotalSupply`)
 - Input-kind type guards and validators (`requireJsonInput`, `requireJsonInputFromConfig`, etc.)
 - Slice normalization with configurable precision (`normalizeSlices`, `slicesFromValues`)
