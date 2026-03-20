@@ -21,6 +21,7 @@ const EURC_SLICES: CircleSliceConfig[] = [
 
 function extractAttrValue(html: string, attr: string): number | null {
   // Match data-attr="value" — value is a decimal number like "47.08"
+  // eslint-disable-next-line security/detect-non-literal-regexp -- attr is selected from adapter-owned config constants.
   const re = new RegExp(`${attr}="([\\d.]+)"`, "i");
   const m = html.match(re);
   if (!m) return null;

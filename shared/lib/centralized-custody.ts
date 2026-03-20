@@ -11,6 +11,7 @@ export const CENTRALIZED_CUSTODY_CRYPTO = new Set([
 // Pre-compiled patterns sorted longest-first for whole-word matching
 const CENTRALIZED_CRYPTO_PATTERNS = [...CENTRALIZED_CUSTODY_CRYPTO]
   .sort((a, b) => b.length - a.length)
+  // eslint-disable-next-line security/detect-non-literal-regexp -- patterns are built from curated in-repo ticker constants.
   .map((sym) => new RegExp(`(?:^|[^A-Z0-9])${sym}(?:[^A-Z0-9]|$)`));
 
 function sliceMatchesCentralizedCrypto(name: string): boolean {

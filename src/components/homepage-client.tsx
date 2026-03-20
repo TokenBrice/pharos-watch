@@ -388,7 +388,7 @@ export function HomepageClient() {
 
   // Keyboard shortcut to toggle filters
   useEffect(() => {
-    function handleToggleFilters(e: Event) {
+    function handleToggleFilters() {
       setShowFilters((prev) => !prev);
     }
     window.addEventListener("toggle-filters", handleToggleFilters);

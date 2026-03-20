@@ -30,6 +30,15 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Repo-local maintenance scripts intentionally walk dynamic paths inside the
+    // checked-out workspace. The security rule is useful for runtime code, but
+    // it produces false positives for these controlled CLI scripts.
+    files: ["scripts/**/*.mjs"],
+    rules: {
+      "security/detect-non-literal-fs-filename": "off",
+    },
+  },
+  {
     // Downgrade React Compiler rules to warnings — these flag valid patterns
     // that aren't optimal for the compiler but work correctly at runtime.
     // Suppress no-img-element — static export with unoptimized images makes

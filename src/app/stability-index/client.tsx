@@ -32,7 +32,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { THREE_DAYS_MS } from "@/lib/constants";
-import { MethodologyLabel, MethodologyHint } from "@/components/methodology-hint";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
 
 /* ─── Constants ─────────────────────────────────────────────────── */

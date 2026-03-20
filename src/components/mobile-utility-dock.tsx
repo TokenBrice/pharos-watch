@@ -6,14 +6,18 @@ import { FeedbackModal } from "@/components/feedback-modal";
 import { cn } from "@/lib/utils";
 
 function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+
   useEffect(() => {
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mql.matches);
     const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
+
   return reduced;
 }
 
@@ -21,6 +25,7 @@ export function MobileUtilityDock() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     function onScroll() {
@@ -41,10 +46,12 @@ export function MobileUtilityDock() {
           showFeedback
             ? "pointer-events-none visible translate-y-0 opacity-100"
             : "pointer-events-none invisible translate-y-4 opacity-0",
-          !usePrefersReducedMotion() && "transition-[opacity,transform] duration-300 ease-out"
+          !prefersReducedMotion && "transition-[opacity,transform] duration-300 ease-out"
         )}
         style={{
-          transitionTimingFunction: showFeedback ? 'cubic-bezier(0.0, 0.0, 0.2, 1)' : 'cubic-bezier(0.4, 0.0, 1, 1)'
+          transitionTimingFunction: showFeedback
+            ? "cubic-bezier(0.0, 0.0, 0.2, 1)"
+            : "cubic-bezier(0.4, 0.0, 1, 1)",
         }}
       >
         <div className={cn(

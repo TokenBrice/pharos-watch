@@ -273,7 +273,6 @@ function CompositionSection({ chainId }: { chainId: string }) {
       maxDisplay = 11;
     }
 
-    const totalCells = cols * rows;
     const needsOthers = totalCoins > maxDisplay;
     // If we need Others, reduce display count by 1 to make room
     const finalDisplayCount = needsOthers ? Math.min(maxDisplay - 1, totalCoins) : totalCoins;

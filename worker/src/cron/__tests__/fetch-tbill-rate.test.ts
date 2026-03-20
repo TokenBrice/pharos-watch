@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CIRCUIT_SOURCE,
-  FRED_TBILL_CSV_URL,
-  TREASURY_YIELD_XML_URL,
   RISK_FREE_RATE_FALLBACK,
 } from "../../lib/constants";
 

@@ -1219,8 +1219,6 @@ describe("collectDewsStress — topSignals enrichment", () => {
   });
 
   it("returns topSignals on elevated coins when signals_json is provided", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-
     const db = mockD1([
       {
         match: "FROM stress_signals",

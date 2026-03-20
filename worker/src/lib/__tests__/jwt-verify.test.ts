@@ -205,7 +205,7 @@ describe("verifyAccessJwt", () => {
       );
       // Should get past claim validation but fail at crypto — returning false
       // (but not due to claim rejection)
-      const result = await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN });
+      await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN });
       // We can't easily distinguish "claim pass but crypto fail" from claim rejection
       // in the boolean API, but we know the fetch was called (meaning claims passed)
       expect(fetch).toHaveBeenCalledWith(JWKS_URL);

@@ -74,6 +74,7 @@ function extractCanonicalSymbol(sliceName: string): string | null {
   // Only match against the primary name, not the parenthetical description
   const primary = sliceName.replace(/\s*\(.*\)$/, "").toUpperCase();
   for (const sym of SORTED_SYMBOLS) {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- sym comes from curated tracked stablecoin symbols.
     const re = new RegExp(`(?:^|[^A-Z0-9])${sym}(?:[^A-Z0-9]|$)`);
     if (re.test(primary)) return sym;
   }

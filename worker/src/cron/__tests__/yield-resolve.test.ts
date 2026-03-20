@@ -485,9 +485,6 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     mockFetch([]);
 
     const result = await syncYieldData(db);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      divergenceFlags: number;
-    };
 
     // The curated source should be best, and the auto-discovered should have a divergence flag
     const stmts = getWriteStatements();
@@ -1073,7 +1070,7 @@ describe("price-derived and auto-discovery yield paths", () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
 
-    const result = await syncYieldData(db);
+    await syncYieldData(db);
 
     const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
     const priceDerivedRow = writeStatements?.find(
@@ -1114,7 +1111,7 @@ describe("price-derived and auto-discovery yield paths", () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
 
-    const result = await syncYieldData(db);
+    await syncYieldData(db);
 
     const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
     const autoRow = writeStatements?.find(

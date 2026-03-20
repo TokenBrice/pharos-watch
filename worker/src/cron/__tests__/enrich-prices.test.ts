@@ -1076,7 +1076,7 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     }]);
 
     const dlListPrices = new Map([["dusd-dtrinity", 0.994]]);
-    const { results, stats } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
+    const { results } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
 
     expect(results.size).toBe(1);
     const result = results.get("dusd-dtrinity")!;

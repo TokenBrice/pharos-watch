@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,13 +18,12 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { gradeRange, REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { ReportCard, DimensionKey } from "@shared/types";
-import { trackEvent } from "@/lib/analytics";
 import { encodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
-import { Trophy, TrendingUp, TrendingDown, Minus, X } from "lucide-react";
+import { Trophy, X } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,13 +106,6 @@ function getSortScore(card: ReportCard, key: SortKey, mcapMap: Map<string, numbe
   if (key === "overall") return card.overallScore;
   if (key === "mcap") return mcapMap.get(card.id) ?? 0;
   return card.dimensions[key].score;
-}
-
-// Calculate trend from report card history (if available)
-function getGradeTrend(card: ReportCard): "up" | "down" | "stable" | null {
-  // If we have score history or trend data, use it
-  // For now, return null - the component will handle gracefully
-  return null;
 }
 
 // ---------------------------------------------------------------------------

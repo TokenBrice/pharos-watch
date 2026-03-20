@@ -72,6 +72,7 @@ function injectCashtags(text: string): string {
   const symbols = [...new Set(ACTIVE_STABLECOINS.map((s) => s.symbol))];
   let result = text;
   for (const sym of symbols) {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- tracked symbols are curated and bounded to whole-word matches.
     result = result.replace(new RegExp(`\\b${sym}\\b`, "i"), `$${sym}`);
   }
   return result;

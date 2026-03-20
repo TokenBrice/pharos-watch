@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, RotateCcw, Settings2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DensityToggle } from "./density-toggle";
 import { ColumnVisibilityDropdown } from "./stablecoin-table-column-visibility";

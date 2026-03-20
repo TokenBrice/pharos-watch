@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "pharos-command-palette-history";
 const MAX_HISTORY = 5;
+const HISTORY_EVENT = "pharos-command-palette-history-change";
 
 interface HistoryItem {
   id: string;
@@ -14,24 +15,48 @@ interface HistoryItem {
   timestamp: number;
 }
 
-export function useCommandPaletteHistory() {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [mounted, setMounted] = useState(false);
+function subscribeHistory(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
 
-  useEffect(() => {
-    setMounted(true);
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as HistoryItem[];
-        // Filter out items older than 7 days
-        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-        setHistory(parsed.filter((item) => item.timestamp > weekAgo));
-      }
-    } catch {
-      // Ignore parse errors
-    }
-  }, []);
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) onStoreChange();
+  };
+
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(HISTORY_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(HISTORY_EVENT, onStoreChange);
+  };
+}
+
+function readHistorySnapshot(): HistoryItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [];
+
+    const parsed = JSON.parse(stored) as HistoryItem[];
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return parsed.filter((item) => item.timestamp > weekAgo);
+  } catch {
+    return [];
+  }
+}
+
+function publishHistoryChange() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(HISTORY_EVENT));
+}
+
+export function useCommandPaletteHistory() {
+  const history = useSyncExternalStore(
+    subscribeHistory,
+    readHistorySnapshot,
+    () => [],
+  );
 
   const addToHistory = useCallback((
     id: string,
@@ -40,42 +65,36 @@ export function useCommandPaletteHistory() {
     sublabel: string | undefined,
     href: string
   ) => {
-    setHistory((prev) => {
-      // Remove existing entry if present
-      const filtered = prev.filter((item) => item.id !== id);
-      // Add new entry at beginning
-      const newItem: HistoryItem = {
-        id,
-        type,
-        label,
-        sublabel,
-        href,
-        timestamp: Date.now(),
-      };
-      const newHistory = [newItem, ...filtered].slice(0, MAX_HISTORY);
-      
-      // Persist to localStorage
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
-      } catch {
-        // Ignore quota errors
-      }
-      
-      return newHistory;
-    });
-  }, []);
+    const filtered = history.filter((item) => item.id !== id);
+    const newItem: HistoryItem = {
+      id,
+      type,
+      label,
+      sublabel,
+      href,
+      timestamp: Date.now(),
+    };
+    const newHistory = [newItem, ...filtered].slice(0, MAX_HISTORY);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+      publishHistoryChange();
+    } catch {
+      // Ignore quota errors
+    }
+  }, [history]);
 
   const clearHistory = useCallback(() => {
-    setHistory([]);
     try {
       localStorage.removeItem(STORAGE_KEY);
+      publishHistoryChange();
     } catch {
       // Ignore
     }
   }, []);
 
   return {
-    history: mounted ? history : [],
+    history,
     addToHistory,
     clearHistory,
   };

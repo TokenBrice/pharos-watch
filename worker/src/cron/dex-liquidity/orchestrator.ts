@@ -38,7 +38,6 @@ import {
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
-  type KnownPoolIdentityIndex,
   type PoolIdentity,
 } from "./pool-identity";
 

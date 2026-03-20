@@ -218,7 +218,7 @@ const pricing = createMethodologyVersion({
 });
 
 /** Canonical Pricing Pipeline methodology version (no "v" prefix). */
-const PRICING_PIPELINE_VERSION = pricing.currentVersion;
+export const PRICING_PIPELINE_VERSION = pricing.currentVersion;
 
 /** Display-ready Pricing Pipeline methodology version (with "v" prefix). */
 export const PRICING_PIPELINE_VERSION_LABEL = pricing.versionLabel;
@@ -230,4 +230,4 @@ export const PRICING_PIPELINE_CHANGELOG_PATH = pricing.changelogPath;
 export const PRICING_PIPELINE_CHANGELOG = pricing.changelog;
 
 /** Resolve Pricing Pipeline methodology version active at a given Unix timestamp (seconds). */
-const getPricingPipelineVersionAt = pricing.getVersionAt;
+export const getPricingPipelineVersionAt = pricing.getVersionAt;

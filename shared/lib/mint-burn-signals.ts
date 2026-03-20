@@ -18,7 +18,7 @@ export const PRESSURE_SHIFT_STATE_VALUES = [
 
 export type PressureShiftState = (typeof PRESSURE_SHIFT_STATE_VALUES)[number];
 
-const COIN_FLOW_COMPOSITE_STATE_VALUES = [
+export const COIN_FLOW_COMPOSITE_STATE_VALUES = [
   "minting-improving",
   "minting-stable",
   "minting-worsening",
