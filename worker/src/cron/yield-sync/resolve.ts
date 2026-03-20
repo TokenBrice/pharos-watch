@@ -7,6 +7,7 @@ import {
   MIN_SAFETY_SCORE_FOR_YIELD,
 } from "../../lib/constants";
 import {
+  buildOnChainSourceKey,
   computeApyFromRate,
   findBestLendingPool,
   matchAllDlPools,
@@ -26,10 +27,6 @@ import { fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
-
-function buildOnChainSourceKey(stablecoinId: string): string {
-  return `onchain:${stablecoinId}`;
-}
 
 interface SafetyScoreSnapshot {
   score: number;
@@ -136,6 +133,25 @@ export async function resolveYieldSources({
           },
         });
         hasAnySource = true;
+      } else {
+        // Seed the exchange rate so the next cycle (7+ days later) can compute APY.
+        // Without this, coins whose DeFiLlama pool reports 0% APY get stuck in a
+        // bootstrapping deadlock: on-chain never resolves → rate never stored → on-chain
+        // can never resolve.
+        resolved.push({
+          id,
+          symbol,
+          yield: {
+            currentApy: 0,
+            apyBase: null,
+            apyReward: null,
+            sourcePool: null,
+            sourceTvlUsd: null,
+            dataSource: "onchain",
+            exchangeRate: rate,
+            sourceKey: buildOnChainSourceKey(id),
+          },
+        });
       }
     }
 

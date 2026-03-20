@@ -1,6 +1,17 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.3` (2026-03-01 -> 2026-03-19).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.4` (2026-03-01 -> 2026-03-20).
+
+---
+
+## v4.4 - On-chain rate bootstrapping and pipeline hardening (Mar 20, 2026)
+
+**Commit:** `unreleased`
+
+- On-chain rate configs now emit a seed row with `currentApy: 0` and `exchangeRate` when no previous rate exists, breaking a bootstrapping deadlock that prevented all 13 Tier 1 vaults from ever computing APY
+- `buildOnChainSourceKey()` consolidated from 3 duplicate definitions (sync-yield-data, resolve, sources) into a single export from yield-helpers
+- `isYieldRelevantDlPool` pre-filter sets (pool IDs and variant symbols) promoted from per-call allocations to module-level constants
+- `hydrateYieldRankingsWithLiveSafety` coverage ratio guard fixed to use active card count instead of total card count
 
 ---
 

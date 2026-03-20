@@ -74,7 +74,7 @@ Currently configured for 13 vaults (all use selector `0x07a2d13a` — `convertTo
 apy = ((rate_now / rate_7d_ago) ^ (365.25 / 7) - 1) * 100
 ```
 
-Even when Tier 1 succeeds, the cron still falls through to Tier 2 to collect additional wrapper/native DeFiLlama rows. If no previous exchange rate exists yet (first sync), Tier 1 contributes no row and Tier 2 becomes the first fallback.
+Even when Tier 1 succeeds, the cron still falls through to Tier 2 to collect additional wrapper/native DeFiLlama rows. If no previous exchange rate exists yet (first sync), Tier 1 emits a seed row with `currentApy: 0` and the current `exchangeRate` so the rate is persisted in `yield_history`. This breaks the bootstrapping deadlock: without the seed, the on-chain source would never resolve because it needs a 7-day-old rate, but the rate was never stored because the source never resolved. Subsequent syncs (7+ days later) will find the seed rate and compute a real APY.
 
 #### Special-case Tier 1 estimator: LUSD / B.Protocol Stability Pool
 
@@ -674,6 +674,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 ## Edge Cases
 
 - **First sync (no history):** `apy7d` and `apy30d` equal `currentApy`. PYS still computed.
+- **On-chain rate bootstrapping:** When a Tier 1 vault has no previous exchange rate in history (first 7 days after config is added), the sync emits a seed row with `currentApy: 0` and the current `exchangeRate`. This persists the rate in `yield_history` so future cycles can compute APY once a 7-day-old reference point exists.
 - **Unrated coins (no safety grade):** Safety score defaults to `DEFAULT_SAFETY_SCORE` (40, D-equivalent). Most NAV tokens hit this path since the report card framework doesn't grade them yet.
 - **Incomplete live safety hydration:** rankings rows stay published with safety fallback `40 / NR` instead of being dropped.
 - **All tiers fail:** Coin is recorded with `yield: null` and skipped in the write phase. No PYS computed. Logged as warning.

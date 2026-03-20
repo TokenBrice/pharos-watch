@@ -261,6 +261,7 @@ import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
+import * as yieldSourcesModule from "../yield-sync/sources";
 
 // --- Helpers ---
 
@@ -1120,5 +1121,96 @@ describe("price-derived and auto-discovery yield paths", () => {
       (stmt) => stmt.boundValues?.[0] === "u-united-stables",
     );
     expect(autoRow).toBeDefined();
+  });
+});
+
+describe("on-chain rate bootstrapping seed", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    setupDefaultMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("seeds exchange rate when on-chain rate available but no previous rate exists", async () => {
+    // Push an on-chain config for usde-ethena
+    const configs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    configs.push({
+      stablecoinId: "usde-ethena",
+      chain: "ethereum",
+      contract: "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+
+    // Mock fetchOnChainRates to return a rate for usde-ethena
+    vi.spyOn(yieldSourcesModule, "fetchOnChainRates").mockResolvedValue(
+      new Map([["usde-ethena", { rate: 1.05 }]]),
+    );
+
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    // DL pool for usde-ethena with 0% APY (simulating the USN-like scenario)
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-usde-native",
+              chain: "Ethereum",
+              project: "ethena",
+              symbol: "sUSDe",
+              tvlUsd: 3_000_000_000,
+              apy: 0,
+              apyBase: 0,
+              apyReward: null,
+              apyMean30d: 0,
+              stablecoin: false,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+    expect(result.itemCount).toBeGreaterThanOrEqual(1);
+
+    const stmts = getWriteStatements();
+    // Find the on-chain seed row for usde-ethena
+    const onchainRow = findYieldDataRow(stmts, "usde-ethena", "onchain:usde-ethena");
+    expect(onchainRow).toBeDefined();
+
+    // current_apy should be 0 (seed — no previous rate to compute from)
+    expect(onchainRow?.boundValues?.[3]).toBe(0);
+    // exchange_rate should store the current rate (index 22)
+    expect(onchainRow?.boundValues?.[22]).toBe(1.05);
+    // data_source should be "onchain" (index 12)
+    expect(onchainRow?.boundValues?.[12]).toBe("onchain");
+
+    // Also check that a yield_history row is created with the exchange rate
+    // History rows come after yield_data rows in the batch
+    const historyRow = stmts.find(
+      (stmt) =>
+        stmt.boundValues?.[0] === "usde-ethena" &&
+        stmt.boundValues?.[1] === "onchain:usde-ethena" &&
+        stmt.boundValues?.[7] === 1.05, // exchange_rate in history INSERT
+    );
+    expect(historyRow).toBeDefined();
+
+    // Clean up
+    configs.length = 0;
   });
 });

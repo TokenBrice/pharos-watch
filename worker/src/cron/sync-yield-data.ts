@@ -18,6 +18,7 @@ import { validatePayloadWithSchema } from "../lib/api-utils";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 import {
   STALE_THRESHOLD_MS,
+  buildOnChainSourceKey,
   computePYS,
   computeYieldStability,
   computeApyVarianceScore,
@@ -91,10 +92,6 @@ interface EvaluatedYieldSource {
 
 function buildHistoryKey(stablecoinId: string, sourceKey: string): string {
   return `${stablecoinId}::${sourceKey}`;
-}
-
-function buildOnChainSourceKey(stablecoinId: string): string {
-  return `onchain:${stablecoinId}`;
 }
 
 function isLegacyDeterministicOnChainSourceKey(

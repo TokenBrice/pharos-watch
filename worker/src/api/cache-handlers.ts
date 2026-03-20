@@ -68,6 +68,10 @@ function hydrateYieldRankingsWithLiveSafety(
       return a.name.localeCompare(b.name);
     });
 
+  const activeCards = cards.filter((card) => !card.isDefunct);
+  const coveredCount = activeCards.filter((card) => card.overallScore !== null).length;
+  const trackedCount = activeCards.length;
+
   return {
     ...payload,
     rankings,
@@ -76,13 +80,10 @@ function hydrateYieldRankingsWithLiveSafety(
         ...payload.provenance,
         safetySnapshot: {
           ...payload.provenance.safetySnapshot,
-          coveredCount: cards.filter((card) => !card.isDefunct && card.overallScore !== null).length,
-          trackedCount: cards.filter((card) => !card.isDefunct).length,
-          coverageRatio: cards.length > 0
-            ? Number((
-              cards.filter((card) => !card.isDefunct && card.overallScore !== null).length
-              / Math.max(1, cards.filter((card) => !card.isDefunct).length)
-            ).toFixed(4))
+          coveredCount,
+          trackedCount,
+          coverageRatio: trackedCount > 0
+            ? Number((coveredCount / trackedCount).toFixed(4))
             : 1,
           reason: null,
         },

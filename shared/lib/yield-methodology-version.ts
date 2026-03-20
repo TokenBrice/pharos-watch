@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.3",
+  currentVersion: "4.4",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.4",
+    title: "On-chain rate bootstrapping and pipeline hardening",
+    date: "2026-03-20",
+    effectiveAt: 1774022400,
+    summary:
+      "Fixed a bootstrapping deadlock preventing all 13 Tier 1 vault configs from computing on-chain APY, plus DRY and performance improvements.",
+    impact: [
+      "On-chain rate configs now emit a seed row when no previous exchange rate exists, breaking the bootstrapping deadlock that prevented Tier 1 APY computation since launch",
+      "buildOnChainSourceKey consolidated from 3 duplicate definitions into a single shared export",
+      "Pool pre-filter set allocations promoted from per-call to module-level for improved DL pool ingestion performance",
+      "Live safety hydration coverage ratio now uses active card count instead of total card count for accurate degradation detection",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.3",
     title: "Wrapper-preserving ingestion and hydration hardening",

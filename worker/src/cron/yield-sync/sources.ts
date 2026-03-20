@@ -11,7 +11,7 @@ import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
-import { computeApyFromPrice } from "../yield-helpers";
+import { buildOnChainSourceKey, computeApyFromPrice } from "../yield-helpers";
 import {
   parseDlStablecoinPoolsCache,
   parseRiskFreeRateCache,
@@ -32,10 +32,6 @@ const LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR = "0x9bf2f1ac";
 const LIQUITY_LQTY_GECKO_ID = "liquity";
 
 const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX sync refresh)
-
-function buildOnChainSourceKey(stablecoinId: string): string {
-  return `onchain:${stablecoinId}`;
-}
 
 export async function loadDlStablecoinPools(
   db: D1Database,
