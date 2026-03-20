@@ -55,26 +55,30 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Run `npm run test:smoke-api`
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Runs strict API checks sequentially with bounded transient retry behavior (`SMOKE_API_RETRY_COUNT` default `1`, `SMOKE_API_TIMEOUT_MS` default `12000`)
-5. `deploy-pages` (needs `smoke-api`):
+5. `build-pages` (needs `smoke-api`):
    - `npm run sync:digests`
    - `npm run build`
    - `npm run seo:check`
-   - Deploy to Cloudflare Pages
-6. `smoke-ui` (needs `deploy-pages`, runs in parallel with `smoke-ops`):
-   - Run `npm run test:smoke-ui`
-   - Uses `SMOKE_UI_URL` from `vars.SMOKE_UI_URL` (fallback: `https://pharos.watch`)
+   - Uploads the built `out/` export as the deploy artifact
+6. `smoke-ui` (needs `build-pages`):
+   - Downloads the built `out/` artifact
+   - Starts a local static-export server with `/api/*` proxied to `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
+   - Runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173`
    - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
-7. `smoke-ops` (needs `deploy-pages`, runs in parallel with `smoke-ui`):
+7. `deploy-pages` (needs `build-pages` and `smoke-ui`):
+   - Downloads the same `out/` artifact that passed `smoke-ui`
+   - Deploys that verified static export to Cloudflare Pages
+8. `smoke-ops` (needs `deploy-pages`):
    - Run `npm run test:smoke-ops`
    - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
    - Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
-8. `CodeQL`:
+9. `CodeQL`:
    - defined in `.github/workflows/codeql.yml`
    - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
    - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
-This arrangement gives pull requests the same validate gate the deploy workflow depends on, prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, runs parallel public-site and ops-surface smoke checks after Pages deploy, and keeps security scanning on a separate CodeQL workflow.
+This arrangement gives pull requests the same validate gate the deploy workflow depends on, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, still runs the post-deploy ops-surface smoke after Pages publish, and keeps security scanning on a separate CodeQL workflow.
 
 The workflows pin `actions/checkout@v5` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the pipeline before deploy.
 

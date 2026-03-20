@@ -11,6 +11,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/sync-digests.ts`                       | Fetch digest archive before frontend build                                                                                            | `https://api.pharos.watch/api/digest-archive`                                                                                                                                                                                                                                                              | Writes `data/digests.json`                                                                              |
 | `scripts/generate-redirects.ts`                 | Regenerate Cloudflare Pages redirects for legacy stablecoin IDs before frontend build                                                 | Existing `public/_redirects` + embedded ID mapping tables                                                                                                                                                                                                                                                  | Idempotently updates `public/_redirects`                                                                |
 | `scripts/check-seo-static.mjs`                  | Validate static-export SEO/meta/link integrity                                                                                        | `out/` build output                                                                                                                                                                                                                                                                                        | Fails non-zero on SEO/crawlability issues                                                               |
+| `scripts/serve-static-export.mjs`               | Serve the built static export locally and proxy `/api/*` to the configured public API base for pre-deploy browser smoke               | `STATIC_EXPORT_ROOT`, `STATIC_EXPORT_HOST`, `STATIC_EXPORT_PORT`, `STATIC_EXPORT_API_BASE`                                                                                                                                                                                                                | Starts a local HTTP server for the exported app + API proxy                                             |
 | `scripts/smoke-api.mjs`                         | HTTP smoke checks for strict API contract paths                                                                                       | `--base-url`, `--timeout-ms`, `--retry-count`, `--retry-delay-ms`, or `SMOKE_API_BASE` / `API_BASE_URL`, optional `SMOKE_API_TIMEOUT_MS`, `SMOKE_API_RETRY_COUNT`, `SMOKE_API_RETRY_DELAY_MS`                                                                                                              | Exits non-zero on shape/range/status failures                                                           |
 | `scripts/smoke-ops.mjs`                         | Private post-deploy smoke for the Access-protected ops UI and ops API                                                                 | `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`                                                                                                                                                                                             | Exits non-zero on ops-host shell or admin API failures                                                  |
 | `scripts/smoke-ui.mjs`                          | Browser smoke check for live homepage data state + mobile overflow regression routes                                                  | `--url`, `--skip-overflow`, `SMOKE_UI_URL`, optional `SMOKE_UI_WAIT_TIMEOUT_MS`, `SMOKE_UI_RETRY_COUNT`, `SMOKE_UI_RETRY_DELAY_MS`, `SMOKE_UI_OVERFLOW_ROUTES`, `SMOKE_UI_OVERFLOW_WAIT_MS`, `SMOKE_UI_OVERFLOW_SETTLE_SAMPLES`, `SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS`, `SMOKE_UI_STYLE_READY_TIMEOUT_MS` | Exits non-zero on homepage outage/empty state or sustained horizontal overflow on tracked mobile routes |
@@ -34,6 +35,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/pull-re
 - `sync-digests.ts` before `npm run build`
 - `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `check-seo-static.mjs` via `npm run seo:check`
+- `serve-static-export.mjs` via the pre-deploy `smoke-ui` gate in `.github/workflows/deploy-cloudflare.yml`
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ops.mjs` via `npm run test:smoke-ops`
 - `smoke-ui.mjs` via `npm run test:smoke-ui`
@@ -72,12 +74,19 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/pull-re
 ### `smoke-ui.mjs`
 
 - Uses Playwright CLI in a temporary session.
+- In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `scripts/serve-static-export.mjs` proxies `/api/*` to the configured public API base so the smoke still exercises live API responses against the exact built frontend artifact.
 - Verifies homepage is not in outage/empty state (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`, missing rows/ticker).
 - Homepage data wait retries once on timeout by default (configurable via `SMOKE_UI_RETRY_COUNT` / `SMOKE_UI_RETRY_DELAY_MS`) and includes a compact DOM text preview in timeout diagnostics.
 - Runs mobile overflow checks at `390x844` on a default critical route set:
   - `/`, `/dependency-map/`, `/flows/`, `/yield/`, `/liquidity/`, `/depeg/`, `/blacklist/`, `/stability-index/`, `/safety-scores/`
 - Overflow detection samples layout multiple times and retries once before failing, which filters transient post-deploy layout jitter while still catching sustained overflow regressions.
 - Override checked routes via `SMOKE_UI_OVERFLOW_ROUTES` (comma-separated), or skip overflow checks with `--skip-overflow`.
+
+### `serve-static-export.mjs`
+
+- Defaults to serving `out/` on `127.0.0.1:4173`.
+- Proxies `GET`/`HEAD` requests under `/api/*` to `STATIC_EXPORT_API_BASE` (default: `https://api.pharos.watch`).
+- Exists to keep browser smoke pre-deploy while still exercising the same API-backed UI code paths as production.
 
 ### `smoke-api.mjs`
 

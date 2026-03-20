@@ -134,6 +134,11 @@ describe("api contract validation policy", () => {
     expect(resolveApiBase("c0e7dcc0.stablecoin-dashboard.pages.dev", "")).toBe("https://api.pharos.watch");
   });
 
+  it("keeps localhost-style hosts on relative /api paths when env is empty", () => {
+    expect(resolveApiBase("localhost", "")).toBe("");
+    expect(resolveApiBase("127.0.0.1", "")).toBe("");
+  });
+
   it("prefers explicit env API base over hostname inference", () => {
     expect(resolveApiBase("pharos.watch", "https://custom.example")).toBe("https://custom.example");
   });
