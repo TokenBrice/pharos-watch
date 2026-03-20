@@ -4,12 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { X, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-
-export interface CoinOption {
-  id: string;
-  name: string;
-  symbol: string;
-}
+import type { CoinOption } from "@/lib/compare-types";
 
 interface CoinSelectorProps {
   coins: CoinOption[];

@@ -4,12 +4,9 @@ import { Suspense } from "react";
 import { Tweet } from "react-tweet";
 import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play } from "lucide-react";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import {
-  BACKING_LABELS,
-  GOVERNANCE_LABELS,
-  PEG_LABELS_SHORT,
-} from "@shared/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinMeta, LaunchPhase, FeaturedContent } from "@shared/types";
 
@@ -103,26 +100,6 @@ function formatFuzzyDate(raw: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Related-coin scoring
-// ---------------------------------------------------------------------------
-
-function getRelatedActiveCoins(coin: StablecoinMeta, limit = 6): StablecoinMeta[] {
-  const others = ACTIVE_STABLECOINS.filter((s) => s.id !== coin.id);
-  const scored = others.map((s) => {
-    let score = 0;
-    if (s.flags.governance === coin.flags.governance) score += 3;
-    if (s.flags.backing === coin.flags.backing) score += 2;
-    if (s.flags.pegCurrency === coin.flags.pegCurrency) score += 1;
-    return { coin: s, score };
-  });
-  return scored
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((s) => s.coin);
-}
-
-// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
@@ -134,13 +111,7 @@ function LaunchPhaseBadge({ phase }: { phase: LaunchPhase }) {
   );
 }
 
-function TimelineBar({
-  announcedDate,
-  expectedLaunchDate,
-}: {
-  announcedDate: string;
-  expectedLaunchDate: string;
-}) {
+function TimelineBar({ announcedDate, expectedLaunchDate }: { announcedDate: string; expectedLaunchDate: string }) {
   const start = parseFuzzyDate(announcedDate);
   const end = parseFuzzyDate(expectedLaunchDate);
   const now = new Date();
@@ -170,10 +141,7 @@ function TimelineBar({
         aria-valuemax={ariaValueMax}
         aria-label="Launch timeline progress"
       >
-        <div
-          className="absolute inset-y-0 left-0 rounded-full bg-indigo-500/60"
-          style={{ width: `${pct}%` }}
-        />
+        <div className="absolute inset-y-0 left-0 rounded-full bg-indigo-500/60" style={{ width: `${pct}%` }} />
         {pct > 2 && pct < 98 && (
           <div
             className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-foreground"
@@ -182,9 +150,7 @@ function TimelineBar({
           />
         )}
       </div>
-      {pct > 2 && pct < 98 && (
-        <div className="text-center text-xs text-muted-foreground">Today</div>
-      )}
+      {pct > 2 && pct < 98 && <div className="text-center text-xs text-muted-foreground">Today</div>}
     </div>
   );
 }
@@ -214,7 +180,7 @@ interface PreLaunchDetailProps {
 // ---------------------------------------------------------------------------
 
 export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDetailProps) {
-  const related = getRelatedActiveCoins(coin);
+  const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
   const chains = coin.contracts?.map((c) => c.chain) ?? [];
   const uniqueChains = [...new Set(chains)];
 
@@ -244,28 +210,18 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Pre-Launch Banner ─────────────────────────────────────── */}
       <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-            Pre-Launch
-          </span>
-          <span className="text-sm text-muted-foreground">
-            No data processed by Pharos yet
-          </span>
-          {coin.launchPhase && (
-            <LaunchPhaseBadge phase={coin.launchPhase} />
-          )}
+          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Pre-Launch</span>
+          <span className="text-sm text-muted-foreground">No data processed by Pharos yet</span>
+          {coin.launchPhase && <LaunchPhaseBadge phase={coin.launchPhase} />}
         </div>
-        {coin.launchPhaseDetail && (
-          <p className="mt-2 text-sm text-muted-foreground">{coin.launchPhaseDetail}</p>
-        )}
+        {coin.launchPhaseDetail && <p className="mt-2 text-sm text-muted-foreground">{coin.launchPhaseDetail}</p>}
       </div>
 
       {/* ── Header ────────────────────────────────────────────────── */}
       <header className="flex items-start gap-4">
         <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
         <div className="min-w-0 space-y-1">
-          <h2 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {coin.name}
-          </h2>
+          <h2 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{coin.name}</h2>
           <p className="font-mono text-sm text-muted-foreground">{coin.symbol}</p>
         </div>
       </header>
@@ -274,10 +230,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {coin.announcedDate && coin.expectedLaunchDate ? (
         <section className="pharos-card-shell p-4 sm:p-5">
           <h3 className="mb-3 text-lg font-semibold tracking-tight">Launch Timeline</h3>
-          <TimelineBar
-            announcedDate={coin.announcedDate}
-            expectedLaunchDate={coin.expectedLaunchDate}
-          />
+          <TimelineBar announcedDate={coin.announcedDate} expectedLaunchDate={coin.expectedLaunchDate} />
         </section>
       ) : coin.expectedLaunchDate ? (
         <section className="pharos-card-shell p-4 sm:p-5">
@@ -294,9 +247,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         <section className="pharos-card-shell space-y-2 p-4 sm:p-5">
           <h3 className="text-lg font-semibold tracking-tight">{summary.title}</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">{summary.text}</p>
-          <p className="text-[11px] text-muted-foreground/60">
-            Updated {summary.updatedAt}
-          </p>
+          <p className="text-[11px] text-muted-foreground/60">Updated {summary.updatedAt}</p>
         </section>
       )}
 
@@ -348,9 +299,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
                   <div className="flex flex-1 flex-col gap-1.5 p-4">
                     <p className="text-sm font-semibold text-foreground">{item.title}</p>
                     {item.description && (
-                      <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                        {item.description}
-                      </p>
+                      <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
                     )}
                     <div className="mt-auto flex items-center gap-1.5 pt-1 text-[11px] text-muted-foreground/60">
                       <ContentTypeIcon type={item.type} />
@@ -368,33 +317,21 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       <section className="pharos-card-shell p-4 sm:p-5">
         <h3 className="mb-3 text-lg font-semibold tracking-tight">At a Glance</h3>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <InfoGridItem
-            label="Backing"
-            value={BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
-          />
-          <InfoGridItem
-            label="Governance"
-            value={GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
-          />
+          <InfoGridItem label="Backing" value={BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} />
+          <InfoGridItem label="Governance" value={GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} />
           <InfoGridItem
             label="Peg Currency"
             value={PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
           />
-          {jurisdictionDisplay && (
-            <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />
-          )}
-          {coin.flags.yieldBearing && (
-            <InfoGridItem label="Yield-Bearing" value="Yes" />
-          )}
+          {jurisdictionDisplay && <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />}
+          {coin.flags.yieldBearing && <InfoGridItem label="Yield-Bearing" value="Yes" />}
         </dl>
       </section>
 
       {/* ── Planned Reserves ──────────────────────────────────────── */}
       {coin.reserves && coin.reserves.length > 0 && (
         <section className="pharos-card-shell p-4 sm:p-5">
-          <h3 className="mb-3 text-lg font-semibold tracking-tight">
-            Planned Collateral Composition
-          </h3>
+          <h3 className="mb-3 text-lg font-semibold tracking-tight">Planned Collateral Composition</h3>
           <div className="space-y-2">
             {coin.reserves.map((slice) => (
               <div
@@ -402,9 +339,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
                 className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/45 px-3 py-2"
               >
                 <span className="text-sm">{slice.name}</span>
-                <span className="shrink-0 font-mono text-sm text-muted-foreground">
-                  {slice.pct}%
-                </span>
+                <span className="shrink-0 font-mono text-sm text-muted-foreground">{slice.pct}%</span>
               </div>
             ))}
           </div>

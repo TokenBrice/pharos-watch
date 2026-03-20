@@ -60,6 +60,219 @@ function HeroMetricCard({
   );
 }
 
+function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
+  if (!tags || tags.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground border-border/60 bg-muted/40"
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
+  return (
+    <p className="text-sm text-muted-foreground">
+      {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
+      {" \u00b7 "}
+      {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
+      {" \u00b7 "}
+      {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
+    </p>
+  );
+}
+
+function HeroIdentityHeader({
+  coin,
+  logoSrc,
+  mobile,
+}: {
+  coin: StablecoinMeta;
+  logoSrc?: string;
+  mobile: boolean;
+}) {
+  if (mobile) {
+    return (
+      <div className="flex items-start gap-3">
+        <StablecoinLogo src={logoSrc} name={coin.name} size={52} />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="min-w-0 text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
+            <span className="text-base font-mono text-muted-foreground">{coin.symbol}</span>
+            <BluechipHeaderBadge stablecoinId={coin.id} />
+          </div>
+          <HeroClassificationLine coin={coin} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-3">
+        <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
+        <h2 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
+        <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
+        <BluechipHeaderBadge stablecoinId={coin.id} />
+      </div>
+      <HeroClassificationLine coin={coin} />
+    </>
+  );
+}
+
+function HeroPriceContent({
+  coin,
+  coinData,
+  pegRef,
+  gaugeDeviationBps,
+  isNavToken,
+  deviationBps,
+  usesFallbackPegRate,
+  onOpenFeedback,
+  gaugeClassName,
+  buttonClassName,
+}: {
+  coin: StablecoinMeta;
+  coinData: StablecoinData;
+  pegRef: number;
+  gaugeDeviationBps: number;
+  isNavToken: boolean;
+  deviationBps: number;
+  usesFallbackPegRate: boolean;
+  onOpenFeedback: () => void;
+  gaugeClassName: string;
+  buttonClassName: string;
+}) {
+  return (
+    <>
+      {coinData.price != null && pegRef > 0 && (
+        <PegGauge deviationBps={gaugeDeviationBps} className={gaugeClassName} />
+      )}
+      <div className="min-w-0">
+        <div className="text-2xl font-bold font-mono tracking-tight">
+          {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
+        </div>
+        <p
+          className={`text-sm font-mono ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}
+        >
+          {formatPegDeviation(coinData.price, pegRef)}
+          {isNavToken && (
+            <span
+              className="text-xs text-muted-foreground ml-1"
+              title="Price reflects NAV appreciation — not a peg deviation"
+            >
+              (NAV token)
+            </span>
+          )}
+          {!isNavToken && usesFallbackPegRate && (
+            <span
+              className="text-xs text-muted-foreground ml-1"
+              title="Peg reference: ECB FX rate (not market-derived)"
+            >
+              (ECB rate)
+            </span>
+          )}
+        </p>
+        <button onClick={onOpenFeedback} className={buttonClassName}>
+          <Flag className="h-3 w-3" />
+          Report data issue
+        </button>
+      </div>
+    </>
+  );
+}
+
+function HeroMarketCapContent({
+  mcap,
+  prevDay,
+  prevDayTrendClass,
+  hasPrevDay,
+  chainCount,
+}: {
+  mcap: number;
+  prevDay: number | null;
+  prevDayTrendClass: string;
+  hasPrevDay: boolean;
+  chainCount: number;
+}) {
+  return (
+    <>
+      <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
+      <p className={`text-xs font-mono tabular-nums mt-0.5 ${prevDayTrendClass}`}>
+        {hasPrevDay ? formatPercentChange(mcap, prevDay!) : "—"}{" "}
+        <span className="text-muted-foreground">24h</span>
+      </p>
+      <p className="text-xs text-muted-foreground mt-0.5">
+        {chainCount} chain{chainCount !== 1 ? "s" : ""}
+      </p>
+    </>
+  );
+}
+
+function HeroSupplyContent({
+  mcap,
+  supply,
+  symbol,
+  prevWeek,
+  prevWeekTrendClass,
+  hasPrevWeek,
+  prevMonth,
+  prevMonthTrendClass,
+  hasPrevMonth,
+  prev90d,
+  prev90dTrendClass,
+  include90d,
+}: {
+  mcap: number;
+  supply: number | null;
+  symbol: string;
+  prevWeek: number | null;
+  prevWeekTrendClass: string;
+  hasPrevWeek: boolean;
+  prevMonth: number | null;
+  prevMonthTrendClass: string;
+  hasPrevMonth: boolean;
+  prev90d: number;
+  prev90dTrendClass: string;
+  include90d: boolean;
+}) {
+  return (
+    <>
+      <div className="text-xl font-bold font-mono tracking-tight leading-none">
+        {supply != null ? formatSupply(supply) : "—"}{" "}
+        <span className="text-sm text-muted-foreground">{symbol}</span>
+      </div>
+      <p className="text-xs font-mono tabular-nums mt-0.5">
+        <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek!) : "—"}</span>
+        <span className="text-muted-foreground"> 7d</span>
+        {hasPrevMonth && (
+          <>
+            <span className="text-muted-foreground"> · </span>
+            <span className={prevMonthTrendClass}>
+              {formatPercentChange(mcap, prevMonth!)}
+            </span>
+            <span className="text-muted-foreground"> 30d</span>
+          </>
+        )}
+        {include90d && prev90d > 0 && (
+          <>
+            <span className="text-muted-foreground"> · </span>
+            <span className={prev90dTrendClass}>{formatPercentChange(mcap, prev90d)}</span>
+            <span className="text-muted-foreground"> 90d</span>
+          </>
+        )}
+      </p>
+    </>
+  );
+}
+
 export function HeroCard({
   coin,
   coinData,
@@ -100,6 +313,11 @@ export function HeroCard({
     : "text-muted-foreground";
   const prevMonthTrendClass = hasPrevMonth
     ? mcap >= prevMonth
+      ? "text-green-700 dark:text-green-400"
+      : "text-red-700 dark:text-red-400"
+    : "text-muted-foreground";
+  const prev90dTrendClass = prev90d > 0
+    ? mcap >= prev90d
       ? "text-green-700 dark:text-green-400"
       : "text-red-700 dark:text-red-400"
     : "text-muted-foreground";
@@ -211,75 +429,24 @@ export function HeroCard({
       <div className="px-4 sm:px-5 py-4">
         <div className="space-y-5 lg:hidden">
           <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <StablecoinLogo src={logoSrc} name={coin.name} size={52} />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="min-w-0 text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
-                  <span className="text-base font-mono text-muted-foreground">{coin.symbol}</span>
-                  <BluechipHeaderBadge stablecoinId={coin.id} />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
-                  {" \u00b7 "}
-                  {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
-                  {" \u00b7 "}
-                  {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
-                </p>
-              </div>
-            </div>
-            {coin.tags && coin.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {coin.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground border-border/60 bg-muted/40"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
+            <HeroIdentityHeader coin={coin} logoSrc={logoSrc} mobile />
+            <HeroTagList tags={coin.tags} />
           </div>
 
           <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-4">
             <div className="flex items-center gap-4">
-              {coinData.price != null && pegRef > 0 && (
-                <PegGauge deviationBps={gaugeDeviationBps} className="w-full max-w-[108px]" />
-              )}
-              <div className="min-w-0">
-                <div className="text-2xl font-bold font-mono tracking-tight">
-                  {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
-                </div>
-                <p
-                  className={`text-sm font-mono ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}
-                >
-                  {formatPegDeviation(coinData.price, pegRef)}
-                  {isNavToken && (
-                    <span
-                      className="text-xs text-muted-foreground ml-1"
-                      title="Price reflects NAV appreciation — not a peg deviation"
-                    >
-                      (NAV token)
-                    </span>
-                  )}
-                  {!isNavToken && usesFallbackPegRate && (
-                    <span
-                      className="text-xs text-muted-foreground ml-1"
-                      title="Peg reference: ECB FX rate (not market-derived)"
-                    >
-                      (ECB rate)
-                    </span>
-                  )}
-                </p>
-                <button
-                  onClick={onOpenFeedback}
-                  className="pharos-focus-ring mt-2 flex min-h-11 items-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <Flag className="h-3 w-3" />
-                  Report data issue
-                </button>
-              </div>
+              <HeroPriceContent
+                coin={coin}
+                coinData={coinData}
+                pegRef={pegRef}
+                gaugeDeviationBps={gaugeDeviationBps}
+                isNavToken={isNavToken}
+                deviationBps={deviationBps}
+                usesFallbackPegRate={usesFallbackPegRate}
+                onOpenFeedback={onOpenFeedback}
+                gaugeClassName="w-full max-w-[108px]"
+                buttonClassName="pharos-focus-ring mt-2 flex min-h-11 items-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground"
+              />
             </div>
             {pegScoreResult?.activeDepeg && (
               <div className="mt-3 rounded-full border border-red-500/20 bg-red-500/8 px-3 py-1.5 text-xs text-red-700 dark:text-red-400">
@@ -290,14 +457,13 @@ export function HeroCard({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <HeroMetricCard label="Market Cap">
-              <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
-              <p className={`text-xs font-mono tabular-nums mt-0.5 ${prevDayTrendClass}`}>
-                {hasPrevDay ? formatPercentChange(mcap, prevDay) : "—"}{" "}
-                <span className="text-muted-foreground">24h</span>
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {chainCount} chain{chainCount !== 1 ? "s" : ""}
-              </p>
+              <HeroMarketCapContent
+                mcap={mcap}
+                prevDay={prevDay}
+                prevDayTrendClass={prevDayTrendClass}
+                hasPrevDay={hasPrevDay}
+                chainCount={chainCount}
+              />
             </HeroMetricCard>
 
             <HeroMetricCard
@@ -314,23 +480,20 @@ export function HeroCard({
             </summary>
             <div className="grid gap-3 border-t border-border/50 px-4 pb-4 pt-4 sm:grid-cols-2">
               <HeroMetricCard label="Supply">
-                <div className="text-xl font-bold font-mono tracking-tight leading-none">
-                  {supply != null ? formatSupply(supply) : "—"}{" "}
-                  <span className="text-sm text-muted-foreground">{coin.symbol}</span>
-                </div>
-                <p className="text-xs font-mono tabular-nums mt-0.5">
-                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek) : "—"}</span>
-                  <span className="text-muted-foreground"> 7d</span>
-                  {hasPrevMonth && (
-                    <>
-                      <span className="text-muted-foreground"> · </span>
-                      <span className={prevMonthTrendClass}>
-                        {formatPercentChange(mcap, prevMonth)}
-                      </span>
-                      <span className="text-muted-foreground"> 30d</span>
-                    </>
-                  )}
-                </p>
+                <HeroSupplyContent
+                  mcap={mcap}
+                  supply={supply}
+                  symbol={coin.symbol}
+                  prevWeek={prevWeek}
+                  prevWeekTrendClass={prevWeekTrendClass}
+                  hasPrevWeek={hasPrevWeek}
+                  prevMonth={prevMonth}
+                  prevMonthTrendClass={prevMonthTrendClass}
+                  hasPrevMonth={hasPrevMonth}
+                  prev90d={prev90d}
+                  prev90dTrendClass={prev90dTrendClass}
+                  include90d={false}
+                />
               </HeroMetricCard>
 
               <HeroMetricCard label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>} className={liqBorderClass}>
@@ -343,71 +506,23 @@ export function HeroCard({
         <div className="hidden lg:flex lg:flex-row lg:items-stretch gap-6">
           <div className="lg:w-[45%] flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <div className="flex flex-wrap items-center gap-3">
-                <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
-                <h2 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
-                <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
-                <BluechipHeaderBadge stablecoinId={coin.id} />
-              </div>
-
-              <p className="text-sm text-muted-foreground">
-                {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
-                {" \u00b7 "}
-                {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
-                {" \u00b7 "}
-                {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
-              </p>
-              {coin.tags && coin.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {coin.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground border-border/60 bg-muted/40"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <HeroIdentityHeader coin={coin} logoSrc={logoSrc} mobile={false} />
+              <HeroTagList tags={coin.tags} />
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-auto border-t border-border/30 pt-3">
-              {coinData.price != null && pegRef > 0 && (
-                <PegGauge deviationBps={gaugeDeviationBps} className="w-full max-w-[110px]" />
-              )}
-              <div>
-                <div className="text-2xl font-bold font-mono tracking-tight">
-                  {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
-                </div>
-                <p
-                  className={`text-sm font-mono ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}
-                >
-                  {formatPegDeviation(coinData.price, pegRef)}
-                  {isNavToken && (
-                    <span
-                      className="text-xs text-muted-foreground ml-1"
-                      title="Price reflects NAV appreciation — not a peg deviation"
-                    >
-                      (NAV token)
-                    </span>
-                  )}
-                  {!isNavToken && usesFallbackPegRate && (
-                    <span
-                      className="text-xs text-muted-foreground ml-1"
-                      title="Peg reference: ECB FX rate (not market-derived)"
-                    >
-                      (ECB rate)
-                    </span>
-                  )}
-                </p>
-                <button
-                  onClick={onOpenFeedback}
-                  className="pharos-focus-ring mt-2 flex min-h-11 items-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-0"
-                >
-                  <Flag className="h-3 w-3" />
-                  Report data issue
-                </button>
-              </div>
+              <HeroPriceContent
+                coin={coin}
+                coinData={coinData}
+                pegRef={pegRef}
+                gaugeDeviationBps={gaugeDeviationBps}
+                isNavToken={isNavToken}
+                deviationBps={deviationBps}
+                usesFallbackPegRate={usesFallbackPegRate}
+                onOpenFeedback={onOpenFeedback}
+                gaugeClassName="w-full max-w-[110px]"
+                buttonClassName="pharos-focus-ring mt-2 flex min-h-11 items-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-0"
+              />
             </div>
           </div>
 
@@ -416,47 +531,30 @@ export function HeroCard({
           <div className="lg:flex-1">
             <div className="grid grid-cols-2 gap-3">
               <HeroMetricCard label="Market Cap">
-                <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
-                <p className={`text-xs font-mono tabular-nums mt-0.5 ${prevDayTrendClass}`}>
-                  {hasPrevDay ? formatPercentChange(mcap, prevDay) : "—"}{" "}
-                  <span className="text-muted-foreground">24h</span>
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {chainCount} chain{chainCount !== 1 ? "s" : ""}
-                </p>
+                <HeroMarketCapContent
+                  mcap={mcap}
+                  prevDay={prevDay}
+                  prevDayTrendClass={prevDayTrendClass}
+                  hasPrevDay={hasPrevDay}
+                  chainCount={chainCount}
+                />
               </HeroMetricCard>
 
               <HeroMetricCard label="Supply">
-                <div className="text-xl font-bold font-mono tracking-tight leading-none">
-                  {supply != null ? formatSupply(supply) : "—"}{" "}
-                  <span className="text-sm text-muted-foreground">{coin.symbol}</span>
-                </div>
-                <p className="text-xs font-mono tabular-nums mt-0.5">
-                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek) : "—"}</span>
-                  <span className="text-muted-foreground"> 7d</span>
-                  {hasPrevMonth && (
-                    <>
-                      <span className="text-muted-foreground"> · </span>
-                      <span className={prevMonthTrendClass}>
-                        {formatPercentChange(mcap, prevMonth)}
-                      </span>
-                      <span className="text-muted-foreground"> 30d</span>
-                    </>
-                  )}
-                  {prev90d > 0 && (
-                    <>
-                      <span className="text-muted-foreground"> · </span>
-                      <span
-                        className={
-                          mcap >= prev90d ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
-                        }
-                      >
-                        {formatPercentChange(mcap, prev90d)}
-                      </span>
-                      <span className="text-muted-foreground"> 90d</span>
-                    </>
-                  )}
-                </p>
+                <HeroSupplyContent
+                  mcap={mcap}
+                  supply={supply}
+                  symbol={coin.symbol}
+                  prevWeek={prevWeek}
+                  prevWeekTrendClass={prevWeekTrendClass}
+                  hasPrevWeek={hasPrevWeek}
+                  prevMonth={prevMonth}
+                  prevMonthTrendClass={prevMonthTrendClass}
+                  hasPrevMonth={hasPrevMonth}
+                  prev90d={prev90d}
+                  prev90dTrendClass={prev90dTrendClass}
+                  include90d
+                />
               </HeroMetricCard>
 
               <HeroMetricCard

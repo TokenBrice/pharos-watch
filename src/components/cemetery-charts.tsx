@@ -61,25 +61,27 @@ function CemeteryChartCard({ title, ariaLabel, children }: { title: string; aria
   );
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   1a. Cause of Death (by Count) — Donut Chart
-   ══════════════════════════════════════════════════════════════════════ */
+type CauseOfDeathDonutDatum = {
+  name: string;
+  value: number;
+  cause: CauseOfDeath;
+};
 
-function CauseOfDeathByCountChart() {
-  const data = useMemo(() => {
-    const counts = new Map<CauseOfDeath, number>();
-    for (const coin of DEAD_STABLECOINS) {
-      counts.set(coin.causeOfDeath, (counts.get(coin.causeOfDeath) ?? 0) + 1);
-    }
-    return Array.from(counts.entries()).map(([cause, count]) => ({
-      name: CAUSE_META[cause].label,
-      value: count,
-      cause,
-    }));
-  }, []);
-
+function CauseOfDeathDonutChart({
+  title,
+  ariaLabel,
+  data,
+  total,
+  formatValue,
+}: {
+  title: string;
+  ariaLabel: string;
+  data: CauseOfDeathDonutDatum[];
+  total: number;
+  formatValue: (datum: CauseOfDeathDonutDatum, total: number) => ReactNode;
+}) {
   return (
-    <CemeteryChartCard title="Cause of Death (by Count)" ariaLabel="Cause of death distribution by count">
+    <CemeteryChartCard title={title} ariaLabel={ariaLabel}>
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <PieChart>
           <Pie
@@ -93,25 +95,20 @@ function CauseOfDeathByCountChart() {
             paddingAngle={3}
             strokeWidth={0}
           >
-            {data.map((d) => (
-              <Cell key={d.cause} fill={CAUSE_HEX[d.cause]} />
+            {data.map((datum) => (
+              <Cell key={datum.cause} fill={CAUSE_HEX[datum.cause]} />
             ))}
           </Pie>
           <Tooltip
             content={({ active, payload }) => {
               if (!active || !payload?.[0]) return null;
-              const d = payload[0].payload as (typeof data)[0];
+              const datum = payload[0].payload as CauseOfDeathDonutDatum;
               return (
                 <ChartTooltip>
-                  <p className="font-semibold" style={{ color: CAUSE_HEX[d.cause] }}>
-                    {d.name}
+                  <p className="font-semibold" style={{ color: CAUSE_HEX[datum.cause] }}>
+                    {datum.name}
                   </p>
-                  <p className="font-mono tabular-nums">
-                    {d.value} stablecoin{d.value !== 1 ? "s" : ""}{" "}
-                    <span className="text-muted-foreground">
-                      ({((d.value / DEAD_STABLECOINS.length) * 100).toFixed(0)}%)
-                    </span>
-                  </p>
+                  <div className="font-mono tabular-nums">{formatValue(datum, total)}</div>
                 </ChartTooltip>
               );
             }}
@@ -120,6 +117,42 @@ function CauseOfDeathByCountChart() {
         </PieChart>
       </ResponsiveContainer>
     </CemeteryChartCard>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   1a. Cause of Death (by Count) — Donut Chart
+   ══════════════════════════════════════════════════════════════════════ */
+
+function CauseOfDeathByCountChart() {
+  const { data, total } = useMemo(() => {
+    const counts = new Map<CauseOfDeath, number>();
+    for (const coin of DEAD_STABLECOINS) {
+      counts.set(coin.causeOfDeath, (counts.get(coin.causeOfDeath) ?? 0) + 1);
+    }
+    return {
+      data: Array.from(counts.entries()).map(([cause, count]) => ({
+        name: CAUSE_META[cause].label,
+        value: count,
+        cause,
+      })),
+      total: DEAD_STABLECOINS.length,
+    };
+  }, []);
+
+  return (
+    <CauseOfDeathDonutChart
+      title="Cause of Death (by Count)"
+      ariaLabel="Cause of death distribution by count"
+      data={data}
+      total={total}
+      formatValue={(datum, countTotal) => (
+        <>
+          {datum.value} stablecoin{datum.value !== 1 ? "s" : ""}{" "}
+          <span className="text-muted-foreground">({((datum.value / countTotal) * 100).toFixed(0)}%)</span>
+        </>
+      )}
+    />
   );
 }
 
@@ -135,55 +168,29 @@ function CauseOfDeathByMcapChart() {
         mcaps.set(coin.causeOfDeath, (mcaps.get(coin.causeOfDeath) ?? 0) + coin.peakMcap);
       }
     }
-    const total = Array.from(mcaps.values()).reduce((s, v) => s + v, 0);
-    const data = Array.from(mcaps.entries()).map(([cause, mcap]) => ({
-      name: CAUSE_META[cause].label,
-      value: mcap,
-      cause,
-    }));
-    return { data, total };
+    return {
+      data: Array.from(mcaps.entries()).map(([cause, mcap]) => ({
+        name: CAUSE_META[cause].label,
+        value: mcap,
+        cause,
+      })),
+      total: Array.from(mcaps.values()).reduce((sum, value) => sum + value, 0),
+    };
   }, []);
 
   return (
-    <CemeteryChartCard title="Cause of Death (by Peak Mcap)" ariaLabel="Cause of death distribution by peak market cap">
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={55}
-            outerRadius={95}
-            dataKey="value"
-            nameKey="name"
-            paddingAngle={3}
-            strokeWidth={0}
-          >
-            {data.map((d) => (
-              <Cell key={d.cause} fill={CAUSE_HEX[d.cause]} />
-            ))}
-          </Pie>
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!active || !payload?.[0]) return null;
-              const d = payload[0].payload as (typeof data)[0];
-              return (
-                <ChartTooltip>
-                  <p className="font-semibold" style={{ color: CAUSE_HEX[d.cause] }}>
-                    {d.name}
-                  </p>
-                  <p className="font-mono tabular-nums">
-                    {formatCurrency(d.value, 1)}{" "}
-                    <span className="text-muted-foreground">({((d.value / total) * 100).toFixed(0)}%)</span>
-                  </p>
-                </ChartTooltip>
-              );
-            }}
-          />
-          <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-        </PieChart>
-      </ResponsiveContainer>
-    </CemeteryChartCard>
+    <CauseOfDeathDonutChart
+      title="Cause of Death (by Peak Mcap)"
+      ariaLabel="Cause of death distribution by peak market cap"
+      data={data}
+      total={total}
+      formatValue={(datum, mcapTotal) => (
+        <>
+          {formatCurrency(datum.value, 1)}{" "}
+          <span className="text-muted-foreground">({((datum.value / mcapTotal) * 100).toFixed(0)}%)</span>
+        </>
+      )}
+    />
   );
 }
 
@@ -262,9 +269,7 @@ function DeathsByYearChart() {
                       <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
                       <span>Peak Mcap</span>
                     </div>
-                    <span className="font-mono tabular-nums">
-                      {formatCurrency(Number(payload[1]?.value ?? 0), 1)}
-                    </span>
+                    <span className="font-mono tabular-nums">{formatCurrency(Number(payload[1]?.value ?? 0), 1)}</span>
                   </div>
                 </ChartTooltip>
               );

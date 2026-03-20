@@ -4,7 +4,7 @@ import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { StatusCause, StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminAccess } from "@/lib/admin-access";
-import { getRecommendedActionsForCause } from "./action-recommendations";
+import { getRecommendedActionsForCause } from "@/lib/status/action-recommendations";
 import { AdminActionButton } from "./admin-action-button";
 
 interface StatusFactsProps {

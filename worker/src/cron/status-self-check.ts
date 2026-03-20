@@ -2,7 +2,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
-import { evaluateStatusAndPersist } from "../api/status";
+import { evaluateStatusAndPersist } from "../lib/status-evaluation";
 import { route } from "../router";
 import {
   buildDiscrepancy,

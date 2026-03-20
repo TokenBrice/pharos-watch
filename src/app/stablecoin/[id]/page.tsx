@@ -5,6 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
+import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import StablecoinDetailClient from "./client";
@@ -19,11 +20,7 @@ export function generateStaticParams() {
   return TRACKED_STABLECOINS.map((coin) => ({ id: coin.id }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const coin = TRACKED_META_BY_ID.get(id);
 
@@ -32,28 +29,6 @@ export async function generateMetadata({
   }
 
   return buildStablecoinDetailMetadata(coin);
-}
-
-function getRelatedStablecoins(coinId: string, limit = 6) {
-  const coin = TRACKED_META_BY_ID.get(coinId);
-  if (!coin) return [];
-
-  const others = ACTIVE_STABLECOINS.filter((s) => s.id !== coinId);
-
-  // Score by similarity: same governance (3pts), same backing (2pts), same peg (1pt)
-  const scored = others.map((s) => {
-    let score = 0;
-    if (s.flags.governance === coin.flags.governance) score += 3;
-    if (s.flags.backing === coin.flags.backing) score += 2;
-    if (s.flags.pegCurrency === coin.flags.pegCurrency) score += 1;
-    return { coin: s, score };
-  });
-
-  return scored
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((s) => s.coin);
 }
 
 export default async function StablecoinDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -66,7 +41,10 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
       <div className="space-y-4 py-12 text-center">
         <h1 className="text-3xl font-extrabold tracking-tighter">Stablecoin Not Found</h1>
         <p className="text-muted-foreground">No stablecoin found with ID &ldquo;{id}&rdquo;.</p>
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
           &larr; Back to Dashboard
         </Link>
       </div>
@@ -84,7 +62,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     );
   }
 
-  const related = getRelatedStablecoins(id);
+  const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
   const staticComparisonPages = getStaticComparisonPagesForCoin(id);
 
   return (
@@ -95,12 +73,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           {`Live price, market cap, supply trends, chain distribution, peg score, and depeg history for ${coin.name}.`}
         </p>
       </div>
-      <StablecoinDetailClient
-        id={id}
-        summary={typedSummaries[id] ?? null}
-        coin={coin}
-        logoSrc={typedLogos[coin.id]}
-      />
+      <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={typedLogos[coin.id]} />
       <ExploreNextSection
         coin={coin}
         related={related}

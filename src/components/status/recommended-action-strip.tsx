@@ -1,4 +1,4 @@
-import type { StatusActionRecommendation } from "@/components/status/action-recommendations";
+import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import type { AdminAccess } from "@/lib/admin-access";
 import { cn } from "@/lib/utils";

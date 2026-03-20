@@ -4,70 +4,70 @@
 
 Curated architecture-significant routes. Start with the [Documentation Index](./README.md) for the full docs map, or go straight to the [API Reference](./api-reference.md) for the exhaustive HTTP contract.
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/stablecoins` | Full stablecoin list with supply, price, chains. Returns `X-Data-Age` header |
-| `GET /api/stablecoin/:id` | Per-coin detail (cache-aside, 5min TTL) |
-| `GET /api/stablecoin-summary/:id` | Lightweight per-coin snapshot (price + aggregate supply/deltas) |
-| `GET /api/stablecoin-reserves/:id` | Live or fallback reserve composition for live-enabled assets |
-| `GET /api/redemption-backstops` | Modeled redemption-route and effective-exit snapshot for configured assets |
-| `GET /api/stablecoin-charts` | Historical total supply chart data |
-| `GET /api/blacklist` | Freeze/blacklist events (filterable by token, chain) |
-| `GET /api/depeg-events` | Depeg events (`?stablecoin=ID`, `?active=true`, `?limit=N&offset=M`) |
-| `GET /api/peg-summary` | Per-coin peg scores + aggregate summary stats |
-| `GET /api/usds-status` | USDS Sky protocol status |
-| `GET /api/bluechip-ratings` | Bluechip safety ratings (keyed by Pharos ID) |
-| `GET /api/dex-liquidity` | DEX liquidity scores, pool data, protocol/chain breakdowns, HHI, trends (keyed by Pharos ID) |
-| `GET /api/dex-liquidity-history` | Per-coin historical liquidity data (`?stablecoin=ID&days=90`) |
-| `GET /api/chains` | Chain-level stablecoin aggregates with Chain Health Scores, computed on-the-fly from stablecoins + report-card caches |
-| `GET /api/supply-history` | Per-coin supply history (`?stablecoin=ID&days=N`) |
-| `GET /api/daily-digest` | AI-generated daily market summary (latest) |
-| `GET /api/digest-archive` | All daily digests, newest-first |
-| `GET /api/digest-snapshot` | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD`) for SSG builds |
-| `GET /api/health` | Worker health check (includes circuit breaker states) |
-| `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/admin/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers |
-| `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Preferred access is `ops-api.pharos.watch/api/status-history` with Access service-token headers |
-| `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
-| `GET /api/og/*` | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards |
-| `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
-| `GET /api/safety-score-history` | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`) |
-| `GET /api/yield-rankings` | Cache-backed yield rankings with live-hydrated Safety Scores and risk-adjusted metrics |
-| `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
-| `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
-| `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all|counted`, `?minAmount=`, `?limit=N&offset=M`) |
-| `GET /api/stress-signals` | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`) |
-| `POST /api/backfill-depegs` | Admin: backfill depeg events (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/backfill-supply-history` | Admin: backfill per-coin supply history (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/backfill-stability-index` | Admin: backfill historical stability index scores (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/backfill-mint-burn` | Admin: controlled mint/burn ingestion backfill by `configKey` (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/reclassify-atomic-roundtrips` | Admin: retroactively tag same-tx mint/burn noise as `flow_type='atomic_roundtrip'` (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `GET /api/discovery-candidates` | Admin: list stablecoin coverage candidates surfaced by the daily discovery scan |
-| `POST /api/discovery-candidates/:id/dismiss` | Admin: dismiss a discovery candidate from the status dashboard |
-| `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
-| `POST /api/telegram-webhook` | Telegram bot webhook (command handling, subscription management) |
+| Endpoint                                     | Description                                                                                                                                                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| `GET /api/stablecoins`                       | Full stablecoin list with supply, price, chains. Returns `X-Data-Age` header                                                                                                                                                   |
+| `GET /api/stablecoin/:id`                    | Per-coin detail (cache-aside, 5min TTL)                                                                                                                                                                                        |
+| `GET /api/stablecoin-summary/:id`            | Lightweight per-coin snapshot (price + aggregate supply/deltas)                                                                                                                                                                |
+| `GET /api/stablecoin-reserves/:id`           | Live or fallback reserve composition for live-enabled assets                                                                                                                                                                   |
+| `GET /api/redemption-backstops`              | Modeled redemption-route and effective-exit snapshot for configured assets                                                                                                                                                     |
+| `GET /api/stablecoin-charts`                 | Historical total supply chart data                                                                                                                                                                                             |
+| `GET /api/blacklist`                         | Freeze/blacklist events (filterable by token, chain)                                                                                                                                                                           |
+| `GET /api/depeg-events`                      | Depeg events (`?stablecoin=ID`, `?active=true`, `?limit=N&offset=M`)                                                                                                                                                           |
+| `GET /api/peg-summary`                       | Per-coin peg scores + aggregate summary stats                                                                                                                                                                                  |
+| `GET /api/usds-status`                       | USDS Sky protocol status                                                                                                                                                                                                       |
+| `GET /api/bluechip-ratings`                  | Bluechip safety ratings (keyed by Pharos ID)                                                                                                                                                                                   |
+| `GET /api/dex-liquidity`                     | DEX liquidity scores, pool data, protocol/chain breakdowns, HHI, trends (keyed by Pharos ID)                                                                                                                                   |
+| `GET /api/dex-liquidity-history`             | Per-coin historical liquidity data (`?stablecoin=ID&days=90`)                                                                                                                                                                  |
+| `GET /api/chains`                            | Chain-level stablecoin aggregates with Chain Health Scores, computed on-the-fly from stablecoins + report-card caches                                                                                                          |
+| `GET /api/supply-history`                    | Per-coin supply history (`?stablecoin=ID&days=N`)                                                                                                                                                                              |
+| `GET /api/daily-digest`                      | AI-generated daily market summary (latest)                                                                                                                                                                                     |
+| `GET /api/digest-archive`                    | All daily digests, newest-first                                                                                                                                                                                                |
+| `GET /api/digest-snapshot`                   | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD`) for SSG builds                                                                                                                                        |
+| `GET /api/health`                            | Worker health check (includes circuit breaker states)                                                                                                                                                                          |
+| `GET /api/status`                            | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/admin/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers |
+| `GET /api/status-history`                    | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Preferred access is `ops-api.pharos.watch/api/status-history` with Access service-token headers                                                    |
+| `GET /api/stability-index`                   | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history)                                                                                                                         |
+| `GET /api/og/*`                              | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards                                                                                                                                 |
+| `GET /api/report-cards`                      | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency)                                                                                                                   |
+| `GET /api/safety-score-history`              | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`)                                                                                                                                                       |
+| `GET /api/yield-rankings`                    | Cache-backed yield rankings with live-hydrated Safety Scores and risk-adjusted metrics                                                                                                                                         |
+| `GET /api/yield-history`                     | Per-coin historical yield data (`?stablecoin=ID&days=90`)                                                                                                                                                                      |
+| `GET /api/mint-burn-flows`                   | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`)                                                                                             |
+| `GET /api/mint-burn-events`                  | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all                                                                                           | counted`, `?minAmount=`, `?limit=N&offset=M`) |
+| `GET /api/stress-signals`                    | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`)                                                                                                                                                               |
+| `POST /api/backfill-depegs`                  | Admin: backfill depeg events (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                         |
+| `POST /api/backfill-supply-history`          | Admin: backfill per-coin supply history (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                              |
+| `POST /api/backfill-stability-index`         | Admin: backfill historical stability index scores (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                    |
+| `POST /api/backfill-cg-prices`               | Admin: backfill CoinGecko historical prices into price_cache (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                         |
+| `POST /api/backfill-mint-burn`               | Admin: controlled mint/burn ingestion backfill by `configKey` (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                        |
+| `POST /api/reclassify-atomic-roundtrips`     | Admin: retroactively tag same-tx mint/burn noise as `flow_type='atomic_roundtrip'` (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                   |
+| `POST /api/audit-depeg-history`              | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                |
+| `POST /api/trigger-digest`                   | Admin: force digest regeneration bypassing 1h dedup (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                  |
+| `POST /api/reset-blacklist-sync`             | Admin: roll back blacklist sync state to re-scan missed events (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                       |
+| `GET /api/backfill-dews`                     | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                 |
+| `POST /api/backfill-mint-burn-prices`        | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                               |
+| `GET /api/debug-sync-state`                  | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
+| `GET /api/discovery-candidates`              | Admin: list stablecoin coverage candidates surfaced by the daily discovery scan                                                                                                                                                |
+| `POST /api/discovery-candidates/:id/dismiss` | Admin: dismiss a discovery candidate from the status dashboard                                                                                                                                                                 |
+| `POST /api/feedback`                         | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified                                                                                                                                   |
+| `POST /api/telegram-webhook`                 | Telegram bot webhook (command handling, subscription management)                                                                                                                                                               |
 
 ## Telegram Subsystem Tables
 
-| Table | Description |
-|-------|-------------|
-| `telegram_subscribers` | Bot subscriber preferences (`chat_id`, alert type flags) |
-| `telegram_subscriptions` | Per-user coin subscriptions (`chat_id`, `stablecoin_id`) |
-| `telegram_pending_disambiguation` | Ephemeral mid-conversation state for ticker disambiguation |
-| `telegram_pending_alerts` | Overflow subscriber-alert delivery queue drained by the 5-minute alert cron |
+| Table                             | Description                                                                 |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| `telegram_subscribers`            | Bot subscriber preferences (`chat_id`, alert type flags)                    |
+| `telegram_subscriptions`          | Per-user coin subscriptions (`chat_id`, `stablecoin_id`)                    |
+| `telegram_pending_disambiguation` | Ephemeral mid-conversation state for ticker disambiguation                  |
+| `telegram_pending_alerts`         | Overflow subscriber-alert delivery queue drained by the 5-minute alert cron |
 
 The subscription/disambiguation tables are created in `worker/migrations/0054_telegram_subscribers.sql`; the overflow queue is added by `worker/migrations/0060_telegram_pending_alerts.sql`. For the full bot flow, see [Telegram Alert Bot](./telegram-alerts.md).
 
 ## Telegram Alert Cron Job
 
-| Job | Description |
-|-----|-------------|
+| Job                        | Description                                                                                                                               |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `dispatch-telegram-alerts` | Detects DEWS/depeg/safety changes and fans out alerts to subscribers on the dedicated `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` trigger |
 
 ## File Tree Guide
@@ -214,7 +214,6 @@ src/                              # Next.js frontend (static export)
 │   │   ├── recommended-action-strip.tsx # Status hero intervention strip
 │   │   ├── cron-metadata-summary.ts # Per-job cron metadata summarizer registry for cron-card
 │   │   ├── cron-card.tsx         # Individual cron job health card
-│   │   ├── cron-config.ts        # Cron display configuration
 │   │   ├── status-banner.tsx     # Top-level status banner
 │   │   ├── status-facts.tsx      # Status fact summaries
 │   │   ├── format.ts             # Status-specific formatting helpers
@@ -225,7 +224,6 @@ src/                              # Next.js frontend (static export)
 │   │   ├── data-quality-cards.tsx      # Data quality signal cards
 │   │   ├── circuit-breaker-table.tsx   # Circuit breaker state table
 │   │   ├── system-diagnostics.tsx      # System-level diagnostic panel
-│   │   ├── action-recommendations.ts   # Action recommendation engine
 │   │   ├── admin-action-button.tsx     # Admin action trigger button
 │   │   ├── admin-actions-panel.tsx     # Admin action shelf panel
 │   │   ├── discovery-candidates.tsx    # Discovery candidate listing
@@ -315,16 +313,16 @@ src/                              # Next.js frontend (static export)
 ├── hooks/
 │   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (`/api/supply-history`)
 │   ├── use-chains.ts             # GET /api/chains → useChains() + useChainStablecoins()
-│   ├── api-hooks.ts              # Consolidated low-friction GET hooks wired to shared API path builders
+│   ├── api-hooks.ts              # Consolidated low-friction GET hooks wired to shared API path builders, including stress-signal queries
 │   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
 │   ├── use-logos.ts              # Static logos from data/logos.json
 │   ├── use-blacklist-events.ts   # GET /api/blacklist
 │   ├── use-depeg-events.ts       # GET /api/depeg-events
 │   ├── use-endpoint-probes.ts    # Parallel endpoint probes; exports both admin-mode and public-only probe hooks, with admin probes switching to same-origin `/api/admin/*` on the ops host
 │   ├── use-status.ts             # GET /api/status through the ops-host same-origin proxy
-│   ├── use-status-dashboard-model.ts # Status dashboard polling orchestration + derived operator model
+│   ├── use-status-dashboard-model.ts # Status dashboard polling orchestration + derived operator model (backed by src/lib/status/* helpers)
 │   ├── use-coverage-matrix-model.ts # Coverage page query orchestration + derived row/snapshot model
-│   ├── use-compare-selection.ts  # Compare page URL state, slot selection, and preset application
+│   ├── use-compare-selection.ts  # Compare page URL state, slot selection, and preset application (shared compare types live in src/lib/compare-types.ts)
 │   ├── use-compare-data-model.ts # Compare page query wiring + derived chart/card/table models
 │   ├── use-compare-share-actions.ts # Compare page share/download image actions + clipboard fallbacks
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
@@ -340,7 +338,6 @@ src/                              # Next.js frontend (static export)
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
 │   ├── use-portfolio.ts          # Portfolio holdings state + browser persistence; delegates codec/analysis to src/lib/portfolio-*.ts
 │   ├── use-preferences.ts        # User preference state (persistent settings)
-│   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
 │   └── use-status-history.ts     # GET /api/status-history through the ops-host same-origin proxy
 └── lib/
@@ -498,7 +495,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── dex-liquidity.ts      # GET /api/dex-liquidity (includes HHI, trends)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health
-    │   ├── status.ts             # GET /api/status (admin)
+    │   ├── status.ts             # GET /api/status (admin; raw synthesis lives in worker/src/lib/status-evaluation.ts)
     │   ├── status-data-quality.ts # Shared status data-quality loader reused by /api/status
     │   ├── status-derived-data.ts # Shared status endpoint data loaders (dataset freshness, Telegram stats, mint/burn reconciliation)
     │   ├── status-history.ts     # GET /api/status-history (admin)

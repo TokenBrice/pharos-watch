@@ -227,7 +227,7 @@ Validates DEWS against historical depeg events. Reports TP rate and lead time.
 | `DEWSDetail`  | `src/components/dews-detail.tsx`  | Stablecoin detail page; contextual methodology hint + footer links on the detail card |
 | `DEWSSummary` | `src/components/dews-summary.tsx` | Homepage widget / depeg-page hero radar; title-level contextual methodology hint      |
 
-**Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/use-stress-signals.ts`
+**Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/api-hooks.ts`
 
 **Classification constants:** `ThreatBand`, `THREAT_BAND_COLORS`, `THREAT_BAND_HEX`, `THREAT_BAND_LABELS` in `shared/lib/classification.ts`
 

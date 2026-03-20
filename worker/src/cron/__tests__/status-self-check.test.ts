@@ -57,7 +57,7 @@ const buildDiscrepancyMock = vi.fn(
 );
 
 vi.mock("../../lib/alerts", () => ({ sendAlert: sendAlertMock }));
-vi.mock("../../api/status", () => ({
+vi.mock("../../lib/status-evaluation", () => ({
   evaluateStatusAndPersist: evaluateStatusAndPersistMock,
 }));
 vi.mock("../../router", () => ({

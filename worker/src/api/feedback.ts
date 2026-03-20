@@ -1,7 +1,7 @@
 // worker/src/api/feedback.ts
 
 import { z } from "zod";
-import { errorResponse, jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { formatCurrency } from "@shared/lib/format";
 import { checkFeedbackRateLimit } from "../lib/rate-limit";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
@@ -50,10 +50,7 @@ interface VerificationResult {
   verifiedLabel: "verified: confirmed" | "verified: unconfirmed" | "verified: pending";
 }
 
-async function verifyDataCorrection(
-  db: D1Database,
-  stablecoinId: string
-): Promise<VerificationResult> {
+async function verifyDataCorrection(db: D1Database, stablecoinId: string): Promise<VerificationResult> {
   try {
     const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
     if (stablecoinsCache.kind !== "ok") {
@@ -87,10 +84,7 @@ async function verifyDataCorrection(
     const mcapStr = formatCurrency(totalUSD);
 
     // "Confirmed" = data issue is real (warning); "Unconfirmed" = data looks OK (checkmark)
-    const verificationSummary =
-      verifiedLabel === "verified: confirmed"
-        ? "⚠️ Confirmed"
-        : "✅ Unconfirmed";
+    const verificationSummary = verifiedLabel === "verified: confirmed" ? "⚠️ Confirmed" : "✅ Unconfirmed";
 
     const block = [
       "**--- Auto-Verification Snapshot (at time of submission) ---**",
@@ -123,21 +117,13 @@ const GH_HEADERS = (pat: string): Record<string, string> => ({
   "User-Agent": "pharos-feedback-widget/1.0",
 });
 
-async function createGitHubIssue(
-  pat: string,
-  title: string,
-  body: string,
-  labels: string[]
-): Promise<void> {
-  const res = await fetch(
-    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues`,
-    {
-      method: "POST",
-      headers: GH_HEADERS(pat),
-      body: JSON.stringify({ title, body, labels }),
-      signal: AbortSignal.timeout(10_000),
-    }
-  );
+async function createGitHubIssue(pat: string, title: string, body: string, labels: string[]): Promise<void> {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues`, {
+    method: "POST",
+    headers: GH_HEADERS(pat),
+    body: JSON.stringify({ title, body, labels }),
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`GitHub Issues API ${res.status}: ${text.slice(0, 200)}`);
@@ -149,7 +135,7 @@ async function createGitHubDiscussion(
   repositoryId: string,
   categoryId: string,
   title: string,
-  body: string
+  body: string,
 ): Promise<boolean> {
   const mutation = `
     mutation CreateDiscussion($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
@@ -195,7 +181,7 @@ function formatBody(fb: FeedbackBody, verificationBlock?: string): string {
   const lines: string[] = [];
 
   lines.push(
-    `**Type:** ${fb.type === "bug" ? "Bug Report" : fb.type === "data-correction" ? "Data Correction" : "Feature Request"}`
+    `**Type:** ${fb.type === "bug" ? "Bug Report" : fb.type === "data-correction" ? "Data Correction" : "Feature Request"}`,
   );
 
   if (fb.stablecoinName || fb.stablecoinId) {
@@ -221,119 +207,114 @@ function formatBody(fb: FeedbackBody, verificationBlock?: string): string {
 
 // ── Main handler ──────────────────────────────────────────────────────────
 
-export async function handleFeedback(
-  db: D1Database,
-  request: Request,
-  env: FeedbackEnv
-): Promise<Response> {
-  // Parse + validate JSON body via Zod
-  let fb: FeedbackBody;
-  try {
-    const raw = await request.json();
-    const result = FeedbackBodySchema.safeParse(raw);
-    if (!result.success) {
-      return errorResponse(400, result.error.issues[0]?.message ?? "Invalid feedback data");
-    }
-    fb = result.data;
-  } catch {
-    return errorResponse(400, "Invalid JSON body");
-  }
-
-  // Honeypot: silently accept but do nothing
-  if (fb.website) return jsonResponse({ ok: true });
-
-  // Validate title (required for bug + feature-request — cross-field business rule)
-  if (fb.type === "bug" || fb.type === "feature-request") {
-    const title = fb.title?.trim() ?? "";
-    if (title.length < 3 || title.length > 100) {
-      return errorResponse(400, "Title must be 3–100 characters");
-    }
-  }
-
-  let canonicalStablecoinId: string | undefined;
-
-  // Validate stablecoinId if provided.
-  if (fb.stablecoinId) {
-    const resolved = resolveStablecoinId(fb.stablecoinId);
-    if (!resolved) {
-      return errorResponse(400, "Invalid stablecoinId");
-    }
-    canonicalStablecoinId = resolved.canonicalId;
-    fb.stablecoinId = resolved.canonicalId;
-  }
-
-  // Rate limiting
-  const forwardedFor = request.headers.get("X-Forwarded-For");
-  const ip =
-    request.headers.get("CF-Connecting-IP") ??
-    forwardedFor?.split(",")[0]?.trim() ??
-    "unknown";
-  if (!env.FEEDBACK_IP_SALT) {
-    console.error("[feedback] FEEDBACK_IP_SALT secret not configured");
-    return errorResponse(503, "Service misconfigured");
-  }
-  const allowed = await checkFeedbackRateLimit(
-    db,
-    ip,
-    env.FEEDBACK_IP_SALT,
-    FEEDBACK_RATE_LIMIT_WINDOW_SEC,
-    FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
-  );
-  if (!allowed) {
-    return errorResponse(429, "Too many submissions. Please wait a few minutes.");
-  }
-
-  // Require PAT
-  const pat = env.GITHUB_PAT;
-  if (!pat) {
-    console.error("[feedback] GITHUB_PAT secret not configured");
-    return errorResponse(503, "Feedback service temporarily unavailable");
-  }
-
-  try {
-    if (fb.type === "feature-request") {
-      const title = `[Feature Request] ${(fb.title ?? "").trim()}`;
-      const body = formatBody(fb);
-
-      const repoNodeId = env.GITHUB_REPO_NODE_ID;
-      const categoryId = env.GITHUB_DISCUSSION_CATEGORY_ID;
-
-      let created = false;
-      if (repoNodeId && categoryId) {
-        created = await createGitHubDiscussion(pat, repoNodeId, categoryId, title, body);
+export const handleFeedback = withErrorHandler(
+  "feedback",
+  async (db: D1Database, request: Request, env: FeedbackEnv): Promise<Response> => {
+    // Parse + validate JSON body via Zod
+    let fb: FeedbackBody;
+    try {
+      const raw = await request.json();
+      const result = FeedbackBodySchema.safeParse(raw);
+      if (!result.success) {
+        return errorResponse(400, result.error.issues[0]?.message ?? "Invalid feedback data");
       }
-      if (!created) {
-        await createGitHubIssue(pat, title, body, ["feature-request"]);
-      }
-    } else {
-      let verificationBlock: string | undefined;
-      let verifiedLabel: "verified: confirmed" | "verified: unconfirmed" | "verified: pending" = "verified: pending";
-
-      if (fb.type === "data-correction" && canonicalStablecoinId) {
-        const result = await verifyDataCorrection(db, canonicalStablecoinId);
-        verificationBlock = result.block;
-        verifiedLabel = result.verifiedLabel;
-      }
-
-      const stablecoinPart = fb.stablecoinName ? `${fb.stablecoinName}: ` : "";
-      const shortDesc = fb.description.trim().slice(0, 60);
-      const ellipsis = fb.description.trim().length > 60 ? "…" : "";
-
-      const title =
-        fb.type === "bug"
-          ? `[Bug] ${(fb.title ?? "").trim()}`
-          : `[Data Correction] ${stablecoinPart}${shortDesc}${ellipsis}`;
-
-      const labels =
-        fb.type === "bug" ? ["bug"] : ["data-correction", verifiedLabel];
-
-      const body = formatBody(fb, verificationBlock);
-      await createGitHubIssue(pat, title, body, labels);
+      fb = result.data;
+    } catch {
+      return errorResponse(400, "Invalid JSON body");
     }
 
-    return jsonResponse({ ok: true });
-  } catch (err) {
-    console.error("[feedback] GitHub API error:", err);
-    return errorResponse(500, "Failed to submit feedback. Please try again.");
-  }
-}
+    // Honeypot: silently accept but do nothing
+    if (fb.website) return jsonResponse({ ok: true });
+
+    // Validate title (required for bug + feature-request — cross-field business rule)
+    if (fb.type === "bug" || fb.type === "feature-request") {
+      const title = fb.title?.trim() ?? "";
+      if (title.length < 3 || title.length > 100) {
+        return errorResponse(400, "Title must be 3–100 characters");
+      }
+    }
+
+    let canonicalStablecoinId: string | undefined;
+
+    // Validate stablecoinId if provided.
+    if (fb.stablecoinId) {
+      const resolved = resolveStablecoinId(fb.stablecoinId);
+      if (!resolved) {
+        return errorResponse(400, "Invalid stablecoinId");
+      }
+      canonicalStablecoinId = resolved.canonicalId;
+      fb.stablecoinId = resolved.canonicalId;
+    }
+
+    // Rate limiting
+    const forwardedFor = request.headers.get("X-Forwarded-For");
+    const ip = request.headers.get("CF-Connecting-IP") ?? forwardedFor?.split(",")[0]?.trim() ?? "unknown";
+    if (!env.FEEDBACK_IP_SALT) {
+      console.error("[feedback] FEEDBACK_IP_SALT secret not configured");
+      return errorResponse(503, "Service misconfigured");
+    }
+    const allowed = await checkFeedbackRateLimit(
+      db,
+      ip,
+      env.FEEDBACK_IP_SALT,
+      FEEDBACK_RATE_LIMIT_WINDOW_SEC,
+      FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
+    );
+    if (!allowed) {
+      return errorResponse(429, "Too many submissions. Please wait a few minutes.");
+    }
+
+    // Require PAT
+    const pat = env.GITHUB_PAT;
+    if (!pat) {
+      console.error("[feedback] GITHUB_PAT secret not configured");
+      return errorResponse(503, "Feedback service temporarily unavailable");
+    }
+
+    try {
+      if (fb.type === "feature-request") {
+        const title = `[Feature Request] ${(fb.title ?? "").trim()}`;
+        const body = formatBody(fb);
+
+        const repoNodeId = env.GITHUB_REPO_NODE_ID;
+        const categoryId = env.GITHUB_DISCUSSION_CATEGORY_ID;
+
+        let created = false;
+        if (repoNodeId && categoryId) {
+          created = await createGitHubDiscussion(pat, repoNodeId, categoryId, title, body);
+        }
+        if (!created) {
+          await createGitHubIssue(pat, title, body, ["feature-request"]);
+        }
+      } else {
+        let verificationBlock: string | undefined;
+        let verifiedLabel: "verified: confirmed" | "verified: unconfirmed" | "verified: pending" = "verified: pending";
+
+        if (fb.type === "data-correction" && canonicalStablecoinId) {
+          const result = await verifyDataCorrection(db, canonicalStablecoinId);
+          verificationBlock = result.block;
+          verifiedLabel = result.verifiedLabel;
+        }
+
+        const stablecoinPart = fb.stablecoinName ? `${fb.stablecoinName}: ` : "";
+        const shortDesc = fb.description.trim().slice(0, 60);
+        const ellipsis = fb.description.trim().length > 60 ? "…" : "";
+
+        const title =
+          fb.type === "bug"
+            ? `[Bug] ${(fb.title ?? "").trim()}`
+            : `[Data Correction] ${stablecoinPart}${shortDesc}${ellipsis}`;
+
+        const labels = fb.type === "bug" ? ["bug"] : ["data-correction", verifiedLabel];
+
+        const body = formatBody(fb, verificationBlock);
+        await createGitHubIssue(pat, title, body, labels);
+      }
+
+      return jsonResponse({ ok: true });
+    } catch (err) {
+      console.error("[feedback] GitHub API error:", err);
+      return errorResponse(500, "Failed to submit feedback. Please try again.");
+    }
+  },
+);

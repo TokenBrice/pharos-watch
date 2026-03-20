@@ -2,7 +2,7 @@ import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/p
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";
-import { withErrorHandler, jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
@@ -32,12 +32,13 @@ async function backfillCommodity(
 ): Promise<{ rows: number; error?: string }> {
   // Fetch market_chart (prices + market_caps) and current circulating_supply in parallel
   const [cgRes, coinRes] = await Promise.all([
+    fetchWithRetry(cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`), {
+      headers: cgHeaders({ "User-Agent": USER_AGENT }),
+    }),
     fetchWithRetry(
-      cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
-      { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
-    ),
-    fetchWithRetry(
-      cgUrl(`/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`),
+      cgUrl(
+        `/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`,
+      ),
       { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
     ),
   ]);
@@ -60,7 +61,9 @@ async function backfillCommodity(
       };
       circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
     } else {
-      console.warn(`[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${coinRes?.status ?? "no response"}), sanity check skipped`);
+      console.warn(
+        `[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${coinRes?.status ?? "no response"}), sanity check skipped`,
+      );
     }
 
     const mcaps = cgData.market_caps ?? [];
@@ -80,9 +83,7 @@ async function backfillCommodity(
         const price = priceMap.get(snapshotDate) ?? null;
 
         // Validate historical mcap via supply×price when price is available
-        const resolvedMcap = price != null
-          ? resolveMarketCap(mcap, circulatingSupply, price)
-          : mcap;
+        const resolvedMcap = price != null ? resolveMarketCap(mcap, circulatingSupply, price) : mcap;
 
         stmts.push(
           db
@@ -171,16 +172,15 @@ async function backfillCommodity(
   return { rows: stmts.length };
 }
 
-export const handleBackfillSupplyHistory = withErrorHandler(
-  "backfill-supply-history",
-  async (
-    db: D1Database,
-    url: URL,
-    trustedAdmin?: boolean,
-    request?: Request,
-  ): Promise<Response> => {
-    return withAdmin(request, async () => {
-
+export async function handleBackfillSupplyHistory(
+  db: D1Database,
+  url: URL,
+  trustedAdmin?: boolean,
+  request?: Request,
+): Promise<Response> {
+  return withAdmin(
+    request,
+    async () => {
       const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
 
       const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
@@ -195,171 +195,172 @@ export const handleBackfillSupplyHistory = withErrorHandler(
         return noCoinsInBatchResponse();
       }
 
-    let totalRows = 0;
-    const errors: string[] = [];
-    const skipped: string[] = [];
+      let totalRows = 0;
+      const errors: string[] = [];
+      const skipped: string[] = [];
 
-    for (const meta of coins) {
-      // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
-      const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
-      if (isCommodity && meta.geckoId) {
-        try {
-          const result = await backfillCommodity(db, meta.id, { geckoId: meta.geckoId, protocolSlug: meta.protocolSlug ?? undefined });
-          if (result.error) {
-            errors.push(`${meta.symbol}: ${result.error}`);
-          } else {
-            totalRows += result.rows;
-          }
-        } catch (err) {
-          errors.push(`${meta.symbol}: commodity backfill failed — ${err}`);
-        }
-        continue;
-      }
-
-      // CoinGecko-only and non-gold/silver commodity coins: backfill via CoinGecko market_chart
-      // (same path as commodity tokens — market_cap from CG is accurate for USD stablecoins too)
-      if (meta.detailProvider === "coingecko" || meta.detailProvider === "commodity") {
-        if (meta.geckoId) {
+      for (const meta of coins) {
+        // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
+        const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
+        if (isCommodity && meta.geckoId) {
           try {
-            const result = await backfillCommodity(db, meta.id, { geckoId: meta.geckoId, protocolSlug: meta.protocolSlug ?? undefined });
+            const result = await backfillCommodity(db, meta.id, {
+              geckoId: meta.geckoId,
+              protocolSlug: meta.protocolSlug ?? undefined,
+            });
             if (result.error) {
               errors.push(`${meta.symbol}: ${result.error}`);
             } else {
               totalRows += result.rows;
             }
           } catch (err) {
-            errors.push(`${meta.symbol}: CoinGecko backfill failed — ${err}`);
+            errors.push(`${meta.symbol}: commodity backfill failed — ${err}`);
           }
-        } else {
-          skipped.push(meta.symbol);
+          continue;
         }
-        continue;
-      }
 
-      // Determine if this coin needs native→USD conversion
-      const isUsd = meta.flags.pegCurrency === "USD";
-      const needsConversion = !isUsd;
-      const geckoId = meta.geckoId ?? PSI_ELIGIBLE_META_BY_ID.get(meta.id)?.geckoId;
-      const dlId = meta.llamaId ?? meta.id;
+        // CoinGecko-only and non-gold/silver commodity coins: backfill via CoinGecko market_chart
+        // (same path as commodity tokens — market_cap from CG is accurate for USD stablecoins too)
+        if (meta.detailProvider === "coingecko" || meta.detailProvider === "commodity") {
+          if (meta.geckoId) {
+            try {
+              const result = await backfillCommodity(db, meta.id, {
+                geckoId: meta.geckoId,
+                protocolSlug: meta.protocolSlug ?? undefined,
+              });
+              if (result.error) {
+                errors.push(`${meta.symbol}: ${result.error}`);
+              } else {
+                totalRows += result.rows;
+              }
+            } catch (err) {
+              errors.push(`${meta.symbol}: CoinGecko backfill failed — ${err}`);
+            }
+          } else {
+            skipped.push(meta.symbol);
+          }
+          continue;
+        }
 
-      // Fetch DL detail + historical prices (for non-USD coins) in parallel
-      const fetches: Promise<Response | null>[] = [
-        fetchWithRetry(
-          `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
-          { headers: { "User-Agent": USER_AGENT } },
-        ),
-      ];
-      if (needsConversion && geckoId) {
-        fetches.push(
-          fetchWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${geckoId}?start=0&span=500`, {
+        // Determine if this coin needs native→USD conversion
+        const isUsd = meta.flags.pegCurrency === "USD";
+        const needsConversion = !isUsd;
+        const geckoId = meta.geckoId ?? PSI_ELIGIBLE_META_BY_ID.get(meta.id)?.geckoId;
+        const dlId = meta.llamaId ?? meta.id;
+
+        // Fetch DL detail + historical prices (for non-USD coins) in parallel
+        const fetches: Promise<Response | null>[] = [
+          fetchWithRetry(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`, {
             headers: { "User-Agent": USER_AGENT },
           }),
-        );
-      }
-
-      let detail: StablecoinDetail | null = null;
-      let historicalPrices: { timestamp: number; price: number }[] = [];
-      try {
-        const responses = await Promise.all(fetches);
-        const detailRes = responses[0];
-        if (!detailRes?.ok) {
-          errors.push(`${meta.symbol}: DL returned ${detailRes?.status ?? "no response"}`);
-          continue;
+        ];
+        if (needsConversion && geckoId) {
+          fetches.push(
+            fetchWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${geckoId}?start=0&span=500`, {
+              headers: { "User-Agent": USER_AGENT },
+            }),
+          );
         }
-        detail = (await detailRes.json()) as StablecoinDetail;
 
-        // Parse historical prices if fetched
-        if (responses[1]?.ok) {
-          const priceData = (await responses[1].json()) as {
-            coins: Record<string, { prices: { timestamp: number; price: number }[] }>;
-          };
-          historicalPrices = priceData.coins?.[`coingecko:${geckoId}`]?.prices ?? [];
-          historicalPrices.sort((a, b) => a.timestamp - b.timestamp);
-        }
-      } catch (err) {
-        errors.push(`${meta.symbol}: fetch failed — ${err}`);
-        continue;
-      }
-
-      const tokens = detail?.tokens;
-      if (!tokens || tokens.length === 0) {
-        skipped.push(meta.symbol);
-        continue;
-      }
-
-      // For non-USD coins: require historical price data by default.
-      // Optional emergency fallback can use current price for only a short recent window.
-      const hasHistoricalPrices = historicalPrices.length > 0;
-      const fallbackPrice = (needsConversion && detail?.price) ? detail.price : null;
-      if (needsConversion && !hasHistoricalPrices) {
-        if (!allowConstantPriceFallback) {
-          errors.push(`${meta.symbol}: non-USD coin missing historical prices (set allow-constant-price-fallback=true for emergency short-window fallback)`);
-          continue;
-        }
-        if (!fallbackPrice) {
-          errors.push(`${meta.symbol}: non-USD coin missing historical prices and fallback price`);
-          continue;
-        }
-        const reason = !geckoId ? "no geckoId" : "price API returned no data";
-        console.warn(`[backfill] ${meta.symbol}: ${reason}, using emergency constant fallback price $${fallbackPrice} for recent window only`);
-      }
-
-      function findHistoricalPrice(date: number): number | null {
-        return binarySearchNearest(historicalPrices, date, (p) => p.timestamp)?.price ?? null;
-      }
-
-      const stmts: D1PreparedStatement[] = [];
-
-      const fallbackWindowStart = Math.floor(Date.now() / 1000) - 7 * 86400;
-      for (const entry of tokens) {
-        const circ = entry.circulating;
-        if (!circ) continue;
-
-        // Sum across all peg buckets (native currency for non-USD, USD for USD coins)
-        const rawSum = Object.values(circ).reduce(
-          (sum, v) => sum + (v ?? 0),
-          0,
-        );
-        if (rawSum <= 0) continue;
-
-        let marketCapUsd: number;
-        let price: number | null = null;
-
-        if (needsConversion) {
-          // Non-USD: multiply native supply by USD price to get market cap
-          price = findHistoricalPrice(entry.date);
-          if (
-            price == null &&
-            allowConstantPriceFallback &&
-            fallbackPrice &&
-            entry.date >= fallbackWindowStart
-          ) {
-            price = fallbackPrice;
+        let detail: StablecoinDetail | null = null;
+        let historicalPrices: { timestamp: number; price: number }[] = [];
+        try {
+          const responses = await Promise.all(fetches);
+          const detailRes = responses[0];
+          if (!detailRes?.ok) {
+            errors.push(`${meta.symbol}: DL returned ${detailRes?.status ?? "no response"}`);
+            continue;
           }
-          if (!price || price <= 0) continue;
-          marketCapUsd = rawSum * price;
-        } else {
-          // USD: rawSum is already in USD
-          marketCapUsd = rawSum;
+          detail = (await detailRes.json()) as StablecoinDetail;
+
+          // Parse historical prices if fetched
+          if (responses[1]?.ok) {
+            const priceData = (await responses[1].json()) as {
+              coins: Record<string, { prices: { timestamp: number; price: number }[] }>;
+            };
+            historicalPrices = priceData.coins?.[`coingecko:${geckoId}`]?.prices ?? [];
+            historicalPrices.sort((a, b) => a.timestamp - b.timestamp);
+          }
+        } catch (err) {
+          errors.push(`${meta.symbol}: fetch failed — ${err}`);
+          continue;
         }
 
-        // Floor to UTC midnight
-        const snapshotDate = Math.floor(entry.date / 86400) * 86400;
+        const tokens = detail?.tokens;
+        if (!tokens || tokens.length === 0) {
+          skipped.push(meta.symbol);
+          continue;
+        }
 
-        stmts.push(
-          db
-            .prepare(
-              "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
-            )
-            .bind(meta.id, snapshotDate, marketCapUsd, price),
-        );
-      }
+        // For non-USD coins: require historical price data by default.
+        // Optional emergency fallback can use current price for only a short recent window.
+        const hasHistoricalPrices = historicalPrices.length > 0;
+        const fallbackPrice = needsConversion && detail?.price ? detail.price : null;
+        if (needsConversion && !hasHistoricalPrices) {
+          if (!allowConstantPriceFallback) {
+            errors.push(
+              `${meta.symbol}: non-USD coin missing historical prices (set allow-constant-price-fallback=true for emergency short-window fallback)`,
+            );
+            continue;
+          }
+          if (!fallbackPrice) {
+            errors.push(`${meta.symbol}: non-USD coin missing historical prices and fallback price`);
+            continue;
+          }
+          const reason = !geckoId ? "no geckoId" : "price API returned no data";
+          console.warn(
+            `[backfill] ${meta.symbol}: ${reason}, using emergency constant fallback price $${fallbackPrice} for recent window only`,
+          );
+        }
 
-      if (stmts.length > 0) {
-        await batchExecute(db, stmts);
-        totalRows += stmts.length;
+        function findHistoricalPrice(date: number): number | null {
+          return binarySearchNearest(historicalPrices, date, (p) => p.timestamp)?.price ?? null;
+        }
+
+        const stmts: D1PreparedStatement[] = [];
+
+        const fallbackWindowStart = Math.floor(Date.now() / 1000) - 7 * 86400;
+        for (const entry of tokens) {
+          const circ = entry.circulating;
+          if (!circ) continue;
+
+          // Sum across all peg buckets (native currency for non-USD, USD for USD coins)
+          const rawSum = Object.values(circ).reduce((sum, v) => sum + (v ?? 0), 0);
+          if (rawSum <= 0) continue;
+
+          let marketCapUsd: number;
+          let price: number | null = null;
+
+          if (needsConversion) {
+            // Non-USD: multiply native supply by USD price to get market cap
+            price = findHistoricalPrice(entry.date);
+            if (price == null && allowConstantPriceFallback && fallbackPrice && entry.date >= fallbackWindowStart) {
+              price = fallbackPrice;
+            }
+            if (!price || price <= 0) continue;
+            marketCapUsd = rawSum * price;
+          } else {
+            // USD: rawSum is already in USD
+            marketCapUsd = rawSum;
+          }
+
+          // Floor to UTC midnight
+          const snapshotDate = Math.floor(entry.date / 86400) * 86400;
+
+          stmts.push(
+            db
+              .prepare(
+                "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+              )
+              .bind(meta.id, snapshotDate, marketCapUsd, price),
+          );
+        }
+
+        if (stmts.length > 0) {
+          await batchExecute(db, stmts);
+          totalRows += stmts.length;
+        }
       }
-    }
 
       return jsonResponse({
         coinsProcessed: coins.length,
@@ -367,6 +368,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
         skipped: skipped.length > 0 ? skipped : undefined,
         errors: errors.length > 0 ? errors : undefined,
       });
-    }, trustedAdmin);
-  }
-);
+    },
+    trustedAdmin,
+  );
+}

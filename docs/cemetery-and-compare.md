@@ -63,6 +63,7 @@ Primary files:
 - `src/components/compare-empty-state.tsx`
 - `src/lib/compare-pages.ts`
 - `src/lib/compare-config.ts` — `MAX_COMPARE_COINS`, `COMPARISON_PRESETS`
+- `src/lib/compare-types.ts` — shared compare slot / preset types
 - `src/lib/compare-share-image.ts`
 - `src/hooks/use-compare-selection.ts` — selection state management
 - `src/hooks/use-compare-data-model.ts` — data fetching and derived state

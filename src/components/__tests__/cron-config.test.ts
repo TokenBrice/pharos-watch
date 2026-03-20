@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getStatusCronDisplay } from "@/components/status/cron-config";
+import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { CRON_GROUPS, CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 
 describe("status cron config", () => {

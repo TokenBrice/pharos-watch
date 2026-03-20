@@ -2,15 +2,10 @@
 
 import { ArrowRight, LockKeyhole, Waves } from "lucide-react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { PresetCard } from "@/components/preset-card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-export interface ComparePreset {
-  title: string;
-  description: string;
-  coins: readonly string[];
-}
+import type { ComparePreset } from "@/lib/compare-types";
 
 interface CompareEmptyStateProps {
   presets: readonly ComparePreset[];
@@ -121,59 +116,43 @@ function ComparePresetCard({
   onApplyPreset: (preset: ComparePreset) => void;
   featured?: boolean;
 }) {
+  const previewItems = preset.coins
+    .slice(0, featured ? 4 : 3)
+    .map((coinId) => {
+      const coin = TRACKED_META_BY_ID.get(coinId);
+      return coin
+        ? {
+            key: coinId,
+            logoName: coin.name,
+            logoSrc: logos?.[coinId],
+          }
+        : null;
+    })
+    .filter((item) => item != null);
+
+  const chips = preset.coins
+    .map((coinId) => {
+      const coin = TRACKED_META_BY_ID.get(coinId);
+      return coin
+        ? {
+            key: coinId,
+            label: coin.symbol,
+          }
+        : null;
+    })
+    .filter((item) => item != null);
+
   return (
-    <Card
-      className={`pharos-focus-ring cursor-pointer border-border/70 transition-[border-color,background-color,transform,box-shadow] hover:border-primary/40 hover:bg-accent/35 hover:shadow-[0_16px_34px_oklch(0_0_0_/0.16)] ${featured ? "bg-card/92" : "bg-card/72"}`}
-      role="button"
-      tabIndex={0}
-      aria-label={`Apply ${preset.title} preset`}
+    <PresetCard
+      title={preset.title}
+      description={preset.description}
+      previewItems={previewItems}
+      chips={chips}
+      footer="Loads directly into the comparison table without auto-populating on first visit."
+      ariaLabel={`Apply ${preset.title} preset`}
+      featured={featured}
       onClick={() => onApplyPreset(preset)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onApplyPreset(preset);
-        }
-      }}
-    >
-      <CardHeader className="space-y-3 pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle className="text-base">{preset.title}</CardTitle>
-            <CardDescription className="text-sm leading-relaxed">{preset.description}</CardDescription>
-          </div>
-          <div className="flex -space-x-2">
-            {preset.coins.slice(0, featured ? 4 : 3).map((coinId) => {
-              const coin = TRACKED_META_BY_ID.get(coinId);
-              if (!coin) return null;
-              return (
-                <span key={coinId} className="rounded-full ring-2 ring-card">
-                  <StablecoinLogo src={logos?.[coinId]} name={coin.name} size={24} />
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-0">
-        <div className="flex flex-wrap gap-2">
-          {preset.coins.map((coinId) => {
-            const coin = TRACKED_META_BY_ID.get(coinId);
-            if (!coin) return null;
-            return (
-              <span
-                key={coinId}
-                className="rounded-full border border-border/60 bg-background/65 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground"
-              >
-                {coin.symbol}
-              </span>
-            );
-          })}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Loads directly into the comparison table without auto-populating on first visit.
-        </p>
-      </CardContent>
-    </Card>
+    />
   );
 }
 

@@ -1,6 +1,6 @@
 import type { EndpointProbeResult, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
-import { deriveStatusActionRecommendations } from "@/components/status/action-recommendations";
-import { getStatusCronDisplay } from "@/components/status/cron-config";
+import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
+import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
 import { formatElapsedSeconds } from "@shared/lib/format";
 

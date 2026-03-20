@@ -1,4 +1,4 @@
-import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeStabilityIndex } from "../lib/stability-index";
@@ -11,10 +11,14 @@ import {
   type PsiSupplyRow,
 } from "../lib/psi-recompute";
 
-export const handleBackfillStabilityIndex = withErrorHandler(
-  "backfill-stability-index",
-  async (db: D1Database, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
-    return withAdmin(request, async () => {
+export async function handleBackfillStabilityIndex(
+  db: D1Database,
+  trustedAdmin?: boolean,
+  request?: Request,
+): Promise<Response> {
+  return withAdmin(
+    request,
+    async () => {
       const rebuildTableSql = [
         "CREATE TABLE stability_index_rebuild (",
         "computed_at INTEGER PRIMARY KEY,",
@@ -43,7 +47,9 @@ export const handleBackfillStabilityIndex = withErrorHandler(
 
       // Load all depeg events into memory for fast lookup
       const allDepegs = await db
-        .prepare("SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at")
+        .prepare(
+          "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at",
+        )
         .all<PsiDepegEventRow>();
       const depegEvents = allDepegs.results ?? [];
 
@@ -53,10 +59,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         .all<PsiSupplyRow>();
       const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
-      await db.batch([
-        db.prepare("DROP TABLE IF EXISTS stability_index_rebuild"),
-        db.prepare(rebuildTableSql),
-      ]);
+      await db.batch([db.prepare("DROP TABLE IF EXISTS stability_index_rebuild"), db.prepare(rebuildTableSql)]);
 
       // Iterate day by day — build all statements first, then atomically swap
       const stmts: D1PreparedStatement[] = [];
@@ -77,21 +80,23 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         const methodologyVersion = getPsiMethodologyVersionAt(day);
 
         stmts.push(
-          db.prepare(
-            "INSERT INTO stability_index_rebuild (computed_at, score, band, components, input_snapshot, methodology_version) VALUES (?, ?, ?, ?, ?, ?)"
-          ).bind(
-            day,
-            result.score,
-            result.band,
-            JSON.stringify(result.components),
-            JSON.stringify({
-              depegCount: input.depegCount,
-              totalMcapUsd: input.totalMcapUsd,
-              mcap7dChangePct: input.mcap7dChangePct,
+          db
+            .prepare(
+              "INSERT INTO stability_index_rebuild (computed_at, score, band, components, input_snapshot, methodology_version) VALUES (?, ?, ?, ?, ?, ?)",
+            )
+            .bind(
+              day,
+              result.score,
+              result.band,
+              JSON.stringify(result.components),
+              JSON.stringify({
+                depegCount: input.depegCount,
+                totalMcapUsd: input.totalMcapUsd,
+                mcap7dChangePct: input.mcap7dChangePct,
+                methodologyVersion,
+              }),
               methodologyVersion,
-            }),
-            methodologyVersion,
-          )
+            ),
         );
         count++;
       }
@@ -107,7 +112,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
             `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
              SELECT computed_at, score, band, components, input_snapshot, methodology_version
              FROM stability_index_rebuild
-             ORDER BY computed_at`
+             ORDER BY computed_at`,
           ),
         ]);
       } finally {
@@ -115,6 +120,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       }
 
       return jsonResponse({ ok: true, daysBackfilled: count, skippedInsufficientData });
-    }, trustedAdmin);
-  }
-);
+    },
+    trustedAdmin,
+  );
+}

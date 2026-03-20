@@ -3,7 +3,7 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { withErrorHandler, jsonResponse } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
@@ -17,16 +17,16 @@ interface CoinResult {
   rowsInserted: number;
 }
 
-export const handleBackfillCgPrices = withErrorHandler(
-  "backfill-cg-prices",
-  async (
-    db: D1Database,
-    url: URL,
-    trustedAdmin?: boolean,
-    request?: Request,
-    cgApiKey?: string | null,
-  ): Promise<Response> => {
-    return withAdmin(request, async () => {
+export async function handleBackfillCgPrices(
+  db: D1Database,
+  url: URL,
+  trustedAdmin?: boolean,
+  request?: Request,
+  cgApiKey?: string | null,
+): Promise<Response> {
+  return withAdmin(
+    request,
+    async () => {
       const selection = selectBackfillCoins(url, ACTIVE_STABLECOINS, {
         defaultBatchSize: DEFAULT_BATCH_SIZE,
       });
@@ -100,9 +100,7 @@ export const handleBackfillCgPrices = withErrorHandler(
 
         // Query existing rows for this coin
         const existing = await db
-          .prepare(
-            "SELECT snapshot_date, price, circulating_usd FROM supply_history WHERE stablecoin_id = ?",
-          )
+          .prepare("SELECT snapshot_date, price, circulating_usd FROM supply_history WHERE stablecoin_id = ?")
           .bind(meta.id)
           .all<{ snapshot_date: number; price: number | null; circulating_usd: number }>();
 
@@ -173,6 +171,7 @@ export const handleBackfillCgPrices = withErrorHandler(
         skipped: skipped.length > 0 ? skipped : undefined,
         errors: errors.length > 0 ? errors : undefined,
       });
-    }, trustedAdmin);
-  }
-);
+    },
+    trustedAdmin,
+  );
+}

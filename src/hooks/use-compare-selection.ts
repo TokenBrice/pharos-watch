@@ -9,7 +9,7 @@ import {
   MAX_COMPARE_COINS,
   resolveCompareSelectedIds,
 } from "@/lib/compare-config";
-import type { CoinOption } from "@/components/coin-selector";
+import type { CoinOption } from "@/lib/compare-types";
 
 const VALID_COMPARE_RANGES = new Set<TimeRangeOption>(["7d", "30d", "90d", "1y", "all"]);
 

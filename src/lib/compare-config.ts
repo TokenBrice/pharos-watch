@@ -1,6 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { CoinOption } from "@/components/coin-selector";
-import type { ComparePreset } from "@/components/compare-empty-state";
+import type { CoinOption, ComparePreset } from "@/lib/compare-types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 
 export const MAX_COMPARE_COINS = 5;

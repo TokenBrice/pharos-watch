@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getStatusCronDisplay } from "./cron-config";
+import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { summarizeCronMetadata } from "./cron-metadata-summary";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { formatLatency, formatInterval } from "./format";

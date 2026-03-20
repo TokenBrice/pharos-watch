@@ -1,8 +1,4 @@
-import {
-  ENDPOINT_DEFINITIONS,
-  getEndpointDefinitionByKey,
-  type EndpointKey,
-} from "@shared/lib/api-endpoints";
+import { ENDPOINT_DEFINITIONS, getEndpointDefinitionByKey, type EndpointKey } from "@shared/lib/api-endpoints";
 import {
   handleBluechipRatings,
   handleStablecoinCharts,
@@ -49,10 +45,7 @@ import { handleTelegramWebhook } from "./api/telegram-webhook";
 import { generateDailyDigest } from "./cron/daily-digest";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { requireAdmin, withAdmin } from "./lib/auth";
-import {
-  jsonResponse,
-  withErrorHandler,
-} from "./lib/api-utils";
+import { jsonResponse, withErrorHandler } from "./lib/api-utils";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TelegramCreds } from "./lib/telegram";
 import type { ChainRpcConfig } from "./lib/chain-registry";
@@ -127,172 +120,123 @@ export const ROUTE_DEPENDENCIES_BY_KEY: Partial<Record<EndpointKey, readonly Rou
 };
 
 const STATIC_ROUTE_HANDLERS_BY_KEY = {
-  stablecoins: withErrorHandler("stablecoins", ({ db }) => handleStablecoins(db)),
-  "stablecoin-detail-canary": withErrorHandler("stablecoin-detail-canary", ({ db, execCtx, coingeckoApiKey }) => handleStablecoinDetail(db, "usdt-tether", execCtx, coingeckoApiKey)),
-  "stablecoin-summary-canary": withErrorHandler("stablecoin-summary-canary", ({ db }) => handleStablecoinSummary(db, "usdt-tether")),
-  "stablecoin-reserves-canary": withErrorHandler("stablecoin-reserves-canary", ({ db }) => handleStablecoinReserves(db, "iusd-infinifi")),
-  "stablecoin-charts": withErrorHandler("stablecoin-charts", ({ db }) => handleStablecoinCharts(db)),
-  blacklist: withErrorHandler("blacklist", ({ db, url }) => handleBlacklist(db, url)),
-  "depeg-events": withErrorHandler("depeg-events", ({ db, url }) => handleDepegEvents(db, url)),
+  stablecoins: ({ db }) => handleStablecoins(db),
+  "stablecoin-detail-canary": ({ db, execCtx, coingeckoApiKey }) =>
+    handleStablecoinDetail(db, "usdt-tether", execCtx, coingeckoApiKey),
+  "stablecoin-summary-canary": ({ db }) => handleStablecoinSummary(db, "usdt-tether"),
+  "stablecoin-reserves-canary": ({ db }) => handleStablecoinReserves(db, "iusd-infinifi"),
+  "stablecoin-charts": ({ db }) => handleStablecoinCharts(db),
+  blacklist: ({ db, url }) => handleBlacklist(db, url),
+  "depeg-events": ({ db, url }) => handleDepegEvents(db, url),
   "backfill-depegs": withErrorHandler("backfill-depegs", ({ db, url, trustedAdmin, request }) =>
-    runIdempotentAdminAction(
-      db,
-      "backfill-depegs",
-      request,
-      () => handleBackfillDepegs(db, url, trustedAdmin, request),
+    runIdempotentAdminAction(db, "backfill-depegs", request, () =>
+      handleBackfillDepegs(db, url, trustedAdmin, request),
     ),
   ),
   "backfill-supply-history": withErrorHandler("backfill-supply-history", ({ db, url, trustedAdmin, request }) =>
-    runIdempotentAdminAction(
-      db,
-      "backfill-supply-history",
-      request,
-      () => handleBackfillSupplyHistory(db, url, trustedAdmin, request),
+    runIdempotentAdminAction(db, "backfill-supply-history", request, () =>
+      handleBackfillSupplyHistory(db, url, trustedAdmin, request),
     ),
   ),
-  "peg-summary": withErrorHandler("peg-summary", ({ db }) => handlePegSummary(db)),
-  health: withErrorHandler("health", ({ db, mintBurnFreshnessConfig }) =>
-    handleHealth(db, { mintBurnConfig: mintBurnFreshnessConfig }),
-  ),
-  "usds-status": withErrorHandler("usds-status", ({ db }) => handleUsdsStatus(db)),
-  "bluechip-ratings": withErrorHandler("bluechip-ratings", ({ db }) => handleBluechipRatings(db)),
-  "dex-liquidity": withErrorHandler("dex-liquidity", ({ db }) => handleDexLiquidity(db)),
-  "dex-liquidity-history": withErrorHandler("dex-liquidity-history", ({ db, url }) => handleDexLiquidityHistory(db, url)),
-  "supply-history": withErrorHandler("supply-history", ({ db, url }) => handleSupplyHistory(db, url)),
-  status: withErrorHandler("status", ({ db, trustedAdmin, request }) => handleStatus(db, trustedAdmin, request)),
-  "status-history": withErrorHandler("status-history", ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request)),
-  "daily-digest": withErrorHandler("daily-digest", ({ db }) => handleDailyDigest(db)),
-  "digest-archive": withErrorHandler("digest-archive", ({ db }) => handleDigestArchive(db)),
-  "digest-snapshot": withErrorHandler("digest-snapshot", ({ db, url }) => handleDigestSnapshot(db, url)),
-  "stability-index": withErrorHandler("stability-index", ({ db, url }) => handleStabilityIndex(db, url)),
+  "peg-summary": ({ db }) => handlePegSummary(db),
+  health: ({ db, mintBurnFreshnessConfig }) => handleHealth(db, { mintBurnConfig: mintBurnFreshnessConfig }),
+  "usds-status": ({ db }) => handleUsdsStatus(db),
+  "bluechip-ratings": ({ db }) => handleBluechipRatings(db),
+  "dex-liquidity": ({ db }) => handleDexLiquidity(db),
+  "dex-liquidity-history": ({ db, url }) => handleDexLiquidityHistory(db, url),
+  "supply-history": ({ db, url }) => handleSupplyHistory(db, url),
+  status: ({ db, trustedAdmin, request }) => handleStatus(db, trustedAdmin, request),
+  "status-history": ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request),
+  "daily-digest": ({ db }) => handleDailyDigest(db),
+  "digest-archive": ({ db }) => handleDigestArchive(db),
+  "digest-snapshot": ({ db, url }) => handleDigestSnapshot(db, url),
+  "stability-index": ({ db, url }) => handleStabilityIndex(db, url),
   "backfill-stability-index": withErrorHandler("backfill-stability-index", ({ db, trustedAdmin, request }) =>
-    runIdempotentAdminAction(
-      db,
-      "backfill-stability-index",
-      request,
-      () => handleBackfillStabilityIndex(db, trustedAdmin, request),
+    runIdempotentAdminAction(db, "backfill-stability-index", request, () =>
+      handleBackfillStabilityIndex(db, trustedAdmin, request),
     ),
   ),
   "audit-depeg-history": withErrorHandler("audit-depeg-history", ({ db, url, trustedAdmin, request }) => {
     if (request.method === "POST") {
-      return runIdempotentAdminAction(
-        db,
-        "audit-depeg-history",
-        request,
-        () => handleAuditDepegHistory(db, url, trustedAdmin, request),
+      return runIdempotentAdminAction(db, "audit-depeg-history", request, () =>
+        handleAuditDepegHistory(db, url, trustedAdmin, request),
       );
     }
     return handleAuditDepegHistory(db, url, trustedAdmin, request);
   }),
-  "report-cards": withErrorHandler("report-cards", ({ db }) => handleReportCards(db)),
-  "redemption-backstops": withErrorHandler("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),
-  "yield-rankings": withErrorHandler("yield-rankings", ({ db }) => handleYieldRankings(db)),
-  "yield-history": withErrorHandler("yield-history", ({ db, url }) => handleYieldHistory(db, url)),
-  "safety-score-history": withErrorHandler("safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)),
-  "mint-burn-flows": withErrorHandler("mint-burn-flows", ({ db, url }) => handleMintBurnFlows(db, url)),
-  "mint-burn-events": withErrorHandler("mint-burn-events", ({ db, url }) => handleMintBurnEvents(db, url)),
+  "report-cards": ({ db }) => handleReportCards(db),
+  "redemption-backstops": ({ db }) => handleRedemptionBackstops(db),
+  "yield-rankings": ({ db }) => handleYieldRankings(db),
+  "yield-history": ({ db, url }) => handleYieldHistory(db, url),
+  "safety-score-history": ({ db, url }) => handleSafetyScoreHistory(db, url),
+  "mint-burn-flows": ({ db, url }) => handleMintBurnFlows(db, url),
+  "mint-burn-events": ({ db, url }) => handleMintBurnEvents(db, url),
   "backfill-cg-prices": withErrorHandler("backfill-cg-prices", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
-    runIdempotentAdminAction(
-      db,
-      "backfill-cg-prices",
-      request,
-      () => handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
+    runIdempotentAdminAction(db, "backfill-cg-prices", request, () =>
+      handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
     ),
   ),
   "backfill-mint-burn-prices": withErrorHandler("backfill-mint-burn-prices", ({ db, url, trustedAdmin, request }) =>
-    runIdempotentAdminAction(
-      db,
-      "backfill-mint-burn-prices",
-      request,
-      () => handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
+    runIdempotentAdminAction(db, "backfill-mint-burn-prices", request, () =>
+      handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
     ),
   ),
   "backfill-mint-burn": withErrorHandler("backfill-mint-burn", ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
-    runIdempotentAdminAction(
-      db,
-      "backfill-mint-burn",
-      request,
-      () => handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
+    runIdempotentAdminAction(db, "backfill-mint-burn", request, () =>
+      handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
     ),
   ),
-  "reclassify-atomic-roundtrips": withErrorHandler("reclassify-atomic-roundtrips", ({ db, url, trustedAdmin, request }) =>
-    runIdempotentAdminAction(
-      db,
-      "reclassify-atomic-roundtrips",
-      request,
-      () => handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
-    ),
+  "reclassify-atomic-roundtrips": withErrorHandler(
+    "reclassify-atomic-roundtrips",
+    ({ db, url, trustedAdmin, request }) =>
+      runIdempotentAdminAction(db, "reclassify-atomic-roundtrips", request, () =>
+        handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
+      ),
   ),
-  "stress-signals": withErrorHandler("stress-signals", ({ db, url }) => handleStressSignals(db, url)),
-  chains: withErrorHandler("chains", ({ db }) => handleChains(db)),
-  "backfill-dews": withErrorHandler("backfill-dews", ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request)),
-  feedback: withErrorHandler("feedback", ({ db, request, feedbackEnv }) =>
-    handleFeedback(db, request, feedbackEnv ?? {}),
-  ),
-  "telegram-webhook": withErrorHandler(
-    "telegram-webhook",
-    ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
-      handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken),
-  ),
+  "stress-signals": ({ db, url }) => handleStressSignals(db, url),
+  chains: ({ db }) => handleChains(db),
+  "backfill-dews": ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request),
+  feedback: ({ db, request, feedbackEnv }) => handleFeedback(db, request, feedbackEnv ?? {}),
+  "telegram-webhook": ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
+    handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken),
   "trigger-digest": withErrorHandler(
     "route-trigger-digest",
     async ({ db, request, trustedAdmin, anthropicApiKey, telegramCreds }) => {
       const authError = await requireAdmin(request, trustedAdmin);
       if (authError) return authError;
 
-      return runIdempotentAdminAction(
-        db,
-        "trigger-digest",
-        request,
-        async () => {
-          const result = await generateDailyDigest(
-            db,
-            anthropicApiKey ?? null,
-            null,
-            true,
-            telegramCreds ?? null,
-          );
-          return jsonResponse({ ok: true, result });
-        },
-      );
+      return runIdempotentAdminAction(db, "trigger-digest", request, async () => {
+        const result = await generateDailyDigest(db, anthropicApiKey ?? null, null, true, telegramCreds ?? null);
+        return jsonResponse({ ok: true, result });
+      });
     },
   ),
-  "reset-blacklist-sync": withErrorHandler(
-    "route-reset-blacklist-sync",
-    async ({ db, request, trustedAdmin }) => {
-      const authError = await requireAdmin(request, trustedAdmin);
-      if (authError) return authError;
+  "reset-blacklist-sync": withErrorHandler("route-reset-blacklist-sync", async ({ db, request, trustedAdmin }) => {
+    const authError = await requireAdmin(request, trustedAdmin);
+    if (authError) return authError;
 
-      return runIdempotentAdminAction(
-        db,
-        "reset-blacklist-sync",
-        request,
-        async () => {
-          const result = await db.batch([
-            db.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'"),
-            db.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 604800000, 0) WHERE config_key LIKE 'tron-%'"),
-          ]);
-          const evmChanged = result[0]?.meta?.changes ?? 0;
-          const tronChanged = result[1]?.meta?.changes ?? 0;
-          return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
-        },
-      );
-    },
-  ),
-  "debug-sync-state": withErrorHandler(
-    "route-debug-sync-state",
-    async ({ db, request, trustedAdmin }) => {
-      const authError = await requireAdmin(request, trustedAdmin);
-      if (authError) return authError;
-      const rows = await db
-        .prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key")
-        .all();
-      return jsonResponse(rows.results);
-    },
-  ),
-  "discovery-candidates": withErrorHandler("discovery-candidates", ({ db, url, trustedAdmin, request }) =>
+    return runIdempotentAdminAction(db, "reset-blacklist-sync", request, async () => {
+      const result = await db.batch([
+        db.prepare(
+          "UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'",
+        ),
+        db.prepare(
+          "UPDATE blacklist_sync_state SET last_block = MAX(last_block - 604800000, 0) WHERE config_key LIKE 'tron-%'",
+        ),
+      ]);
+      const evmChanged = result[0]?.meta?.changes ?? 0;
+      const tronChanged = result[1]?.meta?.changes ?? 0;
+      return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
+    });
+  }),
+  "debug-sync-state": withErrorHandler("route-debug-sync-state", async ({ db, request, trustedAdmin }) => {
+    const authError = await requireAdmin(request, trustedAdmin);
+    if (authError) return authError;
+    const rows = await db.prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key").all();
+    return jsonResponse(rows.results);
+  }),
+  "discovery-candidates": ({ db, url, trustedAdmin, request }) =>
     withAdmin(request, () => handleDiscoveryCandidates(db, url), trustedAdmin),
-  ),
 } satisfies StaticRouteHandlerMap;
 
 export const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>(

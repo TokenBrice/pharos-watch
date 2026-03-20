@@ -2,9 +2,8 @@
 
 import { Lock, Radar, ShieldCheck } from "lucide-react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PresetCard } from "@/components/preset-card";
 
 export interface PortfolioPreset {
   title: string;
@@ -125,61 +124,46 @@ export function PortfolioEmptyState({ presets, logos, onApplyPreset }: Portfolio
       />
 
       <div className="grid gap-3 lg:grid-cols-3">
-        {presets.map((preset) => (
-          <Card
-            key={preset.title}
-            className="pharos-focus-ring cursor-pointer border-border/70 bg-card/75 transition-[border-color,background-color,transform,box-shadow] hover:border-primary/40 hover:bg-accent/35 hover:shadow-[0_16px_34px_oklch(0_0_0_/0.16)]"
-            role="button"
-            tabIndex={0}
-            aria-label={`Load ${preset.title} starting portfolio`}
-            onClick={() => onApplyPreset(preset)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onApplyPreset(preset);
-              }
-            }}
-          >
-            <CardHeader className="space-y-2 pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <CardTitle className="text-base">{preset.title}</CardTitle>
-                  <CardDescription className="mt-1 text-sm leading-relaxed">{preset.description}</CardDescription>
-                </div>
-                <div className="flex -space-x-2">
-                  {preset.holdings.slice(0, 4).map(({ coinId }) => {
-                    const coin = TRACKED_META_BY_ID.get(coinId);
-                    if (!coin) return null;
-                    return (
-                      <span key={coinId} className="rounded-full ring-2 ring-card">
-                        <StablecoinLogo src={logos?.[coinId]} name={coin.name} size={24} />
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              <div className="flex flex-wrap gap-2">
-                {preset.holdings.map(({ coinId, amount }) => {
-                  const coin = TRACKED_META_BY_ID.get(coinId);
-                  if (!coin) return null;
-                  return (
-                    <span
-                      key={coinId}
-                      className="rounded-full border border-border/60 bg-background/65 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground"
-                    >
-                      {coin.symbol} {amount}%
-                    </span>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Loads as a $100 reference mix that you can edit line by line.
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        {presets.map((preset) => {
+          const previewItems = preset.holdings
+            .slice(0, 4)
+            .map(({ coinId }) => {
+              const coin = TRACKED_META_BY_ID.get(coinId);
+              return coin
+                ? {
+                    key: coinId,
+                    logoName: coin.name,
+                    logoSrc: logos?.[coinId],
+                  }
+                : null;
+            })
+            .filter((item) => item != null);
+
+          const chips = preset.holdings
+            .map(({ coinId, amount }) => {
+              const coin = TRACKED_META_BY_ID.get(coinId);
+              return coin
+                ? {
+                    key: coinId,
+                    label: `${coin.symbol} ${amount}%`,
+                  }
+                : null;
+            })
+            .filter((item) => item != null);
+
+          return (
+            <PresetCard
+              key={preset.title}
+              title={preset.title}
+              description={preset.description}
+              previewItems={previewItems}
+              chips={chips}
+              footer="Loads as a $100 reference mix that you can edit line by line."
+              ariaLabel={`Load ${preset.title} starting portfolio`}
+              onClick={() => onApplyPreset(preset)}
+            />
+          );
+        })}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { getStatusPageActions } from "@shared/lib/api-endpoints";
 import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminAccess } from "@/lib/admin-access";
-import { deriveStatusActionRecommendations } from "./action-recommendations";
+import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { AdminActionButton, type AdminActionExecution } from "./admin-action-button";
 import { formatElapsedSeconds } from "@shared/lib/format";
 

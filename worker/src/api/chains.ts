@@ -3,12 +3,12 @@ import { loadReportCardCache } from "../lib/report-card-cache";
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
+import { addFreshnessHeaders, errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = 600;
 
-export async function handleChains(db: D1Database): Promise<Response> {
+export const handleChains = withErrorHandler("chains", async (db: D1Database): Promise<Response> => {
   const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
   if (stablecoinsResult.kind !== "ok") {
     return errorResponse(503, "Data not yet available");
@@ -44,4 +44,4 @@ export async function handleChains(db: D1Database): Promise<Response> {
   );
 
   return jsonResponse(response, headers);
-}
+});

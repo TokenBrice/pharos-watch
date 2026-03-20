@@ -86,6 +86,10 @@ The active frontend operator mode is now:
 - `src/hooks/use-status-dashboard-model.ts`
   - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
   - Derives the operational lane summaries, severity-ranked section order, notice rail entries, cross-surface status deltas, and the sync-floor freshness view used by the page shell
+- `src/lib/status/action-recommendations.ts`
+  - Shared recommendation engine reused by the status model and status UI components
+- `src/lib/status/cron-config.ts`
+  - Shared cron display metadata lookup used by both the status model and cron cards
 - `src/components/longform-scrollspy-nav.tsx`
   - Applies sticky section navigation without re-running hash alignment on every live refresh, so polling does not snap operators back to an anchored section mid-scroll
 - `src/components/status/telegram-bot-stats.tsx`
@@ -125,6 +129,8 @@ Probe groups are sourced from `shared/lib/api-endpoints.ts`:
 ## Backend Contract (`GET /api/status`)
 
 Source: `worker/src/api/status.ts`
+
+Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
 Related extracted loaders:
 

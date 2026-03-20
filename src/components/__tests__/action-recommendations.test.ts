@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveStatusActionRecommendations, getRecommendedActionsForCause } from "@/components/status/action-recommendations";
+import { deriveStatusActionRecommendations, getRecommendedActionsForCause } from "@/lib/status/action-recommendations";
 import type { StatusCause, StatusResponse } from "@shared/types";
 
 function makeCronStatus(overrides?: Partial<StatusResponse["crons"][string]>): StatusResponse["crons"][string] {
