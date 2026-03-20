@@ -118,36 +118,43 @@ export async function fetchOnChainRates(
   // Fetch all vault exchange rates in parallel. The Workers runtime queues
   // excess connections behind the 6-connection limit, so this completes in
   // ceil(N/6) × timeout instead of N × 2 × timeout sequentially.
-  const tasks = ON_CHAIN_RATE_CONFIGS.map(async (config): Promise<{ id: string; rate: number } | null> => {
+  const tasks = ON_CHAIN_RATE_CONFIGS.map(async (config): Promise<{ id: string; rate: number; status: "ok" } | { id: string; status: "no-rpc" | "null" | "error"; error?: string }> => {
     const rpc = getChainRpc(chainRpcs, config.chain);
-    if (!rpc) return null;
+    if (!rpc) return { id: config.stablecoinId, status: "no-rpc" };
 
-    const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
-    const raw = await fetchEvmUint256AtBlock(config.chain, config.contract, callData, "latest", {
-      extraRpcUrls: [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-        (url): url is string => typeof url === "string" && url.length > 0,
-      ),
-      signal,
-      timeoutMs: 10_000,
-    });
-    if (raw == null) return null;
-    return { id: config.stablecoinId, rate: Number(raw) / 10 ** config.decimals };
+    try {
+      const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
+      const raw = await fetchEvmUint256AtBlock(config.chain, config.contract, callData, "latest", {
+        extraRpcUrls: [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+          (url): url is string => typeof url === "string" && url.length > 0,
+        ),
+        signal,
+        timeoutMs: 10_000,
+      });
+      if (raw == null) return { id: config.stablecoinId, status: "null" };
+      return { id: config.stablecoinId, rate: Number(raw) / 10 ** config.decimals, status: "ok" };
+    } catch (err) {
+      return { id: config.stablecoinId, status: "error", error: err instanceof Error ? err.message : String(err) };
+    }
   });
 
   const settled = await Promise.allSettled(tasks);
   const rates = new Map<string, { rate: number }>();
-  let failures = 0;
+  const failureCounts: Record<string, number> = {};
 
   for (const result of settled) {
-    if (result.status === "fulfilled" && result.value) {
-      rates.set(result.value.id, { rate: result.value.rate });
+    const val = result.status === "fulfilled" ? result.value : { id: "unknown", status: "rejected" as const };
+    if ("rate" in val && val.status === "ok") {
+      rates.set(val.id, { rate: val.rate });
     } else {
-      failures++;
+      failureCounts[val.status] = (failureCounts[val.status] ?? 0) + 1;
     }
   }
 
-  if (failures > 0) {
-    console.warn(`[yield] On-chain rates: ${rates.size}/${ON_CHAIN_RATE_CONFIGS.length} succeeded, ${failures} failed/skipped`);
+  const totalFailures = Object.values(failureCounts).reduce((s, n) => s + n, 0);
+  if (totalFailures > 0) {
+    const breakdown = Object.entries(failureCounts).map(([k, v]) => `${k}=${v}`).join(", ");
+    console.warn(`[yield] On-chain rates: ${rates.size}/${ON_CHAIN_RATE_CONFIGS.length} ok (${breakdown})`);
   }
 
   return rates;
