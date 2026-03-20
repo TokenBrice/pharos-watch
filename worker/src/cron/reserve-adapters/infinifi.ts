@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchJsonWithRetry, isHttpJsonInput, normalizeSlices } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices } from "./helpers";
 
 interface InfiniFiFarm {
   name: string;
@@ -75,8 +75,8 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
   const rawSlices: ReserveSlice[] = [];
 
   for (const f of activeFarms) {
-    const pct = Math.round((f.assetsNormalized / tvl) * 100);
-    if (pct <= 0) continue;
+    const pct = (f.assetsNormalized / tvl) * 100;
+    if (pct < 0.05) continue;
     const config = FARM_RISK_MAP[f.name];
     if (!config) unknownFarms.push(f.name);
     const risk: ReserveSlice["risk"] = config?.risk
@@ -106,7 +106,7 @@ export async function fetchInfiniFiReserves(
   }
 
   const url = primaryInput.url;
-  const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal);
+  const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal, getAdapterTimeout(config, 12_000));
   if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
   const adapted = adaptInfiniFi(payload);
   const warnings: LiveReserveWarning[] = adapted.unknownFarms.map((farmName) => ({

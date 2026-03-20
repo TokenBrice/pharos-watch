@@ -62,4 +62,22 @@ describe("adaptReservoirReserves", () => {
 
     expect(unknownAssets).toContain("Mystery Adapter");
   });
+
+  it("handles non-integer percentages correctly via normalizeSlices", () => {
+    const { slices } = adaptReservoirReserves({
+      assets: [
+        { label: "USDC", totalBalanceValue: "33.33" },
+        { label: "Euler - Sentora PYUSD", totalBalanceValue: "33.33" },
+        { label: "Euler - Sentora RLUSD", totalBalanceValue: "33.34" },
+      ],
+      liabilities: [],
+      totalAssets: "100",
+      totalLiabilities: "0",
+      equity: "0",
+    });
+
+    const total = slices.reduce((acc, s) => acc + s.pct, 0);
+    expect(total).toBe(100);
+    expect(slices).toHaveLength(3);
+  });
 });

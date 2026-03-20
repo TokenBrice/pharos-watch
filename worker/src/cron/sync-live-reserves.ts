@@ -3,6 +3,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { validateAdapterOutput } from "./reserve-adapters/validate";
+import { buildInClause } from "../lib/db";
 import {
   getReserveSyncState,
   upsertReserveSnapshot,
@@ -235,6 +236,19 @@ export async function syncLiveReserves(
   // Deferred breaker outcome recording: worst outcome per key wins
   for (const [key, success] of breakerOutcomes) {
     await recordOutcomeSafe(db, key, success);
+  }
+
+  // Clean up ghost reserve_sync_state rows for coins no longer configured
+  if (CONFIGURED_COINS.length > 0) {
+    try {
+      const idClause = buildInClause(CONFIGURED_COINS.map((c) => c.id));
+      await db
+        .prepare(`DELETE FROM reserve_sync_state WHERE stablecoin_id NOT IN (${idClause.sql})`)
+        .bind(...idClause.binds)
+        .run();
+    } catch (e) {
+      console.warn("[sync-live-reserves] Ghost row cleanup failed:", e);
+    }
   }
 
   const total = CONFIGURED_COINS.length;

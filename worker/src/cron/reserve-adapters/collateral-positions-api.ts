@@ -1,7 +1,7 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
-import { fetchJsonWithRetry, normalizeSlices, requireJsonInput } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput } from "./helpers";
 
 interface PositionDetailsEntry {
   address: string;
@@ -165,9 +165,10 @@ export async function fetchCollateralPositionsApiReserves(
   const input = requireJsonInput(config.inputs.primary, "collateral-positions-api");
   const params = readParams(config);
 
+  const timeout = getAdapterTimeout(config, 12_000);
   const [details, prices] = await Promise.all([
-    fetchJsonWithRetry<PositionDetailsPayload>(input.url, signal),
-    fetchJsonWithRetry<PriceMappingPayload>(params.pricesUrl, signal),
+    fetchJsonWithRetry<PositionDetailsPayload>(input.url, signal, timeout),
+    fetchJsonWithRetry<PriceMappingPayload>(params.pricesUrl, signal, timeout),
   ]);
 
   return adaptCollateralPositions(details, prices, params.otherThresholdPct ?? 2);

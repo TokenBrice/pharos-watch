@@ -1,7 +1,7 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
-import { fetchDefiLlamaPrices, fetchJsonWithRetry, requireJsonInput, slicesFromValues } from "./helpers";
+import { fetchDefiLlamaPrices, fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, slicesFromValues } from "./helpers";
 
 interface FxPoolInfo {
   collateralBalance?: string;
@@ -38,7 +38,7 @@ export async function fetchFxReserves(
   signal: AbortSignal,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "fx");
-  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal);
+  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, getAdapterTimeout(config, 12_000));
   const balances = adaptFx(payload);
   const priceMap = await fetchDefiLlamaPrices(
     balances.map(({ key }) => ({

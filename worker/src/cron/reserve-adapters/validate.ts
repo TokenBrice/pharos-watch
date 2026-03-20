@@ -13,6 +13,10 @@ interface ValidationResult {
 const PCT_SUM_TOLERANCE = 5;
 
 export function validateAdapterOutput(input: ValidationInput): ValidationResult {
+  if (input.slices.length === 0) {
+    return { valid: false, warnings: [{ code: "empty-slices", message: "Adapter returned zero reserve slices", severity: "warning" }] };
+  }
+
   const warnings: LiveReserveWarning[] = [];
 
   for (const slice of input.slices) {

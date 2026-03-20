@@ -3,6 +3,7 @@ import type { AdapterContext, AdapterResult } from "./index";
 import {
   fetchErc20TotalSupply,
   fetchJsonWithRetry,
+  getAdapterTimeout,
   getJsonPath,
   isHttpJsonInput,
   isReserveRisk,
@@ -47,7 +48,7 @@ export async function fetchSingleAssetReserves(
     if (!probe || probe.kind !== "json-path") {
       throw new Error("single-asset http-json mode requires params.probe.kind = json-path");
     }
-    const payload = await fetchJsonWithRetry<Record<string, unknown>>(primary.url, signal);
+    const payload = await fetchJsonWithRetry<Record<string, unknown>>(primary.url, signal, getAdapterTimeout(config, 12_000));
     const value = getJsonPath(payload, probe.path);
     const asString = typeof value === "string" ? value : String(value ?? "");
     if (!asString || asString === "0" || asString === "0.0") {

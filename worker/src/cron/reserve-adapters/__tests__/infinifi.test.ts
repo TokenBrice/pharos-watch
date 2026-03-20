@@ -82,7 +82,7 @@ describe("adaptInfiniFi", () => {
     expect(result.unknownFarms).toContain("brand-new-farm");
   });
 
-  it("ignores dust unknown farms that round out of the displayed mix", () => {
+  it("flags dust unknown farms but excludes them from final slices after rounding", () => {
     const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,
       data: {
@@ -96,7 +96,28 @@ describe("adaptInfiniFi", () => {
     };
 
     const result = adaptInfiniFi(response);
-    expect(result.unknownFarms).not.toContain("dust-farm");
+    // Farm is detected as unknown (above 0.05% threshold)
+    expect(result.unknownFarms).toContain("dust-farm");
+    // But normalizeSlices rounds 0.4% to 0 and filters it out
     expect(result.slices.some((slice) => slice.name === "Dust Farm")).toBe(false);
+  });
+
+  it("preserves small farms above 0.05% before normalizeSlices rounding", () => {
+    // A farm with 0.5% of TVL should pass the pct threshold and reach normalizeSlices
+    const response: InfiniFiProtocolData = {
+      code: "OK",
+      data: {
+        stats: { asset: { totalTVLAssetNormalized: 1000 } },
+        farms: [
+          { name: "fasanara-gdaf", label: "Fasanara mGLOBAL", assetsNormalized: 995, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+          { name: "spark-sUSDC-refcode", label: "Spark sUSDC", assetsNormalized: 5, type: "LIQUID", underlyingAssetSymbol: "sUSDC" },
+        ],
+      },
+    };
+
+    const { slices } = adaptInfiniFi(response);
+    // Both farms should be present (0.5% passes the >=0.05 threshold)
+    expect(slices).toHaveLength(2);
+    expect(slices.reduce((acc, s) => acc + s.pct, 0)).toBe(100);
   });
 });

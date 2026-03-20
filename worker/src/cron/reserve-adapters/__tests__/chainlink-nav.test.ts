@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { parseChainlinkLatestRoundData } from "../chainlink";
 import { adaptChainlinkNavResponse, type ChainlinkNavParams } from "../chainlink-nav";
 
 describe("adaptChainlinkNavResponse", () => {
@@ -36,5 +37,46 @@ describe("adaptChainlinkNavResponse", () => {
         params,
       ),
     ).toThrow();
+  });
+});
+
+describe("parseChainlinkLatestRoundData", () => {
+  const validHex = "0x"
+    + "0000000000000000000000000000000000000000000000000000000000000001" // roundId
+    + "000000000000000000000000000000000000000000000000000000003b9aca00" // answer (1e9)
+    + "0000000000000000000000000000000000000000000000000000000065a8f000" // startedAt
+    + "0000000000000000000000000000000000000000000000000000000065a8f100" // updatedAt
+    + "0000000000000000000000000000000000000000000000000000000000000001"; // answeredInRound
+
+  it("parses a valid 5-word hex response", () => {
+    const result = parseChainlinkLatestRoundData(validHex, "test");
+    expect(result.roundId).toBe(1n);
+    expect(result.answer).toBe(1_000_000_000n);
+    expect(result.updatedAt).toBeGreaterThan(0);
+  });
+
+  it("throws on short hex response (< 256 chars)", () => {
+    const shortHex = "0x" + "00".repeat(80); // 160 hex chars
+    expect(() => parseChainlinkLatestRoundData(shortHex, "test")).toThrow("too short");
+  });
+
+  it("throws on zero answer", () => {
+    const zeroAnswer = "0x"
+      + "0000000000000000000000000000000000000000000000000000000000000001"
+      + "0000000000000000000000000000000000000000000000000000000000000000" // answer = 0
+      + "0000000000000000000000000000000000000000000000000000000065a8f000"
+      + "0000000000000000000000000000000000000000000000000000000065a8f100"
+      + "0000000000000000000000000000000000000000000000000000000000000001";
+    expect(() => parseChainlinkLatestRoundData(zeroAnswer, "test")).toThrow("non-positive answer");
+  });
+
+  it("throws on zero updatedAt", () => {
+    const zeroUpdatedAt = "0x"
+      + "0000000000000000000000000000000000000000000000000000000000000001"
+      + "000000000000000000000000000000000000000000000000000000003b9aca00"
+      + "0000000000000000000000000000000000000000000000000000000065a8f000"
+      + "0000000000000000000000000000000000000000000000000000000000000000" // updatedAt = 0
+      + "0000000000000000000000000000000000000000000000000000000000000001";
+    expect(() => parseChainlinkLatestRoundData(zeroUpdatedAt, "test")).toThrow("non-positive updatedAt");
   });
 });

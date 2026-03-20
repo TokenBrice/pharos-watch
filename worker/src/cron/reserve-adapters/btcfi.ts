@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterResult } from "./index";
-import { fetchJsonWithRetry, requireJsonInput } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInput } from "./helpers";
 
 interface BtcfiMarketRow {
   token_handler_id: number;
@@ -46,9 +46,10 @@ export async function fetchBtcfiReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "btcfi");
   const params = readParams(config);
+  const timeout = getAdapterTimeout(config, 12_000);
   const [market, handlers] = await Promise.all([
-    fetchJsonWithRetry<BtcfiMarketRow[]>(input.url, signal),
-    fetchJsonWithRetry<BtcfiHandlerRow[]>(params.handlersUrl, signal),
+    fetchJsonWithRetry<BtcfiMarketRow[]>(input.url, signal, timeout),
+    fetchJsonWithRetry<BtcfiHandlerRow[]>(params.handlersUrl, signal, timeout),
   ]);
 
   return {

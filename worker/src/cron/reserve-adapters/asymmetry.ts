@@ -1,7 +1,7 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
-import { requireJsonInput, fetchJsonWithRetry, normalizeSlices } from "./helpers";
+import { requireJsonInput, fetchJsonWithRetry, getAdapterTimeout, normalizeSlices } from "./helpers";
 
 interface AsymmetryBranchStats {
   coll_value?: string;
@@ -60,7 +60,7 @@ export async function fetchAsymmetryReserves(
   signal: AbortSignal,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "asymmetry");
-  const payload = await fetchJsonWithRetry<AsymmetryPayload>(input.url, signal);
+  const payload = await fetchJsonWithRetry<AsymmetryPayload>(input.url, signal, getAdapterTimeout(config, 12_000));
   return {
     slices: adaptAsymmetry(payload),
   };

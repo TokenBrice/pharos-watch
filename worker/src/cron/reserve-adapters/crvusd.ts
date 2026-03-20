@@ -1,7 +1,7 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./index";
-import { fetchJsonWithRetry, normalizeSlices, requireJsonInput } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput } from "./helpers";
 
 interface CurveMarketEntry {
   collateral_amount_usd?: number;
@@ -96,6 +96,6 @@ export async function fetchCrvUsdReserves(
   signal: AbortSignal,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "crvusd");
-  const payload = await fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal);
+  const payload = await fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, getAdapterTimeout(config, 12_000));
   return adaptCrvUsd(payload);
 }

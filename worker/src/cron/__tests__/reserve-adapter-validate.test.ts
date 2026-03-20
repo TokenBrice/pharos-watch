@@ -59,4 +59,46 @@ describe("validateAdapterOutput", () => {
     });
     expect(result.valid).toBe(true);
   });
+
+  it("rejects empty slices array", () => {
+    const result = validateAdapterOutput({ slices: [] });
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0].code).toBe("empty-slices");
+  });
+
+  it("rejects slices with Infinity pct", () => {
+    const result = validateAdapterOutput({
+      slices: [{ name: "A", pct: Infinity, risk: "low" }],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0].code).toBe("invalid-pct");
+  });
+
+  it("warns at 95% sum (within tolerance)", () => {
+    const result = validateAdapterOutput({
+      slices: [{ name: "A", pct: 95, risk: "low" }],
+    });
+    expect(result.valid).toBe(true);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it("warns at 105% sum (within tolerance)", () => {
+    const result = validateAdapterOutput({
+      slices: [
+        { name: "A", pct: 55, risk: "low" },
+        { name: "B", pct: 50, risk: "medium" },
+      ],
+    });
+    expect(result.valid).toBe(true);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it("warns at 94% sum (outside tolerance)", () => {
+    const result = validateAdapterOutput({
+      slices: [{ name: "A", pct: 94, risk: "low" }],
+    });
+    expect(result.valid).toBe(true);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0].code).toBe("pct-sum-deviation");
+  });
 });

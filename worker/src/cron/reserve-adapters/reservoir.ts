@@ -1,6 +1,6 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchJsonWithRetry, isHttpJsonInput, normalizeSlices } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices } from "./helpers";
 
 interface ReservoirBalanceItem {
   label: string;
@@ -113,13 +113,13 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
       const config = RESERVOIR_BUCKETS.find((bucket) => bucket.key === bucketKey)!;
       return {
         name: config.label,
-        pct: Math.round((bucketValue / totalAssets) * 100),
+        pct: (bucketValue / totalAssets) * 100,
         risk: config.risk,
         ...(config.coinId ? { coinId: config.coinId } : {}),
         ...(config.depType ? { depType: config.depType } : {}),
       } satisfies ReserveSlice;
     })
-    .filter((slice) => slice.pct > 0)
+    .filter((slice) => slice.pct >= 0.05)
     .sort((a, b) => b.pct - a.pct);
 
   return {
@@ -139,7 +139,7 @@ export async function fetchReservoirReserves(
     throw new Error("reservoir adapter requires an http-json primary input");
   }
 
-  const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(primaryInput.url, signal);
+  const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
   const adapted = adaptReservoirReserves(payload);
   const warnings: LiveReserveWarning[] = adapted.unknownAssets.map((label) => ({
     code: "unknown-position",
