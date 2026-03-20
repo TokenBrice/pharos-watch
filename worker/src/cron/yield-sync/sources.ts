@@ -110,41 +110,47 @@ export async function fetchOnChainRates(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<Map<string, { rate: number }>> {
-  const results = new Map<string, { rate: number }>();
+  if (!chainRpcs) {
+    console.warn("[yield] No chain RPCs configured, skipping all on-chain rate fetches");
+    return new Map();
+  }
 
-  for (const config of ON_CHAIN_RATE_CONFIGS) {
-    try {
-      if (!chainRpcs) {
-        console.warn(`[yield] No chain RPCs configured for on-chain rate ${config.stablecoinId}`);
-        continue;
-      }
-      const rpc = getChainRpc(chainRpcs, config.chain);
-      if (!rpc) {
-        console.warn(`[yield] No RPC for chain ${config.chain}`);
-        continue;
-      }
+  // Fetch all vault exchange rates in parallel. The Workers runtime queues
+  // excess connections behind the 6-connection limit, so this completes in
+  // ceil(N/6) × timeout instead of N × 2 × timeout sequentially.
+  const tasks = ON_CHAIN_RATE_CONFIGS.map(async (config): Promise<{ id: string; rate: number } | null> => {
+    const rpc = getChainRpc(chainRpcs, config.chain);
+    if (!rpc) return null;
 
-      const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
-      const raw = await fetchEvmUint256AtBlock(config.chain, config.contract, callData, "latest", {
-        extraRpcUrls: [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-          (url): url is string => typeof url === "string" && url.length > 0,
-        ),
-        signal,
-        timeoutMs: 10_000,
-        chainRpcs,
-      });
-      if (raw == null) {
-        console.warn(`[yield] On-chain rate returned null for ${config.stablecoinId} (${config.chain}:${config.contract})`);
-        continue;
-      }
-      const rate = Number(raw) / 10 ** config.decimals;
-      results.set(config.stablecoinId, { rate });
-    } catch (error) {
-      console.warn(`[yield] On-chain rate failed for ${config.stablecoinId}:`, error);
+    const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
+    const raw = await fetchEvmUint256AtBlock(config.chain, config.contract, callData, "latest", {
+      extraRpcUrls: [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+        (url): url is string => typeof url === "string" && url.length > 0,
+      ),
+      signal,
+      timeoutMs: 10_000,
+    });
+    if (raw == null) return null;
+    return { id: config.stablecoinId, rate: Number(raw) / 10 ** config.decimals };
+  });
+
+  const settled = await Promise.allSettled(tasks);
+  const rates = new Map<string, { rate: number }>();
+  let failures = 0;
+
+  for (const result of settled) {
+    if (result.status === "fulfilled" && result.value) {
+      rates.set(result.value.id, { rate: result.value.rate });
+    } else {
+      failures++;
     }
   }
 
-  return results;
+  if (failures > 0) {
+    console.warn(`[yield] On-chain rates: ${rates.size}/${ON_CHAIN_RATE_CONFIGS.length} succeeded, ${failures} failed/skipped`);
+  }
+
+  return rates;
 }
 
 async function fetchEthCallUint256(

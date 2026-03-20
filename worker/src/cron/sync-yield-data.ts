@@ -24,7 +24,7 @@ import {
   computeApyVarianceScore,
   detectWarningSignals,
 } from "./yield-helpers";
-import { LENDING_PROTOCOL_LABELS } from "./yield-config";
+import { LENDING_PROTOCOL_LABELS, ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import {
   fetchOnChainRates,
@@ -917,6 +917,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
         safetyScoresExpected: safetySnapshot.trackedCount,
         safetyCoverageRatio: Number(safetyCoverageRatio.toFixed(4)),
         dlPoolCount: dlPoolsMeta.poolCount,
+        onChainRatesResolved: onChainRates.size,
+        onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
       },
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       validationFailures,
