@@ -2,7 +2,7 @@
 
 ## Overview
 
-The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-next`) for linting. The shared validation suite now runs in CI on pull requests to `main` and again before every deploy.
+The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-next`) for linting. The shared validation suite now runs in CI on pull requests to `main` and again before every push/manual production deploy.
 
 ## Commands
 
@@ -28,7 +28,7 @@ npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke che
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, and `.github/workflows/codeql.yml`.
+Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/codeql.yml`.
 
 For deployment/worktree operating procedure (including the local merge gate before pushing `main`), see [Deployment Process](./deployment-process.md).
 
@@ -46,48 +46,61 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm test`
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
-3. `detect-changes`:
+3. `detect-changes` (push/manual deploy workflow only):
    - Diffs `github.event.before..github.sha` on `push`
+   - Emits both `worker_changed` and `pages_changed`
    - Marks worker/API deploy work as required only when the push touches worker/shared runtime or worker-deploy infra files
-   - Forces the full path on `schedule` and `workflow_dispatch`
+   - Marks Pages deploy work as required only when the push touches frontend/Pages/shared build paths or deploy infra files
+   - Forces the full path on `workflow_dispatch`
 4. `deploy-worker` (needs `validate` and `detect-changes`):
    - Apply D1 migrations with the local worker-pinned Wrangler CLI
    - Deploy worker with the local worker-pinned Wrangler CLI
    - Sync routes/domains/cron triggers with `wrangler triggers deploy`
-   - Skipped on frontend-only `push` events
+   - Skipped on Pages-only or docs-only `push` events
 5. `smoke-api` (needs `deploy-worker` when worker/API work is required):
    - `npm ci`
    - Run `npm run test:smoke-api`
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Runs strict API checks sequentially with bounded transient retry behavior (`SMOKE_API_RETRY_COUNT` default `1`, `SMOKE_API_TIMEOUT_MS` default `12000`)
-   - Skipped on frontend-only `push` events alongside `deploy-worker`
+   - Skipped on Pages-only or docs-only `push` events alongside `deploy-worker`
 6. `build-pages`:
    - `npm run sync:digests`
    - `npm run build`
    - `npm run seo:check`
    - Uploads the built `out/` export as the deploy artifact
-   - Waits for `smoke-api` only when worker/API work was actually required for that push
+   - Runs only when `pages_changed=true`
+   - Waits for `smoke-api` only when worker/API work was also required for that push
 7. `smoke-ui` (needs `build-pages`):
    - Downloads the built `out/` artifact
    - Starts a local static-export server with `/api/*` proxied to `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173`
    - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
-8. `deploy-pages` (needs `build-pages` and `smoke-ui`):
+8. `smoke-ui-live` (worker-only push path):
+   - Runs only when `worker_changed=true` and `pages_changed=false`
+   - Runs `npm run test:smoke-ui -- --url https://pharos.watch`
+   - Verifies that the unchanged live Pages frontend still works against the newly deployed worker/API
+9. `deploy-pages` (needs `build-pages` and `smoke-ui`):
    - Downloads the same `out/` artifact that passed `smoke-ui`
    - Deploys that verified static export to Cloudflare Pages
-9. `smoke-ops` (needs `deploy-pages`):
+10. `smoke-ops`:
    - Run `npm run test:smoke-ops`
    - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
    - Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
+   - Runs after `deploy-pages` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
    - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
-10. `CodeQL`:
+11. `Rebuild Pages`:
+   - defined in `.github/workflows/rebuild-pages.yml`
+   - runs on the daily schedule and on manual dispatch
+   - skips `validate`, `deploy-worker`, and `smoke-api`
+   - runs `build-pages -> smoke-ui -> deploy-pages -> smoke-ops` only
+12. `CodeQL`:
    - defined in `.github/workflows/codeql.yml`
    - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
    - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
-This arrangement gives pull requests the same validate gate the deploy workflow depends on, skips worker deploy/API smoke for frontend-only pushes, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, still runs the post-deploy ops-surface smoke after Pages publish, and keeps security scanning on a separate CodeQL workflow.
+This arrangement gives pull requests the same validate gate the push/manual deploy workflow depends on, skips worker deploy/API smoke for Pages-only pushes, skips Pages build/deploy for worker-only pushes, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, keeps the scheduled digest rebuild off the worker deploy path, and still runs the post-deploy ops-surface smoke after each production-changing workflow.
 
-The workflows pin `actions/checkout@v5` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the pipeline before deploy.
+The workflows pin `actions/checkout@v5` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the push/manual deploy pipeline before deploy. The production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs, while the scheduled/manual Pages rebuild queues behind an active production deploy instead of interrupting it.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker now fails only on new undeclared duplicates and keeps the current allowlist visible in review.
 

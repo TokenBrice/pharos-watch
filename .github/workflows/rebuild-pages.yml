@@ -1,96 +1,16 @@
-name: Deploy to Cloudflare
+name: Rebuild Pages
 on:
-  push:
-    branches: [main]
+  schedule:
+    # Rebuild daily at 8:15 UTC (after 8 AM digest generation)
+    - cron: "15 8 * * *"
   workflow_dispatch:
 
 concurrency:
   group: production-deploy-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      pages_changed: ${{ steps.classify.outputs.pages_changed }}
-      worker_changed: ${{ steps.classify.outputs.worker_changed }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 22
-      - id: classify
-        env:
-          DEPLOY_BASE_SHA: ${{ github.event.before }}
-          DEPLOY_EVENT_NAME: ${{ github.event_name }}
-          DEPLOY_HEAD_SHA: ${{ github.sha }}
-        run: node scripts/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
-
-  validate:
-    uses: ./.github/workflows/validate-ci.yml
-    with:
-      coverage-compare-ref: ${{ github.event.before }}
-
-  deploy-worker:
-    needs:
-      - detect-changes
-      - validate
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
-    runs-on: ubuntu-latest
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - name: Apply D1 migrations
-        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
-      - name: Deploy worker
-        run: cd worker && npx --no-install wrangler deploy
-      - name: Sync worker triggers
-        run: cd worker && npx --no-install wrangler triggers deploy
-
-  smoke-api:
-    needs:
-      - deploy-worker
-      - detect-changes
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.deploy-worker.result == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run test:smoke-api
-        env:
-          SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
-
   build-pages:
-    needs:
-      - detect-changes
-      - validate
-      - smoke-api
-    if: >-
-      ${{
-        always()
-        && needs.detect-changes.result == 'success'
-        && needs.validate.result == 'success'
-        && needs.detect-changes.outputs.pages_changed == 'true'
-        && (
-          needs.detect-changes.outputs.worker_changed != 'true'
-          || needs.smoke-api.result == 'success'
-        )
-      }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -148,19 +68,6 @@ jobs:
             kill "$(cat /tmp/pages-smoke-server.pid)" || true
           fi
 
-  smoke-ui-live:
-    needs:
-      - detect-changes
-      - smoke-api
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.detect-changes.outputs.pages_changed != 'true' && needs.smoke-api.result == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 22
-      - run: npm run test:smoke-ui -- --url https://pharos.watch
-
   deploy-pages:
     needs:
       - build-pages
@@ -196,28 +103,7 @@ jobs:
           done
 
   smoke-ops:
-    needs:
-      - detect-changes
-      - deploy-pages
-      - smoke-api
-      - smoke-ui-live
-    if: >-
-      ${{
-        always()
-        && needs.detect-changes.result == 'success'
-        && (
-          (
-            needs.detect-changes.outputs.pages_changed == 'true'
-            && needs.deploy-pages.result == 'success'
-          )
-          || (
-            needs.detect-changes.outputs.pages_changed != 'true'
-            && needs.detect-changes.outputs.worker_changed == 'true'
-            && needs.smoke-api.result == 'success'
-            && needs.smoke-ui-live.result == 'success'
-          )
-        )
-      }}
+    needs: deploy-pages
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

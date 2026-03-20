@@ -6,7 +6,7 @@ This document defines the production deploy flow and the required local gate for
 
 ## Core Rules
 
-1. Pull requests into `main` run the shared validation gate in GitHub Actions; production deploys still ship from pushes to `main` and the deploy workflow also supports a daily scheduled rebuild plus manual `workflow_dispatch`.
+1. Pull requests into `main` run the shared validation gate in GitHub Actions; production deploys still ship from pushes to `main`, while a separate Pages-only rebuild workflow refreshes the static export daily. Both workflows also support manual dispatch.
 2. Heavy feature/refactor work must be done in a dedicated worktree branch.
 3. After merging a worktree branch into local `main`, run the merge gate before pushing.
 
@@ -91,7 +91,8 @@ Defined across:
 
 - `.github/workflows/validate-ci.yml` for the shared validate gate
 - `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`
-- `.github/workflows/deploy-cloudflare.yml` for main-branch deploys that reuse the same validate gate
+- `.github/workflows/deploy-cloudflare.yml` for push/manual production deploys that reuse the same validate gate
+- `.github/workflows/rebuild-pages.yml` for the scheduled/manual Pages-only rebuild path
 
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
@@ -102,38 +103,57 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run check:duplicate-exports`
 2. `detect-changes`
    - diffs `github.event.before..github.sha` on `push`
-   - decides whether worker/API deploy work is actually required for that push
-   - defaults to the full deploy path on `schedule` and `workflow_dispatch`
+   - decides separately whether worker/API deploy work and Pages deploy work are actually required for that push
+   - defaults to the full deploy path on `workflow_dispatch`
 3. `deploy-worker`
    - applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`
    - runs `cd worker && npx --no-install wrangler deploy`
    - runs `cd worker && npx --no-install wrangler triggers deploy` to explicitly sync cron/routes/domain triggers after the worker deploy
-   - skipped on frontend-only `push` events where `detect-changes` reports no worker/API-impacting files
+   - skipped on Pages-only or docs-only `push` events where `detect-changes` reports no worker/API-impacting files
 4. `smoke-api`
-   - also skipped on those frontend-only `push` events
+   - also skipped on those Pages-only or docs-only `push` events
 5. `build-pages`
    - runs `npm run sync:digests`
    - runs `npm run build`
    - runs `npm run seo:check`
    - uploads the built `out/` export as a reusable artifact
-   - waits for `smoke-api` only when worker/API work was required for the push
+   - runs only when `detect-changes` reports `pages_changed=true`
+   - waits for `smoke-api` only when worker/API work was also required for the push
 6. `smoke-ui`
    - downloads the built `out/` artifact
    - serves it locally with `scripts/serve-static-export.mjs`
    - proxies `/api/*` to the configured public API base so browser smoke runs against the same rendered bundle before production deploy
-7. `deploy-pages`
+7. `smoke-ui-live`
+   - worker-only deploy path that runs `npm run test:smoke-ui -- --url https://pharos.watch`
+   - verifies the live Pages frontend still works against the newly deployed worker/API when no static rebuild is needed
+8. `deploy-pages`
    - downloads the same `out/` artifact that passed `smoke-ui`
    - uses the workspace-installed Wrangler CLI (`npx --no-install wrangler`) with explicit retries for transient Pages API failures during `pages deploy`
-8. `smoke-ops`
+9. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
 
+Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
+
+1. `build-pages`
+   - runs `npm run sync:digests`
+   - runs `npm run build`
+   - runs `npm run seo:check`
+2. `smoke-ui`
+   - runs against the locally served static export before publish
+3. `deploy-pages`
+   - deploys the verified Pages artifact
+4. `smoke-ops`
+   - runs the normal post-deploy ops smoke
+
+This workflow intentionally skips `validate`, `deploy-worker`, and `smoke-api`; it exists to refresh the Pages export after digest generation without redeploying unchanged worker code.
+
 GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
 
-Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The repo now uses a root npm workspace, so the workflow installs the shared toolchain from the root `package-lock.json` and runs Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
+Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The repo now uses a root npm workspace, so the workflows install the shared toolchain from the root `package-lock.json` and run Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
 
-Deployment stops on the first failed job. Because `deploy-pages` now waits on the local `smoke-ui` gate, a bad static export is blocked before Cloudflare Pages production publish instead of being discovered only after the live site has already switched. On `push`, worker deploy and API smoke are now skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files.
+Deployment stops on the first failed job. Because `deploy-pages` now waits on the local `smoke-ui` gate, a bad static export is blocked before Cloudflare Pages production publish instead of being discovered only after the live site has already switched. On `push`, worker deploy and API smoke are skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files, and Pages build/deploy are skipped entirely when the diff does not touch frontend/Pages/shared build paths. Both production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs on the same ref, while the Pages rebuild workflow waits behind an active production deploy instead of canceling it mid-flight.
 
 ## Operator Origins
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyDeployChanges,
+  hasPagesDeployImpact,
   hasWorkerDeployImpact,
   normalizeChangedFiles,
 } from "../classify-deploy-changes.mjs";
@@ -31,20 +32,41 @@ describe("hasWorkerDeployImpact", () => {
   });
 });
 
+describe("hasPagesDeployImpact", () => {
+  it("returns false for worker-only changes", () => {
+    expect(hasPagesDeployImpact([
+      "worker/src/api/health.ts",
+      "worker/src/cron/sync-stablecoins.ts",
+      "docs/testing.md",
+    ])).toBe(false);
+  });
+
+  it("returns true for frontend, shared, and deploy-infra changes", () => {
+    expect(hasPagesDeployImpact(["src/app/page.tsx"])).toBe(true);
+    expect(hasPagesDeployImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["shared/lib/stablecoins.ts"])).toBe(true);
+    expect(hasPagesDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
+  });
+});
+
 describe("classifyDeployChanges", () => {
   it("runs the full worker deploy path for non-push events", () => {
-    expect(classifyDeployChanges({ eventName: "workflow_dispatch" }).workerChanged).toBe(true);
+    const result = classifyDeployChanges({ eventName: "workflow_dispatch" });
+    expect(result.workerChanged).toBe(true);
+    expect(result.pagesChanged).toBe(true);
   });
 
   it("falls back to full worker deploy when the push base sha is unavailable", () => {
-    expect(classifyDeployChanges({
+    const result = classifyDeployChanges({
       baseSha: "0000000000000000000000000000000000000000",
       eventName: "push",
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
-    }).workerChanged).toBe(true);
+    });
+    expect(result.workerChanged).toBe(true);
+    expect(result.pagesChanged).toBe(true);
   });
 
-  it("skips worker deploy work for push diffs without worker-impacting files", () => {
+  it("runs only the Pages path for frontend-only push diffs", () => {
     const exec = () => "src/app/page.tsx\ndocs/testing.md\n";
 
     const result = classifyDeployChanges({
@@ -55,10 +77,26 @@ describe("classifyDeployChanges", () => {
     });
 
     expect(result.workerChanged).toBe(false);
+    expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "docs/testing.md"]);
   });
 
-  it("keeps worker deploy work enabled for push diffs that touch shared or worker code", () => {
+  it("runs only the worker path for worker-only push diffs", () => {
+    const exec = () => "worker/src/api/health.ts\ndocs/testing.md\n";
+
+    const result = classifyDeployChanges({
+      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
+      eventName: "push",
+      exec,
+      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    });
+
+    expect(result.workerChanged).toBe(true);
+    expect(result.pagesChanged).toBe(false);
+    expect(result.changedFiles).toEqual(["worker/src/api/health.ts", "docs/testing.md"]);
+  });
+
+  it("keeps both deploy paths enabled for shared or deploy-infra changes", () => {
     const exec = () => "src/app/page.tsx\nshared/lib/classification.ts\n";
 
     const result = classifyDeployChanges({
@@ -69,6 +107,7 @@ describe("classifyDeployChanges", () => {
     });
 
     expect(result.workerChanged).toBe(true);
+    expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "shared/lib/classification.ts"]);
   });
 });
