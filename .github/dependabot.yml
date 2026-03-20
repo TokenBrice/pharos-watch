@@ -4,9 +4,14 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    rebase-strategy: "disabled"
     labels:
       - "dependencies"
+    ignore:
+      - dependency-name: "eslint"
+        update-types:
+          - "version-update:semver-major"
     groups:
       minor-and-patch:
         update-types:
@@ -16,7 +21,8 @@ updates:
     directory: "/worker"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    rebase-strategy: "disabled"
     labels:
       - "dependencies"
       - "worker"
@@ -29,7 +35,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    rebase-strategy: "disabled"
     labels:
       - "dependencies"
       - "github-actions"
