@@ -172,14 +172,17 @@ export async function persistScores(
   const validIds = new Set(ACTIVE_STABLECOINS.map((m) => m.id));
   validIds.add("__global__");
   try {
-    const existingRows = await db
-      .prepare("SELECT stablecoin_id FROM dex_liquidity")
-      .all<{ stablecoin_id: string }>();
-    for (const row of existingRows.results ?? []) {
-      if (!validIds.has(row.stablecoin_id)) {
-        stmts.push(
-          db.prepare("DELETE FROM dex_liquidity WHERE stablecoin_id = ?").bind(row.stablecoin_id),
-        );
+    const tables = ["dex_liquidity", "dex_liquidity_history", "dex_discovery_meta"] as const;
+    for (const table of tables) {
+      const existingRows = await db
+        .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
+        .all<{ stablecoin_id: string }>();
+      for (const row of existingRows.results ?? []) {
+        if (!validIds.has(row.stablecoin_id)) {
+          stmts.push(
+            db.prepare(`DELETE FROM ${table} WHERE stablecoin_id = ?`).bind(row.stablecoin_id),
+          );
+        }
       }
     }
   } catch (err) {
