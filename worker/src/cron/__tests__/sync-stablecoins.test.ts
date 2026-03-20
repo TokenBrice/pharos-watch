@@ -298,6 +298,36 @@ describe("syncStablecoins", () => {
     expect(enrichmentAssets).toHaveLength(60);
   });
 
+  it("runs missing-price enrichment before the GT probe", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const order: string[] = [];
+
+    vi.mocked(enrichMissingPrices).mockImplementationOnce(async () => {
+      order.push("enrich");
+      return {
+        totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, finalMissing: 0, failedPasses: [],
+      };
+    });
+    vi.mocked(runGtProbePass).mockImplementationOnce(async () => {
+      order.push("gt");
+      return {
+        updatedCount: 0,
+        stats: { probed: 0, pricesObtained: 0, divergences500bps: 0, skippedLowTvl: 0 },
+      };
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    await syncStablecoins(db);
+
+    expect(order).toEqual(["enrich", "gt"]);
+  });
+
   it("applies protocol-backed price overrides before caching", async () => {
     const db = makeDb();
     const writes = trackCacheWrites(db);

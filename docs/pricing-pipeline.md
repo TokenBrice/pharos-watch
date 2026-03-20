@@ -154,6 +154,8 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation
 5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available, falling back to symbol search under the same liquidity and peg-aware validation gates
 
+Operationally, missing-price enrichment runs before the slower GeckoTerminal single-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for CG-only assets and protocol overrides still apply after that probe.
+
 The enrichment path is intentionally narrower than primary pricing:
 
 - it exists to fill holes, not overrule good consensus
