@@ -100,24 +100,31 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run check:cron-sync`
    - includes `npm run check:doc-counts`
    - includes `npm run check:duplicate-exports`
-2. `deploy-worker`
+2. `detect-changes`
+   - diffs `github.event.before..github.sha` on `push`
+   - decides whether worker/API deploy work is actually required for that push
+   - defaults to the full deploy path on `schedule` and `workflow_dispatch`
+3. `deploy-worker`
    - applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`
    - runs `cd worker && npx --no-install wrangler deploy`
    - runs `cd worker && npx --no-install wrangler triggers deploy` to explicitly sync cron/routes/domain triggers after the worker deploy
-3. `smoke-api`
-4. `build-pages`
+   - skipped on frontend-only `push` events where `detect-changes` reports no worker/API-impacting files
+4. `smoke-api`
+   - also skipped on those frontend-only `push` events
+5. `build-pages`
    - runs `npm run sync:digests`
    - runs `npm run build`
    - runs `npm run seo:check`
    - uploads the built `out/` export as a reusable artifact
-5. `smoke-ui`
+   - waits for `smoke-api` only when worker/API work was required for the push
+6. `smoke-ui`
    - downloads the built `out/` artifact
    - serves it locally with `scripts/serve-static-export.mjs`
    - proxies `/api/*` to the configured public API base so browser smoke runs against the same rendered bundle before production deploy
-6. `deploy-pages`
+7. `deploy-pages`
    - downloads the same `out/` artifact that passed `smoke-ui`
    - uses the workspace-installed Wrangler CLI (`npx --no-install wrangler`) with explicit retries for transient Pages API failures during `pages deploy`
-7. `smoke-ops`
+8. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
@@ -126,7 +133,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 
 Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The repo now uses a root npm workspace, so the workflow installs the shared toolchain from the root `package-lock.json` and runs Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
 
-Deployment stops on the first failed job. Because `deploy-pages` now waits on the local `smoke-ui` gate, a bad static export is blocked before Cloudflare Pages production publish instead of being discovered only after the live site has already switched.
+Deployment stops on the first failed job. Because `deploy-pages` now waits on the local `smoke-ui` gate, a bad static export is blocked before Cloudflare Pages production publish instead of being discovered only after the live site has already switched. On `push`, worker deploy and API smoke are now skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files.
 
 ## Operator Origins
 

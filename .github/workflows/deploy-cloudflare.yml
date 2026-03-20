@@ -8,13 +8,34 @@ on:
   workflow_dispatch:
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      worker_changed: ${{ steps.classify.outputs.worker_changed }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+      - id: classify
+        env:
+          DEPLOY_BASE_SHA: ${{ github.event.before }}
+          DEPLOY_EVENT_NAME: ${{ github.event_name }}
+          DEPLOY_HEAD_SHA: ${{ github.sha }}
+        run: node scripts/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
+
   validate:
     uses: ./.github/workflows/validate-ci.yml
     with:
       coverage-compare-ref: ${{ github.event.before }}
 
   deploy-worker:
-    needs: validate
+    needs:
+      - detect-changes
+      - validate
+    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -35,7 +56,10 @@ jobs:
         run: cd worker && npx --no-install wrangler triggers deploy
 
   smoke-api:
-    needs: deploy-worker
+    needs:
+      - deploy-worker
+      - detect-changes
+    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.deploy-worker.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -50,7 +74,20 @@ jobs:
           SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
 
   build-pages:
-    needs: smoke-api
+    needs:
+      - detect-changes
+      - validate
+      - smoke-api
+    if: >-
+      ${{
+        always()
+        && needs.detect-changes.result == 'success'
+        && needs.validate.result == 'success'
+        && (
+          needs.detect-changes.outputs.worker_changed != 'true'
+          || needs.smoke-api.result == 'success'
+        )
+      }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

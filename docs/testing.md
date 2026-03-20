@@ -46,39 +46,46 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm test`
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
-3. `deploy-worker` (needs `validate`):
+3. `detect-changes`:
+   - Diffs `github.event.before..github.sha` on `push`
+   - Marks worker/API deploy work as required only when the push touches worker/shared runtime or worker-deploy infra files
+   - Forces the full path on `schedule` and `workflow_dispatch`
+4. `deploy-worker` (needs `validate` and `detect-changes`):
    - Apply D1 migrations with the local worker-pinned Wrangler CLI
    - Deploy worker with the local worker-pinned Wrangler CLI
    - Sync routes/domains/cron triggers with `wrangler triggers deploy`
-4. `smoke-api` (needs `deploy-worker`):
+   - Skipped on frontend-only `push` events
+5. `smoke-api` (needs `deploy-worker` when worker/API work is required):
    - `npm ci`
    - Run `npm run test:smoke-api`
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Runs strict API checks sequentially with bounded transient retry behavior (`SMOKE_API_RETRY_COUNT` default `1`, `SMOKE_API_TIMEOUT_MS` default `12000`)
-5. `build-pages` (needs `smoke-api`):
+   - Skipped on frontend-only `push` events alongside `deploy-worker`
+6. `build-pages`:
    - `npm run sync:digests`
    - `npm run build`
    - `npm run seo:check`
    - Uploads the built `out/` export as the deploy artifact
-6. `smoke-ui` (needs `build-pages`):
+   - Waits for `smoke-api` only when worker/API work was actually required for that push
+7. `smoke-ui` (needs `build-pages`):
    - Downloads the built `out/` artifact
    - Starts a local static-export server with `/api/*` proxied to `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173`
    - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
-7. `deploy-pages` (needs `build-pages` and `smoke-ui`):
+8. `deploy-pages` (needs `build-pages` and `smoke-ui`):
    - Downloads the same `out/` artifact that passed `smoke-ui`
    - Deploys that verified static export to Cloudflare Pages
-8. `smoke-ops` (needs `deploy-pages`):
+9. `smoke-ops` (needs `deploy-pages`):
    - Run `npm run test:smoke-ops`
    - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
    - Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
-9. `CodeQL`:
+10. `CodeQL`:
    - defined in `.github/workflows/codeql.yml`
    - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
    - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
-This arrangement gives pull requests the same validate gate the deploy workflow depends on, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, still runs the post-deploy ops-surface smoke after Pages publish, and keeps security scanning on a separate CodeQL workflow.
+This arrangement gives pull requests the same validate gate the deploy workflow depends on, skips worker deploy/API smoke for frontend-only pushes, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, still runs the post-deploy ops-surface smoke after Pages publish, and keeps security scanning on a separate CodeQL workflow.
 
 The workflows pin `actions/checkout@v5` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the pipeline before deploy.
 

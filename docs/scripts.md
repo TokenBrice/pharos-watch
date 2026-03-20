@@ -11,6 +11,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/sync-digests.ts`                       | Fetch digest archive before frontend build                                                                                            | `https://api.pharos.watch/api/digest-archive`                                                                                                                                                                                                                                                              | Writes `data/digests.json`                                                                              |
 | `scripts/generate-redirects.ts`                 | Regenerate Cloudflare Pages redirects for legacy stablecoin IDs before frontend build                                                 | Existing `public/_redirects` + embedded ID mapping tables                                                                                                                                                                                                                                                  | Idempotently updates `public/_redirects`                                                                |
 | `scripts/check-seo-static.mjs`                  | Validate static-export SEO/meta/link integrity                                                                                        | `out/` build output                                                                                                                                                                                                                                                                                        | Fails non-zero on SEO/crawlability issues                                                               |
+| `scripts/classify-deploy-changes.mjs`           | Classify whether a push diff requires worker/API deploy work                                                                          | `DEPLOY_EVENT_NAME`, `DEPLOY_BASE_SHA`, `DEPLOY_HEAD_SHA`, local git history                                                                                                                                                                                                                              | Emits GitHub Actions outputs such as `worker_changed=true/false`                                        |
 | `scripts/serve-static-export.mjs`               | Serve the built static export locally and proxy `/api/*` to the configured public API base for pre-deploy browser smoke               | `STATIC_EXPORT_ROOT`, `STATIC_EXPORT_HOST`, `STATIC_EXPORT_PORT`, `STATIC_EXPORT_API_BASE`                                                                                                                                                                                                                | Starts a local HTTP server for the exported app + API proxy                                             |
 | `scripts/smoke-api.mjs`                         | HTTP smoke checks for strict API contract paths                                                                                       | `--base-url`, `--timeout-ms`, `--retry-count`, `--retry-delay-ms`, or `SMOKE_API_BASE` / `API_BASE_URL`, optional `SMOKE_API_TIMEOUT_MS`, `SMOKE_API_RETRY_COUNT`, `SMOKE_API_RETRY_DELAY_MS`                                                                                                              | Exits non-zero on shape/range/status failures                                                           |
 | `scripts/smoke-ops.mjs`                         | Private post-deploy smoke for the Access-protected ops UI and ops API                                                                 | `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`                                                                                                                                                                                             | Exits non-zero on ops-host shell or admin API failures                                                  |
@@ -35,6 +36,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/pull-re
 - `sync-digests.ts` before `npm run build`
 - `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `check-seo-static.mjs` via `npm run seo:check`
+- `classify-deploy-changes.mjs` via the `detect-changes` job in `.github/workflows/deploy-cloudflare.yml`
 - `serve-static-export.mjs` via the pre-deploy `smoke-ui` gate in `.github/workflows/deploy-cloudflare.yml`
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ops.mjs` via `npm run test:smoke-ops`
@@ -87,6 +89,12 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/pull-re
 - Defaults to serving `out/` on `127.0.0.1:4173`.
 - Proxies `GET`/`HEAD` requests under `/api/*` to `STATIC_EXPORT_API_BASE` (default: `https://api.pharos.watch`).
 - Exists to keep browser smoke pre-deploy while still exercising the same API-backed UI code paths as production.
+
+### `classify-deploy-changes.mjs`
+
+- Used only by the deploy workflow’s `detect-changes` job.
+- On `push`, diffs `DEPLOY_BASE_SHA..DEPLOY_HEAD_SHA` and flags worker/API deploy work only when worker/shared runtime or worker-deploy infra paths changed.
+- On `schedule` or `workflow_dispatch`, forces the full worker path for safety.
 
 ### `smoke-api.mjs`
 
