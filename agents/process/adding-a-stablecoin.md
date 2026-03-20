@@ -309,16 +309,18 @@ The right backfill endpoint depends on source fields, not the `id` format:
 | Coin has `geckoId` but no `llamaId` | `POST /api/backfill-cg-prices?stablecoin={id}` | Reads CoinGecko `market_chart` (prices + market caps) and inserts rows |
 | Neither | None — no historical data available | Chart will stay empty; document this in the coin's notes |
 
-Both endpoints require the `X-Admin-Key` header and **POST** method. Call them immediately after pushing the new entries to production.
+Both endpoints are gated by **Cloudflare Access** via `ops-api.pharos.watch` and require **POST** method. Call them immediately after pushing the new entries to production.
 
 ```bash
 # For a DL-tracked coin:
-curl -X POST "https://api.pharos.watch/api/backfill-supply-history?stablecoin=usdy-ondo-finance" \
-  -H "X-Admin-Key: $ADMIN_KEY"
+curl -X POST "https://ops-api.pharos.watch/api/backfill-supply-history?stablecoin=usdy-ondo-finance" \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
 
 # For a CoinGecko-only coin:
-curl -X POST "https://api.pharos.watch/api/backfill-cg-prices?stablecoin=ousg-ondo-finance" \
-  -H "X-Admin-Key: $ADMIN_KEY"
+curl -X POST "https://ops-api.pharos.watch/api/backfill-cg-prices?stablecoin=ousg-ondo-finance" \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
 ```
 
 `backfill-cg-prices` also back-fills `price` for any existing rows that have `NULL` in that column, so it is safe to run on any coin with a `geckoId`.
