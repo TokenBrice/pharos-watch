@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
@@ -7,6 +7,7 @@ import {
   resolveDexCoverage,
   resolveFlowCoverage,
   resolvePriceCoverage,
+  resolveRedemptionCoverage,
   resolveReserveCoverage,
 } from "@/lib/coverage";
 
@@ -23,6 +24,37 @@ function makeCoin(overrides?: Partial<StablecoinMeta>): StablecoinMeta {
       rwa: true,
       navToken: false,
     },
+    ...overrides,
+  };
+}
+
+function makeRedemptionEntry(
+  overrides?: Partial<RedemptionBackstopEntry>,
+): RedemptionBackstopEntry {
+  return {
+    stablecoinId: "test-usd",
+    score: 72,
+    effectiveExitScore: 65,
+    dexLiquidityScore: 58,
+    accessScore: 100,
+    settlementScore: 100,
+    executionCertaintyScore: 100,
+    capacityScore: 60,
+    outputAssetQualityScore: 100,
+    costScore: 40,
+    routeFamily: "psm-swap",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    provider: "supply-ratio-model",
+    sourceMode: "estimated",
+    immediateCapacityUsd: 10_000_000,
+    immediateCapacityRatio: 0.15,
+    feeBps: null,
+    queueEnabled: false,
+    methodologyVersion: "1.1",
+    updatedAt: 1_700_000_000,
     ...overrides,
   };
 }
@@ -80,6 +112,21 @@ describe("coverage helpers", () => {
     expect(resolveReserveCoverage(makeCoin()).kind).toBe("estimated");
   });
 
+  it("maps redemption route families into user-facing labels", () => {
+    expect(resolveRedemptionCoverage(makeRedemptionEntry()).label).toBe("PSM");
+    expect(
+      resolveRedemptionCoverage(
+        makeRedemptionEntry({ routeFamily: "offchain-issuer" }),
+      ).label,
+    ).toBe("Issuer");
+    expect(
+      resolveRedemptionCoverage(
+        makeRedemptionEntry({ routeFamily: "queue-redeem" }),
+      ).label,
+    ).toBe("Queue");
+    expect(resolveRedemptionCoverage(null).available).toBe(false);
+  });
+
   it("maps mint/burn coverage states into visible labels", () => {
     expect(resolveFlowCoverage("full").label).toBe("Full");
     expect(resolveFlowCoverage("partial-history").label).toBe("Partial");
@@ -97,15 +144,17 @@ describe("coverage helpers", () => {
       hasPegCoverage: true,
       safetyScore: 82,
       dexCoverageClass: "primary",
+      redemptionEntry: makeRedemptionEntry(),
       hasYieldCoverage: false,
       flowCoverageStatus: "partial-history",
       hasDependencyCoverage: false,
     });
 
-    expect(row.coverageCount).toBe(5);
-    expect(row.advancedCoverageCount).toBe(4);
+    expect(row.coverageCount).toBe(6);
+    expect(row.advancedCoverageCount).toBe(5);
     expect(row.statuses.yield.available).toBe(false);
     expect(row.statuses.blacklist.available).toBe(false);
+    expect(row.statuses.redemption.label).toBe("PSM");
   });
 
   it("builds per-feature summaries with breakdown text and market-cap share", () => {
@@ -122,9 +171,9 @@ describe("coverage helpers", () => {
         priceConfidence: "high",
         safetyScore: 82,
         dexCoverageClass: "primary",
+        redemptionEntry: makeRedemptionEntry(),
         hasYieldCoverage: true,
         flowCoverageStatus: "full",
-        bluechipGrade: "A",
         hasDependencyCoverage: true,
       }),
       buildCoverageRow({
@@ -144,9 +193,9 @@ describe("coverage helpers", () => {
         hasPegCoverage: false,
         safetyScore: null,
         dexCoverageClass: "unobserved",
+        redemptionEntry: null,
         hasYieldCoverage: false,
         flowCoverageStatus: null,
-        bluechipGrade: null,
         hasDependencyCoverage: false,
       }),
     ];
@@ -200,9 +249,9 @@ describe("coverage helpers", () => {
         consensusSources: ["coingecko", "defillama", "pyth", "binance", "coinbase"],
         safetyScore: null,
         dexCoverageClass: null,
+        redemptionEntry: null,
         hasYieldCoverage: false,
         flowCoverageStatus: null,
-        bluechipGrade: null,
         hasDependencyCoverage: false,
       }),
       buildCoverageRow({
@@ -212,9 +261,9 @@ describe("coverage helpers", () => {
         consensusSources: ["coingecko"],
         safetyScore: null,
         dexCoverageClass: null,
+        redemptionEntry: null,
         hasYieldCoverage: false,
         flowCoverageStatus: null,
-        bluechipGrade: null,
         hasDependencyCoverage: false,
       }),
     ];
@@ -249,9 +298,9 @@ describe("coverage helpers", () => {
         hasPegCoverage: true,
         safetyScore: 82,
         dexCoverageClass: "primary",
+        redemptionEntry: null,
         hasYieldCoverage: false,
         flowCoverageStatus: null,
-        bluechipGrade: null,
         hasDependencyCoverage: false,
       }),
       buildCoverageRow({
@@ -264,9 +313,9 @@ describe("coverage helpers", () => {
         hasPegCoverage: true,
         safetyScore: 82,
         dexCoverageClass: "primary",
+        redemptionEntry: null,
         hasYieldCoverage: false,
         flowCoverageStatus: null,
-        bluechipGrade: null,
         hasDependencyCoverage: false,
       }),
     ];
@@ -284,5 +333,56 @@ describe("coverage helpers", () => {
     expect(summary.coverageLabel).toBe("50% with live reserve tracking");
     expect(summary.shareLabel).toBe("Live reserve market-cap reach");
     expect(summary.breakdown).toBe("live 1 · curated 1 · estimated 0");
+  });
+
+  it("breaks down redemption coverage by route family", () => {
+    const rows = [
+      buildCoverageRow({
+        coin: makeCoin({ id: "issuer", symbol: "ISS" }),
+        marketCapUsd: 500,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: makeRedemptionEntry({ routeFamily: "offchain-issuer" }),
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "psm", symbol: "PSM" }),
+        marketCapUsd: 300,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: makeRedemptionEntry({ routeFamily: "psm-swap" }),
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "none", symbol: "NON" }),
+        marketCapUsd: 200,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(
+      COVERAGE_FEATURES.find((feature) => feature.key === "redemption")!,
+      rows,
+      1_000,
+    );
+
+    expect(summary.availableCount).toBe(2);
+    expect(summary.coveragePct).toBeCloseTo(66.6666666667, 4);
+    expect(summary.mcapSharePct).toBe(80);
+    expect(summary.breakdown).toBe(
+      "issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0",
+    );
   });
 });

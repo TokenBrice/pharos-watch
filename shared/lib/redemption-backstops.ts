@@ -65,7 +65,7 @@ const issuerBase: RedemptionBackstopConfig = {
   executionModel: "rules-based-nav",
   outputAssetType: "stable-single",
   capacityModel: { kind: "supply-full" },
-  costModel: { kind: "dynamic-or-unclear" },
+  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
 const collateralRedeemBase: RedemptionBackstopConfig = {
@@ -115,6 +115,20 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
       "ausd-agora",
       "usdo-openeden",
       "usdm-moneta",
+      "usdcv-societe-generale-forge",
+      "usdh-native-markets",
+      "fidd-fidelity",
+      "usdgo-osl",
+      "wusd-worldwide",
+      "sbc-brale",
+      "usda-anzens",
+      "eurcv-societe-generale-forge",
+      "aeur-anchored-coins",
+      "eure-monerium",
+      "usdr-stablr",
+      "eurr-stablr",
+      "europ-schuman",
+      "eurau-allunity",
     ],
     issuerBase,
   ),
@@ -261,6 +275,22 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
       "LitePSM docs show fees are not activated for DAI <-> USDC",
     ),
   },
+  "usds-sky": {
+    version: 1,
+    routeFamily: "psm-swap",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-ratio", ratio: 0.33 },
+    costModel: fixedFee(
+      0,
+      "USDS uses the LitePSMWrapper-USDS-USDC route, and Sky docs show LitePSM fees are not activated for the underlying DAI <-> USDC leg",
+    ),
+    notes: [
+      "USDS <-> USDC routes through LitePSMWrapper-USDS-USDC and the fee-free DAI <-> USDS converter, so it shares the same LitePSM liquidity path as DAI",
+    ],
+  },
   "gho-aave": {
     version: 1,
     routeFamily: "psm-swap",
@@ -271,6 +301,19 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     capacityModel: { kind: "supply-ratio", ratio: 0.13 },
     costModel: documentedVariableFee(
       "GSM exit fee is governance-set; recent Aave docs show roughly 8-10 bps on redemption",
+    ),
+  },
+  "usdd-tron-dao-reserve": {
+    version: 1,
+    routeFamily: "psm-swap",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-ratio", ratio: 0.16 },
+    costModel: fixedFee(
+      0,
+      "USDD docs describe 1:1 PSM conversions between USDD and USDT/USDC/TUSD",
     ),
   },
   "dola-inverse-finance": {
@@ -309,6 +352,20 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     capacityModel: { kind: "supply-ratio", ratio: 0.15 },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
+  "lisusd-lista": {
+    version: 1,
+    routeFamily: "psm-swap",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
+    costModel: fixedFee(
+      200,
+      "Lista docs list a 2% fee on lisUSD -> centralized stablecoin conversions and a 500,000 lisUSD daily redemption limit",
+    ),
+    notes: ["Docs also publish a 500,000 lisUSD daily redemption limit for PSM exits"],
+  },
   "dusd-dtrinity": {
     version: 1,
     routeFamily: "stablecoin-redeem",
@@ -321,6 +378,52 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
       50,
       "Protocol docs describe redemption fees of up to 50 bps",
     ),
+  },
+  "honey-berachain": {
+    version: 1,
+    routeFamily: "stablecoin-redeem",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-full" },
+    costModel: documentedVariableFee(
+      "Current redeem fees are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe",
+    ),
+    notes: [
+      "Basket Mode activates when any collateral asset depegs and turns redemptions into proportional basket exits",
+    ],
+  },
+  "ousd-origin-protocol": {
+    version: 1,
+    routeFamily: "stablecoin-redeem",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-full" },
+    costModel: fixedFee(
+      25,
+      "Origin docs list a 0.25% exit fee on OUSD redemptions",
+    ),
+    notes: [
+      "Origin docs still describe pro-rata basket redemption semantics; current OUSD collateral is USDC only",
+    ],
+  },
+  "eusd-electronic-usd": {
+    version: 1,
+    routeFamily: "basket-redeem",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-basket",
+    outputAssetType: "stable-basket",
+    capacityModel: { kind: "supply-full" },
+    costModel: documentedVariableFee(
+      "Reserve Index docs describe mint and TVL fees, but do not document a separate redemption fee",
+    ),
+    notes: [
+      "Redemption requires receiving the underlying basket composition rather than selecting a single stablecoin output",
+    ],
   },
   ...expandIds(
     [

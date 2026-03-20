@@ -5,7 +5,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 const coverageDescription =
-  "Per-coin feature coverage across Pharos. See which stablecoins have depeg tracking, DEX price verification, reserve views, yield intelligence, mint/burn flows, blacklist tracking, and dependency-map visibility.";
+  "Per-coin feature coverage across Pharos. See which stablecoins have depeg tracking, DEX price verification, reserve views, redemption backstop coverage, yield intelligence, mint/burn flows, blacklist tracking, and dependency-map visibility.";
 
 const COVERAGE_FAQ_JSON_LD = {
   "@context": "https://schema.org",
@@ -16,7 +16,7 @@ const COVERAGE_FAQ_JSON_LD = {
       name: "What features does Pharos track for each stablecoin?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Pharos tracks eight core features per stablecoin: depeg monitoring with real-time price deviation alerts, DEX liquidity scoring across Curve, Uniswap, and other venues, proof-of-reserve transparency with attestation links, yield intelligence for yield-bearing designs, Ethereum mint/burn flow monitoring, blacklist event tracking for freeze-capable assets, dependency map visibility for collateral relationships, and safety grade report cards across five risk dimensions.",
+        text: "Pharos tracks nine core features per stablecoin: depeg monitoring with real-time price deviation alerts, DEX liquidity scoring across Curve, Uniswap, and other venues, reserve transparency views, modeled redemption backstop routes, yield intelligence for yield-bearing designs, Ethereum mint/burn flow monitoring, blacklist event tracking for freeze-capable assets, dependency map visibility for collateral relationships, and safety grade report cards across five risk dimensions.",
       },
     },
     {
@@ -24,7 +24,7 @@ const COVERAGE_FAQ_JSON_LD = {
       name: "Why do some stablecoins have incomplete coverage?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Coverage gaps typically stem from three factors: data availability (some newer or smaller stablecoins lack sufficient on-chain history for certain metrics), technical constraints (not all chains support the same level of RPC access for mint/burn tracking), and design differences (algorithmic stablecoins don't have traditional reserves, while non-yield-bearing designs have no yield data to display). Pharos marks these gaps clearly rather than showing misleading placeholders.",
+        text: "Coverage gaps typically stem from three factors: data availability (some newer or smaller stablecoins lack sufficient on-chain history for certain metrics), technical constraints (not all chains support the same level of RPC access for mint/burn tracking), and design differences (algorithmic stablecoins don't have traditional reserves, while many assets do not expose a direct issuer or protocol redemption path). Pharos marks these gaps clearly rather than showing misleading placeholders.",
       },
     },
     {
@@ -32,7 +32,7 @@ const COVERAGE_FAQ_JSON_LD = {
       name: "How often is coverage data updated?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Most metrics refresh every 15 minutes: prices, peg scores, DEX liquidity, and DEWS stress signals. Mint/burn flows and blacklist events sync on a similar cadence. Yield data updates every 30 minutes. Safety grades and reserve attestations typically update daily. The coverage matrix itself reflects the current availability state and updates as new data sources come online or existing ones expand.",
+        text: "Most metrics refresh every 15 minutes: prices, peg scores, DEX liquidity, and DEWS stress signals. Mint/burn flows and blacklist events sync on a similar cadence. Yield data updates every 30 minutes. Redemption backstop snapshots refresh hourly. Safety grades and reserve attestations typically update daily. The coverage matrix itself reflects the current availability state and updates as new data sources come online or existing ones expand.",
       },
     },
   ],

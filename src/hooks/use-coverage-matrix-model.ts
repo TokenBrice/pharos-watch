@@ -7,6 +7,7 @@ import { deriveDependencies } from "@shared/lib/reserve-templates";
 import {
   useDexLiquidity,
   usePegSummary,
+  useRedemptionBackstops,
   useReportCards,
   useYieldRankings,
 } from "@/hooks/api-hooks";
@@ -22,6 +23,7 @@ export function useCoverageMatrixModel() {
   const stablecoinsQuery = useStablecoins();
   const pegQuery = usePegSummary();
   const dexQuery = useDexLiquidity();
+  const redemptionQuery = useRedemptionBackstops();
   const yieldQuery = useYieldRankings();
   const flowQuery = useMintBurnFlows();
   const reportCardsQuery = useReportCards();
@@ -71,6 +73,7 @@ export function useCoverageMatrixModel() {
         priceConfidence: pegCoin?.priceConfidence ?? undefined,
         safetyScore: reportCardById.get(coin.id)?.overallScore ?? null,
         dexCoverageClass: dexQuery.data?.[coin.id]?.coverageClass ?? null,
+        redemptionEntry: redemptionQuery.data?.coins?.[coin.id] ?? null,
         hasYieldCoverage: yieldIds.has(coin.id),
         flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
         hasDependencyCoverage: dependencyIds.has(coin.id),
@@ -83,6 +86,7 @@ export function useCoverageMatrixModel() {
     flowQuery.data,
     reportCardsQuery.data,
     dexQuery.data,
+    redemptionQuery.data,
   ]);
 
   const totalMcapUsd = useMemo(
@@ -181,6 +185,12 @@ export function useCoverageMatrixModel() {
         error: dexQuery.error,
         hasData: !!dexQuery.data,
         meta: dexQuery.meta,
+      },
+      {
+        preset: "redemptionBackstops" as const,
+        dataUpdatedAt: redemptionQuery.dataUpdatedAt,
+        error: redemptionQuery.error,
+        hasData: !!redemptionQuery.data?.coins,
       },
       {
         preset: "yieldRankings" as const,

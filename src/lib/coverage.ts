@@ -7,6 +7,7 @@ import { getReserves } from "@shared/lib/reserve-templates";
 import type {
   LiquidityCoverageClass,
   MintBurnCoverageStatus,
+  RedemptionBackstopEntry,
   StablecoinMeta,
 } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types";
@@ -16,6 +17,7 @@ export type CoverageFeatureKey =
   | "safety"
   | "dex"
   | "reserves"
+  | "redemption"
   | "yield"
   | "flows"
   | "blacklist"
@@ -89,6 +91,7 @@ interface BuildCoverageRowInput {
   priceConfidence?: string;
   safetyScore: number | null | undefined;
   dexCoverageClass: LiquidityCoverageClass | null | undefined;
+  redemptionEntry?: RedemptionBackstopEntry | null | undefined;
   hasYieldCoverage: boolean;
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined;
   hasDependencyCoverage: boolean;
@@ -131,6 +134,13 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) =>
       `${coveragePct.toFixed(0)}% with live reserve tracking`,
     headlineShareLabel: "Live reserve market-cap reach",
+  },
+  {
+    key: "redemption",
+    label: "Redemption Backstop",
+    shortLabel: "Backstop",
+    description: "Modeled issuer or protocol exit routes beyond secondary-market DEX liquidity.",
+    href: "/methodology/#safety-scores-methodology",
   },
   {
     key: "yield",
@@ -398,6 +408,90 @@ export function resolveYieldCoverage(
   );
 }
 
+export function resolveRedemptionCoverage(
+  entry: RedemptionBackstopEntry | null | undefined,
+): CoverageStatus {
+  if (!entry) {
+    return createStatus(
+      "none",
+      "—",
+      "slate",
+      false,
+      0,
+      "No modeled redemption-backstop route is currently configured.",
+      "Not tracked",
+    );
+  }
+
+  switch (entry.routeFamily) {
+    case "offchain-issuer":
+      return createStatus(
+        "offchain-issuer",
+        "Issuer",
+        "amber",
+        true,
+        2,
+        "Issuer or institutional redemption path is modeled.",
+      );
+    case "psm-swap":
+      return createStatus(
+        "psm-swap",
+        "PSM",
+        "rose",
+        true,
+        3,
+        "Protocol swap or PSM-style redemption floor is modeled.",
+      );
+    case "queue-redeem":
+      return createStatus(
+        "queue-redeem",
+        "Queue",
+        "violet",
+        true,
+        1,
+        "Queued protocol redemption path is modeled.",
+      );
+    case "collateral-redeem":
+      return createStatus(
+        "collateral-redeem",
+        "Collat.",
+        "sky",
+        true,
+        3,
+        "Direct collateral redemption path is modeled.",
+        "Collateral redeem",
+      );
+    case "stablecoin-redeem":
+      return createStatus(
+        "stablecoin-redeem",
+        "Stable",
+        "emerald",
+        true,
+        3,
+        "Direct stablecoin redemption path is modeled.",
+        "Stablecoin redeem",
+      );
+    case "basket-redeem":
+      return createStatus(
+        "basket-redeem",
+        "Basket",
+        "sky",
+        true,
+        2,
+        "Basket redemption path is modeled.",
+      );
+    default:
+      return createStatus(
+        "modeled",
+        "Modeled",
+        "rose",
+        true,
+        1,
+        "Redemption-backstop route is modeled.",
+      );
+  }
+}
+
 export function resolveFlowCoverage(
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined,
 ): CoverageStatus {
@@ -544,6 +638,9 @@ function buildCoverageBreakdown(
   if (featureKey === "reserves") {
     return `live ${breakdownMap.get("live") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
   }
+  if (featureKey === "redemption") {
+    return `issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0}`;
+  }
   if (featureKey === "flows") {
     return `full ${breakdownMap.get("full") ?? 0} · partial ${breakdownMap.get("partial-history") ?? 0} · bootstrapping ${breakdownMap.get("bootstrapping") ?? 0}`;
   }
@@ -614,6 +711,7 @@ export function buildCoverageRow({
   priceConfidence,
   safetyScore,
   dexCoverageClass,
+  redemptionEntry,
   hasYieldCoverage,
   flowCoverageStatus,
   hasDependencyCoverage,
@@ -623,6 +721,7 @@ export function buildCoverageRow({
     safety: resolveSafetyCoverage(safetyScore),
     dex: resolveDexCoverage(dexCoverageClass),
     reserves: resolveReserveCoverage(coin),
+    redemption: resolveRedemptionCoverage(redemptionEntry),
     yield: resolveYieldCoverage(hasYieldCoverage),
     flows: resolveFlowCoverage(flowCoverageStatus),
     blacklist: resolveBlacklistCoverage(coin),
@@ -643,6 +742,7 @@ export function buildCoverageRow({
       "safety",
       "dex",
       "reserves",
+      "redemption",
       "yield",
       "flows",
       "blacklist",
