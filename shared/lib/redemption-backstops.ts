@@ -155,7 +155,6 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
       "pusd-plume",
       "pusd-pleasing",
       "gusd-gate",
-      "aid-gaib",
       "usyc-hashnote",
       "ustb-superstate",
       "mtbill-midas",
@@ -771,7 +770,7 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     settlementModel: "atomic",
     executionModel: "deterministic-onchain",
     outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-full" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
   "dusd-standx": {
@@ -781,7 +780,7 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     settlementModel: "same-day",
     executionModel: "rules-based-nav",
     outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-full" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
     costModel: documentedVariableFee(
       "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption; public fee schedule not disclosed",
     ),
@@ -793,7 +792,7 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     settlementModel: "atomic",
     executionModel: "deterministic-onchain",
     outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-full" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
   "yusd-aegis": {
@@ -803,7 +802,7 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     settlementModel: "atomic",
     executionModel: "deterministic-onchain",
     outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-full" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
     costModel: documentedVariableFee(
       "1:1 redemption via Aegis Mint contract; no separate fee disclosed",
     ),
@@ -849,7 +848,7 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
   "xaum-matrixdock": {
     version: 1,
     routeFamily: "offchain-issuer",
-    accessModel: "whitelisted-onchain",
+    accessModel: "issuer-api",
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "bluechip-collateral",
@@ -972,8 +971,20 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     settlementModel: "atomic",
     executionModel: "deterministic-onchain",
     outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-full" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  },
+  "aid-gaib": {
+    version: 1,
+    routeFamily: "stablecoin-redeem",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-onchain",
+    outputAssetType: "stable-single",
+    capacityModel: { kind: "supply-full" },
+    costModel: documentedVariableFee(
+      "1:1 mint and burn against accepted stablecoins; no separate fee disclosed",
+    ),
   },
   "u-united-stables": {
     version: 1,
@@ -1006,7 +1017,7 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     settlementModel: "atomic",
     executionModel: "deterministic-onchain",
     outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-full" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.10 },
     costModel: documentedVariableFee(
       "Reserve-backed 1:1 mint and redeem on Solana against USDC; Ethena manages reserve operations",
     ),
