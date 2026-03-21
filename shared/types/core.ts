@@ -86,10 +86,10 @@ export interface ReserveSlice {
   depType?: DependencyType;
 }
 
-export type ChainTier = "ethereum" | "stage1-l2" | "established-alt-l1" | "unproven";
+export type ChainTier = "ethereum" | "stage1-l2" | "mature-alt-l1" | "established-alt-l1" | "unproven";
 export type DeploymentModel = "single-chain" | "canonical-bridge" | "third-party-bridge" | "native-multichain";
 export type CollateralQuality = "native" | "rwa" | "eth-lst" | "alt-lst-bridged-or-mixed" | "exotic";
-export type CustodyModel = "onchain" | "institutional" | "cex";
+export type CustodyModel = "onchain" | "institutional-top" | "institutional-regulated" | "institutional-unregulated" | "institutional-sanctioned" | "cex";
 
 export type GovernanceQuality =
   | "immutable-code"
@@ -101,10 +101,10 @@ export type GovernanceQuality =
 
 const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
 const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
-const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "established-alt-l1", "unproven"] as const;
+const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
 const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
 const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
-const CUSTODY_MODEL_VALUES = ["onchain", "institutional", "cex"] as const;
+const CUSTODY_MODEL_VALUES = ["onchain", "institutional-top", "institutional-regulated", "institutional-unregulated", "institutional-sanctioned", "cex"] as const;
 const GOVERNANCE_QUALITY_VALUES = [
   "immutable-code",
   "dao-governance",

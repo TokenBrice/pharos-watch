@@ -58,22 +58,22 @@ function makePeg(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
   };
 }
 
-describe("scoreResilience — blacklist sub-factor", () => {
+describe("scoreResilience — blacklist descriptive only (v6)", () => {
   const meta = makeMeta();
 
-  it("scores 33 for blacklistable coins", () => {
+  it("reports blacklist descriptively for blacklistable coins", () => {
     const result = scoreResilience(meta, true);
-    expect(result.detail).toContain("Blacklist: Yes (33)");
+    expect(result.detail).toContain("Blacklist: Yes (descriptive only)");
   });
 
-  it("scores 66 for possibly blacklistable coins", () => {
+  it("reports blacklist descriptively for possibly blacklistable coins", () => {
     const result = scoreResilience(meta, "possible");
-    expect(result.detail).toContain("Blacklist: Possible (mutable contract) (66)");
+    expect(result.detail).toContain("Blacklist: Possible (mutable contract) (descriptive only)");
   });
 
-  it("scores 100 for non-blacklistable coins", () => {
+  it("reports blacklist descriptively for non-blacklistable coins", () => {
     const result = scoreResilience(meta, false);
-    expect(result.detail).toContain("Blacklist: No (100)");
+    expect(result.detail).toContain("Blacklist: No (descriptive only)");
   });
 });
 
@@ -233,9 +233,9 @@ describe("computeOverallGrade — no-liquidity penalty", () => {
 });
 
 describe("scoreResilience — possible-inherited blacklist label", () => {
-  it("scores 66 and labels Possible (inherited) for possible-inherited", () => {
+  it("labels Possible (inherited) descriptively for possible-inherited", () => {
     const result = scoreResilience(makeMeta(), "possible-inherited");
-    expect(result.detail).toContain("Blacklist: Possible (inherited) (66)");
+    expect(result.detail).toContain("Blacklist: Possible (inherited) (descriptive only)");
   });
 });
 
@@ -512,30 +512,30 @@ describe("chainInfraScore", () => {
     expect(chainInfraScore("ethereum", "single-chain")).toBe(100);
   });
 
-  it("returns 85 for ethereum + canonical-bridge", () => {
-    expect(chainInfraScore("ethereum", "canonical-bridge")).toBe(85);
+  it("returns 90 for ethereum + canonical-bridge", () => {
+    expect(chainInfraScore("ethereum", "canonical-bridge")).toBe(90);
   });
 
   it("returns 60 for ethereum + third-party-bridge", () => {
     expect(chainInfraScore("ethereum", "third-party-bridge")).toBe(60);
   });
 
-  it("returns 40 for ethereum + native-multichain", () => {
-    expect(chainInfraScore("ethereum", "native-multichain")).toBe(40);
+  it("returns 75 for ethereum + native-multichain", () => {
+    expect(chainInfraScore("ethereum", "native-multichain")).toBe(75);
   });
 
   it("returns 66 for stage1-l2 + single-chain", () => {
     expect(chainInfraScore("stage1-l2", "single-chain")).toBe(66);
   });
 
-  it("returns 56 for stage1-l2 + canonical-bridge", () => {
-    // 66 * 0.85 = 56.1, rounded to 56
-    expect(chainInfraScore("stage1-l2", "canonical-bridge")).toBe(56);
+  it("returns 59 for stage1-l2 + canonical-bridge", () => {
+    // 66 * 0.90 = 59.4, rounded to 59
+    expect(chainInfraScore("stage1-l2", "canonical-bridge")).toBe(59);
   });
 
-  it("returns 26 for stage1-l2 + native-multichain", () => {
-    // 66 * 0.40 = 26.4, rounded to 26
-    expect(chainInfraScore("stage1-l2", "native-multichain")).toBe(26);
+  it("returns 50 for stage1-l2 + native-multichain", () => {
+    // 66 * 0.75 = 49.5, rounded to 50
+    expect(chainInfraScore("stage1-l2", "native-multichain")).toBe(50);
   });
 
   it("returns 20 for established-alt-l1 + single-chain", () => {
@@ -664,37 +664,37 @@ describe("scoreDecentralization", () => {
     expect(result.score).toBe(85);
   });
 
-  it("applies -15 penalty when infra score is 50-79", () => {
+  it("applies -10 penalty when infra score is 60-79", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       chainTier: "stage1-l2",
       deploymentModel: "single-chain",
     });
     const result = scoreDecentralization("decentralized", meta);
-    // Base 85, infra = 66 (50-79 band), penalty = -15 => 70
-    expect(result.score).toBe(70);
+    // Base 85, infra = 66 (60-79 band), penalty = -10 => 75
+    expect(result.score).toBe(75);
   });
 
-  it("applies -50 penalty when infra score is 15-49", () => {
+  it("applies -40 penalty when infra score is 20-39", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       chainTier: "established-alt-l1",
       deploymentModel: "single-chain",
     });
     const result = scoreDecentralization("decentralized", meta);
-    // Base 85, infra = 20 (15-49 band), penalty = -50 => 35
-    expect(result.score).toBe(35);
+    // Base 85, infra = 20 (20-39 band), penalty = -40 => 45
+    expect(result.score).toBe(45);
   });
 
-  it("applies -65 penalty when infra score < 15", () => {
+  it("applies -60 penalty when infra score < 20", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       chainTier: "unproven",
       deploymentModel: "single-chain",
     });
     const result = scoreDecentralization("decentralized", meta);
-    // Base 85, infra = 0 (<15 band), penalty = -65 => 20
-    expect(result.score).toBe(20);
+    // Base 85, infra = 0 (<20 band), penalty = -60 => 25
+    expect(result.score).toBe(25);
   });
 
   // --- Penalty guard: centralized types skip infra penalty ---
@@ -723,7 +723,7 @@ describe("scoreDecentralization", () => {
 
   // --- Score floor ---
 
-  it("floors score at 0 (never negative)", () => {
+  it("wrapper governance is exempt from chain penalty (v6)", () => {
     const meta = makeMeta({
       flags: { governance: "centralized-dependent", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       governanceQuality: "wrapper",
@@ -731,8 +731,8 @@ describe("scoreDecentralization", () => {
       deploymentModel: "native-multichain",
     });
     const result = scoreDecentralization("centralized-dependent", meta);
-    // wrapper = 10, infra = 0 (<15 band), penalty = -65 => -55 clamped to 0
-    expect(result.score).toBe(0);
+    // wrapper = 10, exempt from penalty
+    expect(result.score).toBe(10);
     expect(result.grade).toBe("F");
   });
 

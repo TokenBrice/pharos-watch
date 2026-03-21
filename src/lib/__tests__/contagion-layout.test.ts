@@ -42,7 +42,7 @@ const RAW_INPUTS_STUB = {
   chainTier: "ethereum" as const,
   deploymentModel: "native-multichain" as const,
   collateralQuality: "rwa" as const,
-  custodyModel: "institutional" as const,
+  custodyModel: "institutional-regulated" as const,
   governanceTier: "centralized" as const,
   governanceQuality: "regulated-entity" as const,
   dependencies: [],

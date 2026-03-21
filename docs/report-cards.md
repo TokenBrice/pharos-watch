@@ -21,7 +21,7 @@ Current-version note: v5.9 corrects governance classifications for centralized-c
 | Dimension | Weight | Source | Scoring |
 |-----------|--------|--------|---------|
 | **Liquidity / Exit** | 30% | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present |
-| **Resilience** | 20% | Token metadata (3 sub-factors) | Weighted avg of collateral quality, custody model, and blacklist capability |
+| **Resilience** | 20% | Token metadata (2 sub-factors) | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score |
 | **Decentralization** | 15% | Governance quality + chain infrastructure | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75 |
 
@@ -54,15 +54,18 @@ Current-version note: v5.9 corrects governance classifications for centralized-c
 
 ### Resilience Details
 
-3-factor weighted average (each sub-factor 1/3 of the resilience score). Chain infrastructure is scored exclusively in the Decentralization dimension to avoid double-counting.
+2-factor solvency measure (each sub-factor 1/2 of the resilience score). Chain infrastructure is scored exclusively in the Decentralization dimension to avoid double-counting. Blacklist capability is reported descriptively but does not affect the Resilience score.
 
 | Sub-factor | Scoring | Tiers |
 |---|---|---|
 | **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback |
-| **Custody Model** | Who holds collateral? | On-chain (100), Institutional custodian (50), CEX/off-exchange (0) |
-| **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Possible — mutable contract (66), Possible — inherited (66), Blacklistable (33) |
+| **Custody Model** | Who holds collateral? | Fully on-chain (100), Top-tier custodian (80), Regulated custodian (55), Unregulated custodian (30), Sanctioned custodian (5), CEX / off-exchange custody (0) |
+
+**Formula:** `resilience = (collateral + custody) / 2`
 
 #### Blacklist Capability Tiers
+
+Blacklist capability is reported descriptively only and does not affect the Resilience score.
 
 | Value | Score | Condition |
 |---|---|---|
@@ -171,16 +174,17 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 
 **Auto-promotion to `regulated-entity`:** A `single-entity` coin is automatically promoted to `regulated-entity` (40) when all three conditions are met: `jurisdiction.regulator` is set, `jurisdiction.license` is set, and `proofOfReserves.type === "independent-audit"`. This recognizes that regulated, audited centralized issuers carry less governance risk than unregulated single entities.
 
-**Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO, multisig, and wrapper governance — immutable-code and centralized issuers are exempt):
+**Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO and multisig governance — immutable-code, wrapper, and centralized issuers are exempt):
 
 | Combined Score Range | Penalty |
 |---|---|
 | 80–100 | 0 |
-| 50–79 | −15 |
-| 15–49 | −50 |
-| 0–14 | −65 |
+| 60–79 | −10 |
+| 40–59 | −25 |
+| 20–39 | −40 |
+| 0–19 | −60 |
 
-`immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
+`immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. `wrapper` is exempt because its governance score already reflects inherited upstream governance. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
 
 #### Chain Infrastructure: Two-Axis Scoring
 
@@ -194,6 +198,7 @@ The chain infrastructure score combines **primary chain maturity** with **deploy
 |------|-------|
 | `ethereum` | 100 |
 | `stage1-l2` | 66 |
+| `mature-alt-l1` | 45 |
 | `established-alt-l1` | 20 |
 | `unproven` | 0 |
 
@@ -202,24 +207,24 @@ The chain infrastructure score combines **primary chain maturity** with **deploy
 | Model | Multiplier | Description |
 |-------|-----------|-------------|
 | `single-chain` | 1.00 | No multichain presence, or irrelevant bridged copies |
-| `canonical-bridge` | 0.85 | Bridges via L2 canonical rollup bridges (inherits rollup security) |
+| `canonical-bridge` | 0.90 | Bridges via L2 canonical rollup bridges (inherits rollup security) |
+| `native-multichain` | 0.75 | Independent minting/redeeming on multiple chains |
 | `third-party-bridge` | 0.60 | Bridges via CCIP, LayerZero, Wormhole, etc. |
-| `native-multichain` | 0.40 | Independent minting/redeeming on multiple chains |
 
 **Combined score matrix:**
 
-| Deployment Model | ETH (100) | L2 (66) | Alt-L1 (20) | Unproven (0) |
-|------------------|-----------|---------|-------------|--------------|
-| single-chain | 100 | 66 | 20 | 0 |
-| canonical-bridge | 85 | 56 | 17 | 0 |
-| third-party-bridge | 60 | 40 | 12 | 0 |
-| native-multichain | 40 | 26 | 8 | 0 |
+| Deployment Model | ETH (100) | L2 (66) | Mature Alt-L1 (45) | Alt-L1 (20) | Unproven (0) |
+|------------------|-----------|---------|--------------------| ------------|--------------|
+| single-chain | 100 | 66 | 45 | 20 | 0 |
+| canonical-bridge | 90 | 59 | 41 | 18 | 0 |
+| native-multichain | 75 | 50 | 34 | 15 | 0 |
+| third-party-bridge | 60 | 40 | 27 | 12 | 0 |
 
 Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
 
-Examples: BOLD (immutable-code) = **100** (exempt from chain penalty). LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 20) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper, Ethereum → infra 100) = **10** (infra ≥ 80, so chain penalty = 0).
+Examples: BOLD (immutable-code) = **100** (exempt from chain penalty). LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 45) = 85 − 25 = **60**. USDB (multisig, Blast L2) = 55 − 10 = **45**. cUSD (wrapper, Ethereum → infra 100) = **10** (wrapper exempt from chain penalty).
 
-Chain penalty applies to `dao-governance`, `multisig`, and `wrapper` tiers. Exempt tiers: `immutable-code`, `single-entity`, `regulated-entity`.
+Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `immutable-code`, `wrapper`, `single-entity`, `regulated-entity`.
 
 ### Dependency Risk Details
 

@@ -284,6 +284,17 @@ Weights and grade thresholds are unchanged from v5.7.
 
 ---
 
+## v6.0 — Custody model tiers, mature-alt-l1, 2-factor Resilience (2026-03-21)
+
+- Custody model expanded from 3 to 6 tiers: onchain (100), institutional-top (80), institutional-regulated (55), institutional-unregulated (30), institutional-sanctioned (5), cex (0)
+- New chain tier: mature-alt-l1 (score 45) for Solana and BNB Chain
+- Resilience becomes 2-factor: (collateral + custody) / 2; blacklist reported descriptively only
+- 5-band chain penalty replaces 4-band: ≥80→0, ≥60→-10, ≥40→-25, ≥20→-40, <20→-60
+- Wrapper governance exempted from chain infrastructure penalty
+- Deployment multipliers: canonical-bridge 0.85→0.90, native-multichain 0.40→0.75
+
+---
+
 ## Quick Reference: Weight Evolution
 
 | Version    | Peg        | Liquidity | Safety  | Resilience | Decentralization | Dep Risk |
@@ -295,7 +306,8 @@ Weights and grade thresholds are unchanged from v5.7.
 | v3.3       | 25%        | 20%       | —       | 20%        | 15%              | 25%      |
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
-| **v5.0–5.8** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
+| **v6.0** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

@@ -32,10 +32,10 @@ const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
 const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
 const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
-const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "established-alt-l1", "unproven"] as const;
+const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
 const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
 const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
-const CUSTODY_MODEL_VALUES = ["onchain", "institutional", "cex"] as const;
+const CUSTODY_MODEL_VALUES = ["onchain", "institutional-top", "institutional-regulated", "institutional-unregulated", "institutional-sanctioned", "cex"] as const;
 const GOVERNANCE_QUALITY_VALUES = [
   "immutable-code",
   "dao-governance",

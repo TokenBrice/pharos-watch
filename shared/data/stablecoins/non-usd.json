@@ -47,6 +47,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-sanctioned",
     "reserves": [
       {
         "name": "Russian ruble deposits at Promsvyazbank (sanctioned)",
@@ -130,6 +131,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "Deposits at Systemically Important Institutions (EUR)",
@@ -2180,7 +2182,7 @@
       }
     ],
     "collateralQuality": "exotic",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "apcxUSDT (custodial 1:1 USDT wrapper)",
@@ -2257,7 +2259,7 @@
     ],
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "reserves": [
       {

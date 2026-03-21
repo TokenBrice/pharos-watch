@@ -370,6 +370,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "Short-dated U.S. Treasury Bills",
@@ -989,6 +990,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-top",
     "governanceQuality": "dao-governance",
     "reserves": [
       {
@@ -1512,6 +1514,7 @@
         "decimals": 6
       }
     ],
+    "chainTier": "mature-alt-l1",
     "reserves": [
       {
         "name": "U.S. Treasury bills (<=3mo maturity)",
@@ -1737,7 +1740,7 @@
     ],
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)",
@@ -1879,7 +1882,7 @@
         "decimals": 18
       }
     ],
-    "chainTier": "established-alt-l1",
+    "chainTier": "mature-alt-l1",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -2261,6 +2264,7 @@
         "decimals": 2
       }
     ],
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "U.S. Treasury bills (<=3 month maturity)",
@@ -2356,6 +2360,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "U.S. Treasury bills (<90 day maturity)",
@@ -2972,7 +2977,7 @@
         "decimals": 6
       }
     ],
-    "chainTier": "established-alt-l1",
+    "chainTier": "mature-alt-l1",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -3393,6 +3398,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "USD cash deposits at BNY Mellon (segregated)",
@@ -3688,7 +3694,7 @@
       }
     ],
     "collateralQuality": "exotic",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "USDC/USDT (1:1 backing)",
@@ -4688,7 +4694,7 @@
       }
     ],
     "collateralQuality": "exotic",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Delta-neutral basis/funding trades (perp futures)",
@@ -4902,8 +4908,8 @@
         "decimals": 6
       }
     ],
-    "chainTier": "established-alt-l1",
-    "custodyModel": "institutional",
+    "chainTier": "mature-alt-l1",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)",
@@ -4958,7 +4964,7 @@
         "decimals": 18
       }
     ],
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)",
@@ -5364,6 +5370,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "U.S. Treasury securities (short-term)",
@@ -6241,7 +6248,7 @@
       }
     ],
     "collateralQuality": "exotic",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "BMMF Turkey FX arbitrage (Balsa Technologies, delta-neutral TRY/USD)",
@@ -6456,7 +6463,7 @@
     "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
     "reserves": [
       {
@@ -6725,7 +6732,7 @@
     ],
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-top",
     "governanceQuality": "regulated-entity",
     "reserves": [
       {
@@ -6825,7 +6832,7 @@
     ],
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "reserves": [
       {
@@ -6920,7 +6927,7 @@
     ],
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "reserves": [
       {
@@ -7020,7 +7027,7 @@
     "canBeBlacklisted": "possible",
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
     "reserves": [
       {
@@ -7151,7 +7158,7 @@
       }
     ],
     "collateralQuality": "exotic",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "multisig",
     "reserves": [
       {
@@ -7598,7 +7605,7 @@
       }
     ],
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
     "yieldConfig": {
       "yieldSource": "GAIB savings (sAID)",
@@ -7644,7 +7651,7 @@
       }
     ],
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
     "reserves": [
       {

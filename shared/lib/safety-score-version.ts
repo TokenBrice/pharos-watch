@@ -1,9 +1,27 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "5.9",
+  currentVersion: "6.0",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.0",
+      title: "Custody model tiers, mature-alt-l1, 2-factor Resilience",
+      date: "2026-03-21",
+      effectiveAt: 1742515200,
+      summary:
+        "Four structural changes: 6-tier custody model replaces 3-tier, new mature-alt-l1 chain tier for Solana/BNB, Resilience becomes 2-factor (blacklist descriptive only), 5-band chain penalty with wrapper exemption.",
+      impact: [
+        "Custody model split: onchain/institutional-top/institutional-regulated/institutional-unregulated/institutional-sanctioned/cex (was onchain/institutional/cex)",
+        "USDC, BUIDL, EURC, frxUSD, DAI, USDS classified as institutional-top (80); sanctioned custodians score 5",
+        "Mature-alt-l1 tier (score 45) for Solana and BNB Chain; JupUSD, USX, hyUSD, lisUSD, CASH reclassified",
+        "Resilience is now (collateral + custody) / 2; blacklist reported but no longer affects score",
+        "5-band chain penalty: ≥80→0, ≥60→-10, ≥40→-25, ≥20→-40, <20→-60; wrappers exempted",
+        "Deployment multipliers: canonical-bridge 0.85→0.90, native-multichain 0.40→0.75",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.9",
       title: "Classification corrections: centralized-custody DeFi coins",
@@ -260,6 +278,7 @@ export const getSafetyScoreVersionAt = safetyScore.getVersionAt;
 /** Ordered scoring changelog versions used for the longform navigation rail. */
 export const SAFETY_SCORE_CHANGELOG_NAV_VERSIONS = [
   safetyScore.versionLabel, // dynamic coupling to currentVersion
+  "v5.9",
   "v5.7",
   "v5.6",
   "v5.5",

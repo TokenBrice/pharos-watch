@@ -277,21 +277,22 @@ export function scoreLiquidity(
 }
 
 // ---------------------------------------------------------------------------
-// Resilience: 4-factor model
+// Resilience: 2-factor solvency model
 // ---------------------------------------------------------------------------
 
 const CHAIN_TIER_SCORE: Record<ChainTier, number> = {
   ethereum: 100,
   "stage1-l2": 66,
+  "mature-alt-l1": 45,
   "established-alt-l1": 20,
   unproven: 0,
 };
 
 const DEPLOYMENT_MULT: Record<DeploymentModel, number> = {
   "single-chain": 1.0,
-  "canonical-bridge": 0.85,
+  "canonical-bridge": 0.90,
+  "native-multichain": 0.75,
   "third-party-bridge": 0.60,
-  "native-multichain": 0.40,
 };
 
 const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
@@ -337,13 +338,17 @@ function collateralScoreLabel(score: number): string {
 
 const CUSTODY_MODEL_SCORE: Record<CustodyModel, number> = {
   onchain: 100,
-  institutional: 50,
+  "institutional-top": 80,
+  "institutional-regulated": 55,
+  "institutional-unregulated": 30,
+  "institutional-sanctioned": 5,
   cex: 0,
 };
 
 const CHAIN_TIER_LABEL: Record<ChainTier, string> = {
   ethereum: "Ethereum mainnet",
   "stage1-l2": "Stage 1+ L2",
+  "mature-alt-l1": "Mature alt-L1",
   "established-alt-l1": "Established alt-L1",
   unproven: "Unproven chain",
 };
@@ -365,7 +370,10 @@ const COLLATERAL_QUALITY_LABEL: Record<CollateralQuality, string> = {
 
 const CUSTODY_MODEL_LABEL: Record<CustodyModel, string> = {
   onchain: "Fully on-chain",
-  institutional: "Institutional custodian",
+  "institutional-top": "Top-tier custodian",
+  "institutional-regulated": "Regulated custodian",
+  "institutional-unregulated": "Unregulated custodian",
+  "institutional-sanctioned": "Sanctioned custodian",
   cex: "CEX / off-exchange custody",
 };
 
@@ -390,10 +398,10 @@ export function inferResilienceDefaults(
   governance: GovernanceType,
 ): { chainTier: ChainTier; deploymentModel: DeploymentModel; collateralQuality: CollateralQuality; custodyModel: CustodyModel } {
   if (backing === "rwa-backed" && governance === "centralized") {
-    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "rwa", custodyModel: "institutional" };
+    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "rwa", custodyModel: "institutional-regulated" };
   }
   if (backing === "rwa-backed" && governance === "centralized-dependent") {
-    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "rwa", custodyModel: "institutional" };
+    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "rwa", custodyModel: "institutional-regulated" };
   }
   if (backing === "crypto-backed" && governance === "decentralized") {
     return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "native", custodyModel: "onchain" };
@@ -459,13 +467,13 @@ export function isBlacklistable(
 }
 
 /**
- * Resilience: 3-factor weighted average.
+ * Resilience: 2-factor solvency measure.
  *
- * Sub-factors (each 1/3 of the resilience score):
+ * Sub-factors (each 1/2 of the resilience score):
  * 1. Collateral Quality — trust assumptions in backing assets
  * 2. Custody Model — who holds the collateral?
- * 3. Blacklist Capability — can the issuer freeze funds?
  *
+ * Blacklist capability is reported descriptively but does not affect the score.
  * Chain infrastructure is scored exclusively in the Decentralization
  * dimension to avoid double-counting.
  */
@@ -496,13 +504,13 @@ export function scoreResilience(
     : COLLATERAL_QUALITY_LABEL[factors.collateralQuality];
 
   const score = Math.round(
-    (collateralScore + custodyScore + blacklistScore) / 3,
+    (collateralScore + custodyScore) / 2,
   );
 
   const parts = [
     `Collateral: ${collateralLabel} (${collateralScore})`,
     `Custody: ${CUSTODY_MODEL_LABEL[factors.custodyModel]} (${custodyScore})`,
-    `Blacklist: ${blacklistLabel} (${blacklistScore})`,
+    `Blacklist: ${blacklistLabel} (descriptive only)`,
   ];
 
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
@@ -579,16 +587,17 @@ export function scoreDecentralization(
 
   let penalty = 0;
   if (infraScore >= 80) penalty = 0;
-  else if (infraScore >= 50) penalty = -15;
-  else if (infraScore >= 15) penalty = -50;
-  else penalty = -65;
+  else if (infraScore >= 60) penalty = -10;
+  else if (infraScore >= 40) penalty = -25;
+  else if (infraScore >= 20) penalty = -40;
+  else penalty = -60;
 
-  if (quality !== "immutable-code" && quality !== "single-entity" && quality !== "regulated-entity" && penalty < 0) {
+  if (quality !== "immutable-code" && quality !== "single-entity" && quality !== "regulated-entity" && quality !== "wrapper" && penalty < 0) {
     score = Math.max(0, score + penalty);
   }
 
   const govScore = GOVERNANCE_QUALITY_SCORE[quality];
-  const penaltyApplied = penalty < 0 && quality !== "immutable-code" && quality !== "single-entity" && quality !== "regulated-entity";
+  const penaltyApplied = penalty < 0 && quality !== "immutable-code" && quality !== "single-entity" && quality !== "regulated-entity" && quality !== "wrapper";
   let detail: string;
   if (factors && penaltyApplied) {
     const chainDesc = chainInfraLabel(factors.chainTier, factors.deploymentModel);

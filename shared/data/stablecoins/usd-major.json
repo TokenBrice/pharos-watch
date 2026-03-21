@@ -210,6 +210,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury Bills",
@@ -523,6 +524,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "U.S. Treasuries",
@@ -849,7 +851,7 @@
     "canBeBlacklisted": "possible",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-top",
     "governanceQuality": "dao-governance",
     "reserves": [
       {
@@ -1116,7 +1118,7 @@
     ],
     "deploymentModel": "canonical-bridge",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-top",
     "governanceQuality": "dao-governance",
     "reserves": [
       {
@@ -1234,6 +1236,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "U.S. Treasury Reverse Repos",
@@ -1431,6 +1434,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury Bills",
@@ -1604,6 +1608,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury Bills",
@@ -1725,6 +1730,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Short-Term U.S. Treasuries",
@@ -1851,6 +1857,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "U.S. Treasury Bills",
@@ -3015,7 +3022,7 @@
     ],
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
-    "custodyModel": "institutional",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "ETH + wstETH (delta-neutral via short perps)",
@@ -3310,7 +3317,7 @@
         "decimals": 6
       }
     ],
-    "chainTier": "established-alt-l1",
+    "chainTier": "mature-alt-l1",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "wrapper",
     "reserves": [

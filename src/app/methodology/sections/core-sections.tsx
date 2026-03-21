@@ -846,8 +846,8 @@ export function CoreMethodologySections() {
                     <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Resilience</td>
                       <td className="py-2 pr-4">20%</td>
-                      <td className="py-2 pr-4">Collateral, custody, blacklist</td>
-                      <td className="py-2">Structural resilience across 3 equally-weighted sub-factors</td>
+                      <td className="py-2 pr-4">Collateral, custody</td>
+                      <td className="py-2">2-factor solvency measure; blacklist capability reported descriptively only</td>
                     </tr>
                     <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Decentralization</td>
@@ -911,8 +911,9 @@ export function CoreMethodologySections() {
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Resilience Scoring</h3>
               <p>
-                Average of three equally-weighted sub-factors (~33% each). Chain infrastructure is scored exclusively in
-                the Decentralization dimension.
+                Average of two equally-weighted sub-factors (50% each): Collateral Quality and Custody Model. Chain
+                infrastructure is scored exclusively in the Decentralization dimension. Blacklist capability is reported
+                descriptively but does not affect the Resilience score.
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -937,17 +938,9 @@ export function CoreMethodologySections() {
                       <td className="py-2 pr-4 text-foreground">Custody Model</td>
                       <td className="py-2 pr-4">Who holds the collateral?</td>
                       <td className="py-2">
-                        Fully&nbsp;on&#8209;chain&nbsp;(100), Institutional&nbsp;custodian&nbsp;(50),
-                        CEX/off&#8209;exchange&nbsp;(0)
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-muted/40 transition-colors">
-                      <td className="py-2 pr-4 text-foreground">Blacklist Capability</td>
-                      <td className="py-2 pr-4">Can the issuer freeze holder funds?</td>
-                      <td className="py-2">
-                        No&nbsp;(100), Possible&nbsp;(mutable&nbsp;contract)&nbsp;(66),
-                        Possible&nbsp;(inherited&nbsp;&mdash;&nbsp;&ge;25%&nbsp;of&nbsp;reserves&nbsp;backed&nbsp;by&nbsp;blacklistable&nbsp;coins&nbsp;such&nbsp;as&nbsp;USDC/USDT)&nbsp;(66),
-                        Yes&nbsp;(33)
+                        Fully&nbsp;on&#8209;chain&nbsp;(100), Top&#8209;tier&nbsp;custodian&nbsp;(80),
+                        Regulated&nbsp;custodian&nbsp;(55), Unregulated&nbsp;custodian&nbsp;(30),
+                        Sanctioned&nbsp;custodian&nbsp;(5), CEX&nbsp;/&nbsp;off&#8209;exchange&nbsp;custody&nbsp;(0)
                       </td>
                     </tr>
                   </tbody>
@@ -993,18 +986,19 @@ export function CoreMethodologySections() {
                 </li>
               </ul>
               <p className="font-medium text-foreground mt-2">
-                Chain-risk penalty (DAO, multisig, and wrapper governance &mdash; exempt for immutable-code,
+                Chain-risk penalty (DAO and multisig governance &mdash; exempt for immutable-code, wrapper,
                 regulated-entity, single-entity):
               </p>
               <ul className="list-disc list-inside space-y-1">
-                <li>Ethereum &mdash; no penalty</li>
-                <li>Stage 1+ L2 &mdash; &minus;15</li>
-                <li>Established alt-L1 &mdash; &minus;50</li>
-                <li>Unproven chain &mdash; &minus;65</li>
+                <li>Combined score &ge;80 &mdash; no penalty</li>
+                <li>Combined score &ge;60 &mdash; &minus;10</li>
+                <li>Combined score &ge;40 &mdash; &minus;25</li>
+                <li>Combined score &ge;20 &mdash; &minus;40</li>
+                <li>Combined score &lt;20 &mdash; &minus;60</li>
               </ul>
               <p className="text-xs">
-                Example: hyUSD (DAO governance, Solana) = 85 &minus; 50 = <span className="text-foreground">35</span>.
-                USDB (multisig, Blast L2) = 55 &minus; 15 = <span className="text-foreground">40</span>.
+                Example: hyUSD (DAO governance, Solana, combined score 45) = 85 &minus; 25 = <span className="text-foreground">60</span>.
+                USDB (multisig, Blast L2, combined score 66) = 55 &minus; 10 = <span className="text-foreground">45</span>.
               </p>
             </div>
 
@@ -1128,7 +1122,8 @@ export function CoreMethodologySections() {
                 <li>Cemetery (defunct) coins receive a permanent F</li>
                 <li>Decentralization score is structural, not a value judgment</li>
                 <li>
-                  Blacklist inheritance: stablecoins where &ge;25% of reserves (by weight) are backed by first-order
+                  Blacklist capability is reported descriptively only and does not affect the Resilience score.
+                  Stablecoins where &ge;25% of reserves (by weight) are backed by first-order
                   blacklistable coins are flagged as &ldquo;possible-inherited&rdquo; blacklist risk
                 </li>
               </ul>
