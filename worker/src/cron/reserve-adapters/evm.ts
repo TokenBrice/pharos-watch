@@ -12,8 +12,9 @@ export async function fetchEvmCallHex(
   data: string,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  timeoutMs?: number,
 ): Promise<`0x${string}` | null> {
-  const result = await fetchEvmCallHexAtBlock(chainId, to, data, "latest", { signal, chainRpcs });
+  const result = await fetchEvmCallHexAtBlock(chainId, to, data, "latest", { signal, chainRpcs, timeoutMs });
   return isHexResult(result ?? undefined) ? result : null;
 }
 

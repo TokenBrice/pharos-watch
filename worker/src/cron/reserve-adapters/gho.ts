@@ -59,7 +59,18 @@ export async function fetchGhoReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "gho");
-  const callOpts = { rpcMode: input.rpcMode, chain: input.chain, signal, ctx };
+  if (input.chain !== "ethereum") {
+    throw new Error(`gho adapter only supports ethereum, got "${input.chain}"`);
+  }
+  const params = config.params as Record<string, unknown> | undefined;
+  const callOpts = {
+    rpcMode: input.rpcMode,
+    chain: input.chain,
+    signal,
+    ctx,
+    rpcUrl: typeof params?.rpcUrl === "string" ? params.rpcUrl : undefined,
+    fallbackRpcUrl: typeof params?.fallbackRpcUrl === "string" ? params.fallbackRpcUrl : undefined,
+  };
 
   const [gsmUsdc, gsmUsdt, totalSupply] = await Promise.all([
     fetchOnchainUint256({

@@ -71,6 +71,7 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
       tokenDecimals: data.tokenDecimals,
       oracleRoundId: data.roundId.toString(),
       oracleUpdatedAt: data.updatedAt,
+      oracleTimestampSource: data.roundId === 0n ? "adapter-invocation" : "oracle-round",
     },
   };
 }

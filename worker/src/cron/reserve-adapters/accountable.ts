@@ -28,19 +28,18 @@ interface AccountableParams {
   renameMap?: Record<string, string>;
 }
 
+const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split"]);
+
 function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
   const params = config.params;
   if (!params || typeof params !== "object" || Array.isArray(params)) return {};
 
-  const bucket =
-    params.bucket === "type"
-    || params.bucket === "reserves_split"
-    || params.bucket === "deployment"
-    || params.bucket === "type_split"
-    || params.bucket === "stablecoin_split"
-    || params.bucket === "exposure_split"
-      ? params.bucket
-      : undefined;
+  if (params.bucket != null && !VALID_BUCKETS.has(params.bucket as string)) {
+    throw new Error(`accountable: invalid bucket "${params.bucket as string}", expected one of: ${[...VALID_BUCKETS].join(", ")}`);
+  }
+  const bucket = VALID_BUCKETS.has(params.bucket as string)
+    ? (params.bucket as AccountableParams["bucket"])
+    : undefined;
   const rawRiskMap = params.riskMap;
   const rawRenameMap = params.renameMap;
   const riskMap: Record<string, ReserveSlice["risk"]> = {};
@@ -75,15 +74,16 @@ function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
   };
 }
 
-function extractNestedNumericValue(value: unknown): number | null {
+function extractNestedNumericValue(value: unknown, depth = 0): number | null {
   const direct = toFiniteNumber(value);
   if (direct != null) return direct;
+  if (depth > 4) return null;
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
   let total = 0;
   let found = false;
   for (const nested of Object.values(value)) {
-    const numeric = extractNestedNumericValue(nested);
+    const numeric = extractNestedNumericValue(nested, depth + 1);
     if (numeric == null) continue;
     total += numeric;
     found = true;

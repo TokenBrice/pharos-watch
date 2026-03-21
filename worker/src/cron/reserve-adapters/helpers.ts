@@ -27,6 +27,7 @@ interface EvmCallOptions {
   fallbackRpcUrl?: string;
   rpcMode?: EvmInput["rpcMode"];
   chain?: string;
+  timeoutMs?: number;
 }
 
 export function isHttpJsonInput(input: LiveReserveInput): input is JsonInput {
@@ -96,6 +97,32 @@ export async function fetchJsonWithRetry<T>(
   return res.json() as Promise<T>;
 }
 
+export async function fetchJsonPostWithRetry<T>(
+  url: string,
+  body: unknown,
+  signal: AbortSignal,
+  timeoutMs = 10_000,
+): Promise<T> {
+  const res = await fetchWithRetry(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+      body: JSON.stringify(body),
+      signal,
+    },
+    2,
+    { timeoutMs },
+  );
+  if (!res) {
+    throw new Error(`POST fetch failed for ${url}`);
+  }
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} for POST ${url}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 export async function fetchTextWithRetry(
   url: string,
   signal: AbortSignal,
@@ -160,7 +187,7 @@ export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigi
     {
       extraRpcUrls,
       signal: options.signal,
-      timeoutMs: 10_000,
+      timeoutMs: options.timeoutMs ?? 10_000,
       chainRpcs: options.ctx?.chainRpcs,
     },
   );
@@ -178,7 +205,7 @@ export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigi
       {
         apiKey: options.ctx?.etherscanApiKey,
         signal: options.signal,
-        timeoutMs: 10_000,
+        timeoutMs: options.timeoutMs ?? 10_000,
       },
     );
   }
@@ -199,7 +226,7 @@ export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<stri
     {
       extraRpcUrls,
       signal: options.signal,
-      timeoutMs: 10_000,
+      timeoutMs: options.timeoutMs ?? 10_000,
       chainRpcs: options.ctx?.chainRpcs,
     },
   );
@@ -217,7 +244,7 @@ export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<stri
       blockNumberOrTag: "latest",
       apiKey: options.ctx?.etherscanApiKey,
       signal: options.signal,
-      timeoutMs: 10_000,
+      timeoutMs: options.timeoutMs ?? 10_000,
     });
   }
 

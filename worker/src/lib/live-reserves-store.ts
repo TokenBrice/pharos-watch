@@ -1,6 +1,6 @@
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, ReserveSlice, ReserveSyncStateView, StablecoinMeta } from "@shared/types";
 import { buildInClause } from "./db";
 import { decodeJsonString } from "./cache-json";
 
@@ -414,6 +414,24 @@ export async function loadFreshLiveReserveMap(
   return map;
 }
 
+function buildSyncView(
+  syncState: ReserveSyncStateRecord | null,
+  stale: boolean,
+  overrides: { enabled: boolean; defaultStatus: ReserveSyncStatus; bootstrap: boolean },
+): ReserveSyncStateView {
+  const warningMessages = syncState?.warnings.map((w) => w.message);
+  return {
+    enabled: overrides.enabled,
+    status: syncState?.lastStatus ?? overrides.defaultStatus,
+    stale,
+    bootstrap: overrides.bootstrap,
+    ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
+    ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
+    ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
+    ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
+  };
+}
+
 export async function resolveReserveResult(
   db: D1Database,
   stablecoinId: string,
@@ -430,7 +448,6 @@ export async function resolveReserveResult(
 
   const displayUrl = meta.liveReservesConfig?.display?.url;
   const staticFallback = getReserves(meta);
-  const warningMessages = syncState?.warnings.map((warning) => warning.message);
   const liveSnapshot = hasConsistentSnapshotRecord(syncState, composition) ? composition : null;
   const liveAt = liveSnapshot?.fetchedAt ?? null;
   const stale = !!(liveAt && now - liveAt > freshnessSec);
@@ -443,16 +460,11 @@ export async function resolveReserveResult(
       liveAt: liveSnapshot.fetchedAt,
       source: liveSnapshot.source,
       displayUrl,
-      sync: {
+      sync: buildSyncView(syncState, stale, {
         enabled: !!meta.liveReservesConfig,
-        status: syncState?.lastStatus ?? "ok",
-        stale,
+        defaultStatus: "ok",
         bootstrap: false,
-        ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
-        ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
-        ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
-        ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
-      },
+      }),
     };
   }
 
@@ -461,16 +473,11 @@ export async function resolveReserveResult(
       ...staticFallback,
       displayUrl,
       sync: meta.liveReservesConfig
-        ? {
+        ? buildSyncView(syncState, stale, {
             enabled: true,
-            status: syncState?.lastStatus ?? "skipped",
-            stale,
+            defaultStatus: "skipped",
             bootstrap: !syncState?.lastSuccessAt,
-            ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
-            ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
-            ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
-            ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
-          }
+          })
         : undefined,
     };
   }
@@ -481,16 +488,11 @@ export async function resolveReserveResult(
         estimated: false,
         mode: "unavailable",
         displayUrl,
-        sync: {
+        sync: buildSyncView(syncState, stale, {
           enabled: true,
-          status: syncState?.lastStatus ?? "skipped",
-          stale,
+          defaultStatus: "skipped",
           bootstrap: !syncState?.lastSuccessAt,
-          ...(syncState?.lastAttemptedAt != null ? { lastAttemptedAt: syncState.lastAttemptedAt } : {}),
-          ...(syncState?.lastSuccessAt != null ? { lastSuccessAt: syncState.lastSuccessAt } : {}),
-          ...(warningMessages && warningMessages.length > 0 ? { warnings: warningMessages } : {}),
-          ...(syncState?.lastError ? { lastError: syncState.lastError.slice(0, 200) } : {}),
-        },
+        }),
       }
     : null;
 }

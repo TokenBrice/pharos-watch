@@ -11,7 +11,7 @@ import {
   parseEvmAddressResult,
   resolveCoinContractAddress,
 } from "./evm";
-import { isOnchainEvmInput, isReserveRisk } from "./helpers";
+import { getAdapterTimeout, isOnchainEvmInput, isReserveRisk } from "./helpers";
 
 const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
@@ -67,9 +67,10 @@ export async function fetchErc4626SingleAssetReserves(
     throw new Error(`No ${primaryInput.chain} contract configured for ${coin.id}`);
   }
 
+  const timeout = getAdapterTimeout(config, 12_000);
   const [assetResult, totalAssetsResult] = await Promise.all([
-    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_ASSET_SELECTOR, signal, _ctx?.chainRpcs),
-    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_TOTAL_ASSETS_SELECTOR, signal, _ctx?.chainRpcs),
+    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_ASSET_SELECTOR, signal, _ctx?.chainRpcs, timeout),
+    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_TOTAL_ASSETS_SELECTOR, signal, _ctx?.chainRpcs, timeout),
   ]);
 
   if (!totalAssetsResult) {

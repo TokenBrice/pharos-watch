@@ -56,9 +56,9 @@ export async function fetchSingleAssetReserves(
     }
   } else {
     const onchain = requireOnchainInput(primary, "single-asset");
-    const probeContract = coin.contracts?.find((contract) => contract.chain === onchain.chain)?.address ?? coin.contracts?.[0]?.address;
+    const probeContract = coin.contracts?.find((contract) => contract.chain === onchain.chain)?.address;
     if (!probeContract) {
-      throw new Error(`single-asset adapter could not find a contract for ${coin.id}`);
+      throw new Error(`single-asset adapter could not find a ${onchain.chain} contract for ${coin.id}`);
     }
     const totalSupply = await fetchErc20TotalSupply(
       onchain,

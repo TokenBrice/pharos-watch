@@ -68,5 +68,8 @@ export async function fetchCircleReserves(
   );
   const params = config.params as Record<string, unknown> | undefined;
   const coinType = String(params?.coinType ?? "usdc");
+  if (coinType !== "usdc" && coinType !== "eurc") {
+    throw new Error(`circle-transparency: invalid coinType "${coinType}", expected "usdc" or "eurc"`);
+  }
   return adaptCircleTransparency(html, coinType);
 }

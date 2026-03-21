@@ -80,7 +80,7 @@ export async function syncLiveReserves(
   const sharedSourceResults = new Map<string, Promise<AdapterResult>>();
   const breakerOutcomes = new Map<string, boolean>();
 
-  const runAdapter = (
+  const tryPrimary = (
     coin: ConfiguredCoin,
     config: LiveReserveConfig,
     adapter: NonNullable<ReturnType<typeof getReserveAdapter>>,
@@ -91,13 +91,29 @@ export async function syncLiveReserves(
     }
 
     const cached = sharedSourceResults.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
     const resultPromise = adapter(coin, config, signal, adapterCtx);
     sharedSourceResults.set(cacheKey, resultPromise);
     return resultPromise;
+  };
+
+  const runAdapter = async (
+    coin: ConfiguredCoin,
+    config: LiveReserveConfig,
+    adapter: NonNullable<ReturnType<typeof getReserveAdapter>>,
+  ): Promise<AdapterResult> => {
+    try {
+      return await tryPrimary(coin, config, adapter);
+    } catch (primaryError) {
+      for (const fb of config.inputs.fallbacks ?? []) {
+        try {
+          const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
+          return await adapter(coin, fbConfig, signal, adapterCtx);
+        } catch { continue; }
+      }
+      throw primaryError;
+    }
   };
 
   for (const coin of CONFIGURED_COINS) {
@@ -105,20 +121,23 @@ export async function syncLiveReserves(
     const adapter = getReserveAdapter(config.adapter);
     const breakerKey = breakerKeyForConfig(config);
     const previousState = await getReserveSyncState(db, coin.id);
+    const prevSuccessAt = previousState?.lastSuccessAt ?? null;
     breakerKeys.add(breakerKey);
+
+    const recordFailure = (
+      status: ReserveSyncStateRecord["lastStatus"],
+      lastError: string | null,
+      reason: string,
+    ) => upsertReserveSyncState(db, buildReserveSyncStateRecord({
+      stablecoinId: coin.id, config, breakerKey,
+      previousLastSuccessAt: prevSuccessAt, now, status, lastError,
+      metadata: { reason },
+    }));
 
     const canFetch = await shouldAttemptFetch(db, breakerKey);
     if (!canFetch) {
       skipped++;
-      await upsertReserveSyncState(db, buildReserveSyncStateRecord({
-        stablecoinId: coin.id,
-        config,
-        breakerKey,
-        previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
-        now,
-        status: "skipped",
-        metadata: { reason: "circuit-open" },
-      }));
+      await recordFailure("skipped", null, "circuit-open");
       continue;
     }
 
@@ -126,16 +145,7 @@ export async function syncLiveReserves(
       console.warn(`[sync-live-reserves] Unknown adapter "${config.adapter}" for ${coin.id}`);
       failed++;
       coinsWithErrors.push(coin.id);
-      await upsertReserveSyncState(db, buildReserveSyncStateRecord({
-        stablecoinId: coin.id,
-        config,
-        breakerKey,
-        previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
-        now,
-        status: "error",
-        lastError: `Unknown adapter: ${config.adapter}`,
-        metadata: { reason: "unknown-adapter" },
-      }));
+      await recordFailure("error", `Unknown adapter: ${config.adapter}`, "unknown-adapter");
       breakerOutcomes.set(breakerKey, false);
       continue;
     }
@@ -145,19 +155,11 @@ export async function syncLiveReserves(
 
       const validation = validateAdapterOutput(result);
       if (!validation.valid) {
-        console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${validation.warnings.map(w => w.message).join("; ")}`);
+        const msg = validation.warnings.map(w => w.message).join("; ");
+        console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${msg}`);
         failed++;
         coinsWithErrors.push(coin.id);
-        await upsertReserveSyncState(db, buildReserveSyncStateRecord({
-          stablecoinId: coin.id,
-          config,
-          breakerKey,
-          previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
-          now,
-          status: "error",
-          lastError: `Validation failed: ${validation.warnings.map(w => w.message).join("; ")}`,
-          metadata: { reason: "validation-failed" },
-        }));
+        await recordFailure("error", `Validation failed: ${msg}`, "validation-failed");
         breakerOutcomes.set(breakerKey, false);
         continue;
       }
@@ -171,16 +173,7 @@ export async function syncLiveReserves(
         console.warn(`[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
         failed++;
         coinsWithErrors.push(coin.id);
-        await upsertReserveSyncState(db, buildReserveSyncStateRecord({
-          stablecoinId: coin.id,
-          config,
-          breakerKey,
-          previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
-          now,
-          status: "error",
-          lastError: "Adapter returned zero reserve slices",
-          metadata: { reason: "empty-slices" },
-        }));
+        await recordFailure("error", "Adapter returned zero reserve slices", "empty-slices");
         breakerOutcomes.set(breakerKey, false);
         continue;
       }
@@ -200,14 +193,10 @@ export async function syncLiveReserves(
           source: config.adapter,
         },
         buildReserveSyncStateRecord({
-          stablecoinId: coin.id,
-          config,
-          breakerKey,
-          previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
-          now,
+          stablecoinId: coin.id, config, breakerKey,
+          previousLastSuccessAt: prevSuccessAt, now,
           status: warnings.length > 0 ? "degraded" : "ok",
-          warnings,
-          metadata: result.metadata ?? {},
+          warnings, metadata: result.metadata ?? {},
           lastSuccessAt: now,
         }),
       );
@@ -219,16 +208,7 @@ export async function syncLiveReserves(
       console.error(`[sync-live-reserves] Failed for ${coin.id}:`, e);
       failed++;
       coinsWithErrors.push(coin.id);
-      await upsertReserveSyncState(db, buildReserveSyncStateRecord({
-        stablecoinId: coin.id,
-        config,
-        breakerKey,
-        previousLastSuccessAt: previousState?.lastSuccessAt ?? null,
-        now,
-        status: "error",
-        lastError: e instanceof Error ? e.message : String(e),
-        metadata: { reason: "adapter-exception" },
-      }));
+      await recordFailure("error", e instanceof Error ? e.message : String(e), "adapter-exception");
       breakerOutcomes.set(breakerKey, false);
     }
   }

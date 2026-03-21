@@ -1,7 +1,6 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { fetchJsonPostWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface M0GraphQlResponse {
   data?: {
@@ -94,24 +93,12 @@ export async function fetchM0Reserves(
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "m0");
-  const res = await fetchWithRetry(
+  const payload = await fetchJsonPostWithRetry<M0GraphQlResponse>(
     primaryInput.url,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ query: M0_COLLATERAL_QUERY }),
-      signal,
-    },
-    2,
-    { timeoutMs: getAdapterTimeout(config, 12_000) },
+    { query: M0_COLLATERAL_QUERY },
+    signal,
+    getAdapterTimeout(config, 12_000),
   );
-
-  if (!res) throw new Error("M0 GraphQL: fetchWithRetry returned null (all retries failed)");
-  if (!res.ok) throw new Error(`M0 GraphQL ${res.status}`);
-
-  const payload = await res.json() as M0GraphQlResponse;
   if (payload.errors?.length) {
     const message = payload.errors.map((error) => error.message).filter(Boolean).join("; ");
     throw new Error(message || "M0 GraphQL returned errors");

@@ -162,8 +162,7 @@ describe("fetchSingleAssetReserves", () => {
     ]);
   });
 
-  it("uses first contract as fallback when chain does not match", async () => {
-    vi.mocked(fetchErc20TotalSupply).mockResolvedValue(500n);
+  it("throws when chain does not match any contract", async () => {
     const config: LiveReservesConfig = {
       adapter: "single-asset",
       version: 1,
@@ -172,22 +171,11 @@ describe("fetchSingleAssetReserves", () => {
       params: { label: "Collateral", risk: "medium" },
     };
 
-    const result = await fetchSingleAssetReserves(
+    await expect(fetchSingleAssetReserves(
       makeCoin([{ chain: "arbitrum", address: "0xABCD" }]),
       config,
       signal,
-    );
-    expect(result.slices).toEqual([
-      { name: "Collateral", pct: 100, risk: "medium" },
-    ]);
-    expect(fetchErc20TotalSupply).toHaveBeenCalledWith(
-      expect.objectContaining({ chain: "ethereum" }),
-      "0xABCD",
-      signal,
-      undefined,
-      undefined,
-      undefined,
-    );
+    )).rejects.toThrow("could not find a ethereum contract");
   });
 
   it("throws when onchain mode has no contracts", async () => {
@@ -200,7 +188,7 @@ describe("fetchSingleAssetReserves", () => {
     };
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
-      .rejects.toThrow("could not find a contract");
+      .rejects.toThrow("could not find a ethereum contract");
   });
 
   it("throws when onchain totalSupply is null", async () => {

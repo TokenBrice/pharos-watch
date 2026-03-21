@@ -43,11 +43,16 @@ function extractEscapedArray(html: string, startNeedle: string, endNeedle: strin
 
 export function parseMentoReserveComposition(html: string): MentoReserveEntry[] {
   const escapedJson = extractEscapedArray(html, RESERVE_COMPOSITION_START, RESERVE_COMPOSITION_END);
-  const parsed = JSON.parse(
-    escapedJson
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, "\\"),
-  ) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      escapedJson
+        .replace(/\\\\/g, "\\")
+        .replace(/\\"/g, '"'),
+    );
+  } catch (e) {
+    throw new Error(`Mento reserve composition JSON is malformed: ${e instanceof Error ? e.message : String(e)}`);
+  }
   if (!Array.isArray(parsed)) {
     throw new Error("Mento reserveComposition was not an array");
   }
