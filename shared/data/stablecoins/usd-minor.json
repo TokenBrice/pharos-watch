@@ -1152,7 +1152,7 @@
         "coinId": "buidl-blackrock"
       },
       {
-        "name": "Aggregated treasury-backed stablecoins (USDY, USDS, sDAI, etc.)",
+        "name": "Aggregated treasury-backed stablecoins (100+ via Multipli)",
         "pct": 25,
         "risk": "medium"
       },
@@ -1245,7 +1245,7 @@
         "coinId": "usdc-circle"
       },
       {
-        "name": "USDC loss-absorption reserve (0xPartners managed)",
+        "name": "Loss-absorption reserve (0xPartners managed)",
         "pct": 5,
         "risk": "medium"
       }
@@ -8110,7 +8110,7 @@
       "yieldType": "lending-vault"
     },
     "reserves": [
-      { "name": "GPU compute leases & accepted stablecoins (USDC, USDT)", "pct": 100, "risk": "medium" }
+      { "name": "GPU compute leases & accepted stablecoin deposits", "pct": 100, "risk": "medium" }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",
