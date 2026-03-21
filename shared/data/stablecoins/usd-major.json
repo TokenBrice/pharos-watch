@@ -2122,9 +2122,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "usdtb-ethena",
       "display": {
         "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
@@ -2136,10 +2136,6 @@
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "BlackRock BUIDL (U.S. T-Bills, cash, repos) & USDC reserve",
-        "risk": "low"
       }
     }
   },

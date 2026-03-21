@@ -1281,7 +1281,7 @@
       },
       "params": {
         "label": "CNH cash reserves",
-        "risk": "low"
+        "risk": "very-low"
       }
     }
   },
@@ -1363,7 +1363,7 @@
       },
       "params": {
         "label": "IDR bank deposits",
-        "risk": "low"
+        "risk": "very-low"
       }
     }
   },
@@ -1461,7 +1461,7 @@
       },
       "params": {
         "label": "TRY cash reserves",
-        "risk": "low"
+        "risk": "very-low"
       }
     }
   },
@@ -2697,7 +2697,9 @@
       },
       "params": {
         "label": "apcxUSDT custodial wrapper",
-        "risk": "high"
+        "risk": "high",
+        "coinId": "usdt-tether",
+        "depType": "wrapper"
       }
     }
   },

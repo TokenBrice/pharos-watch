@@ -3842,9 +3842,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "usdb-blast",
       "display": {
         "url": "https://blast.io/",
@@ -3858,8 +3858,6 @@
         }
       },
       "params": {
-        "label": "DAI / sDAI and bridged stablecoin reserve basket",
-        "risk": "low",
         "rpcUrl": "https://rpc.blast.io"
       }
     },
@@ -5638,9 +5636,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "feusd-felix",
       "display": {
         "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp",
@@ -5654,8 +5652,6 @@
         }
       },
       "params": {
-        "label": "WHYPE / HYPE branch collateral",
-        "risk": "very-high",
         "rpcUrl": "https://rpc.hyperliquid.xyz/evm"
       }
     },
@@ -5868,7 +5864,8 @@
       "params": {
         "label": "USDC",
         "risk": "low",
-        "coinId": "usdc-circle"
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
       }
     }
   },
@@ -6296,7 +6293,8 @@
       },
       "params": {
         "label": "USDC via Nucleus BoringVault",
-        "risk": "low"
+        "risk": "medium",
+        "coinId": "usdc-circle"
       }
     }
   },
@@ -7521,7 +7519,7 @@
       },
       "params": {
         "label": "tULTRA tokenized U.S. Treasury bills",
-        "risk": "very-low"
+        "risk": "low"
       }
     }
   },

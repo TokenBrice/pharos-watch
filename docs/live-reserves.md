@@ -208,7 +208,7 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `circle-transparency` | `http-html` | `attestation-mix` | 2 |
 | `collateral-positions-api` | `http-json` | `collateral-mix` | 2 |
 | `crvusd` | `http-json` | `collateral-mix` | 1 |
-| `curated-validated` | `onchain-evm` | `attestation-mix` / `collateral-mix` | 21 |
+| `curated-validated` | `onchain-evm` | `attestation-mix` / `collateral-mix` | 24 |
 | `dola-inverse` | `http-json` | `collateral-mix` | 1 |
 | `erc4626-single-asset` | `onchain-evm` | `single-asset` | 2 |
 | `ethena` | `http-json` | `collateral-mix` | 1 |
@@ -224,7 +224,7 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `openeden-usdo` | `http-json` | `collateral-mix` | 1 |
 | `reservoir` | `http-json` | `protocol-reserve` | 1 |
 | `sgforge-coinvertible` | `http-html` | `attestation-mix` | 1 |
-| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 50 |
+| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 47 |
 | `sky-makercore` | `http-json` | `collateral-mix` | 2 |
 | `tether` | `http-json` | `attestation-mix` | 1 |
 
