@@ -7718,7 +7718,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": true,
       "rwa": false,
       "navToken": false
