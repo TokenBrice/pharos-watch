@@ -134,12 +134,12 @@ Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
 Related extracted loaders:
 
-- `worker/src/api/status-derived-data.ts`
+- `worker/src/lib/status/derived-data.ts`
   - `getDatasetFreshness()`
   - `getTelegramBotStats()`
   - `getMintBurnReconciliation()`
   - empty fallback builders for dataset freshness / reserve composition
-- `worker/src/api/status-data-quality.ts`
+- `worker/src/lib/status/data-quality.ts`
   - canonical stablecoins-cache / blacklist-gap / active-depeg / on-chain-supply quality aggregation
 
 ### Auth and caching
@@ -368,11 +368,11 @@ Source: `src/hooks/use-endpoint-probes.ts`
 
 Three internal health-check registrations in `shared/lib/api-endpoints.ts` use hardcoded stablecoin IDs to probe parameterized routes without requiring dynamic URL construction:
 
-| Endpoint Key | Registered Path | Probe Path | Rationale |
-|---|---|---|---|
-| `stablecoin-detail-canary` | `/api/stablecoin/usdt-tether` | `/api/stablecoin/pyusd-paypal` | Lighter payload than USDT avoids timeout false negatives |
-| `stablecoin-summary-canary` | `/api/stablecoin-summary/usdt-tether` | (same as path) | Snapshot route health check |
-| `stablecoin-reserves-canary` | `/api/stablecoin-reserves/iusd-infinifi` | (same as path) | Live reserves route health check |
+| Endpoint Key                 | Registered Path                          | Probe Path                     | Rationale                                                |
+| ---------------------------- | ---------------------------------------- | ------------------------------ | -------------------------------------------------------- |
+| `stablecoin-detail-canary`   | `/api/stablecoin/usdt-tether`            | `/api/stablecoin/pyusd-paypal` | Lighter payload than USDT avoids timeout false negatives |
+| `stablecoin-summary-canary`  | `/api/stablecoin-summary/usdt-tether`    | (same as path)                 | Snapshot route health check                              |
+| `stablecoin-reserves-canary` | `/api/stablecoin-reserves/iusd-infinifi` | (same as path)                 | Live reserves route health check                         |
 
 Handler bindings are in `worker/src/route-registry.ts`. Each delegates to the same handler as the corresponding dynamic `GET /api/stablecoin/:id` route but with a pre-selected ID.
 
@@ -479,7 +479,7 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`); admin probes switch to same-origin proxy mode on the ops host                                                                                                                                     |
 | `src/hooks/use-status-history.ts`                    | Shared polling policy for `/api/status-history` + dashboard time-window filters through the ops-host same-origin proxy                                                                                                                                                                 |
 | `functions/api/admin/[[path]].ts`                    | Pages Functions admin proxy: ops-host gating, upstream method/path allowlisting, and service-token forwarding to `ops-api.pharos.watch`                                                                                                                                                |
-| `shared/lib/status-thresholds.ts`                    | Single source of truth for all status thresholds (cache ratios, missing prices, blacklist gaps, on-chain supply, price confidence bands, reconciliation, discovery mcap) — imported by both worker and frontend |
+| `shared/lib/status-thresholds.ts`                    | Single source of truth for all status thresholds (cache ratios, missing prices, blacklist gaps, on-chain supply, price confidence bands, reconciliation, discovery mcap) — imported by both worker and frontend                                                                        |
 | `shared/lib/cron-jobs.ts`                            | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |
 | `shared/lib/api-endpoints.ts`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                        |
 | `worker/src/route-registry.ts`                       | Static route binding registry keyed by shared endpoint metadata                                                                                                                                                                                                                        |

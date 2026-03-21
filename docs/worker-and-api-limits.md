@@ -30,14 +30,14 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 
 ## Worker Runtime
 
-| Constraint | Current repo value | Source | Notes |
-|---|---|---|---|
-| Worker CPU budget per invocation | `30000` ms | `worker/wrangler.toml` | Hard repo-configured CPU cap via `[limits].cpu_ms` |
-| Cron expressions / trigger slots | `10` | `worker/wrangler.toml`, `shared/lib/cron-jobs.ts` | Public status tooling groups around these trigger slots |
-| Status-tracked cron jobs | `25` | `shared/lib/cron-jobs.ts` | These are the jobs expected by `/api/status` |
-| Runtime jobs actually scheduled | `25` | `shared/lib/cron-jobs.ts` | Runtime scheduling now matches the shared status metadata set; cemetery/tracking appendices are folded into daily digest delivery instead of a separate cron |
-| Public API limiter | `300 requests / 60 seconds` per IP hash | `worker/src/handlers/http.ts`, `worker/src/lib/rate-limit.ts` | Enforced through D1-backed `public_api_rate_limit`; falls back to isolate-local memory if the distributed path fails |
-| Feedback limiter | `3 submissions / 10 minutes` per salted IP hash | `worker/src/api/feedback.ts`, `worker/src/lib/rate-limit.ts` | Separate from the general public API limiter |
+| Constraint                       | Current repo value                              | Source                                                        | Notes                                                                                                                                                        |
+| -------------------------------- | ----------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Worker CPU budget per invocation | `30000` ms                                      | `worker/wrangler.toml`                                        | Hard repo-configured CPU cap via `[limits].cpu_ms`                                                                                                           |
+| Cron expressions / trigger slots | `10`                                            | `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`             | Public status tooling groups around these trigger slots                                                                                                      |
+| Status-tracked cron jobs         | `25`                                            | `shared/lib/cron-jobs.ts`                                     | These are the jobs expected by `/api/status`                                                                                                                 |
+| Runtime jobs actually scheduled  | `25`                                            | `shared/lib/cron-jobs.ts`                                     | Runtime scheduling now matches the shared status metadata set; cemetery/tracking appendices are folded into daily digest delivery instead of a separate cron |
+| Public API limiter               | `300 requests / 60 seconds` per IP hash         | `worker/src/handlers/http.ts`, `worker/src/lib/rate-limit.ts` | Enforced through D1-backed `public_api_rate_limit`; falls back to isolate-local memory if the distributed path fails                                         |
+| Feedback limiter                 | `3 submissions / 10 minutes` per salted IP hash | `worker/src/api/feedback.ts`, `worker/src/lib/rate-limit.ts`  | Separate from the general public API limiter                                                                                                                 |
 
 ### Connection-budget operating assumption
 
@@ -51,37 +51,39 @@ Treat any new fetch-heavy work added to an existing trigger slot as competing fo
 
 For `sync-stablecoins`, failed upstream responses must be consumed or canceled before later passes start. Leaving non-OK bodies unread can strand the same trigger-local connection slots and starve the late fallback phase (`CoinMarketCap` -> `Jupiter` -> `DexScreener`).
 
+The same rule applies to Worker-side integration clients. Telegram delivery, X posting, and GitHub feedback submission should always consume or cancel response bodies before returning so one idle stream does not pin a scarce connection slot.
+
 ---
 
 ## Cron Budgeting
 
-| Area | Current repo budget | Source | Notes |
-|---|---|---|---|
-| DEX discovery overall deadline | `20 minutes` | `worker/src/cron/dex-discovery/orchestrator.ts` | Shared deadline for the discovery pass before persistence/cleanup tail work |
-| Blacklist sync runtime budget | `7 minutes` | `worker/src/cron/sync-blacklist.ts` | Guardrail before the trigger wrapper times out |
-| Blacklist sync subrequest budget | `900` | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/evm-logs.ts` | Covers explorer/RPC calls for a single run |
-| Mint/burn global request budget | `200` | `worker/src/cron/sync-mint-burn.ts` | Shared per-run request ceiling |
-| Mint/burn per-config budget (critical) | `60` | `worker/src/cron/sync-mint-burn.ts` | Prevents one hot config from consuming the full run |
-| Mint/burn per-config budget (extended) | `25` | `worker/src/cron/sync-mint-burn.ts` | Lower ceiling for long-tail backlog drain |
-| Mint/burn max scan range | `50,000` blocks | `worker/src/cron/sync-mint-burn.ts` | Keeps per-request log scans bounded |
-| Mint/burn SQL `IN` chunk size | `90` ids | `worker/src/cron/sync-mint-burn.ts` | Current safeguard for large batched SQL |
+| Area                                   | Current repo budget | Source                                                            | Notes                                                                       |
+| -------------------------------------- | ------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| DEX discovery overall deadline         | `20 minutes`        | `worker/src/cron/dex-discovery/orchestrator.ts`                   | Shared deadline for the discovery pass before persistence/cleanup tail work |
+| Blacklist sync runtime budget          | `7 minutes`         | `worker/src/cron/sync-blacklist.ts`                               | Guardrail before the trigger wrapper times out                              |
+| Blacklist sync subrequest budget       | `900`               | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/evm-logs.ts` | Covers explorer/RPC calls for a single run                                  |
+| Mint/burn global request budget        | `200`               | `worker/src/cron/sync-mint-burn.ts`                               | Shared per-run request ceiling                                              |
+| Mint/burn per-config budget (critical) | `60`                | `worker/src/cron/sync-mint-burn.ts`                               | Prevents one hot config from consuming the full run                         |
+| Mint/burn per-config budget (extended) | `25`                | `worker/src/cron/sync-mint-burn.ts`                               | Lower ceiling for long-tail backlog drain                                   |
+| Mint/burn max scan range               | `50,000` blocks     | `worker/src/cron/sync-mint-burn.ts`                               | Keeps per-request log scans bounded                                         |
+| Mint/burn SQL `IN` chunk size          | `90` ids            | `worker/src/cron/sync-mint-burn.ts`                               | Current safeguard for large batched SQL                                     |
 
 ---
 
 ## Upstream Fetch Budgets
 
-| Path | Current repo throttle / budget | Source | Notes |
-|---|---|---|---|
-| CoinGecko onchain discovery | `250 ms` between requests | `worker/src/lib/rate-limit.ts` | Used by discovery crawlers |
-| CoinGecko onchain crawl budget | `5 minutes` | `worker/src/lib/rate-limit.ts` | Per-source crawl budget, not full-run deadline |
-| CoinGecko backfill throttle | `200 ms` between requests | `worker/src/lib/rate-limit.ts` | Used by CoinGecko backfill/admin flows |
-| GeckoTerminal crawl throttle | `2000 ms` between requests | `worker/src/lib/rate-limit.ts` | Conservative crawl pacing |
-| GeckoTerminal crawl budget | `3 minutes` | `worker/src/lib/rate-limit.ts` | Per-source crawl budget |
-| DexScreener discovery fallback budget | `2 minutes` shared fallback window | `worker/src/lib/rate-limit.ts` | Shared with other late-stage discovery fallbacks |
-| Jupiter price fallback | `50` ids/request, `5 s` timeout/request, `0` retries | `worker/src/cron/enrich-prices-passes.ts` | Solana-only enrichment pass between CMC and DexScreener |
-| DexScreener price-enrichment pass | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/enrich-prices.ts` | Best-effort final fallback for missing prices; exact token-address lookups run before symbol search when available |
-| CoinMarketCap fallback | `1 call / hour`, `10 s` timeout, `0` retries | `worker/src/cron/enrich-prices.ts` | Rate-limited through cache key `cmc_last_fetch` |
-| Generic circuit breaker | opens after `3` consecutive failures, probes every `30 minutes` | `worker/src/lib/circuit-breaker.ts` | Used to stop hammering degraded upstreams |
+| Path                                  | Current repo throttle / budget                                               | Source                                    | Notes                                                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| CoinGecko onchain discovery           | `250 ms` between requests                                                    | `worker/src/lib/rate-limit.ts`            | Used by discovery crawlers                                                                                         |
+| CoinGecko onchain crawl budget        | `5 minutes`                                                                  | `worker/src/lib/rate-limit.ts`            | Per-source crawl budget, not full-run deadline                                                                     |
+| CoinGecko backfill throttle           | `200 ms` between requests                                                    | `worker/src/lib/rate-limit.ts`            | Used by CoinGecko backfill/admin flows                                                                             |
+| GeckoTerminal crawl throttle          | `2000 ms` between requests                                                   | `worker/src/lib/rate-limit.ts`            | Conservative crawl pacing                                                                                          |
+| GeckoTerminal crawl budget            | `3 minutes`                                                                  | `worker/src/lib/rate-limit.ts`            | Per-source crawl budget                                                                                            |
+| DexScreener discovery fallback budget | `2 minutes` shared fallback window                                           | `worker/src/lib/rate-limit.ts`            | Shared with other late-stage discovery fallbacks                                                                   |
+| Jupiter price fallback                | `50` ids/request, `5 s` timeout/request, `0` retries                         | `worker/src/cron/enrich-prices-passes.ts` | Solana-only enrichment pass between CMC and DexScreener                                                            |
+| DexScreener price-enrichment pass     | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/enrich-prices.ts`        | Best-effort final fallback for missing prices; exact token-address lookups run before symbol search when available |
+| CoinMarketCap fallback                | `1 call / hour`, `10 s` timeout, `0` retries                                 | `worker/src/cron/enrich-prices.ts`        | Rate-limited through cache key `cmc_last_fetch`                                                                    |
+| Generic circuit breaker               | opens after `3` consecutive failures, probes every `30 minutes`              | `worker/src/lib/circuit-breaker.ts`       | Used to stop hammering degraded upstreams                                                                          |
 
 ### What this means operationally
 
@@ -93,13 +95,13 @@ For `sync-stablecoins`, failed upstream responses must be consumed or canceled b
 
 ## Request Timeouts Worth Preserving
 
-| Area | Current timeout | Source |
-|---|---|---|
-| CoinMarketCap price fallback | `10_000 ms` | `worker/src/cron/enrich-prices.ts` |
-| Jupiter price fallback | `5_000 ms` | `worker/src/cron/enrich-prices-passes.ts` |
-| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/enrich-prices.ts` |
-| Blacklist explorer / RPC reads | `15_000 ms` | `worker/src/lib/fetch-retry.ts` (default timeout) |
-| Daily digest LLM call | `120_000 ms` | `worker/src/cron/daily-digest.ts` |
+| Area                                | Current timeout              | Source                                            |
+| ----------------------------------- | ---------------------------- | ------------------------------------------------- |
+| CoinMarketCap price fallback        | `10_000 ms`                  | `worker/src/cron/enrich-prices.ts`                |
+| Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/enrich-prices-passes.ts`         |
+| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/enrich-prices.ts`                |
+| Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout) |
+| Daily digest LLM call               | `120_000 ms`                 | `worker/src/cron/daily-digest.ts`                 |
 
 ---
 

@@ -99,6 +99,12 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 
 ## Fallback And Staleness Rules
 
+On the worker side, `GET /api/stablecoin/:id` now uses a small strategy layer:
+
+- `worker/src/api/stablecoin-detail.ts` handles cache lookup, fresh-cache hits, provider selection, and shared response helpers
+- `worker/src/api/stablecoin-detail/commodity.ts`, `coingecko-only.ts`, and `defillama.ts` own provider-specific upstream behavior
+- `worker/src/api/stablecoin-detail/shared.ts` owns cache writes, supply-history fallback loading, and stale-cache vs hard-error response policy
+
 ### Reserve presentation
 
 The detail page prefers live reserve data when the coin is live-enabled:

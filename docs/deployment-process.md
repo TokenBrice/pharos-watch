@@ -92,6 +92,7 @@ Defined across:
 - `.github/workflows/validate-ci.yml` for the shared validate gate
 - `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`
 - `.github/workflows/deploy-cloudflare.yml` for push/manual production deploys that reuse the same validate gate
+- `.github/workflows/pages-release.yml` for the shared Pages build/smoke/deploy path
 - `.github/workflows/rebuild-pages.yml` for the scheduled/manual Pages-only rebuild path
 
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
@@ -101,6 +102,8 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run check:cron-sync`
    - includes `npm run check:doc-counts`
    - includes `npm run check:duplicate-exports`
+   - includes `npm run check:unused-code`
+   - includes `npm run check:hotspot-ratchet`
 2. `detect-changes`
    - diffs `github.event.before..github.sha` on `push`
    - decides separately whether worker/API deploy work and Pages deploy work are actually required for that push
@@ -112,39 +115,27 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - skipped on Pages-only or docs-only `push` events where `detect-changes` reports no worker/API-impacting files
 4. `smoke-api`
    - also skipped on those Pages-only or docs-only `push` events
-5. `build-pages`
-   - runs `npm run sync:digests`
-   - runs `npm run build`
-   - runs `npm run seo:check`
-   - uploads the built `out/` export as a reusable artifact
+5. `pages-release`
+   - reusable workflow call to `.github/workflows/pages-release.yml`
    - runs only when `detect-changes` reports `pages_changed=true`
    - waits for `smoke-api` only when worker/API work was also required for the push
-6. `smoke-ui`
-   - downloads the built `out/` artifact
-   - serves it locally with `scripts/serve-static-export.mjs`
-   - proxies `/api/*` to the configured public API base so browser smoke runs against the same rendered bundle before production deploy
+   - executes the shared Pages path:
+     - `build-pages` runs `npm run sync:digests`, `npm run build`, and `npm run seo:check`, then uploads `out/`
+     - `smoke-ui` downloads the same artifact, serves it locally with `scripts/serve-static-export.mjs`, and proxies `/api/*` to the configured public API base
+     - `deploy-pages` publishes that verified artifact through Wrangler with the existing retry loop
 7. `smoke-ui-live`
    - worker-only deploy path that runs `npm run test:smoke-ui -- --url https://pharos.watch`
    - verifies the live Pages frontend still works against the newly deployed worker/API when no static rebuild is needed
-8. `deploy-pages`
-   - downloads the same `out/` artifact that passed `smoke-ui`
-   - uses the workspace-installed Wrangler CLI (`npx --no-install wrangler`) with explicit retries for transient Pages API failures during `pages deploy`
-9. `smoke-ops`
+8. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
 
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
-1. `build-pages`
-   - runs `npm run sync:digests`
-   - runs `npm run build`
-   - runs `npm run seo:check`
-2. `smoke-ui`
-   - runs against the locally served static export before publish
-3. `deploy-pages`
-   - deploys the verified Pages artifact
-4. `smoke-ops`
+1. `pages-release`
+   - reuses the same `.github/workflows/pages-release.yml` build/smoke/deploy path as push/manual production deploys
+2. `smoke-ops`
    - runs the normal post-deploy ops smoke
 
 This workflow intentionally skips `validate`, `deploy-worker`, and `smoke-api`; it exists to refresh the Pages export after digest generation without redeploying unchanged worker code.
@@ -153,7 +144,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 
 Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The repo now uses a root npm workspace, so the workflows install the shared toolchain from the root `package-lock.json` and run Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
 
-Deployment stops on the first failed job. Because `deploy-pages` now waits on the local `smoke-ui` gate, a bad static export is blocked before Cloudflare Pages production publish instead of being discovered only after the live site has already switched. On `push`, worker deploy and API smoke are skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files, and Pages build/deploy are skipped entirely when the diff does not touch frontend/Pages/shared build paths. Both production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs on the same ref, while the Pages rebuild workflow waits behind an active production deploy instead of canceling it mid-flight.
+Deployment stops on the first failed job. Because the shared `pages-release` workflow still requires the local `smoke-ui` gate before `deploy-pages`, a bad static export is blocked before Cloudflare Pages production publish instead of being discovered only after the live site has already switched. On `push`, worker deploy and API smoke are skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files, and Pages build/deploy are skipped entirely when the diff does not touch frontend/Pages/shared build paths. Both production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs on the same ref, while the Pages rebuild workflow waits behind an active production deploy instead of canceling it mid-flight.
 
 ## Operator Origins
 

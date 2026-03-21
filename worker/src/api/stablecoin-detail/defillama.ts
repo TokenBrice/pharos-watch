@@ -1,4 +1,14 @@
 import { z } from "zod";
+import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
+import { fetchWithRetry } from "../../lib/fetch-retry";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import {
+  type DetailResponseHelpers,
+  DETAIL_UPSTREAM_MAX_RETRIES,
+  DETAIL_UPSTREAM_TIMEOUT_MS,
+  logUpstreamException,
+  logUpstreamFailure,
+} from "./shared";
 
 interface PegMeta {
   flags: {
@@ -124,4 +134,59 @@ export function normalizeDefiLlamaDetailBody(
   }
 
   return JSON.stringify(parsed);
+}
+
+export async function handleDefiLlamaDetail(
+  config: {
+    db: D1Database;
+    stablecoinId: string;
+    llamaId: string;
+    meta: PegMeta | undefined;
+  },
+  detail: DetailResponseHelpers,
+): Promise<Response> {
+  const dlDetailAllowed = await shouldAttemptFetch(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL);
+  if (!dlDetailAllowed) {
+    const fallback = await detail.trySupplyHistoryFallback("defillama-circuit-open");
+    if (fallback) return fallback;
+    return detail.staleCacheOrError(503, "DefiLlama detail circuit open");
+  }
+
+  try {
+    const res = await fetchWithRetry(
+      `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(config.llamaId)}`,
+      undefined,
+      DETAIL_UPSTREAM_MAX_RETRIES,
+      { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
+    );
+
+    if (!res?.ok) {
+      await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+      logUpstreamFailure("defillama-stablecoin-detail", config.stablecoinId, res?.status ?? "no-response");
+      const fallback = await detail.trySupplyHistoryFallback("defillama-upstream-failure");
+      if (fallback) return fallback;
+      return detail.staleCacheOrError(502, `Failed to fetch stablecoin ${config.stablecoinId}`);
+    }
+
+    const upstreamBody = await res.text();
+    let body: string;
+    try {
+      body = normalizeDefiLlamaDetailBody(upstreamBody, config.meta);
+    } catch (err) {
+      await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+      logUpstreamException("defillama-stablecoin-detail-parse", config.stablecoinId, err);
+      const fallback = await detail.trySupplyHistoryFallback("defillama-parse-failure");
+      if (fallback) return fallback;
+      return detail.staleCacheOrError(502, `Invalid upstream data for stablecoin ${config.stablecoinId}`);
+    }
+
+    await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, true);
+    return detail.createFreshResponseFromBody(body);
+  } catch (err) {
+    await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+    logUpstreamException("defillama-stablecoin-detail", config.stablecoinId, err);
+    const fallback = await detail.trySupplyHistoryFallback("defillama-exception");
+    if (fallback) return fallback;
+    return detail.staleCacheOrError(502, `Failed to fetch stablecoin ${config.stablecoinId}`);
+  }
 }

@@ -12,7 +12,7 @@ export type StatusLevel = "healthy" | "degraded" | "stale";
 
 const STATUS_SCOPE = "global" as const;
 
-const STATUS_HYSTERESIS = {
+export const STATUS_HYSTERESIS = {
   escalateToDegraded: 2,
   escalateToStale: 1,
   recoverToDegraded: 2,
@@ -24,7 +24,6 @@ const STATUS_HYSTERESIS = {
 export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
 export const STATUS_DISCREPANCY_ALERT_STREAK = 2;
 export const STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC = 1800;
-const STATUS_DISCREPANCY_MAX_PROBE_AGE_SEC = 1800;
 
 interface StatusStateRow {
   scope: string;
@@ -82,7 +81,7 @@ function parseCauses(json: string | null | undefined): StatusCause[] {
   if (!json) return [];
   try {
     const parsed = JSON.parse(json);
-    return Array.isArray(parsed) ? parsed as StatusCause[] : [];
+    return Array.isArray(parsed) ? (parsed as StatusCause[]) : [];
   } catch {
     return [];
   }
@@ -116,6 +115,29 @@ function toStateInfo(row: StatusStateRow): StatusStateInfo {
   };
 }
 
+export function buildFallbackStatusState(rawStatus: StatusLevel, now: number): StatusStateInfo {
+  return {
+    scope: "global",
+    currentStatus: rawStatus,
+    rawStatus,
+    lastEvaluatedAt: now,
+    lastChangedAt: now,
+    minDwellSec: STATUS_HYSTERESIS.minDwellSec,
+    staleMinDwellSec: STATUS_HYSTERESIS.staleMinDwellSec,
+    consecutiveRaw: {
+      healthy: rawStatus === "healthy" ? 1 : 0,
+      degraded: rawStatus === "degraded" ? 1 : 0,
+      stale: rawStatus === "stale" ? 1 : 0,
+    },
+    thresholds: {
+      escalateToDegraded: STATUS_HYSTERESIS.escalateToDegraded,
+      escalateToStale: STATUS_HYSTERESIS.escalateToStale,
+      recoverToDegraded: STATUS_HYSTERESIS.recoverToDegraded,
+      recoverToHealthy: STATUS_HYSTERESIS.recoverToHealthy,
+    },
+  };
+}
+
 function decideNextStatus(
   current: StatusLevel,
   raw: StatusLevel,
@@ -134,13 +156,28 @@ function decideNextStatus(
   }
 
   // Recoveries (require sustained healthy signals + dwell)
-  if (current === "degraded" && raw === "healthy" && counters.healthy >= STATUS_HYSTERESIS.recoverToHealthy && dwellSec >= STATUS_HYSTERESIS.minDwellSec) {
+  if (
+    current === "degraded" &&
+    raw === "healthy" &&
+    counters.healthy >= STATUS_HYSTERESIS.recoverToHealthy &&
+    dwellSec >= STATUS_HYSTERESIS.minDwellSec
+  ) {
     return { next: "healthy", changed: true, reason: "raw-healthy-recovery-threshold" };
   }
-  if (current === "stale" && raw === "degraded" && counters.degraded >= STATUS_HYSTERESIS.recoverToDegraded && dwellSec >= STATUS_HYSTERESIS.staleMinDwellSec) {
+  if (
+    current === "stale" &&
+    raw === "degraded" &&
+    counters.degraded >= STATUS_HYSTERESIS.recoverToDegraded &&
+    dwellSec >= STATUS_HYSTERESIS.staleMinDwellSec
+  ) {
     return { next: "degraded", changed: true, reason: "raw-degraded-recovery-from-stale" };
   }
-  if (current === "stale" && raw === "healthy" && counters.healthy >= STATUS_HYSTERESIS.recoverToHealthy && dwellSec >= STATUS_HYSTERESIS.staleMinDwellSec) {
+  if (
+    current === "stale" &&
+    raw === "healthy" &&
+    counters.healthy >= STATUS_HYSTERESIS.recoverToHealthy &&
+    dwellSec >= STATUS_HYSTERESIS.staleMinDwellSec
+  ) {
     return { next: "healthy", changed: true, reason: "raw-healthy-recovery-from-stale" };
   }
 
@@ -168,7 +205,7 @@ export async function reconcileStatusState(
         `SELECT scope, current_status, raw_status, last_evaluated_at, last_changed_at,
                 consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json
          FROM status_state
-         WHERE scope = ?`
+         WHERE scope = ?`,
       )
       .bind(STATUS_SCOPE)
       .first<StatusStateRow>();
@@ -196,7 +233,7 @@ export async function reconcileStatusState(
           `INSERT INTO status_state
            (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
             consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           seed.scope,
@@ -234,7 +271,7 @@ export async function reconcileStatusState(
         .prepare(
           `INSERT INTO status_transitions
            (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           STATUS_SCOPE,
@@ -290,7 +327,7 @@ export async function reconcileStatusState(
          SET current_status = ?, raw_status = ?, last_evaluated_at = ?, last_changed_at = ?,
              consecutive_healthy = ?, consecutive_degraded = ?, consecutive_stale = ?,
              confidence = ?, causes_json = ?, updated_at = ?
-         WHERE scope = ?`
+         WHERE scope = ?`,
       )
       .bind(
         nextRow.current_status,
@@ -330,7 +367,7 @@ export async function reconcileStatusState(
         .prepare(
           `INSERT INTO status_transitions
            (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           STATUS_SCOPE,
@@ -366,7 +403,7 @@ export async function getStatusStateSnapshot(
         `SELECT scope, current_status, raw_status, last_evaluated_at, last_changed_at,
                 consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json
          FROM status_state
-         WHERE scope = ?`
+         WHERE scope = ?`,
       )
       .bind(STATUS_SCOPE)
       .first<StatusStateRow>();
@@ -445,7 +482,7 @@ export async function writeStatusProbeRun(
       .prepare(
         `INSERT INTO status_probe_runs
          (sample_count, pass_count, fail_count, p95_latency_ms, status, details_json, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         row.sampleCount,
@@ -469,7 +506,7 @@ export async function getLatestStatusProbe(db: D1Database): Promise<StatusProbeS
         `SELECT created_at, status, sample_count, pass_count, fail_count, p95_latency_ms
          FROM status_probe_runs
          ORDER BY created_at DESC
-         LIMIT 1`
+         LIMIT 1`,
       )
       .first<StatusProbeRow>();
     if (!row) {
@@ -525,7 +562,7 @@ export async function updateDiscrepancyObservation(
                 last_probe_failure_at,
                 last_probe_alert_at
          FROM status_discrepancy_state
-         WHERE scope = ?`
+         WHERE scope = ?`,
       )
       .bind(STATUS_SCOPE)
       .first<StatusDiscrepancyStateRow>();
@@ -560,7 +597,7 @@ export async function updateDiscrepancyObservation(
            last_divergent_at = excluded.last_divergent_at,
            consecutive_probe_failures = excluded.consecutive_probe_failures,
            last_probe_failure_at = excluded.last_probe_failure_at,
-           updated_at = excluded.updated_at`
+           updated_at = excluded.updated_at`,
       )
       .bind(
         STATUS_SCOPE,
@@ -591,7 +628,7 @@ export async function markDiscrepancyAlertSent(db: D1Database, now: number): Pro
       .prepare(
         `UPDATE status_discrepancy_state
          SET last_alert_at = ?, updated_at = ?
-         WHERE scope = ?`
+         WHERE scope = ?`,
       )
       .bind(now, now, STATUS_SCOPE)
       .run();
@@ -606,7 +643,7 @@ export async function markProbeFailureAlertSent(db: D1Database, now: number): Pr
       .prepare(
         `UPDATE status_discrepancy_state
          SET last_probe_alert_at = ?, updated_at = ?
-         WHERE scope = ?`
+         WHERE scope = ?`,
       )
       .bind(now, now, STATUS_SCOPE)
       .run();
@@ -649,7 +686,7 @@ export function buildDiscrepancy(
   const statusSeverity = SEVERITY[overallStatus];
   const probeSeverity = SEVERITY[probe.status];
   const severityDelta = statusSeverity - probeSeverity;
-  const freshProbe = probeAgeSeconds <= STATUS_DISCREPANCY_MAX_PROBE_AGE_SEC;
+  const freshProbe = probeAgeSeconds <= STATUS_SYSTEM_FRESHNESS_SEC;
   const hasDivergence = freshProbe && Math.abs(severityDelta) >= 1;
 
   return {
@@ -657,9 +694,7 @@ export function buildDiscrepancy(
     severityDelta,
     statusSeverity,
     probeSeverity,
-    details: hasDivergence
-      ? `status=${overallStatus}, probe=${probe.status}, probeAge=${probeAgeSeconds}s`
-      : null,
+    details: hasDivergence ? `status=${overallStatus}, probe=${probe.status}, probeAge=${probeAgeSeconds}s` : null,
     probeAgeSeconds,
     consecutiveDivergent,
   };

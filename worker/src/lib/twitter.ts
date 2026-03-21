@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { drainResponseBody } from "./response-body";
 
 export interface TwitterCreds {
   apiKey: string;
@@ -9,21 +10,14 @@ export interface TwitterCreds {
 
 /** RFC 3986 percent-encode (stricter than encodeURIComponent for OAuth). */
 function encode(s: string): string {
-  return encodeURIComponent(s).replace(
-    /[!'()*]/g,
-    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
+  return encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
 /**
  * Build and return an OAuth 1.0a Authorization header for a given request.
  * Uses crypto.subtle (available in Cloudflare Workers) for HMAC-SHA1.
  */
-async function buildOAuthHeader(
-  method: string,
-  url: string,
-  creds: TwitterCreds,
-): Promise<string> {
+async function buildOAuthHeader(method: string, url: string, creds: TwitterCreds): Promise<string> {
   const oauthParams: Record<string, string> = {
     oauth_consumer_key: creds.apiKey,
     oauth_nonce: crypto.randomUUID().replace(/-/g, ""),
@@ -49,14 +43,8 @@ async function buildOAuthHeader(
     false,
     ["sign"],
   );
-  const sigBytes = await crypto.subtle.sign(
-    "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(baseString),
-  );
-  oauthParams.oauth_signature = btoa(
-    String.fromCharCode(...new Uint8Array(sigBytes)),
-  );
+  const sigBytes = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(baseString));
+  oauthParams.oauth_signature = btoa(String.fromCharCode(...new Uint8Array(sigBytes)));
 
   return (
     "OAuth " +
@@ -95,7 +83,10 @@ export function buildTweetText(digestTitle: string, digestText: string, editionN
   // Strip title if the LLM accidentally repeated it at the start of the text
   let text = digestText;
   if (digestTitle && text.toLowerCase().startsWith(digestTitle.toLowerCase())) {
-    text = text.slice(digestTitle.length).replace(/^[\s\n:–—-]+/, "").trim();
+    text = text
+      .slice(digestTitle.length)
+      .replace(/^[\s\n:–—-]+/, "")
+      .trim();
   }
   const available = MAX - titlePrefix.length;
   const fittedText = truncateToFit(injectCashtags(text), available);
@@ -121,6 +112,8 @@ async function postTweet(text: string, creds: TwitterCreds): Promise<void> {
     const body = await res.text();
     throw new Error(`Twitter API ${res.status}: ${body.slice(0, 300)}`);
   }
+
+  await drainResponseBody(res);
 }
 
 /**

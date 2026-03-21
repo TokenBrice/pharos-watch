@@ -1,6 +1,7 @@
 export interface DigestInputData {
   totalMcapUsd: number;
   mcap7dDelta: number;
+  degradedSources?: string[];
   activeDepegCount: number;
   topDepegs: { symbol: string; bps: number; mcapUsd: number }[];
   biggestSupplyChange: {

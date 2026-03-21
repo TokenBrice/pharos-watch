@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  buildFallbackStatusState,
   buildDiscrepancy,
   getDiscrepancyStreak,
   getLatestStatusProbe,
@@ -8,6 +9,8 @@ import {
   markDiscrepancyAlertSent,
   markProbeFailureAlertSent,
   reconcileStatusState,
+  STATUS_HYSTERESIS,
+  STATUS_SYSTEM_FRESHNESS_SEC,
   updateDiscrepancyObservation,
   writeStatusProbeRun,
 } from "../status-reliability";
@@ -107,9 +110,9 @@ function makeStatefulDb() {
       }
 
       if (sql.includes("SELECT consecutive_divergent FROM status_discrepancy_state")) {
-        return (store.discrepancy
-          ? { consecutive_divergent: store.discrepancy.consecutive_divergent }
-          : null) as T | null;
+        return (
+          store.discrepancy ? { consecutive_divergent: store.discrepancy.consecutive_divergent } : null
+        ) as T | null;
       }
 
       if (sql.includes("FROM status_discrepancy_state")) {
@@ -320,12 +323,35 @@ describe("status-reliability", () => {
     expect(snapshot.state?.currentStatus).toBe("degraded");
     expect(snapshot.staleness).toEqual({
       ageSeconds: 2_000,
-      maxAgeSec: 1_800,
+      maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
       isStale: true,
     });
 
     const failed = await getStatusStateSnapshot(makeFailingDb(), 2_100);
     expect(failed).toEqual({ state: null, staleness: null });
+  });
+
+  it("builds fallback state from the canonical hysteresis policy", () => {
+    expect(buildFallbackStatusState("degraded", 500)).toEqual({
+      scope: "global",
+      currentStatus: "degraded",
+      rawStatus: "degraded",
+      lastEvaluatedAt: 500,
+      lastChangedAt: 500,
+      minDwellSec: STATUS_HYSTERESIS.minDwellSec,
+      staleMinDwellSec: STATUS_HYSTERESIS.staleMinDwellSec,
+      consecutiveRaw: {
+        healthy: 0,
+        degraded: 1,
+        stale: 0,
+      },
+      thresholds: {
+        escalateToDegraded: STATUS_HYSTERESIS.escalateToDegraded,
+        escalateToStale: STATUS_HYSTERESIS.escalateToStale,
+        recoverToDegraded: STATUS_HYSTERESIS.recoverToDegraded,
+        recoverToHealthy: STATUS_HYSTERESIS.recoverToHealthy,
+      },
+    });
   });
 
   it("lists recent transitions with bounds and safely parses invalid causes", async () => {
@@ -477,7 +503,7 @@ describe("status-reliability", () => {
           failCount: 0,
           p95LatencyMs: 200,
         },
-        2_000,
+        STATUS_SYSTEM_FRESHNESS_SEC + 200,
         1,
       ).hasDivergence,
     ).toBe(false);

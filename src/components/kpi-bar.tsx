@@ -2,12 +2,7 @@
 
 import { useMemo } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
-import {
-  useDexLiquidity,
-  usePegSummary,
-  useStabilityIndex,
-  useStressSignals,
-} from "@/hooks/api-hooks";
+import { useDexLiquidity, usePegSummary, useStabilityIndex, useStressSignals } from "@/hooks/api-hooks";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -213,22 +208,22 @@ function PrimarySnapshotCard({
   valueClassName?: string;
 }) {
   // Detect crisis/meltdown bands for alert styling
-  const isCrisis = band.toLowerCase().includes('crisis') || band.toLowerCase().includes('meltdown');
-  const isTremor = band.toLowerCase().includes('tremor') || band.toLowerCase().includes('fracture');
-  
+  const isCrisis = band.toLowerCase().includes("crisis") || band.toLowerCase().includes("meltdown");
+  const isTremor = band.toLowerCase().includes("tremor") || band.toLowerCase().includes("fracture");
+
   return (
-    <div 
+    <div
       className={`rounded-[1.4rem] border px-4 py-3.5 transition-all duration-500 sm:px-5 sm:py-4 ${
-        isCrisis ? 'animate-pulse' : ''
+        isCrisis ? "animate-pulse" : ""
       }`}
       style={{
-        background: 'var(--surface-featured-gradient)',
-        borderColor: isCrisis ? 'var(--p-red-400)' : isTremor ? 'var(--p-amber-400)' : 'var(--surface-featured-border)',
-        boxShadow: isCrisis 
-          ? 'var(--surface-featured-shadow), 0 0 30px oklch(0.7 0.2 25 / 0.3)' 
-          : isTremor 
-            ? 'var(--surface-featured-shadow), 0 0 20px oklch(0.75 0.15 85 / 0.2)'
-            : 'var(--surface-featured-shadow)',
+        background: "var(--surface-featured-gradient)",
+        borderColor: isCrisis ? "var(--p-red-400)" : isTremor ? "var(--p-amber-400)" : "var(--surface-featured-border)",
+        boxShadow: isCrisis
+          ? "var(--surface-featured-shadow), 0 0 30px oklch(0.7 0.2 25 / 0.3)"
+          : isTremor
+            ? "var(--surface-featured-shadow), 0 0 20px oklch(0.75 0.15 85 / 0.2)"
+            : "var(--surface-featured-shadow)",
       }}
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
@@ -363,6 +358,7 @@ export function KpiBar() {
   const psiCurrent = psiData?.current;
   const psiScoreNum = psiCurrent ? (psiCurrent.avg24h ?? psiCurrent.score) : null;
   const psiBand = psiCurrent ? (psiCurrent.avg24hBand ?? psiCurrent.band) : "";
+  const psiDayAnchor = psiCurrent?.computedAt ?? null;
   const psiColorClass = PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "";
   const hasStablecoinsData = !!stablecoinsData?.peggedAssets;
   const hasPsiData = !!psiCurrent;
@@ -397,13 +393,12 @@ export function KpiBar() {
         : "neutral";
 
   const { psiDaysInBand, psiDelta24h, psiDelta7d, psiDelta30d } = useMemo(() => {
-    if (!psiBand || !psiData?.history || psiScoreNum === null) {
+    if (!psiBand || !psiData?.history || psiScoreNum === null || psiDayAnchor === null) {
       return { psiDaysInBand: 0, psiDelta24h: null, psiDelta7d: null, psiDelta30d: null };
     }
 
     let days = 1;
-    const todayUtc = Math.floor(Date.now() / 1000);
-    const todayMidnight = todayUtc - (todayUtc % 86400);
+    const todayMidnight = psiDayAnchor - (psiDayAnchor % 86400);
     for (const point of psiData.history) {
       if (point.date >= todayMidnight) continue; // skip today's entry, already counted
       if (point.band === psiBand) days++;
@@ -414,7 +409,7 @@ export function KpiBar() {
     const d7d = psiData.history.length >= 7 ? psiScoreNum - psiData.history[6].score : null;
     const d30d = psiData.history.length >= 30 ? psiScoreNum - psiData.history[29].score : null;
     return { psiDaysInBand: days, psiDelta24h: d24h, psiDelta7d: d7d, psiDelta30d: d30d };
-  }, [psiBand, psiData, psiScoreNum]);
+  }, [psiBand, psiData, psiDayAnchor, psiScoreNum]);
 
   const dewsBandCounts = useMemo(() => {
     if (!stressData?.signals) return null;
@@ -498,12 +493,34 @@ export function KpiBar() {
   const mobileDewsMeta = dewsBandCounts ? (
     <>
       <span className="text-foreground">DEWS:</span>
-      {dewsBandCounts.danger > 0 && <><span className="text-muted-foreground"> · </span><span className="text-red-700 dark:text-red-400">Critical {dewsBandCounts.danger}</span></>}
-      {dewsBandCounts.warning > 0 && <><span className="text-muted-foreground"> · </span><span className="text-amber-700 dark:text-amber-400">Warning {dewsBandCounts.warning}</span></>}
-      {dewsBandCounts.alert > 0 && <><span className="text-muted-foreground"> · </span><span className="text-amber-700 dark:text-amber-400">Alert {dewsBandCounts.alert}</span></>}
-      {allDewsCalm && <><span className="text-muted-foreground"> · </span><span className="text-muted-foreground">all calm</span></>}
+      {dewsBandCounts.danger > 0 && (
+        <>
+          <span className="text-muted-foreground"> · </span>
+          <span className="text-red-700 dark:text-red-400">Critical {dewsBandCounts.danger}</span>
+        </>
+      )}
+      {dewsBandCounts.warning > 0 && (
+        <>
+          <span className="text-muted-foreground"> · </span>
+          <span className="text-amber-700 dark:text-amber-400">Warning {dewsBandCounts.warning}</span>
+        </>
+      )}
+      {dewsBandCounts.alert > 0 && (
+        <>
+          <span className="text-muted-foreground"> · </span>
+          <span className="text-amber-700 dark:text-amber-400">Alert {dewsBandCounts.alert}</span>
+        </>
+      )}
+      {allDewsCalm && (
+        <>
+          <span className="text-muted-foreground"> · </span>
+          <span className="text-muted-foreground">all calm</span>
+        </>
+      )}
     </>
-  ) : <span className="text-muted-foreground">no DEWS</span>;
+  ) : (
+    <span className="text-muted-foreground">no DEWS</span>
+  );
 
   const desktopDewsSublabel = (
     <>
@@ -511,7 +528,13 @@ export function KpiBar() {
       {dewsBandCounts?.danger ? <DewsBandChip band="DANGER" count={dewsBandCounts.danger} /> : null}
       {dewsBandCounts?.warning ? <DewsBandChip band="WARNING" count={dewsBandCounts.warning} /> : null}
       {dewsBandCounts?.alert ? <DewsBandChip band="ALERT" count={dewsBandCounts.alert} /> : null}
-      {dewsBandCounts ? (allDewsCalm ? <span className="text-[11px] text-muted-foreground">all calm</span> : null) : <span className="text-[11px] text-muted-foreground">no data</span>}
+      {dewsBandCounts ? (
+        allDewsCalm ? (
+          <span className="text-[11px] text-muted-foreground">all calm</span>
+        ) : null
+      ) : (
+        <span className="text-[11px] text-muted-foreground">no data</span>
+      )}
     </>
   );
 
@@ -523,23 +546,50 @@ export function KpiBar() {
       value: mcapDisplay,
       mobileMetaPrimary: <span className={mcapColorClass}>24h {mcapChange24Display}</span>,
       mobileMetaSecondary: <span className={mcap7ColorClass}>7d {mcapChange7Display}</span>,
-      desktopSublabel: <>
-        <TrendChip label="24h" value={mcapChange24Display} direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"} />
-        <InfoChip label="USDT+USDC share" value={usdtShareDisplay} tone={hasStablecoinsData && usdtUsdcSharePct >= 65 ? "warning" : "neutral"} />
-      </>,
+      desktopSublabel: (
+        <>
+          <TrendChip
+            label="24h"
+            value={mcapChange24Display}
+            direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"}
+          />
+          <InfoChip
+            label="USDT+USDC share"
+            value={usdtShareDisplay}
+            tone={hasStablecoinsData && usdtUsdcSharePct >= 65 ? "warning" : "neutral"}
+          />
+        </>
+      ),
     },
-    { key: "peg", mobileLabel: "Peg", desktopLabel: "Peg Status", value: pegStatusDisplay, mobileMetaSecondary: mobileDewsMeta, desktopSublabel: desktopDewsSublabel },
+    {
+      key: "peg",
+      mobileLabel: "Peg",
+      desktopLabel: "Peg Status",
+      value: pegStatusDisplay,
+      mobileMetaSecondary: mobileDewsMeta,
+      desktopSublabel: desktopDewsSublabel,
+    },
     {
       key: "dex-vol",
       mobileLabel: "DEX Vol",
       desktopLabel: "Tracked 24H DEX Vol",
       value: dexVolDisplay,
-      mobileMetaPrimary: <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>vs 7d avg {dexDeltaDisplay}</span>,
+      mobileMetaPrimary: (
+        <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>
+          vs 7d avg {dexDeltaDisplay}
+        </span>
+      ),
       mobileMetaSecondary: <span className="text-muted-foreground">Turnover {turnoverDisplay}</span>,
-      desktopSublabel: <>
-        <TrendChip label="vs 7d avg" value={dexDeltaDisplay} direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"} />
-        <InfoChip label="Turnover" value={turnoverDisplay} />
-      </>,
+      desktopSublabel: (
+        <>
+          <TrendChip
+            label="vs 7d avg"
+            value={dexDeltaDisplay}
+            direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"}
+          />
+          <InfoChip label="Turnover" value={turnoverDisplay} />
+        </>
+      ),
     },
     {
       key: "net-flow",

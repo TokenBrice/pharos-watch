@@ -7,11 +7,46 @@ import type {
 } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 
+function logPendingParseWarning(pending: PendingDisambiguationRow, field: string, error: unknown): void {
+  const actionType = pending.action_type ?? "unknown";
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(
+    `[telegram-webhook] malformed pending field action=${actionType} ambiguous=${pending.ambiguous_ticker} field=${field} error=${message}`,
+  );
+}
+
+function parsePendingActionType(value: string | null | undefined): PendingActionType | null {
+  if (value === "subscribe" || value === "unsubscribe" || value === "set") {
+    return value;
+  }
+  return null;
+}
+
+function parsePendingJsonField<T>(
+  pending: PendingDisambiguationRow,
+  field: keyof Pick<
+    PendingDisambiguationRow,
+    "action_payload" | "alert_types" | "resolved_ids" | "candidates" | "remaining_tickers"
+  >,
+  fallback: T,
+  transform: (value: unknown) => T,
+): T {
+  const rawValue = pending[field];
+  if (!rawValue) {
+    return fallback;
+  }
+
+  try {
+    return transform(JSON.parse(rawValue));
+  } catch (error) {
+    logPendingParseWarning(pending, field, error);
+    return fallback;
+  }
+}
+
 export function parseCommand(text: string): { command: string; args: string } {
   const spaceIdx = text.indexOf(" ");
-  const command = (spaceIdx === -1 ? text : text.slice(0, spaceIdx))
-    .toLowerCase()
-    .replace(/@\w+$/, "");
+  const command = (spaceIdx === -1 ? text : text.slice(0, spaceIdx)).toLowerCase().replace(/@\w+$/, "");
   const args = spaceIdx === -1 ? "" : text.slice(spaceIdx + 1).trim();
   return { command, args };
 }
@@ -32,10 +67,7 @@ export function parseStoredSetCommand(payload: Record<string, unknown>): ParsedS
         ticker,
         setting,
         enabled: payload.enabled !== false,
-        mode:
-          payload.mode === "downgrade-only" || payload.mode === "upgrade-only"
-            ? payload.mode
-            : null,
+        mode: payload.mode === "downgrade-only" || payload.mode === "upgrade-only" ? payload.mode : null,
       };
     case "depeg":
       return {
@@ -67,11 +99,7 @@ export function parseResolvedCoins(value: unknown): ResolvedCoin[] {
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
     const coin = item as Partial<ResolvedCoin>;
-    if (
-      typeof coin.id !== "string" ||
-      typeof coin.symbol !== "string" ||
-      typeof coin.name !== "string"
-    ) {
+    if (typeof coin.id !== "string" || typeof coin.symbol !== "string" || typeof coin.name !== "string") {
       continue;
     }
     coins.push({ id: coin.id, symbol: coin.symbol, name: coin.name });
@@ -93,58 +121,60 @@ export function dedupeCoins(coins: ResolvedCoin[]): ResolvedCoin[] {
 }
 
 export function parsePendingDisambiguation(pending: PendingDisambiguationRow): PendingAction | null {
-  try {
-    const actionType = (pending.action_type ?? "subscribe") as PendingActionType;
-    const payload = pending.action_payload ? JSON.parse(pending.action_payload) as Record<string, unknown> : {};
-    const legacyAlertTypes = new Set(parseStringArray(JSON.parse(pending.alert_types)));
-    const resolvedIds = parseStringArray(JSON.parse(pending.resolved_ids));
-    const candidates = parseResolvedCoins(JSON.parse(pending.candidates));
-    const remainingTickers = parseStringArray(JSON.parse(pending.remaining_tickers));
-    if (candidates.length === 0) return null;
-
-    const resolvedCoins = dedupeCoins(
-      resolvedIds.map((id) => STABLECOIN_BY_ID.get(id) ?? { id, symbol: id, name: id }),
+  const actionType = parsePendingActionType(pending.action_type ?? "subscribe");
+  if (!actionType) {
+    console.warn(
+      `[telegram-webhook] malformed pending action_type ambiguous=${pending.ambiguous_ticker} value=${String(pending.action_type)}`,
     );
+    return null;
+  }
 
-    if (actionType === "subscribe") {
-      const actionAlertTypes = new Set(
-        Array.isArray(payload.alertTypes)
-          ? parseStringArray(payload.alertTypes)
-          : Array.from(legacyAlertTypes),
-      );
-      return {
-        actionType,
-        alertTypes: actionAlertTypes,
-        resolvedCoins,
-        ambiguousTicker: pending.ambiguous_ticker,
-        candidates,
-        remainingTickers,
-      };
-    }
+  const payload = parsePendingJsonField<Record<string, unknown>>(pending, "action_payload", {}, (value) =>
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {},
+  );
+  const legacyAlertTypes = new Set(parsePendingJsonField(pending, "alert_types", [], parseStringArray));
+  const resolvedIds = parsePendingJsonField(pending, "resolved_ids", [], parseStringArray);
+  const candidates = parsePendingJsonField(pending, "candidates", [], parseResolvedCoins);
+  const remainingTickers = parsePendingJsonField(pending, "remaining_tickers", [], parseStringArray);
 
-    if (actionType === "unsubscribe") {
-      return {
-        actionType,
-        resolvedCoins,
-        ambiguousTicker: pending.ambiguous_ticker,
-        candidates,
-        remainingTickers,
-      };
-    }
+  if (candidates.length === 0) return null;
 
-    const setCommand = parseStoredSetCommand(payload);
-    if (!setCommand) return null;
+  const resolvedCoins = dedupeCoins(resolvedIds.map((id) => STABLECOIN_BY_ID.get(id) ?? { id, symbol: id, name: id }));
+
+  if (actionType === "subscribe") {
+    const actionAlertTypes = new Set(
+      Array.isArray(payload.alertTypes) ? parseStringArray(payload.alertTypes) : Array.from(legacyAlertTypes),
+    );
     return {
-      actionType: "set",
-      command: setCommand,
+      actionType,
+      alertTypes: actionAlertTypes,
       resolvedCoins,
       ambiguousTicker: pending.ambiguous_ticker,
       candidates,
       remainingTickers,
     };
-  } catch {
-    return null;
   }
+
+  if (actionType === "unsubscribe") {
+    return {
+      actionType,
+      resolvedCoins,
+      ambiguousTicker: pending.ambiguous_ticker,
+      candidates,
+      remainingTickers,
+    };
+  }
+
+  const setCommand = parseStoredSetCommand(payload);
+  if (!setCommand) return null;
+  return {
+    actionType: "set",
+    command: setCommand,
+    resolvedCoins,
+    ambiguousTicker: pending.ambiguous_ticker,
+    candidates,
+    remainingTickers,
+  };
 }
 
 export function parseSetCommand(args: string): ParsedSetCommand | { error: string } {

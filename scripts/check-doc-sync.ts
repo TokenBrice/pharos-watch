@@ -446,15 +446,15 @@ function checkLiquidityDoc(failures: Failure[]): void {
 function checkWorkerLimitsDoc(failures: Failure[]): void {
   const file = "docs/worker-and-api-limits.md";
   const doc = read(file);
-  const httpSource = read("worker/src/handlers/http.ts");
-  const feedbackSource = read("worker/src/api/feedback.ts");
+  const httpSource = read("worker/src/handlers/http/gates.ts");
+  const feedbackSource = read("worker/src/api/feedback/types.ts");
   const circuitSource = read("worker/src/lib/circuit-breaker.ts");
   const cronSource = read("shared/lib/cron-jobs.ts");
 
   const publicApiLimiter = normalizeNumber(
     findLineValue(
       httpSource,
-      /getClientIp\(request\),\s*publicApiRateLimit\.salt,\s*([0-9][0-9_]*)/,
+      /resolveClientIp\(request\),\s*publicApiRateLimit\.salt,\s*([0-9][0-9_]*)/,
     ) ?? "",
   );
   const feedbackLimit = extractConstNumber(feedbackSource, "FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS");

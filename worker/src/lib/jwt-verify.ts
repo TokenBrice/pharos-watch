@@ -45,14 +45,17 @@ interface JwtPayload {
 }
 
 // ── In-memory JWKS cache ────────────────────────────────────────────
-let cachedJwks: JwksResponse | null = null;
-let cachedJwksExpiry = 0;
+interface CachedJwksEntry {
+  jwks: JwksResponse;
+  expiresAt: number;
+}
+
+const jwksCache = new Map<string, CachedJwksEntry>();
 const JWKS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-/** Visible for testing — resets the in-memory JWKS cache. */
+/** Visible for testing — resets the in-memory JWKS cache for all domains. */
 export function _resetJwksCache(): void {
-  cachedJwks = null;
-  cachedJwksExpiry = 0;
+  jwksCache.clear();
 }
 
 // ── Base64url helpers ───────────────────────────────────────────────
@@ -86,8 +89,9 @@ function decodeJsonPart<T>(part: string): T | null {
 
 async function fetchJwks(teamDomain: string): Promise<JwksResponse | null> {
   const now = Date.now();
-  if (cachedJwks && now < cachedJwksExpiry) {
-    return cachedJwks;
+  const cached = jwksCache.get(teamDomain);
+  if (cached && now < cached.expiresAt) {
+    return cached.jwks;
   }
 
   try {
@@ -97,8 +101,10 @@ async function fetchJwks(teamDomain: string): Promise<JwksResponse | null> {
     const jwks = (await response.json()) as JwksResponse;
     if (!jwks.keys || !Array.isArray(jwks.keys)) return null;
 
-    cachedJwks = jwks;
-    cachedJwksExpiry = now + JWKS_CACHE_TTL_MS;
+    jwksCache.set(teamDomain, {
+      jwks,
+      expiresAt: now + JWKS_CACHE_TTL_MS,
+    });
     return jwks;
   } catch {
     return null;
@@ -121,9 +127,7 @@ function importAlgorithm(alg: string): { name: string; hash: string } | null {
   }
 }
 
-async function importPublicKey(
-  jwk: JwksKey,
-): Promise<CryptoKey | null> {
+async function importPublicKey(jwk: JwksKey): Promise<CryptoKey | null> {
   const algorithm = importAlgorithm(jwk.alg);
   if (!algorithm) return null;
 
@@ -154,9 +158,7 @@ async function importPublicKey(
  * Returns `true` if the JWT signature is valid and all claims pass
  * validation. Returns `false` (never throws) for any failure.
  */
-export async function verifyAccessJwt(
-  options: JwtVerifyOptions,
-): Promise<boolean> {
+export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolean> {
   const { token, aud, teamDomain } = options;
 
   // ── 1. Split and decode ───────────────────────────────────────
@@ -179,11 +181,7 @@ export async function verifyAccessJwt(
   if (typeof payload.nbf === "number" && payload.nbf > now) return false;
 
   // Audience — may be a string or array
-  const audValues = Array.isArray(payload.aud)
-    ? payload.aud
-    : typeof payload.aud === "string"
-      ? [payload.aud]
-      : [];
+  const audValues = Array.isArray(payload.aud) ? payload.aud : typeof payload.aud === "string" ? [payload.aud] : [];
   if (!audValues.includes(aud)) return false;
 
   // Issuer
@@ -205,17 +203,10 @@ export async function verifyAccessJwt(
   if (!algorithm) return false;
 
   try {
-    const signingInput = new TextEncoder().encode(
-      `${headerB64}.${payloadB64}`,
-    );
+    const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
     const signature = base64urlDecode(signatureB64);
 
-    return await crypto.subtle.verify(
-      algorithm.name,
-      cryptoKey,
-      signature,
-      signingInput,
-    );
+    return await crypto.subtle.verify(algorithm.name, cryptoKey, signature, signingInput);
   } catch {
     return false;
   }

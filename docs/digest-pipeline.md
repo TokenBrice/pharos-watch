@@ -83,6 +83,12 @@ Digest generation now fails closed on stablecoins-cache availability: if the cac
 
 Safety-score enrichment also uses explicit degraded semantics. When `computeSafetyScoresSnapshot()` returns a degraded result, the digest still renders from the remaining inputs, but the safety section is omitted and the cron metadata records the degraded reason rather than fabricating distribution stats from an empty score set.
 
+The early collectors now distinguish "no signal" from "collector failed". If the active-depeg, blacklist-activity, or supply-velocity queries error, `generateDailyDigest()` still stores the digest but:
+
+- returns cron `status: "degraded"`
+- appends the collector key to the cron metadata string
+- stores the collector keys in `input_data.degradedSources`
+
 ---
 
 ## Storage
@@ -103,7 +109,7 @@ CREATE TABLE daily_digest (
 CREATE INDEX idx_daily_digest_generated_at ON daily_digest(generated_at);
 ```
 
-The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data.
+The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data. When one of the early collectors fails, `input_data.degradedSources` records the failed collector keys (`active-depegs-query`, `blacklist-activity-query`, `supply-velocity-query`, etc.).
 
 The `digest_meta` column stores structured metadata about editorial choices (lead signal, tone, featured coins) for variety enforcement across consecutive digests. Older rows with `NULL` `digest_meta` fall back to raw text comparison.
 

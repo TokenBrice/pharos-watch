@@ -1,3 +1,5 @@
+import { drainResponseBody } from "./response-body";
+
 export interface TelegramCreds {
   botToken: string;
   chatId: string;
@@ -5,10 +7,7 @@ export interface TelegramCreds {
 
 /** Escape HTML special characters for Telegram HTML parse mode. */
 export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /** Build the full Telegram message for a digest. */
@@ -49,6 +48,8 @@ export async function postTelegramMessage(text: string, creds: TelegramCreds): P
     const body = await res.text();
     throw new Error(`Telegram API ${res.status}: ${body.slice(0, 300)}`);
   }
+
+  await drainResponseBody(res);
 }
 
 /**
@@ -207,11 +208,10 @@ export async function sendToChat(
     });
 
     if (!res.ok) {
-      await res.text().catch(() => {});
+      await drainResponseBody(res);
       return buildResponseFailure(res.status);
     }
-    // Consume body to release connection (Workers 6-conn limit)
-    await res.json().catch(() => {});
+    await drainResponseBody(res);
     return {
       ok: true,
       blocked: false,
@@ -249,11 +249,7 @@ export interface BatchResult {
  * Individual send failures are caught — a single 500 error does NOT abort the batch.
  * Returns one result per input message in the same order.
  */
-export async function sendBatch(
-  messages: BatchMessage[],
-  botToken: string,
-  batchSize: number,
-): Promise<BatchResult[]> {
+export async function sendBatch(messages: BatchMessage[], botToken: string, batchSize: number): Promise<BatchResult[]> {
   const results: BatchResult[] = [];
   for (let i = 0; i < messages.length; i += batchSize) {
     const batch = messages.slice(i, i + batchSize);

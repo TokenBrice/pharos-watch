@@ -3,10 +3,8 @@ import { join } from "node:path";
 
 const WORKER_SRC_DIR = "worker/src";
 const SOURCE_FILE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs", ".cts"]);
-const WORKER_TO_FRONTEND_IMPORT_PATTERN =
-  /(?:from\s+["'][^"']*(?:@\/|src\/)|import\s*\(\s*["'][^"']*(?:@\/|src\/))/;
-const FRONTEND_TO_WORKER_IMPORT_PATTERN =
-  /(?:from\s+["'][^"']*worker\/src\/|import\s*\(\s*["'][^"']*worker\/src\/)/;
+const WORKER_TO_FRONTEND_IMPORT_PATTERN = /(?:from\s+["'][^"']*(?:@\/|src\/)|import\s*\(\s*["'][^"']*(?:@\/|src\/))/;
+const FRONTEND_TO_WORKER_IMPORT_PATTERN = /(?:from\s+["'][^"']*worker\/src\/|import\s*\(\s*["'][^"']*worker\/src\/)/;
 
 function isSourceFile(path) {
   const dot = path.lastIndexOf(".");
@@ -79,13 +77,14 @@ const nonTestWorkerOk = runBoundaryCheck("non-test worker sources", {
   forbiddenPattern: WORKER_TO_FRONTEND_IMPORT_PATTERN,
 });
 
-const appDirs = ["src", "shared", "scripts"];
+const appDirs = ["src", "shared", "scripts", "functions"];
 const allFrontendBoundaryOk = appDirs.every((dir) =>
   runBoundaryCheck(`${dir} sources`, {
     rootDir: dir,
     excludeTests: false,
     forbiddenPattern: FRONTEND_TO_WORKER_IMPORT_PATTERN,
-  }));
+  }),
+);
 
 if (!allWorkerOk || !nonTestWorkerOk || !allFrontendBoundaryOk) {
   process.exit(1);

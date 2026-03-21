@@ -3,13 +3,37 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const { sendToChat, sendBatch } = await import("../telegram");
+const { postDigestToTelegram, sendToChat, sendBatch } = await import("../telegram");
+
+const digestCreds = {
+  botToken: "bot-token",
+  chatId: "12345",
+};
 
 beforeEach(() => {
   fetchSpy.mockReset();
 });
 
 describe("sendToChat", () => {
+  it("drains the success response body for digest sends", async () => {
+    const response = new Response(JSON.stringify({ ok: true }), { status: 200 });
+    fetchSpy.mockResolvedValueOnce(response);
+
+    await postDigestToTelegram("Daily Digest", "PSI held steady.", "2026-03-21", digestCreds);
+
+    expect(response.bodyUsed).toBe(true);
+  });
+
+  it("drains the error response body for digest sends", async () => {
+    const response = new Response("Forbidden", { status: 403 });
+    fetchSpy.mockResolvedValueOnce(response);
+
+    await expect(postDigestToTelegram("Daily Digest", "PSI held steady.", "2026-03-21", digestCreds)).rejects.toThrow(
+      "Telegram API 403: Forbidden",
+    );
+    expect(response.bodyUsed).toBe(true);
+  });
+
   it("sends HTML message and returns ok", async () => {
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const result = await sendToChat("12345", "<b>Test</b>", "bot-token");

@@ -28,13 +28,26 @@ export interface CollectorContext {
   yesterdayTs: number;
 }
 
+export interface CollectorResult<T> {
+  value: T;
+  degradedReason?: string;
+}
+
+function collectorOk<T>(value: T): CollectorResult<T> {
+  return { value };
+}
+
+function collectorDegraded<T>(value: T, degradedReason: string): CollectorResult<T> {
+  return { value, degradedReason };
+}
+
 // ---------------------------------------------------------------------------
 // 1. Active depegs
 // ---------------------------------------------------------------------------
 
 export async function collectActiveDepegs(
   ctx: CollectorContext,
-): Promise<{ activeDepegCount: number; topDepegs: DigestInputData["topDepegs"] }> {
+): Promise<CollectorResult<{ activeDepegCount: number; topDepegs: DigestInputData["topDepegs"] }>> {
   try {
     const activeDepegs = await ctx.db
       .prepare("SELECT stablecoin_id, symbol, peak_deviation_bps FROM depeg_events WHERE ended_at IS NULL")
@@ -48,10 +61,10 @@ export async function collectActiveDepegs(
     withImpact.sort((a, b) => b.impact - a.impact);
     const topDepegs = withImpact.slice(0, 3).map(({ symbol, bps, mcapUsd }) => ({ symbol, bps, mcapUsd }));
 
-    return { activeDepegCount: rows.length, topDepegs };
+    return collectorOk({ activeDepegCount: rows.length, topDepegs });
   } catch (e) {
     console.error("[daily-digest] Failed to query active depegs:", e);
-    return { activeDepegCount: 0, topDepegs: [] };
+    return collectorDegraded({ activeDepegCount: 0, topDepegs: [] }, "active-depegs-query");
   }
 }
 
@@ -61,7 +74,7 @@ export async function collectActiveDepegs(
 
 export async function collectBlacklistActivity(
   ctx: CollectorContext,
-): Promise<DigestInputData["blacklistActivity"]> {
+): Promise<CollectorResult<DigestInputData["blacklistActivity"]>> {
   try {
     const blRows = await ctx.db
       .prepare(
@@ -75,7 +88,7 @@ export async function collectBlacklistActivity(
       const totalAmountUsd = blEvents.reduce((s, e) => s + (e.amount ?? 0), 0);
       const hasLargeEvent = blEvents.some((e) => (e.amount ?? 0) > 10_000_000);
       if (eventCount >= 2 || hasLargeEvent) {
-        return {
+        return collectorOk({
           eventCount,
           totalAmountUsd,
           topEvents: blEvents
@@ -87,13 +100,14 @@ export async function collectBlacklistActivity(
               type: e.event_type as "blacklist" | "destroy",
               amountUsd: e.amount ?? 0,
             })),
-        };
+        });
       }
     }
   } catch (e) {
     console.error("[daily-digest] Failed to query blacklist events:", e);
+    return collectorDegraded(undefined, "blacklist-activity-query");
   }
-  return undefined;
+  return collectorOk(undefined);
 }
 
 // ---------------------------------------------------------------------------
@@ -102,7 +116,7 @@ export async function collectBlacklistActivity(
 
 export async function collectSupplyVelocity(
   ctx: CollectorContext,
-): Promise<DigestInputData["supplyVelocity"]> {
+): Promise<CollectorResult<DigestInputData["supplyVelocity"]>> {
   try {
     const top10 = ctx.trackedStablecoinAssets
       .map((coin) => ({ id: coin.id, symbol: coin.symbol, mcap: getCirculatingRaw(coin) }))
@@ -154,13 +168,14 @@ export async function collectSupplyVelocity(
       }
 
       if (velocitySignals.length > 0) {
-        return velocitySignals;
+        return collectorOk(velocitySignals);
       }
     }
   } catch (e) {
     console.error("[daily-digest] Failed to compute supply velocity:", e);
+    return collectorDegraded(undefined, "supply-velocity-query");
   }
-  return undefined;
+  return collectorOk(undefined);
 }
 
 // ---------------------------------------------------------------------------

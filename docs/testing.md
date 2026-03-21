@@ -12,7 +12,9 @@ npm run test:watch    # Watch mode — re-runs on file changes
 npm run lint          # ESLint across frontend + worker code
 npm run audit:deps    # Fails on high-severity npm advisories
 npm run seo:check     # Static SEO audit against built `out/` HTML
-npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts` -> `worker/src` imports)
+npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts`/`functions` -> `worker/src` imports)
+npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports in hotspot areas
+npm run check:hotspot-ratchet # Fail when key hotspot files grow beyond the checked-in baseline
 npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts` stays aligned with `worker/wrangler.toml` cron declarations
 npm run check:doc-sync # Verify exact methodology versions, thresholds, weights, and enforced limits stay aligned with code
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
@@ -45,6 +47,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run check:doc-counts`
    - `npm run check:doc-sync`
    - `npm run check:duplicate-exports`
+   - `npm run check:unused-code`
+   - `npm run check:hotspot-ratchet`
    - `npm test`
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
@@ -65,40 +69,38 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
    - Runs strict API checks sequentially with bounded transient retry behavior (`SMOKE_API_RETRY_COUNT` default `1`, `SMOKE_API_TIMEOUT_MS` default `12000`)
    - Skipped on Pages-only or docs-only `push` events alongside `deploy-worker`
-6. `build-pages`:
-   - `npm run sync:digests`
-   - `npm run build`
-   - `npm run seo:check`
-   - Uploads the built `out/` export as the deploy artifact
-   - Runs only when `pages_changed=true`
-   - Waits for `smoke-api` only when worker/API work was also required for that push
-7. `smoke-ui` (needs `build-pages`):
-   - Downloads the built `out/` artifact
-   - Starts a local static-export server with `/api/*` proxied to `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
-   - Runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173`
-   - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
+6. `pages-release`:
+   - reusable workflow in `.github/workflows/pages-release.yml`
+   - runs only when `pages_changed=true`
+   - waits for `smoke-api` only when worker/API work was also required for that push
+   - executes `build-pages -> smoke-ui -> deploy-pages` as one shared Pages release path
+   - `build-pages` still runs `npm run sync:digests`, `npm run build`, and `npm run seo:check`, then uploads `out/`
+   - `smoke-ui` still serves that exact artifact locally and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173`
+   - `deploy-pages` still publishes the verified artifact with the Wrangler retry loop
 8. `smoke-ui-live` (worker-only push path):
    - Runs only when `worker_changed=true` and `pages_changed=false`
    - Runs `npm run test:smoke-ui -- --url https://pharos.watch`
    - Verifies that the unchanged live Pages frontend still works against the newly deployed worker/API
-9. `deploy-pages` (needs `build-pages` and `smoke-ui`):
-   - Downloads the same `out/` artifact that passed `smoke-ui`
-   - Deploys that verified static export to Cloudflare Pages
 10. `smoke-ops`:
-   - Run `npm run test:smoke-ops`
-   - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
-   - Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
-   - Runs after `deploy-pages` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
-   - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
+
+- Run `npm run test:smoke-ops`
+- Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
+- Requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
+- Runs after `pages-release` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
+- Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
+
 11. `Rebuild Pages`:
-   - defined in `.github/workflows/rebuild-pages.yml`
-   - runs on the daily schedule and on manual dispatch
-   - skips `validate`, `deploy-worker`, and `smoke-api`
-   - runs `build-pages -> smoke-ui -> deploy-pages -> smoke-ops` only
+
+- defined in `.github/workflows/rebuild-pages.yml`
+- runs on the daily schedule and on manual dispatch
+- skips `validate`, `deploy-worker`, and `smoke-api`
+- runs the shared `pages-release` workflow and then `smoke-ops`
+
 12. `CodeQL`:
-   - defined in `.github/workflows/codeql.yml`
-   - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
-   - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
+
+- defined in `.github/workflows/codeql.yml`
+- runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
+- analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
 This arrangement gives pull requests the same validate gate the push/manual deploy workflow depends on, skips worker deploy/API smoke for Pages-only pushes, skips Pages build/deploy for worker-only pushes, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, keeps the scheduled digest rebuild off the worker deploy path, and still runs the post-deploy ops-surface smoke after each production-changing workflow.
 
@@ -248,32 +250,32 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 ### Frontend Library Tests (`src/lib/__tests__/`)
 
-| File                                   | Module Under Test                                      | What It Covers                                                                                                                                                                                                      |
-| -------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `format.test.ts`                       | `shared/lib/format.ts`                                 | `formatCurrency`, `formatBps`, `formatPegDeviation`, `formatPercentChange`, `formatSupply`, `formatAddress`, `formatDuration`, `formatNativePrice`, `formatPegStability`, `formatDeathDate`, `formatDeathDateShort` |
-| `supply.test.ts`                       | `shared/lib/supply.ts`                                 | `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, `getPrevWeekRaw`, `getPrevMonthRaw`                                                                                                                          |
-| `classification.test.ts`               | `shared/lib/classification.ts`                         | Label maps, short label consistency, color map integrity, `PEG_CURRENCY_COUNT`                                                                                                                                      |
-| `report-cards.test.ts`                 | `shared/lib/report-cards.ts`                           | Grade computation, dimension scorers, peg multiplier, dependency risk, stress test                                                                                                                                  |
-| `reserve-templates.test.ts`            | `shared/lib/reserve-templates.ts`                      | Reserve composition templates, `getReserves()`, `deriveDependencies()`                                                                                                                                              |
-| `reserve-coinid-validation.test.ts`    | `shared/lib/reserve-templates.ts`                      | Reserve slice `coinId` references match tracked stablecoin IDs                                                                                                                                                      |
-| `liquidity-coverage.test.ts`           | `src/lib/dex-constants.ts`                             | DEX pool configs cover all stablecoins with DEX presence                                                                                                                                                            |
-| `api-endpoints.test.ts`                | `shared/lib/api-endpoints.ts`                          | Endpoint registry invariants: probe groups, status actions, cache/method flags, strict contract path uniqueness, smoke assertion alignment                                                                          |
-| `api-fetch-contracts.test.ts`          | `shared/types/index.ts` + `src/lib/api.ts`             | Shared Zod contracts and frontend API helpers stay aligned on critical endpoints                                                                                                                                    |
-| `critical-invariants.test.ts`          | Shared methodology constants and schema invariants     | Cross-surface invariants for contracts, methodology metadata, and route-critical defaults                                                                                                                           |
-| `coverage.test.ts`                     | `src/lib/coverage.ts`                                  | Coverage-status derivation, feature headline summaries, and reserve/yield/flow availability semantics                                                                                                               |
-| `data-health.test.ts`                  | `src/lib/data-health.ts`                               | Frontend freshness-band derivation and stale/degraded banner helpers                                                                                                                                                |
-| `blacklist-api.test.ts`                | `src/lib/blacklist-api.ts`                             | Query param encoding and API path generation for blacklist filters                                                                                                                                                  |
-| `dews-radar-utils.test.ts`             | `src/lib/dews-radar-utils.ts`                          | DEWS radar interaction geometry and deterministic calm-dot placement helpers                                                                                                                                        |
-| `methodology-version.test.ts`          | `shared/lib/methodology-version.ts`                    | Version-window resolution, labels, and changelog selection logic                                                                                                                                                    |
-| `mint-burn-timeframes.test.ts`         | `src/lib/mint-burn-timeframes.ts`                      | Timeframe presets and label semantics for flow views                                                                                                                                                                |
-| `peg-scoring.test.ts`                  | `shared/lib/peg-score.ts` + `src/lib/peg-stability.ts` | Peg score computation helpers plus UI-facing peg-stability formatting                                                                                                                                               |
-| `portfolio-codec.test.ts`              | `src/lib/portfolio-codec.ts`                           | Portfolio codec round-trips and canonical-ID migration behavior                                                                                                                                                     |
-| `stablecoin-detail-derive.test.ts`     | `src/lib/stablecoin-detail-derive.ts`                  | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback                                                                                              |
-| `stablecoin-detail-view-model.test.ts` | `src/lib/stablecoin-detail-view-model.ts`              | Detail-page composed view-model derivation, reserve integration, and stale-query aggregation                                                                                                                        |
+| File                                   | Module Under Test                                                     | What It Covers                                                                                                                                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `format.test.ts`                       | `shared/lib/format.ts`                                                | `formatCurrency`, `formatBps`, `formatPegDeviation`, `formatPercentChange`, `formatSupply`, `formatAddress`, `formatDuration`, `formatNativePrice`, `formatPegStability`, `formatDeathDate`, `formatDeathDateShort` |
+| `supply.test.ts`                       | `shared/lib/supply.ts`                                                | `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, `getPrevWeekRaw`, `getPrevMonthRaw`                                                                                                                          |
+| `classification.test.ts`               | `shared/lib/classification.ts`                                        | Label maps, short label consistency, color map integrity, `PEG_CURRENCY_COUNT`                                                                                                                                      |
+| `report-cards.test.ts`                 | `shared/lib/report-cards.ts`                                          | Grade computation, dimension scorers, peg multiplier, dependency risk, stress test                                                                                                                                  |
+| `reserve-templates.test.ts`            | `shared/lib/reserve-templates.ts`                                     | Reserve composition templates, `getReserves()`, `deriveDependencies()`                                                                                                                                              |
+| `reserve-coinid-validation.test.ts`    | `shared/lib/reserve-templates.ts`                                     | Reserve slice `coinId` references match tracked stablecoin IDs                                                                                                                                                      |
+| `liquidity-coverage.test.ts`           | `src/lib/dex-constants.ts`                                            | DEX pool configs cover all stablecoins with DEX presence                                                                                                                                                            |
+| `api-endpoints.test.ts`                | `shared/lib/api-endpoints.ts`                                         | Endpoint registry invariants: probe groups, status actions, cache/method flags, strict contract path uniqueness, smoke assertion alignment                                                                          |
+| `api-fetch-contracts.test.ts`          | `shared/types/index.ts` + `src/lib/api.ts`                            | Shared Zod contracts and frontend API helpers stay aligned on critical endpoints                                                                                                                                    |
+| `critical-invariants.test.ts`          | Shared methodology constants and schema invariants                    | Cross-surface invariants for contracts, methodology metadata, and route-critical defaults                                                                                                                           |
+| `coverage.test.ts`                     | `src/lib/coverage.ts`                                                 | Coverage-status derivation, feature headline summaries, and reserve/yield/flow availability semantics                                                                                                               |
+| `data-health.test.ts`                  | `src/lib/data-health.ts`                                              | Frontend freshness-band derivation and stale/degraded banner helpers                                                                                                                                                |
+| `blacklist-api.test.ts`                | `src/lib/blacklist-api.ts`                                            | Query param encoding and API path generation for blacklist filters                                                                                                                                                  |
+| `dews-radar-utils.test.ts`             | `src/lib/dews-radar-utils.ts`                                         | DEWS radar interaction geometry and deterministic calm-dot placement helpers                                                                                                                                        |
+| `methodology-version.test.ts`          | `shared/lib/methodology-version.ts`                                   | Version-window resolution, labels, and changelog selection logic                                                                                                                                                    |
+| `mint-burn-timeframes.test.ts`         | `src/lib/mint-burn-timeframes.ts`                                     | Timeframe presets and label semantics for flow views                                                                                                                                                                |
+| `peg-scoring.test.ts`                  | `shared/lib/peg-score.ts` + `src/lib/peg-stability.ts`                | Peg score computation helpers plus UI-facing peg-stability formatting                                                                                                                                               |
+| `portfolio-codec.test.ts`              | `src/lib/portfolio-codec.ts`                                          | Portfolio codec round-trips and canonical-ID migration behavior                                                                                                                                                     |
+| `stablecoin-detail-derive.test.ts`     | `src/lib/stablecoin-detail-derive.ts`                                 | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback                                                                                              |
+| `stablecoin-detail-view-model.test.ts` | `src/lib/stablecoin-detail-view-model.ts`                             | Detail-page composed view-model derivation, reserve integration, and stale-query aggregation                                                                                                                        |
 | `stablecoins.test.ts`                  | `shared/data/stablecoins/*.json` + `shared/lib/stablecoins/schema.ts` | Tracked stablecoin JSON assets load successfully, preserve canonical ordering, and remain compatible with the shared metadata loader                                                                                |
-| `start-here-callout.test.ts`           | `src/lib/start-here-callout.ts`                        | Browser-persisted Start Here callout retirement and first-session visibility helpers                                                                                                                                |
-| `yield-scatter.test.ts`                | `src/lib/yield-scatter.ts`                             | Scatterplot point derivation and label bucketing for yield views                                                                                                                                                    |
-| `severity-colors.test.ts`              | `src/lib/severity-colors.ts`                           | Deviation threshold classes/icons/hex mapping, score-tier thresholds, peg/durability color helpers                                                                                                                  |
+| `start-here-callout.test.ts`           | `src/lib/start-here-callout.ts`                                       | Browser-persisted Start Here callout retirement and first-session visibility helpers                                                                                                                                |
+| `yield-scatter.test.ts`                | `src/lib/yield-scatter.ts`                                            | Scatterplot point derivation and label bucketing for yield views                                                                                                                                                    |
+| `severity-colors.test.ts`              | `src/lib/severity-colors.ts`                                          | Deviation threshold classes/icons/hex mapping, score-tier thresholds, peg/durability color helpers                                                                                                                  |
 
 ### Frontend Component Tests (`src/__tests__/`)
 
@@ -383,8 +385,8 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `digest-snapshot.test.ts`             | `handleDigestSnapshot`                                 | 400 missing/invalid date, 404 no digest, 200 with snapshot                                                                                           |
 | `discovery.test.ts`                   | `handleDiscoveryCandidates` + `handleDismissCandidate` | Admin candidate listing, filtering, and dismiss mutation behavior                                                                                    |
 | `health.test.ts`                      | `handleHealth`                                         | 200 health status shape, Cache-Control: no-store                                                                                                     |
-| `feedback.test.ts`                    | `handleFeedback`                                       | Payload validation, rate limiting, verification routing, and GitHub mode selection                                                                   |
-| `mint-burn-flows.test.ts`             | `handleMintBurnFlows`                                  | Aggregate (gauge + coins[]), per-coin (flat + chains[]), cached-fallback corrupt-cache handling, 404                                                |
+| `feedback.test.ts`                    | `handleFeedback` + `worker/src/api/feedback/*`         | Payload validation, rate limiting, verification routing, and GitHub mode selection after request/policy/submission decomposition                     |
+| `mint-burn-flows.test.ts`             | `handleMintBurnFlows`                                  | Aggregate (gauge + coins[]), per-coin (flat + chains[]), cached-fallback corrupt-cache handling, 404                                                 |
 | `backfill-mint-burn.test.ts`          | `handleBackfillMintBurn`                               | Auth/validation, chunked ingestion progression, `done/nextFromBlock` semantics                                                                       |
 | `backfill-mint-burn-prices.test.ts`   | `handleBackfillMintBurnPrices`                         | NULL-price backfill aggregation and response summary shape                                                                                           |
 | `stability-index.test.ts`             | `handleStabilityIndex`                                 | Summary, Detail (with components in history)                                                                                                         |
@@ -404,7 +406,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 | File                                    | Cron Under Test                    | What It Covers                                                                                                                                                  |
 | --------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sync-stablecoins.test.ts`              | `sync-stablecoins.ts`              | Main/fallback validation guards, extracted intake/metadata orchestration, stale detection, depeg handoff, cache-write invariants                              |
+| `sync-stablecoins.test.ts`              | `sync-stablecoins.ts`              | Main/fallback validation guards, extracted intake/metadata orchestration, stale detection, depeg handoff, cache-write invariants                                |
 | `sync-stablecoins-stages.test.ts`       | `sync-stablecoins/stages.ts`       | Extracted pure stage helpers (structural filtering, chain normalization, staleness summary)                                                                     |
 | `sync-stablecoin-charts.test.ts`        | `sync-stablecoin-charts.ts`        | Chart sync cache writes, retention, and error handling                                                                                                          |
 | `detect-depegs.test.ts`                 | `detect-depegs.ts`                 | Stable prices, depeg open/close/update, direction change, NAV skip, supply threshold, DEX cross-validation, duplicate merge                                     |
@@ -435,7 +437,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `confirm-pending-depegs.test.ts`        | `confirm-pending-depegs.ts`        | Pending depeg state-machine decisions, secondary confirmation paths, missing dex table handling, abort propagation                                              |
 | `dex-liquidity-persistence.test.ts`     | `dex-liquidity/persistence.ts`     | Current-score upserts, coverage-confidence persistence, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior              |
 | `sync-mint-burn.test.ts`                | `sync-mint-burn.ts`                | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior                                                             |
-| `telegram-digest-appendices.test.ts`    | `telegram-digest-appendices.ts`    | Cemetery/tracked snapshot diffing, first-run seeding, and deferred appendix snapshot commits after successful Telegram digest delivery                         |
+| `telegram-digest-appendices.test.ts`    | `telegram-digest-appendices.ts`    | Cemetery/tracked snapshot diffing, first-run seeding, and deferred appendix snapshot commits after successful Telegram digest delivery                          |
 | `discovery-scan.test.ts`                | `discovery-scan.ts`                | Daily CoinGecko residual scan, candidate upserts, and dismiss-state preservation                                                                                |
 
 ## Conventions

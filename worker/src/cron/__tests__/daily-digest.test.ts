@@ -665,6 +665,27 @@ describe("generateDailyDigest", () => {
     expect(meta.coins).toEqual(["FRAX"]);
   });
 
+  it("marks the digest degraded and stores collector degradation when active depeg loading fails", async () => {
+    const db = mockD1([
+      ...makeBaseTables().map((table) =>
+        table.match === "FROM depeg_events WHERE ended_at IS NULL"
+          ? { ...table, throwError: new Error("d1 unavailable") }
+          : table,
+      ),
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+
+    expect(result.itemCount).toBe(1);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toContain("active-depegs-query");
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3])) as { degradedSources?: string[]; activeDepegCount: number };
+    expect(storedInput.activeDepegCount).toBe(0);
+    expect(storedInput.degradedSources).toContain("active-depegs-query");
+  });
+
   it("keeps digest persistence even when social posting fails", async () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));

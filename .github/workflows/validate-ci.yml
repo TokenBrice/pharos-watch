@@ -29,6 +29,8 @@ jobs:
       - run: npm run check:doc-counts
       - run: npm run check:doc-sync
       - run: npm run check:duplicate-exports
+      - run: npm run check:unused-code
+      - run: npm run check:hotspot-ratchet
       - run: npm test
       - run: npm run coverage:critical
         env:

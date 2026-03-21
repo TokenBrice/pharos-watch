@@ -12,6 +12,12 @@ The feedback pipeline has three layers:
 2. **`FeedbackModal`** — dialog with a type selector, context banner, and form fields
 3. **`POST /api/feedback`** — Cloudflare Worker endpoint that validates, rate-limits, and forwards to GitHub
 
+Inside the worker route, the handler is intentionally split into focused modules:
+
+- `worker/src/api/feedback/request.ts` for JSON parsing, business-rule validation, canonical ID normalization, and rate-limit / env policy checks
+- `worker/src/api/feedback/verification.ts` for auto-verification snapshots
+- `worker/src/api/feedback/submission.ts` plus `github.ts` / `format.ts` for GitHub routing and payload assembly
+
 ---
 
 ## Frontend Components
@@ -93,7 +99,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 | `description` | 10–2000 characters after trim |
 | `title` | 3–100 characters after trim; required for `bug` / `feature-request` |
 | `pageUrl` | Must start with `"/"` |
-| `stablecoinId` | Checked with `resolveStablecoinId(...)`; unknown or non-canonical values are silently stripped |
+| `stablecoinId` | Checked with `resolveStablecoinId(...)`; unknown values return `400 Invalid stablecoinId` |
 | `website` | Non-empty → silent 200 OK, no GitHub call |
 
 #### Rate limiting
@@ -173,7 +179,7 @@ Feature requests are posted to GitHub Discussions using the GraphQL `createDiscu
 
 User-supplied strings are only partially normalized before the GitHub write:
 
-- `stablecoinName` and `pageUrl` have newlines stripped and length caps applied in `formatBody()`
+- `stablecoinName` and `pageUrl` have newlines stripped and length caps applied in `worker/src/api/feedback/format.ts`
 - issue titles are length-validated by the request schema / handler rules
 - `description` and `expectedValue` are otherwise preserved verbatim in the body after request validation
 
@@ -222,6 +228,11 @@ gh api graphql -f query='{ repository(owner: "TokenBrice", name: "stablecoin-das
 | `src/components/feedback-button.tsx` | Floating action button, rendered in root layout |
 | `src/components/feedback-modal.tsx` | Feedback dialog (form + submission logic) |
 | `src/app/layout.tsx` | Mounts `<FeedbackButton />` globally |
-| `worker/src/api/feedback.ts` | Handler: validation, rate limiting, auto-verification, GitHub dispatch |
+| `worker/src/api/feedback.ts` | Thin route handler / coordinator |
+| `worker/src/api/feedback/request.ts` | Request parsing, canonicalization, and policy checks |
+| `worker/src/api/feedback/verification.ts` | Auto-verification snapshot builder for data corrections |
+| `worker/src/api/feedback/submission.ts` | GitHub routing orchestration |
+| `worker/src/api/feedback/github.ts` | GitHub REST / GraphQL transport helpers |
+| `worker/src/api/feedback/format.ts` | Issue/discussion body and title formatting |
 | `worker/src/router.ts` | Routes `POST /api/feedback` to `handleFeedback()` |
 | `worker/migrations/0029_feedback_rate_limit.sql` | D1 rate-limit table migration |

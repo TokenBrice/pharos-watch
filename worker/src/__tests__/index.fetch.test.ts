@@ -175,6 +175,27 @@ describe("worker.fetch", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it("returns a maintenance response before routing or cache lookup", async () => {
+    const env = {
+      DB: mockD1(),
+      CORS_ORIGIN: "https://pharos.watch",
+      MAINTENANCE_MODE: "true",
+    } as const;
+    const { ctx } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("300");
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
   it("writes cache on cacheable GET misses", async () => {
     const now = Math.floor(Date.now() / 1000);
     const env = {

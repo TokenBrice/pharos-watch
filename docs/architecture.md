@@ -417,7 +417,12 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata
     ├── handlers/
-    │   ├── http.ts               # HTTP flow: CORS, edge cache, method/auth gating, router dispatch
+    │   ├── http.ts               # HTTP orchestration: preflight, gates, edge cache, route-context build, router dispatch
+    │   ├── http/                 # Focused HTTP helper modules
+    │   │   ├── cors.ts           # Origin resolution + preflight / response header helpers
+    │   │   ├── gates.ts          # Maintenance mode, public API rate limit, env warnings
+    │   │   ├── edge-cache.ts     # Edge cache match / store policy
+    │   │   └── context.ts        # Route dependency hydration from Env
     │   ├── scheduled.ts          # Thin cron entrypoint: init env-aware clients + dispatch to slot runner registry
     │   └── scheduled/            # Slot runners + shared lease/runtime context for scheduled execution
     ├── router.ts                 # Worker route dispatcher: static registry lookup + dynamic route matching
@@ -501,8 +506,6 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health
     │   ├── status.ts             # GET /api/status (admin; raw synthesis lives in worker/src/lib/status-evaluation.ts)
-    │   ├── status-data-quality.ts # Shared status data-quality loader reused by /api/status
-    │   ├── status-derived-data.ts # Shared status endpoint data loaders (dataset freshness, Telegram stats, mint/burn reconciliation)
     │   ├── status-history.ts     # GET /api/status-history (admin)
     │   ├── stability-index.ts    # GET /api/stability-index
     │   ├── og.tsx                # GET /api/og/* dynamic Open Graph PNG generation
@@ -523,7 +526,14 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (route-level aggregate/per-coin orchestration)
     │   ├── mint-burn-flows-shared.ts # Shared mint/burn cache, baseline, and coverage helpers
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)
-    │   ├── feedback.ts          # POST /api/feedback (public)
+    │   ├── feedback.ts          # POST /api/feedback (public coordinator)
+    │   ├── feedback/            # Feedback endpoint internals
+    │   │   ├── request.ts       # JSON parsing, validation, rate-limit/env policy
+    │   │   ├── verification.ts  # Auto-verification snapshots for data corrections
+    │   │   ├── submission.ts    # GitHub routing orchestration
+    │   │   ├── github.ts        # GitHub REST / GraphQL helpers
+    │   │   ├── format.ts        # Issue/discussion payload formatting
+    │   │   └── types.ts         # Shared feedback types and constants
     │   ├── telegram-webhook.ts  # POST /api/telegram-webhook (Telegram bot command ingress coordinator)
     │   ├── telegram-webhook-shared.ts # Telegram webhook shared constants/types/catalog
     │   ├── telegram-webhook-parsing.ts # Telegram webhook command / pending-state parsing helpers
@@ -561,6 +571,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── backfill-query.ts     # Shared admin backfill query parsing/selection helpers (stablecoin/batch/batchSize)
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (from shared types), buildCacheStatuses()
         ├── status-reliability.ts # Status hysteresis, transitions, probe/discrepancy persistence
+        ├── status/               # Shared status data-quality + derived loader modules used by /api/status
+        │   ├── data-quality.ts   # Stablecoins cache / blacklist gap / active-depeg / on-chain-supply quality aggregation
+        │   └── derived-data.ts   # Dataset freshness, Telegram stats, and mint/burn reconciliation loaders
         ├── mint-burn-contracts.ts # Mint/burn event configs resolved from shared stablecoin contract metadata, plus explicit vault overrides
         ├── mint-burn-scoring.ts  # Flow Intensity Score (FIS), Bank Run Gauge, flight-to-quality detection
         ├── mint-burn-pipeline/   # Shared ingestion helpers used by cron + admin backfill paths

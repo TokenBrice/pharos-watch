@@ -30,6 +30,7 @@ import {
   collectYieldAnomalies,
   collectLiquidityShifts,
   collectCrossDayTrends,
+  type CollectorResult,
   type CollectorContext,
 } from "./daily-digest/collectors";
 
@@ -144,6 +145,13 @@ interface DigestMeta {
   lead?: string;
   tone?: string;
   coins?: string[];
+}
+
+function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: string[]): T {
+  if (result.degradedReason) {
+    degradedReasons.push(result.degradedReason);
+  }
+  return result.value;
 }
 
 function buildUserPrompt(
@@ -478,7 +486,7 @@ export async function generateDailyDigest(
 
   const ctx: CollectorContext = { db, trackedStablecoinAssets, mcapById, nowSec, todayTs, yesterdayTs };
 
-  const { activeDepegCount, topDepegs } = await collectActiveDepegs(ctx);
+  const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 
   // 3. Stability index — match homepage/stability page display logic
   // Current source: latest 15-min sample, fallback to latest daily snapshot if needed
@@ -530,8 +538,8 @@ export async function generateDailyDigest(
 
   // --- Enrichment data collection via collectors ---
 
-  const blacklistActivity = await collectBlacklistActivity(ctx);
-  const supplyVelocity = await collectSupplyVelocity(ctx);
+  const blacklistActivity = consumeCollectorResult(await collectBlacklistActivity(ctx), degradedReasons);
+  const supplyVelocity = consumeCollectorResult(await collectSupplyVelocity(ctx), degradedReasons);
 
   // Safety scores need "mentioned symbols" from earlier phases
   const mentionedSymbols = new Set<string>();
@@ -554,6 +562,7 @@ export async function generateDailyDigest(
   const inputData: DigestInputData = {
     totalMcapUsd,
     mcap7dDelta: totalMcapUsd - totalPrevWeek,
+    ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
     activeDepegCount,
     topDepegs,
     biggestSupplyChange,

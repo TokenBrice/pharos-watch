@@ -20,9 +20,12 @@ function makeJwtParts(
 }
 
 const TEAM_DOMAIN = "pharos";
+const OTHER_TEAM_DOMAIN = "ops";
 const AUD = "test-aud-value";
 const ISSUER = `https://${TEAM_DOMAIN}.cloudflareaccess.com`;
+const OTHER_ISSUER = `https://${OTHER_TEAM_DOMAIN}.cloudflareaccess.com`;
 const JWKS_URL = `https://${TEAM_DOMAIN}.cloudflareaccess.com/cdn-cgi/access/certs`;
+const OTHER_JWKS_URL = `https://${OTHER_TEAM_DOMAIN}.cloudflareaccess.com/cdn-cgi/access/certs`;
 
 function validClaims(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
   return {
@@ -76,47 +79,33 @@ describe("verifyAccessJwt", () => {
 
   describe("malformed tokens", () => {
     it("rejects empty string", async () => {
-      expect(
-        await verifyAccessJwt({ token: "", aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token: "", aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with only one part", async () => {
-      expect(
-        await verifyAccessJwt({ token: "abc", aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token: "abc", aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with two parts", async () => {
-      expect(
-        await verifyAccessJwt({ token: "abc.def", aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token: "abc.def", aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with four parts", async () => {
-      expect(
-        await verifyAccessJwt({ token: "a.b.c.d", aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token: "a.b.c.d", aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with invalid base64url header", async () => {
-      expect(
-        await verifyAccessJwt({ token: "!!!.abc.def", aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token: "!!!.abc.def", aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with header missing kid", async () => {
       const { token } = makeJwtParts({ alg: "RS256" }, validClaims());
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with header missing alg", async () => {
       const { token } = makeJwtParts({ kid: "k1" }, validClaims());
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
   });
 
@@ -124,71 +113,42 @@ describe("verifyAccessJwt", () => {
 
   describe("claim validation", () => {
     it("rejects expired token", async () => {
-      const { token } = makeJwtParts(
-        validHeader(),
-        validClaims({ exp: Math.floor(Date.now() / 1000) - 60 }),
-      );
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      const { token } = makeJwtParts(validHeader(), validClaims({ exp: Math.floor(Date.now() / 1000) - 60 }));
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with missing exp claim", async () => {
       const claims = validClaims();
       delete claims.exp;
       const { token } = makeJwtParts(validHeader(), claims);
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with wrong audience (string)", async () => {
-      const { token } = makeJwtParts(
-        validHeader(),
-        validClaims({ aud: "wrong-aud" }),
-      );
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      const { token } = makeJwtParts(validHeader(), validClaims({ aud: "wrong-aud" }));
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with wrong audience (array)", async () => {
-      const { token } = makeJwtParts(
-        validHeader(),
-        validClaims({ aud: ["wrong-1", "wrong-2"] }),
-      );
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      const { token } = makeJwtParts(validHeader(), validClaims({ aud: ["wrong-1", "wrong-2"] }));
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with missing audience", async () => {
       const claims = validClaims();
       delete claims.aud;
       const { token } = makeJwtParts(validHeader(), claims);
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with wrong issuer", async () => {
-      const { token } = makeJwtParts(
-        validHeader(),
-        validClaims({ iss: "https://evil.cloudflareaccess.com" }),
-      );
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      const { token } = makeJwtParts(validHeader(), validClaims({ iss: "https://evil.cloudflareaccess.com" }));
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("rejects token with nbf in the future", async () => {
-      const { token } = makeJwtParts(
-        validHeader(),
-        validClaims({ nbf: Math.floor(Date.now() / 1000) + 3600 }),
-      );
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      const { token } = makeJwtParts(validHeader(), validClaims({ nbf: Math.floor(Date.now() / 1000) + 3600 }));
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("accepts token with audience as array containing correct aud", async () => {
@@ -196,13 +156,8 @@ describe("verifyAccessJwt", () => {
       // we're testing that the claim check for array audience works.
       // We mock fetch to return JWKS but the crypto.subtle.verify will
       // fail because the signature is fake.
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-        new Response(JSON.stringify(MOCK_JWKS), { status: 200 }),
-      ));
-      const { token } = makeJwtParts(
-        validHeader(),
-        validClaims({ aud: ["other-aud", AUD] }),
-      );
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 })));
+      const { token } = makeJwtParts(validHeader(), validClaims({ aud: ["other-aud", AUD] }));
       // Should get past claim validation but fail at crypto — returning false
       // (but not due to claim rejection)
       await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN });
@@ -218,39 +173,32 @@ describe("verifyAccessJwt", () => {
     it("returns false when JWKS fetch fails", async () => {
       vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")));
       const { token } = makeJwtParts(validHeader(), validClaims());
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("returns false when JWKS returns non-200", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-        new Response("not found", { status: 404 }),
-      ));
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("not found", { status: 404 })));
       const { token } = makeJwtParts(validHeader(), validClaims());
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("returns false when JWKS has no matching kid", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "other-kid" }] }), { status: 200 }),
-      ));
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockResolvedValue(
+            new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "other-kid" }] }), { status: 200 }),
+          ),
+      );
       const { token } = makeJwtParts(validHeader(), validClaims());
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("returns false when JWKS response has no keys array", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({}), { status: 200 }),
-      ));
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })));
       const { token } = makeJwtParts(validHeader(), validClaims());
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
   });
 
@@ -258,9 +206,7 @@ describe("verifyAccessJwt", () => {
 
   describe("JWKS caching", () => {
     it("caches JWKS and reuses on second call", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify(MOCK_JWKS), { status: 200 }),
-      );
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 }));
       vi.stubGlobal("fetch", fetchMock);
 
       const { token: token1 } = makeJwtParts(validHeader(), validClaims());
@@ -274,9 +220,7 @@ describe("verifyAccessJwt", () => {
     });
 
     it("re-fetches JWKS after cache expiry", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify(MOCK_JWKS), { status: 200 }),
-      );
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 }));
       vi.stubGlobal("fetch", fetchMock);
 
       const { token: token1 } = makeJwtParts(validHeader(), validClaims());
@@ -291,14 +235,29 @@ describe("verifyAccessJwt", () => {
       // but the cache was set with the real Date.now)
       _resetJwksCache();
 
-      const { token: token2 } = makeJwtParts(
-        validHeader(),
-        validClaims({ exp: Math.floor(Date.now() / 1000) + 3600 }),
-      );
+      const { token: token2 } = makeJwtParts(validHeader(), validClaims({ exp: Math.floor(Date.now() / 1000) + 3600 }));
       await verifyAccessJwt({ token: token2, aud: AUD, teamDomain: TEAM_DOMAIN });
       expect(fetchMock).toHaveBeenCalledTimes(2);
 
       vi.useRealTimers();
+    });
+
+    it("keeps JWKS caches isolated per team domain", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { token: token1 } = makeJwtParts(validHeader(), validClaims());
+      await verifyAccessJwt({ token: token1, aud: AUD, teamDomain: TEAM_DOMAIN });
+
+      const { token: token2 } = makeJwtParts(validHeader(), validClaims({ iss: OTHER_ISSUER }));
+      await verifyAccessJwt({ token: token2, aud: AUD, teamDomain: OTHER_TEAM_DOMAIN });
+
+      const { token: token3 } = makeJwtParts(validHeader(), validClaims());
+      await verifyAccessJwt({ token: token3, aud: AUD, teamDomain: TEAM_DOMAIN });
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenNthCalledWith(1, JWKS_URL);
+      expect(fetchMock).toHaveBeenNthCalledWith(2, OTHER_JWKS_URL);
     });
   });
 
@@ -306,18 +265,19 @@ describe("verifyAccessJwt", () => {
 
   describe("algorithm handling", () => {
     it("rejects unsupported algorithm", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({
-          keys: [{ ...MOCK_JWKS.keys[0], kid: "test-kid-1", alg: "ES256" }],
-        }), { status: 200 }),
-      ));
-      const { token } = makeJwtParts(
-        validHeader({ alg: "ES256" }),
-        validClaims(),
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              keys: [{ ...MOCK_JWKS.keys[0], kid: "test-kid-1", alg: "ES256" }],
+            }),
+            { status: 200 },
+          ),
+        ),
       );
-      expect(
-        await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN }),
-      ).toBe(false);
+      const { token } = makeJwtParts(validHeader({ alg: "ES256" }), validClaims());
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
   });
 });

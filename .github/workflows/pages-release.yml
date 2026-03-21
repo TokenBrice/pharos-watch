@@ -1,0 +1,97 @@
+name: Pages Release
+
+on:
+  workflow_call:
+
+jobs:
+  build-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run sync:digests
+      - run: npm run build
+      - run: npm run seo:check
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pages-static-export
+          path: out
+          if-no-files-found: error
+
+  smoke-ui:
+    needs: build-pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: pages-static-export
+          path: out
+      - name: Start local export smoke server
+        env:
+          STATIC_EXPORT_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+          STATIC_EXPORT_HOST: 127.0.0.1
+          STATIC_EXPORT_PORT: "4173"
+        run: |
+          node scripts/serve-static-export.mjs > /tmp/pages-smoke-server.log 2>&1 &
+          echo $! > /tmp/pages-smoke-server.pid
+          for attempt in $(seq 1 30); do
+            if node -e "fetch('http://127.0.0.1:4173/').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1));"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/pages-smoke-server.log
+          exit 1
+      - run: npm run test:smoke-ui -- --url http://127.0.0.1:4173
+      - name: Dump local export smoke server log
+        if: failure()
+        run: cat /tmp/pages-smoke-server.log
+      - name: Stop local export smoke server
+        if: always()
+        run: |
+          if [ -f /tmp/pages-smoke-server.pid ]; then
+            kill "$(cat /tmp/pages-smoke-server.pid)" || true
+          fi
+
+  deploy-pages:
+    needs:
+      - build-pages
+      - smoke-ui
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: pages-static-export
+          path: out
+      - name: Deploy Pages with retry
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for attempt in 1 2 3; do
+            echo "[deploy-pages] Attempt ${attempt}/3"
+            if npx --no-install wrangler pages deploy out --project-name=stablecoin-dashboard --commit-dirty=true --commit-message="${{ github.sha }}"; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "[deploy-pages] Exhausted retries"
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done

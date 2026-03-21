@@ -1,0 +1,22 @@
+{
+  "worker/src/api/stablecoin-detail.ts": {
+    "fileLines": 76,
+    "maxFunctionLines": 60,
+    "branchCount": 4
+  },
+  "worker/src/api/feedback.ts": {
+    "fileLines": 27,
+    "maxFunctionLines": 15,
+    "branchCount": 3
+  },
+  "worker/src/handlers/http.ts": {
+    "fileLines": 52,
+    "maxFunctionLines": 44,
+    "branchCount": 6
+  },
+  "worker/src/cron/sync-stablecoins.ts": {
+    "fileLines": 621,
+    "maxFunctionLines": 305,
+    "branchCount": 82
+  }
+}

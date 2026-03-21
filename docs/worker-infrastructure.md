@@ -34,7 +34,7 @@ invocation_logs = true
 
 ## Env Interface
 
-The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus `worker/src/handlers/http.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
+The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
 
 `worker/src/lib/env.ts` is now the canonical worker binding contract and exports four groupings:
 
@@ -120,7 +120,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 ### Public API Rate Limiting
 
-- `worker/src/handlers/http.ts` calls `checkPublicApiRateLimit(...)` for non-admin public `/api/*` traffic before router dispatch.
+- `worker/src/handlers/http/gates.ts` calls `checkPublicApiRateLimit(...)` for non-admin public `/api/*` traffic before router dispatch.
 - Default threshold: `300 requests / 60 seconds` per IP hash, enforced through the D1-backed `public_api_rate_limit` table.
 - If the distributed D1 path fails, `worker/src/lib/rate-limit.ts` falls back to the legacy isolate-local in-memory limiter for the same threshold/window.
 - Requests that are already authorized for the `ops-api.pharos.watch` admin lane bypass this limiter.
@@ -942,7 +942,11 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | File                                               | Role                                                                                                                                                                |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `worker/src/index.ts`                              | Thin worker entry: delegates `fetch`/`scheduled` to handler modules                                                                                                 |
-| `worker/src/handlers/http.ts`                      | HTTP request pipeline: CORS, method gating, edge cache, route-context assembly, router dispatch                                                                     |
+| `worker/src/handlers/http.ts`                      | HTTP request orchestration: preflight, gates, edge cache lookup/write, route-context build, router dispatch                                                        |
+| `worker/src/handlers/http/cors.ts`                 | CORS origin resolution, preflight response, and response-header decoration                                                                                           |
+| `worker/src/handlers/http/gates.ts`                | Maintenance-mode gate, public API rate limiting, and one-time env-contract warnings                                                                                  |
+| `worker/src/handlers/http/context.ts`              | Route dependency hydration from `Env` into `FullRouteContext`                                                                                                        |
+| `worker/src/handlers/http/edge-cache.ts`           | Edge cache match/store policy for cacheable GET requests                                                                                                             |
 | `worker/src/handlers/scheduled.ts`                 | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch                                                                                      |
 | `worker/src/handlers/scheduled/context.ts`         | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing                                                          |
 | `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated 20-minute lanes, half-hourly including DEX discovery, hourly reserve sync, Telegram, and daily slots)             |

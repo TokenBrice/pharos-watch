@@ -184,6 +184,7 @@ describe("handleStatus", () => {
       telegramBot: Record<string, unknown> | null;
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
       datasetFreshness: Record<string, number | null>;
+      state: Record<string, unknown>;
       priceSourceHealth: Record<string, unknown> | null;
       liquidityHealth: Record<string, unknown> | null;
       discoveryCandidates: Array<Record<string, unknown>> | null;
@@ -200,6 +201,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("telegramBot");
     expect(body).toHaveProperty("sectionErrors");
     expect(body).toHaveProperty("datasetFreshness");
+    expect(body).toHaveProperty("state");
     expect(body).toHaveProperty("priceSourceHealth");
     expect(body).toHaveProperty("liquidityHealth");
     expect(body).toHaveProperty("discoveryCandidates");
@@ -210,6 +212,17 @@ describe("handleStatus", () => {
     expect(body.datasetFreshness).toHaveProperty("mintBurn");
     expect(body.datasetFreshness).toHaveProperty("safetyGrades");
     expect(body.datasetFreshness).toHaveProperty("discoveryCandidates");
+    expect(body.state).toMatchObject({
+      scope: "global",
+      thresholds: {
+        escalateToDegraded: 2,
+        escalateToStale: 1,
+        recoverToDegraded: 2,
+        recoverToHealthy: 3,
+      },
+      minDwellSec: 120,
+      staleMinDwellSec: 180,
+    });
     expect(body.priceSourceHealth).toMatchObject({
       totalAssets: 156,
     });

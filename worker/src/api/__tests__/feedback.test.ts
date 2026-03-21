@@ -12,11 +12,18 @@ stubCryptoForAuth();
 const { handleFeedback } = await import("../feedback");
 
 /** Build a valid feedback request body */
-function makeFeedbackBody(overrides: Partial<{
-  type: string; title: string; description: string;
-  pageUrl: string; stablecoinId: string; stablecoinName: string;
-  expectedValue: string; website: string;
-}> = {}) {
+function makeFeedbackBody(
+  overrides: Partial<{
+    type: string;
+    title: string;
+    description: string;
+    pageUrl: string;
+    stablecoinId: string;
+    stablecoinName: string;
+    expectedValue: string;
+    website: string;
+  }> = {},
+) {
   return {
     type: overrides.type ?? "bug",
     title: overrides.title ?? "Something is broken",
@@ -68,14 +75,8 @@ describe("handleFeedback", () => {
   });
 
   it("returns 400 for invalid feedback type", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-    ]);
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody({ type: "spam" })),
-      makeEnv()
-    );
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "spam" })), makeEnv());
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
@@ -83,14 +84,8 @@ describe("handleFeedback", () => {
   });
 
   it("returns 400 when description is too short", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-    ]);
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody({ description: "short" })),
-      makeEnv()
-    );
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ description: "short" })), makeEnv());
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
@@ -98,14 +93,8 @@ describe("handleFeedback", () => {
   });
 
   it("returns 400 when title is missing for bug type", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-    ]);
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody({ type: "bug", title: "" })),
-      makeEnv()
-    );
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ type: "bug", title: "" })), makeEnv());
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
@@ -113,14 +102,8 @@ describe("handleFeedback", () => {
   });
 
   it("returns 400 when pageUrl does not start with /", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-    ]);
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody({ pageUrl: "https://evil.com" })),
-      makeEnv()
-    );
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ pageUrl: "https://evil.com" })), makeEnv());
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
@@ -129,11 +112,7 @@ describe("handleFeedback", () => {
 
   it("returns 400 when stablecoinId is invalid", async () => {
     const db = mockD1([]);
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody({ stablecoinId: "not-a-real-coin" })),
-      makeEnv(),
-    );
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ stablecoinId: "not-a-real-coin" })), makeEnv());
 
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid stablecoinId" });
@@ -142,11 +121,7 @@ describe("handleFeedback", () => {
 
   it("silently accepts honeypot submissions", async () => {
     const db = mockD1([]);
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody({ website: "I am a bot" })),
-      makeEnv()
-    );
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ website: "I am a bot" })), makeEnv());
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean };
@@ -156,14 +131,8 @@ describe("handleFeedback", () => {
   });
 
   it("returns 429 when rate limited", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 0 } },
-    ]);
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody()),
-      makeEnv()
-    );
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 0 } }]);
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
 
     expect(res.status).toBe(429);
     const body = (await res.json()) as { error: string };
@@ -172,11 +141,7 @@ describe("handleFeedback", () => {
 
   it("returns 503 when FEEDBACK_IP_SALT is not configured", async () => {
     const db = mockD1([]);
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody()),
-      { GITHUB_PAT: "ghp_test_token" }
-    );
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), { GITHUB_PAT: "ghp_test_token" });
 
     expect(res.status).toBe(503);
     const body = (await res.json()) as { error: string };
@@ -184,16 +149,10 @@ describe("handleFeedback", () => {
   });
 
   it("returns 503 when GITHUB_PAT is not configured", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-    ]);
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
     // Explicitly omit GITHUB_PAT (not undefined — ?? would fill the default)
     const env: FeedbackEnv = { FEEDBACK_IP_SALT: "test-salt" };
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody()),
-      env
-    );
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), env);
 
     expect(res.status).toBe(503);
     const body = (await res.json()) as { error: string };
@@ -201,19 +160,16 @@ describe("handleFeedback", () => {
   });
 
   it("returns 200 and creates GitHub issue for bug report", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-    ]);
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
     // Mock successful GitHub Issues API response
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 1, number: 42 }), { status: 201 })
-    );
+    const response = new Response(JSON.stringify({ id: 1, number: 42 }), { status: 201 });
+    fetchSpy.mockResolvedValueOnce(response);
 
     const res = await handleFeedback(
       db,
       makeRequest(makeFeedbackBody({ type: "bug", title: "Chart broken" })),
-      makeEnv()
+      makeEnv(),
     );
 
     expect(res.status).toBe(200);
@@ -226,6 +182,7 @@ describe("handleFeedback", () => {
     expect(String(url)).toContain("api.github.com");
     expect(String(url)).toContain("/issues");
     expect(init?.method).toBe("POST");
+    expect(response.bodyUsed).toBe(true);
   });
 
   it("returns 200 and creates GitHub issue for data-correction", async () => {
@@ -235,19 +192,19 @@ describe("handleFeedback", () => {
       { match: "cache", rows: [], first: null },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 2, number: 43 }), { status: 201 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 2, number: 43 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
-      makeRequest(makeFeedbackBody({
-        type: "data-correction",
-        description: "The circulating supply is wrong by a large margin.",
-        stablecoinId: "usdt-tether",
-        stablecoinName: "Tether",
-      })),
-      makeEnv()
+      makeRequest(
+        makeFeedbackBody({
+          type: "data-correction",
+          description: "The circulating supply is wrong by a large margin.",
+          stablecoinId: "usdt-tether",
+          stablecoinName: "Tether",
+        }),
+      ),
+      makeEnv(),
     );
 
     expect(res.status).toBe(200);
@@ -281,19 +238,19 @@ describe("handleFeedback", () => {
       },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
-      makeRequest(makeFeedbackBody({
-        type: "data-correction",
-        description: "EURC appears to be showing the wrong peg deviation.",
-        stablecoinId: "eurc-circle",
-        stablecoinName: "EURC",
-      })),
-      makeEnv()
+      makeRequest(
+        makeFeedbackBody({
+          type: "data-correction",
+          description: "EURC appears to be showing the wrong peg deviation.",
+          stablecoinId: "eurc-circle",
+          stablecoinName: "EURC",
+        }),
+      ),
+      makeEnv(),
     );
 
     expect(res.status).toBe(200);
@@ -328,19 +285,19 @@ describe("handleFeedback", () => {
       },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 6, number: 47 }), { status: 201 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 6, number: 47 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
-      makeRequest(makeFeedbackBody({
-        type: "data-correction",
-        description: "XAUT looks off relative to spot gold.",
-        stablecoinId: "xaut-tether",
-        stablecoinName: "Tether Gold",
-      })),
-      makeEnv()
+      makeRequest(
+        makeFeedbackBody({
+          type: "data-correction",
+          description: "XAUT looks off relative to spot gold.",
+          stablecoinId: "xaut-tether",
+          stablecoinName: "Tether Gold",
+        }),
+      ),
+      makeEnv(),
     );
 
     expect(res.status).toBe(200);
@@ -350,30 +307,26 @@ describe("handleFeedback", () => {
   });
 
   it("tries GitHub Discussion first for feature-request, falls back to issue", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-    ]);
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
     // First call: GraphQL Discussion creation fails
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ errors: [{ message: "fail" }] }), { status: 200 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ errors: [{ message: "fail" }] }), { status: 200 }));
     // Second call: Falls back to Issues API
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 3, number: 44 }), { status: 201 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 3, number: 44 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
-      makeRequest(makeFeedbackBody({
-        type: "feature-request",
-        title: "Add dark mode",
-        description: "Please add a dark mode toggle to the dashboard.",
-      })),
+      makeRequest(
+        makeFeedbackBody({
+          type: "feature-request",
+          title: "Add dark mode",
+          description: "Please add a dark mode toggle to the dashboard.",
+        }),
+      ),
       makeEnv({
         GITHUB_REPO_NODE_ID: "R_abc123",
         GITHUB_DISCUSSION_CATEGORY_ID: "DC_xyz789",
-      })
+      }),
     );
 
     expect(res.status).toBe(200);
@@ -384,20 +337,39 @@ describe("handleFeedback", () => {
     expect(String(fetchSpy.mock.calls[1][0])).toContain("/issues");
   });
 
-  it("returns 500 when GitHub API call fails", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
-    ]);
+  it("drains GraphQL HTTP error bodies before falling back to issues", async () => {
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
-    fetchSpy.mockResolvedValueOnce(
-      new Response("Forbidden", { status: 403 })
-    );
+    const graphQlError = new Response("upstream unavailable", { status: 502 });
+    const issueResponse = new Response(JSON.stringify({ id: 3, number: 44 }), { status: 201 });
+    fetchSpy.mockResolvedValueOnce(graphQlError).mockResolvedValueOnce(issueResponse);
 
     const res = await handleFeedback(
       db,
-      makeRequest(makeFeedbackBody()),
-      makeEnv()
+      makeRequest(
+        makeFeedbackBody({
+          type: "feature-request",
+          title: "Add dark mode",
+          description: "Please add a dark mode toggle to the dashboard.",
+        }),
+      ),
+      makeEnv({
+        GITHUB_REPO_NODE_ID: "R_abc123",
+        GITHUB_DISCUSSION_CATEGORY_ID: "DC_xyz789",
+      }),
     );
+
+    expect(res.status).toBe(200);
+    expect(graphQlError.bodyUsed).toBe(true);
+    expect(issueResponse.bodyUsed).toBe(true);
+  });
+
+  it("returns 500 when GitHub API call fails", async () => {
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+
+    fetchSpy.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));
+
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
 
     expect(res.status).toBe(500);
     const body = (await res.json()) as { error: string };
@@ -410,9 +382,7 @@ describe("handleFeedback", () => {
       { match: "cache", rows: [], first: null },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 4, number: 45 }), { status: 201 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 4, number: 45 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
@@ -423,7 +393,7 @@ describe("handleFeedback", () => {
         stablecoinId: "usdt-tether",
         // no title field
       }),
-      makeEnv()
+      makeEnv(),
     );
 
     expect(res.status).toBe(200);

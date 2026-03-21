@@ -5,10 +5,12 @@ import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import {
   buildPriceMapByDate,
   buildTokenRowsFromMarketCaps,
+  type DetailResponseHelpers,
   DETAIL_UPSTREAM_MAX_RETRIES,
   DETAIL_UPSTREAM_TIMEOUT_MS,
   findNearestPrice,
   logUpstreamFailure,
+  logUpstreamException,
 } from "./shared";
 
 export interface CommodityDetailConfig {
@@ -137,4 +139,25 @@ export async function fetchCommodityTokens(
   }
 
   return tokens;
+}
+
+export async function handleCommodityDetail(
+  config: CommodityDetailConfig,
+  detail: DetailResponseHelpers,
+): Promise<Response> {
+  try {
+    const tokens = await detail.resolveTokensWithSupplyHistoryFallback(
+      await fetchCommodityTokens(config),
+      {
+        emptyReason: "commodity-history-empty",
+        staleReason: "commodity-history-stale",
+      },
+    );
+    return detail.createFreshResponseFromTokens(tokens);
+  } catch (err) {
+    logUpstreamException("commodity-detail", config.stablecoinId, err);
+    const fallback = await detail.trySupplyHistoryFallback("commodity-upstream-failure");
+    if (fallback) return fallback;
+    return detail.staleCacheOrError(502, "Failed to fetch commodity token data");
+  }
 }

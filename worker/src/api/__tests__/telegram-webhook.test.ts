@@ -109,15 +109,17 @@ describe("handleTelegramWebhook", () => {
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
-        rows: [{
-          stablecoin_id: "usdc-circle",
-          alert_dews: 1,
-          alert_depeg: 0,
-          alert_safety: 0,
-          dews_min_band: null,
-          safety_mode: null,
-          depeg_worsening_bps_step: null,
-        }],
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+        ],
       },
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews USDC"), "test-secret", "bot-token");
@@ -182,15 +184,17 @@ describe("handleTelegramWebhook", () => {
       { match: "telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM telegram_subscriptions",
-        rows: [{
-          stablecoin_id: "usdc-circle",
-          alert_dews: 1,
-          alert_depeg: 0,
-          alert_safety: 0,
-          dews_min_band: "WARNING",
-          safety_mode: null,
-          depeg_worsening_bps_step: null,
-        }],
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            dews_min_band: "WARNING",
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+        ],
       },
     ]);
 
@@ -340,6 +344,65 @@ describe("handleTelegramWebhook", () => {
     expect(text).toContain("Updated subscriptions");
     expect(text).toContain(ambiguous.matches[0].id);
     expect(text).toContain(usdc.matches[0].id);
+  });
+
+  it("keeps a pending subscribe flow alive when a non-critical stored field is malformed", async () => {
+    const ambiguous = resolveTicker("USDF");
+    const usdc = resolveTicker("USDC");
+    if (ambiguous.status !== "ambiguous" || usdc.status !== "unique") {
+      throw new Error("Expected fixed ticker fixtures for telegram malformed pending-row test");
+    }
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: "{bad-json",
+          alert_types: JSON.stringify(["dews"]),
+          resolved_ids: "{bad-json",
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(ambiguous.matches),
+          remaining_tickers: JSON.stringify(["USDC"]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+        },
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
+        rows: [
+          {
+            stablecoin_id: ambiguous.matches[0].id,
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+          {
+            stablecoin_id: usdc.matches[0].id,
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+        ],
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "1"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+    expect(sentMessageBody().text).toContain("Updated subscriptions");
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=action_payload"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=resolved_ids"));
   });
 
   it("handles /unsubscribe all", async () => {
