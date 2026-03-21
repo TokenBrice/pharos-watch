@@ -160,8 +160,9 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
+    // stability-index and compute-dews now on the half-hourly trigger
+    expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
+    expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
     // Telegram alerts now on dedicated 5-min trigger
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
@@ -195,8 +196,6 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
-    expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
-    expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
   });
@@ -231,8 +230,6 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
-    expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
   });
 
   it("runs charts → dex → yield on the 30-min cron", async () => {
@@ -251,12 +248,20 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncYieldData).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncDexLiquidity.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.syncStablecoinCharts.mock.invocationCallOrder[0],
     );
-    expect(cronMocks.syncYieldData.mock.invocationCallOrder[0]).toBeGreaterThan(
+    expect(cronMocks.computeAndStoreDEWS.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.syncDexLiquidity.mock.invocationCallOrder[0],
+    );
+    expect(cronMocks.computeAndStoreStabilityIndex.mock.invocationCallOrder[0]).toBeGreaterThan(
+      cronMocks.computeAndStoreDEWS.mock.invocationCallOrder[0],
+    );
+    expect(cronMocks.syncYieldData.mock.invocationCallOrder[0]).toBeGreaterThan(
+      cronMocks.computeAndStoreStabilityIndex.mock.invocationCallOrder[0],
     );
   });
 

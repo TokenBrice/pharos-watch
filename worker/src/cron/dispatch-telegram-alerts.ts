@@ -368,6 +368,13 @@ export async function dispatchTelegramAlerts(
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
 
+    // Defense-in-depth null guards: mustSeedSnapshots above catches null snapshots,
+    // but protect downstream indexing in case guard logic drifts.
+    const safeDewsSnapshot = previousDewsSnapshot ?? {};
+    const safeDewsAlertable = previousDewsAlertableSnapshot ?? {};
+    const safeDepegSnapshot = previousDepegSnapshot ?? {};
+    const safeSafetySnapshot = previousSafetySnapshot ?? {};
+
     const pendingBudget = Math.floor(MAX_MESSAGES_PER_RUN / 4);
     const drainResult = await drainPendingQueue(db, botToken, pendingBudget, signal);
 
@@ -375,9 +382,9 @@ export async function dispatchTelegramAlerts(
 
     const dewsChanges: DewsChange[] = [];
     for (const row of dewsRows) {
-      const oldBand = previousDewsAlertableSnapshot[row.stablecoin_id];
+      const oldBand = safeDewsAlertable[row.stablecoin_id];
       if (oldBand === row.band || !isDewsAlertable(row.band)) continue;
-      const previousRawBand = previousDewsSnapshot[row.stablecoin_id];
+      const previousRawBand = safeDewsSnapshot[row.stablecoin_id];
       dewsChanges.push({
         stablecoinId: row.stablecoin_id,
         symbol: getSymbol(row.stablecoin_id),
@@ -393,7 +400,7 @@ export async function dispatchTelegramAlerts(
       });
     }
 
-    const previousActiveIds = new Set(Object.keys(previousDepegSnapshot));
+    const previousActiveIds = new Set(Object.keys(safeDepegSnapshot));
     const currentActiveIds = new Set(Object.keys(currentSnapshots.depeg));
 
     const depegTriggered: DepegAlertPayload[] = activeDepegRows
@@ -409,7 +416,7 @@ export async function dispatchTelegramAlerts(
 
     const depegWorsening: DepegWorsening[] = activeDepegRows
       .flatMap((row) => {
-        const previous = previousDepegSnapshot[row.stablecoin_id];
+        const previous = safeDepegSnapshot[row.stablecoin_id];
         const currentDeviationBps = Math.abs(Number(row.peak_deviation_bps ?? 0));
         if (!previous || previous.direction !== row.direction || currentDeviationBps <= previous.deviationBps) {
           return [];
@@ -450,7 +457,7 @@ export async function dispatchTelegramAlerts(
       if (!resolved || resolved.ended_at == null || resolved.started_at == null) continue;
 
       const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
-      const previous = previousDepegSnapshot[stablecoinId];
+      const previous = safeDepegSnapshot[stablecoinId];
       depegResolved.push({
         stablecoinId,
         symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
@@ -467,7 +474,7 @@ export async function dispatchTelegramAlerts(
     const safetyChanges: SafetyChange[] = [];
     let suppressedMethodologyChanges = 0;
     for (const row of safetyRows) {
-      const previous = previousSafetySnapshot[row.stablecoin_id];
+      const previous = safeSafetySnapshot[row.stablecoin_id];
       if (previous?.grade === row.grade) continue;
 
       if (previous?.methodologyVersion && row.methodology_version && previous.methodologyVersion !== row.methodology_version) {

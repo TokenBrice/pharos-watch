@@ -146,6 +146,7 @@ export const CIRCUIT_SOURCE = {
   REDSTONE_PRICES: "redstone-prices",
   CURVE_ONCHAIN: "curve-onchain",
   CURVE_LIQUIDITY_API: "curve-liquidity-api",
+  FX_FRANKFURTER: "fx-frankfurter",
   FX_REALTIME: "fx-realtime",
   CHAINLINK_FEEDS: "chainlink-feeds",
   JUPITER_PRICES: "jupiter-prices",

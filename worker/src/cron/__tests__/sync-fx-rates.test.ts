@@ -153,7 +153,8 @@ describe("syncFxRates", () => {
 
     const result = await syncFxRates(db);
     expect(result.itemCount).toBe(2);
-    expect(result.status).toBe("degraded");
+    // First consecutive fallback run (1 < 4 threshold) — not yet degraded
+    expect(result.status).toBeUndefined();
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.fallbackMode).toBe("cached-fx-rates");
     expect(metadata.mode).toBe("cached-fallback");

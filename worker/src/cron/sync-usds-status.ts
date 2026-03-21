@@ -111,7 +111,11 @@ export async function syncUsdsStatus(
     lastChecked: Math.floor(Date.now() / 1000),
   };
 
-  await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
+  try {
+    await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
+  } catch (err) {
+    console.error("[sync-usds-status] Cache write failed:", err);
+  }
   console.log("[usds-status] Cache updated");
   return {
     itemCount: 1,

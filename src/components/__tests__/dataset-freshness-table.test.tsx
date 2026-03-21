@@ -31,6 +31,6 @@ describe("DatasetFreshnessTable", () => {
 
     const discoveryRow = screen.getByText("Coverage discovery").closest("tr");
     expect(discoveryRow).not.toBeNull();
-    expect(within(discoveryRow as HTMLTableRowElement).getByText("2d")).toBeTruthy();
+    expect(within(discoveryRow as HTMLTableRowElement).getByText("14d")).toBeTruthy();
   });
 });

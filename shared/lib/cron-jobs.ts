@@ -105,7 +105,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-stablecoin-charts",
     label: "Stablecoin charts",
     group: "half-hourly",
-    intervalSec: 1800,
+    intervalSec: 3600,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "shared",
     maxConnections: 1, // Single DL stablecoincharts/all fetch
@@ -122,18 +122,18 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "stability-index",
     label: "PSI compute",
-    group: "quarter-hourly",
-    intervalSec: 900,
-    scheduleKey: "quarterHourly",
+    group: "half-hourly",
+    intervalSec: 1800,
+    scheduleKey: "halfHourlyOffset",
     triggerMode: "shared",
     maxConnections: 0, // DB-only computation
   },
   {
     job: "compute-dews",
     label: "DEWS compute",
-    group: "quarter-hourly",
-    intervalSec: 900,
-    scheduleKey: "quarterHourly",
+    group: "half-hourly",
+    intervalSec: 1800,
+    scheduleKey: "halfHourlyOffset",
     triggerMode: "shared",
     maxConnections: 0, // DB-only computation
   },
@@ -315,7 +315,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "discovery-scan",
     label: "Coverage discovery",
     group: "daily",
-    intervalSec: 86400,
+    intervalSec: 604800,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
     maxConnections: 1, // CoinGecko stablecoins market list fetch

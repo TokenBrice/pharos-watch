@@ -7,33 +7,40 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
   const todayMidnight = now - (now % 86400);
   const yesterdayMidnight = todayMidnight - 86400;
 
-  const row = await db
-    .prepare(
-      `SELECT AVG(score) as avg_score,
-              AVG(json_extract(components, '$.severity')) as avg_severity,
-              AVG(json_extract(components, '$.breadth')) as avg_breadth,
-              AVG(json_extract(components, '$.stressBreadth')) as avg_stress_breadth,
-              AVG(json_extract(components, '$.trend')) as avg_trend,
-              COUNT(*) as cnt
-       FROM stability_index_samples
-       WHERE stored_at >= ? AND stored_at < ?`
-    )
-    .bind(yesterdayMidnight, todayMidnight)
-    .first<{ avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_stress_breadth: number | null; avg_trend: number | null; cnt: number }>();
+  let row: { avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_stress_breadth: number | null; avg_trend: number | null; cnt: number } | null;
+  let versionRows: D1Result<{ methodology_version: string; cnt: number }>;
+  try {
+    row = await db
+      .prepare(
+        `SELECT AVG(score) as avg_score,
+                AVG(json_extract(components, '$.severity')) as avg_severity,
+                AVG(json_extract(components, '$.breadth')) as avg_breadth,
+                AVG(json_extract(components, '$.stressBreadth')) as avg_stress_breadth,
+                AVG(json_extract(components, '$.trend')) as avg_trend,
+                COUNT(*) as cnt
+         FROM stability_index_samples
+         WHERE stored_at >= ? AND stored_at < ?`
+      )
+      .bind(yesterdayMidnight, todayMidnight)
+      .first<{ avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_stress_breadth: number | null; avg_trend: number | null; cnt: number }>();
 
-  const versionRows = await db
-    .prepare(
-      `SELECT methodology_version, COUNT(*) as cnt
-       FROM stability_index_samples
-       WHERE stored_at >= ? AND stored_at < ?
-       GROUP BY methodology_version
-       ORDER BY cnt DESC, methodology_version DESC`
-    )
-    .bind(yesterdayMidnight, todayMidnight)
-    .all<{ methodology_version: string; cnt: number }>();
+    versionRows = await db
+      .prepare(
+        `SELECT methodology_version, COUNT(*) as cnt
+         FROM stability_index_samples
+         WHERE stored_at >= ? AND stored_at < ?
+         GROUP BY methodology_version
+         ORDER BY cnt DESC, methodology_version DESC`
+      )
+      .bind(yesterdayMidnight, todayMidnight)
+      .all<{ methodology_version: string; cnt: number }>();
+  } catch (err) {
+    console.error("[snapshot-psi] DB query failed:", err);
+    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_query_failed", error: String(err).slice(0, 200) }) };
+  }
 
   if (!row || !row.cnt || row.avg_score == null) {
-    return { metadata: "skipped: no samples for yesterday" };
+    return { status: "ok", itemCount: 0, metadata: "skipped: no samples for yesterday" };
   }
 
   const score = Math.round(row.avg_score * 10) / 10;
@@ -70,5 +77,5 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
     .run();
 
   console.log(`[snapshot-psi] yesterday avg=${score} band=${band} samples=${row.cnt}`);
-  return { metadata: `avg=${score} band=${band} samples=${row.cnt}` };
+  return { itemCount: 1, metadata: `avg=${score} band=${band} samples=${row.cnt}` };
 }

@@ -462,13 +462,21 @@ export async function syncFxRates(
       return false;
     };
 
+    const frankfurterAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.FX_FRANKFURTER);
     const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
-    const res = await fetchWithRetry(url, {
-      headers: { "User-Agent": USER_AGENT },
-      signal,
-    });
+    const res = frankfurterAllowed
+      ? await fetchWithRetry(url, {
+          headers: { "User-Agent": USER_AGENT },
+          signal,
+        })
+      : null;
 
     if (!res || !res.ok) {
+      if (frankfurterAllowed) {
+        await runBestEffort("recordOutcome:fx-frankfurter-failure", async () => {
+          await recordOutcome(db, CIRCUIT_SOURCE.FX_FRANKFURTER, false);
+        });
+      }
       const cachedRateCount = Object.keys(prevRates).length;
       const appliedLiveFallback = await tryLiveFullSetFallback("error");
       if (!appliedLiveFallback && cachedRateCount > 0) {
@@ -516,6 +524,9 @@ export async function syncFxRates(
             throw new Error(`frankfurter.app payload validation failed: ${frankfurterValidation.issues}`);
           }
         } else {
+          await runBestEffort("recordOutcome:fx-frankfurter-success", async () => {
+            await recordOutcome(db, CIRCUIT_SOURCE.FX_FRANKFURTER, true);
+          });
           const data = frankfurterValidation.data;
           usableRates = {};
           ecbDate = data.date;
@@ -801,7 +812,7 @@ export async function syncFxRates(
       sources,
     };
     return {
-      status: mode === "cached-fallback" ? "degraded" : undefined,
+      status: mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4 ? "degraded" : undefined,
       itemCount: Object.keys(usableRates).length,
       metadata: JSON.stringify(metadata),
     };

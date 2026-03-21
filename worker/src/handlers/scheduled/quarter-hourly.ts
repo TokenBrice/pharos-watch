@@ -1,7 +1,7 @@
 /**
  * Quarter-hourly trigger (every 15 min):
  *   sync-stablecoins (3) → snapshot-supply (0) → sync-fx-rates (2)
- *   → stability-index (0) → compute-dews (0) → status-self-check (1)
+ *   → status-self-check (1)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Connection budget: 3/6 peak (sync-stablecoins phase)
@@ -13,8 +13,6 @@ import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
-import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
-import { computeAndStoreDEWS } from "../../cron/compute-dews";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
 
@@ -40,7 +38,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
     );
     const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
     const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;
-    const depegPipelineSafe = stablecoinsCapabilities.depegPipeline;
     if (stablecoinsResult && !stablecoinsCacheSafe) {
       console.warn("[cron] sync-stablecoins completed without downstream-safe cache write — skipping dependent jobs");
     }
@@ -56,16 +53,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
     await runQuarterHourlyJob("sync-fx-rates", (signal) =>
       syncFxRates(runtime.db, signal, runtime.env.OPENEXCHANGERATES_API_KEY, runtime.chainRpcs),
     );
-
-    if (stablecoinsCacheSafe && depegPipelineSafe) {
-      await runQuarterHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(runtime.db, signal));
-    } else if (stablecoinsCacheSafe && !depegPipelineSafe) {
-      console.warn("[cron] sync-stablecoins completed without a safe depeg pipeline — skipping stability-index");
-    }
-
-    if (stablecoinsCacheSafe) {
-      await runQuarterHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(runtime.db, signal));
-    }
 
     await runQuarterHourlyJob(
       "status-self-check",

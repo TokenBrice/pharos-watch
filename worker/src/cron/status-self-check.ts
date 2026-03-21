@@ -454,7 +454,7 @@ export async function runStatusSelfCheck(
   }
 
   return {
-    status: probeStatus === "stale" || discrepancyState.consecutiveDivergent >= 2 ? "degraded" : "ok",
+    status: probeStatus === "stale" ? "degraded" : "ok",
     itemCount: sampleCount,
     metadata: JSON.stringify({
       sampleCount,

@@ -1,4 +1,4 @@
-import { setCacheIfNewer } from "../lib/db-cache";
+import { getCache, setCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
@@ -60,6 +60,13 @@ function downsample(data: RawChartPoint[]): DownsampledPoint[] {
 
 export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
+
+  const COOLDOWN_SEC = 3600;
+  const lastWrite = await getCache(db, "stablecoin-charts:last-write");
+  if (lastWrite && (syncStartSec - lastWrite.updatedAt) < COOLDOWN_SEC) {
+    return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: syncStartSec - lastWrite.updatedAt }) };
+  }
+
   const res = await fetchWithRetry(`${DEFILLAMA_BASE}/stablecoincharts/all`, signal ? { signal } : undefined);
 
   if (!res || !res.ok) {
@@ -125,6 +132,7 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
   const downsampled = downsample(raw);
 
   await setCacheIfNewer(db, "stablecoin-charts", JSON.stringify(downsampled), syncStartSec);
+  await setCache(db, "stablecoin-charts:last-write", "1");
   console.log(`[sync-charts] Cached ${downsampled.length} points (from ${raw.length} raw)`);
   return {
     itemCount: downsampled.length,

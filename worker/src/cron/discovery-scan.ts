@@ -137,6 +137,10 @@ export async function runDiscoveryScan(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
 ): Promise<CronResult> {
+  if (new Date().getUTCDay() !== 1) {
+    return { itemCount: 0, metadata: JSON.stringify({ reason: "skipped_not_monday" }) };
+  }
+
   const trackedGeckoIds = new Set(
     ACTIVE_STABLECOINS.map((s) => s.geckoId).filter(Boolean) as string[],
   );

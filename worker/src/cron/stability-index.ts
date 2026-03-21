@@ -5,7 +5,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
-export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
+export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
   if (stablecoinsCache.kind !== "ok") {
     return {
@@ -38,10 +38,18 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
     ? ((totalMcapUsd - totalPrevWeek) / totalPrevWeek) * 100
     : 0;
 
+  if (signal?.aborted) throw signal.reason ?? new Error("stability-index aborted");
+
   // Active depegs — use current price to compute live deviation
-  const activeDepegs = await db
-    .prepare("SELECT stablecoin_id, peg_reference, started_at FROM depeg_events WHERE ended_at IS NULL")
-    .all<{ stablecoin_id: string; peg_reference: number; started_at: number }>();
+  let activeDepegs: D1Result<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
+  try {
+    activeDepegs = await db
+      .prepare("SELECT stablecoin_id, peg_reference, started_at FROM depeg_events WHERE ended_at IS NULL")
+      .all<{ stablecoin_id: string; peg_reference: number; started_at: number }>();
+  } catch (err) {
+    console.warn("[stability-index] depeg query failed:", err);
+    activeDepegs = { results: [], success: true, meta: { duration: 0, last_row_id: 0, changes: 0, changed_db: false, size_after: 0, rows_read: 0, rows_written: 0 } };
+  }
 
   // Build price lookup from stablecoins cache
   const priceById = new Map<string, number>();
@@ -123,6 +131,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
       factor: Math.round(getDepreciationFactor(ageDays) * 100) / 100,
     });
   }
+
+  if (signal?.aborted) throw signal.reason ?? new Error("stability-index aborted");
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
   if (!result) {

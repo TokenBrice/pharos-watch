@@ -20,15 +20,21 @@ export function isRetriableD1OverloadError(err: unknown): boolean {
   return msg.includes("D1 DB is overloaded") || msg.includes("Requests queued for too long");
 }
 
-export async function runWithOverloadRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+export async function runWithOverloadRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  signal?: AbortSignal,
+): Promise<T> {
   let attempt = 0;
   while (true) {
+    if (signal?.aborted) throw signal.reason ?? new Error("aborted");
     try {
       return await fn();
     } catch (err) {
       if (!isRetriableD1OverloadError(err) || attempt >= maxRetries) {
         throw err;
       }
+      if (signal?.aborted) throw signal.reason ?? new Error("aborted");
       const delayMs = 150 * 2 ** attempt;
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       attempt++;
