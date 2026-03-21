@@ -53,6 +53,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Physical gold bars (LBMA Good Delivery, Swiss vaults)",
@@ -115,6 +116,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
@@ -181,6 +183,7 @@
       "regulator": "CIMA",
       "license": "VASP Registration"
     },
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Physical gold bullion (LBMA-approved, ABX/Brink's/Loomis vaults)",
@@ -240,6 +243,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Physical gold bars (LBMA-certified 99.99%, Brink's & Malca-Amit, Singapore & Hong Kong)",
@@ -285,6 +289,7 @@
       "regulator": "DAFZA",
       "license": "DAFZA; endorsed by DMCC"
     },
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Physical gold (24K 999.9, Transguard vaults UAE)",
@@ -341,6 +346,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)",
@@ -394,6 +400,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "Physical gold bullion (LBMA-standard, 99.99% purity)",
@@ -436,6 +443,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "Issuer-managed gold backing / balance-sheet gold exposure",
@@ -492,6 +500,7 @@
         "decimals": 9
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Physical silver bullion (999 fine, ABX global vaults)",

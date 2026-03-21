@@ -980,6 +980,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury Bills",
@@ -1540,6 +1541,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "U.S. Government Securities",
@@ -2070,6 +2072,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
@@ -2181,6 +2184,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (30-90 day)",
@@ -2248,6 +2252,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "USDC",
@@ -2331,6 +2336,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "wM / U.S. Treasury Bills (via M0 Protocol)",
@@ -2413,6 +2419,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Hashnote USYC (tokenized T-bills/reverse repos)",
@@ -2720,6 +2727,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "First Digital Trust fund investments (at cost, opaque)",
@@ -2824,6 +2832,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury Bills",
@@ -2907,6 +2916,7 @@
       }
     ],
     "governanceQuality": "wrapper",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "USDC (Circle)",
@@ -3100,6 +3110,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "Overnight Treasury repo agreements (UMB Bank)",

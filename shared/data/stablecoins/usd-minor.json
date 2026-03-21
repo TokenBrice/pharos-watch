@@ -103,6 +103,7 @@
     ],
     "deploymentModel": "third-party-bridge",
     "governanceQuality": "dao-governance",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "USTB (Superstate tokenized T-bills)",
@@ -1168,6 +1169,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)",
@@ -1233,6 +1235,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "USDT deposits (1:1 minting collateral)",
@@ -1391,6 +1394,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "ION.au tokenized gold (I-ON Digital, Chainlink PoR attested)",
@@ -1456,6 +1460,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. private credit ABS (SMB receivables, auto leases, consumer lending, litigation finance via Percent)",
@@ -1515,6 +1520,7 @@
       }
     ],
     "chainTier": "mature-alt-l1",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury bills (<=3mo maturity)",
@@ -1592,6 +1598,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "U.S. Treasury bills (<=90-day duration)",
@@ -1663,6 +1670,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "Short-dated U.S. Treasury bills (WAM <3mo)",
@@ -1811,6 +1819,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Short-term U.S. Treasuries (BlackRock-managed, JP Morgan custody)",
@@ -1972,6 +1981,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
@@ -2051,6 +2061,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "Short-term U.S. Treasury bills (off-chain)",
@@ -2137,6 +2148,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Government bonds (NL, DE, US)",
@@ -2449,6 +2461,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury bills (1-3 month maturity)",
@@ -2512,6 +2525,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-top",
     "reserves": [
       {
         "name": "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)",
@@ -2577,6 +2591,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury bills (0-180 day maturity)",
@@ -3210,6 +3225,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
@@ -3621,6 +3637,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
@@ -5019,6 +5036,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury bills",
@@ -5423,6 +5441,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "U.S. Treasury bills",
@@ -5537,6 +5556,7 @@
       }
     ],
     "chainTier": "established-alt-l1",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "USD bank deposits",
@@ -5662,6 +5682,7 @@
       "regulator": "FinCEN",
       "license": "Money Service Business (MSB)"
     },
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "USD cash deposits",
@@ -5790,6 +5811,7 @@
         "decimals": 18
       }
     ],
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "Asian sovereign bonds (BBB+ min)",
@@ -5949,6 +5971,7 @@
       }
     ],
     "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "Cash and cash equivalents",
@@ -6055,6 +6078,7 @@
       }
     ],
     "deploymentModel": "third-party-bridge",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Cash and cash equivalents",
@@ -6316,6 +6340,7 @@
         "decimals": 6
       }
     ],
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Cash and short-term government bonds (EU financial institutions)",
@@ -7727,7 +7752,8 @@
         "image": "/featured/usdpt-coindesk.jpg",
         "source": "CoinDesk"
       }
-    ]
+    ],
+    "custodyModel": "institutional-regulated"
   },
   {
     "id": "roughrider-bnd",
@@ -7779,7 +7805,8 @@
         "image": "/featured/roughrider-bnd-press.jpg",
         "source": "Bank of North Dakota"
       }
-    ]
+    ],
+    "custodyModel": "institutional-regulated"
   },
   {
     "id": "fiusd-fiserv",
@@ -7821,7 +7848,8 @@
         "image": "/featured/fiusd-coindesk.jpg",
         "source": "CoinDesk"
       }
-    ]
+    ],
+    "custodyModel": "institutional-regulated"
   },
   {
     "id": "pusd-polaris",
@@ -7947,6 +7975,7 @@
         "title": "Klarna announces KlarnaUSD stablecoin",
         "source": "Klarna"
       }
-    ]
+    ],
+    "custodyModel": "institutional-unregulated"
   }
 ]
