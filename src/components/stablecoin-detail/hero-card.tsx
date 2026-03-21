@@ -327,6 +327,12 @@ export function HeroCard({
     pegScoreResult !== null &&
     pegScoreResult.pegScore === null &&
     pegScoreResult.trackingSpanDays > 0 &&
+    pegScoreResult.trackingSpanDays < 7;
+
+  const earlyPegScore =
+    !isNavToken &&
+    pegScoreResult !== null &&
+    pegScoreResult.pegScore !== null &&
     pegScoreResult.trackingSpanDays < 30;
 
   const pegScoreEventLine = (() => {
@@ -352,14 +358,20 @@ export function HeroCard({
           <span className="text-sm text-muted-foreground">/100</span>
         </div>
         <p className="text-xs text-muted-foreground font-mono mt-0.5">{pegScoreResult.pegPct.toFixed(1)}% at peg</p>
-        <p
-          className="text-xs text-muted-foreground"
-          title={recordedDepegEventCount != null && recordedDepegEventCount !== pegScoreResult.eventCount
-            ? "Recorded count includes full history. Peg score uses a rolling 4-year event window."
-            : undefined}
-        >
-          {pegScoreEventLine}
-        </p>
+        {earlyPegScore ? (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5" title="Score is based on limited history and may change as more data accumulates.">
+            Early score · {pegScoreResult.trackingSpanDays}d tracked
+          </p>
+        ) : (
+          <p
+            className="text-xs text-muted-foreground"
+            title={recordedDepegEventCount != null && recordedDepegEventCount !== pegScoreResult.eventCount
+              ? "Recorded count includes full history. Peg score uses a rolling 4-year event window."
+              : undefined}
+          >
+            {pegScoreEventLine}
+          </p>
+        )}
       </>
     ) : tooNewForPegScore ? (
       <details className="group">
@@ -371,8 +383,8 @@ export function HeroCard({
           <p className="text-xs text-muted-foreground font-mono mt-0.5">{pegScoreResult!.trackingSpanDays}d tracked</p>
         </summary>
         <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-          Peg score requires 30 days of history.{" "}
-          {Math.ceil(30 - pegScoreResult!.trackingSpanDays)} day{Math.ceil(30 - pegScoreResult!.trackingSpanDays) !== 1 ? "s" : ""} remaining.
+          Peg score requires 7 days of history.{" "}
+          {Math.ceil(7 - pegScoreResult!.trackingSpanDays)} day{Math.ceil(7 - pegScoreResult!.trackingSpanDays) !== 1 ? "s" : ""} remaining.
         </p>
       </details>
     ) : (

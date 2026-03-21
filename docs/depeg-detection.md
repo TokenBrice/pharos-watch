@@ -332,7 +332,7 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers based o
 |--------|-------------|
 | `pegPct` | Percentage of tracked history at peg (merges overlapping intervals) |
 | `trackingSpan` | Human-readable span ("3y 8mo", "45d") |
-| `limited` | `true` if < 30 days history |
+| `limited` | `true` if < 7 days history |
 | `currentStreakDays` | Days since last event ended |
 | `depeggedNow` | Boolean (any ongoing event?) |
 
@@ -363,7 +363,7 @@ high-magnitude depegs from being scored as nearly free.
 **Active depeg penalty**: Floor of 5, scales at `|peakBps| / 50`, capped at 50.
 A 500 bps ongoing depeg costs 10 points; 2500+ bps hits the cap.
 
-Returns `null` if < 30 days tracking.
+Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as "Early score" in the UI.
 
 ## Edge Cases & Guardrails
 

@@ -49,7 +49,7 @@ export function computePegScoreWithWindow(
 }
 
 export interface PegScoreResult {
-  /** Composite score 0-100, or null if insufficient data (<30 days tracking) */
+  /** Composite score 0-100, or null if insufficient data (<7 days tracking) */
   pegScore: number | null;
   /** Time-at-peg percentage (0-100) */
   pegPct: number;
@@ -107,7 +107,7 @@ export function computePegScore(
 
   const spanSec = Math.max(now - startSec, 1);
   const spanDays = spanSec / 86400;
-  const insufficientData = spanDays < 30;
+  const insufficientData = spanDays < 7;
 
   // --- Time score (pegPct) ---
   const totalDepegSec = mergeDepegSeconds(events, startSec, now);

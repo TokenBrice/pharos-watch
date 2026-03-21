@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "4.6",
+  currentVersion: "4.7",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "4.7",
+    title: "Early peg score: minimum data threshold lowered from 30 to 7 days",
+    date: "2026-03-21",
+    effectiveAt: 1774310400,
+    summary:
+      "Peg score is now emitted after 7 days of tracking instead of 30, with an 'Early score' label for the 7–30 day window.",
+    impact: [
+      "Minimum tracking threshold reduced from 30 to 7 days — coins receive a composite peg score after their first week",
+      "Scores based on 7–30 days of data are labelled 'Early score' in the hero card (amber text with tooltip)",
+      "Report card peg-stability dimension is now rated from day 7; NR only appears for coins with < 7 days of history",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.6",
     title: "Confidence-aware depeg routing, extreme-move confirmation, and provenance surfacing",

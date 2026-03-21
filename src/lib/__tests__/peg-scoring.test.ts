@@ -192,14 +192,26 @@ describe("computePegScore", () => {
     expect(result.activeDepeg).toBe(false);
   });
 
-  it("returns null pegScore when tracking span is < 30 days", () => {
+  it("returns null pegScore when tracking span is < 7 days", () => {
+    const trackingStart = NOW - 3 * DAY_SECONDS;
+    const events = [
+      makeEvent({ startedAt: NOW - 2 * DAY_SECONDS, endedAt: NOW - 1 * DAY_SECONDS, peakDeviationBps: -200 }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    // Score is null due to insufficient data, but other metrics are populated
+    expect(result.pegScore).toBeNull();
+    expect(result.pegPct).toBeGreaterThan(0);
+    expect(result.eventCount).toBe(1);
+  });
+
+  it("returns a score for coins with 7-30 days of tracking (early score)", () => {
     const trackingStart = NOW - 20 * DAY_SECONDS;
     const events = [
       makeEvent({ startedAt: NOW - 10 * DAY_SECONDS, endedAt: NOW - 9 * DAY_SECONDS, peakDeviationBps: -200 }),
     ];
     const result = computePegScore(events, trackingStart, NOW);
-    // Score is null due to insufficient data, but other metrics are populated
-    expect(result.pegScore).toBeNull();
+    // Score is computed (not null) even in the 7-30 day window
+    expect(result.pegScore).not.toBeNull();
     expect(result.pegPct).toBeGreaterThan(0);
     expect(result.eventCount).toBe(1);
   });
@@ -761,15 +773,15 @@ describe("computePegStability", () => {
     expect(result!.pegPct).toBeCloseTo(90, 0);
   });
 
-  it("marks limited=true when tracking span is under 30 days", () => {
-    const earliestDate = String(NOW - 15 * DAY_SECONDS);
+  it("marks limited=true when tracking span is under 7 days", () => {
+    const earliestDate = String(NOW - 3 * DAY_SECONDS);
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     expect(result!.limited).toBe(true);
   });
 
-  it("marks limited=false when tracking span is 30+ days", () => {
-    const earliestDate = String(NOW - 60 * DAY_SECONDS);
+  it("marks limited=false when tracking span is 7+ days", () => {
+    const earliestDate = String(NOW - 10 * DAY_SECONDS);
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     expect(result!.limited).toBe(false);

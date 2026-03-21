@@ -1,14 +1,15 @@
 import type { DepegEvent } from "@shared/types";
 import { formatTrackingSpanSeconds } from "@shared/lib/format";
 import { computePegScore } from "@shared/lib/peg-score";
-import { DAY_SECONDS, THIRTY_DAYS_SECONDS } from "@/lib/constants";
+import { DAY_SECONDS } from "@/lib/constants";
+import { WEEK_SECONDS } from "@shared/lib/time-constants";
 
 interface PegStabilityMetrics {
   /** Percentage of tracked history at peg (0–100) */
   pegPct: number;
   /** Human-readable tracking span (e.g. "3y 8m") */
   trackingSpan: string;
-  /** Whether tracking history is < 30 days */
+  /** Whether tracking history is < 7 days */
   limited: boolean;
   /** Total number of depeg events */
   eventCount: number;
@@ -49,7 +50,7 @@ export function computePegStability(
 
   // Shared peg-score logic is the single source for pegPct, eventCount, worst deviation, and active-depeg state.
   const pegMetrics = computePegScore(events, earliestSec, nowSec);
-  const limited = historySpanSec < THIRTY_DAYS_SECONDS;
+  const limited = historySpanSec < WEEK_SECONDS;
 
   // Current streak: days since last closed event ended
   const depeggedNow = pegMetrics.activeDepeg;

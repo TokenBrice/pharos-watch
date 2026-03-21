@@ -266,7 +266,7 @@ export function MonitoringMethodologySections() {
               <ul className="list-disc list-inside space-y-1">
                 <li>
                   Trailing averages require sufficient history &mdash; newly tracked coins may show unstable scores
-                  until 30 days of data accumulate
+                  until 7 days of data accumulate
                 </li>
                 <li>
                   DeFiLlama pool matching uses heuristics; pool mismatches are corrected via the static override map
@@ -381,8 +381,9 @@ export function MonitoringMethodologySections() {
               <p>
                 Composite 0&ndash;100 score measuring how faithfully a stablecoin holds its peg. The tracking window
                 spans up to 4 years but is capped at the coin&apos;s actual age (earliest supply snapshot), so young
-                coins are not diluted across history they didn&apos;t exist for. Requires at least 30 days of tracking
-                data; returns null otherwise.
+                coins are not diluted across history they didn&apos;t exist for. Requires at least 7 days of tracking
+                data; returns null otherwise. Scores based on fewer than 30 days are marked as &ldquo;Early score&rdquo;
+                to signal limited history.
               </p>
             </div>
 

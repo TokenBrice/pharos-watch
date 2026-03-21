@@ -1,6 +1,18 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v4.6` (2026-02-18 -> 2026-03-10).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v4.7` (2026-02-18 -> 2026-03-21).
+
+---
+
+## v4.7 — Early peg score: minimum data threshold lowered from 30 to 7 days (Mar 21, 2026)
+
+**Commit:** `unreleased`
+
+- Peg score minimum tracking threshold reduced from 30 days to 7 days — coins now receive a composite score after their first week of history
+- Scores based on 7–30 days of data are labelled "Early score" in the detail-page hero card (amber text, tooltip explaining limited history)
+- Report card peg-stability dimension is now rated from day 7 (previously NR until day 30)
+- NR ("Not Rated") display now only appears for coins with fewer than 7 days of tracking
+- `limited` flag in `computePegStability` threshold lowered to match (< 7 days)
 
 ---
 

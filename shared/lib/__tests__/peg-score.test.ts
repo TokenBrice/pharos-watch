@@ -23,10 +23,16 @@ describe("coinTrackingStart", () => {
 });
 
 describe("computePegScore", () => {
-  it("returns null for insufficient tracking (< 30 days)", () => {
-    const start = NOW - 10 * DAY;
+  it("returns null for insufficient tracking (< 7 days)", () => {
+    const start = NOW - 3 * DAY;
     const result = computePegScore([], start, NOW);
     expect(result.pegScore).toBeNull();
+  });
+
+  it("returns a score for a coin with 7+ days of tracking", () => {
+    const start = NOW - 10 * DAY;
+    const result = computePegScore([], start, NOW);
+    expect(result.pegScore).toBe(100);
   });
 
   it("returns 100 for a coin with no depeg events over 30+ days", () => {
