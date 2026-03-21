@@ -260,7 +260,9 @@ export async function upsertRedemptionBackstopSnapshots(
     stmts.push(buildHistoryUpsert(db, record, snapshotDate));
   }
 
-  await batchExecute(db, stmts);
+  // Each coin produces 2 statements (current: 24 params, history: 8 params = 32 total).
+  // D1 limits total bound params per batch, so use a smaller chunk than the default 100.
+  await batchExecute(db, stmts, 50);
 }
 
 export async function loadRedemptionBackstopMap(
