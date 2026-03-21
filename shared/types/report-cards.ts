@@ -51,6 +51,12 @@ const DependencyWeightSchema = z.object({
   type: DependencyTypeSchema.optional(),
 });
 
+// Wire-compatible schema: accepts legacy "institutional" from old worker snapshots
+// and maps it to "institutional-regulated". Remove once all D1 rows are refreshed.
+const CustodyModelWireSchema = CustodyModelSchema.or(
+  z.literal("institutional").transform((): CustodyModel => "institutional-regulated"),
+);
+
 const RawDimensionInputsSchema = z.object({
   pegScore: z.number().nullable(),
   activeDepeg: z.boolean(),
@@ -68,7 +74,7 @@ const RawDimensionInputsSchema = z.object({
   chainTier: ChainTierSchema,
   deploymentModel: DeploymentModelSchema,
   collateralQuality: CollateralQualitySchema,
-  custodyModel: CustodyModelSchema,
+  custodyModel: CustodyModelWireSchema,
   governanceTier: GovernanceTypeSchema,
   governanceQuality: GovernanceQualitySchema,
   dependencies: z.array(DependencyWeightSchema),
