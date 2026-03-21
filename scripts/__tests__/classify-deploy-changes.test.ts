@@ -27,7 +27,7 @@ describe("hasWorkerDeployImpact", () => {
 
   it("returns true for worker, shared, and workflow-infra changes", () => {
     expect(hasWorkerDeployImpact(["worker/src/api/health.ts"])).toBe(true);
-    expect(hasWorkerDeployImpact(["shared/lib/stablecoins.ts"])).toBe(true);
+    expect(hasWorkerDeployImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
     expect(hasWorkerDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
   });
 });
@@ -44,7 +44,7 @@ describe("hasPagesDeployImpact", () => {
   it("returns true for frontend, shared, and deploy-infra changes", () => {
     expect(hasPagesDeployImpact(["src/app/page.tsx"])).toBe(true);
     expect(hasPagesDeployImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["shared/lib/stablecoins.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
   });
 });

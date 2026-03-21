@@ -8,11 +8,11 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
 
 ## Cron Schedule
 
-- **Primary schedule:** `0 8 * * *` (daily at 08:00 UTC)
-- **Retry path:** chained after each `*/15 * * * *` `sync-stablecoins` run (same-day upsert safeguard)
+- **Primary schedule:** chained after each `*/15 * * * *` `sync-stablecoins` run (same-day upsert path after a safe stablecoins-cache write)
+- **Safety-net fallback:** `0 8 * * *` (daily at 08:00 UTC)
 - **Function:** `snapshotSupply(db: D1Database): Promise<CronResult>`
 - **File:** `worker/src/cron/snapshot-supply.ts`
-- **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
+- **Registration:** declared in `worker/wrangler.toml`; executed from both `worker/src/handlers/scheduled/quarter-hourly.ts` and `worker/src/handlers/scheduled/daily-0800.ts`
 
 ---
 
@@ -142,7 +142,7 @@ All in `shared/lib/supply.ts`:
 
 ### Known decimal exceptions
 
-Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in `shared/lib/stablecoins.ts`.
+Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in the metadata assets under `shared/data/stablecoins/*.json`, loaded via `shared/lib/stablecoins/index.ts`.
 
 Current examples:
 
@@ -274,7 +274,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 | `shared/lib/psi-eligible.ts` | PSI-eligible tracked + shadow stablecoin registry used by the snapshot filter |
 | `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata referenced by `PSI_ELIGIBLE_STABLECOINS` |
 | `shared/types/index.ts` | `StablecoinMeta` types |
-| `shared/lib/stablecoins.ts` | Stablecoin metadata |
+| `shared/lib/stablecoins/index.ts` | Stablecoin metadata loader backed by `shared/data/stablecoins/*.json` |
 | `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook for `/api/supply-history` |
 | `src/hooks/use-compare-data-model.ts` | Compare-page supply-history queries |
 | `src/components/mcap-chart.tsx` | Individual mcap chart |

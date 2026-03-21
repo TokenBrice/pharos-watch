@@ -1,17 +1,17 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 import {
-  onchainRateLimit, fetchCgTokenPools, parseCgPoolVolume, CG_CHAIN_MAP,
+  onchainRateLimit, fetchCgTokenPools, CG_CHAIN_MAP,
 } from "../../lib/coingecko-onchain";
 import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS, CRAWL_BUDGETS } from "../../lib/rate-limit";
-import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import { sleepWithSignal } from "../../lib/abort";
 import type {
   LiquidityMetrics, DexPriceObs, GtCrawlResult, GtNewPool, CgNewPool,
 } from "./types";
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "./geckoterminal-shared";
+import { classifyCgPool, parseCgPool } from "./coingecko-onchain-shared";
 import {
   normalizeProtocol, getGtDexQuality,
   computePoolPairQuality, computePoolStress, initMetrics,
@@ -73,51 +73,15 @@ export async function fetchCgPools(
       return true;
     },
     fetchPools: (tokenAddress, cgChain, abortSignal) => fetchCgTokenPools(cgChain, tokenAddress, abortSignal, coingeckoApiKey ?? null),
-    parsePool: (pool) => {
-      const a = pool.attributes;
-      return {
-        dexId: pool.relationships.dex.data.id,
-        poolAddress: a.address.toLowerCase(),
-        tvlUsd: parseFloat(a.reserve_in_usd ?? ""),
-        volume24hUsd: parseCgPoolVolume(a),
-        baseTokenAddress: pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "",
-        quoteTokenAddress: pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "",
-        baseTokenPriceUsd: parseFloat(a.base_token_price_usd ?? ""),
-        quoteTokenPriceUsd: parseFloat(a.quote_token_price_usd ?? ""),
-        createdAt: a.pool_created_at,
-        poolName: a.name,
-      };
-    },
+    parsePool: parseCgPool,
     buildNewPool: ({ rawPool, parsed, chain, price, cappedTvlUsd, maturityDays }) => {
-      const attrs = rawPool.attributes;
-
-      // Quality multiplier (use fee percentage if available, else DEX-based)
-      const feePct = attrs.pool_fee_percentage != null ? parseFloat(attrs.pool_fee_percentage) : null;
-      let qualMult: number;
-      let poolType: string;
-      if (feePct != null && !isNaN(feePct)) {
-        if (feePct <= 0.01) { qualMult = QUALITY_MULTIPLIERS["uniswap-v3-1bp"]!; poolType = "cg-cl-1bp"; }
-        else if (feePct <= 0.05) { qualMult = QUALITY_MULTIPLIERS["uniswap-v3-5bp"]!; poolType = "cg-cl-5bp"; }
-        else if (feePct <= 0.30) { qualMult = QUALITY_MULTIPLIERS["uniswap-v3-30bp"]!; poolType = "cg-cl-30bp"; }
-        else { qualMult = QUALITY_MULTIPLIERS["generic"]!; poolType = "cg-wide-fee"; }
-      } else {
-        qualMult = getGtDexQuality(parsed.dexId);
-        poolType = parsed.dexId.includes("v3") || parsed.dexId.includes("v4")
-          ? "cg-concentrated" : parsed.dexId.includes("stable") ? "cg-stable-amm" : "cg-amm";
-      }
-
-      let balanceRatio: number | null = null;
-      if (parsed.baseTokenPriceUsd > 0 && parsed.quoteTokenPriceUsd > 0) {
-        const priceRatio = Math.min(parsed.baseTokenPriceUsd, parsed.quoteTokenPriceUsd) /
-          Math.max(parsed.baseTokenPriceUsd, parsed.quoteTokenPriceUsd);
-        if (priceRatio > 0.5) {
-          balanceRatio = priceRatio;
-        }
-      }
-
-      const lockedLiqPct = attrs.locked_liquidity_percentage != null
-        ? parseFloat(attrs.locked_liquidity_percentage)
-        : null;
+      const {
+        qualityMultiplier,
+        poolType,
+        feePercentage,
+        lockedLiquidityPct,
+        balanceRatio,
+      } = classifyCgPool(parsed, rawPool.attributes);
 
       return {
         address: parsed.poolAddress,
@@ -126,15 +90,15 @@ export async function fetchCgPools(
         name: parsed.poolName,
         tvlUsd: cappedTvlUsd,
         volume24hUsd: parsed.volume24hUsd,
-        qualityMultiplier: qualMult,
+        qualityMultiplier,
         maturityDays,
         poolType,
         price,
         symbol: parsed.poolName,
         sourceFamily: "cg_onchain",
         balanceRatio,
-        lockedLiquidityPct: lockedLiqPct != null && !isNaN(lockedLiqPct) ? lockedLiqPct : null,
-        feePercentage: feePct != null && !isNaN(feePct) ? feePct : null,
+        lockedLiquidityPct,
+        feePercentage,
       };
     },
   });

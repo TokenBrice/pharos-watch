@@ -1,0 +1,274 @@
+import { z } from "zod";
+import type { DeadStablecoin, StablecoinMeta } from "../../types";
+
+const BACKING_TYPE_VALUES = ["rwa-backed", "crypto-backed", "algorithmic"] as const;
+const PEG_CURRENCY_VALUES = [
+  "USD",
+  "EUR",
+  "GBP",
+  "CHF",
+  "BRL",
+  "RUB",
+  "JPY",
+  "IDR",
+  "SGD",
+  "TRY",
+  "AUD",
+  "ZAR",
+  "CAD",
+  "CNY",
+  "CNH",
+  "PHP",
+  "MXN",
+  "UAH",
+  "ARS",
+  "GOLD",
+  "SILVER",
+  "VAR",
+  "OTHER",
+] as const;
+const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
+const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
+const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
+const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
+const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
+const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "established-alt-l1", "unproven"] as const;
+const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
+const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
+const CUSTODY_MODEL_VALUES = ["onchain", "institutional", "cex"] as const;
+const GOVERNANCE_QUALITY_VALUES = [
+  "immutable-code",
+  "dao-governance",
+  "multisig",
+  "regulated-entity",
+  "single-entity",
+  "wrapper",
+] as const;
+const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
+const LIVE_RESERVE_SEMANTICS_VALUES = [
+  "collateral-mix",
+  "protocol-reserve",
+  "attestation-mix",
+  "single-asset",
+] as const;
+const LIVE_RESERVE_RPC_MODE_VALUES = ["etherscan-proxy", "alchemy", "public-rpc"] as const;
+const YIELD_TYPE_VALUES = [
+  "lending-vault",
+  "rebase",
+  "fee-sharing",
+  "lp-receipt",
+  "nav-appreciation",
+  "governance-set",
+  "lending-opportunity",
+] as const;
+const LAUNCH_PHASE_VALUES = ["announced", "testnet", "auditing", "beta", "launching-soon"] as const;
+const FEATURED_CONTENT_TYPE_VALUES = ["tweet", "blog", "video", "article"] as const;
+const STATUS_VALUES = ["pre-launch", "active"] as const;
+const CAUSE_OF_DEATH_VALUES = [
+  "algorithmic-failure",
+  "counterparty-failure",
+  "liquidity-drain",
+  "regulatory",
+  "abandoned",
+] as const;
+
+const StablecoinFlagsAssetSchema = z.object({
+  backing: z.enum(BACKING_TYPE_VALUES),
+  pegCurrency: z.enum(PEG_CURRENCY_VALUES),
+  governance: z.enum(GOVERNANCE_TYPE_VALUES),
+  yieldBearing: z.boolean(),
+  rwa: z.boolean(),
+  navToken: z.boolean(),
+}).strict();
+
+const ProofOfReservesAssetSchema = z.object({
+  type: z.enum(PROOF_OF_RESERVES_TYPE_VALUES),
+  url: z.string(),
+  provider: z.string().optional(),
+}).strict();
+
+const StablecoinLinkAssetSchema = z.object({
+  label: z.string(),
+  url: z.string(),
+}).strict();
+
+const JurisdictionAssetSchema = z.object({
+  country: z.string(),
+  regulator: z.string().optional(),
+  license: z.string().optional(),
+}).strict();
+
+const ContractDeploymentAssetSchema = z.object({
+  chain: z.string(),
+  address: z.string(),
+  decimals: z.number(),
+}).strict();
+
+const DependencyWeightAssetSchema = z.object({
+  id: z.string(),
+  weight: z.number(),
+  type: z.enum(DEPENDENCY_TYPE_VALUES).optional(),
+}).strict();
+
+const ReserveSliceAssetSchema = z.object({
+  name: z.string(),
+  pct: z.number(),
+  risk: z.enum(RESERVE_RISK_VALUES),
+  coinId: z.string().optional(),
+  depType: z.enum(DEPENDENCY_TYPE_VALUES).optional(),
+}).strict();
+
+const CoinNoticeAssetSchema = z.object({
+  type: z.enum(COIN_NOTICE_TYPE_VALUES),
+  title: z.string(),
+  message: z.string(),
+}).strict();
+
+const LiveReserveInputAssetSchema = z.union([
+  z.object({
+    kind: z.literal("http-json"),
+    url: z.string(),
+  }).strict(),
+  z.object({
+    kind: z.literal("http-html"),
+    url: z.string(),
+  }).strict(),
+  z.object({
+    kind: z.literal("indexer"),
+    url: z.string(),
+  }).strict(),
+  z.object({
+    kind: z.literal("onchain-evm"),
+    chain: z.string(),
+    rpcMode: z.enum(LIVE_RESERVE_RPC_MODE_VALUES),
+  }).strict(),
+]);
+
+const LiveReservesConfigAssetSchema = z.object({
+  adapter: z.string(),
+  version: z.number(),
+  semantics: z.enum(LIVE_RESERVE_SEMANTICS_VALUES),
+  breakerScope: z.string().optional(),
+  display: z.object({
+    url: z.string().optional(),
+    label: z.string().optional(),
+  }).strict().optional(),
+  inputs: z.object({
+    primary: LiveReserveInputAssetSchema,
+    fallbacks: z.array(LiveReserveInputAssetSchema).optional(),
+  }).strict(),
+  params: z.record(z.string(), z.unknown()).optional(),
+}).strict();
+
+const YieldConfigAssetSchema = z.object({
+  defiLlamaPoolId: z.string().optional(),
+  yieldSource: z.string(),
+  yieldType: z.enum(YIELD_TYPE_VALUES),
+}).strict();
+
+const FeaturedContentAssetSchema = z.object({
+  type: z.enum(FEATURED_CONTENT_TYPE_VALUES),
+  url: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  image: z.string().optional(),
+  source: z.string().optional(),
+}).strict();
+
+export const StablecoinMetaAssetSchema = z.object({
+  id: z.string(),
+  llamaId: z.string().optional(),
+  detailProvider: z.enum(DETAIL_PROVIDER_VALUES).optional(),
+  name: z.string(),
+  symbol: z.string(),
+  flags: StablecoinFlagsAssetSchema,
+  collateral: z.string().optional(),
+  pegMechanism: z.string().optional(),
+  commodityOunces: z.number().optional(),
+  geckoId: z.string().optional(),
+  cmcSlug: z.string().optional(),
+  pythFeedId: z.string().optional(),
+  protocolSlug: z.string().optional(),
+  proofOfReserves: ProofOfReservesAssetSchema.optional(),
+  links: z.array(StablecoinLinkAssetSchema).optional(),
+  jurisdiction: JurisdictionAssetSchema.optional(),
+  contracts: z.array(ContractDeploymentAssetSchema).optional(),
+  tradedContracts: z.array(ContractDeploymentAssetSchema).optional(),
+  dependencies: z.array(DependencyWeightAssetSchema).optional(),
+  canBeBlacklisted: z.union([z.boolean(), z.literal("possible")]).optional(),
+  chainTier: z.enum(CHAIN_TIER_VALUES).optional(),
+  deploymentModel: z.enum(DEPLOYMENT_MODEL_VALUES).optional(),
+  collateralQuality: z.enum(COLLATERAL_QUALITY_VALUES).optional(),
+  custodyModel: z.enum(CUSTODY_MODEL_VALUES).optional(),
+  governanceQuality: z.enum(GOVERNANCE_QUALITY_VALUES).optional(),
+  reserves: z.array(ReserveSliceAssetSchema).optional(),
+  liveReservesConfig: LiveReservesConfigAssetSchema.optional(),
+  notices: z.array(CoinNoticeAssetSchema).optional(),
+  tags: z.array(z.string()).optional(),
+  yieldConfig: YieldConfigAssetSchema.optional(),
+  status: z.enum(STATUS_VALUES).optional(),
+  announcedDate: z.string().optional(),
+  expectedLaunchDate: z.string().optional(),
+  launchPhase: z.enum(LAUNCH_PHASE_VALUES).optional(),
+  launchPhaseDetail: z.string().optional(),
+  featuredContent: z.array(FeaturedContentAssetSchema).optional(),
+}).strict();
+
+export const StablecoinMetaAssetArraySchema = z.array(StablecoinMetaAssetSchema);
+export const CanonicalOrderAssetSchema = z.array(z.string());
+
+export const DeadStablecoinAssetSchema = z.object({
+  name: z.string(),
+  symbol: z.string(),
+  llamaId: z.string().optional(),
+  logo: z.string().optional(),
+  pegCurrency: z.enum(PEG_CURRENCY_VALUES),
+  causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
+  deathDate: z.string(),
+  peakMcap: z.number().optional(),
+  epitaph: z.string().optional(),
+  obituary: z.string(),
+  sourceUrl: z.string(),
+  sourceLabel: z.string(),
+  contracts: z.array(z.object({
+    chain: z.string(),
+    address: z.string(),
+  }).strict()).optional(),
+}).strict();
+
+export const DeadStablecoinAssetArraySchema = z.array(DeadStablecoinAssetSchema);
+
+function formatSchemaIssues(error: z.ZodError): string {
+  return error.issues
+    .slice(0, 8)
+    .map((issue) => {
+      const path = issue.path.length > 0 ? issue.path.join(".") : "<root>";
+      return `${path}: ${issue.message}`;
+    })
+    .join("; ");
+}
+
+function parseWithSchema<T>(
+  schema: z.ZodType<T>,
+  input: unknown,
+  label: string,
+): T {
+  const result = schema.safeParse(input);
+  if (result.success) {
+    return result.data;
+  }
+
+  throw new Error(`[stablecoin-assets] Invalid ${label}: ${formatSchemaIssues(result.error)}`);
+}
+
+export function parseStablecoinMetaAssets(input: unknown, label: string): StablecoinMeta[] {
+  return parseWithSchema(StablecoinMetaAssetArraySchema, input, label) as StablecoinMeta[];
+}
+
+export function parseCanonicalOrderAsset(input: unknown, label: string): string[] {
+  return parseWithSchema(CanonicalOrderAssetSchema, input, label);
+}
+
+export function parseDeadStablecoinAssets(input: unknown, label: string): DeadStablecoin[] {
+  return parseWithSchema(DeadStablecoinAssetArraySchema, input, label) as DeadStablecoin[];
+}

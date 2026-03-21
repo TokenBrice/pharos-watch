@@ -41,7 +41,12 @@ After pool filtering and protocol-level TVL caps are applied, the scorer rebuild
 
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
-GeckoTerminal request construction, pool parsing, and pool-type normalization are now shared in `worker/src/cron/dex-liquidity/geckoterminal-shared.ts` so discovery and scoring adapters only keep their domain-specific output shaping.
+Shared source-specific helpers now own the duplicate discovery/liquidity normalization rules:
+
+- GeckoTerminal request construction, pool parsing, and pool-type normalization: `worker/src/cron/dex-liquidity/geckoterminal-shared.ts`
+- CoinGecko onchain parsing, fee-bucket classification, balance-ratio inference, and locked-liquidity parsing: `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`
+- CoinGecko tickers filtering, exchange aggregation, synthetic orderbook TVL, and price-observation gating: `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`
+- GT/CG token-batch observation mapping: `worker/src/cron/dex-liquidity/token-price-observations.ts`
 
 Data sources are split across two cron families: scoring remains on `10,40 * * * *`, while discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) now run only on `6,36 * * * *` (every 30 minutes) and write to `dex_pool_staging` for later merge.
 
@@ -86,7 +91,7 @@ For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydiu
 
 ### CoinGecko Onchain Integration
 
-CoinGecko Onchain is now a discovery-stage source rather than a direct scoring-cron fetch. Its outputs are written into `dex_pool_staging` and later merged by `syncDexLiquidity()` if the staged rows are fresh.
+CoinGecko Onchain is now a discovery-stage source rather than a direct scoring-cron fetch. Its outputs are written into `dex_pool_staging` and later merged by `syncDexLiquidity()` if the staged rows are fresh. Pool parsing, fee-tier classification, balance-ratio inference, and locked-liquidity parsing are shared between discovery and liquidity through `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`.
 
 Chain resolution is registry-backed in `worker/src/lib/chain-registry.ts`: the worker keeps one canonical internal chain id per deployment (`bob`, `worldchain`, `plasma`, etc.) and maps it to provider-specific network slugs (`bob-network`, `world-chain`, `plasma`, ...). When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko `/onchain` for chains with a `coingecko` mapping and still runs GeckoTerminal for chains that only have a `geckoTerminal` mapping. This avoids the old all-or-nothing mode switch where enabling CoinGecko could silently drop GT-only chains.
 
@@ -131,7 +136,7 @@ CoinGecko Tickers runs in two complementary paths:
 1. **Discovery cron** (`sync-dex-discovery`): Synthetic orderbook pools enter scoring through `dex_pool_staging`.
 2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After DexScreener fallback, any coin that still has zero pools or no usable DEX price observation and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange). Shares the 2-minute fallback time budget.
 
-Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-equivalent quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.).
+Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-equivalent quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.). Filtering, exchange aggregation, synthetic TVL construction, and orderbook price-observation gating are shared between discovery and liquidity through `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`.
 
 Per-exchange aggregation: all valid tickers from the same exchange are combined into one synthetic pool entry:
 
