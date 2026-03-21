@@ -17,7 +17,7 @@ interface FirmMarketsResponse {
 
 type DolaBucket = "stablecoin" | "eth-lst" | "btc" | "governance" | "other";
 
-const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "DAI", "USDC", "USDT", "crvUSD", "scrvUSD", "FRAX", "PYUSD"]);
+const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "DAI", "USDC", "USDT", "crvUSD", "scrvUSD", "FRAX", "PYUSD", "USR", "wstUSR", "FraxPyUSD lp", "DOLA-FRAXBP"]);
 const ETH_LST_ASSETS = new Set(["WETH", "wstETH", "stETH", "rETH", "weETH", "cbETH"]);
 const BTC_ASSETS = new Set(["WBTC", "cbBTC", "tBTC"]);
 const GOVERNANCE_ASSETS = new Set(["INV", "CRV", "CVX", "cvxCRV", "st-yCRV", "cvxFXS"]);
