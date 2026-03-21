@@ -27,11 +27,11 @@ import {
 } from "./sync-stablecoins/post-enrichment";
 import { loadStablecoinsIntake } from "./sync-stablecoins/intake";
 import { buildStablecoinsSyncResult } from "./sync-stablecoins/metadata";
+import { queueTrackedAdditionsNotice } from "./sync-stablecoins/telegram-tracked-additions";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcome } from "../lib/circuit-breaker";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
-import { queuePendingTrackedStablecoinAdditions } from "../lib/telegram-digest-appendices";
 import {
   buildPriceValidationContext,
   validatePriceCandidate,
@@ -282,21 +282,7 @@ async function syncViaCoingeckoFallback(
   }));
   if (isAbortResult(cacheResult)) return cacheResult;
   if (!cacheResult.written) return cacheResult.blockedResult!;
-
-  try {
-    const trackedAdditions = await queuePendingTrackedStablecoinAdditions(
-      db,
-      previousAssetsById.keys(),
-      assets.map((asset) => String(asset.id)),
-    );
-    if (trackedAdditions.queuedIds.length > 0) {
-      console.log(
-        `[sync-stablecoins] Queued Telegram tracked additions: ${trackedAdditions.queuedIds.join(", ")}`,
-      );
-    }
-  } catch (err) {
-    console.warn("[sync-stablecoins] Failed to queue Telegram tracked additions:", err);
-  }
+  await queueTrackedAdditionsNotice(db, previousAssetsById.keys(), assets);
 
   const depegResult = await runDepegPipeline(
     db, assets, fxFallbackRates, signal, coingeckoApiKey,
@@ -352,7 +338,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     }
     throw new Error(intake.errorMessage);
   }
-
   const {
     assets,
     rawAssetCount,
@@ -368,7 +353,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     fxFallbackRates = freshFxFallbackRates;
   }
   const validationContexts = createValidationContextResolver();
-
   // Extract DL list prices before primary consensus overwrites them
   const dlListPrices = new Map<string, number>();
   for (const asset of assets) {
@@ -381,7 +365,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       dlListPrices.set(asset.id, asset.price);
     }
   }
-
   // --- Primary price validation ---
   // Cross-validate CG and independent sources for higher confidence
   const primaryPricesAbort = returnIfAborted(signal, "primary-prices");
@@ -391,7 +374,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   );
   const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
   const protocolOverrideCount = protocolPriceOverrides.size;
-
   // Apply primary price results — these override the DL list endpoint prices
   for (const asset of assets) {
     const primary = primaryPriceResults.get(asset.id);
@@ -614,21 +596,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     return cacheResult.blockedResult!;
   }
   await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
-
-  try {
-    const trackedAdditions = await queuePendingTrackedStablecoinAdditions(
-      db,
-      previousAssetsById.keys(),
-      assets.map((asset) => String(asset.id)),
-    );
-    if (trackedAdditions.queuedIds.length > 0) {
-      console.log(
-        `[sync-stablecoins] Queued Telegram tracked additions: ${trackedAdditions.queuedIds.join(", ")}`,
-      );
-    }
-  } catch (err) {
-    console.warn("[sync-stablecoins] Failed to queue Telegram tracked additions:", err);
-  }
+  await queueTrackedAdditionsNotice(db, previousAssetsById.keys(), assets);
 
   const depegResult = await runDepegPipeline(
     db, assets, fxFallbackRates, signal, coingeckoApiKey,
