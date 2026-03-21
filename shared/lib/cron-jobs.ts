@@ -9,7 +9,6 @@ export type CronGroupKey =
 
 export const CRON_SCHEDULES = {
   quarterHourly: "*/15 * * * *",
-  twentyMinuteOffset: "3,23,43 * * * *",
   hourlyBlacklist: "3 * * * *",
   twentyMinuteMintBurn: "4,24,44 * * * *",
   thirtyMinuteDexDiscovery: "6,36 * * * *",
