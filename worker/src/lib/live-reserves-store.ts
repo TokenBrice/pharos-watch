@@ -2,6 +2,7 @@ import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { LiveReserveWarning, ReserveSlice, ReserveSyncStateView, StablecoinMeta } from "@shared/types";
 import { buildInClause } from "./db";
+import { chunkArray } from "./collections";
 import { decodeJsonString } from "./cache-json";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * 86400;
@@ -271,20 +272,27 @@ export async function loadReserveSyncStateMap(
 ): Promise<Map<string, ReserveSyncStateRecord>> {
   if (stablecoinIds.length === 0) return new Map();
 
-  const inClause = buildInClause(stablecoinIds);
-  const rows = await db
-    .prepare(
-      `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
-              last_status, warning_count, warnings, last_error, metadata
-         FROM reserve_sync_state
-        WHERE stablecoin_id IN (${inClause.sql})`,
-    )
-    .bind(...inClause.binds)
-    .all<ReserveSyncStateRow>();
+  const BATCH_SIZE = 50;
+  const result = new Map<string, ReserveSyncStateRecord>();
 
-  return new Map(
-    (rows.results ?? []).map((row) => [row.stablecoin_id, toReserveSyncStateRecord(row)]),
-  );
+  for (const batch of chunkArray(stablecoinIds, BATCH_SIZE)) {
+    const inClause = buildInClause(batch);
+    const rows = await db
+      .prepare(
+        `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
+                last_status, warning_count, warnings, last_error, metadata
+           FROM reserve_sync_state
+          WHERE stablecoin_id IN (${inClause.sql})`,
+      )
+      .bind(...inClause.binds)
+      .all<ReserveSyncStateRow>();
+
+    for (const row of rows.results ?? []) {
+      result.set(row.stablecoin_id, toReserveSyncStateRecord(row));
+    }
+  }
+
+  return result;
 }
 
 function hasConsistentSnapshotRow(

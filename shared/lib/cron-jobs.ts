@@ -10,6 +10,7 @@ export type CronGroupKey =
 export const CRON_SCHEDULES = {
   quarterHourly: "*/15 * * * *",
   twentyMinuteOffset: "3,23,43 * * * *",
+  hourlyBlacklist: "3 * * * *",
   twentyMinuteMintBurn: "4,24,44 * * * *",
   thirtyMinuteDexDiscovery: "6,36 * * * *",
   twentyMinuteExtendedOffset: "13,33,53 * * * *",
@@ -158,9 +159,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-blacklist",
     label: "Blacklist sync",
-    group: "twenty-minute",
-    intervalSec: 1200,
-    scheduleKey: "twentyMinuteOffset",
+    group: "hourly",
+    intervalSec: 3600,
+    scheduleKey: "hourlyBlacklist",
     triggerMode: "isolated",
     maxConnections: 1, // Rate-limited sequential Etherscan/TronGrid/RPC calls
   },

@@ -50,7 +50,7 @@ export async function fetchOrcaPools(signal?: AbortSignal): Promise<DexApiFetchR
       try {
         res = await fetch(url, {
           headers: { "User-Agent": USER_AGENT },
-          signal,
+          signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
         });
       } catch (err) {
         pageError = err instanceof Error ? err.message : String(err);

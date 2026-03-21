@@ -58,11 +58,14 @@ describe("snapshotSupply", () => {
         { id: "cash-stabl-fi", symbol: "CASH", price: 1.0, circulating: { peggedUSD: 10_000 } }, // not tracked
       ],
     });
-    const db = mockD1([{
-      match: "cache",
-      rows: [],
-      first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
-    }]);
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
+      },
+    ]);
     const result = await snapshotSupply(db);
     // Should insert 2 rows (IDs "usdt-tether" and "usdc-circle" are tracked, "cash-stabl-fi" is not)
     expect(result.itemCount).toBe(2);

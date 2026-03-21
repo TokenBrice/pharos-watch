@@ -2,6 +2,7 @@ import { batchExecute } from "../lib/db";
 import { CHAIN_META, CHAIN_ALIASES } from "@shared/lib/chains";
 import type { CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { getCache, setCache } from "../lib/db-cache";
 
 export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   if (signal?.aborted) {
@@ -18,6 +19,12 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
   if (cacheAge > 1200) {
     console.warn(`[snapshot-chain-supply] Cache is ${cacheAge}s old (>1200s), skipping`);
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }) };
+  }
+
+  const COOLDOWN_SEC = 3600;
+  const lastWrite = await getCache(db, "snapshot-chain-supply:last-write");
+  if (lastWrite && (Math.floor(Date.now() / 1000) - lastWrite.updatedAt) < COOLDOWN_SEC) {
+    return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: Math.floor(Date.now() / 1000) - lastWrite.updatedAt }) };
   }
 
   // Accumulate per-chain totals
@@ -58,7 +65,13 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
   }
 
   if (stmts.length > 0) {
-    await batchExecute(db, stmts);
+    try {
+      await batchExecute(db, stmts);
+      await setCache(db, "snapshot-chain-supply:last-write", JSON.stringify({ snapshotDate }));
+    } catch (err) {
+      console.error("[snapshot-chain-supply] batchExecute failed:", err);
+      return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
+    }
   }
 
   console.log(`[snapshot-chain-supply] Inserted ${stmts.length} rows for ${new Date(snapshotDate * 1000).toISOString().slice(0, 10)}`);

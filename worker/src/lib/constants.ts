@@ -154,6 +154,8 @@ export const CIRCUIT_SOURCE = {
   BALANCER_API: "balancer-api",
   RAYDIUM_API: "raydium-api",
   ORCA_API: "orca-api",
+  DRPC: "drpc",
+  TRONGRID: "trongrid",
 } as const;
 
 /** Minimum per-pool TVL for DEX pool challenge and pool-level depeg confirmation */

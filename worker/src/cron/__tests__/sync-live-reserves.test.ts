@@ -83,7 +83,7 @@ describe("syncLiveReserves", () => {
     expect(sharedSourceInvocationCount).toBeLessThan(configuredCoinCount);
   });
 
-  it("returns degraded when the adapter yields warning metadata", async () => {
+  it("returns ok with warning metadata when the adapter yields warnings (warnings are metadata-only)", async () => {
     getReserveAdapterMock.mockReturnValue(
       async () => ({
         slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
@@ -95,7 +95,8 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     const result = await syncLiveReserves(db, new AbortController().signal, {});
 
-    expect(result?.status).toBe("degraded");
+    // Warnings no longer affect status (only failed+skipped > 10% of total triggers degraded)
+    expect(result?.status).toBe("ok");
     expect(result?.metadata).toContain(`"warningCount":${configuredCoinCount}`);
   });
 

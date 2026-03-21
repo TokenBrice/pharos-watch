@@ -16,7 +16,7 @@ const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
 const LEGACY_HISTORY_MAX_AGE_SEC = 30 * 86400 + 5 * 86400;
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
-const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 2 * 86400;
+const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 3 * 86400;
 
 export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 

@@ -119,7 +119,7 @@ function getSlowestProbes(probes: ProbeResult[], limit = 3): Array<{
 
 function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusLevel {
   if (sampleCount === 0) return "stale";
-  if (failCount === 0 && p95LatencyMs <= 5000) return "healthy";
+  if (failCount <= 1 && p95LatencyMs <= 5000) return "healthy";
   if (failCount <= Math.max(1, Math.floor(sampleCount * 0.1)) && p95LatencyMs <= 8000) return "degraded";
   return "stale";
 }
@@ -333,10 +333,12 @@ export async function runStatusSelfCheck(
 
   const sampleCount = probes.length;
   const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
-  const passCount = probes.filter((probe) => probe.ok).length;
-  const failCount = sampleCount - passCount;
+  // Exclude semantic-only errors (e.g. "reported-stale") from connectivity fail/latency counts
+  const connectivityProbes = probes.filter((probe) => !probe.error?.startsWith("reported-"));
+  const passCount = connectivityProbes.filter((probe) => probe.ok).length;
+  const failCount = connectivityProbes.length - passCount;
   const hasProbeFailure = failCount > 0;
-  const latencySummary = buildLatencySummary(probes);
+  const latencySummary = buildLatencySummary(connectivityProbes);
   const slowestProbes = getSlowestProbes(probes);
   const p95LatencyMs = latencySummary.p95Ms;
   const semanticProbeStatus = probes.reduce<StatusLevel>(
@@ -344,7 +346,7 @@ export async function runStatusSelfCheck(
     "healthy",
   );
   const probeStatus = maxProbeStatus(
-    classifyProbeStatus(sampleCount, failCount, p95LatencyMs),
+    classifyProbeStatus(connectivityProbes.length, failCount, p95LatencyMs),
     semanticProbeStatus,
   );
 
@@ -452,7 +454,7 @@ export async function runStatusSelfCheck(
   }
 
   return {
-    status: discrepancy.hasDivergence || probeStatus !== "healthy" ? "degraded" : "ok",
+    status: probeStatus === "stale" || discrepancyState.consecutiveDivergent >= 2 ? "degraded" : "ok",
     itemCount: sampleCount,
     metadata: JSON.stringify({
       sampleCount,

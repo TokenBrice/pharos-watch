@@ -1,4 +1,5 @@
 import { D1_BATCH_SIZE } from "./constants";
+import { runWithOverloadRetry } from "./cron-lease";
 
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
 export async function batchExecute(
@@ -8,7 +9,7 @@ export async function batchExecute(
 ): Promise<number> {
   let changes = 0;
   for (let i = 0; i < stmts.length; i += chunkSize) {
-    const result = await db.batch(stmts.slice(i, i + chunkSize));
+    const result = await runWithOverloadRetry(() => db.batch(stmts.slice(i, i + chunkSize)));
     for (const row of result) {
       changes += Number(row?.meta?.changes ?? 0);
     }

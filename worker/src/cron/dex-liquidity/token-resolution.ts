@@ -9,7 +9,7 @@ export interface TokenResolutionResult {
 }
 
 export function normalizeTokenAddress(address: string): string {
-  return address.trim().toLowerCase();
+  return (address ?? "").trim().toLowerCase();
 }
 
 export function buildChainAddressKey(chain: string, address: string): string {

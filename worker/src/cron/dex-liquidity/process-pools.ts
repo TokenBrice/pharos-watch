@@ -33,6 +33,7 @@ export function processPoolMetrics(
   }
 
   for (const pool of pools) {
+   try {
     if (!pool.tvlUsd || pool.tvlUsd < 10_000 || pool.tvlUsd > 1e12) continue; // Skip dust and corrupt values
     if (enforceDexProjectFilter && !dexProjects.has(pool.project)) continue; // Only count DEX pools
     if (BLOCKED_DEX_IDS.has(pool.project)) continue; // Skip explicitly blocked dead DEXes
@@ -260,6 +261,10 @@ export function processPoolMetrics(
         },
       });
     }
+   } catch (err) {
+    console.error(`[dex-liquidity] Pool processing failed for pool=${pool.pool} chain=${pool.chain}:`, err);
+    throw err;
+   }
   }
 
   console.log(`[dex-liquidity] Matched ${metrics.size} stablecoins with DEX liquidity`);

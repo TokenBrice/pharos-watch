@@ -2,6 +2,7 @@ import type { CronResult } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { LlamaPool } from "./types";
 import { CRAWL_BUDGETS } from "../../lib/rate-limit";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs } from "./types";
@@ -142,9 +143,27 @@ export async function syncDexLiquidity(
     fallbackSignals.push("dl-protocols-unavailable");
   }
 
+  // 2. Build symbol/address lookup maps
+  const {
+    symbolToIds,
+    symbolToChainScopedIds,
+    addressToId,
+    chainAddressToId,
+    contractMetaByChainAddress,
+  } = buildSymbolLookups();
+  const initialChainAddressCount = chainAddressToId.size;
+
+  // 3. Parse Curve data into pool lookups and price observations
+  const { curvePoolMap, priceObservations } = await buildCurveLookups(
+    dataSources.curveResponses,
+    symbolToIds,
+    symbolToChainScopedIds,
+    chainAddressToId,
+    validationReferences,
+  );
+
   // Fetch direct API sources in parallel (non-fatal, circuit-breaker gated)
-  // These run alongside the existing data source processing to maximize parallelism.
-  // All response bodies are consumed inline (await res.json()), so connections are released promptly.
+  // Launched after Curve response bodies are consumed to stay within 6-connection pool limit.
   const directApiFetchers: Array<{ name: string; circuitKey: string; fn: (s?: AbortSignal) => Promise<DexApiFetchResult> }> = [
     { name: "Fluid", circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API, fn: fetchFluidPools },
     { name: "Balancer", circuitKey: CIRCUIT_SOURCE.BALANCER_API, fn: fetchBalancerPools },
@@ -200,25 +219,6 @@ export async function syncDexLiquidity(
         };
       }
     }),
-  );
-
-  // 2. Build symbol/address lookup maps
-  const {
-    symbolToIds,
-    symbolToChainScopedIds,
-    addressToId,
-    chainAddressToId,
-    contractMetaByChainAddress,
-  } = buildSymbolLookups();
-  const initialChainAddressCount = chainAddressToId.size;
-
-  // 3. Parse Curve data into pool lookups and price observations
-  const { curvePoolMap, priceObservations } = await buildCurveLookups(
-    dataSources.curveResponses,
-    symbolToIds,
-    symbolToChainScopedIds,
-    chainAddressToId,
-    validationReferences,
   );
 
   // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations
@@ -547,7 +547,7 @@ export async function syncDexLiquidity(
   throwIfAborted(signal);
 
   // 7. Persist primary tables. D1 in Workers rejects manual SQL transaction statements.
-  await persistScores(db, metrics, scoreResults, globalAgg, syncStartSec);
+  await runWithOverloadRetry(() => persistScores(db, metrics, scoreResults, globalAgg, syncStartSec));
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
     ACTIVE_STABLECOINS.map((meta) => [meta.id, criticalSourceFailures.length === 0]),
   );

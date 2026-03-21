@@ -210,13 +210,15 @@ export async function syncDexDiscovery(
       });
 
       try {
+        const PER_COIN_BUDGET_MS = 60_000;
+        const coinDeadline = Math.min(deadlineMs, Date.now() + PER_COIN_BUDGET_MS);
         const result = await crawlCoin(
           candidate.stablecoinId,
           candidate.targets,
           cgApiKey,
           knownPoolIds,
           signal,
-          deadlineMs,
+          coinDeadline,
           validationReferences,
         );
 

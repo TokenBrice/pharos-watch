@@ -66,7 +66,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         method: "POST",
         headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
         body: JSON.stringify({ query: QUERY, variables: { first: pageSize, skip } }),
-        signal,
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

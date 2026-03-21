@@ -174,6 +174,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
 
   console.log(`[stability-index] score=${result.score} band=${result.band}`);
   return {
+    itemCount: 1,
     ...(dewsUnavailable ? { status: "degraded" as const } : {}),
     metadata: JSON.stringify({
       score: result.score,

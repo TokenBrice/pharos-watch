@@ -2,7 +2,7 @@ import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
 import type { Env } from "../lib/env";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import { runQuarterHourlySlot } from "./scheduled/quarter-hourly";
-import { runTwentyMinuteBlacklistSlot } from "./scheduled/twenty-minute-blacklist";
+import { runHourlyBlacklistSlot } from "./scheduled/hourly-blacklist";
 import { runTwentyMinuteMintBurnCriticalSlot } from "./scheduled/twenty-minute-mint-burn-critical";
 import { runTwentyMinuteDexDiscoverySlot } from "./scheduled/twenty-minute-dex-discovery";
 import { runTwentyMinuteMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
@@ -16,7 +16,7 @@ type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<void> | void;
 
 const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = {
   [CRON_SCHEDULES.quarterHourly]: runQuarterHourlySlot,
-  [CRON_SCHEDULES.twentyMinuteOffset]: runTwentyMinuteBlacklistSlot,
+  [CRON_SCHEDULES.hourlyBlacklist]: runHourlyBlacklistSlot,
   [CRON_SCHEDULES.twentyMinuteMintBurn]: runTwentyMinuteMintBurnCriticalSlot,
   [CRON_SCHEDULES.thirtyMinuteDexDiscovery]: runTwentyMinuteDexDiscoverySlot,
   [CRON_SCHEDULES.twentyMinuteExtendedOffset]: runTwentyMinuteMintBurnExtendedSlot,

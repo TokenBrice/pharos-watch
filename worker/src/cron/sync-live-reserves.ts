@@ -117,6 +117,7 @@ export async function syncLiveReserves(
   };
 
   for (const coin of CONFIGURED_COINS) {
+    if (signal?.aborted) throw signal.reason ?? new Error("sync-live-reserves aborted");
     const config = coin.liveReservesConfig!;
     const adapter = getReserveAdapter(config.adapter);
     const breakerKey = breakerKeyForConfig(config);
@@ -232,11 +233,10 @@ export async function syncLiveReserves(
   }
 
   const total = CONFIGURED_COINS.length;
-  const hasWarnings = warningMessages.length > 0;
   const status: CronResult["status"] =
     synced === 0 && (failed > 0 || skipped > 0)
       ? "error"
-      : failed > 0 || skipped > 0 || hasWarnings
+      : (failed + skipped) > Math.ceil(total * 0.1)
         ? "degraded"
         : "ok";
 

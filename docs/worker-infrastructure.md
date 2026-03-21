@@ -294,17 +294,17 @@ crons = [
 - `capabilities.stablecoinsCache`
 - `capabilities.depegPipeline`
 
-`snapshot-supply` retry and `compute-dews` require the stablecoins-cache capability. `stability-index` additionally requires the depeg-pipeline capability, which prevents depeg-stage regressions from propagating as fresh PSI state.
+`snapshot-supply` retry and `compute-dews` require the stablecoins-cache capability. `stability-index` additionally requires the depeg-pipeline capability, which prevents depeg-stage regressions from propagating as fresh PSI state. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 1-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) to prevent redundant DB writes when triggered on the quarter-hourly slot.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
-### Trigger 2: `3,23,43 * * * *` (blacklist — dedicated)
+### Trigger 2: `3 * * * *` (blacklist — dedicated hourly)
 
 | Job              | Function          | File                                | Documentation                               |
 | ---------------- | ----------------- | ----------------------------------- | ------------------------------------------- |
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | [Blacklist Tracker](./blacklist-tracker.md) |
 
-Dedicated trigger for blacklist sync. Uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC, dRPC for historical L2 balance reads, and TronGrid for Tron. Gets its own 6-connection pool and CPU budget.
+Dedicated hourly trigger for blacklist sync (reduced from every 20 minutes — blacklist events are infrequent enough that hourly cadence is sufficient). Uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC, dRPC for historical L2 balance reads, and TronGrid for Tron (with TronGrid circuit breaker gating). Gets its own 6-connection pool and CPU budget.
 
 ### Trigger 3: `4,24,44 * * * *` (mint/burn critical — dedicated)
 
@@ -338,7 +338,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | `sync-dex-liquidity`     | `syncDexLiquidity()`     | `worker/src/cron/dex-liquidity/orchestrator.ts`                       | [DEX Liquidity Score](./dex-liquidity.md)     |
 | `sync-yield-data`        | `syncYieldData()`        | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | [Yield Intelligence](./yield-intelligence.md) |
 
-**Execution model:** All three jobs are chained sequentially: charts → dex-liquidity → yield-data. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `sync-yield-data` is chained after `sync-dex-liquidity` for safety-score dependencies. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency.
+**Execution model:** All three jobs are chained sequentially: charts → dex-liquidity → yield-data. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `sync-yield-data` is chained after `sync-dex-liquidity` for safety-score dependencies. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. `sync-dex-liquidity` launches direct API fetchers (Fluid, Balancer, Raydium, Orca) only after Curve response bodies are consumed, keeping peak connections at max(4 Curve, 4 direct API) = 4. UniV3 subgraph queries run in parallel across chains (4 concurrent) for reduced wall-clock time.
 
 `sync-dex-liquidity` metadata now tracks both row coverage and value coverage. In addition to `currentCoverage` / `previousCoverage`, the cron records `currentGlobalTvl`, `previousGlobalTvl`, top-10 covered TVL, row/value guard flags, and current/previous coverage-class distribution. `/status` surfaces this through the Liquidity Health card.
 
@@ -388,7 +388,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | Trigger | Cron Expression | Max Concurrent External Connections | Headroom |
 |---------|----------------|:---:|:---:|
 | 1 | `*/15 * * * *` | 3 (sync-stablecoins + sync-fx-rates + status-self-check) | 3 |
-| 2 | `3,23,43 * * * *` | 4 (multi-chain blacklist scans) | 2 |
+| 2 | `3 * * * *` | 4 (multi-chain blacklist scans) | 2 |
 | 3 | `4,24,44 * * * *` | 2 (Alchemy JSON-RPC) | 4 |
 | 4 | `6,36 * * * *` | 1 (sequential CG/GT/DexScreener) | 5 |
 | 5 | `13,33,53 * * * *` | 2 (Alchemy JSON-RPC, extended lane) | 4 |
@@ -541,6 +541,8 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` pass 3 fallback                                              |
 | `TREASURY_RATES`                     | `treasury-rates`              | `fetch-tbill-rate`                                                           |
 | `ETHERSCAN`                          | `etherscan`                   | `sync-blacklist`                                                             |
+| `TRONGRID`                           | `trongrid`                    | `sync-blacklist` (Tron chains)                                               |
+| `DRPC`                               | `drpc`                        | Blacklist balance enrichment (L2 archive reads)                              |
 | `ALCHEMY`                            | `alchemy`                     | `sync-mint-burn`                                                             |
 | `PYTH_PRICES`                        | `pyth-prices`                 | `enrich-prices` primary consensus                                            |
 | `BINANCE_PRICES`                     | `binance-prices`              | `enrich-prices` primary consensus                                            |
@@ -891,7 +893,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `compute-dews`                  | 900s (15min)   | `*/15 * * * *`                              |
 | `status-self-check`             | 900s (15min)   | `*/15 * * * *`                              |
 | `dispatch-telegram-alerts`      | 300s (5min)    | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` |
-| `sync-blacklist`                | 1,200s (20min) | `3,23,43 * * * *`                           |
+| `sync-blacklist`                | 3,600s (1h)    | `3 * * * *`                                  |
 | `sync-mint-burn`                | 1,200s (20min) | `4,24,44 * * * *`                           |
 | `sync-dex-discovery`            | 1,800s (30min) | `6,36 * * * *`                              |
 | `sync-mint-burn-extended`       | 1,200s (20min) | `13,33,53 * * * *`                          |

@@ -3,6 +3,7 @@ import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { getCache, setCache } from "../lib/db-cache";
 
 export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
   if (_signal?.aborted) {
@@ -35,6 +36,12 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
   }
   if (cacheAge > 600) {
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>600s), proceeding with degraded freshness`);
+  }
+
+  const COOLDOWN_SEC = 3600;
+  const lastWrite = await getCache(db, "snapshot-supply:last-write");
+  if (lastWrite && (Math.floor(Date.now() / 1000) - lastWrite.updatedAt) < COOLDOWN_SEC) {
+    return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: Math.floor(Date.now() / 1000) - lastWrite.updatedAt }) };
   }
 
   const trackedIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((s) => s.id));
@@ -72,7 +79,13 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
   }
 
   if (stmts.length > 0) {
-    await batchExecute(db, stmts);
+    try {
+      await batchExecute(db, stmts);
+      await setCache(db, "snapshot-supply:last-write", JSON.stringify({ snapshotDate }));
+    } catch (err) {
+      console.error("[snapshot-supply] batchExecute failed:", err);
+      return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_write_failed", error: String(err).slice(0, 200) }) };
+    }
   }
 
   if (stmts.length === 0) {

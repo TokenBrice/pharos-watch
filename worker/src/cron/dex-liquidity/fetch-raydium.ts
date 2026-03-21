@@ -36,7 +36,7 @@ async function fetchPoolType(
     try {
       res = await fetch(url, {
         headers: { "User-Agent": USER_AGENT },
-        signal,
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

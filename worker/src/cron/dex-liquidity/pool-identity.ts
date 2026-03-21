@@ -24,7 +24,7 @@ export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
 }
 
 function normalizeTokenAddress(address: string): string {
-  return address.trim().toLowerCase();
+  return (address ?? "").trim().toLowerCase();
 }
 
 function isTrustworthyExactPoolId(poolId: string | null | undefined): boolean {

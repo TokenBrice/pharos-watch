@@ -86,10 +86,20 @@ export async function loadStablecoinsIntake(
     };
   }
 
-  const llamaData = await llamaRes!.json() as {
+  let llamaData: {
     peggedAssets: PeggedAsset[];
     fxFallbackRates?: Record<string, number>;
   };
+  try {
+    llamaData = await llamaRes!.json() as typeof llamaData;
+  } catch (parseErr) {
+    console.error("[sync-stablecoins] DL response body parse failed:", parseErr);
+    return {
+      kind: "fallback",
+      result: await input.fallbackToCoingecko(cgData),
+      errorMessage: "DefiLlama response body parse failed",
+    };
+  }
   const rawAssetCount = llamaData.peggedAssets?.length ?? 0;
 
   if (llamaData.peggedAssets === undefined) {

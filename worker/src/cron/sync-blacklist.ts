@@ -1,5 +1,6 @@
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../lib/blacklist-contracts";
-import { ETHERSCAN_V2_BASE } from "../lib/constants";
+import { ETHERSCAN_V2_BASE, CIRCUIT_SOURCE } from "../lib/constants";
+import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import type { BlacklistEventType } from "@shared/types";
 import { getLastBlock, setLastBlock, batchExecute } from "../lib/db";
 import {
@@ -560,6 +561,13 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       break;
     }
 
+    // Circuit breaker checks for provider-specific sources
+    if (config.chain.type === "tron" && !(await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID))) {
+      console.log(`[sync-blacklist] TronGrid circuit open, skipping ${configKey}`);
+      contractsSkipped++;
+      continue;
+    }
+
     try {
       let result: {
         rows: BlacklistRow[];
@@ -581,6 +589,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           budget,
           signal,
         );
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
 
         const tronEnrichCounters = await enrichRowBalances(
           result.rows,

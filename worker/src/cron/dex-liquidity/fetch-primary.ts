@@ -374,7 +374,7 @@ export async function fetchUniV3Data(
     return { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs };
   }
 
-  for (const [chain, subgraphId] of Object.entries(UNIV3_SUBGRAPHS)) {
+  await Promise.all(Object.entries(UNIV3_SUBGRAPHS).map(async ([chain, subgraphId]) => {
     try {
     const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
     const combinedSignal = signal
@@ -479,7 +479,7 @@ export async function fetchUniV3Data(
       if (signal?.aborted) throw err;
       console.warn(`[dex-liquidity] Uni V3 subgraph ${chain} failed (non-fatal):`, err);
     }
-  }
+  }));
 
   console.log(`[dex-liquidity] Collected ${uniV3PriceObs.size} coins with Uni V3 price observations`);
   return { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs };

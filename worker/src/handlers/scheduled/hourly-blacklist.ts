@@ -4,7 +4,7 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { syncBlacklist } from "../../cron/sync-blacklist";
 import type { ScheduledRuntimeContext } from "./context";
 
-export async function runTwentyMinuteBlacklistSlot(runtime: ScheduledRuntimeContext): Promise<void> {
+export async function runHourlyBlacklistSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   const etherscanAllowed = await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.ETHERSCAN);
   if (!etherscanAllowed) {
     console.warn("[cron] Etherscan circuit open — skipping blacklist sync");
