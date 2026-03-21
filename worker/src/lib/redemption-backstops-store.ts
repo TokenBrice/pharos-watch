@@ -20,6 +20,7 @@ import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
+import { decodeJsonString } from "./cache-json";
 
 interface RedemptionBackstopRow {
   stablecoin_id: string;
@@ -57,27 +58,35 @@ function parseDetails(
   "docs" | "notes" | "capsApplied" | "feeDescription"
 > {
   if (!value) return {};
-
-  try {
-    const parsed = JSON.parse(value) as {
-      docs?: RedemptionBackstopEntry["docs"];
-      notes?: string[];
-      capsApplied?: string[];
-      feeDescription?: string;
-    };
-    return {
-      ...(parsed.docs ? { docs: parsed.docs } : {}),
-      ...(Array.isArray(parsed.notes) ? { notes: parsed.notes } : {}),
-      ...(Array.isArray(parsed.capsApplied)
-        ? { capsApplied: parsed.capsApplied }
-        : {}),
-      ...(typeof parsed.feeDescription === "string"
-        ? { feeDescription: parsed.feeDescription }
-        : {}),
-    };
-  } catch {
-    return {};
-  }
+  const decoded = decodeJsonString<
+    Pick<RedemptionBackstopEntry, "docs" | "notes" | "capsApplied" | "feeDescription">,
+    "json-parse-failed"
+  >(value, {
+    mode: "best-effort",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => {
+      const record = parsed as {
+        docs?: RedemptionBackstopEntry["docs"];
+        notes?: string[];
+        capsApplied?: string[];
+        feeDescription?: string;
+      };
+      return {
+        ok: true,
+        payload: {
+          ...(record?.docs ? { docs: record.docs } : {}),
+          ...(Array.isArray(record?.notes) ? { notes: record.notes } : {}),
+          ...(Array.isArray(record?.capsApplied)
+            ? { capsApplied: record.capsApplied }
+            : {}),
+          ...(typeof record?.feeDescription === "string"
+            ? { feeDescription: record.feeDescription }
+            : {}),
+        },
+      };
+    },
+  });
+  return decoded.payload ?? {};
 }
 
 function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {

@@ -372,7 +372,7 @@ CREATE TABLE yield_history (
 ### `sync-yield-data`
 
 **Schedule:** `10,40 * * * *` (every 30 min, Trigger 6)
-**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + `worker/src/cron/yield-sync/{cache,sources,resolve,rankings}.ts`
+**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + `worker/src/cron/yield-sync/{cache,sources,resolve,evaluation,publication,history,rankings}.ts`
 
 **Execution flow:**
 
@@ -395,9 +395,11 @@ CREATE TABLE yield_history (
 
 Implementation stages:
 - `yield-sync/sources.ts` + `yield-sync/pool-filter.ts`: DL pool loading, wrapper-relevant pool filtering, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers
-- `yield-sync/resolve.ts`: per-coin source resolution and auto-discovery
-- `yield-sync/rankings.ts`: rankings row shaping, dedupe, warning parsing, TVL-weighted median helper
-- `sync-yield-data.ts`: safety snapshot handling, persistence, stale-row cleanup, and cache writes
+- `yield-sync/resolve.ts`: per-coin source resolution and auto-discovery candidate shaping
+- `yield-sync/evaluation.ts`: source-aware history normalization, trailing metric computation, confidence arbitration, and source-switch tracking
+- `yield-sync/publication.ts` + `yield-sync/rankings.ts`: persistence helpers, rankings shaping, provenance/warning parsing, TVL-weighted median helper, and cache writes
+- `yield-sync/history.ts`: batched history preloads plus stale/orphan cleanup
+- `sync-yield-data.ts`: safety snapshot handling, orchestration glue, and degraded-mode policy
 
 **Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. That helper now shares peg analytics with `/api/report-cards`, preventing rated coins with live price/peg coverage from falling back to `NR` inside yield rankings. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 
@@ -694,7 +696,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/migrations/0031_yield_data.sql`              | D1 schema: `yield_data` + `yield_history` tables                                                                                             |
 | `worker/migrations/0041_yield_data_multi_source.sql` | Adds `source_key` + `is_best` columns, changes PK to `(stablecoin_id, source_key)`                                                           |
 | `worker/migrations/0056_yield_history_warning_signals.sql` | Adds `warning_signals` history persistence support                                                                                       |
-| `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | Yield sync orchestration and stage modules: source loading, multi-source matching, PYS, safety scores, caching |
+| `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | Yield sync orchestration and stage modules: source loading, resolution, evaluation, publication, history maintenance, and rankings caching |
 | `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`, `RATE_DERIVED_CONFIGS`                                        |
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |

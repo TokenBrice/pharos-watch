@@ -2,6 +2,7 @@ import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { buildInClause } from "./db";
+import { decodeJsonString } from "./cache-json";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * 86400;
 
@@ -60,32 +61,37 @@ export interface ReserveCompositionOverview {
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
   if (!value) return {};
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : {};
-  } catch {
-    return {};
-  }
+  const decoded = decodeJsonString<Record<string, unknown>, "json-parse-failed" | "invalid-payload">(value, {
+    mode: "best-effort",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => (
+      parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? { ok: true, payload: parsed as Record<string, unknown> }
+        : { ok: false, reason: "invalid-payload" }
+    ),
+  });
+  return decoded.payload ?? {};
 }
 
 function parseWarnings(value: string | null): LiveReserveWarning[] {
   if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is LiveReserveWarning =>
-        !!item
-        && typeof item === "object"
-        && typeof (item as LiveReserveWarning).code === "string"
-        && typeof (item as LiveReserveWarning).message === "string"
-        && ((item as LiveReserveWarning).severity === "info" || (item as LiveReserveWarning).severity === "warning"),
-      )
-      : [];
-  } catch {
-    return [];
-  }
+  const decoded = decodeJsonString<LiveReserveWarning[], "json-parse-failed">(value, {
+    mode: "best-effort",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => ({
+      ok: true,
+      payload: Array.isArray(parsed)
+        ? parsed.filter((item): item is LiveReserveWarning =>
+          !!item
+          && typeof item === "object"
+          && typeof (item as LiveReserveWarning).code === "string"
+          && typeof (item as LiveReserveWarning).message === "string"
+          && ((item as LiveReserveWarning).severity === "info" || (item as LiveReserveWarning).severity === "warning"),
+        )
+        : [],
+    }),
+  });
+  return decoded.payload ?? [];
 }
 
 const VALID_RISKS = new Set(["very-low", "low", "medium", "high", "very-high"]);
@@ -105,12 +111,15 @@ function isValidSlice(item: unknown): item is ReserveSlice {
 }
 
 function parseSlices(value: string): ReserveSlice[] {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter(isValidSlice) : [];
-  } catch {
-    return [];
-  }
+  const decoded = decodeJsonString<ReserveSlice[], "json-parse-failed">(value, {
+    mode: "best-effort",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => ({
+      ok: true,
+      payload: Array.isArray(parsed) ? parsed.filter(isValidSlice) : [],
+    }),
+  });
+  return decoded.payload ?? [];
 }
 
 export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {

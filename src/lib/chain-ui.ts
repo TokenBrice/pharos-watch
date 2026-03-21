@@ -1,11 +1,8 @@
+import { formatCompactUsd } from "@shared/lib/format";
 import type { HealthBand } from "@shared/types/chains";
 
 export function formatChainUsd(value: number): string {
-  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-  if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-  return `$${value.toFixed(0)}`;
+  return formatCompactUsd(value);
 }
 
 export function formatRatioPct(value: number): string {

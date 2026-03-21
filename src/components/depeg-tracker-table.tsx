@@ -16,7 +16,7 @@ import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import { type DepegTrackerRow } from "@/lib/depeg-sort";
 import type { ThreatBand } from "@shared/lib/classification";
-import { formatPercent } from "@shared/lib/format";
+import { formatPercent, formatTrackingSpanDays } from "@shared/lib/format";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import {
   compareDepegTrackerRows,
@@ -193,7 +193,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                   )}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm hidden xl:table-cell">
-                  {formatTrackingSpan(coin.trackingSpanDays)}
+                  {formatTrackingSpanDays(coin.trackingSpanDays)}
                 </TableCell>
               </InteractiveTableRow>
             );
@@ -207,18 +207,4 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
       )}
     </DataTableShell>
   );
-}
-
-/** Format tracking span in days to a human-readable string */
-function formatTrackingSpan(days: number): string {
-  if (days >= 365) {
-    const years = Math.floor(days / 365);
-    const months = Math.floor((days % 365) / 30);
-    return months > 0 ? `${years}y ${months}mo` : `${years}y`;
-  }
-  if (days >= 30) {
-    const months = Math.floor(days / 30);
-    return `${months}mo`;
-  }
-  return `${days}d`;
 }

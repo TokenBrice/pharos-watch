@@ -4,22 +4,9 @@ import Image from "next/image";
 import { ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
 import { CAUSE_META } from "@shared/lib/dead-stablecoins";
 import { CHAIN_META } from "@shared/lib/chains";
-import { formatCurrency, formatDeathDate } from "@shared/lib/format";
+import { buildExplorerUrl } from "@shared/lib/explorer";
+import { formatAddress, formatCurrency, formatDeathDate } from "@shared/lib/format";
 import type { DeadStablecoin } from "@shared/types";
-
-function getExplorerUrl(chainKey: string, address: string): string | null {
-  const chain = CHAIN_META[chainKey];
-  if (!chain?.explorerUrl) return null;
-  if (chainKey === "tron") return `${chain.explorerUrl}/#/contract/${address}`;
-  if (chainKey === "solana") return `${chain.explorerUrl}/account/${address}`;
-  if (chainKey === "starknet") return `${chain.explorerUrl}/contract/${address}`;
-  if (chainKey === "aptos") return `${chain.explorerUrl}/account/${address}`;
-  return `${chain.explorerUrl}/address/${address}`;
-}
-
-function truncateAddress(address: string): string {
-  return address.length > 14 ? `${address.slice(0, 6)}...${address.slice(-4)}` : address;
-}
 
 interface StablecoinCemeteryProps {
   coins: DeadStablecoin[];
@@ -140,7 +127,11 @@ export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCeme
                   <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
                     {coin.contracts.map((c) => {
                       const chain = CHAIN_META[c.chain];
-                      const url = getExplorerUrl(c.chain, c.address);
+                      const url = buildExplorerUrl({
+                        chainKey: c.chain,
+                        entityType: "contract",
+                        value: c.address,
+                      });
                       return (
                         <div key={`${c.chain}-${c.address}`} className="flex items-center gap-1.5">
                           {chain?.logoPath && (
@@ -160,10 +151,10 @@ export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCeme
                               rel="noopener noreferrer"
                               className="pharos-focus-ring font-mono text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              {truncateAddress(c.address)}
+                              {formatAddress(c.address)}
                             </a>
                           ) : (
-                            <span className="font-mono text-muted-foreground">{truncateAddress(c.address)}</span>
+                            <span className="font-mono text-muted-foreground">{formatAddress(c.address)}</span>
                           )}
                         </div>
                       );

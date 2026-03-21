@@ -120,7 +120,8 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx
 │   │   ├── error.tsx
 │   │   ├── methodology-shared.tsx # Shared methodology page helpers, section metadata, and section-shell primitives
-│   │   ├── methodology-sections.tsx # Long-form methodology section bodies extracted from page.tsx
+│   │   ├── methodology-sections.tsx # Composition root for the long-form methodology section groups
+│   │   ├── sections/             # Grouped long-form methodology section modules (core + monitoring)
 │   │   ├── changelog-page-utils.ts # Shared metadata + entry mapping helpers for methodology changelog routes
 │   │   ├── changelog-route-factory.tsx # Config-driven wrapper factory for methodology changelog routes
 │   │   ├── pricing-pipeline-changelog/page.tsx # Pricing pipeline methodology changelog
@@ -423,7 +424,11 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/
+    │   │   ├── intake.ts         # Intake/fallback gate: DL fetch, structural validation, canonical remap, supplemental merge
     │   │   ├── stages.ts         # Extracted sync-stablecoins stage helpers (normalize/filter/staleness/supply-history fill)
+    │   │   ├── post-enrichment.ts # Shared post-enrichment cache validation + depeg pipeline helpers
+    │   │   ├── metadata.ts       # Final sync metadata and price-source health shaping
+    │   │   ├── shared.ts         # Shared stablecoins-sync cache/write helpers and FX utilities
     │   │   └── supplemental-assets.ts # Extracted supplemental token fetch helpers (gold/silver/CG-only fiat overlays)
     │   ├── enrich-prices.ts      # Dual-primary price validation + 4-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
@@ -470,7 +475,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
     │   ├── sync-yield-data.ts    # Yield data sync orchestration: source load + resolution + persistence/cache stages
-    │   ├── yield-sync/           # Yield sync stage modules (source loading, resolution, rankings shaping)
+    │   ├── yield-sync/           # Yield sync stage modules (source loading, resolution, evaluation, publication, history)
     │   ├── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (critical + extended 20min lanes)
     │   └── status-self-check.ts  # Status reliability cron: real HTTP probes, hysteresis persistence, discrepancy/probe-failure alerts
     ├── api/

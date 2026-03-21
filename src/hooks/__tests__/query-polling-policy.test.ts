@@ -21,7 +21,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
   };
 });
 
-import { createPollingQueryOptions } from "../use-api-query";
+import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useHealth } from "../api-hooks";
 import { useStatus } from "../use-status";
@@ -50,6 +50,13 @@ describe("query polling policy", () => {
     expect(options.staleTime).toBe(15_000);
     expect(options.refetchInterval).toBe(30_000);
     expect(options.retry).toBe(2);
+  });
+
+  it("createStaticQueryOptions disables polling explicitly", () => {
+    const options = createStaticQueryOptions(["static"], async () => 1);
+    expect(options.staleTime).toBe(Infinity);
+    expect(options.refetchInterval).toBe(false);
+    expect(options.retry).toBe(1);
   });
 
   it("useHealth uses shared polling policy with endpoint-specific retry", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
 import type { ZodType } from "zod";
 
@@ -88,11 +88,12 @@ export function createStaticQueryOptions<T>(
     retryDelay?: (attempt: number) => number;
     staleTime?: number;
   },
-) {
+): UseQueryOptions<T, Error, T, readonly unknown[]> {
   return {
     queryKey: key,
     queryFn,
     staleTime: opts?.staleTime ?? Infinity,
+    refetchInterval: false as const,
     enabled: opts?.enabled,
     retry: opts?.retry ?? 1,
     retryDelay: opts?.retryDelay ?? DEFAULT_RETRY_DELAY,

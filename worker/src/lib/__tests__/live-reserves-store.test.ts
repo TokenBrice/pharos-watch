@@ -339,4 +339,48 @@ describe("live-reserves-store", () => {
     expect(result!.reserves).toHaveLength(1);
     expect(result!.reserves[0].name).toBe("Valid");
   });
+
+  it("ignores malformed warning and metadata JSON in sync state rows", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify(LIVE_SLICES),
+          fetched_at: now,
+          source: "infinifi",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 1,
+          warnings: "{bad json",
+          last_error: null,
+          metadata: "{bad json",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", now + 60);
+
+    expect(result).toMatchObject({
+      mode: "live",
+      sync: {
+        status: "ok",
+        bootstrap: false,
+        stale: false,
+      },
+    });
+    expect(result?.sync).not.toHaveProperty("warnings");
+  });
 });

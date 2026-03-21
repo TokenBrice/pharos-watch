@@ -1,6 +1,6 @@
 # Methodology Page Contract
 
-`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ structured data, and the reader-guide hero chrome, while the long-form section bodies live in `src/app/methodology/methodology-sections.tsx`.
+`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ structured data, and the reader-guide hero chrome, while `src/app/methodology/methodology-sections.tsx` now composes the authored long-form section groups from `src/app/methodology/sections/*.tsx`.
 
 ---
 
@@ -8,7 +8,8 @@
 
 - **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, FAQ JSON-LD, hero/reader-guide shell)
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
-- **Section content module:** `src/app/methodology/methodology-sections.tsx`
+- **Section composition module:** `src/app/methodology/methodology-sections.tsx`
+- **Section content groups:** `src/app/methodology/sections/core-sections.tsx` and `src/app/methodology/sections/monitoring-sections.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail
 - **Mode persistence contract:** `MethodologyModeToggle` stores `pharos.methodology.mode` in `localStorage` and opens/closes authored `details` blocks via the `data-methodology-details` / `data-methodology-worked-example` attributes emitted by `MethodologyDetails` and `WorkedExample`
@@ -31,7 +32,7 @@
 | Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/safety-score-version.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                                     |
 | Liquidity Score       | `worker/src/cron/dex-liquidity/pool-helpers.ts`, `shared/lib/liquidity-score-version.ts`                                                                                                                                             |
 | Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/mint-burn-flow-version.ts`                                                                                                                     |
-| Yield Intelligence    | `worker/src/cron/yield-helpers.ts`, `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/{cache,resolve,rankings,sources}.ts`, `worker/src/lib/constants.ts` (PYS constants), `shared/lib/yield-methodology-version.ts` |
+| Yield Intelligence    | `worker/src/cron/yield-helpers.ts`, `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/yield-sync/{cache,sources,resolve,evaluation,publication,history,rankings}.ts`, `worker/src/lib/constants.ts` (PYS constants), `shared/lib/yield-methodology-version.ts` |
 | PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-dews-version.ts`                                                                                                                                              |
 | Contagion Stress Test | `shared/lib/report-cards.ts` (`computeStressedGrades`)                                                                                                                                                                               |
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/blacklist-tracker-version.ts`                                                                                                              |
@@ -45,7 +46,7 @@ When changing any methodology surface, update the runtime implementation, the de
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in `src/app/methodology/methodology-sections.tsx`.
+3. `/methodology` page copy and worked examples in `src/app/methodology/methodology-sections.tsx` plus the relevant `src/app/methodology/sections/*.tsx` group module.
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
 
@@ -92,6 +93,7 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.8** (2026-03-21): Split the authored long-form methodology body out of the single 2.8k-line hotspot into grouped section modules under `src/app/methodology/sections/`, while keeping `methodology-sections.tsx` as the composition root.
 - **v3.7** (2026-03-16): Corrected the Chain Health source mapping to the live v1.1 implementation, added the missing `chain-health-changelog` route to the methodology route inventory, and linked the chain analytics docs update contract.
 - **v3.6** (2026-03-14): Documented the remaining route-shell contract in `page.tsx` (FAQ/metadata/reader-guide copy), the persisted Reader/Analyst mode toggle behavior, the shared changelog factory, and the cross-app anchor/path dependency in `src/lib/methodology-context.ts`.
 - **v3.5** (2026-03-14): Added Pricing Pipeline section (first position) with 8-source consensus diagram, source weights table, enrichment pipeline, confidence levels, and validation modes. Created `shared/lib/pricing-pipeline-version.ts` and `src/app/methodology/pricing-pipeline-changelog/page.tsx`.

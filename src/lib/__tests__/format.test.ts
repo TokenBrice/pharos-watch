@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   formatCurrency,
   formatBps,
+  formatCompactCount,
+  formatCompactUsd,
   formatPegDeviation,
   formatPercentChange,
   formatSupply,
@@ -11,6 +13,8 @@ import {
   formatNativePrice,
   formatDeathDate,
   formatDeathDateShort,
+  formatTrackingSpanDays,
+  formatTrackingSpanSeconds,
 } from "@shared/lib/format";
 
 // ---------------------------------------------------------------------------
@@ -65,6 +69,24 @@ describe("formatCurrency", () => {
     expect(formatCurrency(1_000_000)).toBe("$1.00M");
     expect(formatCurrency(1_000_000_000)).toBe("$1.00B");
     expect(formatCurrency(1_000_000_000_000)).toBe("$1.00T");
+  });
+});
+
+describe("formatCompactUsd", () => {
+  it("matches the compact chain-supply display tiers", () => {
+    expect(formatCompactUsd(1.23e12)).toBe("$1.23T");
+    expect(formatCompactUsd(1.23e9)).toBe("$1.23B");
+    expect(formatCompactUsd(456e6)).toBe("$456.0M");
+    expect(formatCompactUsd(12_345)).toBe("$12K");
+    expect(formatCompactUsd(999)).toBe("$999");
+  });
+});
+
+describe("formatCompactCount", () => {
+  it("formats large counts with a compact k suffix", () => {
+    expect(formatCompactCount(1_500)).toBe("1.5k");
+    expect(formatCompactCount(1_000)).toBe("1k");
+    expect(formatCompactCount(999)).toBe("999");
   });
 });
 
@@ -214,6 +236,27 @@ describe("formatAddress", () => {
 
   it("truncates addresses longer than 12 chars", () => {
     expect(formatAddress("1234567890123")).toBe("123456...0123");
+  });
+});
+
+describe("formatTrackingSpanDays", () => {
+  it("formats day-only spans", () => {
+    expect(formatTrackingSpanDays(15)).toBe("15d");
+  });
+
+  it("formats month spans using the shared 30.44-day rollup", () => {
+    expect(formatTrackingSpanDays(90)).toBe("2mo");
+  });
+
+  it("formats multi-year spans with remaining months", () => {
+    expect(formatTrackingSpanDays(820)).toBe("2y 2mo");
+    expect(formatTrackingSpanDays(731)).toBe("2y");
+  });
+});
+
+describe("formatTrackingSpanSeconds", () => {
+  it("delegates to the shared day formatter", () => {
+    expect(formatTrackingSpanSeconds(90 * 86400)).toBe("2mo");
   });
 });
 

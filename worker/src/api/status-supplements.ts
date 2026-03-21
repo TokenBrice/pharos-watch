@@ -13,7 +13,7 @@ import type {
 } from "@shared/types";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { loadFreshLiveReserveMap } from "../lib/live-reserves-store";
-import { getMintBurnReconciliation } from "./status-derived-data";
+import { getMintBurnReconciliation } from "../lib/status/derived-data";
 
 function sectionError(code: string, message: string): StatusSectionError {
   return { code, message };

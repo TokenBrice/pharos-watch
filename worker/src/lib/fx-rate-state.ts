@@ -1,6 +1,7 @@
 import type { CacheStatus } from "@shared/types";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getCache, setCacheIfNewer } from "./db-cache";
+import { decodeJsonString } from "./cache-json";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
@@ -163,35 +164,49 @@ function buildBootstrapMeta(cache: CacheRow, rates: Record<string, number>): FxR
   };
 }
 
-function parseFxMeta(value: string, fallback: CacheRow, rates: Record<string, number>): FxRatesMeta | null {
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    const usableSyncAt =
-      typeof parsed.usableSyncAt === "number" && Number.isFinite(parsed.usableSyncAt) && parsed.usableSyncAt > 0
-        ? Math.floor(parsed.usableSyncAt)
-        : fallback.updatedAt;
-    const mode: FxRateSyncMode = parsed.mode === "cached-fallback" ? "cached-fallback" : "live";
-    return {
-      usableSyncAt,
-      mode,
-      sourceUpdatedAtByPeg: sanitizeSourceUpdatedAtByPeg(parsed.sourceUpdatedAtByPeg),
-      sourceModeByPeg: sanitizeSourceModeByPeg(parsed.sourceModeByPeg),
-      sourceCadenceByPeg: sanitizeSourceCadenceByPeg(parsed.sourceCadenceByPeg),
-      sourceDateByPeg: sanitizeSourceDateByPeg(parsed.sourceDateByPeg),
-      sources: sanitizeSources(parsed.sources),
-      ecbDate: typeof parsed.ecbDate === "string" && parsed.ecbDate.length > 0 ? parsed.ecbDate : null,
-      previousCacheUpdatedAt:
-        typeof parsed.previousCacheUpdatedAt === "number" && Number.isFinite(parsed.previousCacheUpdatedAt)
-          ? Math.floor(parsed.previousCacheUpdatedAt)
-          : fallback.updatedAt,
-      consecutiveFallbackRuns:
-        typeof parsed.consecutiveFallbackRuns === "number" && Number.isFinite(parsed.consecutiveFallbackRuns) && parsed.consecutiveFallbackRuns >= 0
-          ? Math.floor(parsed.consecutiveFallbackRuns)
-          : 0,
-    };
-  } catch {
-    return buildBootstrapMeta(fallback, rates);
+function parseFxMeta(value: string, fallback: CacheRow, rates: Record<string, number>): FxRatesMeta {
+  const decoded = decodeJsonString<FxRatesMeta, "json-parse-failed" | "invalid-payload">(value, {
+    mode: "best-effort",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => {
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { ok: false, reason: "invalid-payload" };
+      }
+
+      const record = parsed as Record<string, unknown>;
+      const usableSyncAt =
+        typeof record.usableSyncAt === "number" && Number.isFinite(record.usableSyncAt) && record.usableSyncAt > 0
+          ? Math.floor(record.usableSyncAt)
+          : fallback.updatedAt;
+      const mode: FxRateSyncMode = record.mode === "cached-fallback" ? "cached-fallback" : "live";
+      return {
+        ok: true,
+        payload: {
+          usableSyncAt,
+          mode,
+          sourceUpdatedAtByPeg: sanitizeSourceUpdatedAtByPeg(record.sourceUpdatedAtByPeg),
+          sourceModeByPeg: sanitizeSourceModeByPeg(record.sourceModeByPeg),
+          sourceCadenceByPeg: sanitizeSourceCadenceByPeg(record.sourceCadenceByPeg),
+          sourceDateByPeg: sanitizeSourceDateByPeg(record.sourceDateByPeg),
+          sources: sanitizeSources(record.sources),
+          ecbDate: typeof record.ecbDate === "string" && record.ecbDate.length > 0 ? record.ecbDate : null,
+          previousCacheUpdatedAt:
+            typeof record.previousCacheUpdatedAt === "number" && Number.isFinite(record.previousCacheUpdatedAt)
+              ? Math.floor(record.previousCacheUpdatedAt)
+              : fallback.updatedAt,
+          consecutiveFallbackRuns:
+            typeof record.consecutiveFallbackRuns === "number" && Number.isFinite(record.consecutiveFallbackRuns) && record.consecutiveFallbackRuns >= 0
+              ? Math.floor(record.consecutiveFallbackRuns)
+              : 0,
+        },
+      };
+    },
+  });
+
+  if (decoded.ok) {
+    return decoded.payload;
   }
+  return buildBootstrapMeta(fallback, rates);
 }
 
 export function getFxRatesMetaKey(): string {
@@ -421,18 +436,23 @@ export function hydrateFxRateState(
 ): FxRateState | null {
   if (!ratesCache) return null;
 
-  let rates: Record<string, number>;
-  try {
-    rates = sanitizeFxRates(JSON.parse(ratesCache.value));
-  } catch {
+  const decodedRates = decodeJsonString<Record<string, number>, "json-parse-failed">(
+    ratesCache.value,
+    {
+      mode: "strict",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) => ({ ok: true, payload: sanitizeFxRates(parsed) }),
+    },
+  );
+  if (!decodedRates.ok) {
     return null;
   }
+  const rates = decodedRates.payload;
   if (Object.keys(rates).length === 0) return null;
 
   const meta = metaCache
     ? parseFxMeta(metaCache.value, ratesCache, rates)
     : buildBootstrapMeta(ratesCache, rates);
-  if (!meta) return null;
 
   const nowSec = Math.floor(Date.now() / 1000);
   return {

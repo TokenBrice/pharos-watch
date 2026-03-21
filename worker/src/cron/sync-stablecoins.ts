@@ -1,6 +1,4 @@
-import { fetchWithRetry } from "../lib/fetch-retry";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import {
   enrichMissingPrices,
   hasMissingPrice,
@@ -10,26 +8,16 @@ import {
 import type { PeggedAsset } from "./enrich-prices";
 import {
   applyTrackedAssetOverrides,
-  dedupeCanonicalAssets,
   detectPriceStaleness,
   fillMissingSupplyHistory,
-  filterStructurallyValidAssets,
-  normalizeChainCirculating,
 } from "./sync-stablecoins/stages";
-import {
-  fetchCoinGeckoMarketData,
-  fetchSupplementalTrackedTokens,
-  type CoinGeckoMcapData,
-} from "./sync-stablecoins/supplemental-assets";
+import { type CoinGeckoMcapData } from "./sync-stablecoins/supplemental-assets";
 import {
   buildSyncMetadata,
-  hydrateGeckoIdAliases,
   loadFreshFxRates,
   loadPreviousStablecoinsById,
-  mergeSupplementalLastKnownGood,
   stampPriceMetadata,
   type CronResult,
-  type PriceSourceHealth,
 } from "./sync-stablecoins/shared";
 import {
   runPostEnrichmentPricePipeline,
@@ -37,11 +25,11 @@ import {
   runDepegPipeline,
   isAbortResult,
 } from "./sync-stablecoins/post-enrichment";
-
-import { upsertDiscoveryCandidates } from "./discovery-scan";
+import { loadStablecoinsIntake } from "./sync-stablecoins/intake";
+import { buildStablecoinsSyncResult } from "./sync-stablecoins/metadata";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
-import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
+import { MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
+import { recordOutcome } from "../lib/circuit-breaker";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
 import {
   buildPriceValidationContext,
@@ -330,160 +318,43 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);
 
-  const previousAssetsById = await loadPreviousStablecoinsById(db);
-  const cgData = await fetchCoinGeckoMarketData(db, signal, coingeckoApiKey);
-
-  // Check circuit breaker before DL fetch
-  const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_STABLECOINS);
-
   const preFetchAbort = returnIfAborted(signal, "fetch-stablecoins-and-supplementals");
   if (preFetchAbort) return preFetchAbort;
-  const [llamaRes, supplementalTokens] = await Promise.all([
-    dlAllowed
-      ? fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`, signal ? { signal } : undefined)
-      : Promise.resolve(null),
-    fetchSupplementalTrackedTokens(cgData, signal, coingeckoApiKey, chainRpcs),
-  ]);
-  const { goldTokens, silverTokens, fiatCgTokens } = supplementalTokens;
+  const intake = await loadStablecoinsIntake({
+    db,
+    signal,
+    syncStartSec,
+    coingeckoApiKey,
+    chainRpcs,
+    fallbackToCoingecko: (cgData) =>
+      syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey),
+  });
 
-  // Record DL outcome and fallback if needed
-  if (dlAllowed) {
-    if (!llamaRes?.ok) {
-      console.error(`[sync-stablecoins] DefiLlama API error: ${llamaRes?.status ?? "no response"}`);
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-      const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
-      if (fallback.itemCount && fallback.itemCount > 0) return fallback;
-      throw new Error("DefiLlama stablecoins API failed and CoinGecko fallback was insufficient");
+  if (intake.kind === "fallback") {
+    if (intake.result.itemCount && intake.result.itemCount > 0) {
+      return intake.result;
     }
-  } else {
-    console.warn("[sync-stablecoins] DL stablecoins circuit open — using CG supply fallback");
-    const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
-    if (fallback.itemCount && fallback.itemCount > 0) return fallback;
-    throw new Error("DefiLlama stablecoins circuit open and CoinGecko fallback was insufficient");
+    throw new Error(intake.errorMessage);
   }
 
-  const parseAbort = returnIfAborted(signal, "parse-defillama-payload");
-  if (parseAbort) return parseAbort;
-  const llamaData = await llamaRes!.json() as { peggedAssets: PeggedAsset[]; fxFallbackRates?: Record<string, number> };
-  const rawAssetCount = llamaData.peggedAssets?.length ?? 0;
-
-  if (llamaData.peggedAssets === undefined) console.warn("[sync] DefiLlama response missing peggedAssets field — possible API contract change");
-  if (!llamaData.peggedAssets || llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
-    console.error(`[sync-stablecoins] Unexpected asset count (${llamaData.peggedAssets?.length}), need ${MIN_VALID_ASSET_COUNT}+, skipping cache write`);
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-    const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
-    if (fallback.itemCount && fallback.itemCount > 0) return fallback;
-    throw new Error(
-      `DefiLlama payload was structurally invalid (asset count=${llamaData.peggedAssets?.length ?? 0}) and fallback failed`,
-    );
-  }
-
-  // Structural validation: ensure assets have required fields
-  const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(llamaData.peggedAssets);
-  if (validAssets.length < MIN_VALID_ASSET_COUNT) {
-    console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-    const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
-    if (fallback.itemCount && fallback.itemCount > 0) return fallback;
-    throw new Error(
-      `DefiLlama payload had too many malformed assets (valid=${validAssets.length}) and fallback failed`,
-    );
-  }
-  if (validAssets.length < llamaData.peggedAssets.length) {
-    console.warn(`[sync-stablecoins] Dropped ${llamaData.peggedAssets.length - validAssets.length} malformed assets`);
-    llamaData.peggedAssets = validAssets;
-  }
-
-  // DefiLlama may emit `gecko_id` (snake_case). Hydrate `geckoId` early so
-  // primary price and enrichment passes can still use CoinGecko identifiers.
-  hydrateGeckoIdAliases(llamaData.peggedAssets);
-
-  // Normalize chainCirculating: DL returns peg-bucket objects ({peggedUSD: N})
-  // for current/prev values — flatten to plain numbers so the frontend schema
-  // and components can consume them directly.
-  normalizeChainCirculating(llamaData.peggedAssets);
-
-  // Discovery Source A: DL residuals — upsert untracked coins with circulating > $5M
-  const dlResiduals = llamaData.peggedAssets
-    .filter((a) => !REGISTRY_BY_LLAMA_ID.has(String(a.id)))
-    .filter((a) => {
-      const circ = a.circulating;
-      if (!circ || typeof circ !== "object") return false;
-      const total = Object.values(circ).reduce((sum: number, v: unknown) => sum + (typeof v === "number" ? v : 0), 0);
-      return total >= 5_000_000;
-    })
-    .map((a) => ({
-      llamaId: Number(a.id),
-      name: a.name as string,
-      symbol: a.symbol as string,
-      marketCap: Object.values(a.circulating ?? {}).reduce((sum: number, v: unknown) => sum + (typeof v === "number" ? v : 0), 0),
-      source: "defillama",
-    }));
-
-  if (dlResiduals.length > 0) {
-    try {
-      await upsertDiscoveryCandidates(db, dlResiduals);
-      console.log(`[discovery] DL residuals: ${dlResiduals.length} untracked coins above $5M`);
-    } catch (err) {
-      console.warn("[discovery] DL residuals upsert failed:", err);
-    }
-  }
-
-  // Remap DefiLlama numeric IDs to canonical IDs as early as possible.
-  // Unmapped assets keep their original IDs and are filtered downstream.
-  for (const asset of llamaData.peggedAssets) {
-    const mapped = REGISTRY_BY_LLAMA_ID.get(String(asset.id));
-    if (mapped) {
-      asset.id = mapped.id;
-    }
-  }
-
-  const canonicalDeduplication = dedupeCanonicalAssets(llamaData.peggedAssets);
-  if (canonicalDeduplication.duplicateRows > 0) {
-    console.warn(
-      `[sync-stablecoins] Deduped ${canonicalDeduplication.duplicateRows} canonical duplicate row(s): ` +
-      canonicalDeduplication.affectedIds.join(", "),
-    );
-    llamaData.peggedAssets = canonicalDeduplication.dedupedAssets;
-  }
-  if (llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
-    console.error(
-      `[sync-stablecoins] Canonical dedupe reduced asset count to ${llamaData.peggedAssets.length} ` +
-      `(need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
-    );
-    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-    const fallback = await syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey);
-    if (fallback.itemCount && fallback.itemCount > 0) return fallback;
-    throw new Error(
-      `DefiLlama payload collapsed to ${llamaData.peggedAssets.length} unique canonical IDs and fallback failed`,
-    );
-  }
-
-  const supplementalResolution = mergeSupplementalLastKnownGood(
-    [...goldTokens, ...silverTokens, ...fiatCgTokens],
-    previousAssetsById,
-    new Set(llamaData.peggedAssets.map((asset) => String(asset.id))),
-  );
-  if (supplementalResolution.assets.length > 0) {
-    llamaData.peggedAssets = [...llamaData.peggedAssets, ...supplementalResolution.assets];
-  }
-  if (supplementalResolution.restoredCount > 0 || supplementalResolution.skippedDuplicates > 0) {
-    console.log(
-      `[sync-stablecoins] Supplemental resolution: restored=${supplementalResolution.restoredCount}, ` +
-      `skippedDuplicates=${supplementalResolution.skippedDuplicates}`,
-    );
-  }
-
-  // Always prefer curated metadata over DefiLlama fields; includes known address patches.
-  applyTrackedAssetOverrides(llamaData.peggedAssets);
+  const {
+    assets,
+    rawAssetCount,
+    droppedMalformedAssets,
+    canonicalDeduplication,
+  } = intake;
+  let fxFallbackRates = intake.fxFallbackRates;
 
   // Load FX rates early for dynamic price bounds in validatePriceCandidate
-  const { fxFallbackRates: fxRates, validationReferences } = await loadFreshFxRates(db, syncStartSec);
+  const { fxFallbackRates: freshFxFallbackRates, validationReferences } = await loadFreshFxRates(db, syncStartSec);
+  if (freshFxFallbackRates) {
+    fxFallbackRates = freshFxFallbackRates;
+  }
   const validationContexts = createValidationContextResolver();
 
   // Extract DL list prices before primary consensus overwrites them
   const dlListPrices = new Map<string, number>();
-  for (const asset of llamaData.peggedAssets) {
+  for (const asset of assets) {
     if (
       asset.price != null &&
       typeof asset.price === "number" &&
@@ -499,13 +370,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const primaryPricesAbort = returnIfAborted(signal, "primary-prices");
   if (primaryPricesAbort) return primaryPricesAbort;
   const { results: primaryPriceResults, stats: priceValidationStats } = await fetchPrimaryPrices(
-    llamaData.peggedAssets, db, signal, validationReferences, coingeckoApiKey, chainRpcs, dlListPrices,
+    assets, db, signal, validationReferences, coingeckoApiKey, chainRpcs, dlListPrices,
   );
-  const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(llamaData.peggedAssets, signal);
+  const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
   const protocolOverrideCount = protocolPriceOverrides.size;
 
   // Apply primary price results — these override the DL list endpoint prices
-  for (const asset of llamaData.peggedAssets) {
+  for (const asset of assets) {
     const primary = primaryPriceResults.get(asset.id);
     if (primary) {
       const decision = validatePriceCandidate(
@@ -527,14 +398,14 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
 
   // Tag all DL-sourced assets with supplySource
-  for (const asset of llamaData.peggedAssets) {
+  for (const asset of assets) {
     if (!asset.supplySource) {
       asset.supplySource = "defillama";
     }
   }
 
   // Pre-validate: route unreasonable prices through enrichment
-  for (const asset of llamaData.peggedAssets) {
+  for (const asset of assets) {
     if (
       asset.price != null &&
       typeof asset.price === "number" &&
@@ -556,14 +427,14 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
   // Enrich any assets that still have missing prices
   const missingBefore = new Set(
-    llamaData.peggedAssets.filter(hasMissingPrice).map((a) => a.id)
+    assets.filter(hasMissingPrice).map((a) => a.id)
   );
   const enrichAbort = returnIfAborted(signal, "enrich-prices");
   if (enrichAbort) return enrichAbort;
-  const enrichStats = await enrichMissingPrices(llamaData.peggedAssets, cmcApiKey, db, signal);
+  const enrichStats = await enrichMissingPrices(assets, cmcApiKey, db, signal);
 
   // Tag enriched assets with fallback confidence
-  for (const asset of llamaData.peggedAssets) {
+  for (const asset of assets) {
     if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
       stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", syncStartSec);
     }
@@ -575,10 +446,10 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   if (gtProbeAbort) return gtProbeAbort;
   try {
     const { updatedCount: gtUpdated } = await runGtProbePass(
-      llamaData.peggedAssets, primaryPriceResults, db, signal, validationReferences,
+      assets, primaryPriceResults, db, signal, validationReferences,
     );
     if (gtUpdated > 0) {
-      for (const asset of llamaData.peggedAssets) {
+      for (const asset of assets) {
         const primary = primaryPriceResults.get(asset.id);
         if (primary && primary.candidateSources.includes("geckoterminal")) {
           const decision = validatePriceCandidate(
@@ -603,7 +474,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Protocol-backed overrides supersede market-source prices when direct redemption
   // or protocol accounting provides a more authoritative mark. This still runs after
   // the GT probe so later market cross-checks cannot overwrite an authoritative mark.
-  for (const asset of llamaData.peggedAssets) {
+  for (const asset of assets) {
     const override = protocolPriceOverrides.get(asset.id);
     if (!override) continue;
 
@@ -635,12 +506,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
   // --- Shared post-enrichment price pipeline ---
   const priceResult = await runPostEnrichmentPricePipeline({
-    assets: llamaData.peggedAssets,
+    assets,
     missingBefore,
     db,
     syncStartSec,
     signal,
-    fxFallbackRates: fxRates,
+    fxFallbackRates,
     validationReferences,
     validationContexts,
     priceValidationModeForAsset,
@@ -660,7 +531,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   try {
     const fillAbort = returnIfAborted(signal, "fill-supply-history");
     if (fillAbort) return fillAbort;
-    const fillCount = await fillMissingSupplyHistory(db, llamaData.peggedAssets, signal);
+    const fillCount = await fillMissingSupplyHistory(db, assets, signal);
     if (fillCount > 0) {
       console.log(`[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
     }
@@ -674,7 +545,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   try {
     const stalenessAbort = returnIfAborted(signal, "detect-price-staleness");
     if (stalenessAbort) return stalenessAbort;
-    const staleness = await detectPriceStaleness(db, llamaData.peggedAssets, signal);
+    const staleness = await detectPriceStaleness(db, assets, signal);
     if (staleness?.stale) {
       stalenessWarning = true;
       console.warn(
@@ -687,16 +558,11 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     console.warn("[sync-stablecoins] Staleness check failed:", e);
   }
 
-  // Embed live FX fallback rates if available (reuse earlier fetch)
-  if (fxRates) {
-    llamaData.fxFallbackRates = fxRates;
-  }
-
   const validationAbort = returnIfAborted(signal, "validate-stablecoins-payload");
   if (validationAbort) return validationAbort;
   const cacheResult = await validateAndWriteStablecoinsCache({
-    assets: llamaData.peggedAssets,
-    fxFallbackRates: llamaData.fxFallbackRates,
+    assets,
+    fxFallbackRates,
     db,
     syncStartSec,
     signal,
@@ -706,7 +572,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     abortResult,
   }, (stablecoinsCacheAgeSec) => ({
     status: "degraded",
-    itemCount: llamaData.peggedAssets.length,
+    itemCount: assets.length,
     metadata: buildSyncMetadata({
       rowsRead: rawAssetCount,
       rowsWritten: 0,
@@ -733,138 +599,22 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
 
   const depegResult = await runDepegPipeline(
-    db, llamaData.peggedAssets, llamaData.fxFallbackRates, signal, coingeckoApiKey,
+    db, assets, fxFallbackRates, signal, coingeckoApiKey,
     returnIfAborted, abortResult, "", "",
   );
   if (isAbortResult(depegResult)) return depegResult;
   const { depegErrorCount, depegErrors } = depegResult;
 
-  // Build metadata for cron_runs observability
-  let status: CronResult["status"] = "ok";
-  if (depegErrorCount > 0) {
-    status = "degraded";
-  }
-
-  const INDIVIDUAL_SOURCE_KEYS = new Set<string>([
-    "coingecko", "defillama", "defillama-list", "protocol-redeem", "defillama-contract",
-    "coinmarketcap", "dexscreener", "jupiter", "pyth", "binance", "kraken", "bitstamp", "coinbase",
-    "redstone", "curve-onchain", "dex-promoted", "geckoterminal", "pool-tvl-weighted", "cached",
-  ]);
-
-  function mapSourceToBucket(
-    source: string,
-    dist: PriceSourceHealth["sourceDistribution"],
-  ): keyof PriceSourceHealth["sourceDistribution"] | null {
-    if (source in dist) return source as keyof typeof dist;
-    const firstSource = source.split("+")[0];
-    if (firstSource in dist) return firstSource as keyof typeof dist;
-    return null;
-  }
-
-  const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
-  const finalSourceDistribution: PriceSourceHealth["sourceDistribution"] = {
-    "coingecko+defillama-list": 0,
-    coingecko: 0,
-    defillama: 0,
-    "defillama-list": 0,
-    "protocol-redeem": 0,
-    "defillama-contract": 0,
-    coinmarketcap: 0,
-    dexscreener: 0,
-    jupiter: 0,
-    pyth: 0,
-    binance: 0,
-    kraken: 0,
-    bitstamp: 0,
-    coinbase: 0,
-    redstone: 0,
-    "curve-onchain": 0,
-    "dex-promoted": 0,
-    geckoterminal: 0,
-    "pool-tvl-weighted": 0,
-    cached: 0,
-    missing: 0,
-  };
-  const finalConfidenceDistribution: PriceSourceHealth["confidenceDistribution"] = {
-    high: 0,
-    "single-source": 0,
-    low: 0,
-    fallback: 0,
-  };
-
-  for (const asset of llamaData.peggedAssets) {
-    if (hasMissingPrice(asset)) {
-      finalSourceDistribution.missing++;
-      continue;
-    }
-
-    // Participation-based counting: credit EACH source that contributed to
-    // consensus, so oracle/CEX sources (Pyth, RedStone, Binance, Coinbase)
-    // are visible even when they're not first alphabetically in the label.
-    if (asset.agreeSources && asset.agreeSources.length > 0) {
-      const agreeSet = new Set(asset.agreeSources);
-      if (agreeSet.has("coingecko") && agreeSet.has("defillama-list")) {
-        finalSourceDistribution["coingecko+defillama-list"]++;
-      }
-      for (const src of asset.agreeSources) {
-        if (INDIVIDUAL_SOURCE_KEYS.has(src)) {
-          finalSourceDistribution[src as keyof typeof finalSourceDistribution]++;
-        }
-      }
-    } else {
-      // Fallback path for enrichment sources (CMC, DexScreener, cached, etc.)
-      // that don't go through multi-source consensus.
-      const source = asset.priceSource;
-      const bucket = source ? mapSourceToBucket(source, finalSourceDistribution) : null;
-      if (bucket) {
-        finalSourceDistribution[bucket]++;
-      }
-    }
-
-    const confidence = asset.priceConfidence;
-    if (confidence && confidence in finalConfidenceDistribution) {
-      finalConfidenceDistribution[confidence as keyof typeof finalConfidenceDistribution]++;
-    }
-  }
-
-  // Build price source health from the final resolved asset payload.
-  const priceSourceHealth: PriceSourceHealth = {
-    sourceDistribution: finalSourceDistribution,
-    confidenceDistribution: finalConfidenceDistribution,
-    totalAssets: llamaData.peggedAssets.length,
-    lastSync: Math.floor(Date.now() / 1000),
-  };
-
-  const metadata: Record<string, unknown> = {
-    rowsRead: rawAssetCount,
-    rowsWritten: llamaData.peggedAssets.length,
-    rowsDropped: droppedMalformedAssets,
-    sourceCoverage: { defillama: true },
-    fallbackMode: null,
-    validationFailures: 0,
+  return buildStablecoinsSyncResult({
+    assets,
+    rawAssetCount,
+    droppedMalformedAssets,
     canonicalDeduplication,
-    assetCount: llamaData.peggedAssets.length,
-    enrichment: enrichStats,
-    priceValidation: priceValidationStats,
-    rejectedPrices: rejectedCount,
-    missingPrices: finalMissing,
-    priceSourceHealth,
-  };
-  if (stalenessWarning) metadata.stalenessWarning = true;
-  if (depegErrorCount > 0) {
-    metadata.depegErrorCount = depegErrorCount;
-    metadata.depegErrors = depegErrors;
-  }
-
-  return {
-    itemCount: llamaData.peggedAssets.length,
-    status,
-    metadata: buildSyncMetadata(metadata, {
-      cacheWriteMode: "main-write",
-      capabilities: {
-        stablecoinsCache: true,
-        depegPipeline: depegErrorCount === 0,
-      },
-    }),
-  };
+    enrichStats,
+    priceValidationStats,
+    rejectedCount,
+    stalenessWarning,
+    depegErrorCount,
+    depegErrors,
+  });
 }

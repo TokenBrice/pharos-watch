@@ -1,5 +1,5 @@
 import { getCache } from "../lib/db-cache";
-import { addFreshnessHeaders } from "../lib/api-utils";
+import { addFreshnessHeaders, readCachedJsonOr503 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../lib/mint-burn-health-config";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
@@ -76,15 +76,14 @@ export function perCoinFlowCacheKey(stablecoinId: string, hours: number): string
 
 export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }): Response {
   let freshnessTs = cached.updatedAt;
-  try {
-    const parsed = JSON.parse(cached.value) as {
-      sync?: { lastSuccessfulSyncAt?: number | null };
-      updatedAt?: number;
-    };
-    freshnessTs = parsed.sync?.lastSuccessfulSyncAt ?? parsed.updatedAt ?? cached.updatedAt;
-  } catch {
-    freshnessTs = cached.updatedAt;
+  const parsed = readCachedJsonOr503<{
+    sync?: { lastSuccessfulSyncAt?: number | null };
+    updatedAt?: number;
+  }>("mint-burn-flows", "mint-burn-flows", cached);
+  if (!parsed.ok) {
+    return parsed.response;
   }
+  freshnessTs = parsed.data.sync?.lastSuccessfulSyncAt ?? parsed.data.updatedAt ?? cached.updatedAt;
 
   const headers = addFreshnessHeaders({
     "Content-Type": "application/json",

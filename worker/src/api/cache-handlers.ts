@@ -5,6 +5,7 @@ import {
   createCacheHandler,
   errorResponse,
   jsonResponse,
+  readCachedJsonOr503,
   validatePayloadWithSchema,
   withErrorHandler,
 } from "../lib/api-utils";
@@ -110,18 +111,15 @@ export const handleYieldRankings = withErrorHandler(
       "Cache-Control": CACHE_PROFILES.standard,
     }, cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC);
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(cached.value);
-    } catch (err) {
-      console.warn("[yield-rankings] Failed to parse cached payload:", err instanceof Error ? err.message : err);
-      return new Response(cached.value, { headers });
+    const parsed = readCachedJsonOr503<unknown>("yield-rankings", "yield-rankings", cached);
+    if (!parsed.ok) {
+      return parsed.response;
     }
 
-    let body = parsed;
+    let body = parsed.data;
     const validation = validatePayloadWithSchema(
       YieldRankingsResponseSchema,
-      parsed,
+      parsed.data,
       "yield-rankings:cache-read",
     );
 

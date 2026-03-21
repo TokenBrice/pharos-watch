@@ -1,15 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { formatCompactCount } from "@shared/lib/format";
 import { useDexLiquidity, useHealth } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
 import { PharosLogo } from "@/components/pharos-logo";
-
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-  return String(n);
-}
 
 interface SiteHeaderProps {
   total: number;
@@ -34,14 +30,14 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const trackedStats = useMemo(() => {
     const stats: string[] = [];
     if (totalPools != null) {
-      stats.push(`${formatCount(totalPools)} pools processed`);
+      stats.push(`${formatCompactCount(totalPools)} pools processed`);
     }
 
     if (mintBurnEvents != null) {
-      stats.push(`${formatCount(mintBurnEvents)} mint/burn events recorded`);
+      stats.push(`${formatCompactCount(mintBurnEvents)} mint/burn events recorded`);
     }
     if (blacklistEvents != null) {
-      stats.push(`${formatCount(blacklistEvents)} blacklist events recorded`);
+      stats.push(`${formatCompactCount(blacklistEvents)} blacklist events recorded`);
     }
 
     return stats;
@@ -74,9 +70,9 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
 
       <div className="grid gap-2 text-[11px]">
         <div className="flex flex-wrap justify-end gap-2">
-          <span className={METRIC_PILL_CLASS}>{formatCount(liveTrackedCount)} coins</span>
-          <span className={METRIC_PILL_CLASS}>{formatCount(pegCount)} pegs</span>
-          <span className={METRIC_PILL_CLASS}>{formatCount(chainCount)} chains</span>
+          <span className={METRIC_PILL_CLASS}>{formatCompactCount(liveTrackedCount)} coins</span>
+          <span className={METRIC_PILL_CLASS}>{formatCompactCount(pegCount)} pegs</span>
+          <span className={METRIC_PILL_CLASS}>{formatCompactCount(chainCount)} chains</span>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           {trackedStats.map((stat) => (

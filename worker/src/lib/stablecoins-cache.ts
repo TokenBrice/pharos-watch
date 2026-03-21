@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getCache } from "./db-cache";
+import { decodeCachedJson, type JsonDecodeMode } from "./cache-json";
 import type { StablecoinData } from "@shared/types";
 
 // Validate critical fields only -- passthrough preserves all upstream data
@@ -158,32 +159,41 @@ export async function loadStablecoinsCache(
 ): Promise<StablecoinsCacheLoadResult> {
   const mode = options.mode ?? "strict";
   const allowLegacyArray = options.allowLegacyArray ?? true;
-  const cached = await getCache(db, "stablecoins");
+  const decodeMode: JsonDecodeMode = mode === "lenient" ? "degraded" : "strict";
+  const decoded = decodeCachedJson<StablecoinsCachePayload, StablecoinsCacheFailureReason>(
+    await getCache(db, "stablecoins"),
+    {
+      mode: decodeMode,
+      missingReason: "missing-cache",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) => {
+        const normalized = normalizePayload(parsed, allowLegacyArray);
+        if (normalized.kind === "ok") {
+          return { ok: true, payload: normalized.payload };
+        }
+        if (normalized.kind === "degraded") {
+          return {
+            ok: false,
+            reason: normalized.reason,
+            payload: normalized.payload,
+          };
+        }
+        return { ok: false, reason: normalized.reason };
+      },
+    },
+  );
 
-  if (!cached) {
-    return toFailure(mode, "missing-cache", null);
+  if (!decoded.ok) {
+    if (decoded.reason === "legacy-array-payload" && decoded.payload != null) {
+      return {
+        kind: "degraded",
+        reason: decoded.reason,
+        payload: decoded.payload,
+        updatedAt: decoded.updatedAt,
+      };
+    }
+    return toFailure(mode, decoded.reason, decoded.updatedAt);
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cached.value);
-  } catch {
-    return toFailure(mode, "json-parse-failed", cached.updatedAt);
-  }
-
-  const normalized = normalizePayload(parsed, allowLegacyArray);
-  if (normalized.kind === "error") {
-    return toFailure(mode, normalized.reason, cached.updatedAt);
-  }
-
-  if (normalized.kind === "degraded") {
-    return {
-      kind: "degraded",
-      reason: normalized.reason,
-      payload: normalized.payload,
-      updatedAt: cached.updatedAt,
-    };
-  }
-
-  return { kind: "ok", payload: normalized.payload, updatedAt: cached.updatedAt };
+  return { kind: "ok", payload: decoded.payload, updatedAt: decoded.updatedAt ?? 0 };
 }

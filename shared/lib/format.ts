@@ -14,6 +14,23 @@ export function formatCurrency(value: number, decimals = 2): string {
   return abbreviateNumber(value, decimals, "$");
 }
 
+export function formatCompactUsd(value: number): string {
+  if (!Number.isFinite(value)) return "N/A";
+  if (Math.abs(value) >= 1e12) return abbreviateNumber(value, 2, "$");
+  if (Math.abs(value) >= 1e9) return abbreviateNumber(value, 2, "$");
+  if (Math.abs(value) >= 1e6) return abbreviateNumber(value, 1, "$");
+  if (Math.abs(value) >= 1e3) return abbreviateNumber(value, 0, "$");
+  return `${value < 0 ? "-" : ""}$${Math.abs(value).toFixed(0)}`;
+}
+
+export function formatCompactCount(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  if (Math.abs(value) >= 1000) {
+    return `${(value / 1000).toFixed(1).replace(/\.0$/u, "")}k`;
+  }
+  return String(value);
+}
+
 function trimTrailingZeros(value: string): string {
   return value.replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
 }
@@ -92,6 +109,19 @@ export function formatTokenAmount(value: number): string {
 export function formatAddress(address: string): string {
   if (address.length <= 12) return address;
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+export function formatTrackingSpanDays(days: number): string {
+  if (days < 30) return `${days}d`;
+  const months = Math.floor(days / 30.44);
+  if (months < 12) return `${months}mo`;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  return rem > 0 ? `${years}y ${rem}mo` : `${years}y`;
+}
+
+export function formatTrackingSpanSeconds(seconds: number): string {
+  return formatTrackingSpanDays(Math.floor(seconds / 86400));
 }
 
 export function formatEventDate(timestamp: number): string {

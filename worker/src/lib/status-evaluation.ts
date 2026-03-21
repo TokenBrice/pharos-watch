@@ -20,8 +20,8 @@ import {
   emptyReserveComposition,
   getDatasetFreshness,
   getTelegramBotStats,
-} from "../api/status-derived-data";
-import { emptyDataQuality, getDataQuality } from "../api/status-data-quality";
+} from "./status/derived-data";
+import { emptyDataQuality, getDataQuality } from "./status/data-quality";
 import {
   clampConfidence,
   reconcileStatusState,

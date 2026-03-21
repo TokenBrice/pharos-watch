@@ -1395,6 +1395,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 1800 s (30 minutes).
 
+**Error responses:** `503` when the cached rankings payload is missing or malformed.
+
 **Response**
 
 ```json
@@ -1521,6 +1523,8 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin net-flow + pressure-shift signals, and hourly timeseries. Updated every 20 minutes by the sync cron.
 
 **Cache:** standard
+
+**Error responses:** `503` when the cached fallback payload is missing or malformed and live recomputation cannot satisfy the request.
 
 **Optional query parameters**
 

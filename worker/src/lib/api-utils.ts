@@ -518,6 +518,23 @@ export function validatePayloadWithSchema<T>(
   return { ok: false, issues };
 }
 
+export function readCachedJsonOr503<T>(
+  endpoint: string,
+  cacheKey: string,
+  cached: { value: string },
+): { ok: true; data: T } | { ok: false; response: Response } {
+  try {
+    return { ok: true, data: JSON.parse(cached.value) as T };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[cache] Failed to parse ${endpoint} cached payload (${cacheKey}):`, message);
+    return {
+      ok: false,
+      response: errorResponse(503, `Cached ${cacheKey} payload is malformed`),
+    };
+  }
+}
+
 /**
  * Creates a cache-passthrough API handler that reads from the cache table
  * and returns the cached JSON with freshness headers.
@@ -540,19 +557,16 @@ export function createCacheHandler(
     }, cached.updatedAt, maxAgeSec);
 
     // Inject _meta into plain-object responses (not arrays)
-    try {
-      const parsed: unknown = JSON.parse(cached.value);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        (parsed as Record<string, unknown>)._meta = buildFreshnessMeta(cached.updatedAt, maxAgeSec);
-        return new Response(JSON.stringify(parsed), { headers });
-      }
-      if (Array.isArray(parsed)) {
-        return new Response(cached.value, { headers });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[cache] Failed to inject _meta into ${endpoint}:`, message);
-      return errorResponse(503, `Cached ${cacheKey} payload is malformed`);
+    const parsed = readCachedJsonOr503<unknown>(endpoint, cacheKey, cached);
+    if (!parsed.ok) {
+      return parsed.response;
+    }
+    if (parsed.data && typeof parsed.data === "object" && !Array.isArray(parsed.data)) {
+      (parsed.data as Record<string, unknown>)._meta = buildFreshnessMeta(cached.updatedAt, maxAgeSec);
+      return new Response(JSON.stringify(parsed.data), { headers });
+    }
+    if (Array.isArray(parsed.data)) {
+      return new Response(cached.value, { headers });
     }
 
     return new Response(cached.value, { headers });

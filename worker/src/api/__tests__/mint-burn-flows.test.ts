@@ -645,6 +645,50 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.headers.get("Warning")).toBeNull();
   });
 
+  it("returns 503 when the aggregate fallback cache is malformed", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const failingDb = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          all: async <T>() => {
+            if (sql.includes("FROM mint_burn_hourly")) {
+              throw new Error("simulated d1 failure");
+            }
+            return { results: [] as T[], success: true, meta: {} };
+          },
+          first: async <T>() => {
+            if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
+              const key = String(args[0] ?? "");
+              if (key.startsWith("mint-burn-flows:v2:aggregate:")) {
+                return {
+                  value: "{bad json",
+                  updated_at: now,
+                } as T;
+              }
+            }
+            return null;
+          },
+          run: async () => ({ success: true, meta: {} }),
+        }),
+        all: async <T>() => {
+          if (sql.includes("FROM mint_burn_hourly")) {
+            throw new Error("simulated d1 failure");
+          }
+          return { results: [] as T[], success: true, meta: {} };
+        },
+        first: async () => null,
+        run: async () => ({ success: true, meta: {} }),
+      }),
+    } as unknown as D1Database;
+
+    const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: "Cached mint-burn-flows payload is malformed",
+    });
+  });
+
   it("marks FTQ classification unavailable when report-card cache is missing", async () => {
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;

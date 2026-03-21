@@ -1,4 +1,5 @@
 import type { DepegEvent } from "@shared/types";
+import { formatTrackingSpanSeconds } from "@shared/lib/format";
 import { computePegScore } from "@shared/lib/peg-score";
 import { DAY_SECONDS, THIRTY_DAYS_SECONDS } from "@/lib/constants";
 
@@ -62,21 +63,11 @@ export function computePegStability(
 
   return {
     pegPct: pegMetrics.pegPct,
-    trackingSpan: formatTrackingSpan(historySpanSec),
+    trackingSpan: formatTrackingSpanSeconds(historySpanSec),
     limited,
     eventCount: pegMetrics.eventCount,
     worstDeviationBps: pegMetrics.worstDeviationBps,
     currentStreakDays,
     depeggedNow,
   };
-}
-
-function formatTrackingSpan(seconds: number): string {
-  const days = Math.floor(seconds / DAY_SECONDS);
-  if (days < 30) return `${days}d`;
-  const months = Math.floor(days / 30.44);
-  if (months < 12) return `${months}mo`;
-  const years = Math.floor(months / 12);
-  const rem = months % 12;
-  return rem > 0 ? `${years}y ${rem}mo` : `${years}y`;
 }

@@ -1,4 +1,5 @@
 import { getCache } from "./db-cache";
+import { decodeCachedJson } from "./cache-json";
 
 export interface ReportCardScoreEntry {
   score: number;
@@ -37,28 +38,29 @@ export async function loadReportCardCache(
   db: D1Database,
   options: LoadReportCardCacheOptions = {},
 ): Promise<ReportCardCacheLoadResult> {
-  const cached = await getCache(db, "report_card_cache");
-  if (!cached) {
-    return { kind: "error", reason: "missing-cache", updatedAt: null };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cached.value);
-  } catch {
-    return { kind: "error", reason: "json-parse-failed", updatedAt: cached.updatedAt };
-  }
-
-  if (!isValidReportCardCachePayload(parsed)) {
-    return { kind: "error", reason: "invalid-payload", updatedAt: cached.updatedAt };
+  const decoded = decodeCachedJson<ReportCardCachePayload, ReportCardCacheFailureReason>(
+    await getCache(db, "report_card_cache"),
+    {
+      mode: "strict",
+      missingReason: "missing-cache",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) => (
+        isValidReportCardCachePayload(parsed)
+          ? { ok: true, payload: parsed }
+          : { ok: false, reason: "invalid-payload" }
+      ),
+    },
+  );
+  if (!decoded.ok) {
+    return { kind: "error", reason: decoded.reason, updatedAt: decoded.updatedAt };
   }
 
   if (options.maxAgeMs != null) {
-    const ageMs = Date.now() - parsed.updatedAt * 1000;
+    const ageMs = Date.now() - decoded.payload.updatedAt * 1000;
     if (ageMs > options.maxAgeMs) {
-      return { kind: "error", reason: "stale-cache", updatedAt: cached.updatedAt };
+      return { kind: "error", reason: "stale-cache", updatedAt: decoded.updatedAt };
     }
   }
 
-  return { kind: "ok", payload: parsed, updatedAt: cached.updatedAt };
+  return { kind: "ok", payload: decoded.payload, updatedAt: decoded.updatedAt ?? 0 };
 }

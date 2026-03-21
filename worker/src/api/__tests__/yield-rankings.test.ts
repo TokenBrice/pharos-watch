@@ -249,4 +249,17 @@ describe("handleYieldRankings", () => {
     const res = await handleYieldRankings(mockD1());
     expect(res.status).toBe(503);
   });
+
+  it("returns 503 when cached rankings JSON is malformed", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const db = makeCacheDb("{bad json", updatedAt);
+
+    const res = await handleYieldRankings(db);
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: "Cached yield-rankings payload is malformed",
+    });
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+  });
 });

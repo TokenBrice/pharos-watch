@@ -1,3 +1,4 @@
+import { buildExplorerUrl } from "@shared/lib/explorer";
 import type { ChainConfig } from "../../lib/blacklist-contracts";
 
 export interface BlacklistRow {
@@ -17,16 +18,19 @@ export interface BlacklistRow {
 }
 
 export function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {
-  if (chain.type === "tron") {
-    return `${chain.explorerUrl}/#/transaction/${txHash}`;
-  }
-  return `${chain.explorerUrl}/tx/${txHash}`;
+  return buildExplorerUrl({
+    chainType: chain.type,
+    explorerUrl: chain.explorerUrl,
+    entityType: "tx",
+    value: txHash,
+  }) ?? `${chain.explorerUrl}/tx/${txHash}`;
 }
 
 export function buildExplorerAddressUrl(chain: ChainConfig, address: string): string {
-  if (chain.type === "tron") {
-    const tronAddr = address.startsWith("0x") ? "41" + address.slice(2) : address;
-    return `${chain.explorerUrl}/#/address/${tronAddr}`;
-  }
-  return `${chain.explorerUrl}/address/${address}`;
+  return buildExplorerUrl({
+    chainType: chain.type,
+    explorerUrl: chain.explorerUrl,
+    entityType: "address",
+    value: address,
+  }) ?? `${chain.explorerUrl}/address/${address}`;
 }

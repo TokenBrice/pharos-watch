@@ -80,4 +80,29 @@ describe("fx-rate-state cadence-aware freshness", () => {
     expect(getFxReferenceTypeFromState(state, "peggedGOLD", 6 * 3600, nowSec)).toBe("stale");
     expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("degraded");
   });
+
+  it("falls back to bootstrap metadata when the meta cache is malformed", () => {
+    vi.setSystemTime(new Date("2026-03-11T08:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const state = hydrateFxRateState(
+      { value: JSON.stringify({ peggedEUR: 1.08 }), updatedAt: nowSec - 60 },
+      { value: "{bad json", updatedAt: nowSec - 60 },
+    );
+
+    expect(state).not.toBeNull();
+    expect(state?.usableSyncAt).toBe(nowSec - 60);
+    expect(state?.mode).toBe("live");
+    expect(state?.sourceUpdatedAtByPeg.peggedEUR).toBe(nowSec - 60);
+    expect(state?.sourceModeByPeg.peggedEUR).toBe("live");
+  });
+
+  it("returns null when the rates cache JSON is malformed", () => {
+    const state = hydrateFxRateState(
+      { value: "{bad json", updatedAt: 1_700_000_000 },
+      null,
+    );
+
+    expect(state).toBeNull();
+  });
 });

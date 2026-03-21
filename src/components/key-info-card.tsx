@@ -7,6 +7,8 @@ import { Copy, ExternalLink, Globe } from "lucide-react";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_META } from "@shared/lib/chains";
+import { formatAddress } from "@shared/lib/format";
+import { buildExplorerUrl } from "@shared/lib/explorer";
 import { trackEvent } from "@/lib/analytics";
 import type { StablecoinMeta } from "@shared/types";
 import {
@@ -15,12 +17,6 @@ import {
   PEG_BADGE_STYLES,
   POR_BADGE_STYLES,
 } from "@shared/lib/classification";
-
-function getExplorerUrl(chainKey: string, address: string): string | null {
-  const chain = CHAIN_META[chainKey];
-  if (!chain?.explorerUrl) return null;
-  return chainKey === "tron" ? `${chain.explorerUrl}/#/contract/${address}` : `${chain.explorerUrl}/address/${address}`;
-}
 
 export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const [openChain, setOpenChain] = useState<string | null>(null);
@@ -231,7 +227,11 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             {openContract &&
               (() => {
                 const chain = CHAIN_META[openContract.chain];
-                const explorerUrl = getExplorerUrl(openContract.chain, openContract.address);
+                const explorerUrl = buildExplorerUrl({
+                  chainKey: openContract.chain,
+                  entityType: "contract",
+                  value: openContract.address,
+                });
                 return (
                   <div className="mt-3 rounded-lg bg-background/60 px-3 py-2 space-y-1.5">
                     <div className="text-sm font-medium">
@@ -241,7 +241,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs text-muted-foreground truncate">
-                        {openContract.address.slice(0, 6)}...{openContract.address.slice(-4)}
+                        {formatAddress(openContract.address)}
                       </span>
                       <button
                         onClick={() => {
