@@ -24,6 +24,7 @@ export default defineConfig({
     exclude: [
       ...configDefaults.exclude,
       ...worktreeExcludes,
+      ".claude/**",
       ".next/**",
       "out/**",
       "coverage/**",
@@ -34,6 +35,7 @@ export default defineConfig({
       exclude: [
         ...configDefaults.exclude,
         ...worktreeExcludes,
+        ".claude/**",
         ".next/**",
         "out/**",
         "coverage/**",

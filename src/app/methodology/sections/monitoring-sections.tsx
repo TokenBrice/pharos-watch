@@ -323,7 +323,7 @@ export function MonitoringMethodologySections() {
             non-trivial floor of $250K.
           </p>
           <p>
-            DEWS (Depeg Early Warning System) computes forward-looking stress every 15 minutes from market, liquidity,
+            DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
             confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -337,7 +337,7 @@ export function MonitoringMethodologySections() {
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Refresh</p>
-              <p className="text-foreground">15m refresh</p>
+              <p className="text-foreground">Peg 15m / DEWS 30m</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -506,7 +506,7 @@ export function MonitoringMethodologySections() {
               <h3 className="text-foreground font-medium">DEWS</h3>
               <p>
                 DEWS is a per-coin, forward-looking stress score (0&ndash;100) estimating depeg probability. It is
-                computed every 15 minutes from 8 sub-signals. Only signals with available data participate; weights are
+                computed every 30 minutes from 8 sub-signals. Only signals with available data participate; weights are
                 redistributed proportionally across available signals.
               </p>
             </div>

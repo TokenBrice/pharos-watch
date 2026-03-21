@@ -30,7 +30,7 @@ const faqJsonLd = {
       name: "What is the DEWS score?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "DEWS (Depeg Early Warning System) is a per-coin forward-looking stress score from 0 to 100, computed every 15 minutes from 8 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly. It is designed to detect systemic stress before a depeg occurs, with scores amplified by up to 30% during periods of broader ecosystem instability (low PSI).",
+        text: "DEWS (Depeg Early Warning System) is a per-coin forward-looking stress score from 0 to 100, computed every 30 minutes from 8 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly. It is designed to detect systemic stress before a depeg occurs, with scores amplified by up to 30% during periods of broader ecosystem instability (low PSI).",
       },
     },
     {

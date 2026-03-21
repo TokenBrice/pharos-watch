@@ -63,19 +63,19 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "twenty-minute",
     title: "20-minute slot",
     badge: "~20 min",
-    description: "On-chain intake jobs (blacklist, mint/burn) shown together by cadence, each on its own isolated trigger.",
+    description: "On-chain mint/burn intake jobs shown together by cadence, each on its own isolated trigger.",
   },
   {
     key: "half-hourly",
     title: "30-minute slot",
     badge: "~30 min",
-    description: "Stablecoin charts, DEX liquidity scoring, and yield refresh.",
+    description: "Stablecoin charts, DEX discovery/liquidity, DEWS, PSI, and yield refresh.",
   },
   {
     key: "hourly",
     title: "Hourly slot",
     badge: "~1h",
-    description: "Reserve-sync tuning lane with its own trigger so cadence changes do not perturb daily or half-hourly jobs.",
+    description: "Blacklist sync plus reserve-sync tuning lanes, each on its own trigger so cadence changes do not perturb other slots.",
   },
   {
     key: "daily",

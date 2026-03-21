@@ -54,14 +54,14 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [The Graph](https://thegraph.com/)                                      | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices                        | 30 min                            |
 | [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain)           | Discovery-stage DEX pool crawl, locked liquidity %, fee tiers, balance approximation                       | 30 min                            |
 | [GeckoTerminal](https://www.geckoterminal.com/)                         | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs                                        | 30 min                            |
-| [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15/20/30 min) |
+| [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15/30 min)    |
 | [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
 | Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as cUSD, iUSD, and crvUSD                    | 15 min                            |
 | Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Hourly                            |
-| [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains)                                                | 20 min                            |
-| [TronGrid](https://www.trongrid.io/)                                    | USDT freeze events on Tron                                                                                 | 20 min                            |
-| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | 20 min                            |
+| [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains)                                                | Hourly                            |
+| [TronGrid](https://www.trongrid.io/)                                    | USDT freeze events on Tron                                                                                 | Hourly                            |
+| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | Hourly / 20 min                   |
 | [frankfurter.app](https://frankfurter.app/)                             | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN                      | 15 min                            |
 | [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set     | 15 min cron (rate-limited to 1/h) |
 | [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live CNH, RUB, UAH, and ARS rates for peg coverage outside the ECB set                                     | 15 min                            |
@@ -70,7 +70,7 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [Bluechip](https://bluechip.org/)                                       | Independent stablecoin safety ratings (SMIDGE framework)                                                   | Daily                             |
 | [Anthropic](https://anthropic.com/)                                     | AI-generated daily market digest                                                                           | Daily                             |
 
-DEX discovery sources write to `dex_pool_staging` every 20 minutes on the dedicated discovery cron; `syncDexLiquidity()` then merges staged rows on its separate 30-minute scoring cron. DexScreener also participates in the 15-minute stablecoin price-enrichment path.
+DEX discovery sources write to `dex_pool_staging` every 30 minutes on the dedicated discovery cron; `syncDexLiquidity()` then merges staged rows on its separate 30-minute scoring cron. DexScreener also participates in the 15-minute stablecoin price-enrichment path.
 
 ## Getting Started
 
@@ -178,16 +178,16 @@ Current source-of-truth product docs live in `/docs/` and this README. `/agents/
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + FX rates + PSI compute + DEWS + status self-check
-  ├── Cron: 3,23,43 * * * *                     → blacklist sync
+  ├── Cron: */15 * * * *                        → sync stablecoins (includes depeg detection + confirmation) + downstream-safe snapshot-supply retry + snapshot-chain-supply + FX rates + status self-check
+  ├── Cron: 3 * * * *                           → blacklist sync
   ├── Cron: 4,24,44 * * * *                     → mint/burn critical lane
   ├── Cron: 6,36 * * * *                         → DEX discovery staging (30 min)
   ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
-  ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + yield sync
+  ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + DEWS + PSI + yield sync
   ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
-  └── Cron: 5 8 * * *                           → Bluechip sync + daily digest + discovery scan
+  └── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays) + discovery scan (Mondays)
 
 Cloudflare D1 (SQLite database)
   ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, FX/status/ranking caches) with CAS write guard

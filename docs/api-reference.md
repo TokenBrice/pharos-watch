@@ -407,7 +407,7 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 
 ### `GET /api/stablecoin-charts`
 
-Aggregate historical supply chart data across all stablecoins, broken down by peg type. Updated every 30 minutes by `sync-stablecoin-charts`; `/api/health` treats the cache as healthy for up to 1 hour.
+Aggregate historical supply chart data across all stablecoins, broken down by peg type. `sync-stablecoin-charts` is triggered every 30 minutes, but a `stablecoin-charts:last-write` cooldown caps successful refreshes at once per hour; `/api/health` treats the cache as healthy for up to 1 hour.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included.
 
@@ -1101,7 +1101,7 @@ The `/status/` page consumes the richer blacklist fields directly so it can dist
 
 ### `GET /api/stability-index`
 
-Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity).
+Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity).
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included.
 
@@ -2336,7 +2336,7 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
 
 ### `GET /api/discovery-candidates`
 
-Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor, surfaced by the daily discovery scan.
+Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor, surfaced by the Monday CoinGecko discovery scan plus quarter-hourly DefiLlama residual upserts.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 

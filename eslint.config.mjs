@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "coverage/**",
+    ".claude/**",
     ".worktrees/**",
     "worktrees/**",
     ".codex-autorunner/**",

@@ -264,7 +264,7 @@ This worker declares 10 cron expressions in `worker/wrangler.toml`. Fetch-heavy 
 [triggers]
 crons = [
   "*/15 * * * *",
-  "3,23,43 * * * *",
+  "3 * * * *",
   "4,24,44 * * * *",
   "6,36 * * * *",
   "13,33,53 * * * *",
@@ -292,7 +292,7 @@ crons = [
 - `capabilities.stablecoinsCache`
 - `capabilities.depegPipeline`
 
-`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 1-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) to prevent redundant DB writes when triggered on the quarter-hourly slot. `stability-index` and `compute-dews` were moved to the half-hourly trigger (Trigger 7) to halve their run frequency — upstream data (dex-liquidity, yield-data) already runs on a 30-min cadence.
+`snapshot-supply` retry requires the stablecoins-cache capability. Both `snapshot-supply` and `snapshot-chain-supply` enforce a 1-hour cooldown via a `cache` table key (`snapshot-supply:last-write` / `snapshot-chain-supply:last-write`) to prevent redundant DB writes when triggered on the quarter-hourly slot. `stability-index` and `compute-dews` were moved to the half-hourly trigger (Trigger 6) to halve their run frequency — upstream data (dex-liquidity, yield-data) already runs on a 30-min cadence.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -377,9 +377,10 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | ---------------- | ----------------------- | ----------------------------------- | --------------------------------------- |
 | `sync-bluechip`  | `syncBluechip()`        | `worker/src/cron/sync-bluechip.ts`  | This doc (below)                        |
 | `daily-digest`   | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts`   | [Digest Pipeline](./digest-pipeline.md) |
+| `weekly-recap`   | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`   | [Digest Pipeline](./digest-pipeline.md) |
 | `discovery-scan` | `runDiscoveryScan()`    | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md)     |
 
-**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` (1 long-lived Anthropic API call), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 9 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `discovery-scan` runs weekly (Monday-only) — on non-Monday days it returns immediately with `skipped_not_monday`.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 9 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days.
 
 ### Cron Slot Capacity and Connection Pool Budget
 
@@ -687,25 +688,26 @@ The three crons below were previously only listed by filename in [Architecture](
 ### sync-stablecoin-charts
 
 **File:** `worker/src/cron/sync-stablecoin-charts.ts`
-**Schedule:** `10,40 * * * *` (every 30 min, shared with dex-liquidity and yield-data)
+**Schedule:** `10,40 * * * *` (shared half-hourly trigger; successful writes are capped at once per hour)
 **Data source:** `https://stablecoins.llama.fi/stablecoincharts/all`
 
 **Algorithm:**
 
-1. Fetch full chart history from DefiLlama (single GET request)
-2. Validate: must receive array with ≥100 data points
-3. FX rate corruption fix:
+1. Read `stablecoin-charts:last-write`; if the previous successful write is <1 hour old, return immediately with `cooldown_active`
+2. Fetch full chart history from DefiLlama (single GET request)
+3. Validate: must receive array with ≥100 data points
+4. FX rate corruption fix:
    - Read cached FX rates from the `fx-rates` cache key
    - For each chart point, validate implied FX rate: `totalCirculatingUSD[key] / totalCirculating[key]`
    - If rate falls outside tolerance band (`fxRate / RATE_TOLERANCE` to `fxRate * RATE_TOLERANCE`), recompute the USD value using the correct FX rate
    - `RATE_TOLERANCE = 3` (accepts 1/3× to 3× of expected rate)
-4. Downsample to adaptive time buckets:
+5. Downsample to adaptive time buckets:
    - Last 90 days: daily (86,400s intervals)
    - 90 days to 2 years: weekly (604,800s intervals)
    - Older than 2 years: monthly (2,592,000s intervals)
-5. Write to cache via `setCacheIfNewer()` (CAS — won't overwrite newer data)
+6. Write to cache via `setCacheIfNewer()` (CAS — won't overwrite newer data) and update `stablecoin-charts:last-write`
 
-**No staleness guard** — always attempts fetch on every trigger.
+**Cooldown guard:** alternate half-hourly runs skip the upstream fetch entirely when the 1-hour write cooldown is still active.
 
 ### sync-usds-status
 
@@ -952,7 +954,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/handlers/http/edge-cache.ts`           | Edge cache match/store policy for cacheable GET requests                                                                                                             |
 | `worker/src/handlers/scheduled.ts`                 | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch                                                                                      |
 | `worker/src/handlers/scheduled/context.ts`         | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing                                                          |
-| `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated 20-minute lanes, half-hourly including DEX discovery, hourly reserve sync, Telegram, and daily slots)             |
+| `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated mint/burn lanes, half-hourly including DEX discovery, hourly blacklist + reserve slots, Telegram, and daily slots) |
 | `worker/src/lib/env.ts`                            | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides                                                                                       |
 | `worker/wrangler.toml`                             | Deployment config: custom domain, cron triggers, D1 binding, vars                                                                                                   |
 | `worker/src/lib/db.ts`                             | Database helpers: `batchExecute`, block tracking                                                                                                                    |

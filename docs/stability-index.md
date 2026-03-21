@@ -1,6 +1,6 @@
 # Pharos Stability Index (PSI)
 
-Composite ecosystem health score (0–100) measuring how stable the stablecoin market is right now. Computed every 15 minutes.
+Composite ecosystem health score (0–100) measuring how stable the stablecoin market is right now. Computed every 30 minutes.
 
 ## Methodology Versioning
 
@@ -115,8 +115,8 @@ If `totalMcapUsd` is missing or `<= 0`, `computeStabilityIndex()` returns `null`
 
 ## Cron & Storage
 
-- **15-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
-- **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 15-min samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`.
+- **30-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **30 minutes** (`10,40 * * * *`) after `compute-dews` on the shared half-hourly lane. Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
+- **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 30-minute samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
 - **Tables**: `stability_index_samples` (migration 0026, columns added by 0035) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`. `stability_index` (migration 0022, columns added by 0035) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`
 
@@ -142,7 +142,7 @@ The daily digest cron (08:05 UTC) queries the latest two stability index rows an
 | File | Purpose |
 |------|---------|
 | `worker/src/lib/stability-index.ts` | Pure compute function, band definitions, colors |
-| `worker/src/cron/stability-index.ts` | 15-minute cron job |
+| `worker/src/cron/stability-index.ts` | 30-minute cron job |
 | `worker/src/api/stability-index.ts` | API endpoint |
 | `worker/src/api/backfill-stability-index.ts` | Admin backfill (replays formula over historical data) |
 | `src/components/stability-index.tsx` | Homepage widget + lighthouse SVG |

@@ -560,7 +560,7 @@ export function HomepageClient() {
           {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and{" "}
           {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
           deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of fallen stablecoins. Updated
-          every 15 minutes.
+          every 15 minutes for core market data, with slower diagnostics on their own cadences.
         </p>
         {dataUpdatedAt > 0 && (
           <p className="text-center text-xs text-muted-foreground">

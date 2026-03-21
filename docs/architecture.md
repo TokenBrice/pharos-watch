@@ -5,7 +5,7 @@
 Curated architecture-significant routes. Start with the [Documentation Index](./README.md) for the full docs map, or go straight to the [API Reference](./api-reference.md) for the exhaustive HTTP contract.
 
 | Endpoint                                     | Description                                                                                                                                                                                                                    |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GET /api/stablecoins`                       | Full stablecoin list with supply, price, chains. Returns `X-Data-Age` header                                                                                                                                                   |
 | `GET /api/stablecoin/:id`                    | Per-coin detail (cache-aside, 5min TTL)                                                                                                                                                                                        |
 | `GET /api/stablecoin-summary/:id`            | Lightweight per-coin snapshot (price + aggregate supply/deltas)                                                                                                                                                                |
@@ -27,14 +27,14 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/health`                            | Worker health check (includes circuit breaker states)                                                                                                                                                                          |
 | `GET /api/status`                            | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/admin/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers |
 | `GET /api/status-history`                    | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Preferred access is `ops-api.pharos.watch/api/status-history` with Access service-token headers                                                    |
-| `GET /api/stability-index`                   | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history)                                                                                                                         |
+| `GET /api/stability-index`                   | Latest Pharos Stability Index sample plus daily history and component breakdowns (`?detail=true` for full history)                                                                                                            |
 | `GET /api/og/*`                              | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards                                                                                                                                 |
 | `GET /api/report-cards`                      | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency)                                                                                                                   |
 | `GET /api/safety-score-history`              | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`)                                                                                                                                                       |
 | `GET /api/yield-rankings`                    | Cache-backed yield rankings with live-hydrated Safety Scores and risk-adjusted metrics                                                                                                                                         |
 | `GET /api/yield-history`                     | Per-coin historical yield data (`?stablecoin=ID&days=90`)                                                                                                                                                                      |
 | `GET /api/mint-burn-flows`                   | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`)                                                                                             |
-| `GET /api/mint-burn-events`                  | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all                                                                                           | counted`, `?minAmount=`, `?limit=N&offset=M`) |
+| `GET /api/mint-burn-events`                  | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all or counted`, `?minAmount=`, `?limit=N&offset=M`)                                       |
 | `GET /api/stress-signals`                    | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`)                                                                                                                                                               |
 | `POST /api/backfill-depegs`                  | Admin: backfill depeg events (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                         |
 | `POST /api/backfill-supply-history`          | Admin: backfill per-coin supply history (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                              |
@@ -48,7 +48,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/backfill-dews`                     | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                 |
 | `POST /api/backfill-mint-burn-prices`        | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                               |
 | `GET /api/debug-sync-state`                  | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
-| `GET /api/discovery-candidates`              | Admin: list stablecoin coverage candidates surfaced by the daily discovery scan                                                                                                                                                |
+| `GET /api/discovery-candidates`              | Admin: list stablecoin coverage candidates surfaced by the Monday CoinGecko discovery scan plus quarter-hourly DefiLlama residual intake                                                                                      |
 | `POST /api/discovery-candidates/:id/dismiss` | Admin: dismiss a discovery candidate from the status dashboard                                                                                                                                                                 |
 | `POST /api/feedback`                         | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified                                                                                                                                   |
 | `POST /api/telegram-webhook`                 | Telegram bot webhook (command handling, subscription management)                                                                                                                                                               |
@@ -437,7 +437,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   └── supplemental-assets.ts # Extracted supplemental token fetch helpers (gold/silver/CG-only fiat overlays)
     │   ├── enrich-prices.ts      # Dual-primary price validation + 4-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
-    │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
+    │   ├── sync-stablecoin-charts.ts  # Historical chart cache refresh (30-min trigger, 1h write cooldown)
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (runs on */15, writes once daily via dedup guard; primary daily run at 8AM UTC)
     │   ├── snapshot-chain-supply.ts # Daily chain-level supply snapshots → chain_supply_history (quarter-hourly slot, DB-only)
     │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
@@ -468,13 +468,13 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   ├── scoring.ts         # Composite scores, HHI, depth stability, DEX prices
     │   │   ├── persistence.ts     # D1 writes (scores table, history snapshots)
     │   │   └── orchestrator.ts    # 10-step syncDexLiquidity() main function
-    │   ├── stability-index.ts    # Composite ecosystem health score → D1 (every 15 min, after sync-stablecoins)
+    │   ├── stability-index.ts    # Composite ecosystem health score → D1 (every 30 min, after compute-dews on the half-hourly lane)
     │   ├── snapshot-psi.ts       # Daily PSI snapshot → D1 (daily, 8AM UTC)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
     │   ├── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 08:05 UTC)
-    │   ├── weekly-recap.ts      # AI-generated weekly market recap via Claude API (weekly, 08:05 UTC)
-    │   ├── discovery-scan.ts     # Daily stablecoin coverage discovery → D1 (daily, 08:05 UTC)
-    │   ├── compute-dews.ts       # DEWS computation cron (every 15min, after sync-stablecoins)
+    │   ├── weekly-recap.ts      # AI-generated weekly market recap via Claude API (Mondays, 08:05 UTC)
+    │   ├── discovery-scan.ts     # Weekly stablecoin coverage discovery → D1 (Mondays, 08:05 UTC)
+    │   ├── compute-dews.ts       # DEWS computation cron (every 30 min, after sync-dex-liquidity)
     │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety transitions (dedicated every-5-minute trigger)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability

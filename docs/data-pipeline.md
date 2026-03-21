@@ -181,11 +181,11 @@ The live `/price/` endpoint requires no API key and is called every 15-minute sy
 
 ## Stability Index (PSI) Computation
 
-`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 15 minutes and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. If the DEWS dependency query is unavailable, the run stores `dewsUnavailable=true` in `input_snapshot` and returns `status: "degraded"` (stress breadth is defaulted to 0 for continuity). See [Pharos Stability Index](./stability-index.md) for the full algorithm, calibration examples, and band definitions.
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 30 minutes on the half-hourly lane and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. If the DEWS dependency query is unavailable, the run stores `dewsUnavailable=true` in `input_snapshot` and returns `status: "degraded"` (stress breadth is defaulted to 0 for continuity). See [Pharos Stability Index](./stability-index.md) for the full algorithm, calibration examples, and band definitions.
 
 **Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 
-**Storage:** 15-min samples go into `stability_index_samples` (migration 0026); daily averages are aggregated by `snapshotPsiDaily()` into `stability_index` (migration 0022). Both tables store `score`, `band`, `components` (JSON), `input_snapshot` (JSON).
+**Storage:** 30-minute samples go into `stability_index_samples` (migration 0026); daily averages are aggregated by `snapshotPsiDaily()` into `stability_index` (migration 0022). Both tables store `score`, `band`, `components` (JSON), `input_snapshot` (JSON).
 
 ## Pending Depeg Confirmation
 
@@ -204,16 +204,16 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
 | **Homepage**          | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
 | **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
-| **Depeg**             | Peg Data, DEWS, Depeg Events                        | `CRON_15MIN`, `CRON_15MIN`, `CRON_15MIN`                           |
+| **Depeg**             | Peg Data, DEWS, Depeg Events                        | `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`                           |
 | **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
 | **Safety scores**     | Grades, Prices                                      | `CRON_15MIN`, `CRON_15MIN`                                         |
 | **Liquidity**         | Liquidity                                           | `CRON_30MIN`                                                       |
 | **Yield**             | Yield Rankings                                      | `CRON_30MIN`                                                       |
 | **Flows**             | Mint/Burn Flows                                     | `CRON_20MIN`                                                       |
-| **Blacklist**         | Blacklist                                           | `CRON_20MIN`                                                       |
+| **Blacklist**         | Blacklist                                           | `CRON_BLACKLIST`                                                   |
 | **Portfolio**         | Grades                                              | `CRON_15MIN`                                                       |
 
-Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min), `CRON_20MIN` (20 min), `CRON_30MIN` (30 min), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
+Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min), `CRON_20MIN` (20 min, mint/burn), `CRON_BLACKLIST` (1 hour), `CRON_30MIN` (30 min), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
 
 The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. The banner triggers at 2x `staleTime` (i.e., 4x the cron interval), but hook-level freshness metadata can mark data degraded/stale sooner when the worker explicitly reports old cache age or stale-table warnings.
 
@@ -228,13 +228,16 @@ This is intentional — do not mix these values across chain types.
 
 ## Coverage Discovery
 
-`runDiscoveryScan()` in `worker/src/cron/discovery-scan.ts` runs daily and surfaces stablecoins tracked by CoinGecko or DefiLlama that Pharos doesn't yet monitor.
+Coverage discovery has two ingestion paths:
+
+- quarter-hourly DefiLlama residual upserts inside `worker/src/cron/sync-stablecoins/intake.ts`
+- weekly CoinGecko category scan inside `worker/src/cron/discovery-scan.ts` (Mondays on the `5 8 * * *` trigger)
 
 ### Source A: DL Residuals (free)
 
 After `syncStablecoins()` filters DL assets against `REGISTRY_BY_LLAMA_ID`, untracked assets with circulating > $5M are upserted into `discovery_candidates`. Zero extra API calls.
 
-### Source B: CG Stablecoin Category (one call/day)
+### Source B: CG Stablecoin Category (one call/week, Mondays)
 
 `GET /coins/markets?category=stablecoins&vs_currency=usd&per_page=250&order=market_cap_desc`
 
@@ -246,6 +249,6 @@ Uses `CG_DISCOVERY` — independent from `CG_PRICES`, but it still follows the s
 
 ### Candidate Lifecycle
 
-- Upserted daily with `last_seen` and `market_cap` updates
+- Upserted whenever the quarter-hourly DefiLlama residual pass or Monday CoinGecko scan sees them, with `last_seen` and `market_cap` updates
 - Dismissed candidates don't resurface unless market cap crosses 10x the value at dismissal
 - Hard-deleted after 90 days dismissed

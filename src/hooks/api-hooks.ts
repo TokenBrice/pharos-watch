@@ -131,14 +131,14 @@ export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
 }
 
 export function useStablecoinCharts() {
-  return useApiQuery<StablecoinChartPoint[]>(["stablecoin-charts"], API_PATHS.stablecoinCharts(), CRON_15MIN);
+  return useApiQuery<StablecoinChartPoint[]>(["stablecoin-charts"], API_PATHS.stablecoinCharts(), CRON_1H);
 }
 
 export function useStabilityIndex() {
   return useApiQuery<StabilityIndexResponse>(
     ["stability-index"],
     API_PATHS.stabilityIndex(),
-    CRON_15MIN,
+    CRON_30MIN,
     { schema: StabilityIndexResponseSchema },
   );
 }
@@ -147,7 +147,7 @@ export function useStabilityIndexDetail() {
   return useApiQuery<StabilityIndexResponse>(
     ["stability-index-detail"],
     API_PATHS.stabilityIndex(true),
-    CRON_15MIN,
+    CRON_30MIN,
     { schema: StabilityIndexResponseSchema },
   );
 }
@@ -178,7 +178,7 @@ export function useStressSignals() {
   return useApiQueryWithMeta<StressSignalsAllResponse>(
     ["stress-signals"],
     API_PATHS.stressSignals(),
-    CRON_15MIN,
+    CRON_30MIN,
     { schema: StressSignalsAllResponseSchema },
   );
 }
@@ -187,7 +187,7 @@ export function useStressSignalDetail(stablecoinId: string, days = 30) {
   return useApiQueryWithMeta<StressSignalDetailResponse>(
     ["stress-signals", stablecoinId, days],
     API_PATHS.stressSignals(stablecoinId, days),
-    CRON_15MIN,
+    CRON_30MIN,
     { enabled: !!stablecoinId, schema: StressSignalDetailResponseSchema },
   );
 }

@@ -689,7 +689,7 @@ export function StabilityIndexClient() {
                 </svg>
               </div>
               <p className="font-medium">No stability data available</p>
-              <p className="text-sm text-muted-foreground">PSI scores are computed every 15 minutes. Check back soon.</p>
+              <p className="text-sm text-muted-foreground">PSI scores are computed every 30 minutes. Check back soon.</p>
             </div>
           </CardContent>
         </Card>

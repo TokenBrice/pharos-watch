@@ -25,23 +25,23 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Daily digest | Anthropic Claude + PSI snapshot context | `worker/src/cron/daily-digest.ts` | `daily_digest` + static build sync to `data/digests.json` | `GET /api/daily-digest`, `GET /api/digest-archive`, `GET /api/digest-snapshot` | `useDailyDigest`, `useDigestArchive`, `useDigestSnapshot` | Digest page + archive |
 | Report cards + dependency graph | Peg summary + DEX liquidity + redemption backstops + bluechip + stablecoin metadata/dependencies | `worker/src/api/report-cards.ts` compute on read | cache-driven upstream + in-memory compute | `GET /api/report-cards` | `useReportCards` | Safety Scores, Portfolio, Dependency Map, homepage safety snapshot |
 | Status reliability | Real-HTTP self probes + status synthesis | `worker/src/cron/status-self-check.ts`, `worker/src/api/status.ts` | `status_state`, `status_transitions`, `status_probe_runs`, `status_discrepancy_state` | `GET /api/status`, `GET /api/status-history` | `useStatus`, `useEndpointProbes`, `useHealth` | `/status` public health board, `/admin` operator dashboard |
-| Coverage discovery | CoinGecko category API, DL stablecoins residuals | `worker/src/cron/discovery-scan.ts`, `worker/src/cron/sync-stablecoins/intake.ts` (DL residuals) | `discovery_candidates` | `GET /api/discovery-candidates`, `POST /api/discovery-candidates/:id/dismiss` | — (admin only) | `/status` admin page |
+| Coverage discovery | CoinGecko category API, DL stablecoins residuals | `worker/src/cron/discovery-scan.ts` (weekly, Monday-only), `worker/src/cron/sync-stablecoins/intake.ts` (DL residuals) | `discovery_candidates` | `GET /api/discovery-candidates`, `POST /api/discovery-candidates/:id/dismiss` | — (admin only) | `/status` admin page |
 | Chain analytics | Stablecoins cache `chainCirculating` (already aggregated by DefiLlama), report card cache (safety scores for quality sub-factor) | `worker/src/api/chains.ts` (compute on read from stablecoins + report-card D1 caches); `worker/src/cron/snapshot-chain-supply.ts` writes daily totals to D1 | Live leaderboard: computed on-the-fly from D1 caches; history: `chain_supply_history` | `GET /api/chains` | `useChains`, `useChainStablecoins` | `/chains/` leaderboard, `/chains/[chain]/` profile pages |
 
 ## Scheduling Backbone
 
 Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worker/src/handlers/scheduled.ts`:
 
-- `*/15 * * * *`: sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / FX / PSI / DEWS / status self-check
-- `3,23,43 * * * *`: blacklist sync
+- `*/15 * * * *`: sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / FX / status self-check
+- `3 * * * *`: blacklist sync
 - `4,24,44 * * * *`: mint/burn critical lane
 - `6,36 * * * *`: DEX discovery staging (every 30 minutes)
 - `13,33,53 * * * *`: mint/burn extended lane
-- `10,40 * * * *`: stablecoin charts, then DEX liquidity, then yield sync
+- `10,40 * * * *`: stablecoin charts, then DEX liquidity, then DEWS, then PSI, then yield sync
 - `11 * * * *`: live reserve sync, then redemption backstop sync
 - `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram subscriber alerts + cemetery announcements
 - `0 8 * * *`: supply snapshot, safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status
-- `5 8 * * *`: bluechip sync, daily digest, weekly recap, discovery scan
+- `5 8 * * *`: bluechip sync, daily digest, weekly recap (Mondays), discovery scan (Mondays)
 
 ## Freshness Contract (Frontend)
 

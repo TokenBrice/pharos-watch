@@ -333,7 +333,7 @@ export default function AboutPage() {
     {
       title: "Depeg Early Warning (DEWS)",
       description:
-        "A per-coin stress score refreshed every 15 minutes from supply velocity, pool balance drift, liquidity erosion, price confidence, source divergence, blacklist activity, mint and burn flow, and yield anomalies.",
+        "A per-coin stress score refreshed every 30 minutes from supply velocity, pool balance drift, liquidity erosion, price confidence, source divergence, blacklist activity, mint and burn flow, and yield anomalies.",
       icon: ShieldAlert,
     },
   ];
@@ -618,7 +618,8 @@ export default function AboutPage() {
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-foreground">Cloudflare Worker + D1</p>
                       <p>
-                        Cron jobs sync every 15 minutes, normalize the data, and cache the results for the public API.
+                        Staggered quarter-hourly, half-hourly, hourly, and daily cron jobs normalize the data and cache
+                        the results for the public API.
                       </p>
                     </div>
                   </li>

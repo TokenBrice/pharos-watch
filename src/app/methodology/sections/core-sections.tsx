@@ -434,13 +434,13 @@ export function CoreMethodologySections() {
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             The Pharos Stability Index (PSI) is a market-level 0&ndash;100 health score for the stablecoin ecosystem. It
-            is recomputed every 15 minutes from live depeg conditions and stress signals, then aggregated into daily
+            is recomputed every 30 minutes from live depeg conditions and stress signals, then aggregated into daily
             history snapshots.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Update cadence</p>
-              <p className="text-foreground">15m refresh</p>
+              <p className="text-foreground">30m refresh</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Score range</p>

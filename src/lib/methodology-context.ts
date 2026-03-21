@@ -72,7 +72,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   psi: {
     title: "PSI",
     summary: "Pharos Stability Index: a 0-100 ecosystem health score combining active depeg damage, breadth, DEWS stress breadth, and market-cap trend.",
-    detail: "Higher is calmer. It updates every 15 minutes and maps into condition bands from BEDROCK to MELTDOWN.",
+    detail: "Higher is calmer. It updates every 30 minutes and maps into condition bands from BEDROCK to MELTDOWN.",
     methodologyPath: "/methodology/#stability-index-methodology",
     versionLabel: PSI_METHODOLOGY_VERSION_LABEL,
     changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,

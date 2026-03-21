@@ -1,6 +1,6 @@
 # Depeg Early Warning Score (DEWS)
 
-Per-coin, forward-looking stress score (0-100) estimating depeg probability. Computed every 15 minutes from 8 sub-signals.
+Per-coin, forward-looking stress score (0-100) estimating depeg probability. Computed every 30 minutes from 8 sub-signals.
 
 ## Methodology Versioning
 
@@ -147,12 +147,12 @@ Score = `min(100, sum of active signal points)`.
 
 | Table                   | Pruning  | Purpose                                |
 | ----------------------- | -------- | -------------------------------------- |
-| `stress_signals`        | 7 days   | 15-minute rolling samples              |
+| `stress_signals`        | 7 days   | 30-minute rolling samples              |
 | `stress_signal_history` | 365 days | Daily snapshots (first run of UTC day) |
 
 ### Cron Schedule
 
-**Trigger:** `*/15 * * * *` — chained after `sync-stablecoins` (same pattern as `stability-index`)
+**Trigger:** `10,40 * * * *` — chained after `sync-dex-liquidity` on the shared half-hourly lane
 
 **Cron name:** `compute-dews`
 

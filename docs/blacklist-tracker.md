@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 16 contract configurations on 8 chains. Runs every 20 minutes, incrementally scanning from the last processed block.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 16 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block.
 
 **Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT.
 
@@ -12,7 +12,7 @@ Implementation note: `worker/src/lib/blacklist-contracts.ts` currently defines n
 
 ## Cron Schedule
 
-- **Pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
+- **Pattern:** `3 * * * *` (hourly at :03)
 - **Function:** `syncBlacklist(db, etherscanApiKey, trongridApiKey, drpcApiKey)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
 - **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit, runtimeBudgetReached, runtimeBudgetMs } }`
