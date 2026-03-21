@@ -17,6 +17,28 @@ export const STATUS_BLACKLIST_THRESHOLDS = {
   missingRecentStale: 25,
 } as const;
 
+export function getBlacklistGapStatus({
+  missingRatio,
+  recentMissingAmounts,
+}: {
+  missingRatio: number;
+  recentMissingAmounts: number;
+}): "healthy" | "degraded" | "stale" {
+  if (
+    missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
+    || recentMissingAmounts >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale
+  ) {
+    return "stale";
+  }
+  if (
+    recentMissingAmounts > 0
+    || missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
+  ) {
+    return "degraded";
+  }
+  return "healthy";
+}
+
 // --- On-chain supply thresholds ---
 export const STATUS_ONCHAIN_THRESHOLDS = {
   ratioDegraded: 0.1,

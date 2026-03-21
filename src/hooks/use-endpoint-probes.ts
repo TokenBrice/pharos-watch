@@ -4,6 +4,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, type AdminAccess } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { getProbePaths } from "@shared/lib/api-endpoints";
+import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
 import { CRON_1MIN } from "@/lib/cron-intervals";
@@ -50,6 +51,14 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
     blacklist && "missingAmounts" in blacklist && typeof blacklist.missingAmounts === "number"
       ? blacklist.missingAmounts
       : 0;
+  const missingRatio =
+    blacklist && "missingRatio" in blacklist && typeof blacklist.missingRatio === "number"
+      ? blacklist.missingRatio
+      : 0;
+  const recentMissingAmounts =
+    blacklist && "recentMissingAmounts" in blacklist && typeof blacklist.recentMissingAmounts === "number"
+      ? blacklist.recentMissingAmounts
+      : 0;
   const mintBurnWarning =
     mintBurn &&
     "sync" in mintBurn &&
@@ -66,7 +75,9 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
     semanticDetail:
       warnings[0] ??
       mintBurnWarning ??
-      (missingAmounts > 0 ? `Blacklist gaps missing amounts: ${missingAmounts}.` : null),
+      (getBlacklistGapStatus({ missingRatio, recentMissingAmounts }) !== "healthy"
+        ? `Blacklist gaps missing amounts: ${missingAmounts}.`
+        : null),
   };
 }
 

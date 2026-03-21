@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { STATUS_BLACKLIST_THRESHOLDS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { getBlacklistGapStatus, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { HealthResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -82,6 +82,10 @@ function getImpactedSurfaceStatus(cache: HealthResponse["caches"][string]): "hea
 
 function getImpactedPublicSurfaces(healthData: HealthResponse) {
   const items: Array<{ id: string; title: string; detail: string; tone: "degraded" | "stale" }> = [];
+  const blacklistStatus = getBlacklistGapStatus({
+    missingRatio: healthData.blacklist.missingRatio,
+    recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
+  });
 
   if (healthData.mintBurn.sync.freshnessStatus !== "fresh" || healthData.mintBurn.majorStaleCount > 0) {
     items.push({
@@ -93,16 +97,13 @@ function getImpactedPublicSurfaces(healthData: HealthResponse) {
     });
   }
 
-  if (healthData.blacklist.missingAmounts > 0) {
+  if (blacklistStatus !== "healthy") {
     items.push({
       id: "blacklist",
       title: "Blacklist risk context",
       detail:
         "Blacklist event totals and amount-aware risk context are incomplete until missing blacklist amounts are backfilled.",
-      tone:
-        healthData.blacklist.missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
-          ? "stale"
-          : "degraded",
+      tone: blacklistStatus,
     });
   }
 
@@ -271,12 +272,10 @@ export default function StatusClient() {
       ? formatElapsedSeconds(Math.max(0, healthData.timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))
       : "—";
   const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
-  const blacklistStatus =
-    healthData.blacklist.missingAmounts === 0
-      ? "healthy"
-      : healthData.blacklist.missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
-        ? "stale"
-        : "degraded";
+  const blacklistStatus = getBlacklistGapStatus({
+    missingRatio: healthData.blacklist.missingRatio,
+    recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
+  });
   const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
 
   return (
@@ -316,7 +315,7 @@ export default function StatusClient() {
               <SummaryBadge
                 label="Blacklist Gaps"
                 value={String(healthData.blacklist.missingAmounts)}
-                className={healthData.blacklist.missingAmounts > 0 ? getStatusTone(blacklistStatus).badgeClassName : undefined}
+                className={blacklistStatus !== "healthy" ? getStatusTone(blacklistStatus).badgeClassName : undefined}
               />
               <SummaryBadge label="Major Mint/Burn Stale" value={String(healthData.mintBurn.majorStaleCount)} />
             </>
@@ -365,13 +364,13 @@ export default function StatusClient() {
             <PublicSignalCard
               kicker="Data Integrity"
               title="Blacklist Ingestion"
-              description="Blacklist amount gaps spill directly into public risk surfaces and should be treated as a trust issue, not just a back-office discrepancy."
+              description="Blacklist amount gaps stay visible here, but only recent or high-ratio gaps should escalate the public health signal."
               badges={
                 <div className="flex flex-wrap gap-2">
                   <SummaryBadge
                     label="Missing Amounts"
                     value={String(healthData.blacklist.missingAmounts)}
-                    className={healthData.blacklist.missingAmounts > 0 ? getStatusTone(blacklistStatus).badgeClassName : undefined}
+                    className={blacklistStatus !== "healthy" ? getStatusTone(blacklistStatus).badgeClassName : undefined}
                   />
                   <SummaryBadge label="Tracked Events" value={String(healthData.blacklist.totalEvents)} />
                   <SummaryBadge label="Recent Window" value={`${blacklistWindowHours}h`} />
@@ -387,7 +386,9 @@ export default function StatusClient() {
                   {healthData.blacklist.missingAmounts > 0
                     ? healthData.blacklist.recentMissingAmounts > 0
                       ? `${healthData.blacklist.recentMissingAmounts} recent blacklist event(s) in the last ${blacklistWindowHours}h are still missing amounts.`
-                      : `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but no new gaps were recorded in the last ${blacklistWindowHours}h.`
+                      : blacklistStatus === "healthy"
+                        ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but they are historical and below the public warning threshold.`
+                        : `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but no new gaps were recorded in the last ${blacklistWindowHours}h.`
                     : "No current blacklist amount gaps are affecting the public health signal."}
                 </div>
                 {healthData.blacklist.missingAmounts > 0 ? (
