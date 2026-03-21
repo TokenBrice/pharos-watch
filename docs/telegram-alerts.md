@@ -244,8 +244,9 @@ guaranteeing delivery for large subscriber populations.
   - `telegram:cemetery-snapshot`
   - `telegram:cemetery-footer-index`
   - `telegram:tracked-stablecoins-snapshot`
-- First run seeds the current cemetery and tracked identity sets and appends nothing.
-- Invalid snapshot payloads are reseeded and also append nothing.
+- `telegram:tracked-stablecoins-pending` records active tracked IDs discovered by `sync-stablecoins` when the new stablecoins payload contains IDs that were absent from the previous `stablecoins` cache.
+- First run seeds the current cemetery and tracked identity sets only when there is no queued tracked-addition state to drain.
+- Invalid snapshot payloads are reseeded; if queued tracked additions exist, those are still appended before the tracked snapshot is rewritten.
 - Pending additions are appended to the next successful Telegram daily digest post.
 - Snapshot advancement for pending additions is deferred until after Telegram accepts the digest post, so failed delivery does not lose pending notices.
 

@@ -8,6 +8,7 @@ import { escapeHtml } from "./telegram";
 const CEMETERY_SNAPSHOT_CACHE_KEY = "telegram:cemetery-snapshot";
 const CEMETERY_FOOTER_INDEX_CACHE_KEY = "telegram:cemetery-footer-index";
 const TRACKED_SNAPSHOT_CACHE_KEY = "telegram:tracked-stablecoins-snapshot";
+const TRACKED_PENDING_CACHE_KEY = "telegram:tracked-stablecoins-pending";
 
 const CAUSE_LABELS: Record<CauseOfDeath, string> = {
   "algorithmic-failure": "Algorithmic Failure",
@@ -31,6 +32,7 @@ export const CEMETERY_FOOTERS = [
 ] as const;
 
 type TrackedStablecoinMeta = (typeof TRACKED_STABLECOINS)[number];
+const TRACKED_META_BY_ID = new Map(TRACKED_STABLECOINS.map((coin) => [coin.id, coin]));
 
 interface CacheWrite {
   key: string;
@@ -52,6 +54,12 @@ export interface PreparedTelegramDigestAppendices {
   appendixHtml: string | null;
   metadata: TelegramDigestAppendixMetadata;
   commitSuccess: () => Promise<void>;
+}
+
+export interface QueueTrackedStablecoinAdditionsResult {
+  queuedIds: string[];
+  totalPending: number;
+  baselineMissing: boolean;
 }
 
 function buildDeadStablecoinKey(coin: DeadStablecoin): string {
@@ -140,6 +148,52 @@ async function applyCacheWrites(db: D1Database, writes: CacheWrite[]): Promise<v
   }
 }
 
+export async function queuePendingTrackedStablecoinAdditions(
+  db: D1Database,
+  previousAssetIds: Iterable<string>,
+  currentAssetIds: Iterable<string>,
+): Promise<QueueTrackedStablecoinAdditionsResult> {
+  const previousIds = new Set(Array.from(previousAssetIds, String));
+  if (previousIds.size === 0) {
+    return {
+      queuedIds: [],
+      totalPending: 0,
+      baselineMissing: true,
+    };
+  }
+
+  const cachedPending = await getCache(db, TRACKED_PENDING_CACHE_KEY);
+  const parsedPending = cachedPending ? parseSnapshotKeys(cachedPending.value) : null;
+  const pendingIds = new Set(
+    Array.from(parsedPending ?? [], String).filter((id) => TRACKED_META_BY_ID.has(id)),
+  );
+
+  const queuedIds = Array.from(new Set(Array.from(currentAssetIds, String)))
+    .filter((id) => TRACKED_META_BY_ID.has(id))
+    .filter((id) => !previousIds.has(id))
+    .filter((id) => !pendingIds.has(id));
+
+  if (queuedIds.length === 0) {
+    return {
+      queuedIds,
+      totalPending: pendingIds.size,
+      baselineMissing: false,
+    };
+  }
+
+  const mergedPendingIds = new Set(pendingIds);
+  for (const id of queuedIds) {
+    mergedPendingIds.add(id);
+  }
+
+  await setCache(db, TRACKED_PENDING_CACHE_KEY, JSON.stringify([...mergedPendingIds]));
+  return {
+    queuedIds,
+    totalPending: mergedPendingIds.size,
+    baselineMissing: false,
+  };
+}
+
 export async function prepareTelegramDigestAppendices(
   db: D1Database,
 ): Promise<PreparedTelegramDigestAppendices> {
@@ -211,27 +265,74 @@ export async function prepareTelegramDigestAppendices(
 
   const trackedSnapshotPayload = buildTrackedSnapshotPayload();
   const cachedTrackedSnapshot = await getCache(db, TRACKED_SNAPSHOT_CACHE_KEY);
+  const cachedTrackedPending = await getCache(db, TRACKED_PENDING_CACHE_KEY);
+  const parsedTrackedPending = cachedTrackedPending ? parseSnapshotKeys(cachedTrackedPending.value) : null;
+  const pendingTrackedIds = new Set(
+    Array.from(parsedTrackedPending ?? [], String).filter((id) => TRACKED_META_BY_ID.has(id)),
+  );
 
-  if (!cachedTrackedSnapshot) {
-    immediateWrites.push({
-      key: TRACKED_SNAPSHOT_CACHE_KEY,
-      value: trackedSnapshotPayload,
-    });
-    metadata.seededSnapshots.push("tracked:first-run");
-  } else {
-    const previousTrackedKeys = parseSnapshotKeys(cachedTrackedSnapshot.value);
-    if (!previousTrackedKeys) {
+  const appendTrackedCoins = (trackedIds: Iterable<string>, seedReason?: string) => {
+    const trackedCoins: TrackedStablecoinMeta[] = [];
+    const preLaunchCoins: TrackedStablecoinMeta[] = [];
+
+    for (const id of trackedIds) {
+      const coin = TRACKED_META_BY_ID.get(id);
+      if (!coin) continue;
+      if (coin.status === "pre-launch") {
+        preLaunchCoins.push(coin);
+      } else {
+        trackedCoins.push(coin);
+      }
+    }
+
+    if (trackedCoins.length === 0 && preLaunchCoins.length === 0) {
       immediateWrites.push({
         key: TRACKED_SNAPSHOT_CACHE_KEY,
         value: trackedSnapshotPayload,
       });
-      metadata.seededSnapshots.push("tracked:invalid-reseeded");
-    } else {
-      const newTrackedCoins = TRACKED_STABLECOINS.filter(
-        (coin) => !previousTrackedKeys.has(coin.id),
-      );
+      if (seedReason) {
+        metadata.seededSnapshots.push(seedReason);
+      }
+      return;
+    }
 
-      if (newTrackedCoins.length === 0) {
+    appendixSections.push(buildTrackedAppendix(trackedCoins, preLaunchCoins));
+    metadata.trackedDetected = trackedCoins.length;
+    metadata.preLaunchDetected = preLaunchCoins.length;
+    metadata.trackedSymbols = trackedCoins.map((coin) => coin.symbol);
+    metadata.preLaunchSymbols = preLaunchCoins.map((coin) => coin.symbol);
+
+    postSuccessWrites.push(
+      {
+        key: TRACKED_SNAPSHOT_CACHE_KEY,
+        value: trackedSnapshotPayload,
+      },
+      {
+        key: TRACKED_PENDING_CACHE_KEY,
+        value: JSON.stringify([]),
+      },
+    );
+
+    if (seedReason) {
+      metadata.seededSnapshots.push(seedReason);
+    }
+  };
+
+  if (!cachedTrackedSnapshot) {
+    appendTrackedCoins(pendingTrackedIds, "tracked:first-run");
+  } else {
+    const previousTrackedKeys = parseSnapshotKeys(cachedTrackedSnapshot.value);
+    if (!previousTrackedKeys) {
+      appendTrackedCoins(pendingTrackedIds, "tracked:invalid-reseeded");
+    } else {
+      const appendixTrackedIds = new Set(pendingTrackedIds);
+      for (const coin of TRACKED_STABLECOINS) {
+        if (!previousTrackedKeys.has(coin.id)) {
+          appendixTrackedIds.add(coin.id);
+        }
+      }
+
+      if (appendixTrackedIds.size === 0) {
         if (cachedTrackedSnapshot.value !== trackedSnapshotPayload) {
           immediateWrites.push({
             key: TRACKED_SNAPSHOT_CACHE_KEY,
@@ -239,19 +340,7 @@ export async function prepareTelegramDigestAppendices(
           });
         }
       } else {
-        const trackedCoins = newTrackedCoins.filter((coin) => coin.status !== "pre-launch");
-        const preLaunchCoins = newTrackedCoins.filter((coin) => coin.status === "pre-launch");
-
-        appendixSections.push(buildTrackedAppendix(trackedCoins, preLaunchCoins));
-        metadata.trackedDetected = trackedCoins.length;
-        metadata.preLaunchDetected = preLaunchCoins.length;
-        metadata.trackedSymbols = trackedCoins.map((coin) => coin.symbol);
-        metadata.preLaunchSymbols = preLaunchCoins.map((coin) => coin.symbol);
-
-        postSuccessWrites.push({
-          key: TRACKED_SNAPSHOT_CACHE_KEY,
-          value: trackedSnapshotPayload,
-        });
+        appendTrackedCoins(appendixTrackedIds);
       }
     }
   }

@@ -174,6 +174,8 @@ Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also
 - `New Cemetery Entries` for newly added cemetery rows
 - `Tracking Changes` for newly tracked coins, split into live tracked vs pre-launch
 
+Active tracked additions are queued earlier by `worker/src/cron/sync-stablecoins.ts`, which diffs the just-built stablecoins payload against the previous `stablecoins` cache before the cache row is overwritten. That queue is then consumed by the next successful Telegram digest post, so tracked additions are not lost when the digest appendix snapshot key is missing or has to be reseeded.
+
 Appendix snapshots advance only after Telegram accepts the digest post, so a failed channel delivery does not lose pending additions.
 
 **Required secrets:**

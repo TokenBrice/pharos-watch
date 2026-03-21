@@ -77,6 +77,7 @@ vi.mock("../db-cache", () => ({
 const {
   prepareTelegramDigestAppendices,
   CEMETERY_FOOTERS,
+  queuePendingTrackedStablecoinAdditions,
 } = await import("../telegram-digest-appendices");
 
 describe("prepareTelegramDigestAppendices", () => {
@@ -116,6 +117,86 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(mockSetCache).toHaveBeenCalledTimes(2);
   });
 
+  it("queues newly tracked active coins from the previous stablecoins cache baseline", async () => {
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "telegram:tracked-stablecoins-pending") {
+        return {
+          value: JSON.stringify(["usdt-tether"]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      return null;
+    });
+
+    const result = await queuePendingTrackedStablecoinAdditions(
+      {} as D1Database,
+      ["usdt-tether"],
+      ["usdt-tether", "usdx-example"],
+    );
+
+    expect(result).toEqual({
+      queuedIds: ["usdx-example"],
+      totalPending: 2,
+      baselineMissing: false,
+    });
+    expect(mockSetCache).toHaveBeenCalledTimes(1);
+    expect(mockSetCache.mock.calls[0]).toEqual([
+      {},
+      "telegram:tracked-stablecoins-pending",
+      JSON.stringify(["usdt-tether", "usdx-example"]),
+    ]);
+  });
+
+  it("uses queued tracked additions when the tracked snapshot is missing", async () => {
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "telegram:cemetery-snapshot") {
+        return {
+          value: JSON.stringify([
+            "PUSD|2026-01|palm usd",
+            "EURA|2026-03|angle eura",
+            "USDA|2026-03|angle usda",
+          ]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      if (key === "telegram:tracked-stablecoins-pending") {
+        return {
+          value: JSON.stringify(["usdx-example"]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      return null;
+    });
+
+    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+
+    expect(prepared.metadata).toMatchObject({
+      hasAppendix: true,
+      trackedDetected: 1,
+      preLaunchDetected: 0,
+      trackedSymbols: ["USDX"],
+      seededSnapshots: ["tracked:first-run"],
+    });
+    expect(prepared.appendixHtml).toContain("<b>Tracking Changes</b>");
+    expect(prepared.appendixHtml).toContain("<code>USDX</code> Example USD");
+
+    expect(mockSetCache).not.toHaveBeenCalled();
+
+    await prepared.commitSuccess();
+
+    expect(mockSetCache).toHaveBeenCalledTimes(2);
+    expect(mockSetCache.mock.calls[0]).toEqual([
+      {},
+      "telegram:tracked-stablecoins-snapshot",
+      JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+    ]);
+    expect(mockSetCache.mock.calls[1]).toEqual([
+      {},
+      "telegram:tracked-stablecoins-pending",
+      JSON.stringify([]),
+    ]);
+  });
+
   it("builds cemetery and tracking appendices, then advances snapshots only after commit", async () => {
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "telegram:cemetery-snapshot") {
@@ -133,6 +214,12 @@ describe("prepareTelegramDigestAppendices", () => {
       if (key === "telegram:tracked-stablecoins-snapshot") {
         return {
           value: JSON.stringify(["usdt-tether"]),
+          updatedAt: 1_778_500_000,
+        };
+      }
+      if (key === "telegram:tracked-stablecoins-pending") {
+        return {
+          value: JSON.stringify(["usdx-example"]),
           updatedAt: 1_778_500_000,
         };
       }
@@ -165,7 +252,7 @@ describe("prepareTelegramDigestAppendices", () => {
 
     await prepared.commitSuccess();
 
-    expect(mockSetCache).toHaveBeenCalledTimes(3);
+    expect(mockSetCache).toHaveBeenCalledTimes(4);
     expect(mockSetCache.mock.calls[0]).toEqual([
       {},
       "telegram:cemetery-snapshot",
@@ -184,6 +271,11 @@ describe("prepareTelegramDigestAppendices", () => {
       {},
       "telegram:tracked-stablecoins-snapshot",
       JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+    ]);
+    expect(mockSetCache.mock.calls[3]).toEqual([
+      {},
+      "telegram:tracked-stablecoins-pending",
+      JSON.stringify([]),
     ]);
   });
 });

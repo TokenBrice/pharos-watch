@@ -31,6 +31,7 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import { MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcome } from "../lib/circuit-breaker";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
+import { queuePendingTrackedStablecoinAdditions } from "../lib/telegram-digest-appendices";
 import {
   buildPriceValidationContext,
   validatePriceCandidate,
@@ -282,6 +283,21 @@ async function syncViaCoingeckoFallback(
   if (isAbortResult(cacheResult)) return cacheResult;
   if (!cacheResult.written) return cacheResult.blockedResult!;
 
+  try {
+    const trackedAdditions = await queuePendingTrackedStablecoinAdditions(
+      db,
+      previousAssetsById.keys(),
+      assets.map((asset) => String(asset.id)),
+    );
+    if (trackedAdditions.queuedIds.length > 0) {
+      console.log(
+        `[sync-stablecoins] Queued Telegram tracked additions: ${trackedAdditions.queuedIds.join(", ")}`,
+      );
+    }
+  } catch (err) {
+    console.warn("[sync-stablecoins] Failed to queue Telegram tracked additions:", err);
+  }
+
   const depegResult = await runDepegPipeline(
     db, assets, fxFallbackRates, signal, coingeckoApiKey,
     returnIfAborted, abortResult, "fallback-", " (CG fallback)",
@@ -343,6 +359,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     droppedMalformedAssets,
     canonicalDeduplication,
   } = intake;
+  const previousAssetsById = await loadPreviousStablecoinsById(db);
   let fxFallbackRates = intake.fxFallbackRates;
 
   // Load FX rates early for dynamic price bounds in validatePriceCandidate
@@ -597,6 +614,21 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     return cacheResult.blockedResult!;
   }
   await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
+
+  try {
+    const trackedAdditions = await queuePendingTrackedStablecoinAdditions(
+      db,
+      previousAssetsById.keys(),
+      assets.map((asset) => String(asset.id)),
+    );
+    if (trackedAdditions.queuedIds.length > 0) {
+      console.log(
+        `[sync-stablecoins] Queued Telegram tracked additions: ${trackedAdditions.queuedIds.join(", ")}`,
+      );
+    }
+  } catch (err) {
+    console.warn("[sync-stablecoins] Failed to queue Telegram tracked additions:", err);
+  }
 
   const depegResult = await runDepegPipeline(
     db, assets, fxFallbackRates, signal, coingeckoApiKey,
