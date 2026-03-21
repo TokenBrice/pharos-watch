@@ -129,7 +129,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     label: "Live Reserves Sync",
     shortLabel: "Live Sync",
     description:
-      "Headline live reserve-sync coverage on the stablecoin detail page, with curated and estimated reserve views broken out below.",
+      "Live reserve-sync coverage on the stablecoin detail page, with curated and estimated reserve views broken out below.",
     headlineKinds: ["live"],
     headlineCountLabel: "Live tracking",
     headlineCoverageLabel: (coveragePct) =>
