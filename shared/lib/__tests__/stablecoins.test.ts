@@ -1,8 +1,92 @@
 import { describe, expect, it } from "vitest";
+import deadStablecoinAsset from "../../data/dead-stablecoins.json";
+import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
+import commodityAsset from "../../data/stablecoins/commodity.json";
+import nonUsdAsset from "../../data/stablecoins/non-usd.json";
+import usdMajorAsset from "../../data/stablecoins/usd-major.json";
+import usdMinorAsset from "../../data/stablecoins/usd-minor.json";
 import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import {
+  ACTIVE_STABLECOINS,
+  PRE_LAUNCH_STABLECOINS,
+  TRACKED_META_BY_ID,
+  TRACKED_STABLECOINS,
+} from "@shared/lib/stablecoins";
+import {
+  parseCanonicalOrderAsset,
+  parseDeadStablecoinAssets,
+  parseStablecoinMetaAssets,
+} from "../stablecoins/schema";
 
 describe("tracked stablecoin metadata", () => {
+  it("loads all JSON registry assets through the shared schemas", () => {
+    const usdMajor = parseStablecoinMetaAssets(usdMajorAsset, "usd-major");
+    const usdMinor = parseStablecoinMetaAssets(usdMinorAsset, "usd-minor");
+    const nonUsd = parseStablecoinMetaAssets(nonUsdAsset, "non-usd");
+    const commodity = parseStablecoinMetaAssets(commodityAsset, "commodity");
+    const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
+
+    expect(usdMajor).toHaveLength(28);
+    expect(usdMinor).toHaveLength(97);
+    expect(nonUsd).toHaveLength(33);
+    expect(commodity).toHaveLength(10);
+    expect(canonicalOrder).toHaveLength(168);
+    expect(usdMajor.length + usdMinor.length + nonUsd.length + commodity.length).toBe(canonicalOrder.length);
+    expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(82);
+  });
+
+  it("keeps canonical order references limited to known tracked IDs", () => {
+    const knownIds = new Set([
+      ...parseStablecoinMetaAssets(usdMajorAsset, "usd-major"),
+      ...parseStablecoinMetaAssets(usdMinorAsset, "usd-minor"),
+      ...parseStablecoinMetaAssets(nonUsdAsset, "non-usd"),
+      ...parseStablecoinMetaAssets(commodityAsset, "commodity"),
+    ].map((coin) => coin.id));
+
+    expect(parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order").filter((id) => !knownIds.has(id))).toEqual([]);
+  });
+
+  it("keeps active and pre-launch partitions unchanged after the JSON migration", () => {
+    expect(TRACKED_STABLECOINS).toHaveLength(168);
+    expect(ACTIVE_STABLECOINS).toHaveLength(160);
+    expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
+      "usdpt-western-union",
+      "roughrider-bnd",
+      "fiusd-fiserv",
+      "eur-qivalis",
+      "pusd-polaris",
+      "pgold-polaris",
+      "usg-tangent",
+      "klarnausd-klarna",
+    ]);
+  });
+
+  it("rejects malformed stablecoin assets with readable schema errors", () => {
+    expect(() => parseStablecoinMetaAssets([{
+      id: "broken-coin",
+      name: "Broken Coin",
+      symbol: "BROKE",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+      },
+    }], "broken.json")).toThrowError(/broken\.json/);
+  });
+
+  it("rejects malformed dead stablecoin assets with readable schema errors", () => {
+    expect(() => parseDeadStablecoinAssets([{
+      name: "Broken Dead Coin",
+      symbol: "DEAD",
+      pegCurrency: "USD",
+      causeOfDeath: "algorithmic-failure",
+      deathDate: "2025-01-01",
+      sourceUrl: "https://example.com",
+    }], "dead-broken.json")).toThrowError(/dead-broken\.json/);
+  });
+
   it("does not attach a CoinGecko slug to M by M0 when the base token is not contract-resolved on CoinGecko", () => {
     const coin = TRACKED_META_BY_ID.get("m-m0");
 

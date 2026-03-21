@@ -19,7 +19,7 @@ This pipeline is intentionally separate from curated reserve metadata in `Stable
 
 ## Metadata Contract
 
-Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/index.ts`, `shared/lib/stablecoins.ts`).
+Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/index.ts`, loaded from `shared/data/stablecoins/*.json` via `shared/lib/stablecoins/index.ts`).
 
 `LiveReservesConfig` fields:
 
@@ -264,7 +264,7 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 | File | Role |
 |------|------|
 | `shared/types/index.ts` | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types |
-| `shared/lib/stablecoins.ts` | Per-coin `liveReservesConfig` declarations |
+| `shared/lib/stablecoins/index.ts` | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/*.json` |
 | `worker/src/cron/sync-live-reserves.ts` | Hourly sync orchestration and cron result statuses |
 | `worker/src/cron/reserve-adapters/index.ts` | Adapter registry |
 | `worker/src/cron/reserve-adapters/helpers.ts` | Shared adapter fetch / normalization helpers |

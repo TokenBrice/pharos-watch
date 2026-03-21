@@ -17,10 +17,11 @@ Primary files:
 - `src/components/cemetery-tombstones.tsx`
 - `src/components/cemetery-charts.tsx`
 - `shared/lib/dead-stablecoins.ts`
+- `shared/data/dead-stablecoins.json`
 
 ### Data model
 
-Cemetery data is static and versioned in-repo (`DEAD_STABLECOINS`).
+Cemetery data is static and versioned in-repo. The raw dataset lives in `shared/data/dead-stablecoins.json` and is validated/exported as `DEAD_STABLECOINS` by `shared/lib/dead-stablecoins.ts`.
 
 Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such as:
 - identity (`name`, `symbol`, optional `llamaId`)
@@ -117,6 +118,6 @@ That pattern is used in both the stacked mobile cards and the desktop comparison
 ## Operational notes
 
 - Both pages are part of static export and rely on client-side fetches where applicable.
-- Cemetery reliability depends on repository data curation (`shared/lib/dead-stablecoins.ts`).
+- Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
 - Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
 - Compare reliability depends on six independent API datasets plus per-coin supply-history and flow queries; partial failures are surfaced via query error/stale-data UI components.

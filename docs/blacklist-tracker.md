@@ -70,7 +70,7 @@ Implementation note: `worker/src/lib/blacklist-contracts.ts` currently defines n
 
 **File:** `worker/src/lib/blacklist-contracts.ts`
 
-Canonical token addresses and decimals now resolve from `shared/lib/stablecoins.ts`. `blacklist-contracts.ts` keeps only tracker-specific chain/event configuration, with one traded-contract exception for Optimism `USDT0` sourced from the shared `tradedContracts` metadata.
+Canonical token addresses and decimals now resolve from the shared stablecoin loader in `shared/lib/stablecoins/index.ts`, backed by `shared/data/stablecoins/*.json`. `blacklist-contracts.ts` keeps only tracker-specific chain/event configuration, with one traded-contract exception for Optimism `USDT0` sourced from the shared `tradedContracts` metadata.
 
 ### USDC (6 chains)
 

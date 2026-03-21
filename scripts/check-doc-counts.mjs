@@ -14,7 +14,7 @@
  * Usage: node scripts/check-doc-counts.mjs
  * Exits 0 if all counts match, 1 if any are stale.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,20 +23,22 @@ const root = resolve(__dirname, "..");
 
 // --- Extract authoritative counts from source ---
 
-// 1. Tracked stablecoins
-const canonicalSrc = readFileSync(
-  resolve(root, "shared/lib/stablecoins/index.ts"),
-  "utf-8",
-);
-// Extract CANONICAL_ORDER array body, then count entries within it
-const arrayMatch = canonicalSrc.match(
-  /CANONICAL_ORDER:\s*string\[\]\s*=\s*\[([\s\S]*?)\];/,
-);
-if (!arrayMatch) {
-  console.error("FATAL: Could not find CANONICAL_ORDER array in index.ts");
-  process.exit(1);
+function readJson(relativePath) {
+  return JSON.parse(readFileSync(resolve(root, relativePath), "utf-8"));
 }
-const trackedCount = (arrayMatch[1].match(/^\s+"[a-z][a-z0-9-]*"/gm) || []).length;
+
+const stablecoinAssets = [
+  "shared/data/stablecoins/usd-major.json",
+  "shared/data/stablecoins/usd-minor.json",
+  "shared/data/stablecoins/non-usd.json",
+  "shared/data/stablecoins/commodity.json",
+].map((relativePath) => ({
+  relativePath,
+  data: readJson(relativePath),
+}));
+
+// 1. Tracked stablecoins
+const trackedCount = readJson("shared/data/stablecoins/canonical-order.json").length;
 
 // 2. Shadow stablecoins
 const shadowSrc = readFileSync(
@@ -75,14 +77,9 @@ if (!bluechipBlock) {
 }
 const bluechipCount = (bluechipBlock[1].match(/^\s+\w+:\s*"/gm) || []).length;
 
-// 5. Live-enabled stablecoins (coins declaring liveReservesConfig across stablecoin metadata files)
-const stablecoinDir = resolve(root, "shared/lib/stablecoins");
-const coinFiles = readdirSync(stablecoinDir)
-  .filter((f) => f.endsWith(".ts") && f !== "index.ts" && f !== "factory.ts")
-  .map((f) => resolve(stablecoinDir, f));
-const liveEnabledCount = coinFiles.reduce(
-  (sum, f) =>
-    sum + (readFileSync(f, "utf-8").match(/liveReservesConfig:\s*\{/g) || []).length,
+// 5. Live-enabled stablecoins (coins declaring liveReservesConfig in the checked-in JSON assets)
+const liveEnabledCount = stablecoinAssets.reduce(
+  (sum, asset) => sum + asset.data.filter((coin) => Object.hasOwn(coin, "liveReservesConfig")).length,
   0,
 );
 

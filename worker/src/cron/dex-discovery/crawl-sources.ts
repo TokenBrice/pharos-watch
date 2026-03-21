@@ -8,15 +8,22 @@ import { normalizeProtocol, getGtDexQuality } from "../dex-liquidity/pool-helper
 import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers";
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/geckoterminal-shared";
 import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
-import { CG_TICKERS_RATE_MS, ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS } from "../dex-liquidity/constants";
+import { CG_TICKERS_RATE_MS } from "../dex-liquidity/constants";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
-import { fetchCgTokenPools, parseCgPoolVolume } from "../../lib/coingecko-onchain";
+import { fetchCgTokenPools } from "../../lib/coingecko-onchain";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
-import type { GtPool, DexPriceObs, GtNewPool } from "../dex-liquidity/types";
+import type { GtPool, DexPriceObs, GtNewPool, CgTicker } from "../dex-liquidity/types";
+import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-shared";
+import {
+  aggregateCgTickersByExchange,
+  buildCgTickerExchangeSummaries,
+  buildCgTickerPriceObservations,
+  filterValidCgTickers,
+} from "../dex-liquidity/coingecko-tickers-shared";
 import type { StagedPool } from "./types";
 
 export interface CrawlResult {
@@ -81,65 +88,35 @@ export async function crawlCoin(
       try {
         const rawPools = await fetchCgTokenPools(cgNetwork, address.toLowerCase(), signal, cgApiKey);
         for (const pool of rawPools) {
-          const attrs = pool.attributes;
-          const poolAddress = attrs.address?.toLowerCase();
-          if (!poolAddress) continue;
+          const parsed = parseCgPool(pool);
+          if (!parsed) continue;
 
-          const baseToken = pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "";
-          const quoteToken = pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "";
-          const poolId = `${chain.toLowerCase()}:${poolAddress}`;
+          const poolId = `${chain.toLowerCase()}:${parsed.poolAddress}`;
           if (knownPoolIds.has(poolId)) continue;
 
           const side =
-            address.toLowerCase() === baseToken ? "base" : address.toLowerCase() === quoteToken ? "quote" : null;
+            address.toLowerCase() === parsed.baseTokenAddress
+              ? "base"
+              : address.toLowerCase() === parsed.quoteTokenAddress
+                ? "quote"
+                : null;
           if (!side) continue;
 
-          const basePrice = parseFloat(attrs.base_token_price_usd ?? "");
-          const quotePrice = parseFloat(attrs.quote_token_price_usd ?? "");
-          const priceRaw = side === "base" ? basePrice : quotePrice;
-          const tvlUsd = parseFloat(attrs.reserve_in_usd ?? "");
+          const priceRaw = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
+          const tvlUsd = parsed.tvlUsd;
           if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) continue;
-          const volume24h = parseCgPoolVolume(attrs);
+          const volume24h = parsed.volume24hUsd;
           if (tvlUsd > 0 && volume24h / tvlUsd > 50) continue;
 
-          const feePct = attrs.pool_fee_percentage != null ? parseFloat(attrs.pool_fee_percentage) : null;
-          const feeTier = feePct != null && !isNaN(feePct) ? Math.round(feePct * 100) : null;
-          const lockedLiqPct =
-            attrs.locked_liquidity_percentage != null ? parseFloat(attrs.locked_liquidity_percentage) : null;
-
-          let balanceRatio: number | null = null;
-          if (basePrice > 0 && quotePrice > 0) {
-            const ratio = Math.min(basePrice, quotePrice) / Math.max(basePrice, quotePrice);
-            if (ratio > 0.5) balanceRatio = ratio;
-          }
-
-          const dexId = pool.relationships.dex.data.id;
+          const {
+            qualityMultiplier,
+            poolType,
+            feePercentage,
+            lockedLiquidityPct,
+            balanceRatio,
+          } = classifyCgPool(parsed, pool.attributes);
+          const dexId = parsed.dexId;
           const protocol = normalizeProtocol(dexId);
-          let qualityMultiplier: number;
-          let poolType: string;
-          if (feePct != null && !isNaN(feePct)) {
-            if (feePct <= 0.01) {
-              qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-1bp"]!;
-              poolType = "cg-cl-1bp";
-            } else if (feePct <= 0.05) {
-              qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-5bp"]!;
-              poolType = "cg-cl-5bp";
-            } else if (feePct <= 0.3) {
-              qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-30bp"]!;
-              poolType = "cg-cl-30bp";
-            } else {
-              qualityMultiplier = QUALITY_MULTIPLIERS["generic"]!;
-              poolType = "cg-wide-fee";
-            }
-          } else {
-            qualityMultiplier = getGtDexQuality(dexId);
-            poolType =
-              dexId.includes("v3") || dexId.includes("v4")
-                ? "cg-concentrated"
-                : dexId.includes("stable")
-                  ? "cg-stable-amm"
-                  : "cg-amm";
-          }
 
           const stagedPool: StagedPool = {
             poolId,
@@ -148,19 +125,19 @@ export async function crawlCoin(
             chain,
             protocol,
             dexId,
-            symbol: attrs.name,
+            symbol: parsed.poolName,
             tvlUsd,
             volume24h,
             qualityMultiplier,
             poolType,
-            feeTier,
+            feeTier: feePercentage != null ? Math.round(feePercentage * 100) : null,
             balanceRatio,
             isStable: null,
-            baseToken,
-            quoteToken,
+            baseToken: parsed.baseTokenAddress,
+            quoteToken: parsed.quoteTokenAddress,
             quoteSymbol: null,
             priceUsd: Number.isFinite(priceRaw) && priceRaw > 0 ? priceRaw : null,
-            lockedLiqPct: lockedLiqPct != null && !isNaN(lockedLiqPct) ? lockedLiqPct : null,
+            lockedLiqPct: lockedLiquidityPct,
             rawJson: null,
             discoveredAt: nowSec,
             refreshedAt: nowSec,
@@ -419,58 +396,25 @@ export async function crawlCoin(
           signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
         });
         if (res?.ok) {
-          const data = (await res.json()) as {
-            tickers?: Array<{
-              base: string;
-              target: string;
-              market: { name: string; identifier: string };
-              converted_last: { usd: number };
-              converted_volume: { usd: number };
-              target_coin_id?: string;
-              is_anomaly: boolean;
-              is_stale: boolean;
-              trust_score: string | null;
-            }>;
-          };
-          const valid = (data.tickers ?? []).filter((t) => {
-            if (t.is_stale || t.is_anomaly || !t.trust_score) return false;
-            const isUsdQuote =
-              t.target === "USD" || (t.target_coin_id != null && USD_QUOTE_COIN_IDS.has(t.target_coin_id));
-            return isUsdQuote && t.converted_volume.usd >= 1_000;
-          });
+          const data = (await res.json()) as { tickers?: CgTicker[] };
+          const exchangeSummaries = buildCgTickerExchangeSummaries(
+            aggregateCgTickersByExchange(filterValidCgTickers(data.tickers ?? [])),
+          );
 
-          const byExchange = new Map<string, { name: string; volume: number; priceVolumeWeightedSum: number }>();
-          for (const t of valid) {
-            const id = t.market.identifier;
-            const entry = byExchange.get(id);
-            if (entry) {
-              entry.volume += t.converted_volume.usd;
-              entry.priceVolumeWeightedSum += t.converted_last.usd * t.converted_volume.usd;
-            } else {
-              byExchange.set(id, {
-                name: t.market.name,
-                volume: t.converted_volume.usd,
-                priceVolumeWeightedSum: t.converted_last.usd * t.converted_volume.usd,
-              });
-            }
-          }
-
-          for (const [exchangeId, exch] of byExchange) {
-            const syntheticTvl = exch.volume * ORDERBOOK_TVL_FACTOR;
-            const poolId = `orderbook:${exchangeId}:${stablecoinId}`.toLowerCase();
+          for (const summary of exchangeSummaries) {
+            const poolId = `orderbook:${summary.exchangeId}:${stablecoinId}`.toLowerCase();
             if (knownPoolIds.has(poolId)) continue;
-            const price = exch.volume > 0 ? exch.priceVolumeWeightedSum / exch.volume : 0;
 
             addPool({
               poolId,
               stablecoinId,
               source: "cg_tickers",
               chain: "orderbook",
-              protocol: exchangeId,
-              dexId: exchangeId,
+              protocol: summary.exchangeId,
+              dexId: summary.exchangeId,
               symbol: `${stablecoinMeta?.symbol ?? stablecoinId} / USD`,
-              tvlUsd: syntheticTvl,
-              volume24h: exch.volume,
+              tvlUsd: summary.syntheticTvlUsd,
+              volume24h: summary.volumeUsd,
               qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
               poolType: "orderbook",
               feeTier: null,
@@ -479,25 +423,16 @@ export async function crawlCoin(
               baseToken: null,
               quoteToken: null,
               quoteSymbol: "USD",
-              priceUsd: price,
+              priceUsd: summary.priceUsd,
               lockedLiqPct: null,
               rawJson: null,
               discoveredAt: nowSec,
               refreshedAt: nowSec,
             });
+          }
 
-            if (
-              syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
-              isPlausibleDexObservationPrice(stablecoinId, price, references)
-            ) {
-              addPriceObs({
-                stablecoinId,
-                price,
-                tvl: syntheticTvl,
-                chain: "orderbook",
-                protocol: `cg-ticker-${exchangeId}`,
-              });
-            }
+          for (const observation of buildCgTickerPriceObservations(stablecoinId, exchangeSummaries, references)) {
+            addPriceObs({ ...observation, stablecoinId });
           }
         }
       } catch (err) {

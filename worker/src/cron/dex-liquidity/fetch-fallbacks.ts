@@ -8,11 +8,14 @@ import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
 import { getTrackedContracts } from "./pool-helpers";
-import {
-  CG_TICKERS_RATE_MS,
-  ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS,
-} from "./constants";
+import { CG_TICKERS_RATE_MS } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
+import {
+  aggregateCgTickersByExchange,
+  buildCgTickerExchangeSummaries,
+  buildCgTickerPriceObservations,
+  filterValidCgTickers,
+} from "./coingecko-tickers-shared";
 import {
   buildPoolIdentity,
   countDerivedMatchKeys,
@@ -258,71 +261,39 @@ export async function fetchCgTickersFallback(
       }
 
       const data = (await res.json()) as { tickers?: CgTicker[] };
-      const tickers = data?.tickers ?? [];
-
-      // Keep: non-stale, non-anomaly, has trust score, USD-denominated quote, min $1k volume
-      const valid = tickers.filter((t) => {
-        if (t.is_stale || t.is_anomaly || !t.trust_score) return false;
-        const isUsdQuote =
-          t.target === "USD" ||
-          (t.target_coin_id && USD_QUOTE_COIN_IDS.has(t.target_coin_id));
-        return isUsdQuote && t.converted_volume.usd >= 1_000;
-      });
+      const valid = filterValidCgTickers(data?.tickers ?? []);
 
       if (valid.length === 0) {
         await sleepWithSignal(CG_TICKERS_RATE_MS, signal);
         continue;
       }
 
-      // Aggregate by exchange identifier
-      const byExchange = new Map<string, { name: string; volume: number; priceVolumeWeightedSum: number }>();
-      for (const t of valid) {
-        const id = t.market.identifier;
-        const entry = byExchange.get(id);
-        if (entry) {
-          entry.volume += t.converted_volume.usd;
-          entry.priceVolumeWeightedSum += t.converted_last.usd * t.converted_volume.usd;
-        } else {
-          byExchange.set(id, {
-            name: t.market.name,
-            volume: t.converted_volume.usd,
-            priceVolumeWeightedSum: t.converted_last.usd * t.converted_volume.usd,
-          });
-        }
-      }
+      const exchangeSummaries = buildCgTickerExchangeSummaries(
+        aggregateCgTickersByExchange(valid),
+      );
 
       const pools: GtNewPool[] = [];
-      for (const [exchangeId, exch] of byExchange) {
-        const syntheticTvl = exch.volume * ORDERBOOK_TVL_FACTOR;
-        const price = exch.volume > 0 ? exch.priceVolumeWeightedSum / exch.volume : 0;
-
-        // Price observation (only if price is plausible — skip if near 0)
-        if (syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(meta.id, price, references)) {
-          const obs = priceObs.get(meta.id) ?? [];
-          obs.push({
-            price,
-            tvl: syntheticTvl,
-            chain: "orderbook",
-            protocol: `cg-ticker-${exchangeId}`,
-          });
-          priceObs.set(meta.id, obs);
-        }
-
+      for (const summary of exchangeSummaries) {
         pools.push({
-          address: `orderbook-${exchangeId}`,
+          address: `orderbook-${summary.exchangeId}`,
           chain: "orderbook",
-          dexId: exchangeId,
-          name: exch.name,
-          tvlUsd: syntheticTvl,
-          volume24hUsd: exch.volume,
+          dexId: summary.exchangeId,
+          name: summary.exchangeName,
+          tvlUsd: summary.syntheticTvlUsd,
+          volume24hUsd: summary.volumeUsd,
           qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
           maturityDays: 365,
           poolType: "orderbook",
-          price,
+          price: summary.priceUsd,
           // Use "USDC" as quote symbol so computePoolPairQuality returns 1.0
           symbol: `${meta.symbol} / USDC`,
           sourceFamily: "cg_tickers",
         });
+      }
+
+      const observations = buildCgTickerPriceObservations(meta.id, exchangeSummaries, references);
+      if (observations.length > 0) {
+        priceObs.set(meta.id, observations);
       }
 
       if (pools.length > 0) {

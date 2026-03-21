@@ -69,7 +69,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 **File:** `worker/src/lib/mint-burn-contracts.ts`
 
-Token identity now resolves from shared metadata in `shared/lib/stablecoins.ts`. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. The only explicit address overrides are the two `reUSD` vault-event configs, which intentionally track non-token contracts.
+Token identity now resolves from the shared stablecoin loader in `shared/lib/stablecoins/index.ts`, which validates the checked-in metadata assets under `shared/data/stablecoins/*.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. The only explicit address overrides are the two `reUSD` vault-event configs, which intentionally track non-token contracts.
 
 ### Tracked Stablecoins
 

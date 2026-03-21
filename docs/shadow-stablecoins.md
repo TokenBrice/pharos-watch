@@ -5,7 +5,7 @@ Two metadata entries are maintained outside the tracked public stablecoin set fo
 - `ust-terra`
 - `iron-iron-finance`
 
-They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from `shared/lib/stablecoins/` (the tracked stablecoin metadata modules).
+They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from the tracked stablecoin registry (`shared/lib/stablecoins/index.ts`, backed by `shared/data/stablecoins/*.json`).
 
 ---
 
@@ -59,7 +59,7 @@ Operational consequence:
 
 ## Gotchas
 
-- Do not add a shadow asset to `shared/lib/stablecoins.ts` unless it should become publicly tracked everywhere
+- Do not add a shadow asset to `shared/data/stablecoins/*.json` unless it should become publicly tracked everywhere
 - Do not remove a shadow asset without checking PSI, depeg backfill, and supply-history continuity first
 - If a shadow asset gains a reliable live source, update both `shared/lib/shadow-stablecoins.ts` and the paths that depend on `PSI_ELIGIBLE_STABLECOINS`
 

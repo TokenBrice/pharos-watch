@@ -22,7 +22,7 @@ Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated 
 | `"ustb-superstate"` | Superstate USTB |
 | `"gyen-gyen"`       | GYEN            |
 
-The full list is in `shared/lib/stablecoins.ts`. The API currently accepts canonical IDs only; legacy route redirects are handled at the frontend/static-export layer, not by the worker ID resolver.
+The full list is exported from `shared/lib/stablecoins/index.ts`, with the raw metadata stored in `shared/data/stablecoins/*.json` and validated by `shared/lib/stablecoins/schema.ts`. The API currently accepts canonical IDs only; legacy route redirects are handled at the frontend/static-export layer, not by the worker ID resolver.
 
 ---
 

@@ -42,6 +42,7 @@ import {
   learnResolvedChainAddress,
   makeChainAddressKey,
 } from "./token-resolution";
+import { appendTokenBatchPriceObservations } from "./token-price-observations";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
 export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
@@ -735,24 +736,16 @@ export async function fetchGtTokenBatch(
 
         const json = (await res.json()) as { data?: GtToken[] };
         if (!json.data) continue;
-
-        for (const token of json.data) {
-          const a = token.attributes;
-          const addr = a.address.toLowerCase();
-          const trackedToken = batch.find((t) => t.address.toLowerCase() === addr);
-          const stablecoinId = trackedToken?.stablecoinId;
-          if (!stablecoinId || !trackedToken) continue;
-
-          const price = parseFloat(a.price_usd ?? "");
-          const tvl = parseFloat(a.total_reserve_in_usd ?? "");
-          if (!price || price <= 0 || isNaN(price)) continue;
-          if (!isPlausibleDexObservationPrice(stablecoinId, price, references)) continue;
-          if (!tvl || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) continue;
-
-          const obs = priceObs.get(stablecoinId) ?? [];
-          obs.push({ price, tvl, chain: trackedToken.chain, protocol: "geckoterminal-aggregate" });
-          priceObs.set(stablecoinId, obs);
-        }
+        appendTokenBatchPriceObservations({
+          priceObs,
+          batch,
+          tokens: json.data,
+          sourceLabel: "geckoterminal-aggregate",
+          references,
+          getAddress: (token) => token.attributes.address,
+          getPriceUsd: (token) => parseFloat(token.attributes.price_usd ?? ""),
+          getTvlUsd: (token) => parseFloat(token.attributes.total_reserve_in_usd ?? ""),
+        });
       } catch (err) {
         if (signal?.aborted) throw err;
         console.warn(`[dex-liquidity] GT token batch error for ${gtChain}:`, err);
@@ -794,23 +787,16 @@ export async function fetchCgTokenBatchPrices(
 
       try {
         const cgTokens = await fetchCgTokensBatch(cgChain, addresses, signal, coingeckoApiKey ?? null);
-        for (const token of cgTokens) {
-          const a = token.attributes;
-          const addr = a.address.toLowerCase();
-          const trackedToken = batch.find((t) => t.address.toLowerCase() === addr);
-          const stablecoinId = trackedToken?.stablecoinId;
-          if (!stablecoinId || !trackedToken) continue;
-
-          const price = parseFloat(a.price_usd ?? "");
-          const tvl = parseFloat(a.total_reserve_in_usd ?? "");
-          if (!price || price <= 0 || isNaN(price)) continue;
-          if (!isPlausibleDexObservationPrice(stablecoinId, price, references)) continue;
-          if (!tvl || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) continue;
-
-          const obs = priceObs.get(stablecoinId) ?? [];
-          obs.push({ price, tvl, chain: trackedToken.chain, protocol: "coingecko-aggregate" });
-          priceObs.set(stablecoinId, obs);
-        }
+        appendTokenBatchPriceObservations({
+          priceObs,
+          batch,
+          tokens: cgTokens,
+          sourceLabel: "coingecko-aggregate",
+          references,
+          getAddress: (token) => token.attributes.address,
+          getPriceUsd: (token) => parseFloat(token.attributes.price_usd ?? ""),
+          getTvlUsd: (token) => parseFloat(token.attributes.total_reserve_in_usd ?? ""),
+        });
       } catch (err) {
         if (signal?.aborted) throw err;
         console.warn(`[dex-liquidity] CG token batch error for ${cgChain}:`, err);

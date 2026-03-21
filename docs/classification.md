@@ -2,7 +2,7 @@
 
 ## Stablecoin Classification System
 
-Each stablecoin in `shared/lib/stablecoins/` (category files: `usd-major.ts`, `usd-minor.ts`, `non-usd.ts`, `commodity.ts`) has flags:
+Each tracked stablecoin is defined in the checked-in data assets under `shared/data/stablecoins/*.json` and loaded through `shared/lib/stablecoins/index.ts` + `shared/lib/stablecoins/schema.ts`. Each entry carries these flags:
 
 ### Type (governance field internally)
 

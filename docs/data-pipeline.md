@@ -44,7 +44,7 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 |--------|--------|--------|-------|
 | CoinGecko `/simple/price` | 2 | built-in | Primary market data |
 | DefiLlama `coins.llama.fi` | 1 | built-in | Cross-validation |
-| Pyth Network Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle prices with confidence intervals; coverage is driven by curated `pythFeedId` entries in `shared/lib/stablecoins.ts` |
+| Pyth Network Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle prices with confidence intervals; coverage is driven by curated `pythFeedId` entries in the stablecoin metadata assets (`shared/data/stablecoins/*.json` via `shared/lib/stablecoins/index.ts`) |
 | Binance spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (single batch call) |
 | Coinbase spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (per-symbol) |
 | RedStone oracle | 1 | `worker/src/lib/redstone.ts` | Per-venue breakdown + agreement % for exact-case tracked symbols in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` |
@@ -144,7 +144,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 30. **Stage-structured yield history I/O**: `syncYieldData()` now delegates yield-history snapshot loading plus stale/orphan cleanup to `worker/src/cron/yield-sync/history.ts`, keeping source resolution and ranking logic separate from D1 housekeeping.
 31. **Stage-structured mint/burn run-state**: `syncMintBurn()` now delegates disabled-config normalization, lane rotation, and run-state persistence to `worker/src/cron/mint-burn/run-state.ts`; the two 20-minute scheduled handlers already share `worker/src/handlers/scheduled/mint-burn-slot.ts` for slot-specific dispatch.
 32. **Stage-structured blacklist EVM ingestion**: `syncBlacklist()` now delegates EVM event fetch/parsing, RPC fallback target selection, and shared explorer URL helpers to `worker/src/cron/blacklist/{evm-source,shared}.ts`, isolating the Tron path and downstream balance enrichment from the source-ingest stage.
-33. **Shared GeckoTerminal normalization**: both DEX discovery and DEX liquidity fallback paths now use `worker/src/cron/dex-liquidity/geckoterminal-shared.ts` for GeckoTerminal request construction, response parsing, and pool-type normalization.
+33. **Shared DEX-source normalization**: DEX discovery and DEX liquidity now keep GeckoTerminal parsing in `worker/src/cron/dex-liquidity/geckoterminal-shared.ts`, CoinGecko onchain parsing/classification in `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`, CoinGecko tickers aggregation in `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`, and GT/CG token-batch observation mapping in `worker/src/cron/dex-liquidity/token-price-observations.ts`.
 
 ## Gold & Silver Spot Prices (gold-api.com)
 
