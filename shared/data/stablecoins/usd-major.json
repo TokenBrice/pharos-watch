@@ -882,6 +882,10 @@
       "version": 1,
       "semantics": "collateral-mix",
       "breakerScope": "sky-makercore-collateral",
+      "display": {
+        "url": "https://info.sky.money/",
+        "label": "Sky Info"
+      },
       "inputs": {
         "primary": {
           "kind": "http-json",
@@ -1155,6 +1159,10 @@
       "version": 1,
       "semantics": "collateral-mix",
       "breakerScope": "sky-makercore-collateral",
+      "display": {
+        "url": "https://info.sky.money/",
+        "label": "Sky Info"
+      },
       "inputs": {
         "primary": {
           "kind": "http-json",

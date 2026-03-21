@@ -5,12 +5,12 @@ vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
   return {
     ...actual,
-    fetchErc20TotalSupply: vi.fn(),
+    probeOnchainTotalSupply: vi.fn(),
   };
 });
 
 import { fetchCuratedValidatedReserves } from "../curated-validated";
-import { fetchErc20TotalSupply } from "../helpers";
+import { probeOnchainTotalSupply } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
 
@@ -39,8 +39,8 @@ beforeEach(() => {
 });
 
 describe("fetchCuratedValidatedReserves", () => {
-  it("returns coin.reserves as slices when totalSupply > 0", async () => {
-    vi.mocked(fetchErc20TotalSupply).mockResolvedValue(1000000n);
+  it("returns coin.reserves as slices when probe succeeds", async () => {
+    vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1000000n);
 
     const result = await fetchCuratedValidatedReserves(
       makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }]),
@@ -53,7 +53,7 @@ describe("fetchCuratedValidatedReserves", () => {
   });
 
   it("preserves coinId and depType from curated reserves", async () => {
-    vi.mocked(fetchErc20TotalSupply).mockResolvedValue(500n);
+    vi.mocked(probeOnchainTotalSupply).mockResolvedValue(500n);
 
     const result = await fetchCuratedValidatedReserves(
       makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0xABCD" }]),
@@ -86,8 +86,10 @@ describe("fetchCuratedValidatedReserves", () => {
     ).rejects.toThrow("coin.reserves to be defined and non-empty");
   });
 
-  it("throws when totalSupply is null", async () => {
-    vi.mocked(fetchErc20TotalSupply).mockResolvedValue(null);
+  it("throws when on-chain probe fails", async () => {
+    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(
+      new Error("curated-validated totalSupply probe failed for test-coin"),
+    );
 
     await expect(
       fetchCuratedValidatedReserves(
@@ -98,32 +100,14 @@ describe("fetchCuratedValidatedReserves", () => {
     ).rejects.toThrow("totalSupply probe failed");
   });
 
-  it("throws when totalSupply is zero", async () => {
-    vi.mocked(fetchErc20TotalSupply).mockResolvedValue(0n);
+  it("throws when probe cannot find contract", async () => {
+    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(
+      new Error("curated-validated could not find a ethereum contract for test-coin"),
+    );
 
-    await expect(
-      fetchCuratedValidatedReserves(
-        makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }]),
-        BASE_CONFIG,
-        signal,
-      ),
-    ).rejects.toThrow("totalSupply probe failed");
-  });
-
-  it("throws when no contract matches the chain", async () => {
     await expect(
       fetchCuratedValidatedReserves(
         makeCoin(MULTI_SLICE_RESERVES, [{ chain: "arbitrum", address: "0xABCD" }]),
-        BASE_CONFIG,
-        signal,
-      ),
-    ).rejects.toThrow("could not find a ethereum contract");
-  });
-
-  it("throws when coin has no contracts", async () => {
-    await expect(
-      fetchCuratedValidatedReserves(
-        makeCoin(MULTI_SLICE_RESERVES),
         BASE_CONFIG,
         signal,
       ),

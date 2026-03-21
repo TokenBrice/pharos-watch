@@ -8,6 +8,7 @@
 import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";
 import { checkCollateralDrift } from "../../lib/collateral-drift";
+import { getMaxSyncAge } from "../../lib/live-reserves-store";
 import { sendAlert } from "../../lib/alerts";
 import type { ScheduledRuntimeContext } from "./context";
 
@@ -44,6 +45,16 @@ export function runHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): void
         }
         if (drift.fallbackCoins.length > 5) {
           console.warn(`[live-reserves] ${drift.fallbackCoins.length} live-enabled coins using curated fallback`);
+        }
+
+        // Staleness check: alert if no successful sync in 6+ hours (missed cron)
+        const maxAge = await getMaxSyncAge(runtime.db);
+        if (maxAge > 6 * 3600) {
+          sendAlert(
+            runtime.alertWebhookUrl,
+            "Live reserve sync stale",
+            `No successful sync in ${Math.round(maxAge / 3600)}h. Check cron scheduler.`,
+          ).catch(() => {});
         }
       } catch (e) {
         console.error("[live-reserves] Drift check failed:", e);

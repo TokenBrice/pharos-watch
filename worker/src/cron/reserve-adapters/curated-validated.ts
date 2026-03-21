@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
-import { fetchErc20TotalSupply, requireOnchainInput } from "./helpers";
+import { probeOnchainTotalSupply } from "./helpers";
 
 /**
  * Adapter that validates on-chain supply is non-zero, then returns the
@@ -19,23 +19,9 @@ export async function fetchCuratedValidatedReserves(
   }
 
   const params = (config.params ?? {}) as { rpcUrl?: string; fallbackRpcUrl?: string };
-  const onchain = requireOnchainInput(config.inputs.primary, "curated-validated");
-  const probeContract = coin.contracts?.find((c) => c.chain === onchain.chain)?.address;
-  if (!probeContract) {
-    throw new Error(`curated-validated adapter could not find a ${onchain.chain} contract for ${coin.id}`);
-  }
-
-  const totalSupply = await fetchErc20TotalSupply(
-    onchain,
-    probeContract,
-    signal,
-    ctx,
-    params.rpcUrl,
-    params.fallbackRpcUrl,
+  const totalSupply = await probeOnchainTotalSupply(
+    coin, config.inputs.primary, signal, "curated-validated", ctx, params.rpcUrl, params.fallbackRpcUrl,
   );
-  if (totalSupply == null || totalSupply <= 0n) {
-    throw new Error("curated-validated adapter totalSupply probe failed");
-  }
 
   return {
     slices: coin.reserves,

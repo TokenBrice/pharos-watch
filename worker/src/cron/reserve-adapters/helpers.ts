@@ -1,4 +1,4 @@
-import type { LiveReserveInput, LiveReservesConfig, ReserveSlice } from "@shared/types";
+import type { LiveReserveInput, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
@@ -293,6 +293,37 @@ export async function fetchErc20TotalSupply(
   });
 }
 
+/**
+ * Resolves contract address for a coin on a given chain, fetches ERC-20 totalSupply,
+ * and validates it is non-zero. Throws with descriptive error on any failure.
+ */
+export async function probeOnchainTotalSupply(
+  coin: StablecoinMeta,
+  input: LiveReserveInput,
+  signal: AbortSignal,
+  adapterName: string,
+  ctx?: AdapterContext,
+  rpcUrl?: string,
+  fallbackRpcUrl?: string,
+): Promise<bigint> {
+  const onchain = requireOnchainInput(input, adapterName);
+  const contract = coin.contracts?.find((c) => c.chain === onchain.chain)?.address;
+  if (!contract) {
+    throw new Error(`${adapterName} could not find a ${onchain.chain} contract for ${coin.id}`);
+  }
+  const supply = await fetchErc20TotalSupply(onchain, contract, signal, ctx, rpcUrl, fallbackRpcUrl);
+  if (supply == null || supply <= 0n) {
+    throw new Error(`${adapterName} totalSupply probe failed for ${coin.id}`);
+  }
+  return supply;
+}
+
+/**
+ * Deduplicate and normalize reserve slices so percentages sum to exactly 100%.
+ * Slices sharing the same (name, risk, coinId, depType) key are merged by summing pct.
+ * After rounding, the largest slice absorbs any remainder to maintain the 100% invariant.
+ * Returns slices sorted by pct descending.
+ */
 export function normalizeSlices(slices: ReserveSlice[], decimals = 0): ReserveSlice[] {
   const factor = 10 ** decimals;
   const grouped = new Map<string, ReserveSlice>();
@@ -327,6 +358,11 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 0): ReserveSl
     .sort((a, b) => b.pct - a.pct);
 }
 
+/**
+ * Convert absolute values into percentage-based ReserveSlice[].
+ * Filters out zero-value entries, calculates pct relative to total, and normalizes
+ * so percentages sum to 100%. Used by adapters that receive dollar amounts from APIs.
+ */
 export function slicesFromValues(
   values: Array<{
     value: number;

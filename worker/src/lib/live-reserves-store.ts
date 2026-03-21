@@ -418,6 +418,21 @@ export async function computeReserveCompositionOverview(
 }
 
 /**
+ * Returns the age in seconds of the most recent successful sync across all live-enabled coins.
+ * Used to detect missed cron runs: if maxAge > 6 hours, the cron scheduler may be down.
+ */
+export async function getMaxSyncAge(
+  db: D1Database,
+  now = Math.floor(Date.now() / 1000),
+): Promise<number> {
+  const row = await db
+    .prepare("SELECT MAX(last_success_at) AS max_ts FROM reserve_sync_state")
+    .first<{ max_ts: number | null }>();
+  if (!row?.max_ts) return Infinity;
+  return now - row.max_ts;
+}
+
+/**
  * Load all fresh live reserve snapshots as a Map<stablecoinId, ReserveSlice[]>.
  * Only includes snapshots with ≥2 slices that are fresher than `freshnessSec`.
  */

@@ -1,13 +1,12 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./index";
 import {
-  fetchErc20TotalSupply,
   fetchJsonWithRetry,
   getAdapterTimeout,
   getJsonPath,
   isHttpJsonInput,
   isReserveRisk,
-  requireOnchainInput,
+  probeOnchainTotalSupply,
 } from "./helpers";
 
 interface SingleAssetParams {
@@ -55,22 +54,7 @@ export async function fetchSingleAssetReserves(
       throw new Error("single-asset source returned zero/empty probe value");
     }
   } else {
-    const onchain = requireOnchainInput(primary, "single-asset");
-    const probeContract = coin.contracts?.find((contract) => contract.chain === onchain.chain)?.address;
-    if (!probeContract) {
-      throw new Error(`single-asset adapter could not find a ${onchain.chain} contract for ${coin.id}`);
-    }
-    const totalSupply = await fetchErc20TotalSupply(
-      onchain,
-      probeContract,
-      signal,
-      ctx,
-      params.rpcUrl,
-      params.fallbackRpcUrl,
-    );
-    if (totalSupply == null || totalSupply <= 0n) {
-      throw new Error("single-asset adapter totalSupply probe failed");
-    }
+    await probeOnchainTotalSupply(coin, primary, signal, "single-asset", ctx, params.rpcUrl, params.fallbackRpcUrl);
   }
 
   return {

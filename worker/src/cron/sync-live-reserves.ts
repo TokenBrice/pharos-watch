@@ -185,22 +185,29 @@ export async function syncLiveReserves(
         warningMessages.push(...warnings.map((warning) => `${coin.id}:${warning.code}`));
       }
 
-      await upsertReserveSnapshot(
-        db,
-        {
-          stablecoinId: coin.id,
-          slices: result.slices,
-          fetchedAt: now,
-          source: config.adapter,
-        },
-        buildReserveSyncStateRecord({
-          stablecoinId: coin.id, config, breakerKey,
-          previousLastSuccessAt: prevSuccessAt, now,
-          status: warnings.length > 0 ? "degraded" : "ok",
-          warnings, metadata: result.metadata ?? {},
-          lastSuccessAt: now,
+      // D1 write with 30s timeout to prevent hanging cron on slow DB
+      let dbTimer: ReturnType<typeof setTimeout>;
+      await Promise.race([
+        upsertReserveSnapshot(
+          db,
+          {
+            stablecoinId: coin.id,
+            slices: result.slices,
+            fetchedAt: now,
+            source: config.adapter,
+          },
+          buildReserveSyncStateRecord({
+            stablecoinId: coin.id, config, breakerKey,
+            previousLastSuccessAt: prevSuccessAt, now,
+            status: warnings.length > 0 ? "degraded" : "ok",
+            warnings, metadata: result.metadata ?? {},
+            lastSuccessAt: now,
+          }),
+        ).finally(() => clearTimeout(dbTimer)),
+        new Promise<never>((_, reject) => {
+          dbTimer = setTimeout(() => reject(new Error(`D1 write timeout for ${coin.id}`)), 30_000);
         }),
-      );
+      ]);
       if (breakerOutcomes.get(breakerKey) !== false) {
         breakerOutcomes.set(breakerKey, true);
       }

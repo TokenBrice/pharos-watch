@@ -855,7 +855,7 @@
         "coinId": "usdt-tether"
       },
       {
-        "name": "Yield instruments (unspecified)",
+        "name": "Yield strategies (CEX-managed, undisclosed composition)",
         "pct": 5,
         "risk": "high"
       }
@@ -867,7 +867,7 @@
       "breakerScope": "gusd-gate",
       "display": {
         "url": "https://www.gate.com/gusd",
-        "label": "Gate"
+        "label": "Gate USD"
       },
       "inputs": {
         "primary": {
@@ -1152,7 +1152,7 @@
         "coinId": "buidl-blackrock"
       },
       {
-        "name": "Treasury-backed stablecoins (100+ aggregated)",
+        "name": "Aggregated treasury-backed stablecoins (USDY, USDS, sDAI, etc.)",
         "pct": 25,
         "risk": "medium"
       },
@@ -1245,7 +1245,7 @@
         "coinId": "usdc-circle"
       },
       {
-        "name": "Reserve fund (loss absorption buffer)",
+        "name": "USDC loss-absorption reserve (0xPartners managed)",
         "pct": 5,
         "risk": "medium"
       }
@@ -1510,7 +1510,7 @@
       "breakerScope": "pmusd-precious-metals",
       "display": {
         "url": "https://pmusd.raac.io/",
-        "label": "RAAC"
+        "label": "RAAC pmUSD"
       },
       "inputs": {
         "primary": {
@@ -3948,7 +3948,7 @@
       "breakerScope": "zeusd-zoth",
       "display": {
         "url": "https://zoth.io/",
-        "label": "Zoth"
+        "label": "Zoth Finance"
       },
       "inputs": {
         "primary": {
@@ -4709,7 +4709,7 @@
       "breakerScope": "usdaf-asymmetry",
       "display": {
         "url": "https://app.asymmetry.finance/",
-        "label": "App"
+        "label": "Asymmetry Finance"
       },
       "inputs": {
         "primary": {
@@ -5641,8 +5641,8 @@
       "semantics": "collateral-mix",
       "breakerScope": "feusd-felix",
       "display": {
-        "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp",
-        "label": "Developer docs"
+        "url": "https://usefelix.xyz/",
+        "label": "Felix Protocol"
       },
       "inputs": {
         "primary": {
@@ -6377,7 +6377,7 @@
       "breakerScope": "wusd-worldwide",
       "display": {
         "url": "https://wspn.io/",
-        "label": "WSPN"
+        "label": "WSPN Payment"
       },
       "inputs": {
         "primary": {
@@ -7508,7 +7508,7 @@
       "breakerScope": "thbill-theo",
       "display": {
         "url": "https://theo.xyz",
-        "label": "Theo"
+        "label": "Theo Network"
       },
       "inputs": {
         "primary": {
@@ -8109,6 +8109,9 @@
       "yieldSource": "GAIB savings (sAID)",
       "yieldType": "lending-vault"
     },
+    "reserves": [
+      { "name": "GPU compute leases & accepted stablecoins (USDC, USDT)", "pct": 100, "risk": "medium" }
+    ],
     "liveReservesConfig": {
       "adapter": "single-asset",
       "version": 1,
@@ -8116,7 +8119,7 @@
       "breakerScope": "aid-gaib",
       "display": {
         "url": "https://gaib.ai",
-        "label": "GAIB"
+        "label": "GAIB AI"
       },
       "inputs": {
         "primary": {
@@ -8206,7 +8209,7 @@
       "breakerScope": "apxusd-apyx",
       "display": {
         "url": "https://apyx.fi",
-        "label": "APYX"
+        "label": "APYX Finance"
       },
       "inputs": {
         "primary": {

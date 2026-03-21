@@ -3,7 +3,7 @@ import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./index";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
-interface FirmMarket {
+export interface FirmMarket {
   name: string;
   underlying: { symbol: string };
   totalDebt: number;
@@ -24,7 +24,7 @@ const GOVERNANCE_ASSETS = new Set(["INV", "CRV", "CVX", "cvxCRV", "st-yCRV", "cv
 
 const KNOWN_ASSETS = new Set([...STABLECOIN_ASSETS, ...ETH_LST_ASSETS, ...BTC_ASSETS, ...GOVERNANCE_ASSETS]);
 
-function bucketForAsset(symbol: string): DolaBucket {
+export function bucketForAsset(symbol: string): DolaBucket {
   if (STABLECOIN_ASSETS.has(symbol)) return "stablecoin";
   if (ETH_LST_ASSETS.has(symbol)) return "eth-lst";
   if (BTC_ASSETS.has(symbol)) return "btc";
@@ -33,7 +33,7 @@ function bucketForAsset(symbol: string): DolaBucket {
 }
 
 /** Resolve the base asset symbol from compound names like "DOLA-sUSDe clp" or "yv-DOLA-sUSDS". */
-function resolveBaseSymbol(market: FirmMarket): string {
+export function resolveBaseSymbol(market: FirmMarket): string {
   const sym = market.underlying.symbol;
 
   // Yearn vault wrappers: "yv-DOLA-sUSDe" → "sUSDe", "yv-sDOLA-scrvUSD" → "scrvUSD"
