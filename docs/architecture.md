@@ -442,7 +442,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── snapshot-chain-supply.ts # Daily chain-level supply snapshots → chain_supply_history (quarter-hourly slot, DB-only)
     │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
     │   ├── sync-live-reserves.ts # Live reserve composition sync → D1 (hourly, reserve lane)
-    │   ├── reserve-adapters/    # Per-protocol live reserve adapters (26 adapters)
+    │   ├── reserve-adapters/    # Per-protocol live reserve adapters (27 adapters)
     │   │   ├── index.ts         # Adapter registry + dispatch
     │   │   └── ...              # Individual adapters (accountable, tether, circle-transparency, gho, etc.)
     │   ├── sync-redemption-backstops.ts # Redemption backstop + effective-exit snapshot sync → D1 (hourly, reserve lane)

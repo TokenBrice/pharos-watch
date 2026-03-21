@@ -8,7 +8,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
-- **Current coverage:** 114 live-enabled stablecoins across 26 registered adapters
+- **Current coverage:** 114 live-enabled stablecoins across 27 registered adapters
 - **Storage:** `reserve_composition`, `reserve_sync_state`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -200,7 +200,7 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 
 | Adapter | Primary input | Semantics | Configured coins |
 |---------|---------------|-----------|------------------|
-| `accountable` | `http-json` | `protocol-reserve` | 6 |
+| `accountable` | `http-json` | `protocol-reserve` | 7 |
 | `asymmetry` | `http-json` | `collateral-mix` | 1 |
 | `btcfi` | `http-json` | `collateral-mix` | 1 |
 | `chainlink-nav` | `onchain-evm` | `single-asset` | 3 |
@@ -208,21 +208,23 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `circle-transparency` | `http-html` | `attestation-mix` | 2 |
 | `collateral-positions-api` | `http-json` | `collateral-mix` | 2 |
 | `crvusd` | `http-json` | `collateral-mix` | 1 |
+| `curated-validated` | `onchain-evm` | `attestation-mix` / `collateral-mix` | 21 |
+| `dola-inverse` | `http-json` | `collateral-mix` | 1 |
 | `erc4626-single-asset` | `onchain-evm` | `single-asset` | 2 |
 | `ethena` | `http-json` | `collateral-mix` | 1 |
 | `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 3 |
 | `falcon` | `http-json` | `collateral-mix` | 1 |
 | `fdusd-transparency` | `http-html` | `attestation-mix` | 1 |
 | `frax` | `http-json` | `attestation-mix` | 2 |
-| `gho` | `onchain-evm` | `protocol-reserve` | 1 |
 | `fx` | `http-json` | `collateral-mix` | 1 |
+| `gho` | `onchain-evm` | `protocol-reserve` | 1 |
 | `infinifi` | `http-json` | `collateral-mix` | 1 |
 | `m0` | `http-json` | `protocol-reserve` | 3 |
 | `mento` | `http-html` | `collateral-mix` | 2 |
 | `openeden-usdo` | `http-json` | `collateral-mix` | 1 |
 | `reservoir` | `http-json` | `protocol-reserve` | 1 |
 | `sgforge-coinvertible` | `http-html` | `attestation-mix` | 1 |
-| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 8 |
+| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 50 |
 | `sky-makercore` | `http-json` | `collateral-mix` | 2 |
 | `tether` | `http-json` | `attestation-mix` | 1 |
 
@@ -254,7 +256,7 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 - [Risk Lab](./report-cards.md) uses live reserve snapshots for collateral quality scoring when
   available (v5.8+). Dependency inference, blacklist-inherited checks, and all other scoring
   dimensions still use curated reserve metadata.
-- `isBlacklistable()` inherited detection still uses curated `meta.reserves` (which carry `coinId` links). Live adapter slices lack `coinId`, so inherited blacklist scoring cannot use live data. The collateral drift alert flags when these two sources diverge.
+- `isBlacklistable()` inherited detection still uses curated `meta.reserves` (which carry `coinId` links). Most live adapter slices lack `coinId`, so inherited blacklist scoring cannot use live data — except for `curated-validated` coins, which pass through `coinId` and `depType` from curated metadata. The collateral drift alert flags when these two sources diverge; for `curated-validated` coins drift is always zero by construction since live slices equal curated slices.
 - [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
 
 ---

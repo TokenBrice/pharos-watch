@@ -1560,9 +1560,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "usdg-paxos",
       "display": {
         "url": "https://globaldollar.com/",
@@ -1574,10 +1574,6 @@
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "U.S. Gov Securities, cash & equivalents",
-        "risk": "very-low"
       }
     }
   },
@@ -1650,9 +1646,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "rlusd-ripple",
       "display": {
         "url": "https://ripple.com/solutions/stablecoin/",
@@ -1664,10 +1660,6 @@
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "U.S. Treasury bills, money market funds & cash",
-        "risk": "very-low"
       }
     }
   },
@@ -2320,9 +2312,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "u-united-stables",
       "display": {
         "url": "https://u.tech/",
@@ -2334,10 +2326,6 @@
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "USDC, USDT, USD1 & fiat/T-bill basket",
-        "risk": "low"
       }
     }
   },
@@ -2424,9 +2412,9 @@
       "yieldType": "lending-vault"
     },
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "usdai-usd-ai",
       "display": {
         "url": "https://usd.ai/",
@@ -2438,10 +2426,6 @@
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "wM Treasury, PYUSD & GPU-collateralized reserves",
-        "risk": "low"
       }
     }
   },

@@ -60,6 +60,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "a7a5-old-vector",
+      "display": {
+        "url": "https://www.a7a5.io/",
+        "label": "A7A5"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -265,6 +269,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "brz-transfero",
+      "display": {
+        "url": "https://transfero.com/stablecoins/brz/",
+        "label": "Transfero"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -484,20 +492,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "aeur-anchored-coins",
+      "display": {
+        "url": "https://www.anchoredcoins.com/en/landing/aeur",
+        "label": "Anchored Coins"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "Euro bank deposits",
-        "risk": "low"
       }
     }
   },
@@ -565,20 +573,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "euri-banking-circle",
+      "display": {
+        "url": "https://www.eurite.com/",
+        "label": "Eurite"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "Euro cash & EU government securities",
-        "risk": "very-low"
       }
     }
   },
@@ -780,20 +788,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "eure-monerium",
+      "display": {
+        "url": "https://monerium.com/financial-information/",
+        "label": "Monerium"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "EUR Liquidity Fund & bank deposits",
-        "risk": "very-low"
       }
     }
   },
@@ -862,6 +870,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "eurs-stasis",
+      "display": {
+        "url": "https://stasis.net/transparency",
+        "label": "STASIS Transparency"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -946,6 +958,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "xsgd-straitsx",
+      "display": {
+        "url": "https://www.straitsx.com/xsgd",
+        "label": "StraitsX"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1018,6 +1034,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "gyen-gyen",
+      "display": {
+        "url": "https://stablecoin.z.com/attestation/",
+        "label": "GMO Trust"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1100,6 +1120,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "audd-novatti",
+      "display": {
+        "url": "https://www.audd.digital/transparency/",
+        "label": "AUDD Transparency"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1171,6 +1195,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "jpyc-jpyc",
+      "display": {
+        "url": "https://jpyc.co.jp/",
+        "label": "JPYC"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1240,6 +1268,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "axcnh-anchorx",
+      "display": {
+        "url": "https://www.anchorx.org/",
+        "label": "AnchorX"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1318,6 +1350,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "idrt-rupiah-token",
+      "display": {
+        "url": "https://www.rupiahtoken.com/",
+        "label": "Rupiah Token"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1412,6 +1448,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "tryb-bilira",
+      "display": {
+        "url": "https://www.bilira.co/en/product/tryb-stablecoin",
+        "label": "BiLira"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1644,6 +1684,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "veur-vnx",
+      "display": {
+        "url": "https://vnx.li/transparency/",
+        "label": "VNX Transparency"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1714,6 +1758,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "eurr-stablr",
+      "display": {
+        "url": "https://www.stablr.com/proof-of-reserve",
+        "label": "StablR Proof of Reserve"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1810,20 +1858,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "europ-schuman",
+      "display": {
+        "url": "https://schuman.io/reserve-audits/",
+        "label": "Schuman Reserve Audits"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "Euro cash & equivalents",
-        "risk": "very-low"
       }
     }
   },
@@ -1883,20 +1931,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "eurq-quantoz",
+      "display": {
+        "url": "https://quantoz.com/transparency",
+        "label": "Quantoz Transparency"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "Government bonds & cash",
-        "risk": "very-low"
       }
     }
   },
@@ -1981,6 +2029,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "eurau-allunity",
+      "display": {
+        "url": "https://allunity.com/trust-center/",
+        "label": "AllUnity Trust Center"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -2180,6 +2232,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "vchf-vnx",
+      "display": {
+        "url": "https://vnx.li/",
+        "label": "VNX"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -2247,6 +2303,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "vgbp-vnx",
+      "display": {
+        "url": "https://vnx.li/",
+        "label": "VNX"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -2329,6 +2389,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "tgbp-tokenised",
+      "display": {
+        "url": "https://www.tokenisedgbp.com/",
+        "label": "Tokenised"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -2409,6 +2473,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "zarp-zarp",
+      "display": {
+        "url": "https://www.zarpstablecoin.com/",
+        "label": "ZARP"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -2538,6 +2606,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "cadc-cad-coin",
+      "display": {
+        "url": "https://loon.finance/",
+        "label": "Loon Finance"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -2612,6 +2684,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "pht-pht",
+      "display": {
+        "url": "https://www.apacx.io/PHT",
+        "label": "APACX"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",

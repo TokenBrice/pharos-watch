@@ -476,6 +476,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "pgold-pleasing",
+      "display": {
+        "url": "https://www.pleasinggold.com/",
+        "label": "Pleasing Gold"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -536,6 +540,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "ggbr-goldfish-gold",
+      "display": {
+        "url": "https://goldfishgold.com/",
+        "label": "Goldfish Gold"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",

@@ -12,20 +12,18 @@ export interface FraxCombinedDataResponse {
   };
 }
 
-export function adaptFraxCombinedData(payload: FraxCombinedDataResponse): AdapterResult {
+const FALLBACK_SLICE = [
+  { name: "Tokenized T-bills and cash equivalents (BUIDL, USTB, USCC, USDC)", pct: 100, risk: "low" as const },
+];
+
+export function adaptFraxCombinedData(payload: FraxCombinedDataResponse, coin?: StablecoinMeta): AdapterResult {
   const collateral = payload.protocol?.collateral;
   if (!collateral || !Number.isFinite(collateral.total_dollar_value)) {
     throw new Error("Frax combineddata response missing collateral data");
   }
 
   return {
-    slices: [
-      {
-        name: "Tokenized T-bills and cash equivalents (BUIDL, USTB, USCC, USDC)",
-        pct: 100,
-        risk: "low",
-      },
-    ],
+    slices: coin?.reserves?.length ? coin.reserves : FALLBACK_SLICE,
     metadata: {
       collateralRatio: collateral.ratio,
       decentralizationRatio: collateral.decentralization_ratio,
@@ -35,7 +33,7 @@ export function adaptFraxCombinedData(payload: FraxCombinedDataResponse): Adapte
 }
 
 export async function fetchFraxReserves(
-  _coin: StablecoinMeta,
+  coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   _ctx?: AdapterContext,
@@ -46,5 +44,5 @@ export async function fetchFraxReserves(
     signal,
     getAdapterTimeout(config, 12_000),
   );
-  return adaptFraxCombinedData(payload);
+  return adaptFraxCombinedData(payload, coin);
 }

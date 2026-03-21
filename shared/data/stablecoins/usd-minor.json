@@ -406,9 +406,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "ausd-agora",
       "display": {
         "url": "https://www.agora.finance/",
@@ -420,10 +420,6 @@
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "U.S. Treasury bills, reverse repos & cash",
-        "risk": "very-low"
       }
     }
   },
@@ -865,20 +861,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "gusd-gate",
+      "display": {
+        "url": "https://www.gate.com/gusd",
+        "label": "Gate"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "USD reserves (T-bonds & stablecoins)",
-        "risk": "low"
       }
     }
   },
@@ -1172,20 +1168,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "rwausdi-multipli",
+      "display": {
+        "url": "https://verification.afiprotocol.xyz/multipli",
+        "label": "AFi Verification"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "Tokenized U.S. Treasuries & treasury-backed stablecoins",
-        "risk": "low"
       }
     }
   },
@@ -1259,20 +1255,20 @@
       "yieldType": "lending-vault"
     },
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "avusd-avant",
+      "display": {
+        "url": "https://www.avantprotocol.com/",
+        "label": "Avant Protocol"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "USDC (delta-neutral via 0xPartners)",
-        "risk": "low"
       }
     }
   },
@@ -1339,20 +1335,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "pusd-pleasing",
+      "display": {
+        "url": "https://www.pleasinggold.com/",
+        "label": "Pleasing"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "arbitrum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "USDT deposits & tokenized gold",
-        "risk": "low"
       }
     }
   },
@@ -1512,6 +1508,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "pmusd-precious-metals",
+      "display": {
+        "url": "https://pmusd.raac.io/",
+        "label": "RAAC"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1521,7 +1521,7 @@
       },
       "params": {
         "label": "ION.au tokenized gold",
-        "risk": "very-low"
+        "risk": "medium"
       }
     }
   },
@@ -1738,6 +1738,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "mnee-mnee",
+      "display": {
+        "url": "https://www.mnee.io/transparency",
+        "label": "MNEE Transparency"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -1831,6 +1835,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "tbill-openeden",
+      "display": {
+        "url": "https://openeden.com/tbill/transparency",
+        "label": "OpenEden Transparency"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -2261,20 +2269,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "cgusd-cygnus-finance",
+      "display": {
+        "url": "https://www.cygnus.finance/",
+        "label": "Cygnus Finance"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "base",
           "rpcMode": "alchemy"
         }
-      },
-      "params": {
-        "label": "U.S. Treasury bills & stablecoins",
-        "risk": "very-low"
       }
     }
   },
@@ -2609,9 +2617,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "usdp-paxos",
       "display": {
         "url": "https://www.paxos.com/usdp-transparency",
@@ -2623,10 +2631,6 @@
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "U.S. Treasury bills, reverse repos & cash deposits",
-        "risk": "very-low"
       }
     }
   },
@@ -2697,6 +2701,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "usdx-hex-trust",
+      "display": {
+        "url": "https://www.htdigitalassets.com/",
+        "label": "HT Digital Assets"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -2778,6 +2786,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "xusd-straitsx",
+      "display": {
+        "url": "https://www.straitsx.com/xusd",
+        "label": "StraitsX"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -3679,6 +3691,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "usdcv-societe-generale-forge",
+      "display": {
+        "url": "https://www.sgforge.com/product/coinvertible/",
+        "label": "SG Forge"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -3928,20 +3944,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "zeusd-zoth",
+      "display": {
+        "url": "https://zoth.io/",
+        "label": "Zoth"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "Tokenized U.S. T-Bills & MMFs",
-        "risk": "low"
       }
     }
   },
@@ -5340,6 +5356,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "usat-tether",
+      "display": {
+        "url": "https://usat.io/",
+        "label": "USA-T"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -5705,20 +5725,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "fidd-fidelity",
+      "display": {
+        "url": "https://www.fidelitydigitalassets.com/stablecoin",
+        "label": "Fidelity"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "U.S. Treasury securities & cash",
-        "risk": "very-low"
       }
     }
   },
@@ -5834,6 +5854,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "msusd-main-street",
+      "display": {
+        "url": "https://mainstreet.finance/",
+        "label": "Main Street Finance"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -6259,6 +6283,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "pusd-plume",
+      "display": {
+        "url": "https://plume.org/pusd",
+        "label": "Plume"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -6345,20 +6373,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "wusd-worldwide",
+      "display": {
+        "url": "https://wspn.io/",
+        "label": "WSPN"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "U.S. Treasury bills & cash",
-        "risk": "very-low"
       }
     }
   },
@@ -6464,20 +6492,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "attestation-mix",
       "breakerScope": "sbc-brale",
+      "display": {
+        "url": "https://brale.xyz/stablecoins/SBC",
+        "label": "Brale"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "Cash & U.S. Treasury securities",
-        "risk": "very-low"
       }
     }
   },
@@ -6742,6 +6770,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "usdr-stablr",
+      "display": {
+        "url": "https://www.stablr.com/proof-of-reserve",
+        "label": "StablR Proof of Reserve"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -7476,6 +7508,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "thbill-theo",
+      "display": {
+        "url": "https://theo.xyz",
+        "label": "Theo"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -8080,6 +8116,10 @@
       "version": 1,
       "semantics": "single-asset",
       "breakerScope": "aid-gaib",
+      "display": {
+        "url": "https://gaib.ai",
+        "label": "GAIB"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -8162,20 +8202,20 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "single-asset",
+      "adapter": "curated-validated",
       "version": 1,
-      "semantics": "single-asset",
+      "semantics": "collateral-mix",
       "breakerScope": "apxusd-apyx",
+      "display": {
+        "url": "https://apyx.fi",
+        "label": "APYX"
+      },
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
         }
-      },
-      "params": {
-        "label": "Preferred equities & U.S. Treasury bills",
-        "risk": "low"
       }
     }
   },
