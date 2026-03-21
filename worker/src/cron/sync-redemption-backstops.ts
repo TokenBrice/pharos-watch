@@ -1,11 +1,29 @@
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { CronResult } from "../lib/cron-logger";
-import { buildInClause } from "../lib/db";
+import { batchExecute } from "../lib/db";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
 import { loadReserveSyncStateMap } from "../lib/live-reserves-store";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
 import { buildRedemptionBackstopEntry, resolveRedemptionBackstopEntry } from "../lib/redemption-backstop-sources";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
+
+async function pruneRemovedRedemptionBackstops(
+  db: D1Database,
+  configuredIds: readonly string[],
+): Promise<void> {
+  const configuredIdSet = new Set(configuredIds);
+  const existingRows = await db.prepare("SELECT stablecoin_id FROM redemption_backstop").all<{ stablecoin_id: string }>();
+  const staleIds = (existingRows.results ?? [])
+    .map((row) => row.stablecoin_id)
+    .filter((stablecoinId) => !configuredIdSet.has(stablecoinId));
+
+  if (staleIds.length === 0) return;
+
+  await batchExecute(
+    db,
+    staleIds.map((stablecoinId) => db.prepare("DELETE FROM redemption_backstop WHERE stablecoin_id = ?").bind(stablecoinId)),
+  );
+}
 
 export async function syncRedemptionBackstops(db: D1Database, signal: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, {
@@ -78,17 +96,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   }
 
   await upsertRedemptionBackstopSnapshots(db, snapshots);
-
-  if (configuredIds.length > 0) {
-    const inClause = buildInClause(configuredIds);
-    await db
-      .prepare(
-        `DELETE FROM redemption_backstop
-         WHERE stablecoin_id NOT IN (${inClause.sql})`,
-      )
-      .bind(...inClause.binds)
-      .run();
-  }
+  await pruneRemovedRedemptionBackstops(db, configuredIds);
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;
   const estimatedCount = snapshots.filter((entry) => entry.sourceMode === "estimated").length;

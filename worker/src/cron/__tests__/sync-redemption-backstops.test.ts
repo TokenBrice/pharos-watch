@@ -8,6 +8,41 @@ const resolveRedemptionBackstopEntryMock = vi.fn();
 const buildRedemptionBackstopEntryMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
 const loadReserveSyncStateMapMock = vi.fn();
+let configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
+
+function makeResolvedSnapshot(stablecoinId: string, now: number, overrides: Record<string, unknown> = {}) {
+  return {
+    stablecoinId,
+    score: 88,
+    effectiveExitScore: 56,
+    dexLiquidityScore: 29,
+    accessScore: 100,
+    settlementScore: 100,
+    executionCertaintyScore: 80,
+    capacityScore: 100,
+    outputAssetQualityScore: 80,
+    costScore: 40,
+    routeFamily: "basket-redeem",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-basket",
+    outputAssetType: "stable-basket",
+    provider: "supply-full-model",
+    sourceMode: "estimated",
+    resolutionState: "resolved",
+    capacityConfidence: "heuristic",
+    feeConfidence: "undisclosed-reviewed",
+    modelConfidence: "low",
+    immediateCapacityUsd: 10_000_000,
+    immediateCapacityRatio: 1,
+    feeBps: null,
+    queueEnabled: false,
+    methodologyVersion: "1.0",
+    updatedAt: now,
+    capsApplied: [],
+    ...overrides,
+  };
+}
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: loadStablecoinsCacheMock,
@@ -36,9 +71,9 @@ vi.mock("../../lib/redemption-backstops-store", () => ({
 }));
 
 vi.mock("@shared/lib/redemption-backstops", () => ({
-  getConfiguredRedemptionBackstopIds: () => ["cusd-cap", "iusd-infinifi"],
+  getConfiguredRedemptionBackstopIds: () => configuredIdsMock,
   getRedemptionBackstopConfig: (id: string) =>
-    id === "cusd-cap" || id === "iusd-infinifi"
+    configuredIdsMock.includes(id)
       ? {
           routeFamily: "basket-redeem",
           accessModel: "permissionless-onchain",
@@ -55,6 +90,7 @@ vi.mock("@shared/lib/redemption-backstops", () => ({
 describe("syncRedemptionBackstops", () => {
   beforeEach(() => {
     const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
     vi.clearAllMocks();
     loadStablecoinsCacheMock.mockResolvedValue({
       kind: "ok",
@@ -105,6 +141,9 @@ describe("syncRedemptionBackstops", () => {
       capsApplied: [],
     });
     upsertRedemptionBackstopSnapshotsMock.mockResolvedValue(undefined);
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
+      Promise.resolve(makeResolvedSnapshot(asset.id, now)),
+    );
   });
 
   it("returns an error when the stablecoins cache is unavailable", async () => {
@@ -124,66 +163,33 @@ describe("syncRedemptionBackstops", () => {
 
   it("writes snapshots and summarizes source-mode coverage", async () => {
     resolveRedemptionBackstopEntryMock
-      .mockResolvedValueOnce({
-        stablecoinId: "cusd-cap",
-        score: 88,
-        effectiveExitScore: 56,
-        dexLiquidityScore: 29,
-        accessScore: 100,
-        settlementScore: 100,
-        executionCertaintyScore: 80,
-        capacityScore: 100,
-        outputAssetQualityScore: 80,
-        costScore: 40,
-        routeFamily: "basket-redeem",
-        accessModel: "permissionless-onchain",
-        settlementModel: "atomic",
-        executionModel: "deterministic-basket",
-        outputAssetType: "stable-basket",
-        provider: "supply-full-model",
-        sourceMode: "estimated",
-        resolutionState: "resolved",
-        capacityConfidence: "heuristic",
-        feeConfidence: "undisclosed-reviewed",
-        modelConfidence: "low",
-        immediateCapacityUsd: 10_000_000,
-        immediateCapacityRatio: 1,
-        feeBps: null,
-        queueEnabled: false,
-        methodologyVersion: "1.0",
-        updatedAt: 1_700_000_000,
-        capsApplied: [],
-      })
-      .mockResolvedValueOnce({
-        stablecoinId: "iusd-infinifi",
-        score: 70,
-        effectiveExitScore: 57,
-        dexLiquidityScore: 47,
-        accessScore: 100,
-        settlementScore: 20,
-        executionCertaintyScore: 60,
-        capacityScore: 70,
-        outputAssetQualityScore: 100,
-        costScore: 100,
-        routeFamily: "queue-redeem",
-        accessModel: "permissionless-onchain",
-        settlementModel: "queued",
-        executionModel: "rules-based-nav",
-        outputAssetType: "stable-single",
-        provider: "reserve-sync-metadata",
-        sourceMode: "dynamic",
-        resolutionState: "resolved",
-        capacityConfidence: "dynamic",
-        feeConfidence: "fixed",
-        modelConfidence: "high",
-        immediateCapacityUsd: 32_000_000,
-        immediateCapacityRatio: 0.19,
-        feeBps: 0,
-        queueEnabled: true,
-        methodologyVersion: "1.0",
-        updatedAt: 1_700_000_000,
-        capsApplied: ["queue-route-cap"],
-      });
+      .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", 1_700_000_000))
+      .mockResolvedValueOnce(
+        makeResolvedSnapshot("iusd-infinifi", 1_700_000_000, {
+          score: 70,
+          effectiveExitScore: 57,
+          dexLiquidityScore: 47,
+          settlementScore: 20,
+          executionCertaintyScore: 60,
+          capacityScore: 70,
+          outputAssetQualityScore: 100,
+          costScore: 100,
+          routeFamily: "queue-redeem",
+          settlementModel: "queued",
+          executionModel: "rules-based-nav",
+          outputAssetType: "stable-single",
+          provider: "reserve-sync-metadata",
+          sourceMode: "dynamic",
+          capacityConfidence: "dynamic",
+          feeConfidence: "fixed",
+          modelConfidence: "high",
+          immediateCapacityUsd: 32_000_000,
+          immediateCapacityRatio: 0.19,
+          feeBps: 0,
+          queueEnabled: true,
+          capsApplied: ["queue-route-cap"],
+        }),
+      );
 
     const db = mockD1();
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
@@ -192,7 +198,7 @@ describe("syncRedemptionBackstops", () => {
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(2);
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledTimes(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM redemption_backstop"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT stablecoin_id FROM redemption_backstop"))).toBe(true);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, number>;
     expect(metadata.resolved).toBe(2);
@@ -269,5 +275,39 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.resolved).toBe(1);
     expect(metadata.unresolved).toBe(1);
     expect(metadata.missingFromCache).toEqual(["iusd-infinifi"]);
+  });
+
+  it("prunes stale rows without issuing an oversized NOT IN clause", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: 136 }, (_value, index) => `coin-${index + 1}`);
+
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now,
+      payload: {
+        peggedAssets: configuredIdsMock.map((id) =>
+          makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } }),
+        ),
+      },
+    });
+    loadDexLiquiditySnapshotMock.mockResolvedValue({
+      map: {},
+      latestUpdatedAt: now,
+    });
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
+      Promise.resolve(makeResolvedSnapshot(asset.id, now)),
+    );
+
+    const db = mockD1([{ match: "SELECT stablecoin_id FROM redemption_backstop", rows: [{ stablecoin_id: "legacy-removed" }] }]);
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(db, new AbortController().signal);
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(136);
+    expect(db.getHistory().some((entry) => entry.sql.includes("NOT IN"))).toBe(false);
+    expect(db.getHistory()).toContainEqual({
+      sql: "DELETE FROM redemption_backstop WHERE stablecoin_id = ?",
+      binds: ["legacy-removed"],
+    });
   });
 });
