@@ -37,14 +37,20 @@ The page renders through `FeaturePageShell` with:
 
 The current policy copy covers:
 
-1. GA4-based anonymized analytics
+1. optional GA4-based anonymized analytics when `NEXT_PUBLIC_GA_ID` is configured at build time
 2. no accounts or wallet connections
-3. GA4 cookies only
-4. 14-month GA4 retention
+3. GA4 cookies only, and only when analytics is enabled
+4. 14-month GA4 retention when GA4 is enabled
 5. Cloudflare Pages / Workers hosting and Google Analytics as third-party services
 6. support contact via `@PharosWatch` and the About page
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation.
+
+### Telemetry Contract
+
+- `src/app/layout.tsx` injects the GA4 script only when `NEXT_PUBLIC_GA_ID` is set. When that env var is unset, Pharos does not load Google Analytics and `src/lib/analytics.ts` becomes a no-op wrapper around `window.gtag`.
+- `src/lib/analytics.ts` is the typed event catalog for custom telemetry. Current events cover feature adoption (`stress_test_run`, `comparison_*`), engagement (`search_performed`, `filter_applied`, `time_range_changed`, `sort_changed`, `contract_copied`), portfolio actions, and UI toggles (`theme_toggled`, `panel_toggled`).
+- The policy page is static and frontend-only, but its analytics claims must stay aligned with both `src/app/layout.tsx` and `src/lib/analytics.ts`.
 
 ---
 

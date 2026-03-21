@@ -77,6 +77,7 @@
 | 0067 | `0067_public_api_rate_limit.sql` | Create public_api_rate_limit table |
 | 0068 | `0068_dex_prices_index.sql` | Add index on dex_prices.updated_at |
 | 0069 | `0069_chain_supply_history.sql` | Create chain_supply_history table |
+| 0070 | `0070_dex_price_challengers.sql` | Create published DEX challenger snapshot tables for pool-challenge and depeg-confirmation reads |
 
 ## Known Anomalies
 
@@ -93,4 +94,4 @@ If a migration corrupts data:
 4. **Re-apply remaining:** `wrangler d1 migrations apply stablecoin-db --remote`
 5. **Redeploy worker:** `wrangler deploy`
 
-D1 Time Travel retention: 30 days (paid plan), 7 days (free).
+Cloudflare D1 Time Travel retention is account-plan dependent. Verify the current retention window in Cloudflare before relying on a rollback bookmark.

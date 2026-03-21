@@ -44,7 +44,7 @@ The cron assembles a `DigestInputData` object from 16 sources before calling the
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" (threshold: 2.5× weekly avg OR direction reversal) |
 | Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
-| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows), top pressure coins (\|FIS\| > 20) |
+| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (digest-local safe-haven vs risky net flows from `SAFE_HAVEN_IDS`), top pressure coins (\|FIS\| > 20) |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), band changes crossing WATCH/ALERT boundary, elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
 | Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>10 simultaneous changes excluded) |
@@ -52,7 +52,7 @@ The cron assembles a `DigestInputData` object from 16 sources before calling the
 | Yield anomalies | `yield_data` (is_best rows) | Coins with active warning signals (spike, divergence, tvl-outflow); APY vs 7d/30d averages; filtered to mcap >$10M |
 | DEX liquidity shifts | `dex_liquidity_history` | Day-over-day score changes >=8 points; TVL comparison; filtered to mcap >$10M |
 | Cross-day trends | `daily_digest` (archived input_data) | 7-day trajectories for PSI score/band, total mcap, and Bank Run Gauge; requires >=3 days of history |
-| Recent digests | last 5 rows from `daily_digest` | Passed to LLM to enforce variety |
+| Recent digests | last 7 rows from `daily_digest` | Passed to LLM to enforce variety |
 
 `DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
 
@@ -61,6 +61,8 @@ Four additional optional fields were added to `DigestInputData` in the v2 refine
 A further enrichment pass added four more optional fields: `psiContributors`, `yieldAnomalies`, `liquidityShifts`, and `crossDayTrends`. All are populated only when their source data exists.
 
 Safety score computation is shared with the yield cron via `worker/src/lib/safety-scores.ts` (`computeSafetyScoresSnapshot()`), so grade lookups use one canonical scoring path.
+
+The digest's Flight-to-Quality collector is not yet wired to the public `/api/mint-burn-flows` classification path. `worker/src/cron/daily-digest/collectors.ts` still buckets safe-haven flows using hardcoded `SAFE_HAVEN_IDS` from `worker/src/lib/mint-burn-contracts.ts`, while the public API now uses report-card-cache classification when available.
 
 ### LLM call
 

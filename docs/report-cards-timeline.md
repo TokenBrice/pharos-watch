@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history. Covers v1.0 through v5.8 (2026-02-25 → 2026-03-14).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.0 (2026-02-25 → 2026-03-21).
 
 ---
 
@@ -281,6 +281,16 @@ Collateral quality scoring now consumes live reserve snapshots when available:
 - Dependency inference (`deriveDependencies`) remains on curated data because live adapter slices do not carry `coinId` links.
 
 Weights and grade thresholds are unchanged from v5.7.
+
+### v5.9 — Classification corrections: centralized-custody DeFi coins (Mar 20)
+
+Three DeFi-classified coins with majority centralized custody exposure were corrected using the live reserve view:
+
+- meUSD, ALUSD, and BtcUSD were reclassified from decentralized to centralized-dependent
+- ALUSD's earlier v4.1 reclassification was explicitly reversed after reserve review showed 65% direct USDC/USDT exposure
+- meUSD and BtcUSD were corrected after live reserves confirmed custodial BTC-variant exposure (for example WBTC, BTCB, cbBTC, SolvBTC)
+
+Weights and grade thresholds are unchanged from v5.8.
 
 ---
 

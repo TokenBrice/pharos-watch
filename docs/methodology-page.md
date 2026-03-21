@@ -46,7 +46,7 @@ When changing any methodology surface, update the runtime implementation, the de
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in `src/app/methodology/methodology-sections.tsx` plus the relevant `src/app/methodology/sections/*.tsx` group module.
+3. `/methodology` page copy and worked examples in `src/app/methodology/sections/core-sections.tsx` or `src/app/methodology/sections/monitoring-sections.tsx`. Use `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
 
@@ -93,6 +93,7 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.9** (2026-03-22): Corrected the update contract so authored methodology copy points to the grouped section modules under `src/app/methodology/sections/`, not the thin `methodology-sections.tsx` composition wrapper.
 - **v3.8** (2026-03-21): Split the authored long-form methodology body out of the single 2.8k-line hotspot into grouped section modules under `src/app/methodology/sections/`, while keeping `methodology-sections.tsx` as the composition root.
 - **v3.7** (2026-03-16): Corrected the Chain Health source mapping to the live v1.1 implementation, added the missing `chain-health-changelog` route to the methodology route inventory, and linked the chain analytics docs update contract.
 - **v3.6** (2026-03-14): Documented the remaining route-shell contract in `page.tsx` (FAQ/metadata/reader-guide copy), the persisted Reader/Analyst mode toggle behavior, the shared changelog factory, and the cross-app anchor/path dependency in `src/lib/methodology-context.ts`.

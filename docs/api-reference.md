@@ -83,7 +83,8 @@ The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` fro
 | standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                   |
 | custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                       |
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
-| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot                                                                                                                                                                        |
+| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history                                                                                                                                                                                         |
+| archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
 | no-store | `no-store`                           | health, feedback, telegram-webhook, plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`). All admin POST endpoints also bypass cache by virtue of being non-GET |
 
 ---
@@ -98,6 +99,7 @@ Recommended minimum polling cadence for external integrations:
 | standard      | 300 seconds           | Preferred baseline for most dashboards                          |
 | per-coin      | 300 seconds           | `GET /api/stablecoin/:id` is history-heavy; avoid short loops   |
 | slow          | 3600 seconds          | Historical/timeline endpoints should generally be polled hourly |
+| archive       | 86400 seconds         | Historical snapshot payload for digest SSG and recap pages      |
 | no-store      | On-demand only        | Health/admin diagnostics; avoid high-frequency polling          |
 
 Client best practices:
@@ -812,7 +814,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 
 Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC midnight, first sync after day rollover). Baseline consumers should use `coverageClass` / `coverageConfidence` before treating a history point as trend-worthy.
 
-**Cache:** slow
+**Cache:** archive
 
 **Required query parameter**
 
@@ -965,7 +967,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 
 | Param  | Type     | Description                            |
 | ------ | -------- | -------------------------------------- |
-| `date` | `string` | Date in `YYYY-MM-DD` format (required) |
+| `date` | `string` | Date in `YYYY-MM-DD` format, or `YYYY-MM-DD-weekly` for weekly recap pages (required) |
 
 **Response**
 
@@ -1712,13 +1714,13 @@ Results are ordered by `timestamp` descending (most recent first).
 
 ### `GET /api/stress-signals`
 
-Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
+Returns Depeg Early Warning Score (DEWS) data for active tracked stablecoins.
 
 **All coins (no params):** Latest DEWS score + signal breakdown per coin.
 
 **Single coin:** Add `?stablecoin=ID&days=30` for latest + daily history.
 
-`stablecoin` must be a tracked Pharos stablecoin ID. Untracked IDs return `404` with `{ "error": "Stablecoin not tracked" }`.
+`stablecoin` must be an active tracked Pharos stablecoin ID. Unknown IDs and tracked-but-non-active IDs return `404` with `{ "error": "Stablecoin not tracked" }`.
 
 **Cache:** standard (`public, s-maxage=300, max-age=60`)
 
@@ -1729,7 +1731,7 @@ Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
 | `stablecoin` | `string`  | —       | Single coin mode: return latest + daily history |
 | `days`       | `integer` | `30`    | History lookback (max 365)                      |
 
-Aggregate responses are filtered to tracked stablecoin IDs only, even if stale rows for de-tracked IDs still exist in storage.
+Aggregate responses are filtered to active tracked stablecoin IDs only, even if stale rows for non-active or de-tracked IDs still exist in storage.
 
 **Response (all coins)**
 

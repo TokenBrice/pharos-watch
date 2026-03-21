@@ -14,6 +14,14 @@ Primary implementation file:
 
 - `src/app/about/page.tsx`
 
+## Route Shell Contract
+
+The route shell is owned directly by `src/app/about/page.tsx`.
+
+- `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
+- the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and a single lead paragraph
+- the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
+
 ## Section Contract
 
 The page is organized into these sections, in order:

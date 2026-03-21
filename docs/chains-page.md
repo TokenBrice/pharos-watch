@@ -21,7 +21,7 @@ Contract for the public chain analytics surfaces:
 - **Shared chain UI helpers:** `src/lib/chain-ui.ts` (formatting + health band color maps)
 - **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains.ts`
 
-The leaderboard is public and indexable. The profile routes are statically generated from `getActiveChainIds()` which returns chains that have at least one tracked stablecoin contract and a `CHAIN_META` entry.
+The leaderboard is public and indexable. The profile routes are statically generated from `getActiveChainIds()`, which currently returns the sorted `CHAIN_META` key set.
 
 ---
 
@@ -62,7 +62,7 @@ Default sort is `totalUsd desc`.
 `src/app/chains/[chain]/page.tsx`:
 
 - rejects unknown chain IDs with `notFound()`
-- statically generates params from tracked contract chain IDs present in `TRACKED_STABLECOINS`
+- statically generates params from `getActiveChainIds()` / the current `CHAIN_META` key set
 - sets canonical metadata at `/chains/[chain]/`
 
 `src/app/chains/[chain]/client.tsx` uses `useChains()` plus `useChainStablecoins(chainId)` and renders, in order:
@@ -70,7 +70,7 @@ Default sort is `totalUsd desc`.
 1. `QueryErrorNotice` (inline banner when error + stale data)
 2. hero card with supply, global share, 24h/7d/30d change (all with dark-mode colors via `trendColor()`), health badge, and `dark:invert` logo support
 3. Chain Health breakdown card — weight labels derived dynamically from exported constants in `chain-health.ts`
-4. stablecoin composition treemap — uses `grid-cols-2` for 1-2 coins, `grid-cols-3` otherwise; dominant span only for 3+ coins
+4. stablecoin composition treemap — adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
 5. backing-type breakdown — unclassified coins shown as "Other" (zinc-colored) bucket
 6. full stablecoin table with `<caption>` and `scope="col"` attributes
 7. skeleton loading states (hero + health + composition blocks)

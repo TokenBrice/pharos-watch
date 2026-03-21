@@ -6,11 +6,12 @@ In-app feedback collection that routes submissions to GitHub Issues or Discussio
 
 ## Overview
 
-The feedback pipeline has three layers:
+The feedback pipeline has four layers:
 
-1. **`FeedbackButton`** — floating action button rendered in the root layout on every page
-2. **`FeedbackModal`** — dialog with a type selector, context banner, and form fields
-3. **`POST /api/feedback`** — Cloudflare Worker endpoint that validates, rate-limits, and forwards to GitHub
+1. **`FeedbackButton`** — floating desktop/global trigger rendered in the root layout
+2. **`MobileUtilityDock`** — mobile-only dock that can also open the feedback modal
+3. **`FeedbackModal`** — dialog with a type selector, context banner, and form fields
+4. **`POST /api/feedback`** — Cloudflare Worker endpoint that validates, rate-limits, and forwards to GitHub
 
 Inside the worker route, the handler is intentionally split into focused modules:
 
@@ -29,6 +30,14 @@ A fixed-position FAB rendered globally in `src/app/layout.tsx`. Renders at `bott
 ```tsx
 <FeedbackButton />
 ```
+
+### `MobileUtilityDock` (`src/components/mobile-utility-dock.tsx`)
+
+Mounted globally in `src/app/layout.tsx` alongside `FeedbackButton`.
+
+- Mobile only (`sm:hidden`)
+- Shows a compact feedback trigger after modest scroll depth
+- Opens the same `FeedbackModal` component with default type `"bug"`
 
 ### `FeedbackModal` (`src/components/feedback-modal.tsx`)
 
@@ -63,7 +72,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 
 **Honeypot:** a hidden `website` input (off-screen, `tabIndex=-1`, `aria-hidden`) is sent as an empty string. If the worker receives a non-empty `website` value, the submission is silently accepted but discarded.
 
-**Submission:** `POST https://api.pharos.watch/api/feedback` with `Content-Type: application/json`. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
+**Submission:** `POST buildApiUrl("/api/feedback")` with `Content-Type: application/json`. On Pharos production and Pages preview hosts this resolves to `https://api.pharos.watch/api/feedback`; local proxy and explicit `NEXT_PUBLIC_API_BASE` setups follow the frontend runtime API rules in `src/lib/api.ts`. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
 
 ---
 
@@ -226,8 +235,9 @@ gh api graphql -f query='{ repository(owner: "TokenBrice", name: "stablecoin-das
 | File | Role |
 |------|------|
 | `src/components/feedback-button.tsx` | Floating action button, rendered in root layout |
+| `src/components/mobile-utility-dock.tsx` | Mobile-only utility dock with a second feedback entry point |
 | `src/components/feedback-modal.tsx` | Feedback dialog (form + submission logic) |
-| `src/app/layout.tsx` | Mounts `<FeedbackButton />` globally |
+| `src/app/layout.tsx` | Mounts `<FeedbackButton />` and `<MobileUtilityDock />` globally |
 | `worker/src/api/feedback.ts` | Thin route handler / coordinator |
 | `worker/src/api/feedback/request.ts` | Request parsing, canonicalization, and policy checks |
 | `worker/src/api/feedback/verification.ts` | Auto-verification snapshot builder for data corrections |

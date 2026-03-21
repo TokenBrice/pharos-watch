@@ -86,6 +86,8 @@ npm install
 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
 ```
 
+`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, the client runtime auto-targets `https://api.pharos.watch` on `*.pharos.watch` and `*.stablecoin-dashboard.pages.dev`; local static smoke/proxy setups can keep it empty. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
+
 ### Worker API
 
 ```bash
@@ -198,6 +200,8 @@ Cloudflare D1 (SQLite database)
   ├── dex_liquidity        → per-stablecoin DEX liquidity scores, pool data, HHI, depth stability
   ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
   ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, DexScreener
+  ├── dex_price_challengers → published qualifying individual challenger pools used for pool-challenge and depeg-confirmation reads
+  ├── dex_price_challenger_snapshots → latest per-coin challenger snapshot metadata (published_at, has_rows, source coverage completeness)
   ├── onchain_supply       → per-stablecoin on-chain supply by chain (contract calls)
   ├── supply_history       → daily per-coin supply snapshots from cached stablecoins data (08:00 UTC + retry upserts)
   ├── chain_supply_history → daily per-chain supply aggregates for historical analysis
@@ -262,21 +266,19 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 GitHub Actions now runs the shared validate gate on pull requests to `main` via `.github/workflows/pull-request-checks.yml`, while production deploys still run only from `.github/workflows/deploy-cloudflare.yml` on push to `main`, the daily scheduled rebuild, or manual `workflow_dispatch`:
 
 For the full operator runbook (including worktree merge flow and pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
-For the full Worker binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
+For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:doc-counts` → `npm run check:duplicate-exports` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
+1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler deploy` → `cd worker && npx --no-install wrangler triggers deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`)
-4. **Pages deploy:** `npm ci` → `npm run sync:digests` → `NEXT_PUBLIC_API_BASE=$API_BASE_URL npm run build` → `npm run seo:check` → `npx --no-install wrangler pages deploy out` (with retry in CI)
-5. **Post-deploy smoke jobs:** after `deploy-pages`, CI runs these in parallel:
-   - `npm run test:smoke-ui` against `SMOKE_UI_URL` (or `https://pharos.watch` fallback)
-   - `npm run test:smoke-ops` against `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` using Cloudflare Access service-token headers
+4. **Pages release path:** `npm ci` → `npm run sync:digests` → `npm run build` → `npm run seo:check` → serve `out/` locally through `scripts/serve-static-export.mjs` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173` → `npx --no-install wrangler pages deploy out` (with retry in CI)
+5. **Worker-only UI smoke:** when `worker_changed=true` and `pages_changed=false`, CI runs `npm run test:smoke-ui -- --url https://pharos.watch` to verify the unchanged live frontend against the new worker/API
+6. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `pages-release` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
-Optional GitHub variable: `SMOKE_UI_URL` (for non-default frontend smoke target)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`
 Required ops smoke secrets: `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 
@@ -285,6 +287,8 @@ Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_A
 Worker vars (see `.env.example` for the current surface): `CORS_ORIGIN`, `SELF_URL`, `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_UI_AUD`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`
 
 Pages Functions secrets for the same-origin ops admin proxy: `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`
+
+Frontend build/runtime vars: `NEXT_PUBLIC_API_BASE` (optional local-dev override) and `NEXT_PUBLIC_GA_ID` (optional GA4 injection)
 
 Optional mint/burn freshness env overrides (secret or plain env): `MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`, `MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`
 

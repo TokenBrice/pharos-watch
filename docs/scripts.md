@@ -36,13 +36,13 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 
 ## CI-Critical Scripts
 
-These are wired into the GitHub Actions CI workflows (`.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, and `.github/workflows/rebuild-pages.yml`) directly, or indirectly through `npm run build`:
+These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`) directly, or indirectly through `npm run build`:
 
 - `sync-digests.ts` before `npm run build`
 - `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `check-seo-static.mjs` via `npm run seo:check`
 - `classify-deploy-changes.mjs` via the `detect-changes` job in `.github/workflows/deploy-cloudflare.yml`
-- `serve-static-export.mjs` via the pre-deploy `smoke-ui` gate in `.github/workflows/deploy-cloudflare.yml`
+- `serve-static-export.mjs` via the pre-deploy `smoke-ui` job inside `.github/workflows/pages-release.yml`
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ops.mjs` via `npm run test:smoke-ops`
 - `smoke-ui.mjs` via `npm run test:smoke-ui`

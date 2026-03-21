@@ -1,6 +1,17 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.9` (2026-02-01 -> 2026-03-20).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.10` (2026-02-01 -> 2026-03-20).
+
+---
+
+## v2.10 - Cadence-valid FX carry-forward semantics (Mar 20, 2026)
+
+**Commit:** `unreleased`
+
+- FX refreshes now treat already-current daily references as a successful live carry-forward when they are still within expected source cadence
+- Failed Frankfurter or mirror transports no longer automatically mark the published FX state as cached fallback when the underlying daily reference is still current
+- Per-peg metadata preserves source dates and cadence semantics during carry-forward runs
+- Status still degrades once the underlying daily references genuinely age out, rather than on transport failure alone
 
 ---
 

@@ -47,6 +47,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run check:doc-counts`
    - `npm run check:doc-sync`
    - `npm run check:duplicate-exports`
+   - `npm run check:redemption-backstops`
    - `npm run check:unused-code`
    - `npm run check:hotspot-ratchet`
    - `npm test`
@@ -104,7 +105,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 
 This arrangement gives pull requests the same validate gate the push/manual deploy workflow depends on, skips worker deploy/API smoke for Pages-only pushes, skips Pages build/deploy for worker-only pushes, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, keeps the scheduled digest rebuild off the worker deploy path, and still runs the post-deploy ops-surface smoke after each production-changing workflow.
 
-The workflows pin `actions/checkout@v5` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the push/manual deploy pipeline before deploy. The production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs, while the scheduled/manual Pages rebuild queues behind an active production deploy instead of interrupting it.
+The workflows pin `actions/checkout@v6` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the push/manual deploy pipeline before deploy. The production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs, while the scheduled/manual Pages rebuild queues behind an active production deploy instead of interrupting it.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker now fails only on new undeclared duplicates and keeps the current allowlist visible in review.
 

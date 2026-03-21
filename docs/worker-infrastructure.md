@@ -25,7 +25,7 @@ enabled = true
 invocation_logs = true
 ```
 
-- `cpu_ms = 30000`: hard cap on CPU time per invocation (not wall-clock runtime). This is independent from in-app wall-clock cron timeouts in `logCronRun()`. Raised from 5000 to give isolated cron triggers comfortable headroom (paid plan allows up to 300,000ms).
+- `cpu_ms = 30000`: hard cap on CPU time per invocation (not wall-clock runtime). This is independent from in-app wall-clock cron timeouts in `logCronRun()`. Raised from 5000 to give isolated cron triggers comfortable headroom; higher Cloudflare ceilings are vendor-plan details and are intentionally not treated as repo source of truth here.
 - `observability.enabled`: enables Worker traces.
 - `head_sampling_rate = 0.1`: samples 10% of traces.
 - `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
@@ -76,7 +76,7 @@ The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the
 | `TWITTER_ACCESS_TOKEN_SECRET`   | string     | No                 | Digest → Twitter (access token secret)                                                                                                                                     |
 | `TELEGRAM_BOT_TOKEN`            | string     | No                 | Digest → Telegram, bot chat replies, subscriber alert dispatch                                                                                                             |
 | `TELEGRAM_CHAT_ID`              | string     | No                 | Digest channel posts and cemetery announcements                                                                                                                            |
-| `TELEGRAM_WEBHOOK_SECRET`       | string     | No                 | Random string for webhook URL validation (set via `wrangler secret put`)                                                                                                   |
+| `TELEGRAM_WEBHOOK_SECRET`       | string     | No                 | Telegram webhook secret validation (`X-Telegram-Bot-Api-Secret-Token` primary, legacy query-string fallback)                                                              |
 | `MAINTENANCE_MODE`              | `string?`  | No                 | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-`OPTIONS` requests. Used as a kill switch.                                             |
 | `MINT_BURN_DISABLED_IDS`        | string     | No                 | Mint/burn runtime disable list by stablecoin ID (CSV)                                                                                                                      |
 | `MINT_BURN_DISABLED_SYMBOLS`    | string     | No                 | Mint/burn runtime disable list by symbol (CSV)                                                                                                                             |
@@ -164,7 +164,8 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | Per-coin | `public, s-maxage=300, max-age=10`   | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                                         |
 | Standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | Custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity                                                                                                                                                      |
-| Slow     | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, digest-snapshot                                                                     |
+| Slow     | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history                                                                                      |
+| Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                  |
 
 Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetNoStoreHeader()` in `worker/src/router.ts`.
 

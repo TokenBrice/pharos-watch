@@ -28,14 +28,14 @@ Implementation note: `worker/src/lib/blacklist-contracts.ts` currently defines n
 - **Base URL:** `https://api.etherscan.io/v2/api`
 - Primary source for Ethereum, Arbitrum, and Polygon blacklist log scans
 - Max 1000 logs per request (recursive splitting if exceeded, max depth 8)
-- Free plan caveats:
+- Operational caveats:
   - historical `eth_call` is unreliable on L2s (we use dRPC for L2 balance lookups)
-  - `getLogs` is not available on Base, Optimism, Avalanche, or BSC without a paid plan
+  - Base, Optimism, Avalanche, and BSC use chain RPC `eth_getLogs` scans rather than relying on explorer log coverage
 
 ### Chain RPC Log Scans
 
 - Source: `getChainRpc()` from `worker/src/lib/chain-registry.ts`
-- Base, Optimism, Avalanche, and BSC prefer chain RPC `eth_getLogs` scans because Etherscan free-tier coverage is not available
+- Base, Optimism, Avalanche, and BSC prefer chain RPC `eth_getLogs` scans because the explorer path is not treated as a reliable primary log source on those chains
 - Production uses Alchemy primaries when `ALCHEMY_API_KEY` is configured, otherwise public RPC URLs from the chain registry
 - Used for both chain-head discovery and log scans; timestamps are resolved via `eth_getBlockByNumber`
 - Range splitting is depth-first/sequential inside `worker/src/lib/alchemy-logs.ts` so one oversized scan cannot burst past the Workers shared fetch-connection pool
@@ -311,7 +311,7 @@ Per-chain block margins (`INDEXING_SAFETY_SEC / blockTime`):
 1. **Ethereum mainnet:** Etherscan `eth_call` with historical block tag (`blockNumber - 1`)
 2. **L2 with dRPC key:** dRPC archive node `eth_call` at historical block
 3. **L2 RPC fallback:** if dRPC misses, `getChainRpc()` retries the same historical `eth_call` against the configured chain RPCs (Alchemy primary when available, then public fallback)
-4. **Best-effort explorer fallback:** Etherscan `eth_call` with historical block tag (same code path as Ethereum, but Etherscan free plan may silently ignore the block tag on some non-mainnet chains or reject them entirely)
+4. **Best-effort explorer fallback:** Etherscan `eth_call` with historical block tag (same code path as Ethereum, but some non-mainnet explorer paths may silently ignore the block tag or reject it entirely)
 
 ### Tron Strategy
 
@@ -446,8 +446,8 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 4. **USDT has TWO event patterns:** legacy (`AddedBlackList`, address NOT indexed) and USDT0 (`BlockPlaced`, address indexed). Some chains (Arbitrum, Polygon) emit both.
 5. **PAXG FrozenAddressWiped** has no amount in the event -- must fetch via `balanceOf` at `blockNumber - 1`.
 6. **XAUT uses USDT0 event pattern** (was mistakenly using legacy pattern until 2026-02-11 fix).
-7. **L2 Etherscan free plan** cannot do historical `eth_call` on every chain -- rely on dRPC first, then chain-RPC/Alchemy fallback; explorer fallback is best-effort only.
-8. **Etherscan free-tier `getLogs`** is not available on Base, Optimism, Avalanche, or BSC -- those chains use chain RPC log scans instead.
+7. **Explorer historical calls on L2s** are not dependable enough to be primary -- rely on dRPC first, then chain-RPC/Alchemy fallback; explorer fallback is best-effort only.
+8. **Base, Optimism, Avalanche, and BSC log scans** use chain RPC `eth_getLogs` paths instead of depending on explorer log coverage.
 9. **EVM sentinel bug (fixed):** storing `99999999` as `last_block` could cause permanent scan stall.
 10. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
 11. **Partial RPC scans now preserve progress:** incomplete Base/Optimism/Avalanche/BSC log scans still advance to the highest safely covered block, so large first-sync backlogs drain over multiple cron runs instead of re-scanning genesis every time.

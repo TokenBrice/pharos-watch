@@ -187,17 +187,25 @@ Age checks:
 - Must be within 35-minute freshness window and have aggregate source TVL >= $1M
 - Agrees if deviation >= `secondaryBar`
 
+**Pool challenger check:**
+
+- Loads qualifying individual DEX pool challengers from the published challenger snapshot tables via `loadDexPoolChallengers(...)`
+- Uses the same freshness / minimum-TVL guardrail family as the depeg helper layer
+- Agrees if **any** qualifying pool diverges by at least `secondaryBar`
+- Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely
+
 ### Decision Matrix
 
-| Off-chain agrees | CEX agrees | DEX agrees | Action |
-|------------------|-----------|-----------|--------|
-| true | any | any | PROMOTE to `depeg_events` |
-| any | true | any | PROMOTE to `depeg_events` |
-| any | any | true | PROMOTE to `depeg_events` |
-| false | false | false | REJECT (all disagree) |
-| false | false/null | null | REJECT (off-chain + CEX disagree, no DEX) |
-| null | null | false | Keep pending (retry next cycle) |
-| null | null | null | Keep pending (retry next cycle) |
+| Off-chain agrees | CEX agrees | DEX agrees | Pool agrees | Action |
+|------------------|-----------|-----------|-------------|--------|
+| true | any | any | any | PROMOTE to `depeg_events` |
+| any | true | any | any | PROMOTE to `depeg_events` |
+| any | any | true | any | PROMOTE to `depeg_events` |
+| any | any | any | true | PROMOTE to `depeg_events` |
+| false | any | false | any | REJECT (off-chain and aggregate DEX both disagree) |
+| false | any | null | false/null | REJECT (off-chain disagrees and no aggregate DEX confirmation exists) |
+| null | null | false | false/null | Keep pending (retry next cycle) |
+| null | null | null | null | Keep pending (retry next cycle) |
 
 Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, peak = worst of current vs `first_seen`, then deletes from `depeg_pending`.
 
@@ -220,17 +228,26 @@ This keeps confirmed historical crashes visible without weakening the stricter l
 ```
 Price crosses threshold
         |
-        +-- Supply < $1B --> DEX agrees? --> INSERT depeg_events (source='live')
-        |                       | no
-        |                       +-> Suppress (skip)
+        +-- Supply < $1B, authoritative primary, non-extreme move
+        |         |
+        |         +-- Trusted DEX fresh and below threshold --> Suppress (skip)
+        |         |
+        |         +-- Otherwise --> INSERT depeg_events (source='live')
         |
-        +-- Supply >= $1B --> INSERT depeg_pending
-                                |
-                           (next cycle, 15+ min later)
-                                |
-                           Secondary sources agree? --> PROMOTE to depeg_events
-                                | both disagree
-                                +-> REJECT (delete pending)
+        +-- Supply >= $1B, low-confidence primary, or extreme move --> INSERT depeg_pending
+                                                     |
+                                          (next cycle, 15+ min later)
+                                                     |
+                          any secondary agrees? (off-chain, CEX, aggregate DEX, or pool challenger)
+                                                     |
+                                      yes ---------- + ---------- no
+                                                     |             |
+                                              PROMOTE to      authoritative recovery,
+                                              depeg_events    expiry, or decisive disagreement
+                                                               -> delete pending
+
+Special case:
+  - Extreme move + trusted DEX in the same direction can promote immediately without waiting for the pending retry
 
 While event is open:
   - Peak deviation updated if worse price seen
@@ -294,7 +311,7 @@ Response:
 }
 ```
 
-Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers based on latest `startedAt`, 900s TTL.
+Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers use the latest successful `sync-stablecoins` timestamp, falling back to the latest event `startedAt` when cron history is unavailable; TTL remains 900s.
 
 ## Frontend
 

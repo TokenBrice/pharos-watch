@@ -29,7 +29,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 - **Extended lane pattern:** `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53 — 9 minutes after critical lane starts)
 - **Trigger mode:** isolated. `sync-blacklist` runs on its own dedicated hourly trigger (`3 * * * *`); `sync-dex-discovery` runs on a dedicated 30-minute trigger (`6,36 * * * *`).
 - **Function:** `syncMintBurn(db, alchemyApiKey, { lane, jobName, ... })`
-- **Provider:** Alchemy JSON-RPC (PAYG plan)
+- **Provider:** Alchemy JSON-RPC
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
 - **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows). Metadata includes `lane`, `jobName`, `nullPricesHealed`, and per-config coverage-frontier diagnostics when scans are partial.
@@ -160,7 +160,9 @@ Current scope: **84 contract configs** across **83 stablecoin IDs** (7 critical 
 | apxUSD | apxusd-apyx | 18 | Extended | Transfer |
 | reUSD | reusd-re-protocol | 18 | Risky | Deposited + InstantRedemptionProcessed (2 configs, Ethereum) |
 
-Flight-to-quality classification is now **report-card-cache driven only**. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, FTQ classification is marked unavailable in the response (`gauge.classificationSource = "unavailable"`, `sync.classificationWarning != null`) instead of silently falling back to a hardcoded safe-haven list. No hardcoded fallback is implemented — FTQ requires fresh report-card data.
+Public `/api/mint-burn-flows` flight-to-quality classification is **report-card-cache driven**. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, the API marks FTQ classification unavailable in the response (`gauge.classificationSource = "unavailable"`, `sync.classificationWarning != null`) instead of silently falling back to a hardcoded safe-haven list.
+
+The daily digest collector is still a separate path: `worker/src/cron/daily-digest/collectors.ts` currently computes FTQ with hardcoded `SAFE_HAVEN_IDS` from `worker/src/lib/mint-burn-contracts.ts`. Keep that distinction documented until the digest path is moved onto the same classification source.
 
 Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to exclude flash loan / atomic arb noise from aggregation.
 

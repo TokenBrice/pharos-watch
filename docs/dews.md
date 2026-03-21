@@ -177,7 +177,7 @@ Score = `min(100, sum of active signal points)`.
 
 ### `GET /api/stress-signals`
 
-**All coins (no params):** Returns latest DEWS for tracked stablecoins only.
+**All coins (no params):** Returns latest DEWS for active tracked stablecoins only. Pre-launch tracked entries are excluded because the handler gates on `ACTIVE_IDS`.
 
 When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin, so this endpoint continues serving the last valid cached row.
 
@@ -195,7 +195,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 
 **Single coin:** `?stablecoin=usdt-tether&days=30` (default 30, min 1, max 365) — Returns latest + daily history.
 
-Untracked `stablecoin` IDs return `404` (`Stablecoin not tracked`).
+Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tracked`).
 
 ```json
 {
@@ -253,7 +253,8 @@ Dashed ring boundaries are drawn at each zone's inner edge (r=45, 95, 143, 178) 
 
 ## Alerting
 
-DEWS currently has no dedicated outbound alert transport. Signals are surfaced via:
+DEWS has a dedicated outbound Telegram path via `dispatch-telegram-alerts`, scheduled every 5 minutes on the isolated `dispatch-telegram-alerts` cron. Subscriber filtering and dedupe behavior live in the Telegram alert subsystem, but DEWS remains surfaced through the normal read paths too:
 
 - `GET /api/stress-signals`
+- Telegram subscriber alerts (`dispatch-telegram-alerts`)
 - Frontend components (`dews-badge`, `dews-detail`, `dews-summary`)

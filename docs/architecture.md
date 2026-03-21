@@ -23,7 +23,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 | `GET /api/supply-history`                    | Per-coin supply history (`?stablecoin=ID&days=N`)                                                                                                                                                                              |
 | `GET /api/daily-digest`                      | AI-generated daily market summary (latest)                                                                                                                                                                                     |
 | `GET /api/digest-archive`                    | All daily digests, newest-first                                                                                                                                                                                                |
-| `GET /api/digest-snapshot`                   | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD`) for SSG builds                                                                                                                                        |
+| `GET /api/digest-snapshot`                   | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD` or `YYYY-MM-DD-weekly`) for SSG builds                                                                                                                |
 | `GET /api/health`                            | Worker health check (includes circuit breaker states)                                                                                                                                                                          |
 | `GET /api/status`                            | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/admin/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers |
 | `GET /api/status-history`                    | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Preferred access is `ops-api.pharos.watch/api/status-history` with Access service-token headers                                                    |
@@ -598,7 +598,7 @@ data/
 └── digests.json                  # Digest archive data
 ```
 
-## Frontend SEO Surface
+## Frontend Runtime And SEO Surface
 
 - Indexable route families:
   - `/`
@@ -616,6 +616,20 @@ data/
   - `/status/`
   - `/admin/`
 - Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
+
+### Runtime host and env rules
+
+- `src/lib/api.ts` is the frontend runtime source of truth for API origin selection.
+- `NEXT_PUBLIC_API_BASE` is an optional explicit override, mainly for local `next dev` against `wrangler dev`.
+- When `NEXT_PUBLIC_API_BASE` is unset, `resolveApiBase()` routes `*.pharos.watch` and `*.stablecoin-dashboard.pages.dev` to `https://api.pharos.watch`; other hosts fall back to same-origin requests so local proxy and smoke setups still work.
+- `NEXT_PUBLIC_GA_ID` gates GA4 script injection in `src/app/layout.tsx`. When it is unset, the site still renders normally and no browser analytics events are emitted from `src/lib/analytics.ts`.
+
+### Metadata and crawl ownership
+
+- `src/lib/page-metadata.ts` is the shared helper for per-route canonical metadata, Open Graph images, Twitter cards, and sentence-aware description trimming.
+- `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `WebApplication`, `SearchAction`).
+- `src/app/sitemap.ts` owns indexable-route sitemap output and the `LAST_EDITED` map for static long-lived pages. Update `LAST_EDITED` when changing those routes' durable copy or methodology changelog pages so `lastModified` stays honest.
+- `src/app/robots.ts` publishes the global crawl policy (`allow: /`) and the sitemap location.
 
 ---
 

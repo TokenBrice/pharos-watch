@@ -84,6 +84,18 @@ Use those exports as the source of truth when auditing Cloudflare bindings befor
 
 The current proxy trusts the Cloudflare Access-protected `ops.pharos.watch` host as the human-entry gate and does not try to re-validate the UI JWT inside the function itself.
 
+### Proxy contract
+
+- Allowed upstream paths are limited to admin routes registered in `shared/lib/api-endpoints.ts`, plus the explicit `/api/discovery-candidates/:id/dismiss` path used by the operator dashboard.
+- HTTP method rules are enforced by `validateEndpointMethod()`, so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
+- The proxy forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
+- The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`.
+- Failure policy is explicit:
+  - `404` for non-ops origins or non-allowlisted paths
+  - `405` for method mismatch
+  - `500` when the Pages-side service token pair is not configured
+  - `502` when the upstream fetch fails or Cloudflare Access responds with an auth redirect from `ops-api`
+
 ### Pages project bindings needed now
 
 Required active bindings:

@@ -34,17 +34,15 @@ Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig`
 | `inputs.fallbacks` | Optional fallback inputs |
 | `params` | Adapter-specific validated settings |
 
-### Known Limitation: Fallback Inputs
+### Fallback Inputs
 
-`inputs.fallbacks` is declared in `LiveReservesConfig` but **not currently implemented**:
+`inputs.fallbacks` is implemented in `runAdapter()` inside `worker/src/cron/sync-live-reserves.ts`.
 
-- No adapter reads or uses fallback inputs
-- No coin configuration declares fallback inputs
-- The cron orchestrator does not attempt fallback resolution on primary failure
+- The cron tries `inputs.primary` first.
+- If the adapter throws, the orchestrator retries the same adapter against each fallback by temporarily swapping that fallback into `inputs.primary`.
+- If every fallback fails, the original primary error is surfaced and the normal breaker/error path runs.
 
-When the primary source fails, the adapter throws and the circuit breaker handles recovery. Implementing fallback resolution would provide meaningful resilience for adapters with fragile primary sources (e.g., HTML-scraped sources like Mento).
-
-**Future implementation path:** Add fallback resolution to `runAdapter()` in `sync-live-reserves.ts` -- try primary input first, and on failure, iterate through `config.inputs.fallbacks` with the same adapter function.
+Current repo configs do not declare any `inputs.fallbacks`, so the feature is live but presently unused.
 
 Supported input kinds:
 
@@ -63,7 +61,7 @@ Supported input kinds:
 
 `syncLiveReserves()`:
 
-1. Filters `TRACKED_STABLECOINS` to the coins that declare `liveReservesConfig`.
+1. Filters `ACTIVE_STABLECOINS` to the coins that declare `liveReservesConfig`.
 2. Resolves an adapter from `worker/src/cron/reserve-adapters/index.ts`.
 3. Builds a breaker key as `live-reserves:${breakerScope ?? adapter}`.
 4. Checks the per-source circuit breaker before each coin fetch.
@@ -83,9 +81,11 @@ Cron result statuses:
 
 | Status | When |
 |--------|------|
-| `ok` | Every configured coin synced cleanly |
-| `degraded` | Any coin failed, was skipped, or emitted warnings |
-| `error` | No configured coin synced successfully |
+| `ok` | At least one configured coin synced, and `failed + skipped <= ceil(total * 0.1)` |
+| `degraded` | At least one configured coin synced, and `failed + skipped > ceil(total * 0.1)` |
+| `error` | No configured coin synced successfully and at least one coin failed or was skipped |
+
+Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
 The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable.
 

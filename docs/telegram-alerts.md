@@ -58,10 +58,10 @@ The webhook also uses the generic `cache` table key `telegram:last-update-id` to
 | Binding | Required | Used by |
 |---------|----------|---------|
 | `TELEGRAM_BOT_TOKEN` | Yes | Webhook replies, digest posting (including appended cemetery / tracking notices), subscriber alert fan-out |
-| `TELEGRAM_WEBHOOK_SECRET` | Yes | Query-string secret validation for `POST /api/telegram-webhook` |
+| `TELEGRAM_WEBHOOK_SECRET` | Yes | Telegram webhook secret validation for `POST /api/telegram-webhook` (`X-Telegram-Bot-Api-Secret-Token` primary, legacy `?secret=` fallback) |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
 
-Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which calls Telegram `setWebhook` for:
+Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which currently calls Telegram `setWebhook` with a legacy query-param URL:
 
 `https://api.pharos.watch/api/telegram-webhook?secret=<TELEGRAM_WEBHOOK_SECRET>`
 
@@ -69,7 +69,7 @@ Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which
 
 `worker/src/api/telegram-webhook.ts` now acts as a thin ingress coordinator. Command parsing, message formatting, and D1 persistence live in the adjacent `telegram-webhook-*` helper modules so command behavior can be tested without editing the transport entrypoint.
 
-The webhook accepts only Telegram-origin posts that include the configured `secret` query param. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
+The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token` first and still accepts the legacy `secret` query param for older registrations. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
 
 ### Supported Commands
 

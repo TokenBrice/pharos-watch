@@ -2,6 +2,12 @@
 
 This file preserves maintainer comments removed when the tracked stablecoin registry moved from executable TypeScript arrays to JSON assets.
 
+Historical-reference note:
+
+- section headers such as `usd-major.ts` and `usd-minor.ts` refer to the retired pre-JSON registry files those comments originally lived in
+- line numbers below are archival anchors into that historical TypeScript registry, not guaranteed positions inside the current JSON assets
+- current canonical registry data lives under `shared/data/stablecoins/*.json`
+
 ## usd-major.ts
 - Line 296: Source: BitGo monthly attestation reports (AICPA criteria). Exact % not published; estimated from collateral description.
 - Line 383: Source: Paxos KPMG Feb 2025 attestation ($744.6M repos, $25.6M cash of $770.1M total)

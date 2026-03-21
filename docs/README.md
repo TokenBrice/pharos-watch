@@ -47,17 +47,29 @@ Some public routes are documented by feature docs or the architecture doc rather
 
 | Route | Primary doc(s) |
 |-------|-----------------|
+| `/` | [homepage.md](./homepage.md) |
+| `/about/` | [about-page.md](./about-page.md) |
 | `/blacklist/` | [blacklist-tracker.md](./blacklist-tracker.md) |
+| `/cemetery/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
 | `/chains/` | [chains-page.md](./chains-page.md), [api-reference.md](./api-reference.md) |
 | `/chains/[chain]/` | [chains-page.md](./chains-page.md), [api-reference.md](./api-reference.md) |
+| `/compare/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
 | `/compare/[slug]/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
+| `/coverage/` | [coverage-page.md](./coverage-page.md) |
 | `/depeg/` | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md) |
+| `/dependency-map/` | [dependency-map.md](./dependency-map.md) |
 | `/digest/` | [digest-pipeline.md](./digest-pipeline.md) |
 | `/digest/[date]/` | [digest-pipeline.md](./digest-pipeline.md) |
 | `/flows/` | [mint-burn-flows.md](./mint-burn-flows.md) |
 | `/liquidity/` | [dex-liquidity.md](./dex-liquidity.md) |
+| `/methodology/` | [methodology-page.md](./methodology-page.md) |
+| `/portfolio/` | [portfolio-page.md](./portfolio-page.md) |
+| `/privacy/` | [privacy-page.md](./privacy-page.md) |
 | `/safety-scores/` | [report-cards.md](./report-cards.md) |
+| `/stablecoin/[id]/` | [stablecoin-detail-page.md](./stablecoin-detail-page.md) |
 | `/stability-index/` | [stability-index.md](./stability-index.md) |
+| `/start/` | [start-page.md](./start-page.md) |
+| `/status/` | [status-dashboard.md](./status-dashboard.md) |
 | `/stablecoins/[peg]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/backing/[backing]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/governance/[governance]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |

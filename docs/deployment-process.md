@@ -61,19 +61,21 @@ Default policy:
 
 1. Documentation changes:
    - `npm run check:doc-counts`
-2. Critical API/shared contract changes:
+2. Redemption-backstop docs or runtime changes additionally run:
+   - `npm run check:redemption-backstops`
+3. Critical API/shared contract changes:
    - `npm run test:critical-contracts`
    - `npm run coverage:critical`
-3. Cron/worker-lib changes:
+4. Cron/worker-lib changes:
    - `npm run test:invariants`
    - `npm run coverage:critical`
-4. Workflow/gate infra changes:
+5. Workflow/gate infra changes:
    - `npm test`
    - `npm run coverage:critical`
-5. TypeScript/JavaScript changes additionally run:
+6. TypeScript/JavaScript changes additionally run:
    - `npm run lint`
    - `cd worker && npx tsc --noEmit`
-6. Frontend export / SEO-critical changes additionally run:
+7. Frontend export / SEO-critical changes additionally run:
    - `npm run build`
    - `npm run seo:check`
 
@@ -101,7 +103,9 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run audit:deps`
    - includes `npm run check:cron-sync`
    - includes `npm run check:doc-counts`
+   - includes `npm run check:doc-sync`
    - includes `npm run check:duplicate-exports`
+   - includes `npm run check:redemption-backstops`
    - includes `npm run check:unused-code`
    - includes `npm run check:hotspot-ratchet`
 2. `detect-changes`

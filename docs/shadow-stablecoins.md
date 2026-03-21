@@ -47,7 +47,7 @@ They are used where historical continuity matters:
 Shadow stablecoins are not part of the public tracked-set metadata used for dashboard counts, filters, and table inclusion:
 
 - `ACTIVE_STABLECOINS.length` drives public counts in page metadata and copy
-- `TRACKED_IDS` is the inclusion set used by `src/components/stablecoin-table-logic.ts`
+- `ACTIVE_IDS` is the default inclusion set used by `src/components/stablecoin-table-logic.ts`, and filtered table subsets are built from `ACTIVE_STABLECOINS`
 - taxonomy/filter pages derive their selectable universe from tracked metadata, not shadow metadata
 
 Operational consequence:

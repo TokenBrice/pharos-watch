@@ -83,6 +83,10 @@ The active frontend operator mode is now:
   - Cloudflare Pages Functions catch-all for operator-only admin routes
   - Host-gates to `ops.pharos.watch` so public hostnames cannot use the proxy
   - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
+  - Allows only admin routes from the shared endpoint registry, plus discovery-dismiss
+  - Forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request; browser callers never send Access service-token headers directly
+  - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Idempotent-Replay`) back into the app shell
+  - Converts upstream fetch failures or Access redirect responses into operator-visible `502` JSON errors
 - `src/hooks/use-status-dashboard-model.ts`
   - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
   - Derives the operational lane summaries, severity-ranked section order, notice rail entries, cross-surface status deltas, and the sync-floor freshness view used by the page shell
