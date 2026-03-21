@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.9)
+## Overall Grade (v6.0)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v5.9 corrects governance classifications for centralized-custody DeFi coins using live reserve evidence. v5.8 integrated live reserve snapshots into collateral quality scoring (see Live Reserve Passthrough below).
+Current-version note: v6.0 introduces 6-tier custody model, mature-alt-l1 chain tier for Solana/BNB, 2-factor Resilience (blacklist descriptive only), and 5-band chain penalty with wrapper exemption. v5.9 corrected governance classifications for centralized-custody DeFi coins using live reserve evidence.
 
 ## Dimensions
 
