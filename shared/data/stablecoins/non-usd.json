@@ -54,7 +54,24 @@
         "pct": 100,
         "risk": "very-high"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "a7a5-old-vector",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Russian ruble bank deposits",
+        "risk": "very-high"
+      }
+    }
   },
   {
     "id": "eurc-circle",
@@ -242,7 +259,24 @@
         "decimals": 4
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "brz-transfero",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "BRL fiat reserves",
+        "risk": "low"
+      }
+    }
   },
   {
     "id": "fpi-frax",
@@ -448,7 +482,24 @@
         "title": "Winding down",
         "message": "FlowBank SA (reserve partner) declared bankruptcy in June 2024. A portion of AEUR collateral is locked in bankruptcy proceedings. Anchored Coins has ceased new issuance and was delisted from Binance EEA in March 2025."
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "aeur-anchored-coins",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Euro bank deposits",
+        "risk": "low"
+      }
+    }
   },
   {
     "id": "euri-banking-circle",
@@ -512,7 +563,24 @@
         "pct": 30,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "euri-banking-circle",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Euro cash & EU government securities",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "zchf-frankencoin",
@@ -710,7 +778,24 @@
         "pct": 30,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eure-monerium",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "EUR Liquidity Fund & bank deposits",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "eurs-stasis",
@@ -771,7 +856,24 @@
       }
     ],
     "deploymentModel": "native-multichain",
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eurs-stasis",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Euro fiat reserves",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "xsgd-straitsx",
@@ -838,7 +940,24 @@
         "decimals": 6
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "xsgd-straitsx",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "SGD deposits & MAS-eligible securities",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "gyen-gyen",
@@ -893,7 +1012,24 @@
         "decimals": 6
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "gyen-gyen",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "JPY fiat reserves",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "audd-novatti",
@@ -958,7 +1094,24 @@
         "decimals": 7
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "audd-novatti",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "AUD bank deposits",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "jpyc-jpyc",
@@ -1012,7 +1165,24 @@
         "decimals": 18
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "jpyc-jpyc",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "JPY reserves",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "axcnh-anchorx",
@@ -1064,7 +1234,24 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "axcnh-anchorx",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "CNH cash reserves",
+        "risk": "low"
+      }
+    }
   },
   {
     "id": "idrt-rupiah-token",
@@ -1125,7 +1312,24 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "idrt-rupiah-token",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "IDR bank deposits",
+        "risk": "low"
+      }
+    }
   },
   {
     "id": "tryb-bilira",
@@ -1202,7 +1406,24 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "tryb-bilira",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "TRY cash reserves",
+        "risk": "low"
+      }
+    }
   },
   {
     "id": "ceur-celo",
@@ -1417,7 +1638,24 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "veur-vnx",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Euro cash & equivalents",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "eurr-stablr",
@@ -1470,7 +1708,24 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eurr-stablr",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Fiat euro reserves",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "europ-schuman",
@@ -1553,7 +1808,24 @@
         "pct": 2,
         "risk": "low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "europ-schuman",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Euro cash & equivalents",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "eurq-quantoz",
@@ -1609,7 +1881,24 @@
         "pct": 32,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eurq-quantoz",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Government bonds & cash",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "eurau-allunity",
@@ -1686,7 +1975,24 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "eurau-allunity",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Euro bank deposits (CRR institutions)",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "deuro-deuro",
@@ -1868,7 +2174,24 @@
         "decimals": 9
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "vchf-vnx",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "CHF cash & equivalents",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "vgbp-vnx",
@@ -1918,7 +2241,24 @@
         "decimals": 18
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "vgbp-vnx",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "base",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "label": "GBP cash & equivalents",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "tgbp-tokenised",
@@ -1983,7 +2323,24 @@
         "decimals": 18
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "tgbp-tokenised",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "GBP bank deposits",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "zarp-zarp",
@@ -2046,7 +2403,24 @@
         "decimals": 18
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "zarp-zarp",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "ZAR fiat reserves",
+        "risk": "low"
+      }
+    }
   },
   {
     "id": "isc-international-stable-currency",
@@ -2158,7 +2532,24 @@
         "decimals": 18
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "cadc-cad-coin",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "CAD bank deposits",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "pht-pht",
@@ -2215,7 +2606,24 @@
         "coinId": "usdt-tether",
         "depType": "wrapper"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "pht-pht",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "apcxUSDT custodial wrapper",
+        "risk": "high"
+      }
+    }
   },
   {
     "id": "cetes-etherfuse",

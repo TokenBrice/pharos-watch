@@ -6,6 +6,7 @@ import { fetchChainlinkNavReserves } from "./chainlink-nav";
 import { fetchChainlinkPorReserves } from "./chainlink-por";
 import { fetchCollateralPositionsApiReserves } from "./collateral-positions-api";
 import { fetchCrvUsdReserves } from "./crvusd";
+import { fetchDolaInverseReserves } from "./dola-inverse";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
 import { fetchFalconReserves } from "./falcon";
@@ -55,6 +56,7 @@ const ADAPTERS: Record<string, AdapterFn> = {
   "chainlink-por": fetchChainlinkPorReserves,
   "collateral-positions-api": fetchCollateralPositionsApiReserves,
   crvusd: fetchCrvUsdReserves,
+  "dola-inverse": fetchDolaInverseReserves,
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
   ethena: fetchEthenaReserves,

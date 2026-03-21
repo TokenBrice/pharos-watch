@@ -60,7 +60,28 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "xaut-tether",
+      "display": {
+        "url": "https://gold.tether.to/",
+        "label": "Tether Gold"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Physical gold bars (LBMA Good Delivery)",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "paxg-paxos",
@@ -250,7 +271,28 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "xaum-matrixdock",
+      "display": {
+        "url": "https://www.matrixdock.com/xaum",
+        "label": "Matrixdock"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Physical gold bars (LBMA 99.99%)",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "cgo-comtech",
@@ -353,7 +395,28 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "dgld-gold-token-sa",
+      "display": {
+        "url": "https://dgld.ch/",
+        "label": "DGLD"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Allocated LBMA gold bars (PAMP SA vaults)",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "pgold-pleasing",
@@ -407,7 +470,24 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "pgold-pleasing",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "arbitrum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Physical gold bars (LBMA 99.99%)",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "ggbr-goldfish-gold",
@@ -450,7 +530,24 @@
         "pct": 100,
         "risk": "high"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "ggbr-goldfish-gold",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Issuer-managed gold backing",
+        "risk": "high"
+      }
+    }
   },
   {
     "id": "kag-kinesis",
@@ -507,7 +604,28 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "single-asset",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "kag-kinesis",
+      "display": {
+        "url": "https://kinesis.money/silver/",
+        "label": "Kinesis"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Physical silver bullion (LBMA 999 fine)",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "pgold-polaris",
