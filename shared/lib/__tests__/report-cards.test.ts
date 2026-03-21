@@ -120,6 +120,43 @@ describe("scoreLiquidity", () => {
     expect(result.score).toBeNull();
     expect(result.detail).toContain("configured but currently unrated");
   });
+
+  it("blends DEX liquidity with a resolved redemption backstop score", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 40, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },
+      { score: 85, routeFamily: "stablecoin-redeem", immediateCapacityUsd: 50_000_000, immediateCapacityRatio: 0.5, resolutionState: "resolved" },
+    );
+
+    expect(result.grade).not.toBe("NR");
+    expect(result.score).toBeGreaterThan(40);
+    expect(result.detail).toContain("Effective exit score");
+    expect(result.detail).toContain("Redemption backstop");
+    expect(result.detail).toContain("Stablecoin redeem");
+  });
+
+  it("caps and discounts redemption-only scoring correctly", () => {
+    const result = scoreLiquidity(undefined, {
+      score: 90,
+      routeFamily: "collateral-redeem",
+      immediateCapacityUsd: 100_000_000,
+      immediateCapacityRatio: 1.0,
+      resolutionState: "resolved",
+    });
+
+    // min(70, 90 * 0.75) = min(70, 67.5) = 68
+    expect(result.score).toBe(68);
+    expect(result.detail).toContain("DEX liquidity unavailable");
+    expect(result.detail).toContain("Redemption backstop 90/100");
+  });
+
+  it("high DEX liquidity dominates over low redemption score", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 95, concentrationHhi: 0.1, poolCount: 10, chainCount: 3 },
+      { score: 30, routeFamily: "queue-redeem", immediateCapacityUsd: 1_000_000, immediateCapacityRatio: 0.1, resolutionState: "resolved" },
+    );
+
+    expect(result.score).toBe(95);
+  });
 });
 
 describe("computeStressedGrades", () => {

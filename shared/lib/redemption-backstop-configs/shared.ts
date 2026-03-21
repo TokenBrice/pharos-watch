@@ -75,7 +75,6 @@ export const LIQUITY_STYLE_REDEMPTION_FEE = "Minimum 50 bps + baseRate (decays o
  *  while the route-family cap (65) constrains the final score to reflect
  *  the inherent delays and access restrictions of institutional redemption. */
 export const issuerBase: RedemptionBackstopConfig = {
-
   routeFamily: "offchain-issuer",
   accessModel: "issuer-api",
   settlementModel: "same-day",
@@ -92,34 +91,51 @@ export const commodityIssuerBase: RedemptionBackstopConfig = {
 };
 
 export const stablecoinRedeemBase: RedemptionBackstopConfig = {
-
   routeFamily: "stablecoin-redeem",
   accessModel: "permissionless-onchain",
   settlementModel: "atomic",
   executionModel: "deterministic-onchain",
   outputAssetType: "stable-single",
   capacityModel: { kind: "supply-full" },
-  costModel: { kind: "dynamic-or-unclear" },
+  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
 export const collateralRedeemBase: RedemptionBackstopConfig = {
-
   routeFamily: "collateral-redeem",
   accessModel: "permissionless-onchain",
   settlementModel: "atomic",
   executionModel: "deterministic-onchain",
   outputAssetType: "bluechip-collateral",
   capacityModel: { kind: "supply-full" },
-  costModel: { kind: "dynamic-or-unclear" },
+  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+};
+
+export const psmSwapBase: RedemptionBackstopConfig = {
+  routeFamily: "psm-swap",
+  accessModel: "permissionless-onchain",
+  settlementModel: "atomic",
+  executionModel: "deterministic-onchain",
+  outputAssetType: "stable-single",
+  capacityModel: { kind: "supply-full" },
+  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+};
+
+export const basketRedeemBase: RedemptionBackstopConfig = {
+  routeFamily: "basket-redeem",
+  accessModel: "permissionless-onchain",
+  settlementModel: "atomic",
+  executionModel: "deterministic-basket",
+  outputAssetType: "stable-basket",
+  capacityModel: { kind: "supply-full" },
+  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
 export const queueRedeemBase: RedemptionBackstopConfig = {
-
   routeFamily: "queue-redeem",
   accessModel: "permissionless-onchain",
   settlementModel: "queued",
   executionModel: "rules-based-nav",
   outputAssetType: "stable-single",
   capacityModel: { kind: "supply-ratio", ratio: 0.1 },
-  costModel: { kind: "dynamic-or-unclear" },
+  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };

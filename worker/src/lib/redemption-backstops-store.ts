@@ -84,36 +84,25 @@ type RedemptionBackstopDetails = Partial<
   >
 >;
 
+function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetails {
+  const result: RedemptionBackstopDetails = {};
+  if (raw.docs) result.docs = raw.docs as RedemptionBackstopEntry["docs"];
+  if (Array.isArray(raw.notes)) result.notes = raw.notes;
+  if (Array.isArray(raw.capsApplied)) result.capsApplied = raw.capsApplied;
+  if (typeof raw.feeDescription === "string") result.feeDescription = raw.feeDescription;
+  if (typeof raw.resolutionState === "string") result.resolutionState = raw.resolutionState as RedemptionResolutionState;
+  if (typeof raw.capacityConfidence === "string") result.capacityConfidence = raw.capacityConfidence as RedemptionCapacityConfidence;
+  if (typeof raw.feeConfidence === "string") result.feeConfidence = raw.feeConfidence as RedemptionFeeConfidence;
+  if (typeof raw.modelConfidence === "string") result.modelConfidence = raw.modelConfidence as RedemptionModelConfidence;
+  return result;
+}
+
 function parseDetails(value: string | null): RedemptionBackstopDetails {
   if (!value) return {};
   const decoded = decodeJsonString<RedemptionBackstopDetails, "json-parse-failed">(value, {
     mode: "best-effort",
     parseErrorReason: "json-parse-failed",
-    normalize: (parsed) => {
-      const record = parsed as {
-        docs?: RedemptionBackstopEntry["docs"];
-        notes?: string[];
-        capsApplied?: string[];
-        feeDescription?: string;
-        resolutionState?: RedemptionResolutionState;
-        capacityConfidence?: RedemptionCapacityConfidence;
-        feeConfidence?: RedemptionFeeConfidence;
-        modelConfidence?: RedemptionModelConfidence;
-      };
-      return {
-        ok: true,
-        payload: {
-          ...(record?.docs ? { docs: record.docs } : {}),
-          ...(Array.isArray(record?.notes) ? { notes: record.notes } : {}),
-          ...(Array.isArray(record?.capsApplied) ? { capsApplied: record.capsApplied } : {}),
-          ...(typeof record?.feeDescription === "string" ? { feeDescription: record.feeDescription } : {}),
-          ...(typeof record?.resolutionState === "string" ? { resolutionState: record.resolutionState } : {}),
-          ...(typeof record?.capacityConfidence === "string" ? { capacityConfidence: record.capacityConfidence } : {}),
-          ...(typeof record?.feeConfidence === "string" ? { feeConfidence: record.feeConfidence } : {}),
-          ...(typeof record?.modelConfidence === "string" ? { modelConfidence: record.modelConfidence } : {}),
-        },
-      };
-    },
+    normalize: (parsed) => ({ ok: true, payload: pickValidDetails(parsed as Record<string, unknown>) }),
   });
   return decoded.payload ?? {};
 }

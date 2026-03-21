@@ -183,7 +183,7 @@ async function resolveCapacity(
     }
     return {
       immediateCapacityUsd: supplyUsd,
-      immediateCapacityRatio: supplyUsd != null && supplyUsd > 0 ? 1 : null,
+      immediateCapacityRatio: supplyUsd > 0 ? 1 : null,
       provider: "supply-full-model",
       sourceMode: "estimated",
       resolutionState: "resolved",
@@ -205,7 +205,7 @@ async function resolveCapacity(
       };
     }
     return {
-      immediateCapacityUsd: supplyUsd != null ? supplyUsd * model.ratio : null,
+      immediateCapacityUsd: supplyUsd * model.ratio,
       immediateCapacityRatio: model.ratio,
       provider: "supply-ratio-model",
       sourceMode: "estimated",

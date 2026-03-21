@@ -95,6 +95,21 @@ if (!docs.includes(expectedRouteLine)) {
   errors.push(`docs/redemption-backstops.md is out of sync. Expected line: ${expectedRouteLine}`);
 }
 
+for (const [id, config] of Object.entries(REDEMPTION_BACKSTOP_CONFIGS)) {
+  if (config.costModel.kind === "dynamic-or-unclear" && !config.costModel.feeDescription) {
+    errors.push(`${id}: dynamic-or-unclear cost model missing feeDescription`);
+  }
+  if (config.costModel.kind === "fee-bps" && config.costModel.feeBps < 0) {
+    errors.push(`${id}: negative feeBps (${config.costModel.feeBps})`);
+  }
+  if (
+    config.capacityModel.kind === "supply-ratio" &&
+    (config.capacityModel.ratio <= 0 || config.capacityModel.ratio > 1)
+  ) {
+    errors.push(`${id}: supply-ratio out of range (${config.capacityModel.ratio})`);
+  }
+}
+
 if (errors.length > 0) {
   console.error("Redemption backstop registry checks failed:");
   for (const error of errors) {

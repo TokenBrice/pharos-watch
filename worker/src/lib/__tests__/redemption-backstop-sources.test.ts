@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 const getReserveSyncStateMock = vi.fn();
 
@@ -420,5 +421,80 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
     );
     expect(lowEntry.modelConfidence).toBe("low");
+  });
+
+  it("populates docs from proofOfReserves when available", async () => {
+    const meta = TRACKED_META_BY_ID.get("usdt-tether");
+    expect(meta?.proofOfReserves?.url).toBeTruthy();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "usdt-tether",
+      {
+        routeFamily: "offchain-issuer",
+        accessModel: "issuer-api",
+        settlementModel: "same-day",
+        executionModel: "rules-based-nav",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-full" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      },
+      100_000_000,
+      null,
+      now,
+    );
+
+    expect(entry.docs).toBeDefined();
+    expect(entry.docs!.url).toBe(meta!.proofOfReserves!.url);
+    expect(entry.docs!.label).toContain("feed");
+  });
+
+  it("falls back to preferred link labels when no proofOfReserves", async () => {
+    const meta = TRACKED_META_BY_ID.get("usds-sky");
+    expect(meta?.proofOfReserves?.url).toBeFalsy();
+    const preferredLabels = ["Docs", "Proof of Reserve", "Transparency", "Website"];
+    const hasPreferred = meta?.links?.some((l) => preferredLabels.includes(l.label));
+    expect(hasPreferred).toBe(true);
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "usds-sky",
+      {
+        routeFamily: "psm-swap",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-full" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      },
+      1_000_000_000,
+      null,
+      now,
+    );
+
+    expect(entry.docs).toBeDefined();
+    expect(preferredLabels).toContain(entry.docs!.label);
+  });
+
+  it("returns no docs for unknown coins", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-full" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      },
+      100_000_000,
+      null,
+      now,
+    );
+
+    expect(entry.docs).toBeUndefined();
   });
 });

@@ -3,11 +3,8 @@ import { documentedVariableFee, fixedFee, NO_PUBLIC_NUMERIC_REDEMPTION_FEE, queu
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
-    routeFamily: "queue-redeem",
-    accessModel: "permissionless-onchain",
+    ...queueRedeemBase,
     settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "stable-single",
     capacityModel: { kind: "supply-ratio", ratio: 0.3 },
     costModel: documentedVariableFee("1:1 via the Transmuter; no separate redemption fee is disclosed"),
   },
@@ -76,12 +73,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
   "usdai-usd-ai": {
-    routeFamily: "queue-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "queued",
-    executionModel: "rules-based-nav",
-    outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1 },
+    ...queueRedeemBase,
     costModel: documentedVariableFee(
       "Redeemable 1:1 in fixed 30-day processing windows; QEV auction mechanism manages redemptions against illiquid collateral",
     ),

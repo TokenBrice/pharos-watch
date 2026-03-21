@@ -27,7 +27,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "meusd-mezo": {
     ...collateralRedeemBase,
-    costModel: documentedVariableFee("75 bps, or 0 bps when redeeming against your own debt"),
+    costModel: fixedFee(75, "75 bps standard; 0 bps when redeeming against your own debt"),
   },
   "nect-beraborrow": {
     ...collateralRedeemBase,
@@ -53,28 +53,17 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
   "ussd-sonic-labs": {
-    routeFamily: "collateral-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
+    ...collateralRedeemBase,
     outputAssetType: "stable-single",
-    capacityModel: { kind: "supply-full" },
     costModel: fixedFee(0, "Zero minting and redemption fees per Sonic Labs documentation"),
   },
   "reusd-resupply": {
-    routeFamily: "collateral-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
+    ...collateralRedeemBase,
     outputAssetType: "mixed-collateral",
-    capacityModel: { kind: "supply-full" },
     costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
   },
   "cusd-celo": {
-    routeFamily: "collateral-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
+    ...collateralRedeemBase,
     outputAssetType: "mixed-collateral",
     capacityModel: { kind: "supply-ratio", ratio: 0.5 },
     costModel: documentedVariableFee(
@@ -82,10 +71,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ),
   },
   "ceur-celo": {
-    routeFamily: "collateral-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
+    ...collateralRedeemBase,
     outputAssetType: "mixed-collateral",
     capacityModel: { kind: "supply-ratio", ratio: 0.5 },
     costModel: documentedVariableFee(
@@ -93,21 +79,13 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ),
   },
   "gyd-gyroscope": {
-    routeFamily: "collateral-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
+    ...collateralRedeemBase,
     outputAssetType: "mixed-collateral",
-    capacityModel: { kind: "supply-full" },
     costModel: documentedVariableFee("Primary-market AMM (PAMM) adjusts redemption prices based on reserve ratio"),
   },
   "usdp-parallel": {
-    routeFamily: "collateral-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
+    ...collateralRedeemBase,
     outputAssetType: "mixed-collateral",
-    capacityModel: { kind: "supply-full" },
     costModel: documentedVariableFee(
       "Parallelizer module: dynamic minting/burning fees adjust to correct peg deviations; depeg penalty applied proportionally",
     ),
@@ -119,12 +97,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ),
   },
   "fpi-frax": {
-    routeFamily: "collateral-redeem",
-    accessModel: "permissionless-onchain",
-    settlementModel: "atomic",
-    executionModel: "deterministic-onchain",
+    ...collateralRedeemBase,
     outputAssetType: "mixed-collateral",
-    capacityModel: { kind: "supply-full" },
     costModel: documentedVariableFee(
       "CPI-indexed redemption price grows on-chain per second at 12-month US CPI-U rate; 100% collateral ratio maintained via AMOs",
     ),
