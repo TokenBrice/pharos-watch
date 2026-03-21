@@ -43,6 +43,9 @@ const buildReportCardsSnapshotMock = vi.hoisted(() =>
     ],
   })),
 );
+const reportCardsSnapshotUnavailableErrorCtor = vi.hoisted(
+  () => class ReportCardsSnapshotUnavailableError extends Error {},
+);
 
 vi.mock("@shared/lib/stablecoins", () => {
   const stablecoins = [
@@ -73,7 +76,7 @@ vi.mock("@shared/lib/stablecoins", () => {
 
 vi.mock("../report-cards-snapshot", () => ({
   buildReportCardsSnapshot: buildReportCardsSnapshotMock,
-  ReportCardsSnapshotUnavailableError: class ReportCardsSnapshotUnavailableError extends Error {},
+  ReportCardsSnapshotUnavailableError: reportCardsSnapshotUnavailableErrorCtor,
 }));
 
 import { computeSafetyScoresSnapshot } from "../safety-scores";
@@ -127,5 +130,19 @@ describe("computeSafetyScoresSnapshot", () => {
     expect(result.kind).toBe("degraded");
     expect(result.coveredCount).toBe(0);
     expect(result.reason).toBe("Cached stablecoins data is corrupt");
+  });
+
+  it("preserves typed snapshot-unavailable reasons in degraded mode", async () => {
+    buildReportCardsSnapshotMock.mockRejectedValueOnce(
+      new reportCardsSnapshotUnavailableErrorCtor("Redemption backstop snapshot unavailable"),
+    );
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      includeNavTokens: false,
+      outputMode: "map",
+    });
+
+    expect(result.kind).toBe("degraded");
+    expect(result.reason).toBe("Redemption backstop snapshot unavailable");
   });
 });

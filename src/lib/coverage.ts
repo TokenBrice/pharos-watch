@@ -424,6 +424,18 @@ export function resolveRedemptionCoverage(
     );
   }
 
+  if (entry.resolutionState !== "resolved") {
+    return createStatus(
+      "configured-unrated",
+      "Config.",
+      "amber",
+      false,
+      1,
+      "A redemption route is configured, but the current snapshot could not resolve a usable score.",
+      "Configured, unrated",
+    );
+  }
+
   switch (entry.routeFamily) {
     case "offchain-issuer":
       return createStatus(
@@ -640,7 +652,7 @@ function buildCoverageBreakdown(
     return `live ${breakdownMap.get("live") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
   }
   if (featureKey === "redemption") {
-    return `issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0}`;
+    return `configured ${breakdownMap.get("configured-unrated") ?? 0} · issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0}`;
   }
   if (featureKey === "flows") {
     return `full ${breakdownMap.get("full") ?? 0} · partial ${breakdownMap.get("partial-history") ?? 0} · bootstrapping ${breakdownMap.get("bootstrapping") ?? 0}`;

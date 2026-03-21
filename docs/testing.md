@@ -77,11 +77,11 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `build-pages` still runs `npm run sync:digests`, `npm run build`, and `npm run seo:check`, then uploads `out/`
    - `smoke-ui` still serves that exact artifact locally and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173`
    - `deploy-pages` still publishes the verified artifact with the Wrangler retry loop
-8. `smoke-ui-live` (worker-only push path):
+7. `smoke-ui-live` (worker-only push path):
    - Runs only when `worker_changed=true` and `pages_changed=false`
    - Runs `npm run test:smoke-ui -- --url https://pharos.watch`
    - Verifies that the unchanged live Pages frontend still works against the newly deployed worker/API
-10. `smoke-ops`:
+8. `smoke-ops`:
 
 - Run `npm run test:smoke-ops`
 - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
@@ -373,7 +373,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `yield-rankings.test.ts`              | `handleYieldRankings`                                  | 503 cache miss/corrupt-cache handling, live Safety Score hydration, orphan-row filtering, and freshness metadata                                     |
 | `dex-liquidity.test.ts`               | `handleDexLiquidity`                                   | 200 with liquidity map, empty map, coverage-confidence fields, degraded Warning header, X-Data-Age                                                   |
 | `peg-summary.test.ts`                 | `handlePegSummary`                                     | 503 cache miss, 200 with coins + summary, X-Data-Age                                                                                                 |
-| `redemption-backstops.test.ts`        | `handleRedemptionBackstops`                            | 503 bootstrap miss, 200 with modeled route map + methodology metadata                                                                                |
+| `redemption-backstops.test.ts`        | `handleRedemptionBackstops`                            | 503 bootstrap miss, 503 snapshot-read failure, 200 with modeled route map + methodology metadata                                                     |
 | `report-cards.test.ts`                | `handleReportCards`                                    | 503 cache miss, 200 with cards/methodology/dependencyGraph                                                                                           |
 | `stablecoin-detail.test.ts`           | `handleStablecoinDetail`                               | Upstream retry/timeout fallback behavior, stale-cache fallback, parse-failure diagnostics                                                            |
 | `stablecoin-summary.test.ts`          | `handleStablecoinSummary`                              | 503 cache-miss/corrupt-cache handling, 404 unknown coin, 200 compact supply/price summary + freshness headers                                        |
@@ -425,7 +425,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `sync-blacklist.test.ts`                | `sync-blacklist.ts`                | Incremental multi-chain sync, enrichment, and state advancement                                                                                                 |
 | `sync-bluechip.test.ts`                 | `sync-bluechip.ts`                 | Bluechip scrape normalization and cache writes                                                                                                                  |
 | `sync-live-reserves.test.ts`            | `sync-live-reserves.ts`            | Adapter orchestration, circuit-open skips, degraded warning handling, and shared-source dedupe                                                                  |
-| `sync-redemption-backstops.test.ts`     | `sync-redemption-backstops.ts`     | Stablecoins-cache gating, snapshot writes, source-mode metadata, and current-row pruning                                                                        |
+| `sync-redemption-backstops.test.ts`     | `sync-redemption-backstops.ts`     | Stablecoins-cache gating, resolved vs unresolved status semantics, source-mode metadata, and current-row pruning                                                |
 | `sync-usds-status.test.ts`              | `sync-usds-status.ts`              | USDS implementation/freeze-module on-chain checks                                                                                                               |
 | `yield-helpers.test.ts`                 | `yield-helpers.ts`                 | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool`                           |
 | `sync-fx-rates.test.ts`                 | `sync-fx-rates.ts`                 | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for CNH/RUB/UAH/ARS                                                   |
@@ -467,6 +467,10 @@ For cron jobs with external dependencies (APIs, RPC nodes), test at least:
 4. **Boundary validation** — rate bounds, supply thresholds, deviation thresholds
 
 Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply helpers) and `mockFetch()` to control HTTP responses. Use `vi.useFakeTimers()` when test logic depends on `Date.now()`.
+
+### Registry Guardrails
+
+- `npm run check:redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
 
 ### Test style
 

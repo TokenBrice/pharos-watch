@@ -88,6 +88,7 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 - `PriceTransparencyCard` lives inside `OverviewSection` under the `price-transparency` anchor and is hidden when `coinData.price == null`.
 
 ### Price Transparency Card
+
 - **Component:** `PriceTransparencyCard` (`src/components/stablecoin-detail/price-transparency-card.tsx`)
 - **Data:** `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from stablecoins API; `consensusSources` and `dexPriceCheck` from peg-summary API
 - **Scrollspy ID:** `price-transparency` (label: "Price Sources")
@@ -151,21 +152,21 @@ That shared retry is used by the page-level error surfaces.
 
 ## Section Responsibilities
 
-| Section / Component | Responsibility |
-|---------------------|----------------|
-| `HeroCard` | Price, supply deltas, peg metrics, liquidity headline, feedback entrypoint, and first-touch methodology hints for Peg Score / Liquidity |
-| `ReportCardDetail` | Overall Safety Score plus radar/dimension detail, contextual methodology hints, and a methodology footer line |
-| `SafetyScoreHistorySection` | Grade-transition timeline |
-| `OverviewSection` | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card with explicit fixed or documented variable fee messaging, DEWS detail, and the nested `price-transparency` anchor when price data exists |
-| `CoinNotices` | Coin-specific warnings/info blocks from metadata |
-| `McapChart` | Historical supply / market-cap chart |
-| `KeyInfoCard` | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction |
-| `PriceTransparencyCard` | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered inside `OverviewSection` under the `price-transparency` anchor. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists |
-| `YieldDetailSection` | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help |
-| `DexLiquidityCard` | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links |
-| `FlowsSection` | Per-coin mint/burn summary plus the separate `flow-history` event-feed section, with contextual Pressure Shift help on the summary card |
-| `DepegHistory` | Historical depeg timeline for non-NAV assets |
-| `ExploreNextSection` | Related stablecoins, compare pages, and taxonomy/deeper-navigation links |
+| Section / Component         | Responsibility                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HeroCard`                  | Price, supply deltas, peg metrics, liquidity headline, feedback entrypoint, and first-touch methodology hints for Peg Score / Liquidity                                                                                                                                                                                                                                                |
+| `ReportCardDetail`          | Overall Safety Score plus radar/dimension detail, contextual methodology hints, and a methodology footer line                                                                                                                                                                                                                                                                          |
+| `SafetyScoreHistorySection` | Grade-transition timeline                                                                                                                                                                                                                                                                                                                                                              |
+| `OverviewSection`           | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card with explicit fixed or documented variable fee messaging plus resolution / confidence state when the route is configured but currently unrated, DEWS detail, and the nested `price-transparency` anchor when price data exists                                                                    |
+| `CoinNotices`               | Coin-specific warnings/info blocks from metadata                                                                                                                                                                                                                                                                                                                                       |
+| `McapChart`                 | Historical supply / market-cap chart                                                                                                                                                                                                                                                                                                                                                   |
+| `KeyInfoCard`               | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction                                                                                                                                                                                                                                                                                                      |
+| `PriceTransparencyCard`     | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered inside `OverviewSection` under the `price-transparency` anchor. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists |
+| `YieldDetailSection`        | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help                                                                                                                                                                                                                                                 |
+| `DexLiquidityCard`          | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links                                                                                                                                                                                                                                                                                 |
+| `FlowsSection`              | Per-coin mint/burn summary plus the separate `flow-history` event-feed section, with contextual Pressure Shift help on the summary card                                                                                                                                                                                                                                                |
+| `DepegHistory`              | Historical depeg timeline for non-NAV assets                                                                                                                                                                                                                                                                                                                                           |
+| `ExploreNextSection`        | Related stablecoins, compare pages, and taxonomy/deeper-navigation links                                                                                                                                                                                                                                                                                                               |
 
 Composite-score surfaces on the detail page now share a lightweight explainability pattern:
 
@@ -177,22 +178,22 @@ Composite-score surfaces on the detail page now share a lightweight explainabili
 
 ## File Index
 
-| File | Role |
-|------|------|
-| `src/app/stablecoin/[id]/page.tsx` | Static params, metadata, JSON-LD, server shell |
-| `src/app/stablecoin/[id]/client.tsx` | Client-side section composition and dynamic imports |
-| `src/hooks/use-stablecoin-detail-view-model.ts` | Query wiring + aggregate retry handler |
-| `src/lib/stablecoin-detail-view-model.ts` | Pure derivation and fallback assembly |
-| `src/components/stablecoin-detail/hero-card.tsx` | Detail hero surface |
-| `src/components/stablecoin-detail/notices-and-summary-section.tsx` | Overview + notices wrapper |
-| `src/components/stablecoin-detail/overview-section.tsx` | Summary, reserves, redemption backstop |
-| `src/components/stablecoin-detail/price-transparency-card.tsx` | Price source transparency and confidence card |
-| `src/components/stablecoin-detail/flows-section.tsx` | Detail flow section |
-| `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Redemption route card |
-| `src/components/stablecoin-detail/safety-score-history-section.tsx` | Grade timeline section |
-| `src/components/stablecoin-detail/explore-next-section.tsx` | Post-detail navigation hub |
-| `src/components/mcap-chart.tsx` | Supply / market-cap chart (dynamic import) |
-| `src/components/depeg-history.tsx` | Depeg event timeline (dynamic import) |
-| `src/components/key-info-card.tsx` | Key info / metadata card (dynamic import) |
-| `src/components/yield-detail-section.tsx` | Yield detail section (dynamic import) |
-| `src/components/dex-liquidity-card.tsx` | DEX liquidity breakdown card (dynamic import) |
+| File                                                                | Role                                                |
+| ------------------------------------------------------------------- | --------------------------------------------------- |
+| `src/app/stablecoin/[id]/page.tsx`                                  | Static params, metadata, JSON-LD, server shell      |
+| `src/app/stablecoin/[id]/client.tsx`                                | Client-side section composition and dynamic imports |
+| `src/hooks/use-stablecoin-detail-view-model.ts`                     | Query wiring + aggregate retry handler              |
+| `src/lib/stablecoin-detail-view-model.ts`                           | Pure derivation and fallback assembly               |
+| `src/components/stablecoin-detail/hero-card.tsx`                    | Detail hero surface                                 |
+| `src/components/stablecoin-detail/notices-and-summary-section.tsx`  | Overview + notices wrapper                          |
+| `src/components/stablecoin-detail/overview-section.tsx`             | Summary, reserves, redemption backstop              |
+| `src/components/stablecoin-detail/price-transparency-card.tsx`      | Price source transparency and confidence card       |
+| `src/components/stablecoin-detail/flows-section.tsx`                | Detail flow section                                 |
+| `src/components/stablecoin-detail/redemption-backstop-card.tsx`     | Redemption route card                               |
+| `src/components/stablecoin-detail/safety-score-history-section.tsx` | Grade timeline section                              |
+| `src/components/stablecoin-detail/explore-next-section.tsx`         | Post-detail navigation hub                          |
+| `src/components/mcap-chart.tsx`                                     | Supply / market-cap chart (dynamic import)          |
+| `src/components/depeg-history.tsx`                                  | Depeg event timeline (dynamic import)               |
+| `src/components/key-info-card.tsx`                                  | Key info / metadata card (dynamic import)           |
+| `src/components/yield-detail-section.tsx`                           | Yield detail section (dynamic import)               |
+| `src/components/dex-liquidity-card.tsx`                             | DEX liquidity breakdown card (dynamic import)       |

@@ -19,43 +19,60 @@ export function hasTypeScriptOrJsChange(files) {
 }
 
 export function hasCriticalApiContractChange(files) {
-  return files.some((file) =>
-    file.startsWith("worker/src/api/")
-    || file === "src/lib/api.ts"
-    || file === "shared/lib/api-endpoints.ts"
-    || file === "shared/lib/strict-contract-paths.ts"
-    || file === "shared/types/index.ts",
+  return files.some(
+    (file) =>
+      file.startsWith("worker/src/api/") ||
+      file === "src/lib/api.ts" ||
+      file === "shared/lib/api-endpoints.ts" ||
+      file === "shared/lib/strict-contract-paths.ts" ||
+      file === "shared/types/index.ts",
   );
 }
 
 export function hasCronOrWorkerLibChange(files) {
-  return files.some((file) =>
-    file.startsWith("worker/src/cron/")
-    || file.startsWith("worker/src/lib/")
-    || file.startsWith("shared/lib/"),
+  return files.some(
+    (file) =>
+      file.startsWith("worker/src/cron/") || file.startsWith("worker/src/lib/") || file.startsWith("shared/lib/"),
+  );
+}
+
+export function hasRedemptionBackstopChange(files) {
+  return files.some(
+    (file) =>
+      file === "docs/redemption-backstops.md" ||
+      file.startsWith("shared/lib/redemption-backstop") ||
+      file === "shared/lib/redemption-backstops.ts" ||
+      file.startsWith("shared/types/redemption.ts") ||
+      file.startsWith("worker/src/api/redemption-backstops") ||
+      file.startsWith("worker/src/cron/sync-redemption-backstops") ||
+      file.startsWith("worker/src/lib/redemption-backstop") ||
+      file.startsWith("src/components/stablecoin-detail/redemption-backstop") ||
+      file === "src/lib/coverage.ts",
   );
 }
 
 export function hasGateInfraChange(files) {
-  return files.some((file) =>
-    file.startsWith(".github/workflows/")
-    || file === "scripts/check-critical-coverage.mjs"
-    || file === "scripts/test-merge-gate.mjs"
-    || file === "package.json"
-    || file === "package-lock.json"
-    || file.startsWith(".ci/"),
+  return files.some(
+    (file) =>
+      file.startsWith(".github/workflows/") ||
+      file === "scripts/check-critical-coverage.mjs" ||
+      file === "scripts/test-merge-gate.mjs" ||
+      file === "package.json" ||
+      file === "package-lock.json" ||
+      file.startsWith(".ci/"),
   );
 }
 
 export function hasBuildOrSeoImpact(files) {
-  return files.some((file) =>
-    file.startsWith("src/app/")
-    || file.startsWith("src/components/")
-    || file.startsWith("public/")
-    || file === "next.config.ts"
-    || file === "next.config.mjs"
-    || file === "scripts/check-seo-static.mjs"
-    || file === "scripts/generate-redirects.ts",
+  return files.some(
+    (file) =>
+      file.startsWith("src/app/") ||
+      file.startsWith("src/components/") ||
+      file.startsWith("public/") ||
+      file === "next.config.ts" ||
+      file === "next.config.mjs" ||
+      file === "scripts/check-seo-static.mjs" ||
+      file === "scripts/generate-redirects.ts",
   );
 }
 
@@ -90,6 +107,10 @@ export function buildCommandPlan(changedFiles) {
     addCommand(plan, "npm run coverage:critical", "Cron or worker library files changed");
   }
 
+  if (hasRedemptionBackstopChange(changedFiles)) {
+    addCommand(plan, "npm run check:redemption-backstops", "Redemption backstop registry or docs changed");
+  }
+
   if (hasGateInfraChange(changedFiles)) {
     addCommand(plan, "npm test", "Workflow/gating infrastructure changed");
     addCommand(plan, "npm run coverage:critical", "Workflow/gating infrastructure changed");
@@ -107,14 +128,13 @@ export function buildCommandPlan(changedFiles) {
   return plan;
 }
 
-export function getChangedFiles({
-  stagedMode = false,
-  baseRef = "origin/main",
-  exec = execSync,
-} = {}) {
+export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", exec = execSync } = {}) {
   if (stagedMode) {
     const raw = exec("git diff --name-only --cached", { encoding: "utf8" });
-    return raw.split(/\r?\n/g).map((line) => normalizePath(line.trim())).filter(Boolean);
+    return raw
+      .split(/\r?\n/g)
+      .map((line) => normalizePath(line.trim()))
+      .filter(Boolean);
   }
 
   let mergeBase;
@@ -125,7 +145,10 @@ export function getChangedFiles({
   }
 
   const raw = exec(`git diff --name-only ${mergeBase}...HEAD`, { encoding: "utf8" });
-  return raw.split(/\r?\n/g).map((line) => normalizePath(line.trim())).filter(Boolean);
+  return raw
+    .split(/\r?\n/g)
+    .map((line) => normalizePath(line.trim()))
+    .filter(Boolean);
 }
 
 function runCommand(cmd) {
@@ -135,10 +158,7 @@ function runCommand(cmd) {
   }
 }
 
-export function runMergeGate({
-  argv = process.argv.slice(2),
-  env = process.env,
-} = {}) {
+export function runMergeGate({ argv = process.argv.slice(2), env = process.env } = {}) {
   const args = new Set(argv);
   const stagedMode = args.has("--staged");
   const baseRef = env.MERGE_GATE_BASE_REF ?? "origin/main";

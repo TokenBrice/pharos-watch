@@ -8,7 +8,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 - **Current methodology version:** `v1.1`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
-- **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
+- **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -16,7 +16,7 @@ There is no standalone changelog page yet. The public methodology link currently
 
 ## Coverage
 
-Configured coverage is defined statically in `shared/lib/redemption-backstops.ts`.
+Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
 - **Configured coins:** 136
 - **Route families:** 77 `offchain-issuer`, 19 `stablecoin-redeem`, 17 `collateral-redeem`, 12 `queue-redeem`, 9 `psm-swap`, 2 `basket-redeem`
@@ -36,18 +36,18 @@ The config registry is validated at module load time against `TRACKED_META_BY_ID
 The cron reads:
 
 1. The strict `stablecoins` cache via `loadStablecoinsCache(...)`
-2. The latest DEX liquidity map via `loadDexLiquidityMap(db)`
-3. Reserve-sync state only when a route uses `capacityModel.kind = "reserve-sync-metadata"`
+2. The latest DEX liquidity snapshot via `loadDexLiquiditySnapshot(db)` so both the liquidity map and freshness can be reused
+3. Reserve-sync state in one bulk `loadReserveSyncStateMap(...)` read for routes using `capacityModel.kind = "reserve-sync-metadata"`
 
 No external HTTP calls happen during the redemption-backstop pass itself; any live reserve telemetry is reused from D1.
 
 Status semantics:
 
-- `ok` when all configured in-cache coins resolve successfully
-- `degraded` when some coins fail but at least one snapshot is written
-- `error` when zero snapshots are written and failures or missing-cache coverage prevent a usable result
+- `ok` when every configured route resolves to a usable scored row
+- `degraded` when at least one row is written but any configured route is missing from cache, unresolved, or fails
+- `error` when zero routes resolve to a usable scored row
 
-Cron metadata includes `synced`, `failed`, `configured`, `dynamic`, `estimated`, `static`, plus `failedIds` or `missingFromCache` when relevant.
+Cron metadata includes `synced`, `resolved`, `unresolved`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, plus `failedIds` or `missingFromCache` when relevant.
 
 ---
 
@@ -57,14 +57,14 @@ Cron metadata includes `synced`, `failed`, `configured`, `dynamic`, `estimated`,
 
 Defined in `shared/lib/redemption-backstop-scoring.ts`:
 
-| Component | Weight |
-|-----------|--------|
-| Access | 0.20 |
-| Settlement | 0.15 |
-| Execution certainty | 0.15 |
-| Capacity | 0.25 |
-| Output asset quality | 0.15 |
-| Cost | 0.10 |
+| Component            | Weight |
+| -------------------- | ------ |
+| Access               | 0.20   |
+| Settlement           | 0.15   |
+| Execution certainty  | 0.15   |
+| Capacity             | 0.25   |
+| Output asset quality | 0.15   |
+| Cost                 | 0.10   |
 
 If `capacityScore` is unavailable, `computeRedemptionBackstopScore()` returns `null` and the route is treated as unrated.
 
@@ -72,10 +72,10 @@ If `capacityScore` is unavailable, `computeRedemptionBackstopScore()` returns `n
 
 Some route families are intentionally capped even when their component mix scores higher:
 
-| Route family | Cap |
-|--------------|-----|
-| `queue-redeem` | 70 |
-| `offchain-issuer` | 65 |
+| Route family      | Cap |
+| ----------------- | --- |
+| `queue-redeem`    | 70  |
+| `offchain-issuer` | 65  |
 
 An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
@@ -109,23 +109,41 @@ Each configured coin declares:
 - optional `totalScoreCap`
 - optional `notes`
 
-The registry lives in `shared/lib/redemption-backstops.ts`.
+The public registry import lives in `shared/lib/redemption-backstops.ts`. The actual config inventory is split by route family under `shared/lib/redemption-backstop-configs/` to keep review and change scopes small.
 
 ### Capacity Models
 
 Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 
-| Capacity model | Resolution |
-|----------------|------------|
-| `supply-full` | Immediate capacity equals full current supply |
-| `supply-ratio` | Immediate capacity equals `supplyUsd * ratio` |
+| Capacity model          | Resolution                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `supply-full`           | Immediate capacity equals full current supply                                                                                         |
+| `supply-ratio`          | Immediate capacity equals `supplyUsd * ratio`                                                                                         |
 | `reserve-sync-metadata` | Reads `reserve_sync_state.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio`; falls back to configured ratio when provided |
 
 The resulting row is tagged with one `sourceMode`:
 
 - `dynamic` when fresh reserve-sync metadata is available
 - `estimated` when static supply models or stale reserve metadata are used
-- `static` when the route exists but no usable dynamic or estimated capacity could be resolved
+- `static` when the route remains configured but the current snapshot could not resolve a usable score
+
+Each row also carries:
+
+- `resolutionState`:
+  - `resolved` when the route produced a usable score
+  - `missing-cache` when the stablecoins snapshot did not contain the asset or its current supply
+  - `missing-capacity` when the route is configured but current runtime inputs could not produce usable capacity
+  - `failed` when a route-specific resolver failed
+- `capacityConfidence`:
+  - `dynamic` for live reserve-sync backed capacity
+  - `documented-bound` for configured bounded models such as `supply-ratio` or reserve fallback ratios
+  - `heuristic` for coarse full-supply assumptions
+- `feeConfidence`:
+  - `fixed` for bounded bps schedules
+  - `formula` for disclosed formulas such as Liquity-style base-rate fees
+  - `undisclosed-reviewed` when docs were reviewed but only descriptive fee information is available
+- `modelConfidence`:
+  - `high`, `medium`, or `low` rollups used by the API and detail page to communicate fidelity
 
 ### Docs / Notes
 
@@ -181,7 +199,7 @@ Key columns:
 - `methodology_version`
 - `details_json`
 
-`details_json` now also stores `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so descriptive fee logic survives current-snapshot and history writes without a schema migration.
+`details_json` now also stores `resolutionState`, `capacityConfidence`, `feeConfidence`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so runtime status and fidelity metadata survive current-snapshot and history writes without a schema migration.
 
 ### `redemption_backstop_history`
 
@@ -207,6 +225,7 @@ The cron upserts both current and history rows together through `upsertRedemptio
 **File:** `worker/src/api/redemption-backstops.ts`
 
 - Returns `503` with `{ "error": "Data not yet available" }` until at least one hourly sync has written rows
+- Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when the current snapshot cannot be read cleanly from D1
 - Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
 
@@ -218,9 +237,10 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()` with `CRON_1H`
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, access/settlement/output/capacity blocks, an explicit redemption-fee summary with fixed or documented variable/conditional fee text, component subscores, docs link, and contextual methodology hint / footer actions)
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, model confidence, access/settlement/output/capacity blocks, an explicit redemption-fee summary with fixed or documented variable/conditional fee text, component subscores, docs link, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `worker/src/lib/report-cards-snapshot.ts` injects `redemptionBackstopScore`, `redemptionRouteFamily`, and immediate-capacity fields into `rawInputs`, and `shared/lib/report-cards.ts` consumes the score in `scoreLiquidity()`
+- `src/lib/coverage.ts` now distinguishes configured-but-unrated routes from genuinely covered routes so unresolved rows do not inflate public coverage counts
 
 There is currently no dedicated list page or standalone public methodology section for redemption backstops; the primary user-facing surface is the stablecoin detail page plus the report-card liquidity dimension. Contextual hints on those surfaces currently deep-link into the Safety Scores methodology section where effective-exit logic is documented.
 
@@ -228,18 +248,19 @@ There is currently no dedicated list page or standalone public methodology secti
 
 ## File Index
 
-| File | Role |
-|------|------|
-| `shared/lib/redemption-backstops.ts` | Canonical per-coin redemption route configs |
-| `shared/lib/redemption-backstop-scoring.ts` | Component scores, route caps, and effective-exit blend |
-| `shared/lib/redemption-backstop-version.ts` | Methodology version metadata |
-| `shared/types/redemption.ts` | Shared API schemas and TypeScript contracts |
-| `worker/src/cron/sync-redemption-backstops.ts` | Hourly snapshot sync |
-| `worker/src/lib/redemption-backstop-sources.ts` | Runtime resolver for capacity, costs, docs, and scoring inputs |
-| `worker/src/lib/redemption-backstops-store.ts` | D1 storage helpers and API payload builder |
-| `worker/src/api/redemption-backstops.ts` | Public API handler |
-| `worker/migrations/0066_redemption_backstops.sql` | Current + history tables |
-| `src/hooks/api-hooks.ts` | `useRedemptionBackstops()` |
-| `src/hooks/use-stablecoin-detail-view-model.ts` | Detail-page query wiring |
-| `src/lib/stablecoin-detail-view-model.ts` | Detail-page composed view model with redemption freshness tracking |
-| `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Detail-page redemption card UI |
+| File                                                            | Role                                                               |
+| --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `shared/lib/redemption-backstops.ts`                            | Canonical public import facade for the config registry             |
+| `shared/lib/redemption-backstop-configs/*`                      | Route-family config modules plus shared config helpers             |
+| `shared/lib/redemption-backstop-scoring.ts`                     | Component scores, route caps, and effective-exit blend             |
+| `shared/lib/redemption-backstop-version.ts`                     | Methodology version metadata                                       |
+| `shared/types/redemption.ts`                                    | Shared API schemas and TypeScript contracts                        |
+| `worker/src/cron/sync-redemption-backstops.ts`                  | Hourly snapshot sync                                               |
+| `worker/src/lib/redemption-backstop-sources.ts`                 | Runtime resolver for capacity, costs, docs, and scoring inputs     |
+| `worker/src/lib/redemption-backstops-store.ts`                  | D1 storage helpers and API payload builder                         |
+| `worker/src/api/redemption-backstops.ts`                        | Public API handler                                                 |
+| `worker/migrations/0066_redemption_backstops.sql`               | Current + history tables                                           |
+| `src/hooks/api-hooks.ts`                                        | `useRedemptionBackstops()`                                         |
+| `src/hooks/use-stablecoin-detail-view-model.ts`                 | Detail-page query wiring                                           |
+| `src/lib/stablecoin-detail-view-model.ts`                       | Detail-page composed view model with redemption freshness tracking |
+| `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Detail-page redemption card UI                                     |

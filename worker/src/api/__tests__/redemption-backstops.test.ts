@@ -3,6 +3,27 @@ import { mockD1 } from "./helpers/mock-d1";
 import { handleRedemptionBackstops } from "../redemption-backstops";
 
 describe("handleRedemptionBackstops", () => {
+  it("returns 503 when the current snapshot cannot be read", async () => {
+    const db = mockD1([
+      {
+        match: "FROM redemption_backstop",
+        rows: [],
+        throwError: new Error("db unavailable"),
+      },
+      {
+        match: "SELECT MAX(updated_at) AS updated_at FROM redemption_backstop",
+        rows: [],
+        first: { updated_at: 1_700_000_000 },
+      },
+    ]);
+
+    const response = await handleRedemptionBackstops(db);
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Redemption backstop snapshot unavailable",
+    });
+  });
+
   it("returns 503 when no current snapshot exists", async () => {
     const db = mockD1([
       {
@@ -56,6 +77,10 @@ describe("handleRedemptionBackstops", () => {
             updated_at: updatedAt,
             methodology_version: "1.1",
             details_json: JSON.stringify({
+              resolutionState: "resolved",
+              capacityConfidence: "heuristic",
+              feeConfidence: "undisclosed-reviewed",
+              modelConfidence: "low",
               capsApplied: [],
               feeDescription: "Fixed redemption fee, but public docs do not publish the current rate",
             }),
@@ -68,7 +93,16 @@ describe("handleRedemptionBackstops", () => {
     expect(response.status).toBe(200);
 
     const body = await response.json() as {
-      coins: Record<string, { score: number; effectiveExitScore: number; feeDescription?: string }>;
+      coins: Record<
+        string,
+        {
+          score: number;
+          effectiveExitScore: number;
+          feeDescription?: string;
+          resolutionState: string;
+          modelConfidence: string;
+        }
+      >;
       methodology: { version: string };
       updatedAt: number;
     };
@@ -76,6 +110,8 @@ describe("handleRedemptionBackstops", () => {
     expect(body.updatedAt).toBe(updatedAt);
     expect(body.methodology.version).toBe("1.1");
     expect(body.coins["cusd-cap"]?.effectiveExitScore).toBe(56);
+    expect(body.coins["cusd-cap"]?.resolutionState).toBe("resolved");
+    expect(body.coins["cusd-cap"]?.modelConfidence).toBe("low");
     expect(body.coins["cusd-cap"]?.feeDescription).toContain("Fixed redemption fee");
   });
 });

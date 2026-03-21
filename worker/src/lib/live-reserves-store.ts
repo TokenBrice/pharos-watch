@@ -239,12 +239,18 @@ export async function getReserveSyncState(
               last_status, warning_count, warnings, last_error, metadata
          FROM reserve_sync_state
         WHERE stablecoin_id = ?`,
-    )
-    .bind(stablecoinId)
-    .first<ReserveSyncStateRow>();
+      )
+      .bind(stablecoinId)
+      .first<ReserveSyncStateRow>();
 
   if (!row) return null;
 
+  return toReserveSyncStateRecord(row);
+}
+
+function toReserveSyncStateRecord(
+  row: ReserveSyncStateRow,
+): ReserveSyncStateRecord {
   return {
     stablecoinId: row.stablecoin_id,
     adapterKey: row.adapter_key,
@@ -257,6 +263,28 @@ export async function getReserveSyncState(
     lastError: row.last_error,
     metadata: parseJsonObject(row.metadata),
   };
+}
+
+export async function loadReserveSyncStateMap(
+  db: D1Database,
+  stablecoinIds: readonly string[],
+): Promise<Map<string, ReserveSyncStateRecord>> {
+  if (stablecoinIds.length === 0) return new Map();
+
+  const inClause = buildInClause(stablecoinIds);
+  const rows = await db
+    .prepare(
+      `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
+              last_status, warning_count, warnings, last_error, metadata
+         FROM reserve_sync_state
+        WHERE stablecoin_id IN (${inClause.sql})`,
+    )
+    .bind(...inClause.binds)
+    .all<ReserveSyncStateRow>();
+
+  return new Map(
+    (rows.results ?? []).map((row) => [row.stablecoin_id, toReserveSyncStateRecord(row)]),
+  );
 }
 
 function hasConsistentSnapshotRow(

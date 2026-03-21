@@ -52,6 +52,43 @@ export const RedemptionSourceModeSchema = z.enum([
 ]);
 export type RedemptionSourceMode = z.infer<typeof RedemptionSourceModeSchema>;
 
+export const RedemptionResolutionStateSchema = z.enum([
+  "resolved",
+  "missing-cache",
+  "missing-capacity",
+  "failed",
+]);
+export type RedemptionResolutionState = z.infer<
+  typeof RedemptionResolutionStateSchema
+>;
+
+export const RedemptionCapacityConfidenceSchema = z.enum([
+  "dynamic",
+  "documented-bound",
+  "heuristic",
+]);
+export type RedemptionCapacityConfidence = z.infer<
+  typeof RedemptionCapacityConfidenceSchema
+>;
+
+export const RedemptionFeeConfidenceSchema = z.enum([
+  "fixed",
+  "formula",
+  "undisclosed-reviewed",
+]);
+export type RedemptionFeeConfidence = z.infer<
+  typeof RedemptionFeeConfidenceSchema
+>;
+
+export const RedemptionModelConfidenceSchema = z.enum([
+  "high",
+  "medium",
+  "low",
+]);
+export type RedemptionModelConfidence = z.infer<
+  typeof RedemptionModelConfidenceSchema
+>;
+
 const RedemptionDocsSchema = z.object({
   label: z.string().optional(),
   url: z.string().url().optional(),
@@ -75,6 +112,10 @@ export const RedemptionBackstopEntrySchema = z.object({
   outputAssetType: RedemptionOutputAssetTypeSchema,
   provider: z.string(),
   sourceMode: RedemptionSourceModeSchema,
+  resolutionState: RedemptionResolutionStateSchema,
+  capacityConfidence: RedemptionCapacityConfidenceSchema,
+  feeConfidence: RedemptionFeeConfidenceSchema,
+  modelConfidence: RedemptionModelConfidenceSchema,
   immediateCapacityUsd: z.number().nullable(),
   immediateCapacityRatio: z.number().nullable(),
   feeBps: z.number().nullable(),

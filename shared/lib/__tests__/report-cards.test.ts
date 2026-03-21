@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  scoreLiquidity,
   scoreToGrade,
   computeOverallGrade,
   scoreDependencyRisk,
@@ -102,6 +103,22 @@ describe("scoreDependencyRisk", () => {
     const result = scoreDependencyRisk(meta as never, upstream);
     // Wrapper cap: dep_score - 3 = 77
     expect(result.score).toBeLessThanOrEqual(77);
+  });
+});
+
+describe("scoreLiquidity", () => {
+  it("treats configured but unrated redemption routes as NR with explicit detail", () => {
+    const result = scoreLiquidity(undefined, {
+      score: null,
+      routeFamily: "queue-redeem",
+      immediateCapacityUsd: null,
+      immediateCapacityRatio: null,
+      resolutionState: "missing-capacity",
+    });
+
+    expect(result.grade).toBe("NR");
+    expect(result.score).toBeNull();
+    expect(result.detail).toContain("configured but currently unrated");
   });
 });
 

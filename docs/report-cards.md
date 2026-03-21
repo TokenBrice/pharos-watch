@@ -18,17 +18,17 @@ Current-version note: v6.0 introduces 6-tier custody model, mature-alt-l1 chain 
 
 ### Base dimensions (weighted sum)
 
-| Dimension | Weight | Source | Scoring |
-|-----------|--------|--------|---------|
-| **Liquidity / Exit** | 30% | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present |
-| **Resilience** | 20% | Token metadata (2 sub-factors) | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score |
-| **Decentralization** | 15% | Governance quality + chain infrastructure | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
-| **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75 |
+| Dimension            | Weight | Source                                       | Scoring                                                                                                                                                                                            |
+| -------------------- | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                         |
+| **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                      |
+| **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
+| **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75                       |
 
 ### Peg Stability (multiplier)
 
-| Source | Scoring |
-|--------|---------|
+| Source                      | Scoring                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
 | `pegScore` from peg summary | Applied as `(pegScore/100)^0.20` multiplier to base score. NAV tokens → 1.0 (no penalty) |
 
 ### Peg Stability Details
@@ -49,6 +49,7 @@ Current-version note: v6.0 introduces 6-tier custody model, mature-alt-l1 chain 
   - `effectiveExitScore = round(max(liquidityScore, liquidityScore * 0.55 + redemptionBackstopScore * 0.45))`
 - If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
 - If only redemption exists, `effectiveExitScore = round(min(70, redemptionBackstopScore * 0.75))`
+- If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty
 - See [Redemption Backstops](./redemption-backstops.md) for redemption component scoring and route-family caps
 
@@ -56,10 +57,10 @@ Current-version note: v6.0 introduces 6-tier custody model, mature-alt-l1 chain 
 
 2-factor solvency measure (each sub-factor 1/2 of the resilience score). Chain infrastructure is scored exclusively in the Decentralization dimension to avoid double-counting. Blacklist capability is reported descriptively but does not affect the Resilience score.
 
-| Sub-factor | Scoring | Tiers |
-|---|---|---|
-| **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback |
-| **Custody Model** | Who holds collateral? | Fully on-chain (100), Top-tier custodian (80), Regulated custodian (55), Unregulated custodian (30), Sanctioned custodian (5), CEX / off-exchange custody (0) |
+| Sub-factor             | Scoring                                    | Tiers                                                                                                                                                         |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback                                                                                                     |
+| **Custody Model**      | Who holds collateral?                      | Fully on-chain (100), Top-tier custodian (80), Regulated custodian (55), Unregulated custodian (30), Sanctioned custodian (5), CEX / off-exchange custody (0) |
 
 **Formula:** `resilience = (collateral + custody) / 2`
 
@@ -67,12 +68,12 @@ Current-version note: v6.0 introduces 6-tier custody model, mature-alt-l1 chain 
 
 Blacklist capability is reported descriptively only and does not affect the Resilience score.
 
-| Value | Score | Condition |
-|---|---|---|
-| Yes | 33 | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
-| Possible (mutable contract) | 66 | `canBeBlacklisted: "possible"` (explicit override) |
-| Possible (inherited) | 66 | ≥25% of reserves backed by blacklistable coins (via `coinId` lookup) |
-| No | 100 | None of the above |
+| Value                       | Score | Condition                                                             |
+| --------------------------- | ----- | --------------------------------------------------------------------- |
+| Yes                         | 33    | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
+| Possible (mutable contract) | 66    | `canBeBlacklisted: "possible"` (explicit override)                    |
+| Possible (inherited)        | 66    | ≥25% of reserves backed by blacklistable coins (via `coinId` lookup)  |
+| No                          | 100   | None of the above                                                     |
 
 `"possible-inherited"` is a **computed** value only — it never appears as a manual override in `stablecoins.ts`. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that at least 25% of a coin's reserves are backed by stablecoins that are themselves blacklistable.
 
@@ -113,13 +114,13 @@ curated. The collateral drift alert (>15pt divergence) helps operators detect wh
 curated metadata needs updating, which also refreshes the blacklist-inherited
 calculation.
 
-| Reserve Risk Tier | Score | Description | Examples |
-|---|---|---|---|
-| `very-low` | 100 | No/minimal counterparty risk | Government securities, cash, repos, physical gold/silver, ETH, canonical WETH |
-| `low` | 75 | Stablecoin/tokenized layer | USDC, BUIDL, USYC, ETH LSTs, other stablecoins |
-| `medium` | 50 | Wrapped/structured market exposure | wBTC, tokenized gold, delta-neutral strategies, tokenized ETFs |
-| `high` | 25 | Volatile native assets | SOL, BNB, TRX, alt-chain tokens |
-| `very-high` | 5 | Governance/exotic/opaque | Governance tokens, algorithmic mechanisms, sanctioned assets |
+| Reserve Risk Tier | Score | Description                        | Examples                                                                      |
+| ----------------- | ----- | ---------------------------------- | ----------------------------------------------------------------------------- |
+| `very-low`        | 100   | No/minimal counterparty risk       | Government securities, cash, repos, physical gold/silver, ETH, canonical WETH |
+| `low`             | 75    | Stablecoin/tokenized layer         | USDC, BUIDL, USYC, ETH LSTs, other stablecoins                                |
+| `medium`          | 50    | Wrapped/structured market exposure | wBTC, tokenized gold, delta-neutral strategies, tokenized ETFs                |
+| `high`            | 25    | Volatile native assets             | SOL, BNB, TRX, alt-chain tokens                                               |
+| `very-high`       | 5     | Governance/exotic/opaque           | Governance tokens, algorithmic mechanisms, sanctioned assets                  |
 
 **Formula:** `score = round(Σ(slice_pct × tier_score) / Σ(slice_pct))`
 
@@ -133,23 +134,23 @@ Direct ETH reserve slices and canonical wrapped ETH (`WETH`) use the same `very-
 
 For coins without curated reserves, the legacy enum-based scoring is used:
 
-| Enum Value | Score |
-|---|---|
-| `native` | 100 |
-| `eth-lst` | 66 |
-| `rwa` | 50 |
-| `alt-lst-bridged-or-mixed` | 20 |
-| `exotic` | 0 |
+| Enum Value                 | Score |
+| -------------------------- | ----- |
+| `native`                   | 100   |
+| `eth-lst`                  | 66    |
+| `rwa`                      | 50    |
+| `alt-lst-bridged-or-mixed` | 20    |
+| `exotic`                   | 0     |
 
 **Default inference:** When sub-factor fields aren't explicitly set on `StablecoinMeta`, defaults are inferred from `backing` + `governance`:
 
-| Backing + Governance | Chain Tier | Deployment Model | Collateral Quality | Custody Model |
-|---|---|---|---|---|
-| `rwa-backed` + `centralized` | ethereum | single-chain | rwa | institutional |
-| `rwa-backed` + `centralized-dependent` | ethereum | single-chain | rwa | institutional |
-| `crypto-backed` + `decentralized` | ethereum | single-chain | native | onchain |
-| `crypto-backed` + `centralized-dependent` | ethereum | single-chain | eth-lst | onchain |
-| `algorithmic` + any | ethereum | single-chain | native | onchain |
+| Backing + Governance                      | Chain Tier | Deployment Model | Collateral Quality | Custody Model |
+| ----------------------------------------- | ---------- | ---------------- | ------------------ | ------------- |
+| `rwa-backed` + `centralized`              | ethereum   | single-chain     | rwa                | institutional |
+| `rwa-backed` + `centralized-dependent`    | ethereum   | single-chain     | rwa                | institutional |
+| `crypto-backed` + `decentralized`         | ethereum   | single-chain     | native             | onchain       |
+| `crypto-backed` + `centralized-dependent` | ethereum   | single-chain     | eth-lst            | onchain       |
+| `algorithmic` + any                       | ethereum   | single-chain     | native             | onchain       |
 
 Explicit overrides exist for coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody, BOLD with third-party bridge).
 
@@ -161,14 +162,14 @@ Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty fo
 
 **Governance Quality Tiers:**
 
-| Tier | Score | Default for GovernanceType | Examples |
-|---|---|---|---|
-| `immutable-code` | 100 | — (must be explicit) | LUSD, BOLD |
-| `dao-governance` | 85 | `decentralized` | overrides: crvUSD, USDS, DAI, GHO, FRAX, DOLA |
-| `multisig` | 55 | `centralized-dependent` | Most CeFi-dep coins without explicit override |
-| `regulated-entity` | 40 | — (auto-promoted) | Centralized issuers with verified regulatory oversight |
-| `single-entity` | 20 | `centralized` | USDT, USDC, PYUSD |
-| `wrapper` | 10 | — (must be explicit) | syrupUSDC, Cap cUSD, USX, OUSD, FPI |
+| Tier               | Score | Default for GovernanceType | Examples                                               |
+| ------------------ | ----- | -------------------------- | ------------------------------------------------------ |
+| `immutable-code`   | 100   | — (must be explicit)       | LUSD, BOLD                                             |
+| `dao-governance`   | 85    | `decentralized`            | overrides: crvUSD, USDS, DAI, GHO, FRAX, DOLA          |
+| `multisig`         | 55    | `centralized-dependent`    | Most CeFi-dep coins without explicit override          |
+| `regulated-entity` | 40    | — (auto-promoted)          | Centralized issuers with verified regulatory oversight |
+| `single-entity`    | 20    | `centralized`              | USDT, USDC, PYUSD                                      |
+| `wrapper`          | 10    | — (must be explicit)       | syrupUSDC, Cap cUSD, USX, OUSD, FPI                    |
 
 Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governance)`. Override via `governanceQuality` field on `StablecoinMeta`.
 
@@ -177,12 +178,12 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 **Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO and multisig governance — immutable-code, wrapper, and centralized issuers are exempt):
 
 | Combined Score Range | Penalty |
-|---|---|
-| 80–100 | 0 |
-| 60–79 | −10 |
-| 40–59 | −25 |
-| 20–39 | −40 |
-| 0–19 | −60 |
+| -------------------- | ------- |
+| 80–100               | 0       |
+| 60–79                | −10     |
+| 40–59                | −25     |
+| 20–39                | −40     |
+| 0–19                 | −60     |
 
 `immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. `wrapper` is exempt because its governance score already reflects inherited upstream governance. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
 
@@ -194,31 +195,31 @@ The chain infrastructure score combines **primary chain maturity** with **deploy
 
 **Chain tier** (where core minting/logic lives):
 
-| Tier | Score |
-|------|-------|
-| `ethereum` | 100 |
-| `stage1-l2` | 66 |
-| `mature-alt-l1` | 45 |
-| `established-alt-l1` | 20 |
-| `unproven` | 0 |
+| Tier                 | Score |
+| -------------------- | ----- |
+| `ethereum`           | 100   |
+| `stage1-l2`          | 66    |
+| `mature-alt-l1`      | 45    |
+| `established-alt-l1` | 20    |
+| `unproven`           | 0     |
 
 **Deployment model** (how the token extends to other chains):
 
-| Model | Multiplier | Description |
-|-------|-----------|-------------|
-| `single-chain` | 1.00 | No multichain presence, or irrelevant bridged copies |
-| `canonical-bridge` | 0.90 | Bridges via L2 canonical rollup bridges (inherits rollup security) |
-| `native-multichain` | 0.75 | Independent minting/redeeming on multiple chains |
-| `third-party-bridge` | 0.60 | Bridges via CCIP, LayerZero, Wormhole, etc. |
+| Model                | Multiplier | Description                                                        |
+| -------------------- | ---------- | ------------------------------------------------------------------ |
+| `single-chain`       | 1.00       | No multichain presence, or irrelevant bridged copies               |
+| `canonical-bridge`   | 0.90       | Bridges via L2 canonical rollup bridges (inherits rollup security) |
+| `native-multichain`  | 0.75       | Independent minting/redeeming on multiple chains                   |
+| `third-party-bridge` | 0.60       | Bridges via CCIP, LayerZero, Wormhole, etc.                        |
 
 **Combined score matrix:**
 
-| Deployment Model | ETH (100) | L2 (66) | Mature Alt-L1 (45) | Alt-L1 (20) | Unproven (0) |
-|------------------|-----------|---------|--------------------| ------------|--------------|
-| single-chain | 100 | 66 | 45 | 20 | 0 |
-| canonical-bridge | 90 | 59 | 41 | 18 | 0 |
-| native-multichain | 75 | 50 | 34 | 15 | 0 |
-| third-party-bridge | 60 | 40 | 27 | 12 | 0 |
+| Deployment Model   | ETH (100) | L2 (66) | Mature Alt-L1 (45) | Alt-L1 (20) | Unproven (0) |
+| ------------------ | --------- | ------- | ------------------ | ----------- | ------------ |
+| single-chain       | 100       | 66      | 45                 | 20          | 0            |
+| canonical-bridge   | 90        | 59      | 41                 | 18          | 0            |
+| native-multichain  | 75        | 50      | 34                 | 15          | 0            |
+| third-party-bridge | 60        | 40      | 27                 | 12          | 0            |
 
 Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
 
@@ -233,6 +234,7 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 **Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `shared/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages and are not renormalized, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta`.
 
 **Scoring:**
+
 - **No dependencies**: `SELF_BACKED_SCORE_BY_GOVERNANCE[governance]` — varies by tier: `decentralized` = 90, `centralized-dependent` = 75, `centralized` = 95
 - **With dependencies**: `score = sum(weight_i × upstream_score_i) + (1 − totalWeight) × SELF_BACKED_SCORE`
 - −10 penalty if any dependency scores below 75 (B-)
@@ -240,21 +242,21 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 
 **Self-backed score by governance type:**
 
-| Governance Type | Self-Backed Score | Rationale |
-|---|---|---|
-| `decentralized` | 90 | Own peg mechanisms (CDPs, LLAMMA) function independently |
-| `centralized-dependent` | 75 | PSMs/arbitrage loops coupled to upstream infrastructure |
-| `centralized` | 95 | Standalone RWA-backed, minimal coupling |
+| Governance Type         | Self-Backed Score | Rationale                                                |
+| ----------------------- | ----------------- | -------------------------------------------------------- |
+| `decentralized`         | 90                | Own peg mechanisms (CDPs, LLAMMA) function independently |
+| `centralized-dependent` | 75                | PSMs/arbitrage loops coupled to upstream infrastructure  |
+| `centralized`           | 95                | Standalone RWA-backed, minimal coupling                  |
 
 #### Dependency Type Ceilings
 
 Each dependency relationship can be classified as `wrapper`, `mechanism`, or `collateral` (default). After the blended score is computed, a ceiling is applied based on the most critical upstream dependency.
 
-| Type | Meaning | Ceiling |
-|------|---------|---------|
-| `wrapper` | Thin layer around upstream (e.g., syrupUSDC -> USDC) | upstream_score - 3 |
-| `mechanism` | Critical to peg mechanism (e.g., DAI -> USDC PSM) | upstream_score |
-| `collateral` | Standard collateral (default) | no ceiling |
+| Type         | Meaning                                              | Ceiling            |
+| ------------ | ---------------------------------------------------- | ------------------ |
+| `wrapper`    | Thin layer around upstream (e.g., syrupUSDC -> USDC) | upstream_score - 3 |
+| `mechanism`  | Critical to peg mechanism (e.g., DAI -> USDC PSM)    | upstream_score     |
+| `collateral` | Standard collateral (default)                        | no ceiling         |
 
 Formula: `final_score = min(blended_score, min_ceiling_from_wrapper_and_mechanism_deps)`
 
@@ -270,31 +272,31 @@ The ceiling ensures that a coin which fundamentally depends on an upstream stabl
 
 Lowered 5 points in v4.0 to compensate for structural deflation from removing peg from the base. Lowered another 5 points in v5.1 to fix C-range overcrowding after blacklist/decentralization scoring adjustments.
 
-| Grade | Min Score |
-|-------|-----------|
-| A+ | 87 |
-| A | 83 |
-| A- | 80 |
-| B+ | 75 |
-| B | 70 |
-| B- | 65 |
-| C+ | 60 |
-| C | 55 |
-| C- | 50 |
-| D | 40 |
-| F | 0 |
-| NR | null score |
+| Grade | Min Score  |
+| ----- | ---------- |
+| A+    | 87         |
+| A     | 83         |
+| A-    | 80         |
+| B+    | 75         |
+| B     | 70         |
+| B-    | 65         |
+| C+    | 60         |
+| C     | 55         |
+| C-    | 50         |
+| D     | 40         |
+| F     | 0          |
+| NR    | null score |
 
 ## Grade Colors
 
-| Range | Badge (Tailwind) | Radar (hex) |
-|-------|-------------------|-------------|
-| A (A+, A, A-) | emerald-500 | `#10b981` |
-| B (B+, B, B-) | blue-500 | `#3b82f6` |
-| C (C+, C, C-) | amber-500 | `#f59e0b` |
-| D | orange-500 | `#f97316` |
-| F | red-500 | `#ef4444` |
-| NR | muted | `#71717a` |
+| Range         | Badge (Tailwind) | Radar (hex) |
+| ------------- | ---------------- | ----------- |
+| A (A+, A, A-) | emerald-500      | `#10b981`   |
+| B (B+, B, B-) | blue-500         | `#3b82f6`   |
+| C (C+, C, C-) | amber-500        | `#f59e0b`   |
+| D             | orange-500       | `#f97316`   |
+| F             | red-500          | `#ef4444`   |
+| NR            | muted            | `#71717a`   |
 
 ## API
 
@@ -307,10 +309,12 @@ Response includes `cards` (array of `ReportCard` with `rawInputs` for client-sid
 `GET /api/safety-score-history` — per-coin Safety Score grade history timeline (`stablecoin` required, `days` optional). Backed by `safety_grade_history` event rows written daily by `snapshot-safety-grade-history`. Cache: slow (1-hour edge).
 
 Implementation notes:
+
 - Report cards and peg summary share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed once with identical logic in both endpoints.
 - Report-card API responses and the grade-history cron both use `worker/src/lib/report-cards-snapshot.ts` (`buildReportCardsSnapshot()`), preventing scoring drift between live API and persisted history.
 
 Key types:
+
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
 - **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, `collateralFromLive`) — enables client-side stress test recomputation.
 
@@ -356,19 +360,19 @@ Legacy symbol-based tokens are still accepted only when the symbol is unique acr
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `shared/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()` |
-| `worker/src/lib/report-cards-snapshot.ts` | Shared report-card snapshot builder used by API + grade-history cron |
-| `worker/src/api/report-cards.ts` | API handler: serves shared snapshot response with freshness headers |
-| `worker/src/cron/snapshot-safety-grade-history.ts` | Daily grade-history event snapshot writer (`safety_grade_history`) |
-| `worker/src/api/safety-score-history.ts` | History endpoint for per-coin grade transitions |
-| `src/components/stress-test-panel.tsx` | Combined portfolio analyzer + stress test collapsible panel |
-| `src/components/report-card.tsx` | Full detail card with radar |
-| `src/components/stablecoin-detail/safety-score-history-section.tsx` | Stablecoin detail grade-history timeline UI |
-| `src/components/report-card-mini.tsx` | Compact grid tile with simulation mode support |
-| `src/components/radar-chart.tsx` | Recharts radar visualization |
-| `src/app/safety-scores/client.tsx` | Full page with filtering, sorting, grade distribution, simulation mode |
-| `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useReportCards()` and `useSafetyScoreHistory()` |
-| `src/hooks/use-portfolio.ts` | Portfolio holdings state + browser persistence; delegates codec and exposure math to `src/lib/portfolio-codec.ts` and `src/lib/portfolio-analysis.ts` |
-| `src/hooks/use-stress-test.ts` | Stress test state, `computeStressedGrades` invocation, impact calculation |
+| File                                                                | Purpose                                                                                                                                               |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared/lib/report-cards.ts`                                        | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()`                                                        |
+| `worker/src/lib/report-cards-snapshot.ts`                           | Shared report-card snapshot builder used by API + grade-history cron                                                                                  |
+| `worker/src/api/report-cards.ts`                                    | API handler: serves shared snapshot response with freshness headers                                                                                   |
+| `worker/src/cron/snapshot-safety-grade-history.ts`                  | Daily grade-history event snapshot writer (`safety_grade_history`)                                                                                    |
+| `worker/src/api/safety-score-history.ts`                            | History endpoint for per-coin grade transitions                                                                                                       |
+| `src/components/stress-test-panel.tsx`                              | Combined portfolio analyzer + stress test collapsible panel                                                                                           |
+| `src/components/report-card.tsx`                                    | Full detail card with radar                                                                                                                           |
+| `src/components/stablecoin-detail/safety-score-history-section.tsx` | Stablecoin detail grade-history timeline UI                                                                                                           |
+| `src/components/report-card-mini.tsx`                               | Compact grid tile with simulation mode support                                                                                                        |
+| `src/components/radar-chart.tsx`                                    | Recharts radar visualization                                                                                                                          |
+| `src/app/safety-scores/client.tsx`                                  | Full page with filtering, sorting, grade distribution, simulation mode                                                                                |
+| `src/hooks/api-hooks.ts`                                            | TanStack Query hook exports for `useReportCards()` and `useSafetyScoreHistory()`                                                                      |
+| `src/hooks/use-portfolio.ts`                                        | Portfolio holdings state + browser persistence; delegates codec and exposure math to `src/lib/portfolio-codec.ts` and `src/lib/portfolio-analysis.ts` |
+| `src/hooks/use-stress-test.ts`                                      | Stress test state, `computeStressedGrades` invocation, impact calculation                                                                             |

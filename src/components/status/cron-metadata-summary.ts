@@ -58,8 +58,7 @@ function formatSlowestProbes(value: unknown): string | null {
 }
 
 function formatStringList(value: unknown): string | null {
-  const items = readArray(value)
-    ?.filter((item): item is string => typeof item === "string" && item.length > 0);
+  const items = readArray(value)?.filter((item): item is string => typeof item === "string" && item.length > 0);
   return items && items.length > 0 ? items.join(", ") : null;
 }
 
@@ -143,7 +142,9 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
       ? [
           stagedPoolsSkippedByFingerprint != null ? `fp ${stagedPoolsSkippedByFingerprint}` : null,
           stagedPoolsSkippedByAddress != null ? `addr ${stagedPoolsSkippedByAddress}` : null,
-        ].filter((part): part is string => part != null).join(", ")
+        ]
+          .filter((part): part is string => part != null)
+          .join(", ")
       : null;
 
   return [
@@ -231,6 +232,9 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
   const synced = readNumber(metadata.synced);
   const configured = readNumber(metadata.configured);
   const failed = readNumber(metadata.failed);
+  const resolved = readNumber(metadata.resolved);
+  const unresolved = readNumber(metadata.unresolved);
+  const coverageRatio = readNumber(metadata.coverageRatio);
   const dynamic = readNumber(metadata.dynamic);
   const estimated = readNumber(metadata.estimated);
   const staticCount = readNumber(metadata.static);
@@ -239,6 +243,9 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
   return [
     synced != null && configured != null
       ? `synced ${synced}/${configured}${failed != null && failed > 0 ? `, failed ${failed}` : ""}`
+      : null,
+    resolved != null
+      ? `resolved ${resolved}${configured != null ? `/${configured}` : ""}${coverageRatio != null ? ` (${Math.round(coverageRatio * 100)}%)` : ""}${unresolved != null && unresolved > 0 ? `, unrated ${unresolved}` : ""}`
       : null,
     dynamic != null || estimated != null || staticCount != null
       ? `source mix${dynamic != null ? ` dynamic ${dynamic}` : ""}${estimated != null ? `, estimated ${estimated}` : ""}${staticCount != null ? `, static ${staticCount}` : ""}`

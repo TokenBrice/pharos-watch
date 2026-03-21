@@ -27,10 +27,7 @@ import type {
 } from "../types";
 import { deriveDependencies } from "./reserve-templates";
 import { SAFETY_SCORE_VERSION } from "./safety-score-version";
-import {
-  computeEffectiveExitScore,
-  REDEMPTION_ROUTE_FAMILY_LABELS,
-} from "./redemption-backstop-scoring";
+import { computeEffectiveExitScore, REDEMPTION_ROUTE_FAMILY_LABELS } from "./redemption-backstop-scoring";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -46,8 +43,8 @@ export const METHODOLOGY_VERSION = SAFETY_SCORE_VERSION;
 //   Peg stability (0%): applied as post-hoc multiplier, not in base weight
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0,
-  liquidity: 0.30,
-  resilience: 0.20,
+  liquidity: 0.3,
+  resilience: 0.2,
   decentralization: 0.15,
   dependencyRisk: 0.25,
 };
@@ -58,7 +55,7 @@ export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
 //   pegScore 10  → ~37% penalty (severe, reflects sustained depegging)
 // Rationale: peg stability is table-stakes — most coins score 95+,
 // so the multiplier only bites for genuinely impaired pegs.
-export const PEG_MULTIPLIER_EXPONENT = 0.20;
+export const PEG_MULTIPLIER_EXPONENT = 0.2;
 
 // No-liquidity penalty: 10% score reduction when the exit-liquidity dimension is
 // NR (no DEX or redemption backstop signal at all).
@@ -105,17 +102,17 @@ export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
  */
 export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
   "A+": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  "A":  "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  A: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
   "A-": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
   "B+": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  "B":  "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+  B: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
   "B-": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
   "C+": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  "C":  "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  C: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
   "C-": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  "D":  "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  "F":  "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-  "NR": "bg-muted text-muted-foreground border-muted",
+  D: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  F: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  NR: "bg-muted text-muted-foreground border-muted",
 };
 
 /** Canonical display order for report card dimensions. */
@@ -129,12 +126,12 @@ export const DIMENSION_ORDER: DimensionKey[] = [
 
 /** Hex colors for radar chart fills, keyed by grade range. */
 export const GRADE_RADAR_COLORS: Record<string, string> = {
-  A: "#10b981",   // emerald-500
-  B: "#3b82f6",   // blue-500
-  C: "#f59e0b",   // amber-500
-  D: "#f97316",   // orange-500
-  F: "#ef4444",   // red-500
-  NR: "#71717a",  // zinc-500 (muted)
+  A: "#10b981", // emerald-500
+  B: "#3b82f6", // blue-500
+  C: "#f59e0b", // amber-500
+  D: "#f97316", // orange-500
+  F: "#ef4444", // red-500
+  NR: "#71717a", // zinc-500 (muted)
 };
 
 // ---------------------------------------------------------------------------
@@ -168,10 +165,7 @@ export function gradeRange(grade: ReportCardGrade): string {
  * - +3 bonus if no events in 12+ months
  * - Annotates NAV tokens
  */
-export function scorePegStability(
-  peg: PegSummaryCoin | undefined,
-  meta: StablecoinMeta,
-): ReportCardDimension {
+export function scorePegStability(peg: PegSummaryCoin | undefined, meta: StablecoinMeta): ReportCardDimension {
   // NAV tokens (yield-accruing, not pegged to $1) get NR
   if (meta.flags.navToken) {
     return { grade: "NR", score: null, detail: "NAV token - peg tracking not applicable" };
@@ -218,21 +212,22 @@ export function scoreLiquidity(
   liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
   redemption?: Pick<
     RedemptionBackstopEntry,
-    | "score"
-    | "routeFamily"
-    | "immediateCapacityUsd"
-    | "immediateCapacityRatio"
+    "score" | "routeFamily" | "immediateCapacityUsd" | "immediateCapacityRatio" | "resolutionState"
   >,
 ): ReportCardDimension {
   const dexScore = liq?.liquidityScore ?? null;
   const redemptionScore = redemption?.score ?? null;
   const effectiveScore = computeEffectiveExitScore(dexScore, redemptionScore);
+  const hasConfiguredRedemption = !!redemption;
+  const hasResolvedRedemption = redemption?.resolutionState === "resolved";
 
   if (effectiveScore === null) {
     return {
       grade: "NR",
       score: null,
-      detail: redemption ? "No DEX or redemption backstop data" : "No DEX liquidity data",
+      detail: hasConfiguredRedemption
+        ? "DEX liquidity unavailable. Redemption route is configured but currently unrated"
+        : "No DEX liquidity data",
     };
   }
 
@@ -253,12 +248,11 @@ export function scoreLiquidity(
     parts.push("DEX liquidity unavailable");
   }
   if (liq) {
-    parts.push(`${liq.poolCount} pool${liq.poolCount === 1 ? "" : "s"} across ${liq.chainCount} chain${liq.chainCount === 1 ? "" : "s"}`);
+    parts.push(
+      `${liq.poolCount} pool${liq.poolCount === 1 ? "" : "s"} across ${liq.chainCount} chain${liq.chainCount === 1 ? "" : "s"}`,
+    );
   }
-  if (
-    liq?.concentrationHhi != null &&
-    liq.concentrationHhi > 0.5
-  ) {
+  if (liq?.concentrationHhi != null && liq.concentrationHhi > 0.5) {
     parts.push(`high concentration (HHI: ${liq.concentrationHhi.toFixed(2)})`);
   }
   if (redemptionScore !== null) {
@@ -271,6 +265,8 @@ export function scoreLiquidity(
     } else if (redemption?.immediateCapacityUsd != null) {
       parts.push(`immediate capacity ${formatCapacityUsd(redemption.immediateCapacityUsd)}`);
     }
+  } else if (hasConfiguredRedemption && !hasResolvedRedemption) {
+    parts.push("Redemption route configured but currently unrated");
   }
 
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
@@ -290,9 +286,9 @@ const CHAIN_TIER_SCORE: Record<ChainTier, number> = {
 
 const DEPLOYMENT_MULT: Record<DeploymentModel, number> = {
   "single-chain": 1.0,
-  "canonical-bridge": 0.90,
+  "canonical-bridge": 0.9,
   "native-multichain": 0.75,
-  "third-party-bridge": 0.60,
+  "third-party-bridge": 0.6,
 };
 
 const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
@@ -322,10 +318,7 @@ const COLLATERAL_QUALITY_DISPLAY: [number, string][] = [
 export function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): number {
   const totalPct = reserves.reduce((s, r) => s + r.pct, 0);
   if (totalPct === 0) return 0;
-  const weighted = reserves.reduce(
-    (s, r) => s + r.pct * (RESERVE_QUALITY_SCORE[r.risk] ?? 0),
-    0,
-  );
+  const weighted = reserves.reduce((s, r) => s + r.pct * (RESERVE_QUALITY_SCORE[r.risk] ?? 0), 0);
   return Math.round(weighted / totalPct);
 }
 
@@ -396,20 +389,50 @@ export function chainInfraLabel(tier: ChainTier, model: DeploymentModel): string
 export function inferResilienceDefaults(
   backing: BackingType,
   governance: GovernanceType,
-): { chainTier: ChainTier; deploymentModel: DeploymentModel; collateralQuality: CollateralQuality; custodyModel: CustodyModel } {
+): {
+  chainTier: ChainTier;
+  deploymentModel: DeploymentModel;
+  collateralQuality: CollateralQuality;
+  custodyModel: CustodyModel;
+} {
   if (backing === "rwa-backed" && governance === "centralized") {
-    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "rwa", custodyModel: "institutional-regulated" };
+    return {
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+      collateralQuality: "rwa",
+      custodyModel: "institutional-regulated",
+    };
   }
   if (backing === "rwa-backed" && governance === "centralized-dependent") {
-    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "rwa", custodyModel: "institutional-regulated" };
+    return {
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+      collateralQuality: "rwa",
+      custodyModel: "institutional-regulated",
+    };
   }
   if (backing === "crypto-backed" && governance === "decentralized") {
-    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "native", custodyModel: "onchain" };
+    return {
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+      collateralQuality: "native",
+      custodyModel: "onchain",
+    };
   }
   if (backing === "crypto-backed" && governance === "centralized-dependent") {
-    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "eth-lst", custodyModel: "onchain" };
+    return {
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+      collateralQuality: "eth-lst",
+      custodyModel: "onchain",
+    };
   }
-  return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "native", custodyModel: "onchain" };
+  return {
+    chainTier: "ethereum",
+    deploymentModel: "single-chain",
+    collateralQuality: "native",
+    custodyModel: "onchain",
+  };
 }
 
 /**
@@ -459,7 +482,7 @@ export function isBlacklistable(
   if (meta.flags.governance === "centralized") return true;
   if (blacklistableIds && meta.reserves) {
     const inheritedPct = meta.reserves
-      .filter(r => r.coinId !== undefined && blacklistableIds.has(r.coinId))
+      .filter((r) => r.coinId !== undefined && blacklistableIds.has(r.coinId))
       .reduce((sum, r) => sum + r.pct, 0);
     if (inheritedPct >= INHERITED_BLACKLIST_THRESHOLD_PCT) return "possible-inherited";
   }
@@ -483,13 +506,14 @@ export function scoreResilience(
   liveReserveSlices?: ReserveSlice[],
 ): ReportCardDimension {
   const factors = resolveResilienceFactors(meta);
-  const blacklistScore = canBeBlacklisted === true ? 33
-    : (canBeBlacklisted === "possible" || canBeBlacklisted === "possible-inherited") ? 66
-    : 100;
-  const blacklistLabel = canBeBlacklisted === true ? "Yes"
-    : canBeBlacklisted === "possible" ? "Possible (mutable contract)"
-    : canBeBlacklisted === "possible-inherited" ? "Possible (inherited)"
-    : "No";
+  const blacklistLabel =
+    canBeBlacklisted === true
+      ? "Yes"
+      : canBeBlacklisted === "possible"
+        ? "Possible (mutable contract)"
+        : canBeBlacklisted === "possible-inherited"
+          ? "Possible (inherited)"
+          : "No";
 
   const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];
 
@@ -503,9 +527,7 @@ export function scoreResilience(
     ? collateralScoreLabel(collateralScore)
     : COLLATERAL_QUALITY_LABEL[factors.collateralQuality];
 
-  const score = Math.round(
-    (collateralScore + custodyScore) / 2,
-  );
+  const score = Math.round((collateralScore + custodyScore) / 2);
 
   const parts = [
     `Collateral: ${collateralLabel} (${collateralScore})`,
@@ -523,33 +545,33 @@ export function scoreResilience(
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "immutable-code": 100,
   "dao-governance": 85,
-  "multisig": 55,
+  multisig: 55,
   "regulated-entity": 40,
   "single-entity": 20,
-  "wrapper": 10,
+  wrapper: 10,
 };
 
 const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
   "immutable-code": "Immutable code (no governance)",
   "dao-governance": "DAO governance",
-  "multisig": "Multisig governance",
+  multisig: "Multisig governance",
   "regulated-entity": "Regulated entity",
   "single-entity": "Single-entity governance",
-  "wrapper": "Wrapper (inherits upstream)",
+  wrapper: "Wrapper (inherits upstream)",
 };
 
 function inferGovernanceQuality(governance: GovernanceType): GovernanceQuality {
   switch (governance) {
-    case "decentralized": return "dao-governance";
-    case "centralized-dependent": return "multisig";
-    case "centralized": return "single-entity";
+    case "decentralized":
+      return "dao-governance";
+    case "centralized-dependent":
+      return "multisig";
+    case "centralized":
+      return "single-entity";
   }
 }
 
-export function resolveGovernanceQuality(
-  governance: GovernanceType,
-  meta?: StablecoinMeta,
-): GovernanceQuality {
+export function resolveGovernanceQuality(governance: GovernanceType, meta?: StablecoinMeta): GovernanceQuality {
   if (meta?.governanceQuality) return meta.governanceQuality;
   const base = inferGovernanceQuality(governance);
   // Auto-promote single-entity → regulated-entity when metadata confirms regulation
@@ -572,18 +594,13 @@ export function resolveGovernanceQuality(
  * because governance decentralization is undermined when the underlying
  * chain itself has centralisation concerns (validator set, halt risk, etc.).
  */
-export function scoreDecentralization(
-  governance: GovernanceType,
-  meta?: StablecoinMeta,
-): ReportCardDimension {
+export function scoreDecentralization(governance: GovernanceType, meta?: StablecoinMeta): ReportCardDimension {
   const quality = resolveGovernanceQuality(governance, meta);
   let score = GOVERNANCE_QUALITY_SCORE[quality];
 
   // Chain infrastructure penalty (threshold-based on combined score)
   const factors = meta ? resolveResilienceFactors(meta) : undefined;
-  const infraScore = factors
-    ? chainInfraScore(factors.chainTier, factors.deploymentModel)
-    : 100;
+  const infraScore = factors ? chainInfraScore(factors.chainTier, factors.deploymentModel) : 100;
 
   let penalty = 0;
   if (infraScore >= 80) penalty = 0;
@@ -592,12 +609,23 @@ export function scoreDecentralization(
   else if (infraScore >= 20) penalty = -40;
   else penalty = -60;
 
-  if (quality !== "immutable-code" && quality !== "single-entity" && quality !== "regulated-entity" && quality !== "wrapper" && penalty < 0) {
+  if (
+    quality !== "immutable-code" &&
+    quality !== "single-entity" &&
+    quality !== "regulated-entity" &&
+    quality !== "wrapper" &&
+    penalty < 0
+  ) {
     score = Math.max(0, score + penalty);
   }
 
   const govScore = GOVERNANCE_QUALITY_SCORE[quality];
-  const penaltyApplied = penalty < 0 && quality !== "immutable-code" && quality !== "single-entity" && quality !== "regulated-entity" && quality !== "wrapper";
+  const penaltyApplied =
+    penalty < 0 &&
+    quality !== "immutable-code" &&
+    quality !== "single-entity" &&
+    quality !== "regulated-entity" &&
+    quality !== "wrapper";
   let detail: string;
   if (factors && penaltyApplied) {
     const chainDesc = chainInfraLabel(factors.chainTier, factors.deploymentModel);
@@ -624,14 +652,18 @@ const SELF_BACKED_SCORE_BY_GOVERNANCE: Record<GovernanceType, number> = {
 };
 
 export function scoreDependencyRisk(
-  meta: Pick<StablecoinMeta, 'dependencies' | 'reserves'> & { flags: Pick<StablecoinMeta['flags'], 'governance'> },
+  meta: Pick<StablecoinMeta, "dependencies" | "reserves"> & { flags: Pick<StablecoinMeta["flags"], "governance"> },
   overallScores: Map<string, number>,
 ): ReportCardDimension {
   const deps = deriveDependencies(meta);
   if (!deps || deps.length === 0) {
     const governance = meta.flags.governance;
     const selfScore = SELF_BACKED_SCORE_BY_GOVERNANCE[governance];
-    return { grade: scoreToGrade(selfScore), score: selfScore, detail: `Self-backed: ${governance === "centralized-dependent" ? "Partially centralized" : governance === "centralized" ? "Centralized" : "Decentralized"} (${selfScore})` };
+    return {
+      grade: scoreToGrade(selfScore),
+      score: selfScore,
+      detail: `Self-backed: ${governance === "centralized-dependent" ? "Partially centralized" : governance === "centralized" ? "Centralized" : "Decentralized"} (${selfScore})`,
+    };
   }
 
   // Gather upstream scores with weights
@@ -651,8 +683,8 @@ export function scoreDependencyRisk(
   const totalWeight = Math.min(1, rawTotal);
   const selfBackedFraction = 1 - totalWeight;
   const normalizer = rawTotal > 1 ? rawTotal : 1;
-  const blendedScore = resolved.reduce((sum, d) => sum + d.score * (d.weight / normalizer), 0)
-    + selfBackedFraction * SELF_BACKED_SCORE;
+  const blendedScore =
+    resolved.reduce((sum, d) => sum + d.score * (d.weight / normalizer), 0) + selfBackedFraction * SELF_BACKED_SCORE;
 
   let score = blendedScore;
 
@@ -680,13 +712,15 @@ export function scoreDependencyRisk(
   };
 
   const parts: string[] = [];
-  parts.push(`Upstream: ${resolved.length} upstream dep${resolved.length === 1 ? "" : "s"} (${Math.round(totalWeight * 100)}% weight) (${Math.round(blendedScore)})`);
+  parts.push(
+    `Upstream: ${resolved.length} upstream dep${resolved.length === 1 ? "" : "s"} (${Math.round(totalWeight * 100)}% weight) (${Math.round(blendedScore)})`,
+  );
   parts.push(`Self-backed: ${GOV_LABEL[governance]} (${SELF_BACKED_SCORE})`);
   if (weakDeps.length > 0) {
     parts.push(`Penalty: ${weakDeps.length} weak dep${weakDeps.length === 1 ? "" : "s"} below 75 (-10)`);
   }
   if (ceiling < Infinity) {
-    const ceilingType = resolved.some(d => d.type === "wrapper") ? "wrapper" : "mechanism-critical";
+    const ceilingType = resolved.some((d) => d.type === "wrapper") ? "wrapper" : "mechanism-critical";
     parts.push(`Ceiling: ${ceilingType} dependency ceiling (${Math.round(ceiling)})`);
   }
 
@@ -775,7 +809,7 @@ export function computeOverallGrade(
  */
 export function computeStressedGrades(
   cards: ReportCard[],
-  overrides: Map<string, number>,  // coin ID -> synthetic overall score
+  overrides: Map<string, number>, // coin ID -> synthetic overall score
 ): ReportCard[] {
   // Build effective overall scores map (real scores + overrides)
   const overallScores = new Map<string, number>();

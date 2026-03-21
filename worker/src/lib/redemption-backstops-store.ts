@@ -8,6 +8,10 @@ import type {
   RedemptionExecutionModel,
   RedemptionOutputAssetType,
   RedemptionSourceMode,
+  RedemptionResolutionState,
+  RedemptionCapacityConfidence,
+  RedemptionFeeConfidence,
+  RedemptionModelConfidence,
 } from "@shared/types";
 import { batchExecute } from "./db";
 import {
@@ -20,6 +24,11 @@ import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
+import {
+  deriveModelConfidence,
+  inferStoredCapacityConfidence,
+  inferStoredFeeConfidence,
+} from "@shared/lib/redemption-backstop-confidence";
 import { decodeJsonString } from "./cache-json";
 
 interface RedemptionBackstopRow {
@@ -51,17 +60,33 @@ interface RedemptionBackstopRow {
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 
-function parseDetails(
-  value: string | null,
-): Pick<
-  RedemptionBackstopEntry,
-  "docs" | "notes" | "capsApplied" | "feeDescription"
-> {
+export class RedemptionBackstopSnapshotUnavailableError extends Error {
+  cause?: unknown;
+
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message);
+    this.name = "RedemptionBackstopSnapshotUnavailableError";
+    this.cause = options?.cause;
+  }
+}
+
+type RedemptionBackstopDetails = Partial<
+  Pick<
+    RedemptionBackstopEntry,
+    | "docs"
+    | "notes"
+    | "capsApplied"
+    | "feeDescription"
+    | "resolutionState"
+    | "capacityConfidence"
+    | "feeConfidence"
+    | "modelConfidence"
+  >
+>;
+
+function parseDetails(value: string | null): RedemptionBackstopDetails {
   if (!value) return {};
-  const decoded = decodeJsonString<
-    Pick<RedemptionBackstopEntry, "docs" | "notes" | "capsApplied" | "feeDescription">,
-    "json-parse-failed"
-  >(value, {
+  const decoded = decodeJsonString<RedemptionBackstopDetails, "json-parse-failed">(value, {
     mode: "best-effort",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
@@ -70,18 +95,22 @@ function parseDetails(
         notes?: string[];
         capsApplied?: string[];
         feeDescription?: string;
+        resolutionState?: RedemptionResolutionState;
+        capacityConfidence?: RedemptionCapacityConfidence;
+        feeConfidence?: RedemptionFeeConfidence;
+        modelConfidence?: RedemptionModelConfidence;
       };
       return {
         ok: true,
         payload: {
           ...(record?.docs ? { docs: record.docs } : {}),
           ...(Array.isArray(record?.notes) ? { notes: record.notes } : {}),
-          ...(Array.isArray(record?.capsApplied)
-            ? { capsApplied: record.capsApplied }
-            : {}),
-          ...(typeof record?.feeDescription === "string"
-            ? { feeDescription: record.feeDescription }
-            : {}),
+          ...(Array.isArray(record?.capsApplied) ? { capsApplied: record.capsApplied } : {}),
+          ...(typeof record?.feeDescription === "string" ? { feeDescription: record.feeDescription } : {}),
+          ...(typeof record?.resolutionState === "string" ? { resolutionState: record.resolutionState } : {}),
+          ...(typeof record?.capacityConfidence === "string" ? { capacityConfidence: record.capacityConfidence } : {}),
+          ...(typeof record?.feeConfidence === "string" ? { feeConfidence: record.feeConfidence } : {}),
+          ...(typeof record?.modelConfidence === "string" ? { modelConfidence: record.modelConfidence } : {}),
         },
       };
     },
@@ -90,8 +119,30 @@ function parseDetails(
 }
 
 function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
+  const details = parseDetails(row.details_json);
+  const resolutionState = details.resolutionState ?? (row.score != null ? "resolved" : "missing-capacity");
+  const capacityConfidence =
+    details.capacityConfidence ??
+    inferStoredCapacityConfidence({
+      provider: row.provider,
+      sourceMode: row.source_mode,
+    });
+  const feeConfidence =
+    details.feeConfidence ??
+    inferStoredFeeConfidence({
+      feeBps: row.fee_bps,
+      feeDescription: details.feeDescription,
+    });
+  const modelConfidence =
+    details.modelConfidence ??
+    deriveModelConfidence({
+      resolutionState,
+      capacityConfidence,
+      feeConfidence,
+    });
   return {
     stablecoinId: row.stablecoin_id,
+    ...details,
     score: row.score,
     effectiveExitScore: row.effective_exit_score,
     dexLiquidityScore: row.dex_liquidity_score,
@@ -108,20 +159,33 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
     outputAssetType: row.output_asset_type,
     provider: row.provider,
     sourceMode: row.source_mode,
+    resolutionState,
+    capacityConfidence,
+    feeConfidence,
+    modelConfidence,
     immediateCapacityUsd: row.immediate_capacity_usd,
     immediateCapacityRatio: row.immediate_capacity_ratio,
     feeBps: row.fee_bps,
     queueEnabled: row.queue_enabled === 1,
     methodologyVersion: row.methodology_version,
     updatedAt: row.updated_at,
-    ...parseDetails(row.details_json),
   };
 }
 
-function buildCurrentUpsert(
-  db: D1Database,
-  record: RedemptionBackstopSnapshotRecord,
-): D1PreparedStatement {
+function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
+  return JSON.stringify({
+    resolutionState: record.resolutionState,
+    capacityConfidence: record.capacityConfidence,
+    feeConfidence: record.feeConfidence,
+    modelConfidence: record.modelConfidence,
+    ...(record.docs ? { docs: record.docs } : {}),
+    ...(record.notes ? { notes: record.notes } : {}),
+    ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
+    ...(record.feeDescription ? { feeDescription: record.feeDescription } : {}),
+  });
+}
+
+function buildCurrentUpsert(db: D1Database, record: RedemptionBackstopSnapshotRecord): D1PreparedStatement {
   return db
     .prepare(
       `INSERT INTO redemption_backstop (
@@ -199,14 +263,7 @@ function buildCurrentUpsert(
       record.queueEnabled ? 1 : 0,
       record.updatedAt,
       record.methodologyVersion,
-      JSON.stringify({
-        ...(record.docs ? { docs: record.docs } : {}),
-        ...(record.notes ? { notes: record.notes } : {}),
-        ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
-        ...(record.feeDescription
-          ? { feeDescription: record.feeDescription }
-          : {}),
-      }),
+      buildDetailsJson(record),
     );
 }
 
@@ -236,14 +293,7 @@ function buildHistoryUpsert(
       record.dexLiquidityScore,
       record.updatedAt,
       record.methodologyVersion,
-      JSON.stringify({
-        ...(record.docs ? { docs: record.docs } : {}),
-        ...(record.notes ? { notes: record.notes } : {}),
-        ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
-        ...(record.feeDescription
-          ? { feeDescription: record.feeDescription }
-          : {}),
-      }),
+      buildDetailsJson(record),
     );
 }
 
@@ -265,9 +315,7 @@ export async function upsertRedemptionBackstopSnapshots(
   await batchExecute(db, stmts, 50);
 }
 
-export async function loadRedemptionBackstopMap(
-  db: D1Database,
-): Promise<RedemptionBackstopMap> {
+export async function loadRedemptionBackstopMap(db: D1Database): Promise<RedemptionBackstopMap> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
     rows = await db
@@ -283,25 +331,32 @@ export async function loadRedemptionBackstopMap(
       )
       .all<RedemptionBackstopRow>();
   } catch (error) {
-    console.warn("[redemption-backstops] Failed to load current map:", error);
-    return {};
+    throw new RedemptionBackstopSnapshotUnavailableError("Failed to load current redemption backstop snapshot", {
+      cause: error,
+    });
   }
 
-  return Object.fromEntries(
-    (rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]),
-  );
+  return Object.fromEntries((rows.results ?? []).map((row) => [row.stablecoin_id, toEntry(row)]));
 }
 
-export async function buildRedemptionBackstopsSnapshot(
-  db: D1Database,
-): Promise<RedemptionBackstopsResponse> {
-  const [coins, latest] = await Promise.all([
-    loadRedemptionBackstopMap(db),
-    db
-      .prepare("SELECT MAX(updated_at) AS updated_at FROM redemption_backstop")
-      .first<{ updated_at: number | null }>()
-      .catch(() => ({ updated_at: null })),
-  ]);
+export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<RedemptionBackstopsResponse> {
+  let coins: RedemptionBackstopMap;
+  let latest: { updated_at: number | null } | null;
+  try {
+    [coins, latest] = await Promise.all([
+      loadRedemptionBackstopMap(db),
+      db
+        .prepare("SELECT MAX(updated_at) AS updated_at FROM redemption_backstop")
+        .first<{ updated_at: number | null }>(),
+    ]);
+  } catch (error) {
+    if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
+      throw error;
+    }
+    throw new RedemptionBackstopSnapshotUnavailableError("Failed to build redemption backstop snapshot", {
+      cause: error,
+    });
+  }
 
   const updatedAt = latest?.updated_at ?? 0;
 
@@ -318,11 +373,9 @@ export async function buildRedemptionBackstopsSnapshot(
       componentWeights: {
         access: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.access,
         settlement: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.settlement,
-        executionCertainty:
-          REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.executionCertainty,
+        executionCertainty: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.executionCertainty,
         capacity: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.capacity,
-        outputAssetQuality:
-          REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.outputAssetQuality,
+        outputAssetQuality: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.outputAssetQuality,
         cost: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.cost,
       },
       effectiveExitWeights: {

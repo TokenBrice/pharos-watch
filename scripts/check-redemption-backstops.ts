@@ -1,0 +1,110 @@
+#!/usr/bin/env tsx
+
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstop-configs/collateral-redeem";
+import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstop-configs/offchain-issuer";
+import { PSM_AND_BASKET_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstop-configs/psm-and-basket";
+import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstop-configs/queue-redeem";
+import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstop-configs/stablecoin-redeem";
+import { TRACKED_META_BY_ID } from "../shared/lib/stablecoins";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstops";
+
+const ROOT = process.cwd();
+const DOC_PATH = resolve(ROOT, "docs/redemption-backstops.md");
+const docs = readFileSync(DOC_PATH, "utf8");
+
+const familyModules = [
+  {
+    name: "offchain-issuer",
+    configs: OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
+    allowedRouteFamilies: new Set(["offchain-issuer"]),
+  },
+  {
+    name: "psm-and-basket",
+    configs: PSM_AND_BASKET_BACKSTOP_CONFIGS,
+    allowedRouteFamilies: new Set(["basket-redeem", "psm-swap"]),
+  },
+  {
+    name: "collateral-redeem",
+    configs: COLLATERAL_REDEEM_BACKSTOP_CONFIGS,
+    allowedRouteFamilies: new Set(["collateral-redeem"]),
+  },
+  {
+    name: "queue-redeem",
+    configs: QUEUE_REDEEM_BACKSTOP_CONFIGS,
+    allowedRouteFamilies: new Set(["queue-redeem"]),
+  },
+  {
+    name: "stablecoin-redeem",
+    configs: STABLECOIN_REDEEM_BACKSTOP_CONFIGS,
+    allowedRouteFamilies: new Set(["stablecoin-redeem"]),
+  },
+] as const;
+
+const errors: string[] = [];
+const seenById = new Map<string, string>();
+
+for (const moduleEntry of familyModules) {
+  for (const [id, config] of Object.entries(moduleEntry.configs)) {
+    const previous = seenById.get(id);
+    if (previous) {
+      errors.push(`Duplicate id "${id}" appears in both ${previous} and ${moduleEntry.name}.`);
+      continue;
+    }
+    seenById.set(id, moduleEntry.name);
+
+    if (!moduleEntry.allowedRouteFamilies.has(config.routeFamily)) {
+      errors.push(`${moduleEntry.name} contains ${id} with unexpected route family ${config.routeFamily}.`);
+    }
+
+    if (!TRACKED_META_BY_ID.has(id)) {
+      errors.push(`Unknown tracked stablecoin id "${id}" in ${moduleEntry.name}.`);
+    }
+  }
+}
+
+const mergedIds = Object.keys(REDEMPTION_BACKSTOP_CONFIGS);
+if (seenById.size !== mergedIds.length) {
+  errors.push(`Module union size ${seenById.size} does not match merged registry size ${mergedIds.length}.`);
+}
+
+const routeFamilyOrder = [
+  "offchain-issuer",
+  "stablecoin-redeem",
+  "collateral-redeem",
+  "queue-redeem",
+  "psm-swap",
+  "basket-redeem",
+] as const;
+
+const routeFamilyCounts = routeFamilyOrder.map((routeFamily) => ({
+  routeFamily,
+  count: mergedIds.filter((id) => REDEMPTION_BACKSTOP_CONFIGS[id]?.routeFamily === routeFamily).length,
+}));
+
+const expectedConfiguredLine = `- **Configured coins:** ${mergedIds.length}`;
+if (!docs.includes(expectedConfiguredLine)) {
+  errors.push(`docs/redemption-backstops.md is out of sync. Expected line: ${expectedConfiguredLine}`);
+}
+
+const expectedRouteLine = `- **Route families:** ${routeFamilyCounts
+  .map(({ routeFamily, count }) => `${count} \`${routeFamily}\``)
+  .join(", ")}`;
+if (!docs.includes(expectedRouteLine)) {
+  errors.push(`docs/redemption-backstops.md is out of sync. Expected line: ${expectedRouteLine}`);
+}
+
+if (errors.length > 0) {
+  console.error("Redemption backstop registry checks failed:");
+  for (const error of errors) {
+    console.error(`  ${error}`);
+  }
+  process.exit(1);
+}
+
+console.log(
+  `Redemption backstop checks passed (${mergedIds.length} configs; ${routeFamilyCounts
+    .map(({ routeFamily, count }) => `${routeFamily}=${count}`)
+    .join(", ")}).`,
+);

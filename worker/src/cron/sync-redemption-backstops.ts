@@ -1,26 +1,13 @@
-import {
-  getConfiguredRedemptionBackstopIds,
-  getRedemptionBackstopConfig,
-} from "@shared/lib/redemption-backstops";
+import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { CronResult } from "../lib/cron-logger";
 import { buildInClause } from "../lib/db";
-import { loadDexLiquidityMap } from "../lib/dex-liquidity";
-import {
-  upsertRedemptionBackstopSnapshots,
-} from "../lib/redemption-backstops-store";
-import {
-  buildRedemptionBackstopEntry,
-  resolveRedemptionBackstopEntry,
-} from "../lib/redemption-backstop-sources";
-import {
-  hasUsableStablecoinsPayload,
-  loadStablecoinsCache,
-} from "../lib/stablecoins-cache";
+import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
+import { loadReserveSyncStateMap } from "../lib/live-reserves-store";
+import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
+import { buildRedemptionBackstopEntry, resolveRedemptionBackstopEntry } from "../lib/redemption-backstop-sources";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
-export async function syncRedemptionBackstops(
-  db: D1Database,
-  signal: AbortSignal,
-): Promise<CronResult> {
+export async function syncRedemptionBackstops(db: D1Database, signal: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, {
     mode: "strict",
     allowLegacyArray: true,
@@ -35,26 +22,26 @@ export async function syncRedemptionBackstops(
   }
 
   const configuredIds = getConfiguredRedemptionBackstopIds();
-  const stablecoinAssetById = new Map(
-    stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]),
+  const configById = new Map(
+    configuredIds.map((stablecoinId) => [stablecoinId, getRedemptionBackstopConfig(stablecoinId)]),
   );
-  const dexLiquidityMap = await loadDexLiquidityMap(db);
+  const stablecoinAssetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
+  const { map: dexLiquidityMap, latestUpdatedAt } = await loadDexLiquiditySnapshot(db);
   const now = Math.floor(Date.now() / 1000);
+  const reserveSyncStateById = await loadReserveSyncStateMap(
+    db,
+    configuredIds.filter(
+      (stablecoinId) => configById.get(stablecoinId)?.capacityModel.kind === "reserve-sync-metadata",
+    ),
+  );
 
-  // M10: Check liquidity data staleness
   let liquidityStale = false;
-  try {
-    const staleness = await db.prepare("SELECT MAX(updated_at) as max_ts FROM dex_liquidity").first<{ max_ts: number | null }>();
-    const maxTs = staleness?.max_ts;
-    if (maxTs != null) {
-      const ageSec = now - maxTs;
-      if (ageSec > 3600) {
-        console.warn(`[sync-redemption-backstops] Liquidity data is stale (age: ${ageSec}s)`);
-        liquidityStale = true;
-      }
+  if (latestUpdatedAt != null) {
+    const ageSec = now - latestUpdatedAt;
+    if (ageSec > 3600) {
+      console.warn(`[sync-redemption-backstops] Liquidity data is stale (age: ${ageSec}s)`);
+      liquidityStale = true;
     }
-  } catch {
-    // Non-blocking
   }
 
   const snapshots = [];
@@ -71,32 +58,21 @@ export async function syncRedemptionBackstops(
       let resolved = null;
 
       if (asset) {
-        resolved = await resolveRedemptionBackstopEntry(
-          db,
-          asset,
-          dexLiquidityScore,
-          now,
-        );
+        resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
+          reserveSyncState: reserveSyncStateById.get(stablecoinId) ?? null,
+        });
       } else {
-        const config = getRedemptionBackstopConfig(stablecoinId);
+        const config = configById.get(stablecoinId);
         if (config) {
-          resolved = await buildRedemptionBackstopEntry(
-            db,
-            stablecoinId,
-            config,
-            null,
-            dexLiquidityScore,
-            now,
-          );
+          resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
+            reserveSyncState: reserveSyncStateById.get(stablecoinId) ?? null,
+          });
         }
       }
 
       if (resolved) snapshots.push(resolved);
     } catch (error) {
-      console.error(
-        `[sync-redemption-backstops] Failed for ${stablecoinId}:`,
-        error,
-      );
+      console.error(`[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failedIds.push(stablecoinId);
     }
   }
@@ -114,23 +90,18 @@ export async function syncRedemptionBackstops(
       .run();
   }
 
-  const dynamicCount = snapshots.filter(
-    (entry) => entry.sourceMode === "dynamic",
-  ).length;
-  const estimatedCount = snapshots.filter(
-    (entry) => entry.sourceMode === "estimated",
-  ).length;
-  const staticCount = snapshots.filter(
-    (entry) => entry.sourceMode === "static",
-  ).length;
-  const missingFromCache = configuredIds.filter(
-    (stablecoinId) => !stablecoinAssetById.has(stablecoinId),
-  );
+  const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;
+  const estimatedCount = snapshots.filter((entry) => entry.sourceMode === "estimated").length;
+  const staticCount = snapshots.filter((entry) => entry.sourceMode === "static").length;
+  const resolvedCount = snapshots.filter((entry) => entry.resolutionState === "resolved").length;
+  const unresolvedCount = snapshots.length - resolvedCount;
+  const missingFromCache = configuredIds.filter((stablecoinId) => !stablecoinAssetById.has(stablecoinId));
+  const coverageRatio = configuredIds.length > 0 ? resolvedCount / configuredIds.length : 1;
 
   const status: CronResult["status"] =
-    snapshots.length === 0 && (failedIds.length > 0 || missingFromCache.length > 0)
+    resolvedCount === 0 && (failedIds.length > 0 || missingFromCache.length > 0 || unresolvedCount > 0)
       ? "error"
-      : failedIds.length > 0
+      : failedIds.length > 0 || missingFromCache.length > 0 || unresolvedCount > 0
         ? "degraded"
         : "ok";
 
@@ -141,6 +112,9 @@ export async function syncRedemptionBackstops(
       synced: snapshots.length,
       failed: failedIds.length,
       configured: configuredIds.length,
+      resolved: resolvedCount,
+      unresolved: unresolvedCount,
+      coverageRatio,
       dynamic: dynamicCount,
       estimated: estimatedCount,
       static: staticCount,

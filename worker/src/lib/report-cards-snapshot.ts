@@ -3,8 +3,11 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
-import { loadDexLiquidityMap } from "./dex-liquidity";
-import { loadRedemptionBackstopMap } from "./redemption-backstops-store";
+import { loadDexLiquiditySnapshot } from "./dex-liquidity";
+import {
+  loadRedemptionBackstopMap,
+  RedemptionBackstopSnapshotUnavailableError,
+} from "./redemption-backstops-store";
 import { loadFreshLiveReserveMap } from "./live-reserves-store";
 import {
   METHODOLOGY_VERSION,
@@ -77,28 +80,42 @@ export class ReportCardsSnapshotUnavailableError extends Error {
 }
 
 export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCardsSnapshot> {
-  const [stablecoinsCached, bluechipCached, dexLiqMap, redemptionBackstopMap, liveReserveMap] = await Promise.all([
-    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
-    getCache(db, "bluechip-ratings"),
-    loadDexLiquidityMap(db),
-    loadRedemptionBackstopMap(db),
-    loadFreshLiveReserveMap(db),
-  ]);
-
-  // M10: Check liquidity data staleness (separate query — loadDexLiquidityMap doesn't include updated_at)
-  let liquidityStale = false;
+  let stablecoinsCached;
+  let bluechipCached;
+  let dexLiquiditySnapshot;
+  let redemptionBackstopMap;
+  let liveReserveMap;
   try {
-    const staleness = await db.prepare("SELECT MAX(updated_at) as max_ts FROM dex_liquidity").first<{ max_ts: number | null }>();
-    const maxTs = staleness?.max_ts;
-    if (maxTs != null) {
-      const ageSec = Math.floor(Date.now() / 1000) - maxTs;
-      if (ageSec > 3600) {
-        console.warn(`[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
-        liquidityStale = true;
-      }
+    [
+      stablecoinsCached,
+      bluechipCached,
+      dexLiquiditySnapshot,
+      redemptionBackstopMap,
+      liveReserveMap,
+    ] = await Promise.all([
+      loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
+      getCache(db, "bluechip-ratings"),
+      loadDexLiquiditySnapshot(db),
+      loadRedemptionBackstopMap(db),
+      loadFreshLiveReserveMap(db),
+    ]);
+  } catch (error) {
+    if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
+      throw new ReportCardsSnapshotUnavailableError(
+        "Redemption backstop snapshot unavailable",
+      );
     }
-  } catch {
-    // Non-blocking — staleness check is observability only
+    throw error;
+  }
+
+  const dexLiqMap = dexLiquiditySnapshot.map;
+  let liquidityStale = false;
+  if (dexLiquiditySnapshot.latestUpdatedAt != null) {
+    const ageSec = Math.floor(Date.now() / 1000) - dexLiquiditySnapshot.latestUpdatedAt;
+    if (ageSec > 3600) {
+      console.warn(`[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
+      liquidityStale = true;
+    }
   }
 
   if (stablecoinsCached.kind !== "ok") {

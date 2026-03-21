@@ -21,6 +21,10 @@ const BASE_ENTRY: RedemptionBackstopEntry = {
   outputAssetType: "stable-single",
   provider: "supply-full-model",
   sourceMode: "estimated",
+  resolutionState: "resolved",
+  capacityConfidence: "heuristic",
+  feeConfidence: "undisclosed-reviewed",
+  modelConfidence: "low",
   immediateCapacityUsd: 1_000_000,
   immediateCapacityRatio: 1,
   feeBps: null,
@@ -76,5 +80,24 @@ describe("RedemptionBackstopCard", () => {
     expect(html).toContain("Redemption Fee");
     expect(html).toContain("Variable / not explicitly modeled");
     expect(html).toContain("No fixed fee is configured in the current model");
+  });
+
+  it("renders configured-but-unrated state when the route has no usable score", () => {
+    const html = renderToStaticMarkup(
+      <RedemptionBackstopCard
+        entry={{
+          ...BASE_ENTRY,
+          score: null,
+          effectiveExitScore: null,
+          sourceMode: "static",
+          resolutionState: "missing-capacity",
+          modelConfidence: "low",
+        }}
+      />,
+    );
+
+    expect(html).toContain("missing capacity");
+    expect(html).toContain("confidence: low");
+    expect(html).toContain("configured, but the current snapshot could not resolve enough capacity data");
   });
 });

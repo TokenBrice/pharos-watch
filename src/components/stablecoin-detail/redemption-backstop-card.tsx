@@ -27,6 +27,41 @@ function scoreToneClass(score: number | null): string {
   return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400";
 }
 
+function formatResolutionState(value: RedemptionBackstopEntry["resolutionState"]): string {
+  switch (value) {
+    case "resolved":
+      return "resolved";
+    case "missing-cache":
+      return "missing cache";
+    case "missing-capacity":
+      return "missing capacity";
+    case "failed":
+      return "failed";
+  }
+}
+
+function formatModelConfidence(value: RedemptionBackstopEntry["modelConfidence"]): string {
+  switch (value) {
+    case "high":
+      return "confidence: high";
+    case "medium":
+      return "confidence: medium";
+    case "low":
+      return "confidence: low";
+  }
+}
+
+function getResolutionSummary(entry: RedemptionBackstopEntry): string | null {
+  if (entry.resolutionState === "resolved") return null;
+  if (entry.resolutionState === "missing-cache") {
+    return "This route is configured, but the current stablecoins snapshot did not contain the asset, so no usable redemption score could be computed.";
+  }
+  if (entry.resolutionState === "missing-capacity") {
+    return "This route is configured, but the current snapshot could not resolve enough capacity data to produce a usable redemption score.";
+  }
+  return "This route is configured, but the current snapshot failed to resolve a usable redemption score.";
+}
+
 function getFeeSummary(entry: RedemptionBackstopEntry): {
   headline: string;
   detail: string;
@@ -105,7 +140,19 @@ export function RedemptionBackstopCard({
           <Badge variant="outline" className="border-border/60 bg-muted/30">
             {entry.sourceMode}
           </Badge>
+          <Badge variant="outline" className="border-border/60 bg-muted/30">
+            {formatResolutionState(entry.resolutionState)}
+          </Badge>
+          <Badge variant="outline" className="border-border/60 bg-muted/30">
+            {formatModelConfidence(entry.modelConfidence)}
+          </Badge>
         </div>
+
+        {getResolutionSummary(entry) ? (
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-muted-foreground">
+            {getResolutionSummary(entry)}
+          </div>
+        ) : null}
 
         <div className="grid gap-2 text-sm sm:grid-cols-2">
           <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">

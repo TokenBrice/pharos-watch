@@ -49,6 +49,10 @@ function makeRedemptionEntry(
     outputAssetType: "stable-single",
     provider: "supply-ratio-model",
     sourceMode: "estimated",
+    resolutionState: "resolved",
+    capacityConfidence: "documented-bound",
+    feeConfidence: "undisclosed-reviewed",
+    modelConfidence: "medium",
     immediateCapacityUsd: 10_000_000,
     immediateCapacityRatio: 0.15,
     feeBps: null,
@@ -122,9 +126,24 @@ describe("coverage helpers", () => {
     expect(
       resolveRedemptionCoverage(
         makeRedemptionEntry({ routeFamily: "queue-redeem" }),
-      ).label,
+    ).label,
     ).toBe("Queue");
     expect(resolveRedemptionCoverage(null).available).toBe(false);
+  });
+
+  it("treats configured but unrated redemption rows as unavailable coverage", () => {
+    const status = resolveRedemptionCoverage(
+      makeRedemptionEntry({
+        score: null,
+        effectiveExitScore: null,
+        resolutionState: "missing-capacity",
+        modelConfidence: "low",
+      }),
+    );
+
+    expect(status.kind).toBe("configured-unrated");
+    expect(status.available).toBe(false);
+    expect(status.label).toBe("Config.");
   });
 
   it("maps mint/burn coverage states into visible labels", () => {
@@ -382,7 +401,7 @@ describe("coverage helpers", () => {
     expect(summary.coveragePct).toBeCloseTo(66.6666666667, 4);
     expect(summary.mcapSharePct).toBe(80);
     expect(summary.breakdown).toBe(
-      "issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0",
+      "configured 0 · issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0",
     );
   });
 });

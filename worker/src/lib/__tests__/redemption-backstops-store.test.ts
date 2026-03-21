@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { loadRedemptionBackstopMap } from "../redemption-backstops-store";
+import {
+  loadRedemptionBackstopMap,
+  RedemptionBackstopSnapshotUnavailableError,
+} from "../redemption-backstops-store";
 
 describe("loadRedemptionBackstopMap", () => {
   it("keeps the row and drops malformed details JSON", async () => {
@@ -48,5 +51,23 @@ describe("loadRedemptionBackstopMap", () => {
     expect(result["usdc-circle"]?.notes).toBeUndefined();
     expect(result["usdc-circle"]?.capsApplied).toBeUndefined();
     expect(result["usdc-circle"]?.feeDescription).toBeUndefined();
+    expect(result["usdc-circle"]?.resolutionState).toBe("resolved");
+    expect(result["usdc-circle"]?.capacityConfidence).toBe("dynamic");
+    expect(result["usdc-circle"]?.feeConfidence).toBe("fixed");
+    expect(result["usdc-circle"]?.modelConfidence).toBe("high");
+  });
+
+  it("throws a typed error when the current map query fails", async () => {
+    const db = mockD1([
+      {
+        match: "FROM redemption_backstop",
+        rows: [],
+        throwError: new Error("d1 unavailable"),
+      },
+    ]);
+
+    await expect(loadRedemptionBackstopMap(db)).rejects.toBeInstanceOf(
+      RedemptionBackstopSnapshotUnavailableError,
+    );
   });
 });

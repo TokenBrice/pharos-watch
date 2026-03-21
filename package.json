@@ -30,6 +30,7 @@
     "check:worker-boundary": "node scripts/check-worker-import-boundary.mjs",
     "check:unused-code": "node scripts/check-unused-code.mjs",
     "check:hotspot-ratchet": "node scripts/check-hotspot-ratchet.mjs",
+    "check:redemption-backstops": "tsx scripts/check-redemption-backstops.ts",
     "check:hotspot-ratchet:update-baseline": "node scripts/update-hotspot-ratchet-baseline.mjs",
     "check:cron-sync": "tsx scripts/check-cron-schedule-sync.ts",
     "check:doc-counts": "node scripts/check-doc-counts.mjs",

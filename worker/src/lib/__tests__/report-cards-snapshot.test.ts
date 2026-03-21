@@ -6,6 +6,7 @@ import {
   buildReportCardsSnapshot,
   ReportCardsSnapshotUnavailableError,
 } from "../report-cards-snapshot";
+import { RedemptionBackstopSnapshotUnavailableError } from "../redemption-backstops-store";
 
 const loadRedemptionBackstopMapMock = vi.hoisted(() =>
   vi.fn(async () => ({})),
@@ -118,6 +119,10 @@ describe("buildReportCardsSnapshot", () => {
         outputAssetType: "stable-basket",
         provider: "supply-full-model",
         sourceMode: "estimated",
+        resolutionState: "resolved",
+        capacityConfidence: "heuristic",
+        feeConfidence: "undisclosed-reviewed",
+        modelConfidence: "low",
         immediateCapacityUsd: 10_000_000,
         immediateCapacityRatio: 1,
         feeBps: null,
@@ -134,5 +139,18 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
     expect(card?.rawInputs.effectiveExitScore).toBe(56);
     expect(card?.dimensions.liquidity.score).toBe(56);
+  });
+
+  it("throws when the redemption backstop snapshot is unavailable", async () => {
+    const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+    loadRedemptionBackstopMapMock.mockRejectedValueOnce(
+      new RedemptionBackstopSnapshotUnavailableError(
+        "redemption snapshot unavailable",
+      ),
+    );
+
+    await expect(buildReportCardsSnapshot(db)).rejects.toBeInstanceOf(
+      ReportCardsSnapshotUnavailableError,
+    );
   });
 });
