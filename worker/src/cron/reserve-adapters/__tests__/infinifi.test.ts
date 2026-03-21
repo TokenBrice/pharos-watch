@@ -102,6 +102,30 @@ describe("adaptInfiniFi", () => {
     expect(result.slices.some((slice) => slice.name === "Dust Farm")).toBe(false);
   });
 
+  it("propagates coinId from FARM_RISK_MAP for dependency tracking", () => {
+    const response: InfiniFiProtocolData = {
+      code: "OK",
+      data: {
+        stats: { asset: { totalTVLAssetNormalized: 100 } },
+        farms: [
+          { name: "morpho-v2-sentora-pyusd", label: "Sentora PYUSD", assetsNormalized: 30, type: "ILLIQUID", underlyingAssetSymbol: "PYUSD" },
+          { name: "morpho-steakUSDCinfinifi", label: "Morpho steakUSDC", assetsNormalized: 25, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+          { name: "sGHO", label: "Staked GHO", assetsNormalized: 20, type: "LIQUID", underlyingAssetSymbol: "GHO" },
+          { name: "maple-farm-syrup", label: "Maple Syrup USDC", assetsNormalized: 15, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+          { name: "fasanara-gdaf", label: "Fasanara mGLOBAL", assetsNormalized: 10, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+        ],
+      },
+    };
+
+    const { slices } = adaptInfiniFi(response);
+    expect(slices.find((s) => s.name === "Sentora PYUSD")).toMatchObject({ coinId: "pyusd-paypal", depType: "wrapper" });
+    expect(slices.find((s) => s.name === "Morpho steakUSDC")).toMatchObject({ coinId: "usdc-circle", depType: "wrapper" });
+    expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "gho-aave", depType: "wrapper" });
+    expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "wrapper" });
+    // fasanara has no coinId — should be absent
+    expect(slices.find((s) => s.name === "Fasanara mGLOBAL")).not.toHaveProperty("coinId");
+  });
+
   it("preserves small farms above 0.05% before normalizeSlices rounding", () => {
     // A farm with 0.5% of TVL should pass the pct threshold and reach normalizeSlices
     const response: InfiniFiProtocolData = {
