@@ -7,6 +7,7 @@ import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-c
 import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/stablecoin-redeem";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
+import type { RedemptionAccessModel, RedemptionExecutionModel, RedemptionRouteFamily, RedemptionSettlementModel } from "@shared/types";
 
 const entries = Object.entries(REDEMPTION_BACKSTOP_CONFIGS);
 const familyModules = [
@@ -158,5 +159,97 @@ describe("redemption backstop config consistency", () => {
       .map(([id]) => id);
 
     expect(violations).toEqual([]);
+  });
+
+  // --- Cross-family invariants (TG-3) ---
+
+  it("issuer-api access should only appear in offchain-issuer or queue-redeem families", () => {
+    const allowedFamilies = new Set<RedemptionRouteFamily>(["offchain-issuer", "queue-redeem"]);
+    const violations = entries
+      .filter(([, c]) => c.accessModel === "issuer-api" && !allowedFamilies.has(c.routeFamily))
+      .map(([id, c]) => `${id}: ${c.routeFamily} + issuer-api`);
+    expect(violations).toEqual([]);
+  });
+
+  it("stablecoin-redeem and psm-swap should not use opaque execution", () => {
+    const violations = entries
+      .filter(
+        ([, c]) =>
+          (c.routeFamily === "stablecoin-redeem" || c.routeFamily === "psm-swap") &&
+          c.executionModel === "opaque",
+      )
+      .map(([id, c]) => `${id}: ${c.routeFamily} + opaque`);
+    expect(violations).toEqual([]);
+  });
+
+  it("all fee-bps values are non-negative", () => {
+    const violations = entries
+      .filter(([, c]) => c.costModel.kind === "fee-bps" && c.costModel.feeBps < 0)
+      .map(([id, c]) => `${id}: feeBps=${c.costModel.kind === "fee-bps" ? c.costModel.feeBps : "?"}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("supply-ratio values are between 0 and 1", () => {
+    const violations = entries
+      .filter(
+        ([, c]) =>
+          c.capacityModel.kind === "supply-ratio" &&
+          (c.capacityModel.ratio <= 0 || c.capacityModel.ratio > 1),
+      )
+      .map(([id, c]) => `${id}: ratio=${c.capacityModel.kind === "supply-ratio" ? c.capacityModel.ratio : "?"}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("every route family has at least one configured coin", () => {
+    const families: RedemptionRouteFamily[] = [
+      "stablecoin-redeem",
+      "basket-redeem",
+      "collateral-redeem",
+      "psm-swap",
+      "queue-redeem",
+      "offchain-issuer",
+    ];
+    for (const family of families) {
+      const count = entries.filter(([, c]) => c.routeFamily === family).length;
+      expect(count, `${family} should have at least 1 config`).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("every dynamic-or-unclear cost model has a fee description", () => {
+    const violations = entries
+      .filter(([, c]) => c.costModel.kind === "dynamic-or-unclear" && !c.costModel.feeDescription)
+      .map(([id]) => id);
+    expect(violations).toEqual([]);
+  });
+
+  it("every access model appears in at least one config", () => {
+    const models: RedemptionAccessModel[] = ["permissionless-onchain", "whitelisted-onchain", "issuer-api", "manual"];
+    for (const model of models) {
+      // "manual" may not currently be used — skip it
+      if (model === "manual") continue;
+      const count = entries.filter(([, c]) => c.accessModel === model).length;
+      expect(count, `${model} should appear in at least 1 config`).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("every settlement model appears in at least one config", () => {
+    const models: RedemptionSettlementModel[] = ["atomic", "immediate", "same-day", "days", "queued"];
+    for (const model of models) {
+      const count = entries.filter(([, c]) => c.settlementModel === model).length;
+      expect(count, `${model} should appear in at least 1 config`).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("every execution model appears in at least one config", () => {
+    const models: RedemptionExecutionModel[] = [
+      "deterministic-onchain",
+      "deterministic-basket",
+      "rules-based-nav",
+      "opaque",
+    ];
+    for (const model of models) {
+      const count = entries.filter(([, c]) => c.executionModel === model).length;
+      expect(count, `${model} should appear in at least 1 config`).toBeGreaterThanOrEqual(1);
+    }
   });
 });

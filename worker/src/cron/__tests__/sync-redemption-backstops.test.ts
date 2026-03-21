@@ -82,7 +82,6 @@ vi.mock("@shared/lib/redemption-backstops", () => ({
           outputAssetType: "stable-basket",
           capacityModel: { kind: "supply-full" },
           costModel: { kind: "dynamic-or-unclear" },
-          version: 1,
         }
       : null,
 }));

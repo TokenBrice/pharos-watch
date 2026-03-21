@@ -114,6 +114,7 @@ export function RedemptionBackstopCard({
       ? `${(entry.immediateCapacityRatio * 100).toFixed(1)}% of supply`
       : null;
   const feeSummary = getFeeSummary(entry);
+  const resolutionSummary = getResolutionSummary(entry);
 
   return (
     <Card>
@@ -148,9 +149,9 @@ export function RedemptionBackstopCard({
           </Badge>
         </div>
 
-        {getResolutionSummary(entry) ? (
+        {resolutionSummary ? (
           <div className="rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-muted-foreground">
-            {getResolutionSummary(entry)}
+            {resolutionSummary}
           </div>
         ) : null}
 

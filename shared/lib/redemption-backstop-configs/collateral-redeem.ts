@@ -53,7 +53,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
   "ussd-sonic-labs": {
-    version: 1,
     routeFamily: "collateral-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -63,7 +62,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     costModel: fixedFee(0, "Zero minting and redemption fees per Sonic Labs documentation"),
   },
   "reusd-resupply": {
-    version: 1,
     routeFamily: "collateral-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -73,7 +71,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
   },
   "cusd-celo": {
-    version: 1,
     routeFamily: "collateral-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -85,7 +82,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ),
   },
   "ceur-celo": {
-    version: 1,
     routeFamily: "collateral-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -97,7 +93,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ),
   },
   "gyd-gyroscope": {
-    version: 1,
     routeFamily: "collateral-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -107,7 +102,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     costModel: documentedVariableFee("Primary-market AMM (PAMM) adjusts redemption prices based on reserve ratio"),
   },
   "usdp-parallel": {
-    version: 1,
     routeFamily: "collateral-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -125,7 +119,6 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ),
   },
   "fpi-frax": {
-    version: 1,
     routeFamily: "collateral-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",

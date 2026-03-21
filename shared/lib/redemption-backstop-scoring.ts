@@ -256,6 +256,16 @@ export const REDEMPTION_SETTLEMENT_LABELS: Record<
   queued: "Queued",
 };
 
+export const REDEMPTION_EXECUTION_LABELS: Record<
+  RedemptionExecutionModel,
+  string
+> = {
+  "deterministic-onchain": "Deterministic onchain",
+  "deterministic-basket": "Deterministic basket",
+  "rules-based-nav": "Rules-based NAV",
+  opaque: "Opaque",
+};
+
 export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<
   RedemptionOutputAssetType,
   string

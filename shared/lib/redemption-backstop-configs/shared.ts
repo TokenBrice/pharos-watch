@@ -35,7 +35,6 @@ export type RedemptionCapacityModel =
     };
 
 export interface RedemptionBackstopConfig {
-  version: number;
   routeFamily: RedemptionRouteFamily;
   accessModel: RedemptionAccessModel;
   settlementModel: RedemptionSettlementModel;
@@ -71,8 +70,12 @@ export const NO_PUBLIC_NUMERIC_REDEMPTION_FEE = "Public docs reviewed do not pub
 
 export const LIQUITY_STYLE_REDEMPTION_FEE = "Minimum 50 bps + baseRate (decays over time).";
 
+/** Offchain-issuer base config.
+ *  Uses supply-full capacity since the full supply is eventually redeemable,
+ *  while the route-family cap (65) constrains the final score to reflect
+ *  the inherent delays and access restrictions of institutional redemption. */
 export const issuerBase: RedemptionBackstopConfig = {
-  version: 1,
+
   routeFamily: "offchain-issuer",
   accessModel: "issuer-api",
   settlementModel: "same-day",
@@ -82,8 +85,25 @@ export const issuerBase: RedemptionBackstopConfig = {
   costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
+export const commodityIssuerBase: RedemptionBackstopConfig = {
+  ...issuerBase,
+  settlementModel: "days",
+  outputAssetType: "bluechip-collateral",
+};
+
+export const stablecoinRedeemBase: RedemptionBackstopConfig = {
+
+  routeFamily: "stablecoin-redeem",
+  accessModel: "permissionless-onchain",
+  settlementModel: "atomic",
+  executionModel: "deterministic-onchain",
+  outputAssetType: "stable-single",
+  capacityModel: { kind: "supply-full" },
+  costModel: { kind: "dynamic-or-unclear" },
+};
+
 export const collateralRedeemBase: RedemptionBackstopConfig = {
-  version: 1,
+
   routeFamily: "collateral-redeem",
   accessModel: "permissionless-onchain",
   settlementModel: "atomic",
@@ -94,7 +114,7 @@ export const collateralRedeemBase: RedemptionBackstopConfig = {
 };
 
 export const queueRedeemBase: RedemptionBackstopConfig = {
-  version: 1,
+
   routeFamily: "queue-redeem",
   accessModel: "permissionless-onchain",
   settlementModel: "queued",

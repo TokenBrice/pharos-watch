@@ -450,7 +450,7 @@ export function resolveRedemptionCoverage(
       return createStatus(
         "psm-swap",
         "PSM",
-        "rose",
+        "sky",
         true,
         3,
         "Protocol swap or PSM-style redemption floor is modeled.",

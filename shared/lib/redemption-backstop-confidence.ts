@@ -38,10 +38,8 @@ export function inferStoredCapacityConfidence(args: {
 
 export function inferStoredFeeConfidence(args: {
   feeBps: number | null;
-  feeDescription?: string;
 }): RedemptionFeeConfidence {
   if (args.feeBps != null) return "fixed";
-  if (args.feeDescription) return "undisclosed-reviewed";
   return "undisclosed-reviewed";
 }
 

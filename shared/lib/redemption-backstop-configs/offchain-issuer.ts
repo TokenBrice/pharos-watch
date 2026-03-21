@@ -1,5 +1,12 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { documentedVariableFee, expandIds, fixedFee, issuerBase, NO_PUBLIC_NUMERIC_REDEMPTION_FEE } from "./shared";
+import {
+  commodityIssuerBase,
+  documentedVariableFee,
+  expandIds,
+  fixedFee,
+  issuerBase,
+  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+} from "./shared";
 
 export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...expandIds(
@@ -212,89 +219,43 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ),
   },
   "paxg-paxos": {
-    version: 1,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "bluechip-collateral",
-    capacityModel: { kind: "supply-full" },
+    ...commodityIssuerBase,
     costModel: documentedVariableFee(
       "1:1 physical gold or cash equivalent through Paxos Trust Company; public fee schedule not disclosed",
     ),
   },
   "xaut-tether": {
-    version: 1,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "bluechip-collateral",
-    capacityModel: { kind: "supply-full" },
+    ...commodityIssuerBase,
     costModel: documentedVariableFee(
       "Physical gold through TG Commodities; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
     ),
   },
   "xaum-matrixdock": {
-    version: 1,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "bluechip-collateral",
-    capacityModel: { kind: "supply-full" },
+    ...commodityIssuerBase,
     costModel: documentedVariableFee(
       "Physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar); KYC-verified accredited investors only",
     ),
   },
-  "kau-kinesis": {
-    version: 1,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "bluechip-collateral",
-    capacityModel: { kind: "supply-full" },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
-  },
-  "kag-kinesis": {
-    version: 1,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "bluechip-collateral",
-    capacityModel: { kind: "supply-full" },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
-  },
+  ...expandIds(["kau-kinesis", "kag-kinesis"], commodityIssuerBase),
   "cgo-comtech": {
-    version: 1,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "bluechip-collateral",
-    capacityModel: { kind: "supply-full" },
+    ...commodityIssuerBase,
     costModel: documentedVariableFee("Physical gold coins via ComTech Gold app; minimum 10 grams in 1-gram multiples"),
   },
   "dgld-gold-token-sa": {
-    version: 1,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "days",
-    executionModel: "rules-based-nav",
-    outputAssetType: "bluechip-collateral",
-    capacityModel: { kind: "supply-full" },
+    ...commodityIssuerBase,
     costModel: fixedFee(0, "No custody or transfer fees per Gold Token SA; minimum 1 gram"),
   },
   "pgold-pleasing": {
-    version: 1,
-    routeFamily: "offchain-issuer",
-    accessModel: "issuer-api",
-    settlementModel: "days",
+    ...commodityIssuerBase,
     executionModel: "opaque",
-    outputAssetType: "bluechip-collateral",
-    capacityModel: { kind: "supply-full" },
     costModel: documentedVariableFee("Physical gold via Pleasing platform; subject to KYC and size requirements"),
+  },
+  "dusd-standx": {
+    ...issuerBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
+    costModel: documentedVariableFee(
+      "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption; public fee schedule not disclosed",
+    ),
+    notes: ["Estimated 15% capacity ratio pending protocol-specific liquidity research"],
   },
 };

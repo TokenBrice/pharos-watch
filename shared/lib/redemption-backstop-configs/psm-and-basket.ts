@@ -3,7 +3,6 @@ import { documentedVariableFee, fixedFee, NO_PUBLIC_NUMERIC_REDEMPTION_FEE } fro
 
 export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "cusd-cap": {
-    version: 1,
     routeFamily: "basket-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -13,7 +12,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: documentedVariableFee("Fixed redemption fee, but public docs do not publish the current rate"),
   },
   "dai-makerdao": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -23,7 +21,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: fixedFee(0, "LitePSM docs show fees are not activated for DAI <-> USDC"),
   },
   "usds-sky": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -39,7 +36,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   },
   "gho-aave": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -51,7 +47,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
   },
   "usdd-tron-dao-reserve": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -61,7 +56,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: fixedFee(0, "USDD docs describe 1:1 PSM conversions between USDD and USDT/USDC/TUSD"),
   },
   "dola-inverse-finance": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -71,7 +65,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: fixedFee(20, "Inverse FiRM docs list a 20 bps DOLA -> USDS exit fee"),
   },
   "buck-bucket-protocol": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -81,7 +74,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: fixedFee(30, "Modeled route uses PSM OUT at 30 bps; collateral redemptions use a separate dynamic fee"),
   },
   "hollar-hydrated": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -91,7 +83,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
   "lisusd-lista": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -105,7 +96,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: ["Docs also publish a 500,000 lisUSD daily redemption limit for PSM exits"],
   },
   "dusd-alto": {
-    version: 1,
     routeFamily: "psm-swap",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",
@@ -118,7 +108,6 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
   },
   "eusd-electronic-usd": {
-    version: 1,
     routeFamily: "basket-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "atomic",

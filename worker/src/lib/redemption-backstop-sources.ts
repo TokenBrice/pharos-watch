@@ -77,8 +77,10 @@ function resolveCostScore(costModel: RedemptionCostModel): {
 } {
   const feeConfidence = resolveFeeConfidence(costModel);
   if (costModel.kind === "dynamic-or-unclear") {
+    // Documented variable fees score higher than truly opaque ones
+    const score = costModel.feeDescription && costModel.confidence !== "undisclosed-reviewed" ? 60 : 40;
     return {
-      score: 40,
+      score,
       feeBps: null,
       feeConfidence,
       ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),

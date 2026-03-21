@@ -131,7 +131,6 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
     details.feeConfidence ??
     inferStoredFeeConfidence({
       feeBps: row.fee_bps,
-      feeDescription: details.feeDescription,
     });
   const modelConfidence =
     details.modelConfidence ??

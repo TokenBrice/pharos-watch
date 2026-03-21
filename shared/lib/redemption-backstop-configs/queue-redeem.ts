@@ -3,7 +3,6 @@ import { documentedVariableFee, fixedFee, NO_PUBLIC_NUMERIC_REDEMPTION_FEE, queu
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
-    version: 1,
     routeFamily: "queue-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "days",
@@ -77,7 +76,6 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
   "usdai-usd-ai": {
-    version: 1,
     routeFamily: "queue-redeem",
     accessModel: "permissionless-onchain",
     settlementModel: "queued",
