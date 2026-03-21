@@ -8,20 +8,6 @@ vi.mock("../live-reserves-store", () => ({
   LIVE_RESERVE_FRESHNESS_SEC: 3600,
 }));
 
-describe("resolveCostScore", () => {
-  let resolveCostScore: typeof import("../redemption-backstop-sources")["resolveCostScore" & keyof typeof import("../redemption-backstop-sources")];
-
-  beforeEach(async () => {
-    vi.resetModules();
-    const mod = await import("../redemption-backstop-sources");
-    // resolveCostScore is not exported — test it through buildRedemptionBackstopEntry
-  });
-
-  it("placeholder — tested indirectly via buildRedemptionBackstopEntry", () => {
-    expect(true).toBe(true);
-  });
-});
-
 describe("buildRedemptionBackstopEntry", () => {
   let buildRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildRedemptionBackstopEntry;
   const now = 1_700_000_000;
