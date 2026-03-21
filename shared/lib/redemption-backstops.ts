@@ -129,6 +129,33 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
       "eurr-stablr",
       "europ-schuman",
       "eurau-allunity",
+      "tusd-trueusd",
+      "frxusd-frax",
+      "eurs-stasis",
+      "gyen-gyen",
+      "brz-transfero",
+      "tryb-bilira",
+      "idrt-rupiah-token",
+      "jpyc-jpyc",
+      "cadc-cad-coin",
+      "tgbp-tokenised",
+      "veur-vnx",
+      "vchf-vnx",
+      "vgbp-vnx",
+      "zarp-zarp",
+      "audd-novatti",
+      "axcnh-anchorx",
+      "mnee-mnee",
+      "cash-phantom",
+      "musd-metamask",
+      "a7a5-old-vector",
+      "ylds-figure",
+      "usat-tether",
+      "usdtb-ethena",
+      "pusd-plume",
+      "pusd-pleasing",
+      "gusd-gate",
+      "aid-gaib",
     ],
     issuerBase,
   ),
@@ -248,6 +275,57 @@ export const REDEMPTION_BACKSTOP_CONFIGS: Record<
     ...issuerBase,
     costModel: documentedVariableFee(
       "Redeemable 1:1; public fee schedule not disclosed",
+    ),
+  },
+  "buidl-blackrock": {
+    ...issuerBase,
+    costModel: documentedVariableFee(
+      "Redeemable at NAV through Securitize; public docs do not publish a separate redemption fee (50 bps annual management fee is charged separately)",
+    ),
+    notes: ["Restricted to qualified purchasers under SEC Reg D; redemptions processed through Securitize platform"],
+  },
+  "tusd-trueusd": {
+    ...issuerBase,
+    costModel: documentedVariableFee(
+      "Redeemable 1:1 through Techteryx; minting gated by Chainlink Proof of Reserve",
+    ),
+  },
+  "frxusd-frax": {
+    ...issuerBase,
+    costModel: documentedVariableFee(
+      "1:1 mint and redemption through governance-approved enshrined custodians; public fee schedule not disclosed",
+    ),
+  },
+  "eurs-stasis": {
+    ...issuerBase,
+    costModel: documentedVariableFee(
+      "1:1 redemption through STSS (Malta) Limited; public fee schedule not disclosed",
+    ),
+  },
+  "brz-transfero": {
+    ...issuerBase,
+    costModel: fixedFee(
+      100,
+      "Transfero documents a 1% redemption fee in Brazil",
+    ),
+  },
+  "ylds-figure": {
+    ...issuerBase,
+    costModel: documentedVariableFee(
+      "Fixed $1.00 face-amount certificate; 1:1 mint/redeem through Figure Certificate Company; registered security",
+    ),
+  },
+  "usdtb-ethena": {
+    ...issuerBase,
+    costModel: documentedVariableFee(
+      "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize",
+    ),
+  },
+  "pusd-plume": {
+    ...issuerBase,
+    costModel: fixedFee(
+      0,
+      "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation",
     ),
   },
   "cusd-cap": {
