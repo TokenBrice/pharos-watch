@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v4.6`
+- **Current methodology version:** `v4.7`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -184,12 +184,12 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```json
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.6" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.7" },
     ...
   },
   "updatedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "4.6", "versionLabel": "...", "currentVersion": "4.6", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "4.7", "versionLabel": "...", "currentVersion": "4.7", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -199,13 +199,13 @@ Untracked `stablecoin` IDs return `404` (`Stablecoin not tracked`).
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.6" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.7" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "4.6" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "4.7" },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "4.6", "versionLabel": "...", "currentVersion": "4.6", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "4.7", "versionLabel": "...", "currentVersion": "4.7", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
