@@ -7314,6 +7314,22 @@
     ],
     "deploymentModel": "native-multichain",
     "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "sfrxUSD (yield-bearing frxUSD)",
+        "pct": 50,
+        "risk": "low",
+        "coinId": "frxusd-frax",
+        "depType": "collateral"
+      },
+      {
+        "name": "sUSDe (yield-bearing USDe)",
+        "pct": 50,
+        "risk": "medium",
+        "coinId": "usde-ethena",
+        "depType": "collateral"
+      }
+    ],
     "yieldConfig": {
       "yieldSource": "Parallel Savings (sUSDp)",
       "yieldType": "governance-set"
