@@ -66,6 +66,7 @@ const SYSTEM_PROMPT =
   "Grade transitions, DEWS shifts, supply reversals, and blacklist contrasts are equally valid leads. Pick the sharpest story.\n" +
   "CALM priority: historical context > grade transitions > supply mover context > yield anomalies > structural observations. " +
   "The PSI band streak is always worth mentioning. Find the story in the micro-data.\n" +
+  "Tone defaults are suggested, not rigid. Override when the data clearly calls for a different register.\n" +
   "In all regimes: pick the 1-2 most compelling stories. Weave grades and scores into observations, don't list them. " +
   "A D-grade on an $8M coin is noise. A coin entering DANGER band while PSI reads BEDROCK is a story.\n\n" +
   // 7. Historical context instruction
@@ -92,9 +93,9 @@ const SYSTEM_PROMPT =
   "CALM: Find the story in the stillness. P1 = PSI frame + structural context (macro supply trend, grade distribution, band streak). " +
   "P2 = the most interesting micro-observation (a single coin's velocity, a DEWS signal ticking up from nothing, a resolved depeg aftermath). " +
   "P3 (optional) = a memorable closing line. Tone: bemused, wistful, or darkly amused.\n" +
-  "The extended field is 3-4 paragraphs following the P1/P2/P3/P4 structure above. P3 and P4 are optional — three tight paragraphs that say everything beat four that pad. " +
+  "The extended field is 3-4 paragraphs following the P1/P2/P3/P4 structure above. P3 and P4 are optional. Write 3 paragraphs by default; add a 4th only when the data demands a distinct secondary story that cannot fold into P1-P3. " +
   "The text field distills the single sharpest take.\n" +
-  "FOCUS: never mention more than 3 data categories in a single digest. Depth on 1-2 stories beats shallow coverage of 6. " +
+  "FOCUS: never lead with more than 3 data categories as primary stories; supporting details woven into those stories don't count toward the limit. Depth on 1-2 stories beats shallow coverage of 6. " +
   "If a data point doesn't connect to your lead story or provide meaningful contrast, leave it out entirely.\n\n" +
   "OPTIONAL SECTION HEADERS: When the digest covers two distinct stories, you may use bold inline headers to separate them. " +
   "Format: start a paragraph with **Header** (markdown bold) followed by the paragraph text. " +
@@ -135,10 +136,12 @@ export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "W
   const alertPlus = (data.dewsStress?.bandCounts.alert ?? 0)
     + (data.dewsStress?.bandCounts.warning ?? 0)
     + (data.dewsStress?.bandCounts.danger ?? 0);
+  const alertPlusMcap = (data.dewsStress?.elevatedCoins ?? [])
+    .reduce((sum, c) => sum + c.mcapUsd, 0);
 
   if (band === "TREMOR" || band === "FRACTURE" || band === "CRISIS" || ftqActive || gaugeScore < -50)
     return "CRISIS";
-  if (activeDepegs >= 2 || gaugeScore < -20 || alertPlus >= 3)
+  if (activeDepegs >= 2 || gaugeScore < -20 || alertPlus >= 3 || alertPlusMcap > 5_000_000_000)
     return "TENSION";
   if ((data.dewsStress?.bandChanges?.length ?? 0) > 0 || activeDepegs >= 1 || gaugeScore < -10)
     return "WATCHFUL";
@@ -160,7 +163,7 @@ function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: 
 
 function buildUserPrompt(
   data: DigestInputData,
-  recentMeta: { meta: DigestMeta | null; rawText: string | null }[] = [],
+  recentMeta: { meta: DigestMeta | null; rawText: string | null; title: string | null }[] = [],
 ): string {
   const regime = classifyRegime(data);
   const lines: string[] = [
@@ -168,13 +171,14 @@ function buildUserPrompt(
     "",
     `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`,
     `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${((data.mcap7dDelta / (data.totalMcapUsd - data.mcap7dDelta)) * 100).toFixed(2)}%)`,
-    `Active depeg events: ${data.activeDepegCount}`,
+    `Currently active depegs (ongoing, not yet resolved): ${data.activeDepegCount}`,
+    `Depegs resolved in last 24h: ${data.resolvedDepegs?.length ?? 0}`,
   ];
 
   if (data.topDepegs.length > 0) {
     lines.push("Active depegs by market impact (deviation × mcap):");
     for (const d of data.topDepegs) {
-      lines.push(`  ${d.symbol}: ${d.bps} bps off-peg, mcap ${formatCurrency(d.mcapUsd)}`);
+      lines.push(`  ${d.symbol} | ${d.bps} bps off-peg | ${formatCurrency(d.mcapUsd)} mcap`);
     }
   }
 
@@ -184,6 +188,7 @@ function buildUserPrompt(
     lines.push(
       `Pharos Stability Index: ${score} [${band}] (severity=${components.severity}, breadth=${components.breadth}, trend=${trendStr})`,
     );
+    lines.push("  (severity: weighted depeg impact 0-68; breadth: coin-count pressure 0-17; trend: 7d mcap momentum -5 to +5)");
     if (data.yesterdayIndex) {
       lines.push(`Yesterday: ${data.yesterdayIndex.score} [${data.yesterdayIndex.band}]`);
     }
@@ -212,18 +217,21 @@ function buildUserPrompt(
   if (data.crossDayTrends) {
     const { psiTrajectory, mcapTrajectory, gaugeTrajectory } = data.crossDayTrends;
     if (psiTrajectory.length >= 3) {
+      const psiMissing = psiTrajectory.length < 7 ? ` (${7 - psiTrajectory.length} days missing)` : "";
       lines.push(
-        `PSI 7-day trajectory: ${psiTrajectory.map((p) => `${p.score} [${p.band}]`).join(" -> ")}`,
+        `PSI 7-day trajectory: ${psiTrajectory.map((p) => `${p.date}: ${p.score} [${p.band}]`).join(" -> ")}${psiMissing}`,
       );
     }
     if (mcapTrajectory.length >= 3) {
+      const mcapMissing = mcapTrajectory.length < 7 ? ` (${7 - mcapTrajectory.length} days missing)` : "";
       lines.push(
-        `Market cap 7-day trajectory: ${mcapTrajectory.map((m) => formatCurrency(m.mcapUsd)).join(" -> ")}`,
+        `Market cap 7-day trajectory: ${mcapTrajectory.map((m) => `${m.date}: ${formatCurrency(m.mcapUsd)}`).join(" -> ")}${mcapMissing}`,
       );
     }
     if (gaugeTrajectory && gaugeTrajectory.length >= 3) {
+      const gaugeMissing = gaugeTrajectory.length < 7 ? ` (${7 - gaugeTrajectory.length} days missing)` : "";
       lines.push(
-        `Bank Run Gauge 7-day trajectory: ${gaugeTrajectory.map((g) => Math.round(g.gaugeScore * 10) / 10).join(" -> ")}`,
+        `Bank Run Gauge 7-day trajectory: ${gaugeTrajectory.map((g) => `${g.date}: ${Math.round(g.gaugeScore * 10) / 10}`).join(" -> ")}${gaugeMissing}`,
       );
     }
   }
@@ -258,9 +266,9 @@ function buildUserPrompt(
   if (data.supplyVelocity && data.supplyVelocity.length > 0) {
     lines.push("", "Supply velocity (1d vs 7d):");
     for (const v of data.supplyVelocity) {
-      const d1 = `${v.change1d >= 0 ? "+" : ""}${formatCurrency(v.change1d)} yesterday`;
-      const d7 = `${v.change7d >= 0 ? "+" : ""}${formatCurrency(v.change7d)}/week`;
-      lines.push(`  ${v.coin}: ${d1} vs ${d7} — ${v.signal}`);
+      const d1 = `${v.change1d >= 0 ? "+" : ""}${formatCurrency(v.change1d)} 1d`;
+      const d7 = `${v.change7d >= 0 ? "+" : ""}${formatCurrency(v.change7d)} 7d`;
+      lines.push(`  ${v.coin} | ${d1} vs ${d7} | ${v.signal}`);
     }
   }
 
@@ -299,9 +307,9 @@ function buildUserPrompt(
       lines.push("  Elevated coins (ALERT+):");
       for (const c of elevatedCoins) {
         const driverStr = c.topSignals?.length
-          ? `, driven by ${c.topSignals.map((s) => `${s.name}=${s.value}`).join(", ")}`
+          ? `driven by ${c.topSignals.map((s) => `${s.name}=${s.value}`).join(", ")}`
           : "";
-        lines.push(`    ${c.symbol}: ${c.band} (score ${c.score}, mcap ${formatCurrency(c.mcapUsd)}${driverStr})`);
+        lines.push(`    ${c.symbol} | ${c.band} score ${c.score} | ${formatCurrency(c.mcapUsd)} mcap | ${driverStr}`);
       }
     }
   }
@@ -312,7 +320,7 @@ function buildUserPrompt(
     for (const t of data.gradeTransitions) {
       const dims = t.currentDimensions;
       lines.push(
-        `  ${t.symbol}: ${t.fromGrade} (${t.fromScore}) -> ${t.toGrade} (${t.toScore}), mcap ${formatCurrency(t.mcapUsd)} — dimensions: peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
+        `  ${t.symbol} | ${t.fromGrade} (${t.fromScore}) -> ${t.toGrade} (${t.toScore}) | ${formatCurrency(t.mcapUsd)} mcap | peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
       );
     }
   }
@@ -338,7 +346,7 @@ function buildUserPrompt(
     lines.push("", "Yield Anomalies:");
     for (const y of data.yieldAnomalies) {
       lines.push(
-        `  ${y.symbol}: ${y.currentApy}% APY (7d avg ${y.apy7d}%, 30d avg ${y.apy30d}%), mcap ${formatCurrency(y.mcapUsd)}, warnings: ${y.warnings.join(", ")}`,
+        `  ${y.symbol} | ${y.currentApy}% APY (7d avg ${y.apy7d}%, 30d avg ${y.apy30d}%) | ${formatCurrency(y.mcapUsd)} mcap | ${y.warnings.join(", ")}`,
       );
     }
   }
@@ -349,16 +357,16 @@ function buildUserPrompt(
     for (const l of data.liquidityShifts) {
       const dir = l.scoreDelta > 0 ? "+" : "";
       lines.push(
-        `  ${l.symbol}: score ${l.previousScore} -> ${l.currentScore} (${dir}${l.scoreDelta}), TVL ${formatCurrency(l.previousTvl)} -> ${formatCurrency(l.currentTvl)}, mcap ${formatCurrency(l.mcapUsd)}`,
+        `  ${l.symbol} | score ${l.previousScore} -> ${l.currentScore} (${dir}${l.scoreDelta}) | ${formatCurrency(l.mcapUsd)} mcap | TVL ${formatCurrency(l.previousTvl)} -> ${formatCurrency(l.currentTvl)}`,
       );
     }
   }
 
   // Enrichment: resolved depegs
   if (data.resolvedDepegs && data.resolvedDepegs.length > 0) {
-    lines.push("");
+    lines.push("", "Recently resolved depegs:");
     for (const r of data.resolvedDepegs) {
-      lines.push(`Recently resolved: ${r.symbol} recovered from ${r.peakBps}bps after ${r.durationHours}h (${formatCurrency(r.mcapUsd)} mcap)`);
+      lines.push(`  ${r.symbol} | ${r.peakBps} bps peak, ${r.durationHours}h duration | ${formatCurrency(r.mcapUsd)} mcap | recovered`);
     }
   }
 
@@ -366,11 +374,12 @@ function buildUserPrompt(
   const metaLines: string[] = [];
   const rawFallbacks: string[] = [];
   for (let i = 0; i < recentMeta.length; i++) {
-    const m = recentMeta[i];
-    if (m.meta) {
-      metaLines.push(`  Day -${i + 1}: led with ${m.meta.lead ?? "unknown"}, tone: ${m.meta.tone ?? "unknown"}, coins: ${(m.meta.coins ?? []).join(", ") || "none"}`);
-    } else if (m.rawText) {
-      rawFallbacks.push(`- "${m.rawText}"`);
+    const entry = recentMeta[i];
+    if (entry.meta) {
+      const meta = entry.meta;
+      metaLines.push(`  Day -${i + 1}: "${entry.title}" — lead: ${meta.lead ?? "unknown"}, tone: ${meta.tone ?? "unknown"}, coins: ${(meta.coins ?? []).join(", ") || "none"}`);
+    } else if (entry.rawText) {
+      rawFallbacks.push(`- "${entry.rawText}"`);
     }
   }
   if (metaLines.length > 0) {
@@ -421,17 +430,17 @@ export async function generateDailyDigest(
     }
   }
 
-  // Fetch last 5 digests so the model sees a wider window to avoid repetition
+  // Fetch last 7 digests so the model sees a wider window to avoid repetition
   const recentRows = await db
-    .prepare("SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5")
+    .prepare("SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 7")
     .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null; digest_meta: string | null }>();
-  const recentMeta: { meta: DigestMeta | null; rawText: string | null }[] = (recentRows.results ?? []).map((r) => {
+  const recentMeta: { meta: DigestMeta | null; rawText: string | null; title: string | null }[] = (recentRows.results ?? []).map((r) => {
     let meta: DigestMeta | null = null;
     if (r.digest_meta) {
       try { meta = JSON.parse(r.digest_meta) as DigestMeta; } catch { /* expected: legacy digest without structured meta */ }
     }
     const rawText = !meta ? (r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text) : null;
-    return { meta, rawText };
+    return { meta, rawText, title: r.digest_title ?? null };
   });
   const degradedReasons: string[] = [];
 
@@ -455,7 +464,8 @@ export async function generateDailyDigest(
   const trackedStablecoinAssets = stablecoinAssets.filter((coin) => ACTIVE_IDS.has(coin.id));
   const mcapById = new Map<string, number>();
   for (const coin of stablecoinAssets) {
-    mcapById.set(coin.id, getCirculatingRaw(coin));
+    const raw = getCirculatingRaw(coin);
+    if (raw > 0) mcapById.set(coin.id, raw);
   }
 
   let totalMcapUsd = 0;
@@ -466,6 +476,7 @@ export async function generateDailyDigest(
   for (const coin of trackedStablecoinAssets) {
     const mcap = getCirculatingRaw(coin);
     const prevWeek = getPrevWeekRaw(coin);
+    if (mcap <= 0) continue;
     totalMcapUsd += mcap;
     totalPrevWeek += prevWeek;
 
@@ -565,6 +576,7 @@ export async function generateDailyDigest(
 
   // --- Build input data ---
   const inputData: DigestInputData = {
+    digestVersion: 2,
     totalMcapUsd,
     mcap7dDelta: totalMcapUsd - totalPrevWeek,
     ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
@@ -629,19 +641,21 @@ export async function generateDailyDigest(
   }
 
   // Strip markdown code block wrapper if Claude added one (```json ... ```)
-  let jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  const jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
-  // Extract the first JSON object if the model appended trailing text
-  const braceStart = jsonText.indexOf("{");
-  if (braceStart !== -1) {
-    let depth = 0;
-    let braceEnd = -1;
-    for (let i = braceStart; i < jsonText.length; i++) {
-      if (jsonText[i] === "{") depth++;
-      else if (jsonText[i] === "}") { depth--; if (depth === 0) { braceEnd = i; break; } }
-    }
-    if (braceEnd !== -1) {
-      jsonText = jsonText.slice(braceStart, braceEnd + 1);
+  // Progressive JSON extraction: try full text, then from first {, then first { to last }
+  let parsedJson: unknown = null;
+  try { parsedJson = JSON.parse(jsonText); } catch { /* continue */ }
+  if (!parsedJson) {
+    const braceStart = jsonText.indexOf("{");
+    if (braceStart !== -1) {
+      try { parsedJson = JSON.parse(jsonText.slice(braceStart)); } catch { /* continue */ }
+      if (!parsedJson) {
+        const lastBrace = jsonText.lastIndexOf("}");
+        if (lastBrace > braceStart) {
+          try { parsedJson = JSON.parse(jsonText.slice(braceStart, lastBrace + 1)); } catch { /* continue */ }
+        }
+      }
     }
   }
 
@@ -651,8 +665,8 @@ export async function generateDailyDigest(
   let digestExtended: string;
   let digestMeta: string | null = null;
   try {
-    const raw = JSON.parse(jsonText);
-    const parsed = DigestResponseSchema.parse(raw);
+    if (!parsedJson) throw new Error("no valid JSON found");
+    const parsed = DigestResponseSchema.parse(parsedJson);
     digestTitle = parsed.title.trim();
     digestText = parsed.text.trim();
     digestExtended = parsed.extended.trim();
@@ -669,10 +683,27 @@ export async function generateDailyDigest(
   }
 
   // Post-process: replace em/en dashes the model may still produce
+  const dashCount = [digestTitle, digestText, digestExtended].join("").match(/[\u2013\u2014]/g)?.length ?? 0;
+  if (dashCount > 0) console.log(`[daily-digest] Prompt compliance: ${dashCount} forbidden dashes stripped`);
   const stripDashes = (s: string) => s.replace(/[\u2013\u2014]/g, ",");
   digestTitle = stripDashes(digestTitle);
   digestText = stripDashes(digestText);
   digestExtended = stripDashes(digestExtended);
+
+  // Post-process: strip forbidden sentence starters the model may produce
+  const FORBIDDEN_PHRASES = ["Meanwhile, ", "Meanwhile ", "In other news, ", "It's worth noting ", "It remains to be seen "];
+  const stripForbidden = (s: string) => {
+    let result = s;
+    for (const phrase of FORBIDDEN_PHRASES) result = result.replaceAll(phrase, "");
+    return result;
+  };
+  const forbiddenBefore = [digestText, digestExtended].join("").length;
+  digestText = stripForbidden(digestText);
+  digestExtended = stripForbidden(digestExtended);
+  const forbiddenAfter = [digestText, digestExtended].join("").length;
+  if (forbiddenBefore !== forbiddenAfter) {
+    console.warn(`[daily-digest] Prompt compliance: stripped ${forbiddenBefore - forbiddenAfter} chars of forbidden phrases`);
+  }
 
   // --- Store result ---
   const now = Math.floor(Date.now() / 1000);
@@ -721,14 +752,7 @@ export async function generateDailyDigest(
 
       try {
         const date = new Date(now * 1000).toISOString().slice(0, 10);
-        await postDigestToTelegram(
-          digestTitle,
-          digestExtended,
-          date,
-          telegramCreds,
-          editionNumber,
-          telegramAppendices?.appendixHtml ?? null,
-        );
+        // Commit appendix state BEFORE sending to avoid duplicate appendices if send succeeds but commit fails
         if (telegramAppendices) {
           try {
             await telegramAppendices.commitSuccess();
@@ -737,6 +761,14 @@ export async function generateDailyDigest(
             console.error("[daily-digest] Failed to commit Telegram digest appendix state:", err);
           }
         }
+        await postDigestToTelegram(
+          digestTitle,
+          digestExtended,
+          date,
+          telegramCreds,
+          editionNumber,
+          telegramAppendices?.appendixHtml ?? null,
+        );
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
         const appendixSuffix = telegramAppendices?.metadata.hasAppendix
           ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`

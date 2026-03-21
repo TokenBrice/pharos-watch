@@ -157,6 +157,9 @@ export async function collectSupplyVelocity(
         const directionReversed = (change1d > 0 && change7d < 0) || (change1d < 0 && change7d > 0);
         const velocityRatio = dailyAvg7d !== 0 ? Math.abs(change1d / dailyAvg7d) : 0;
 
+        // Noise floor: require $1M absolute change and 0.1% of mcap
+        if (Math.abs(change1d) < 1_000_000 || Math.abs(change1d) < coin.mcap * 0.001) continue;
+
         if (directionReversed || velocityRatio > 2.5) {
           let signal: string;
           if (directionReversed) signal = "reversed";
@@ -223,6 +226,21 @@ export async function collectSafetyScores(
       .slice(0, 2);
     const reportCoins = [...mentionedCoinGrades, ...tensionCoins];
 
+    // Always include worst-graded and F-rated coins above $10M so the
+    // safety section is never empty on calm days
+    const reportIds = new Set(reportCoins.map((g) => g.id));
+    const worstGraded = allGrades
+      .filter((g) => !reportIds.has(g.id) && (ctx.mcapById.get(g.id) ?? 0) > 10_000_000)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 3);
+    for (const g of worstGraded) {
+      if (!reportIds.has(g.id)) { reportCoins.push(g); reportIds.add(g.id); }
+    }
+    const fRated = allGrades.filter((g) => g.grade === "F" && !reportIds.has(g.id) && (ctx.mcapById.get(g.id) ?? 0) > 10_000_000);
+    for (const g of fRated) {
+      reportCoins.push(g); reportIds.add(g.id);
+    }
+
     return {
       safetyScores: {
         mentionedCoins: reportCoins.map((g) => ({
@@ -256,7 +274,7 @@ export async function collectResolvedDepegs(
          FROM depeg_events
          WHERE ended_at IS NOT NULL AND ended_at >= ?
          ORDER BY peak_deviation_bps DESC
-         LIMIT 5`,
+         LIMIT 10`,
       )
       .bind(cutoff48h)
       .all<{ symbol: string; peak_deviation_bps: number; started_at: number; ended_at: number; stablecoin_id: string }>();
@@ -268,8 +286,8 @@ export async function collectResolvedDepegs(
         durationHours: Math.round((r.ended_at - r.started_at) / SECONDS.ONE_HOUR),
         mcapUsd: ctx.mcapById.get(r.stablecoin_id) ?? 0,
       }))
-      .filter((r) => r.peakBps > 200 && r.mcapUsd > 50_000_000)
-      .slice(0, 3);
+      .filter((r) => r.peakBps > 100 && r.mcapUsd > 20_000_000)
+      .slice(0, 5);
 
     if (candidates.length > 0) {
       return candidates;
@@ -324,9 +342,10 @@ export async function collectMintBurnFlows(
 
     // Compute FIS per coin
     const coinIntensities: { id: string; symbol: string; intensity: number | null; net24h: number; mcap: number }[] = [];
+    let mintBurnExcluded = 0;
     for (const [id, f24] of flow24h) {
       const f30 = flow30d.get(id);
-      if (!f30) continue;
+      if (!f30) { mintBurnExcluded++; continue; }
       const coin = ctx.trackedStablecoinAssets.find((c) => c.id === id);
       if (!coin) continue;
       const intensity = computeFlowIntensity({
@@ -338,6 +357,7 @@ export async function collectMintBurnFlows(
       });
       coinIntensities.push({ id, symbol: coin.symbol, intensity, net24h: f24.net_24h, mcap: getCirculatingRaw(coin) });
     }
+    if (mintBurnExcluded > 0) console.log(`[daily-digest] mint-burn: excluded ${mintBurnExcluded} coins without 30d baseline`);
 
     const gaugeScore = computeGaugeScore(coinIntensities.map((c) => ({ intensity: c.intensity, mcap: c.mcap })));
     if (gaugeScore !== null) {
@@ -426,10 +446,11 @@ export async function collectDewsStress(
       for (const today of todayRows) {
         const yesterday = yesterdayMap.get(today.stablecoin_id);
         if (!yesterday || yesterday.band === today.band) continue;
-        // Only include if crossing the WATCH/ALERT boundary
-        const wasElevated = ALERT_BANDS.has(yesterday.band);
-        const isElevated = ALERT_BANDS.has(today.band);
-        if (wasElevated === isElevated) continue;
+        // Detect any band rank change (not just boundary crossings)
+        const BAND_RANK: Record<string, number> = { CALM: 0, WATCH: 1, ALERT: 2, WARNING: 3, DANGER: 4 };
+        const yesterdayRank = BAND_RANK[yesterday.band] ?? 0;
+        const todayRank = BAND_RANK[today.band] ?? 0;
+        if (yesterdayRank === todayRank) continue;
 
         // Extract top driver from signals_json
         let topDriver = "unknown";
@@ -463,13 +484,20 @@ export async function collectDewsStress(
               .map(([key, sig]) => ({ name: SIGNAL_LABELS[key] ?? key, value: Math.round(sig.value) }));
           } catch { /* expected: malformed signals_json — render without top signals */ }
 
+          const mcapUsd = getCirculatingRaw(coin);
+          const yScore = yesterdayMap.get(r.stablecoin_id)?.score;
+          const changeFromYesterday = yScore != null ? r.score - yScore : undefined;
           return {
             symbol: coin.symbol, band: r.band, score: r.score,
-            mcapUsd: getCirculatingRaw(coin), topSignals,
+            mcapUsd, topSignals, changeFromYesterday,
           };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null && r.mcapUsd > 10_000_000)
-        .sort((a, b) => b.score - a.score)
+        .sort((a, b) => {
+          const aDelta = Math.abs(a.changeFromYesterday ?? 0) * a.mcapUsd;
+          const bDelta = Math.abs(b.changeFromYesterday ?? 0) * b.mcapUsd;
+          return bDelta - aDelta || b.score - a.score;
+        })
         .slice(0, 5);
 
       return { bandCounts, yesterdayBandCounts, bandChanges: bandChanges.slice(0, 5), elevatedCoins };
@@ -499,7 +527,8 @@ export async function collectPsiContributors(
     if (!snapshot.contributors || snapshot.contributors.length === 0) return undefined;
 
     return snapshot.contributors
-      .filter((c) => typeof c.bps === "number" && typeof c.mcapUsd === "number" && typeof c.factor === "number")
+      .filter((c) => typeof c.bps === "number" && typeof c.mcapUsd === "number" && typeof c.factor === "number"
+        && c.bps >= 0 && c.bps <= 10000 && c.factor >= 0 && c.mcapUsd > 0)
       .map((c) => ({
         symbol: c.symbol,
         bps: c.bps,
@@ -598,21 +627,12 @@ export async function collectHistoricalContext(
       let supplyMoverContext: NonNullable<DigestInputData["historicalContext"]>["supplyMoverContext"] = null;
       if (biggestSupplyChange) {
         const athRow = await ctx.db
-          .prepare("SELECT MAX(circulating_usd) as ath_mcap FROM supply_history WHERE stablecoin_id = ?")
+          .prepare(
+            "SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history WHERE stablecoin_id = ? ORDER BY circulating_usd DESC LIMIT 1",
+          )
           .bind(biggestSupplyChange.id)
-          .first<{ ath_mcap: number | null }>();
-
-        // ATH date (separate query since D1 doesn't support argmax)
-        let athDate = 0;
-        if (athRow?.ath_mcap) {
-          const athDateRow = await ctx.db
-            .prepare(
-              "SELECT snapshot_date FROM supply_history WHERE stablecoin_id = ? AND circulating_usd = ? ORDER BY snapshot_date DESC LIMIT 1",
-            )
-            .bind(biggestSupplyChange.id, athRow.ath_mcap)
-            .first<{ snapshot_date: number }>();
-          athDate = athDateRow?.snapshot_date ?? 0;
-        }
+          .first<{ ath_mcap: number | null; snapshot_date: number }>();
+        const athDate = athRow?.snapshot_date ?? 0;
 
         // Largest historical 7d change
         const largestChangeRow = await ctx.db
@@ -660,16 +680,24 @@ export async function collectGradeTransitions(
   try {
     const cutoff48h = ctx.nowSec - SECONDS.TWO_DAYS;
 
-    // Check for methodology bumps (>10 simultaneous transitions = version change)
+    // Check for methodology bumps (>15 simultaneous transitions + >80% same direction = version change)
     const bumpRows = await ctx.db
       .prepare(
-        `SELECT recorded_at FROM safety_grade_history
+        `SELECT recorded_at,
+                COUNT(*) as cnt,
+                SUM(CASE WHEN score > prev_score THEN 1 ELSE 0 END) as upgrades,
+                SUM(CASE WHEN score < prev_score THEN 1 ELSE 0 END) as downgrades
+         FROM safety_grade_history
          WHERE recorded_at >= ? AND prev_grade IS NOT NULL
-         GROUP BY recorded_at HAVING COUNT(*) > 10`,
+         GROUP BY recorded_at HAVING COUNT(*) > 15`,
       )
       .bind(cutoff48h)
-      .all<{ recorded_at: number }>();
-    const bumpTimestamps = new Set((bumpRows.results ?? []).map((r) => r.recorded_at));
+      .all<{ recorded_at: number; cnt: number; upgrades: number; downgrades: number }>();
+    const bumpTimestamps = new Set(
+      (bumpRows.results ?? [])
+        .filter((r) => r.upgrades / r.cnt > 0.8 || r.downgrades / r.cnt > 0.8)
+        .map((r) => r.recorded_at),
+    );
 
     // Get transitions sorted by largest score change
     const transitionRows = await ctx.db
@@ -746,7 +774,7 @@ export async function collectYieldAnomalies(
         if (warnings.length === 0) return null;
 
         const mcapUsd = ctx.mcapById.get(r.stablecoin_id) ?? 0;
-        if (mcapUsd < 10_000_000) return null;
+        if (mcapUsd < 10_000_000 || r.current_apy >= 500) return null;
 
         return {
           symbol: r.symbol,
@@ -776,26 +804,27 @@ export async function collectLiquidityShifts(
   ctx: CollectorContext,
 ): Promise<DigestInputData["liquidityShifts"]> {
   try {
-    // Compare yesterday vs day-before-yesterday.
-    // The digest runs at 08:05 UTC — today's dex_liquidity_history row
-    // may not exist yet since snapshots come from the :10/:40 cron.
-    const dayBeforeYesterday = ctx.yesterdayTs - SECONDS.ONE_DAY;
+    // Use a 48h lookback window and pick the two most recent snapshots per coin.
+    // This handles cases where yesterday's snapshot arrived late or was missed.
+    const lookbackStart = ctx.yesterdayTs - 2 * SECONDS.ONE_DAY;
     const rows = await ctx.db
       .prepare(
         `SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date
          FROM dex_liquidity_history h
-         WHERE h.snapshot_date IN (?, ?)
+         WHERE h.snapshot_date <= ? AND h.snapshot_date > ?
            AND h.liquidity_score IS NOT NULL
          ORDER BY h.stablecoin_id, h.snapshot_date DESC`,
       )
-      .bind(ctx.yesterdayTs, dayBeforeYesterday)
+      .bind(ctx.yesterdayTs, lookbackStart)
       .all<{ stablecoin_id: string; liquidity_score: number; total_tvl_usd: number; snapshot_date: number }>();
 
-    const byId = new Map<string, { latest?: (typeof rows.results)[number]; previous?: (typeof rows.results)[number] }>();
+    type LiqRow = (typeof rows.results)[number];
+    const byId = new Map<string, { latest?: LiqRow; previous?: LiqRow }>();
     for (const r of rows.results ?? []) {
       const entry = byId.get(r.stablecoin_id) ?? {};
-      if (r.snapshot_date === ctx.yesterdayTs) entry.latest = r;
-      else entry.previous = r;
+      if (!entry.latest) entry.latest = r;
+      else if (!entry.previous) entry.previous = r;
+      // Skip further rows — we only need the two most recent
       byId.set(r.stablecoin_id, entry);
     }
 

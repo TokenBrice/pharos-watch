@@ -77,7 +77,7 @@ function truncateToFit(text: string, maxLen: number): string {
  *  The LLM prompt targets 270 combined chars for title+text, leaving ~10 chars headroom
  *  for cashtag `$` prefixes injected below. truncateToFit is a safety net for overflow. */
 export function buildTweetText(digestTitle: string, digestText: string, editionNumber?: number | null): string {
-  const MAX = 280;
+  const MAX = 270;
   const editionTag = editionNumber ? ` (#${editionNumber})` : "";
   const titlePrefix = digestTitle ? `${digestTitle}${editionTag}\n\n` : "";
   // Strip title if the LLM accidentally repeated it at the start of the text
@@ -89,7 +89,11 @@ export function buildTweetText(digestTitle: string, digestText: string, editionN
       .trim();
   }
   const available = MAX - titlePrefix.length;
-  const fittedText = truncateToFit(injectCashtags(text), available);
+  const tagged = injectCashtags(text);
+  const fittedText = truncateToFit(tagged, available);
+  if (fittedText !== tagged) {
+    console.warn(`[twitter] Tweet truncated: ${tagged.length} chars -> ${fittedText.length} chars (limit ${available})`);
+  }
   return `${titlePrefix}${fittedText}`;
 }
 

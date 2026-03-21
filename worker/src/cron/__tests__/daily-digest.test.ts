@@ -170,6 +170,7 @@ const ANTHROPIC_OK_RESPONSE = {
 };
 
 const commitTelegramAppendices = vi.fn(async () => undefined);
+const rollbackTelegramAppendices = vi.fn(async () => undefined);
 
 function makeBaseTables(): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -292,6 +293,7 @@ describe("generateDailyDigest", () => {
     vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
     vi.mocked(postDigestToTelegram).mockReset().mockResolvedValue(undefined);
     commitTelegramAppendices.mockReset().mockResolvedValue(undefined);
+    rollbackTelegramAppendices.mockReset().mockResolvedValue(undefined);
     vi.mocked(prepareTelegramDigestAppendices).mockReset().mockResolvedValue({
       appendixHtml: null,
       metadata: {
@@ -305,6 +307,7 @@ describe("generateDailyDigest", () => {
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
+      rollbackSuccess: rollbackTelegramAppendices,
     });
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
@@ -710,7 +713,8 @@ describe("generateDailyDigest", () => {
     expect(result.itemCount).toBe(1);
     expect(result.metadata).toContain("tweet: failed:");
     expect(result.metadata).toContain("telegram: failed:");
-    expect(commitTelegramAppendices).not.toHaveBeenCalled();
+    // commit-before-send: commit is called before sending, no rollback needed
+    expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
   });
 
@@ -728,6 +732,7 @@ describe("generateDailyDigest", () => {
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
+      rollbackSuccess: rollbackTelegramAppendices,
     });
 
     const db = mockD1(makeBaseTables());
@@ -768,6 +773,7 @@ describe("generateDailyDigest", () => {
         seededSnapshots: [],
       },
       commitSuccess: commitTelegramAppendices,
+      rollbackSuccess: rollbackTelegramAppendices,
     });
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
 
@@ -784,7 +790,8 @@ describe("generateDailyDigest", () => {
     );
 
     expect(result.metadata).toContain("telegram: failed:");
-    expect(commitTelegramAppendices).not.toHaveBeenCalled();
+    // commit-before-send: commit is called before sending, no rollback needed
+    expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
   });
 });
 

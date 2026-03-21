@@ -1,5 +1,4 @@
 import { withErrorHandler, safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
-import { CACHE_PROFILES } from "../lib/constants";
 import type { DigestInputData } from "@shared/types";
 
 interface DigestRow {
@@ -32,7 +31,8 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   url: URL,
 ): Promise<Response> => {
   const date = url.searchParams.get("date");
-  const match = date?.match(DATE_RE);
+  const dateForParsing = date?.replace(/-weekly$/, "");
+  const match = dateForParsing?.match(DATE_RE);
   if (!match) {
     return errorResponse(400, "Missing or invalid ?date=YYYY-MM-DD parameter");
   }
@@ -147,5 +147,5 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
     prevInputData,
     depegEvents,
     blacklistEvents,
-  }, { "Cache-Control": CACHE_PROFILES.slow });
+  }, { "Cache-Control": "public, s-maxage=86400, max-age=3600" });
 });

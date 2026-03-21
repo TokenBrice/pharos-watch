@@ -1,4 +1,5 @@
 export interface DigestInputData {
+  digestVersion?: number;
   totalMcapUsd: number;
   mcap7dDelta: number;
   degradedSources?: string[];
@@ -75,6 +76,7 @@ export interface DigestInputData {
       score: number;
       mcapUsd: number;
       topSignals?: { name: string; value: number }[];
+      changeFromYesterday?: number;
     }[];
   };
   historicalContext?: {
@@ -141,10 +143,10 @@ export interface DigestInputData {
 
 export interface DailyDigestResponse {
   digest: string | null;
-  digestTitle?: string | null;
-  digestExtended?: string | null;
-  generatedAt?: number | null;
-  editionNumber?: number | null;
+  digestTitle: string | null;
+  digestExtended: string | null;
+  generatedAt: number | null;
+  editionNumber: number | null;
 }
 
 export interface DigestArchiveEntry {

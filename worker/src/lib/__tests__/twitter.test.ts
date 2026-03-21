@@ -30,7 +30,7 @@ describe("twitter helpers", () => {
     );
 
     const longWord = buildTweetText("", "x".repeat(400));
-    expect(longWord).toHaveLength(280);
+    expect(longWord).toHaveLength(270);
     expect(longWord.endsWith("…")).toBe(true);
   });
 

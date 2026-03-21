@@ -54,6 +54,7 @@ export interface PreparedTelegramDigestAppendices {
   appendixHtml: string | null;
   metadata: TelegramDigestAppendixMetadata;
   commitSuccess: () => Promise<void>;
+  rollbackSuccess: () => Promise<void>;
 }
 
 export interface QueueTrackedStablecoinAdditionsResult {
@@ -199,6 +200,7 @@ export async function prepareTelegramDigestAppendices(
 ): Promise<PreparedTelegramDigestAppendices> {
   const immediateWrites: CacheWrite[] = [];
   const postSuccessWrites: CacheWrite[] = [];
+  const preCommitValues = new Map<string, string | null>();
   const appendixSections: string[] = [];
   const metadata: TelegramDigestAppendixMetadata = {
     hasAppendix: false,
@@ -249,6 +251,8 @@ export async function prepareTelegramDigestAppendices(
         metadata.cemeteryDetected = newCemeteryCoins.length;
         metadata.cemeterySymbols = newCemeteryCoins.map((coin) => coin.symbol);
 
+        preCommitValues.set(CEMETERY_SNAPSHOT_CACHE_KEY, cachedCemeterySnapshot.value);
+        preCommitValues.set(CEMETERY_FOOTER_INDEX_CACHE_KEY, cachedFooterIndex?.value ?? null);
         postSuccessWrites.push(
           {
             key: CEMETERY_SNAPSHOT_CACHE_KEY,
@@ -302,6 +306,8 @@ export async function prepareTelegramDigestAppendices(
     metadata.trackedSymbols = trackedCoins.map((coin) => coin.symbol);
     metadata.preLaunchSymbols = preLaunchCoins.map((coin) => coin.symbol);
 
+    preCommitValues.set(TRACKED_SNAPSHOT_CACHE_KEY, cachedTrackedSnapshot?.value ?? null);
+    preCommitValues.set(TRACKED_PENDING_CACHE_KEY, cachedTrackedPending?.value ?? null);
     postSuccessWrites.push(
       {
         key: TRACKED_SNAPSHOT_CACHE_KEY,
@@ -350,11 +356,19 @@ export async function prepareTelegramDigestAppendices(
   const appendixHtml = appendixSections.length > 0 ? appendixSections.join("\n\n") : null;
   metadata.hasAppendix = appendixHtml != null;
 
+  // Build rollback writes: restore pre-commit cache values for each key in postSuccessWrites
+  const rollbackWrites: CacheWrite[] = postSuccessWrites
+    .filter((w) => preCommitValues.has(w.key) && preCommitValues.get(w.key) != null)
+    .map((w) => ({ key: w.key, value: preCommitValues.get(w.key)! }));
+
   return {
     appendixHtml,
     metadata,
     commitSuccess: async () => {
       await applyCacheWrites(db, postSuccessWrites);
+    },
+    rollbackSuccess: async () => {
+      await applyCacheWrites(db, rollbackWrites);
     },
   };
 }

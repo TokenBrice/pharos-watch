@@ -239,7 +239,7 @@ describe("prepareTelegramDigestAppendices", () => {
     });
     expect(prepared.appendixHtml).toContain("<b>New Cemetery Entries</b>");
     expect(prepared.appendixHtml).toContain("<code>EURA</code> Angle EURA (2026-03; Abandoned)");
-    expect(prepared.appendixHtml).toContain("<i>DeFi's first Euro, last out</i>");
+    expect(prepared.appendixHtml).toContain("<i>DeFi&#39;s first Euro, last out</i>");
     expect(prepared.appendixHtml).toContain("Peak mcap: $200.00M");
     expect(prepared.appendixHtml).toContain(CEMETERY_FOOTERS[8]);
     expect(prepared.appendixHtml).toContain("<b>Tracking Changes</b>");
