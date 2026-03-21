@@ -402,7 +402,10 @@ export function KpiBar() {
     }
 
     let days = 1;
+    const todayUtc = Math.floor(Date.now() / 1000);
+    const todayMidnight = todayUtc - (todayUtc % 86400);
     for (const point of psiData.history) {
+      if (point.date >= todayMidnight) continue; // skip today's entry, already counted
       if (point.band === psiBand) days++;
       else break;
     }
