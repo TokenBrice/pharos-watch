@@ -445,7 +445,9 @@
       {
         "name": "Sentora PYUSD (institutional lending, illiquid)",
         "pct": 18,
-        "risk": "high"
+        "risk": "high",
+        "coinId": "pyusd-paypal",
+        "depType": "wrapper"
       },
       {
         "name": "FalconX Institutional (prime broker lending, illiquid)",
@@ -479,7 +481,9 @@
       {
         "name": "Morpho infiniFi Ecosystem (steakUSDCinfinifi, illiquid)",
         "pct": 4,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
       },
       {
         "name": "Cap stcUSD (illiquid vault)",
