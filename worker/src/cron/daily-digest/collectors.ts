@@ -530,6 +530,17 @@ export async function collectHistoricalContext(
       .prepare("SELECT COUNT(*) as cnt FROM stability_index")
       .first<{ cnt: number }>();
 
+    // How many days of digest history exist
+    const oldestDigest = await ctx.db
+      .prepare(
+        `SELECT MIN(generated_at) as oldest FROM daily_digest
+         WHERE digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly'`,
+      )
+      .first<{ oldest: number | null }>();
+    const digestTrackingDays = oldestDigest?.oldest
+      ? Math.round((ctx.todayTs - oldestDigest.oldest) / SECONDS.ONE_DAY)
+      : 0;
+
     if (displayScore != null && displayBand && (histDepth?.cnt ?? 0) > 30) {
       // PSI precedent: last time the digest reported a score at or below current.
       // Query previous daily digests (not stability_index daily snapshots) so we
@@ -630,7 +641,7 @@ export async function collectHistoricalContext(
         }
       }
 
-      return { psiPrecedent, psiBandStreak, supplyMoverContext };
+      return { psiPrecedent, psiBandStreak, digestTrackingDays, supplyMoverContext };
     }
   } catch (e) {
     console.error("[daily-digest] Failed to collect historical context:", e);

@@ -73,6 +73,10 @@ const SYSTEM_PROMPT =
   "\"PSI at 72\" is a data point. \"PSI at 72, its lowest since March\" is journalism. " +
   "Streaks, precedents, and ATH comparisons make the reader feel the weight of a number. " +
   "Always prefer the contextual framing over the raw value.\n" +
+  "IMPORTANT: PSI historical comparisons are scoped to the Digest's tracking window, NOT the full lifetime of the index. " +
+  "NEVER write \"all-time low\", \"lowest ever recorded\", or similar unqualified superlatives for PSI. " +
+  "Instead, write \"lowest since the Digest began\" or \"lowest in N days of tracking\". " +
+  "The Context lines include the tracking window duration; use it.\n" +
   "You also receive 7-day trajectories for PSI, mcap, and gauge. Use these to identify multi-day trends: " +
   "\"third consecutive day of gauge deterioration\" or \"PSI recovering from Monday's dip\" are more compelling than point-in-time comparisons.\n\n" +
   // 8. Narrative structure
@@ -184,12 +188,13 @@ function buildUserPrompt(
       lines.push(`Yesterday: ${data.yesterdayIndex.score} [${data.yesterdayIndex.band}]`);
     }
     if (data.historicalContext) {
-      const { psiPrecedent, psiBandStreak } = data.historicalContext;
+      const { psiPrecedent, psiBandStreak, digestTrackingDays } = data.historicalContext;
+      const trackingWindow = digestTrackingDays > 0 ? ` (Digest history: ${digestTrackingDays} days)` : "";
       if (psiPrecedent && psiPrecedent.lastSeenDaysAgo >= 2) {
         const precDate = new Date(psiPrecedent.lastSeenDate * 1000).toISOString().slice(0, 10);
-        lines.push(`Context: last below ${score} on ${precDate}, ${psiPrecedent.lastSeenDaysAgo} days ago. Current ${band} streak: ${psiBandStreak} days.`);
+        lines.push(`Context: last below ${score} on ${precDate}, ${psiPrecedent.lastSeenDaysAgo} days ago${trackingWindow}. Current ${band} streak: ${psiBandStreak} days.`);
       } else if (!psiPrecedent) {
-        lines.push(`Context: all-time low. Current ${band} streak: ${psiBandStreak} days.`);
+        lines.push(`Context: lowest since Digest tracking began${trackingWindow}. Current ${band} streak: ${psiBandStreak} days.`);
       } else {
         lines.push(`Context: current ${band} streak: ${psiBandStreak} days.`);
       }

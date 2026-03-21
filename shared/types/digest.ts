@@ -85,6 +85,8 @@ export interface DigestInputData {
       lastSeenBand: string;
     } | null;
     psiBandStreak: number;
+    /** How many days of digest history exist (from first digest to today) */
+    digestTrackingDays: number;
     supplyMoverContext: {
       allTimeHighMcap: number;
       allTimeHighDate: number;
