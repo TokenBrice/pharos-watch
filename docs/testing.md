@@ -14,6 +14,7 @@ npm run audit:deps    # Fails on high-severity npm advisories
 npm run seo:check     # Static SEO audit against built `out/` HTML
 npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts` -> `worker/src` imports)
 npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts` stays aligned with `worker/wrangler.toml` cron declarations
+npm run check:doc-sync # Verify exact methodology versions, thresholds, weights, and enforced limits stay aligned with code
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report
@@ -42,6 +43,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run check:migrations`
    - `npm run check:cron-sync`
    - `npm run check:doc-counts`
+   - `npm run check:doc-sync`
    - `npm run check:duplicate-exports`
    - `npm test`
    - `npm run coverage:critical`

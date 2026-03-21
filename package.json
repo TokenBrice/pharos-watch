@@ -30,6 +30,7 @@
     "check:worker-boundary": "node scripts/check-worker-import-boundary.mjs",
     "check:cron-sync": "tsx scripts/check-cron-schedule-sync.ts",
     "check:doc-counts": "node scripts/check-doc-counts.mjs",
+    "check:doc-sync": "tsx scripts/check-doc-sync.ts",
     "check:duplicate-exports": "node scripts/check-duplicate-exports.mjs",
     "check:migrations": "node scripts/check-worker-migrations.mjs",
     "seo:check": "node scripts/check-seo-static.mjs",

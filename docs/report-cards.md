@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.8)
+## Overall Grade (v5.9)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v5.8 integrates live reserve snapshots into collateral quality scoring (see Live Reserve Passthrough below). v5.7 aligned reserve-derived collateral quality so direct `ETH` and canonical `WETH` slices share the same `very-low` risk tier.
+Current-version note: v5.9 corrects governance classifications for centralized-custody DeFi coins using live reserve evidence. v5.8 integrated live reserve snapshots into collateral quality scoring (see Live Reserve Passthrough below).
 
 ## Dimensions
 
