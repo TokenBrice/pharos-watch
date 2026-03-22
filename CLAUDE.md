@@ -22,6 +22,8 @@ All agent-produced plans, audits, research, and process notes live in the `/agen
 
 Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn/ui, TanStack Query, Recharts, Cloudflare Workers + D1.
 
+- You are logged into wrangler: feel free to use it for debugging.
+
 ## Directory Overview
 
 ```

@@ -12,6 +12,7 @@ Live: https://pharos.watch
 - Update the matching docs for any behavior, API, pipeline, or methodology change.
 - If you add a data source, update the about page.
 - If you change PSI, PegScore, LiquidityScore, Report Cards, DEWS, blacklist, mint/burn, or yield methodology, also update `/methodology` and the relevant timeline doc.
+- You are logged into wrangler: feel free to use it for debugging.
 
 ## Working Set
 
