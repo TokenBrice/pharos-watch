@@ -362,7 +362,6 @@ const REGISTRY = [
 ] as const satisfies readonly PricingSourceRegistryEntry[];
 
 export const PRICING_SOURCE_REGISTRY = REGISTRY;
-export const PRICING_SOURCE_KEYS = REGISTRY.map((entry) => entry.key);
 export type PricingSourceKey = (typeof REGISTRY)[number]["key"];
 
 const REGISTRY_MAP = new Map<string, PricingSourceRegistryEntry>(
@@ -371,8 +370,4 @@ const REGISTRY_MAP = new Map<string, PricingSourceRegistryEntry>(
 
 export function getPricingSourceRegistryEntry(sourceKey: string): PricingSourceRegistryEntry | undefined {
   return REGISTRY_MAP.get(sourceKey);
-}
-
-export function isKnownPricingSourceKey(sourceKey: string): sourceKey is PricingSourceKey {
-  return REGISTRY_MAP.has(sourceKey);
 }
