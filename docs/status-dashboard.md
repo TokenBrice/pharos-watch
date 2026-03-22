@@ -252,7 +252,7 @@ Additional response fields:
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
 - `summary`: compact availability rollup (`unhealthyCrons`, `degradedCrons`, `cronErrors`, `worstCacheRatio`)
 - `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `lastSuccessAt`, `oldestFreshAgeSec`)
-- `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
+- `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
 - `reserveDrift`: optional array of coins where the live-derived collateral quality score diverges from curated by more than 5 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
 - `classificationWarnings`: optional array of decentralized-governance coins where centralized custody fraction exceeds 50% (`coinId`, `governance`, `centralizedCustodyPct`, `threshold`). Signals potential governance reclassification candidates. Omitted when no warnings.
 
@@ -459,7 +459,7 @@ Each row displays:
 - current Pharos price source and confidence tag
 - absolute percentage difference badge
 
-Data is sourced from the admin-only `GET /api/status` payload. The worker supplement reads the cached tracked asset list, batches a CoinGecko `simple/price` fetch, compares the current prices, and sorts flagged rows by `diffPct` descending. When the CoinGecko lookup fails, the card degrades to `null` and the worker records `sectionErrors.coingeckoPriceDiff`.
+Data is sourced from the admin-only `GET /api/status` payload. The worker supplement filters the cached stablecoin payload down to the active tracked assets with `geckoId`, batches a CoinGecko `simple/price` fetch, compares the current prices, and sorts flagged rows by `diffPct` descending. When the CoinGecko lookup fails, the card degrades to `null` and the worker records `sectionErrors.coingeckoPriceDiff`.
 
 ## Mint/Burn Reconciliation Card
 

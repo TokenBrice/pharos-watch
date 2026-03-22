@@ -463,6 +463,106 @@ describe("handleStatus", () => {
     });
   });
 
+  it("limits CoinGecko drift comparisons to active tracked Pharos assets", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          name: "Tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          pegType: "peggedUSD",
+          pegMechanism: "fiat-backed",
+          price: 1,
+          priceSource: "coingecko",
+          priceConfidence: "single-source",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+        {
+          id: "usds-thestandard",
+          name: "TheStandard USD",
+          symbol: "USDS",
+          geckoId: "the-standard-usd",
+          pegType: "peggedUSD",
+          pegMechanism: "crypto-backed",
+          price: 1.0001,
+          priceSource: "coinbase+kraken",
+          priceConfidence: "high",
+          circulating: { peggedUSD: 10_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+        {
+          id: "pyusd-paypal",
+          name: "PayPal USD",
+          symbol: "PYUSD",
+          geckoId: "paypal-usd",
+          pegType: "peggedUSD",
+          pegMechanism: "fiat-backed",
+          price: 0.9,
+          priceSource: "defillama",
+          priceConfidence: "single-source",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+      ],
+    });
+
+    mockFetch([
+      {
+        match: "/simple/price",
+        body: {
+          tether: { usd: 1 },
+          "the-standard-usd": { usd: 0.700692 },
+          "paypal-usd": { usd: 1 },
+        },
+      },
+    ]);
+
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request, "cg-test-key");
+    const body = (await res.json()) as {
+      coingeckoPriceDiff: {
+        trackedWithGeckoId: number;
+        comparedCoins: number;
+        mismatchedCount: number;
+        rows: Array<{ stablecoinId: string; symbol: string; name: string }>;
+      } | null;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.coingeckoPriceDiff).toMatchObject({
+      trackedWithGeckoId: 2,
+      comparedCoins: 2,
+      mismatchedCount: 1,
+    });
+    expect(body.coingeckoPriceDiff?.rows).toEqual([
+      expect.objectContaining({
+        stablecoinId: "pyusd-paypal",
+        symbol: "PYUSD",
+        name: "PayPal USD",
+      }),
+    ]);
+  });
+
   it("emits cache warnings alongside degraded FX-source warnings", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([

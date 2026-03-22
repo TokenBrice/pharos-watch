@@ -1,6 +1,6 @@
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
 import { STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT } from "@shared/lib/status-thresholds";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
   ClassificationWarning,
   CoinGeckoPriceDiff,
@@ -79,7 +79,7 @@ async function loadCoinGeckoPriceDiff(
   }
 
   const trackedWithGeckoId = stablecoinsCache.payload.peggedAssets.filter(
-    (asset) => typeof asset.geckoId === "string" && asset.geckoId.length > 0,
+    (asset) => ACTIVE_IDS.has(asset.id) && typeof asset.geckoId === "string" && asset.geckoId.length > 0,
   );
   if (trackedWithGeckoId.length === 0) {
     return {
@@ -97,6 +97,7 @@ async function loadCoinGeckoPriceDiff(
 
   let comparedCoins = 0;
   const rows = trackedWithGeckoId.flatMap((asset) => {
+    const meta = ACTIVE_META_BY_ID.get(asset.id);
     const ourPrice = typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0
       ? asset.price
       : null;
@@ -114,8 +115,8 @@ async function loadCoinGeckoPriceDiff(
 
     return [{
       stablecoinId: asset.id,
-      symbol: asset.symbol,
-      name: asset.name ?? asset.symbol,
+      symbol: meta?.symbol ?? asset.symbol,
+      name: meta?.name ?? asset.name ?? asset.symbol,
       geckoId,
       ourPrice,
       coinGeckoPrice,
