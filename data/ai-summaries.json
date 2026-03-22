@@ -6,18 +6,18 @@
   },
   "usdt-tether": {
     "title": "Too Big to Depeg",
-    "text": "The 800-pound gorilla of stablecoins commands more market cap than most countries' GDP and settles more volume daily than Visa. Despite years of \"where are the reserves?\" discourse, Tether keeps printing \u2014 and keeps getting redeemed at par. Its BDO Italia attestations have quieted skeptics somewhat, but the real moat is simpler: when every exchange, DeFi protocol, and OTC desk denominates in USDT, switching costs approach infinity. Love it or hate it, the market has voted with its liquidity.",
-    "updatedAt": "2026-02-22"
+    "text": "Tether commands more stablecoin market cap than the next four competitors combined, backed by a reserve that is 92% U.S. Treasuries and reverse repos \u2014 a composition that would have seemed implausible five years ago. Deployed natively across 28 chains with the deepest DEX liquidity of any stablecoin, USDT's infrastructure moat runs as deep as its capital reserves. The safety profile tells the expected story: near-perfect peg stability and overwhelming exit liquidity held back by a decentralization score that reflects what everyone knows \u2014 one company in El Salvador with freeze authority underwrites the world's most important dollar. Direct redemptions require a verified Tether account and a substantial minimum, so the peg for most holders is maintained by arbitrageurs rather than a personal right to redeem.",
+    "updatedAt": "2026-03-22"
   },
   "usdc-circle": {
-    "title": "The Regulated Runner-Up",
-    "text": "Circle's USDC is what happens when you build a stablecoin for compliance officers. Full monthly attestations from Deloitte, SEC registration, and a BlackRock-managed reserve fund make it the institutional darling of the space. The March 2023 SVB depeg briefly shattered its reputation for safety \u2014 and its market cap still hasn't fully recovered to pre-crisis levels. For anyone who needs a stablecoin their legal team won't flinch at, USDC remains the default.",
-    "updatedAt": "2026-02-22"
+    "title": "The Compliance Premium",
+    "text": "Circle built the stablecoin that compliance departments approve on sight: 100% of reserves in very-low-risk assets \u2014 Treasuries, overnight repos, cash \u2014 managed by BlackRock and custodied at BNY Mellon, with institutional-top custody classification that even Tether doesn't match. Deployed across 41 chains with zero-fee direct redemptions, USDC's exit story is the cleanest in the market. The curious detail is that its peg score runs below Tether's, a residue of the March 2023 SVB weekend that still weighs on the tracking window despite years of near-perfect stability since. USDC's highest safety dimension is resilience \u2014 the one category where the quality of your custodian and regulator matters more than the size of your market cap.",
+    "updatedAt": "2026-03-22"
   },
   "dai-makerdao": {
     "title": "The OG Decentralized Dollar",
-    "text": "The stablecoin that proved crypto could create a synthetic dollar without a bank account. DAI survived the March 2020 crash, navigated the USDC depeg contagion, and maintained its peg through sheer overcollateralization. Now overshadowed by its own rebrand (USDS) and increasingly backed by RWAs rather than pure crypto collateral, DAI remains the philosophical North Star that most \"decentralized\" stablecoins claim to be inspired by.",
-    "updatedAt": "2026-02-22"
+    "text": "DAI is the stablecoin that proved crypto could create a dollar without a bank account, and seven years later it still earns the highest decentralization grade in the top ten \u2014 an A that reflects genuine DAO governance rather than a multisig cosplaying as one. The reserve composition has drifted far from crypto-purist origins: 40% U.S. Treasuries, 33% USDC through the PSM, with only a quarter in crypto collateral, making DAI functionally a hybrid fiat-crypto dollar. More depeg events on record than any other major stablecoin sounds alarming until you notice the peg score still sits in the high nineties, and the redemption backstop \u2014 atomic PSM access at zero fee \u2014 scores higher than almost everything else on the dashboard. Now overshadowed by its own rebrand as USDS, DAI occupies a strange position: the philosophical North Star of decentralized money, increasingly backed by the centralized assets it was designed to replace.",
+    "updatedAt": "2026-03-22"
   },
   "frax-frax": {
     "title": "The Identity Crisis",
@@ -46,8 +46,8 @@
   },
   "usdd-tron-dao-reserve": {
     "title": "Justin Sun's Undying Dollar",
-    "text": "USDD 2.0 emerged from its rocky algorithmic era with crypto collateral and a fresh governance model, though the centralized-dependent tag tells you Justin Sun still has the keys. It persistently trades above peg, which sounds good until you realize the premium reflects illiquidity as much as demand. The TRON ecosystem keeps it alive; whether that's a feature or a risk depends on your priors about its founder.",
-    "updatedAt": "2026-02-22"
+    "text": "USDD carries a D safety grade and a zero in decentralization \u2014 the literal floor \u2014 which is what happens when one person controls a stablecoin's governance and the reserve sits 75% in a Smart Allocator deploying stablecoins into Aave and JustLend DeFi strategies. The 329 depeg events and F in liquidity paint a grim picture, yet the PSM backstop scores an incongruous 95 \u2014 permissionless stablecoin swaps with 16% of supply available as immediate capacity, meaning the exit door is wider than the safety grade suggests. The reserves tell the real story: what was once an algorithmic stablecoin backed by Bitcoin is now mostly a DeFi yield strategy wrapped in a dollar token, with TRX comprising just 7% of backing. USDD persists on the TRON ecosystem's gravitational pull and Justin Sun's apparently inexhaustible appetite for financial experimentation, which is either a feature or a risk depending entirely on your priors about its founder.",
+    "updatedAt": "2026-03-22"
   },
   "dola-inverse-finance": {
     "title": "The Comeback CDP",
@@ -135,9 +135,9 @@
     "updatedAt": "2026-02-26"
   },
   "gho-aave": {
-    "title": "Aave's Dollar",
-    "text": "GHO is what happens when the largest lending protocol decides to mint its own stablecoin. Borrowers on Aave can mint GHO at favorable rates, creating a dollar tightly coupled to Aave's ecosystem health. The peg has been stable since the rocky first months, and stkAAVE discounts give governance participants a reason to borrow. It's DeFi-native in a way that few stablecoins genuinely are.",
-    "updatedAt": "2026-02-22"
+    "title": "Aave's Dollar, Grown Up",
+    "text": "GHO earns an A- safety grade \u2014 the highest of any DeFi-native stablecoin on the dashboard \u2014 backed by a diversified collateral base of wstETH, ETH, sDAI, and WBTC drawn from Aave V3's battle-tested lending pools. The redemption backstop is the standout: a 99 score with high confidence, powered by GSM stability modules offering permissionless swaps at single-digit basis-point fees with 40% of total supply available as immediate capacity. The 194 depeg events sound alarming but reflect GHO's rocky post-launch period in 2023; the peg has since stabilized through the GSM mechanism that makes depegs self-correcting by creating arbitrage opportunities. The B+ in decentralization reflects genuine DAO governance \u2014 Aave's multibillion-dollar protocol governs GHO's facilitator caps and risk parameters \u2014 though the dependency on sDAI means GHO partially inherits whatever Sky/MakerDAO decides to do with its own reserves.",
+    "updatedAt": "2026-03-22"
   },
   "fdusd-first-digital": {
     "title": "Binance's Current Favorite",
@@ -145,9 +145,9 @@
     "updatedAt": "2026-02-22"
   },
   "pyusd-paypal": {
-    "title": "Big Fintech's Entry Ticket",
-    "text": "PayPal's stablecoin proves that when a payments giant with 400 million users issues a dollar token, people notice. Paxos-issued and fully reserved in treasuries and cash, PYUSD's regulatory credentials are impeccable. Its challenge isn't trust \u2014 it's utility. Until DeFi and PayPal's walled garden meaningfully converge, it risks being the best-credentialed stablecoin nobody uses on-chain.",
-    "updatedAt": "2026-02-22"
+    "title": "The Fintech Giant's Dollar",
+    "text": "PayPal's PYUSD has quietly grown into a top-ten stablecoin \u2014 proof that when a company with 400 million accounts issues a dollar token, scale eventually follows. The reserve structure is almost comically conservative: 97% in Treasury reverse repos with the balance in cash, custodied at institutional-top tier under Paxos's OCC national trust charter, earning a resilience grade that puts it alongside USDC and ahead of Tether. Zero-fee redemption through Paxos and a near-perfect peg score make the product technically unimpeachable. The tension is distribution: five chains, modest DeFi integration, and a DEX footprint concentrated on just three networks suggest PYUSD is still the best-credentialed stablecoin that hasn't decided whether its future is on-chain or inside PayPal's own walls.",
+    "updatedAt": "2026-03-22"
   },
   "gyen-gyen": {
     "title": "The Yen's Only Option",
@@ -156,8 +156,8 @@
   },
   "usdy-ondo-finance": {
     "title": "Ondo's Yield Machine",
-    "text": "Ondo Finance's USDY offers tokenized US Treasury exposure to everyone outside the US, neatly sidestepping domestic securities law. It's RWA-backed, yield-bearing, and has become the poster child of the \"tokenized treasuries\" narrative. The irony of a product that democratizes US government debt by excluding US persons is apparently lost on no one.",
-    "updatedAt": "2026-02-22"
+    "text": "Ondo's USDY offers tokenized U.S. Treasury exposure across 14 chains to everyone outside the United States \u2014 the irony of democratizing American government debt by excluding American persons remains the product's defining contradiction. Backed entirely by very-low-risk assets with Ankura Trust real-time attestations, the product is structurally sound but earns only a C+ safety grade \u2014 dragged down by an F in decentralization and a D in liquidity that reflects thin DEX pools relative to its billion-dollar-plus circulation. As a NAV-appreciating token rather than a pegged stablecoin, USDY has never depegged because it was never designed to hold a fixed price, which makes its presence on a stablecoin dashboard a philosophical question the market has answered with its wallet. The 14-chain deployment is the broadest of any tokenized treasury product, suggesting Ondo is building for distribution scale that its competitors haven't yet attempted.",
+    "updatedAt": "2026-03-22"
   },
   "cadc-cad-coin": {
     "title": "Canada's Lonely Loonie",
@@ -166,8 +166,8 @@
   },
   "usde-ethena": {
     "title": "The Basis Trade, Tokenized",
-    "text": "Ethena's USDe pioneered the delta-neutral stablecoin: hold spot crypto, short the perps, pocket the funding rate. It works beautifully in bull markets when longs pay shorts handsomely for leverage. The catch? When funding flips negative \u2014 as it inevitably does \u2014 the insurance fund becomes the only thing between USDe and a death spiral. It's a sophisticated yield product wearing a stablecoin's clothing.",
-    "updatedAt": "2026-02-22"
+    "text": "Ethena's USDe pioneered the delta-neutral stablecoin and became crypto's third-largest \u2014 then quietly restructured its backing so that 76% of collateral now sits in liquid stablecoins, primarily its own USDtb backed by BlackRock's BUIDL. The remaining quarter runs the original playbook: spot BTC and ETH hedged with CEX perpetual shorts, custodied off-exchange through Ceffu and Copper. The safety profile reveals the structural tension: a near-perfect peg score paired with an F in resilience, reflecting exotic collateral quality and CEX-tier custody that no amount of funding-rate alpha can paper over. The dependency chain runs three layers deep \u2014 USDe depends on USDtb, which depends on BUIDL \u2014 making Ethena's synthetic dollar ultimately backstopped by BlackRock's tokenized money market fund, which would surprise most of its holders.",
+    "updatedAt": "2026-03-22"
   },
   "aeur-anchored-coins": {
     "title": "The Swiss Euro",
@@ -210,9 +210,9 @@
     "updatedAt": "2026-02-22"
   },
   "buidl-blackrock": {
-    "title": "When BlackRock Calls It a Token",
-    "text": "BlackRock's tokenized money market fund is what happens when the world's largest asset manager decides blockchain isn't a meme. BUIDL doesn't try to be a DeFi building block \u2014 it's institutional plumbing with an ERC-20 wrapper. When Larry Fink's firm validates tokenization, the rest of TradFi starts returning phone calls.",
-    "updatedAt": "2026-02-22"
+    "title": "The Institutional Monolith",
+    "text": "BlackRock's BUIDL has quietly become the largest tokenized money market fund, backed by T-bills and repos at BNY Mellon with institutional-top custody \u2014 and it earns only a B- safety grade, which tells you everything about what Pharos measures versus what a brand name implies. The perfect peg score and A+ resilience are expected from the world's largest asset manager; the F in decentralization and complete absence of DEX liquidity are equally expected from a product restricted to Reg D qualified purchasers. BUIDL's real significance is as infrastructure rather than a tradeable asset: it sits inside the reserve stacks of USDe, USDtb, frxUSD, USD0, and a growing list of stablecoins that want T-bill backing without managing the compliance themselves. Eight chain deployments via Securitize are expanding the footprint, but BUIDL remains the stablecoin that other stablecoins hold \u2014 not the one retail users ever touch.",
+    "updatedAt": "2026-03-22"
   },
   "btcusd-btcfi": {
     "title": "Bitcoin's CDP Outpost",
@@ -236,8 +236,8 @@
   },
   "usd0-usual": {
     "title": "The Usual Suspect",
-    "text": "Usual's USD0 burst onto the scene promising a stablecoin where revenue flows back to tokenholders via the USUAL governance token. The RWA-backed reserves provide the peg stability, while the protocol's token economics provide the sizzle. It's an interesting governance experiment, though the December 2024 USD0++ depeg reminded everyone that innovative doesn't mean risk-free.",
-    "updatedAt": "2026-02-22"
+    "text": "Usual's USD0 is a stablecoin backed by stablecoins backed by stablecoins: 65% Hashnote USYC, 15% M by M0, 10% Ethena's USDtb, 5% BlackRock BUIDL, 3% Ondo's OUSG, and 2% Circle's USDC \u2014 six distinct upstream dependencies, each carrying its own counterparty chain down to the actual Treasury bills. The C- in dependency risk is the inevitable consequence of this architecture: every wrapper adds a layer, and USD0 has more layers than most buildings. The December 2024 USD0++ depeg remains the cautionary asterisk \u2014 a reminder that innovative tokenomics around the USUAL governance token can destabilize what the reserve composition was designed to protect. The 86-rated redemption backstop via permissionless DaoCollateral swaps is the structural safeguard, but with 38 depeg events and DEWS in the Watch band, USD0 demands more trust in its dependency stack than most holders probably realize.",
+    "updatedAt": "2026-03-22"
   },
   "usr-resolv": {
     "title": "Resolving the Yield Question",
@@ -255,14 +255,14 @@
     "updatedAt": "2026-02-22"
   },
   "usds-sky": {
-    "title": "The Artist Formerly Known as DAI",
-    "text": "Sky Dollar is MakerDAO's rebranded stablecoin, the culmination of Rune Christensen's \"Endgame\" vision to make the protocol more normie-friendly. Under the hood it's the same overcollateralized vaults and PSM modules \u2014 just with a fresh coat of paint and a governance structure that's still figuring itself out. Whether the rebrand was genius marketing or unnecessary complexity remains the market's most polite disagreement.",
-    "updatedAt": "2026-02-22"
+    "title": "The Endgame Dollar",
+    "text": "Sky Dollar is MakerDAO rebranded, but the numbers tell a story the name change cannot: supply has surged to make USDS one of the largest stablecoins in existence, driven by the same PSM and vault architecture that sustained DAI for years. The reserve mix \u2014 40% U.S. Treasuries, 30% USDC through the PSM, 20% ETH \u2014 earns a balanced B+ across every safety dimension, the most consistent scorecard in the top ten. The redemption backstop is the real headline: permissionless atomic PSM swaps with roughly a third of total supply available as immediate capacity at zero fee, giving USDS arguably the best exit infrastructure of any stablecoin at scale. The dependency on Circle's USDC as mechanism-critical collateral is the one contradiction a DAO-governed stablecoin probably wishes it could resolve.",
+    "updatedAt": "2026-03-22"
   },
   "m-m0": {
-    "title": "The Middleman's Stablecoin",
-    "text": "M0's M token is a middleware play: rather than competing with USDC or USDT directly, it provides infrastructure for other stablecoins and fintechs to build on. Its RWA-backed reserves and centralized-dependent governance aim for a middle ground between Tether's opacity and Circle's centralization. The \"protocol for stablecoins\" pitch is elegant in theory \u2014 the question is whether the market wants a meta-stablecoin layer.",
-    "updatedAt": "2026-02-22"
+    "title": "The Middleware Dollar",
+    "text": "M0's M token is backed 100% by short-term T-bills in bankruptcy-remote SPVs \u2014 a pristine reserve that earns a perfect peg score, yet the token trades persistently below peg with a D safety grade and a liquidity score of 5 out of 100. The disconnect between flawless backing and negligible on-chain liquidity is M0's defining paradox: this is infrastructure, not a consumer stablecoin. Permissioned Minters lock T-bill collateral while Validators cryptographically attest sufficiency on-chain \u2014 a novel trust architecture that replaces auditor attestations with protocol-level verification, at the cost of institutional-unregulated custody and no redemption backstop modeled by Pharos. M's significance is downstream: it powers Noble's USDN for Cosmos, MetaMask's mUSD, USD.AI's USDai, and Usual's USD0 \u2014 making M the stablecoin that nobody holds directly but everybody depends on.",
+    "updatedAt": "2026-03-22"
   },
   "usdm-moneta": {
     "title": "Cardano's Dollar Anchor",
@@ -286,8 +286,8 @@
   },
   "usdtb-ethena": {
     "title": "Ethena's Safe Side",
-    "text": "If USDe is the exciting sibling, USDtb is the responsible one \u2014 backed by BlackRock's BUIDL fund rather than delta-neutral trades. Ethena built it for users who want the ecosystem without the basis-trade risk, creating a safety valve that also serves as USDe's backstop. It's the stablecoin equivalent of keeping a boring index fund alongside your options portfolio.",
-    "updatedAt": "2026-02-22"
+    "text": "If USDe is Ethena's exciting sibling, USDtb is the responsible one \u2014 90% backed by BlackRock's BUIDL with a 10% USDC buffer for fast redemptions, issued through Anchorage Digital under an OCC federal bank charter. The C safety grade looks harsh for a product whose underlying assets are almost entirely U.S. Treasuries, but the dependency score reveals the catch: USDtb inherits risk from both BUIDL and USDC, and its C in dependency reflects the chain of counterparties between a holder and the actual government bonds. USDtb's real purpose is less as a standalone stablecoin and more as the ballast inside USDe's reserve \u2014 76% of Ethena's flagship product now sits in USDtb, making this the quiet load-bearing wall of a multibillion-dollar structure. On just three chains with modest DEX liquidity, USDtb is a product optimized for one customer: its own parent protocol.",
+    "updatedAt": "2026-03-22"
   },
   "zeusd-zoth": {
     "title": "RWA Restaking's First Bet",
@@ -320,9 +320,9 @@
     "updatedAt": "2026-02-22"
   },
   "usyc-hashnote": {
-    "title": "Treasury Yields On-Chain",
-    "text": "Hashnote's USYC is a tokenized money market fund that passes T-bill yields directly to holders. It's RWA-backed, yield-bearing, and about as exciting as its underlying asset \u2014 which is precisely the point. In a world of exotic DeFi yields, sometimes the most radical product is just a savings account with an ERC-20 wrapper.",
-    "updatedAt": "2026-02-22"
+    "title": "The Invisible Giant",
+    "text": "Hashnote's USYC has surged past $2 billion to become the largest tokenized Treasury product \u2014 and the most invisible, with zero DEX liquidity, a single-source price feed, and deployment on just two chains. The C+ safety grade on a product backed entirely by T-bills and reverse repos sounds paradoxical until you see the breakdown: an F in decentralization and the worst effective exit score of any top-ten stablecoin, reflecting the reality that exiting USYC means going through Hashnote's same-day redemption window, not a swap. As a NAV-appreciating token with a climbing price, USYC is less a stablecoin and more a tokenized money market fund \u2014 one that has grown explosively on institutional demand that apparently cares more about yield-to-maturity than on-chain exit routes. The Bermuda BMA license provides regulatory cover, but the absence of published proof of reserves is a pointed gap for a product of this scale.",
+    "updatedAt": "2026-03-22"
   },
   "eurr-stablr": {
     "title": "Malta's Euro Bet",
@@ -345,9 +345,9 @@
     "updatedAt": "2026-02-22"
   },
   "usdf-falcon": {
-    "title": "The Falcon Play",
-    "text": "Falcon Finance's USDf enters the delta-neutral arena alongside Ethena, offering yield through basis-trade strategies with a centralized-dependent governance model. Its crypto-backed structure means the peg relies on market dynamics rather than reserve transparency. In the crowded yield-bearing stablecoin space, differentiation is a question of execution speed and risk management.",
-    "updatedAt": "2026-02-22"
+    "title": "Altcoin Alchemy",
+    "text": "Falcon Finance runs the delta-neutral playbook with collateral that would make risk managers reach for antacids: 45% BTC shorts, 30% stablecoins, and \u2014 the part that distinguishes it from Ethena \u2014 15% in altcoins including DOGE, FET, TRX, and TON, each hedged with perpetual shorts on centralized exchanges. It is the only top-ten stablecoin in the DEWS Watch band rather than Calm, and the only one persistently trading below peg, which together explain why a C+ safety grade accompanies over a billion dollars in circulation. The ht.digital real-time reserve transparency helps, but the fundamental question is whether delta-neutral strategies on altcoin perp markets \u2014 where liquidity can evaporate in hours \u2014 provide the same structural guarantee as the BTC and ETH hedges that defined the category. The yield on sUSDf is the carrot; the exotic collateral quality rating is the stick.",
+    "updatedAt": "2026-03-22"
   },
   "europ-schuman": {
     "title": "France's MiCA Pioneer",
@@ -361,8 +361,8 @@
   },
   "rlusd-ripple": {
     "title": "Ripple's Dollar Bet",
-    "text": "After years of fighting the SEC over XRP, Ripple launched its own stablecoin with NYDFS approval \u2014 a plot twist even Ripple skeptics didn't see coming. RLUSD is built for Ripple's payments network, aiming to be the bridge asset that XRP never became for institutional transfers. Fully reserved and centrally managed, it's less a DeFi primitive and more a cross-border payments tool.",
-    "updatedAt": "2026-02-22"
+    "text": "After years of fighting the SEC over XRP, Ripple obtained a NYDFS trust charter and launched a stablecoin with reserves that are 100% very-low-risk \u2014 T-bills, government money market funds, and cash \u2014 split evenly across asset types with BPM LLP attestations. The B safety grade reflects a clean balance sheet dragged down by the same D in decentralization that plagues every centralized issuer, but the 54 depeg events including one that hit 636 basis points reveal a rougher early history than the current steady peg suggests. RLUSD lives on just two chains \u2014 Ethereum and Ripple's own XRPL \u2014 a deliberate choice that prioritizes Ripple's cross-border payments corridor over DeFi ubiquity. The strategic question is whether a stablecoin designed for institutional settlement can compete for on-chain liquidity against issuers who have a five-year head start.",
+    "updatedAt": "2026-03-22"
   },
   "feusd-felix": {
     "title": "Hyperliquid's Lending Layer",
@@ -401,8 +401,8 @@
   },
   "usd1-world-liberty-financial": {
     "title": "The Presidential Stablecoin",
-    "text": "World Liberty Financial's USD1 is backed by the Trump family brand and entered the market with all the subtlety you'd expect. It launched with RWA backing and centralized governance, positioning itself somewhere between a political statement and a financial product. The reserves are real, but the regulatory questions write themselves.",
-    "updatedAt": "2026-02-22"
+    "text": "World Liberty Financial's USD1 arrived with the Trump family brand and proved that political controversy does not prevent a stablecoin from functioning: 100% very-low-risk reserves in T-bills, money market funds, and cash, custodied by BitGo under a South Dakota trust charter. The irony is structural \u2014 USD1 is, by the numbers, a perfectly conventional stablecoin with impeccable reserves and a near-perfect peg score, indistinguishable from any Paxos or Circle product except for the name on the letterhead. Supply has contracted by double digits recently, suggesting that the initial burst of politically motivated minting is unwinding as holders discover that USD1 earns no yield and has thinner DEX liquidity than competitors half its size. Whether the brand is an asset or a liability depends on which side of the political aisle you mint from, but the B safety grade suggests the product itself is unremarkable in the best possible way.",
+    "updatedAt": "2026-03-22"
   },
   "usdx-hex-trust": {
     "title": "Hong Kong's Quiet Dollar",
@@ -450,9 +450,9 @@
     "updatedAt": "2026-02-22"
   },
   "usdg-paxos": {
-    "title": "The Paxos Sequel",
-    "text": "Global Dollar is Paxos's second act after BUSD, built to avoid the regulatory friction that killed its Binance partnership. Singapore-regulated and reserve-backed, USDG targets the institutional corridor that doesn't want Tether's opacity or Circle's SVB memories. Whether the market needs another compliant stablecoin is a question USDG is determined to answer anyway.",
-    "updatedAt": "2026-02-22"
+    "title": "Paxos's Singapore Sequel",
+    "text": "After Binance's BUSD died under regulatory fire, Paxos relocated its stablecoin ambitions to Singapore, where USDG now sits under a MAS Major Payment Institution license with reserves split between DBS Bank and Standard Chartered \u2014 institutional-top custody that matches Circle and exceeds Tether. The all-very-low-risk reserve composition and A+ resilience grade make USDG structurally one of the safest stablecoins in existence, which makes the lowest peg score among rated top-ten coins a curious anomaly \u2014 a brief tracking history with early growing pains rather than structural fragility. The zero-fee redemption and additional EU issuance via a MiCA-compliant Finnish entity give USDG a dual-jurisdiction strategy that no competitor currently matches. The catch is on-chain presence: concentrated on just a few chains with modest DEX depth, USDG's institutional pedigree still outpaces its DeFi footprint.",
+    "updatedAt": "2026-03-22"
   },
   "xsgd-straitsx": {
     "title": "Singapore's DeFi On-Ramp",
@@ -520,9 +520,9 @@
     "updatedAt": "2026-02-22"
   },
   "usdai-usd-ai": {
-    "title": "AI Meets RWA",
-    "text": "USD.AI blends the two hottest crypto narratives \u2014 artificial intelligence and real-world assets \u2014 into a single stablecoin product. Its centralized-dependent governance suggests human oversight where it counts, while the AI branding does the marketing work. Whether the \"AI\" label reflects genuine innovation or narrative arbitrage is left as an exercise for the reader.",
-    "updatedAt": "2026-02-22"
+    "title": "GPU Yield in Dollar Clothing",
+    "text": "Peel back the AI branding and USD.AI is a stablecoin backed 56% by M0's T-bill tokens and 43% by PayPal's PYUSD \u2014 a surprisingly conventional reserve for a product that markets itself at the intersection of artificial intelligence and finance. The 1% allocated to GPU-collateralized loans \u2014 NVIDIA hardware tokenized as warehouse receipts under UCC law \u2014 is what makes it interesting, but that's also the only part that justifies the name. The 218 depeg events and a worst deviation of nearly 1500 basis points tell a rougher story than the current peg suggests, and the 30-day redemption windows through a QEV auction mechanism mean exiting USDai is a patience exercise, not a swap. The C- safety grade reflects the accumulated dependency chain: USDai depends on M0, which depends on T-bills in unregulated custody, and on PYUSD, which depends on Paxos \u2014 three layers of counterparty risk between a holder and a government bond.",
+    "updatedAt": "2026-03-22"
   },
   "usx-solstice": {
     "title": "The Swiss Yield Vault",
@@ -600,9 +600,9 @@
     "updatedAt": "2026-02-22"
   },
   "u-united-stables": {
-    "title": "The Aggregator Dollar",
-    "text": "United Stables takes the yield-aggregation approach, pooling reserves across multiple strategies and passing the returns to holders. It's a bet that diversification of stablecoin backing is itself a feature worth tokenizing. Simple concept, hard execution.",
-    "updatedAt": "2026-02-22"
+    "title": "The Stablecoin of Stablecoins",
+    "text": "United Stables' U is exactly what it sounds like: a dollar backed by other dollars \u2014 35% USDC, 35% USDT, 15% World Liberty Financial's USD1, and 15% fiat and T-bills, minted 1:1 by depositing any of the whitelisted stablecoins. The A in dependency risk and 89-rated backstop reflect the strength of the underlying assets; the C- in resilience and F in decentralization reflect the wrapper itself \u2014 a BVI entity with unregulated Bermuda custody adding a layer of counterparty risk on top of stablecoins that already carry their own. At over a billion dollars in circulation with zero depeg events, U has functioned as designed, though the DEWS Watch band suggests the market sees stress signals that the peg hasn't yet absorbed. The honest question is why a holder would accept the additional custody and smart contract risk of wrapping USDC and USDT when they could simply hold the originals.",
+    "updatedAt": "2026-03-22"
   },
   "reusd-re-protocol": {
     "title": "Reinsurance Meets DeFi",

@@ -333,6 +333,8 @@ describe("syncStablecoins", () => {
           lookupMisses: 0,
           upstreamErrors: 0,
           publicFallbacks: 0,
+          budgetExhausted: false,
+          budgetSkipped: 0,
           transports: {
             coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
             geckoTerminalPublic: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
@@ -366,6 +368,8 @@ describe("syncStablecoins", () => {
         lookupMisses: 0,
         upstreamErrors: 0,
         publicFallbacks: 1,
+        budgetExhausted: false,
+        budgetSkipped: 0,
         transports: {
           coingeckoOnchain: { attempted: 1, priced: 0, lookupMisses: 1, upstreamErrors: 0 },
           geckoTerminalPublic: { attempted: 1, priced: 1, lookupMisses: 0, upstreamErrors: 0 },
@@ -513,6 +517,8 @@ describe("syncStablecoins", () => {
           lookupMisses: 0,
           upstreamErrors: 0,
           publicFallbacks: 0,
+          budgetExhausted: false,
+          budgetSkipped: 0,
           transports: {
             coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
             geckoTerminalPublic: { attempted: 1, priced: 1, lookupMisses: 0, upstreamErrors: 0 },

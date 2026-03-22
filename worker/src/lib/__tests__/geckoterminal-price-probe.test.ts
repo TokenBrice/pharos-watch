@@ -57,7 +57,7 @@ vi.mock("@shared/lib/stablecoins", () => ({
   ],
 }));
 
-import { CIRCUIT_SOURCE } from "../constants";
+import { CIRCUIT_SOURCE, GT_PROBE_RUN_BUDGET_MS } from "../constants";
 import { extractPoolPrice, probeGeckoTerminalPrices } from "../geckoterminal-price-probe";
 import type { GtPool } from "../../cron/dex-liquidity/types";
 
@@ -354,6 +354,43 @@ describe("probeGeckoTerminalPrices", () => {
       CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
       true,
     );
+  });
+
+  it("stops probing when the run budget is exhausted and reports skipped candidates", async () => {
+    vi.useFakeTimers();
+    fetchWithRetryMock.mockImplementation((_url: string, opts?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        const signal = opts?.signal;
+        const abort = () => reject(signal?.reason ?? new Error("aborted"));
+        if (signal?.aborted) {
+          abort();
+          return;
+        }
+        signal?.addEventListener("abort", abort, { once: true });
+      })
+    );
+
+    const resultPromise = probeGeckoTerminalPrices(
+      [
+        { id: "asset-404", price: 1 },
+        { id: "asset-429", price: 1 },
+      ],
+      {} as D1Database,
+    );
+
+    await vi.advanceTimersByTimeAsync(GT_PROBE_RUN_BUDGET_MS + 1);
+    const result = await resultPromise;
+
+    expect(result.stats.probed).toBe(1);
+    expect(result.stats.budgetExhausted).toBe(true);
+    expect(result.stats.budgetSkipped).toBe(1);
+    expect(result.stats.upstreamErrors).toBe(0);
+    expect(recordOutcomeMock).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
+      true,
+    );
+    vi.useRealTimers();
   });
 });
 

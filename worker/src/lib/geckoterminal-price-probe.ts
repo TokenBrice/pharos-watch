@@ -2,7 +2,14 @@ import { GT_API_BASE } from "./dex-constants";
 import { RATE_LIMITS } from "./rate-limit";
 import { fetchWithRetry } from "./fetch-retry";
 import { cgHeaders, cgUrl } from "./coingecko";
-import { USER_AGENT, GT_PROBE_MIN_TVL_USD, GT_PROBE_TIMEOUT_MS, GT_PROBE_MAX_RETRIES, CIRCUIT_SOURCE } from "./constants";
+import {
+  USER_AGENT,
+  GT_PROBE_MIN_TVL_USD,
+  GT_PROBE_TIMEOUT_MS,
+  GT_PROBE_MAX_RETRIES,
+  GT_PROBE_RUN_BUDGET_MS,
+  CIRCUIT_SOURCE,
+} from "./constants";
 import { shouldAttemptFetch, recordOutcome } from "./circuit-breaker";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import { CG_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
@@ -75,6 +82,8 @@ export interface GtProbeStats {
   lookupMisses: number;
   upstreamErrors: number;
   publicFallbacks: number;
+  budgetExhausted: boolean;
+  budgetSkipped: number;
   transports: {
     coingeckoOnchain: GtProbeTransportStats;
     geckoTerminalPublic: GtProbeTransportStats;
@@ -90,6 +99,8 @@ export function createEmptyGtProbeStats(): GtProbeStats {
     lookupMisses: 0,
     upstreamErrors: 0,
     publicFallbacks: 0,
+    budgetExhausted: false,
+    budgetSkipped: 0,
     transports: {
       coingeckoOnchain: {
         attempted: 0,
@@ -122,6 +133,16 @@ type ProbeFetchOutcome =
   | { kind: "lookup-miss"; transport: ProbeTransport }
   | { kind: "low-tvl"; transport: ProbeTransport }
   | { kind: "upstream-error"; transport: ProbeTransport };
+
+interface ProbeableSingleSourceAsset {
+  id: string;
+  price: number;
+  priorityUsd: number;
+  chain: string;
+  address: string;
+  gtNetwork: string;
+  cgNetwork?: string;
+}
 
 async function fetchProbeOutcome(
   transport: ProbeTransport,
@@ -187,7 +208,7 @@ async function fetchProbeOutcome(
  * to SourcePrice for injection into a second-pass consensus.
  */
 export async function probeGeckoTerminalPrices(
-  singleSourceCgAssets: { id: string; price: number }[],
+  singleSourceCgAssets: { id: string; price: number; priorityUsd?: number }[],
   db: D1Database,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
@@ -206,121 +227,183 @@ export async function probeGeckoTerminalPrices(
   throwIfAborted(signal);
 
   const metaById = new Map(ACTIVE_STABLECOINS.map((m) => [m.id, m]));
-  let failures = 0;
-
+  const candidates: ProbeableSingleSourceAsset[] = [];
   for (const asset of singleSourceCgAssets) {
-    throwIfAborted(signal);
-
     const meta = metaById.get(asset.id);
     if (!meta?.contracts?.length) continue;
 
-    // Find first EVM contract with a GT chain mapping
     const contract = meta.contracts.find(
-      (c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron" && GT_CHAIN_MAP[c.chain],
+      (entry) => entry.chain !== "solana" && entry.chain !== "stellar" && entry.chain !== "tron" && GT_CHAIN_MAP[entry.chain],
     );
     if (!contract) continue;
 
-    const gtChain = GT_CHAIN_MAP[contract.chain];
-    const cgChain = coingeckoApiKey ? CG_CHAIN_MAP[contract.chain] : undefined;
+    candidates.push({
+      id: asset.id,
+      price: asset.price,
+      priorityUsd: asset.priorityUsd ?? 0,
+      chain: contract.chain,
+      address: contract.address,
+      gtNetwork: GT_CHAIN_MAP[contract.chain],
+      cgNetwork: coingeckoApiKey ? CG_CHAIN_MAP[contract.chain] : undefined,
+    });
+  }
+  candidates.sort((left, right) => {
+    if (right.priorityUsd !== left.priorityUsd) return right.priorityUsd - left.priorityUsd;
+    return left.id.localeCompare(right.id);
+  });
 
-    if (stats.probed > 0) {
-      await sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, signal);
-    }
+  if (candidates.length === 0) {
+    await recordOutcome(db, CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE, true);
+    return { prices, stats };
+  }
 
-    stats.probed++;
+  let failures = 0;
+  const budgetController = new AbortController();
+  const budgetTimer = setTimeout(() => {
+    budgetController.abort(new Error("GT probe run budget exhausted"));
+  }, GT_PROBE_RUN_BUDGET_MS);
+  const probeSignal = signal
+    ? AbortSignal.any([signal, budgetController.signal])
+    : budgetController.signal;
+  const markBudgetExhausted = (skippedCount: number) => {
+    stats.budgetExhausted = true;
+    stats.budgetSkipped = Math.max(stats.budgetSkipped, skippedCount);
+  };
 
-    try {
-      const outcomes: ProbeFetchOutcome[] = [];
-      let pricedOutcome: Extract<ProbeFetchOutcome, { kind: "priced" }> | null = null;
+  try {
+    for (let index = 0; index < candidates.length; index++) {
+      throwIfAborted(signal);
+      if (budgetController.signal.aborted) {
+        markBudgetExhausted(candidates.length - index);
+        break;
+      }
+      const asset = candidates[index];
 
-      if (cgChain) {
-        const onchainOutcome = await fetchProbeOutcome(
-          "coingecko-onchain",
-          cgChain,
-          contract.address,
-          stats,
-          signal,
-          coingeckoApiKey,
-        );
-        if (onchainOutcome.kind === "priced") {
-          pricedOutcome = onchainOutcome;
-        } else {
-          outcomes.push(onchainOutcome);
+      if (stats.probed > 0) {
+        try {
+          await sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, probeSignal);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          if (budgetController.signal.aborted) {
+            markBudgetExhausted(candidates.length - index);
+            break;
+          }
+          throw err instanceof Error ? err : new Error(String(err));
         }
       }
-
-      if (!pricedOutcome) {
-        if (cgChain) stats.publicFallbacks++;
-        const publicOutcome = await fetchProbeOutcome(
-          "geckoterminal-public",
-          gtChain,
-          contract.address,
-          stats,
-          signal,
-        );
-        if (publicOutcome.kind === "priced") {
-          pricedOutcome = publicOutcome;
-        } else {
-          outcomes.push(publicOutcome);
-        }
+      if (budgetController.signal.aborted) {
+        markBudgetExhausted(candidates.length - index);
+        break;
       }
 
-      if (!pricedOutcome) {
-        if (outcomes.some((outcome) => outcome.kind === "low-tvl")) {
-          stats.skippedLowTvl++;
+      stats.probed++;
+
+      try {
+        const outcomes: ProbeFetchOutcome[] = [];
+        let pricedOutcome: Extract<ProbeFetchOutcome, { kind: "priced" }> | null = null;
+
+        if (asset.cgNetwork) {
+          const onchainOutcome = await fetchProbeOutcome(
+            "coingecko-onchain",
+            asset.cgNetwork,
+            asset.address,
+            stats,
+            probeSignal,
+            coingeckoApiKey,
+          );
+          if (onchainOutcome.kind === "priced") {
+            pricedOutcome = onchainOutcome;
+          } else {
+            outcomes.push(onchainOutcome);
+          }
+        }
+
+        if (!pricedOutcome) {
+          if (asset.cgNetwork) stats.publicFallbacks++;
+          const publicOutcome = await fetchProbeOutcome(
+            "geckoterminal-public",
+            asset.gtNetwork,
+            asset.address,
+            stats,
+            probeSignal,
+          );
+          if (publicOutcome.kind === "priced") {
+            pricedOutcome = publicOutcome;
+          } else {
+            outcomes.push(publicOutcome);
+          }
+        }
+
+        if (!pricedOutcome) {
+          if (outcomes.some((outcome) => outcome.kind === "low-tvl")) {
+            stats.skippedLowTvl++;
+            continue;
+          }
+          if (outcomes.some((outcome) => outcome.kind === "lookup-miss")) {
+            stats.lookupMisses++;
+            continue;
+          }
+          failures++;
+          stats.upstreamErrors++;
           continue;
         }
-        if (outcomes.some((outcome) => outcome.kind === "lookup-miss")) {
-          stats.lookupMisses++;
-          continue;
+
+        const result = pricedOutcome.result;
+        result.chain = asset.chain;
+        stats.pricesObtained++;
+
+        // Track divergences for logging
+        const mid = (result.price + asset.price) / 2;
+        if (mid > 0) {
+          const bps = Math.round((Math.abs(result.price - asset.price) / mid) * 10_000);
+          if (bps >= 500) stats.divergences500bps++;
+        }
+
+        prices.set(asset.id, {
+          source: "geckoterminal",
+          price: result.price,
+          weight: 1,
+          observedAt: Math.floor(Date.now() / 1000),
+          metadata: {
+            tvlUsd: result.tvlUsd,
+            chain: result.chain,
+            poolAddress: result.poolAddress,
+            side: result.side,
+            transport: pricedOutcome.transport,
+          },
+        });
+      } catch (err) {
+        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+        if (budgetController.signal.aborted) {
+          markBudgetExhausted(candidates.length - (index + 1));
+          break;
         }
         failures++;
         stats.upstreamErrors++;
-        continue;
+        console.warn(`[gt-probe] Failed for ${asset.id}:`, String(err).slice(0, 200));
       }
-
-      const result = pricedOutcome.result;
-      result.chain = contract.chain;
-      stats.pricesObtained++;
-
-      // Track divergences for logging
-      const mid = (result.price + asset.price) / 2;
-      if (mid > 0) {
-        const bps = Math.round((Math.abs(result.price - asset.price) / mid) * 10_000);
-        if (bps >= 500) stats.divergences500bps++;
-      }
-
-      prices.set(asset.id, {
-        source: "geckoterminal",
-        price: result.price,
-        weight: 1,
-        observedAt: Math.floor(Date.now() / 1000),
-        metadata: {
-          tvlUsd: result.tvlUsd,
-          chain: result.chain,
-          poolAddress: result.poolAddress,
-          side: result.side,
-          transport: pricedOutcome.transport,
-        },
-      });
-    } catch (err) {
-      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-      failures++;
-      stats.upstreamErrors++;
-      console.warn(`[gt-probe] Failed for ${asset.id}:`, String(err).slice(0, 200));
     }
+  } finally {
+    clearTimeout(budgetTimer);
   }
 
   // Source health should reflect GeckoTerminal reachability, not whether each
   // token lookup resolves to an indexed pool. 404/422 lookup misses are common
   // for thin assets and should not open the source-level circuit breaker.
   await recordOutcome(db, CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE, stats.probed === 0 || failures < stats.probed);
+  if (stats.budgetExhausted) {
+    console.warn(
+      `[gt-probe] Budget exhausted after probing ${stats.probed}/${candidates.length} assets; ` +
+      `skipped ${stats.budgetSkipped} remaining candidate${stats.budgetSkipped === 1 ? "" : "s"}`,
+    );
+  }
 
   console.log(
     `[gt-probe] Probed ${stats.probed} assets: ${stats.pricesObtained} prices obtained, ` +
     `${stats.divergences500bps} divergences >500bps, ${stats.skippedLowTvl} skipped (low TVL), ` +
     `${stats.lookupMisses} lookup misses, ${stats.upstreamErrors} upstream errors, ` +
-    `${stats.publicFallbacks} public fallbacks, onchain ${stats.transports.coingeckoOnchain.attempted}/${stats.transports.coingeckoOnchain.priced} priced, ` +
+    `${stats.publicFallbacks} public fallbacks, budget exhausted=${stats.budgetExhausted}, ` +
+    `budget skipped=${stats.budgetSkipped}, onchain ${stats.transports.coingeckoOnchain.attempted}/${stats.transports.coingeckoOnchain.priced} priced, ` +
     `public ${stats.transports.geckoTerminalPublic.attempted}/${stats.transports.geckoTerminalPublic.priced} priced`,
   );
 

@@ -85,6 +85,15 @@ export interface PriceValidationStats {
   low: number;
 }
 
+function sumCirculatingUsd(asset: Pick<PeggedAsset, "circulating">): number {
+  const circulating = asset.circulating;
+  if (!circulating || typeof circulating !== "object") return 0;
+  return Object.values(circulating).reduce(
+    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
+    0,
+  );
+}
+
 function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
   const mid = (left + right) / 2;
   if (mid <= 0) return false;
@@ -681,7 +690,7 @@ export async function runGtProbePass(
   const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../lib/geckoterminal-price-probe");
 
   // Identify weak soft-source assets that can benefit from an independent GT pool check.
-  const singleSourceAssets: Array<{ id: string; price: number }> = [];
+  const singleSourceAssets: Array<{ id: string; price: number; priorityUsd: number }> = [];
   for (const asset of assets) {
     const primary = primaryResults.get(asset.id);
     if (!primary) continue;
@@ -693,7 +702,11 @@ export async function runGtProbePass(
       (primary.confidence === "single-source" || primary.confidence === "low") &&
       primary.candidateSources.some((source) => isGtProbeEligibleSingleSource(source))
     ) {
-      singleSourceAssets.push({ id: asset.id, price: primary.price });
+      singleSourceAssets.push({
+        id: asset.id,
+        price: primary.price,
+        priorityUsd: sumCirculatingUsd(asset),
+      });
     }
   }
 
