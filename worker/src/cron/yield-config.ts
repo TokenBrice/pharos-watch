@@ -78,6 +78,12 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     variantAddress: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
     variantChain: "ethereum",
   },
+  // USBD -> sUSBD (BIMA savings wrapper)
+  "usbd-bima": {
+    variantSymbol: "sUSBD",
+    yieldSource: "BIMA savings (sUSBD)",
+    yieldType: "lending-vault",
+  },
 
   // USD.AI -> sUSDai (savings wrapper, $338M TVL on Stablewatch)
   "usdai-usd-ai": {

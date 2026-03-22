@@ -110,6 +110,7 @@ export const ID_MAPPING = [
   { oldId: "324", newId: "sbc-brale", symbol: "SBC", name: "Brale SBC", issuer: "brale", geckoId: "stable-coin-2" },
   { oldId: "23", newId: "ousd-origin-protocol", symbol: "OUSD", name: "Origin Dollar", issuer: "origin-protocol", geckoId: "origin-dollar" },
   { oldId: "183", newId: "btcusd-btcfi", symbol: "BtcUSD", name: "Bitcoin USD", issuer: "btcfi", geckoId: "bitcoin-usd-btcfi" },
+  { oldId: "253", newId: "usbd-bima", symbol: "USBD", name: "Bima USBD", issuer: "bima", geckoId: "usbd" },
   { oldId: "331", newId: "usp-pikudao", symbol: "USP", name: "PikuDAO USP", issuer: "pikudao", geckoId: "usp-yield-optimized-stablecoin" },
   { oldId: "240", newId: "usdr-stablr", symbol: "USDR", name: "StablR USD", issuer: "stablr", geckoId: "stablr-usd" },
   { oldId: "304", newId: "usdu-usdu-finance", symbol: "USDU", name: "USDU Finance", issuer: "usdu-finance" },

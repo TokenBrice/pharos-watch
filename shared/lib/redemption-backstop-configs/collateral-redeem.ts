@@ -96,6 +96,17 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Omni-CDP with $1-of-collateral redemption arbitrage; public fee schedule not disclosed",
     ),
   },
+  "usbd-bima": {
+    ...collateralRedeemBase,
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee(
+      "Redemption fee = coreRate + 75 bps; coreRate rises with redeemed supply and decays with a 24-hour half-life",
+      "formula",
+    ),
+    notes: [
+      "Docs also describe a PSM against USDC, USDP, and GUSD, but the primary modeled exit is direct redemption into BTC-derivative vault collateral",
+    ],
+  },
   "fpi-frax": {
     ...collateralRedeemBase,
     outputAssetType: "mixed-collateral",

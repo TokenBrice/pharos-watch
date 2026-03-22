@@ -219,6 +219,11 @@
     "text": "BtcUSD is a Bitcoin-collateralized stablecoin that leverages cross-chain capabilities to exist across multiple EVM networks. Users deposit WBTC or BTCB into overcollateralized vaults to mint dollars -- a familiar CDP model applied specifically to Bitcoin holders who want liquidity without selling. At its current modest scale, the question is whether BTC holders will trust yet another wrapping layer when established CDPs like MakerDAO already accept wrapped Bitcoin.",
     "updatedAt": "2026-02-22"
   },
+  "usbd-bima": {
+    "title": "Bitcoin Wrappers, Dollar Ambition",
+    "text": "Bima's USBD is a Bitcoin-backed CDP stablecoin that chose the busiest possible route to a dollar: wrap the BTC, restake the BTC, bridge the BTC, then borrow against it. At roughly $7.5 million market cap, it is early enough that chain distribution matters more than branding, and most supply currently sits on Hemi rather than Ethereum. The protocol does have a real peg floor: permissionless redemption at $1 of BTC-denominated collateral, with a Liquity-style fee that rises when people actually use it. The catch is that \"Bitcoin-backed\" here mostly means a stack of counterparties around Bitcoin, not plain BTC, so the stablecoin inherits every wrapper and bridge in the chain of custody.",
+    "updatedAt": "2026-03-22"
+  },
   "gyd-gyroscope": {
     "title": "The All-Weather Dollar",
     "text": "Gyroscope's GYD is an exercise in paranoid stablecoin design: a diversified reserve of sDAI, USDC, LUSD, and crvUSD, a primary-market AMM that algorithmically adjusts redemption prices during crises, and secondary-market AMMs that concentrate liquidity near the peg. The PAMM's circuit-breaker mechanism -- which reduces redemption rates during bank-run scenarios to preserve solvency -- is elegant game theory. GYD's thesis is that stablecoin design should optimize for surviving tail risks, not maximizing yield.",

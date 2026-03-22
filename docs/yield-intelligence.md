@@ -126,6 +126,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | FRXUSD (235)          | sfrxUSD | Frax staked frxUSD          |
 | DOLA (15)             | sDOLA   | Inverse Finance staked DOLA |
 | BOLD (269)            | yBOLD   | Liquity yield BOLD          |
+| USBD (253)            | sUSBD   | BIMA savings wrapper        |
 | reUSD (339)           | stUSR   | Resolv staking wrapper      |
 | AZND (327)            | loAZND  | Mu Digital locked wrapper   |
 | USD.AI (309)          | sUSDai  | GAIB USD.AI savings         |
