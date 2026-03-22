@@ -287,20 +287,6 @@ export async function syncFxRates(
       chainlink: "unavailable",
       openExchangeRates: "unavailable",
     };
-    let chainlinkSummary:
-      | {
-        configuredFeeds: number;
-        usableQuotes: number;
-        appliedQuotes: number;
-        decimalsUnavailable: number;
-        roundDataUnavailable: number;
-        staleQuotes: number;
-        invalidDecimals: number;
-        invalidAnswers: number;
-        invalidPrices: number;
-        fetchErrors: number;
-      }
-      | undefined;
 
     const markLive = (
       pegKey: string,
@@ -761,13 +747,7 @@ export async function syncFxRates(
               }
             }
 
-            chainlinkSummary = {
-              ...snapshot.summary,
-              appliedQuotes: applied,
-            };
-            chainlinkSource = quotes.size > 0
-              ? (applied === quotes.size ? "ok" : "partial")
-              : "unavailable";
+            chainlinkSource = quotes.size > 0 ? (applied === quotes.size ? "ok" : "partial") : "unavailable";
             await runBestEffort("recordOutcome:chainlink-feeds", async () => {
               await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, quotes.size > 0);
             });
@@ -846,7 +826,6 @@ export async function syncFxRates(
       ecbDate: ecbDate ?? undefined,
       consecutiveFallbackRuns: meta.consecutiveFallbackRuns,
       sources,
-      chainlinkSummary,
     };
     return {
       status: mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4 ? "degraded" : undefined,
