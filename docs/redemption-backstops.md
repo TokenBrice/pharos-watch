@@ -6,7 +6,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.1`
+- **Current methodology version:** `v1.2`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
@@ -43,11 +43,11 @@ No external HTTP calls happen during the redemption-backstop pass itself; any li
 
 Status semantics:
 
-- `ok` when every configured route resolves to a usable scored row
-- `degraded` when at least one row is written but any configured route is missing from cache, unresolved, or fails
+- `ok` when every configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh
+- `degraded` when at least one row is written but any configured route is missing from cache, unresolved, fails, or the reused DEX liquidity snapshot is stale
 - `error` when zero routes resolve to a usable scored row
 
-Cron metadata includes `synced`, `resolved`, `unresolved`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, plus `failedIds` or `missingFromCache` when relevant.
+Cron metadata includes `synced`, `resolved`, `unresolved`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, and `liquidityStale`, plus `failedIds` or `missingFromCache` when relevant.
 
 ---
 
@@ -88,6 +88,8 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 - If only redemption exists: `min(70, redemptionScore * 0.75)`
 - If neither exists: `null`
 
+The redemption-backstop cron only materializes `effectiveExitScore` on resolved rows when the reused DEX liquidity input is fresh. Report cards then apply their own confidence gating on top, so low-confidence redemption routes stay visible but do not uplift Safety Score liquidity.
+
 These weights are surfaced by `/api/redemption-backstops.methodology.effectiveExitWeights` and reused by report cards.
 
 ---
@@ -117,15 +119,15 @@ Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 
 | Capacity model          | Resolution                                                                                                                            |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `supply-full`           | Immediate capacity equals full current supply                                                                                         |
-| `supply-ratio`          | Immediate capacity equals `supplyUsd * ratio`                                                                                         |
+| `supply-full`           | Scores against full current supply as eventual redeemability, but leaves `immediateCapacity*` empty because immediate buffer is not separately quantified |
+| `supply-ratio`          | Immediate modeled capacity equals `supplyUsd * ratio`; this is heuristic unless the config explicitly opts into stronger confidence |
 | `reserve-sync-metadata` | Reads `reserve_sync_state.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio`; falls back to configured ratio when provided |
 
 The resulting row is tagged with one `sourceMode`:
 
 - `dynamic` when fresh reserve-sync metadata is available
 - `estimated` when static supply models or stale reserve metadata are used
-- `static` when the route remains configured but the current snapshot could not resolve a usable score
+- `static` when the route remains configured but the current snapshot could not resolve a usable score, including failure-safe rows written after per-coin sync errors
 
 Each row also carries:
 
@@ -136,18 +138,25 @@ Each row also carries:
   - `failed` when a route-specific resolver failed
 - `capacityConfidence`:
   - `dynamic` for live reserve-sync backed capacity
-  - `documented-bound` for configured bounded models such as `supply-ratio` or reserve fallback ratios
-  - `heuristic` for coarse full-supply assumptions
+  - `documented-bound` only when a bounded model is explicitly configured that way after source review
+  - `heuristic` by default for `supply-full`, `supply-ratio`, and inferred legacy rows without stronger evidence
+- `capacitySemantics`:
+  - `immediate-bounded` when the model is intended to represent a current redeemable buffer
+  - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity
 - `feeConfidence`:
   - `fixed` for bounded bps schedules
   - `formula` for disclosed formulas such as Liquity-style base-rate fees
   - `undisclosed-reviewed` when docs were reviewed but only descriptive fee information is available
+- `feeModelKind`:
+  - `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`
 - `modelConfidence`:
   - `high`, `medium`, or `low` rollups used by the API and detail page to communicate fidelity
+  - currently `low` for heuristic-capacity routes and all unresolved rows
 
 ### Docs / Notes
 
-- `docs` is resolved from the coin metadata's `proofOfReserves.url` first, then from preferred public links (`Docs`, `Proof of Reserve`, `Transparency`, `Website`)
+- `docs` prefers explicit config-reviewed sources first (`docs[]` + `reviewedAt`), then live-reserve display links for reserve-sync routes, then the coin metadata's `proofOfReserves.url`, then preferred public links (`Docs`, `Proof of Reserve`, `Transparency`, `Website`)
+- `docs.sources[]` records structured provenance for what the linked source supports (`route`, `capacity`, `fees`, `access`, `settlement`)
 - `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
 - `notes` merges config notes plus runtime notes such as stale reserve metadata fallback
 - `capsApplied` records any score caps triggered during scoring
@@ -155,6 +164,7 @@ Each row also carries:
 ### Cost Modeling
 
 - `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
+- `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails
 - `feeDescription` is used to surface:
   - dynamic formulas such as Liquity-style `min 50 bps + baseRate`
   - conditional fee schedules such as borrower-vs-non-borrower redemptions
@@ -199,7 +209,7 @@ Key columns:
 - `methodology_version`
 - `details_json`
 
-`details_json` now also stores `resolutionState`, `capacityConfidence`, `feeConfidence`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so runtime status and fidelity metadata survive current-snapshot and history writes without a schema migration.
+`details_json` now also stores `resolutionState`, `capacityConfidence`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so runtime status and fidelity metadata survive current-snapshot and history writes without a schema migration.
 
 ### `redemption_backstop_history`
 
@@ -237,10 +247,10 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()` with `CRON_1H`
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, model confidence, access/settlement/output/capacity blocks, an explicit redemption-fee summary with fixed or documented variable/conditional fee text, component subscores, docs link, and contextual methodology hint / footer actions)
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `worker/src/lib/report-cards-snapshot.ts` injects `redemptionBackstopScore`, `redemptionRouteFamily`, and immediate-capacity fields into `rawInputs`, and `shared/lib/report-cards.ts` consumes the score in `scoreLiquidity()`
-- `src/lib/coverage.ts` now distinguishes configured-but-unrated routes from genuinely covered routes so unresolved rows do not inflate public coverage counts
+- `src/lib/coverage.ts` now distinguishes configured-but-unrated routes and low-confidence heuristic routes from genuinely covered routes, so unresolved or weakly evidenced rows do not inflate public coverage counts
 
 There is currently no dedicated list page or standalone public methodology section for redemption backstops; the primary user-facing surface is the stablecoin detail page plus the report-card liquidity dimension. Contextual hints on those surfaces currently deep-link into the Safety Scores methodology section where effective-exit logic is documented.
 

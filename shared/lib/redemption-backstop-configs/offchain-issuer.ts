@@ -6,6 +6,7 @@ import {
   fixedFee,
   issuerBase,
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  sourceRef,
 } from "./shared";
 
 export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -151,7 +152,12 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "usdo-openeden": {
     ...issuerBase,
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(10, "OpenEden docs list a 10 bps redemption fee"),
+    reviewedAt: "2026-03-22",
+    docs: [
+      sourceRef("OpenEden Transparency", "https://openeden.com/usdo/transparency", ["route", "capacity", "fees"]),
+    ],
   },
   "usdm-moneta": {
     ...issuerBase,

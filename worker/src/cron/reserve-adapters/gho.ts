@@ -1,4 +1,4 @@
-import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchOnchainUint256, requireOnchainInput, slicesFromValues } from "./helpers";
 
@@ -16,6 +16,11 @@ export interface GhoFacilitatorData {
   facilitators: Array<{ label: string; bucketLevel: bigint; bucketCapacity: bigint }>;
   gsmUsdc: bigint;
   gsmUsdt: bigint;
+  totalSupply?: bigint;
+}
+
+function scale18ToUsd(value: bigint): number {
+  return Number(value / 10n ** 12n) / 1_000_000;
 }
 
 export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
@@ -43,11 +48,27 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
 
   if (values.length === 0) return { slices: [] };
 
+  const immediateRedeemableRaw = data.gsmUsdc + data.gsmUsdt;
+  const supplyUsd =
+    typeof data.totalSupply === "bigint" && data.totalSupply > 0n
+      ? scale18ToUsd(data.totalSupply)
+      : null;
+  const immediateRedeemableUsd =
+    immediateRedeemableRaw > 0n ? scale18ToUsd(immediateRedeemableRaw) : 0;
+
   return {
     slices: slicesFromValues(values),
     metadata: {
       facilitatorCount: data.facilitators.length,
       activeFacilitatorCount: data.facilitators.filter((f) => f.bucketLevel > 0n).length,
+      ...(supplyUsd != null
+        ? {
+            supplyUsd,
+            immediateRedeemableUsd,
+            immediateRedeemableRatio:
+              supplyUsd > 0 ? immediateRedeemableUsd / supplyUsd : null,
+          }
+        : {}),
     },
   };
 }
@@ -98,16 +119,25 @@ export async function fetchGhoReserves(
   const gsmUsdcScaled = gsmUsdc * 10n ** 12n;
   const gsmUsdtScaled = gsmUsdt * 10n ** 12n;
   const facilitatorMinted = totalSupply - gsmUsdcScaled - gsmUsdtScaled;
+  const warnings: LiveReserveWarning[] = facilitatorMinted > 0n
+    ? [{
+      code: "aggregated-facilitators",
+      message: "Non-GSM GHO facilitators are aggregated into a single residual bucket",
+      severity: "warning",
+    }]
+    : [];
 
-  return adaptGhoFacilitators({
+  const adapted = adaptGhoFacilitators({
     facilitators: [
       {
-        label: "Aave V3 Ethereum (overcollateralized)",
+        label: "Non-GSM facilitators (aggregated)",
         bucketLevel: facilitatorMinted > 0n ? facilitatorMinted : 0n,
         bucketCapacity: 0n,
       },
     ],
     gsmUsdc: gsmUsdcScaled,
     gsmUsdt: gsmUsdtScaled,
+    totalSupply,
   });
+  return warnings.length > 0 ? { ...adapted, warnings } : adapted;
 }

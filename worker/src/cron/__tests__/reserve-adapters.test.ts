@@ -136,9 +136,9 @@ describe("adaptCircleTransparency", () => {
   const mockUsdcHtml = `
     <div class="reserve-wrapper"
       data-usdc-us-treasuries="47.08"
-      data-usdc-months="7.51"
-      data-usdc-cash="0.11"
-      data-usdc-in-circulation="0.19">
+      data-usdc-months="19.87"
+      data-usdc-cash="11.35"
+      data-usdc-in-circulation="21.70">
     </div>
   `;
 
@@ -177,26 +177,21 @@ describe("adaptCircleTransparency", () => {
   it("throws when no reserve data is found in HTML", () => {
     expect(() =>
       adaptCircleTransparency("<div>empty page</div>", "usdc"),
-    ).toThrow("no reserve data found");
+    ).toThrow("missing reserve attributes");
   });
 
-  it("ignores attributes with zero or invalid values", () => {
+  it("throws when attributes have zero or invalid values", () => {
     const html = `
       <div data-usdc-us-treasuries="0" data-usdc-months="100"></div>
     `;
 
-    const result = adaptCircleTransparency(html, "usdc");
-    // Only the non-zero attribute should be counted
-    expect(result.metadata!.sliceCount).toBe(1);
+    expect(() => adaptCircleTransparency(html, "usdc")).toThrow("missing reserve attributes");
   });
 
-  it("handles partial data (some attributes missing)", () => {
+  it("throws when some required attributes are missing", () => {
     const html = `<div data-usdc-us-treasuries="95.5"></div>`;
 
-    const result = adaptCircleTransparency(html, "usdc");
-    expect(result.slices.length).toBe(1);
-    expect(result.slices[0].pct).toBe(100);
-    expect(result.slices[0].name).toContain("Treasuries");
+    expect(() => adaptCircleTransparency(html, "usdc")).toThrow("missing reserve attributes");
   });
 });
 

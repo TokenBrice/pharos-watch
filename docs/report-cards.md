@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.0)
+## Overall Grade (v6.2)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.0 introduces 6-tier custody model, mature-alt-l1 chain tier for Solana/BNB, 2-factor Resilience (blacklist descriptive only), and 5-band chain penalty with wrapper exemption. v5.9 corrected governance classifications for centralized-custody DeFi coins using live reserve evidence.
+Current-version note: v6.2 keeps the v6.1 structure. Redemption uplift remains confidence-gated, and collateral-quality passthrough now only accepts fresh authoritative independent live reserve feeds (`dynamic-mix` or `single-bucket`). `validated-static` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring.
 
 ## Dimensions
 
@@ -49,6 +49,9 @@ Current-version note: v6.0 introduces 6-tier custody model, mature-alt-l1 chain 
   - `effectiveExitScore = round(max(liquidityScore, liquidityScore * 0.55 + redemptionBackstopScore * 0.45))`
 - If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
 - If only redemption exists, `effectiveExitScore = round(min(70, redemptionBackstopScore * 0.75))`
+- Redemption uplift is only used when the redemption route is resolved and above the low-confidence / heuristic tier
+- Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
+- When DEX liquidity is stale, report cards do not reuse it for blended effective-exit scoring; the dimension falls back to redemption-only or `NR`
 - If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty
 - See [Redemption Backstops](./redemption-backstops.md) for redemption component scoring and route-family caps
@@ -81,24 +84,30 @@ Blacklist capability is reported descriptively only and does not affect the Resi
 
 For coins with curated reserve compositions, collateral quality is computed as a weighted average of per-slice risk scores:
 
-#### Live Reserve Passthrough (v5.8)
+#### Live Reserve Passthrough (v5.8, tightened in v6.2)
 
 For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
-uses the hourly live snapshot from `reserve_composition` instead of curated
-`StablecoinMeta.reserves` when the snapshot is fresh (< 48h) and has >= 2 slices.
+can use the hourly live snapshot from `reserve_composition` instead of curated
+`StablecoinMeta.reserves`, but only when the snapshot is both authoritative and
+independent:
+
+- authoritative = fresh (< 48h), non-empty, and matched to `reserve_sync_state.last_success_at`
+- independent = adapter `feedClass` is `dynamic-mix` or `single-bucket`
+- `validated-static` feeds (for example `curated-validated` and `frax`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
+
 This prevents collateral scores from drifting as protocol reserve compositions evolve.
 
 The `collateralFromLive` flag in `RawDimensionInputs` indicates which source was used.
 Dependency inference (`deriveDependencies`) remains on curated data because live
 adapter slices do not carry `coinId` links.
 
-A delta alert fires when the live-derived score diverges from curated by >15 points,
+A delta alert fires when the independent live-derived score diverges from curated by >15 points,
 signaling that curated metadata (and potentially the governance classification) may
 need human review.
 
 Delta alerts are fired from the hourly reserve sync cron via `checkCollateralDrift()`.
 Drift data is also included in the report-cards snapshot as `collateralDriftCoins` for
-`/status` visibility. Coins using curated fallback (no fresh live data) are tracked as
+`/status` visibility. Coins using curated fallback (no fresh independent live data) are tracked as
 `liveToFallbackCoins` in the snapshot metadata.
 
 **Known Limitation: Blacklist Inherited Uses Curated Data**
@@ -110,9 +119,10 @@ slice names without linking to tracked Pharos stablecoin IDs.
 
 This means the blacklist capability sub-factor and the collateral quality sub-factor
 within Resilience can see different reserve compositions when live data diverges from
-curated. The collateral drift alert (>15pt divergence) helps operators detect when
-curated metadata needs updating, which also refreshes the blacklist-inherited
-calculation.
+curated. Independent live passthrough intentionally does not alter dependency or
+blacklist-inherited logic. The collateral drift alert (>15pt divergence) helps
+operators detect when curated metadata needs updating, which also refreshes the
+blacklist-inherited calculation.
 
 | Reserve Risk Tier | Score | Description                        | Examples                                                                      |
 | ----------------- | ----- | ---------------------------------- | ----------------------------------------------------------------------------- |

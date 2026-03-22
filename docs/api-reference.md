@@ -382,7 +382,7 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 
 - Unknown IDs or coins without live reserve support return `404`.
 - Live-enabled coins return `200` even before the first successful sync; the payload includes fallback mode + sync state.
-- The endpoint currently powers the stablecoin detail-page reserve card only. Other analytics surfaces still use curated static reserve metadata.
+- This endpoint powers the stablecoin detail-page reserve card. The same underlying live-reserve dataset also feeds report-card collateral quality, reserve-drift monitoring, and `/status`, but those surfaces read D1-backed reserve snapshots directly rather than calling this endpoint.
 - A response is treated as `live` only when the stored reserve snapshot matches the latest successful sync state; orphaned partial writes fall back to the curated/template presentation instead of presenting stale live data as authoritative.
 
 **Cache:** dynamic
@@ -1196,7 +1196,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle" }, ...]
   },
   "methodology": {
-    "version": "5.8",
+    "version": "6.1",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.2,
     "thresholds": [{ "grade": "A+", "min": 87 }, { "grade": "A", "min": 83 }, ...]
@@ -1205,7 +1205,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 }
 ```
 
-The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists.
+The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX inputs are not blended.
 
 **`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. Used by the frontend to identify targetable coins for stress testing and walk the dependency tree.
 
@@ -1238,6 +1238,8 @@ The Liquidity dimension now represents `effectiveExitScore`: the public DEX liqu
 | `effectiveExitScore`               | `number \| null`                                |
 | `redemptionBackstopScore`          | `number \| null`                                |
 | `redemptionRouteFamily`            | `RedemptionRouteFamily \| null`                 |
+| `redemptionModelConfidence`        | `"high" \| "medium" \| "low" \| null`           |
+| `redemptionUsedForLiquidity`       | `boolean`                                       |
 | `redemptionImmediateCapacityUsd`   | `number \| null`                                |
 | `redemptionImmediateCapacityRatio` | `number \| null`                                |
 | `concentrationHhi`                 | `number \| null`                                |
@@ -1278,19 +1280,21 @@ Current redemption-backstop dataset for redeemable assets.
       "accessModel": "permissionless-onchain",
       "settlementModel": "atomic",
       "outputAssetType": "stable-basket",
-      "immediateCapacityUsd": 10000000,
-      "immediateCapacityRatio": 1,
+      "immediateCapacityUsd": null,
+      "immediateCapacityRatio": null,
       "sourceMode": "estimated",
       "resolutionState": "resolved",
       "capacityConfidence": "heuristic",
+      "capacitySemantics": "eventual-only",
       "feeConfidence": "undisclosed-reviewed",
+      "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
       "updatedAt": 1773350400,
-      "methodologyVersion": "1.1"
+      "methodologyVersion": "1.2"
     }
   },
   "methodology": {
-    "version": "1.1",
+    "version": "1.2",
     "componentWeights": {
       "access": 0.2,
       "settlement": 0.15,
@@ -1310,7 +1314,7 @@ Current redemption-backstop dataset for redeemable assets.
 
 `score` is the direct redemption-quality score.
 
-`effectiveExitScore` is the blended exit score used by report cards when available.
+`effectiveExitScore` is the blended exit score written into the redemption snapshot when the route resolved cleanly and the reused DEX liquidity input was fresh. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence gating.
 
 `sourceMode`:
 
@@ -1347,14 +1351,16 @@ Top-level fields:
 | `sourceMode`             | `string`                                        | `dynamic`, `estimated`, or `static` capacity provenance                                                     |
 | `resolutionState`        | `string`                                        | `resolved`, `missing-cache`, `missing-capacity`, or `failed`                                                |
 | `capacityConfidence`     | `string`                                        | `dynamic`, `documented-bound`, or `heuristic` fidelity tag for the capacity model                           |
+| `capacitySemantics`      | `string`                                        | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability |
 | `feeConfidence`          | `string`                                        | `fixed`, `formula`, or `undisclosed-reviewed` fidelity tag for the fee model                                |
+| `feeModelKind`           | `string`                                        | `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`                                    |
 | `modelConfidence`        | `string`                                        | Overall route-fidelity rollup: `high`, `medium`, or `low`                                                   |
-| `immediateCapacityUsd`   | `number \| null`                                | Immediate redeemable capacity in USD                                                                        |
-| `immediateCapacityRatio` | `number \| null`                                | Immediate redeemable capacity as a share of supply                                                          |
+| `immediateCapacityUsd`   | `number \| null`                                | Immediate redeemable capacity in USD. `null` when the model is eventual-only or currently unrated           |
+| `immediateCapacityRatio` | `number \| null`                                | Immediate redeemable capacity as a share of supply. `null` when not separately quantified                   |
 | `feeBps`                 | `number \| null`                                | Explicit bounded fee when configured                                                                        |
 | `feeDescription`         | `string \| undefined`                           | Docs-backed fee description for variable, conditional, flat-minimum, or undisclosed redemption schedules    |
 | `queueEnabled`           | `boolean`                                       | Whether the modeled route is explicitly queued/serial                                                       |
-| `docs`                   | `{ label?: string, url?: string } \| undefined` | Optional external documentation / transparency link                                                         |
+| `docs`                   | `{ label?: string, url?: string, reviewedAt?: string, sources?: { label: string, url: string, supports?: string[] }[] } \| undefined` | Optional documentation / transparency metadata with reviewed provenance |
 | `notes`                  | `string[] \| undefined`                         | Runtime notes such as stale reserve metadata fallback                                                       |
 | `capsApplied`            | `string[] \| undefined`                         | Applied score caps (`queue-route-cap`, `offchain-route-cap`, `config-cap`)                                  |
 

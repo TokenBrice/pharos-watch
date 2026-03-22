@@ -84,7 +84,9 @@ export async function fetchSkyMakercoreReserves(
     throw new Error("sky-makercore: tokensInUsd array is empty or missing");
   }
 
-  const latest = entries[entries.length - 1];
+  const latest = entries.reduce((maxEntry, entry) => (
+    entry.date > maxEntry.date ? entry : maxEntry
+  ));
   const tokens = latest.tokens;
   if (!tokens || typeof tokens !== "object") {
     throw new Error("sky-makercore: latest tokensInUsd entry has no tokens object");

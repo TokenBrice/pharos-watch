@@ -51,7 +51,9 @@ function makeRedemptionEntry(
     sourceMode: "estimated",
     resolutionState: "resolved",
     capacityConfidence: "documented-bound",
+    capacitySemantics: "immediate-bounded",
     feeConfidence: "undisclosed-reviewed",
+    feeModelKind: "undisclosed-reviewed",
     modelConfidence: "medium",
     immediateCapacityUsd: 10_000_000,
     immediateCapacityRatio: 0.15,
@@ -144,6 +146,18 @@ describe("coverage helpers", () => {
     expect(status.kind).toBe("configured-unrated");
     expect(status.available).toBe(false);
     expect(status.label).toBe("Config.");
+  });
+
+  it("treats low-confidence redemption rows as heuristic coverage, not strong availability", () => {
+    const status = resolveRedemptionCoverage(
+      makeRedemptionEntry({
+        modelConfidence: "low",
+      }),
+    );
+
+    expect(status.kind).toBe("modeled-heuristic");
+    expect(status.available).toBe(false);
+    expect(status.label).toBe("Heur.");
   });
 
   it("maps mint/burn coverage states into visible labels", () => {

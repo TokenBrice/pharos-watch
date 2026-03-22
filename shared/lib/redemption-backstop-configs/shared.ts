@@ -1,8 +1,11 @@
 import type {
   RedemptionAccessModel,
   RedemptionCapacityConfidence,
+  RedemptionDocSource,
+  RedemptionDocSourceSupport,
   RedemptionExecutionModel,
   RedemptionFeeConfidence,
+  RedemptionFeeModelKind,
   RedemptionOutputAssetType,
   RedemptionRouteFamily,
   RedemptionSettlementModel,
@@ -19,6 +22,7 @@ export type RedemptionCostModel =
       kind: "dynamic-or-unclear";
       feeDescription?: string;
       confidence?: Exclude<RedemptionFeeConfidence, "fixed">;
+      feeModelKind?: Exclude<RedemptionFeeModelKind, "fixed-bps">;
     };
 
 export type RedemptionCapacityModel =
@@ -43,6 +47,8 @@ export interface RedemptionBackstopConfig {
   capacityModel: RedemptionCapacityModel;
   costModel: RedemptionCostModel;
   totalScoreCap?: number;
+  docs?: RedemptionDocSource[];
+  reviewedAt?: string;
   notes?: string[];
 }
 
@@ -63,7 +69,21 @@ export function documentedVariableFee(
   feeDescription: string,
   confidence: Exclude<RedemptionFeeConfidence, "fixed"> = "undisclosed-reviewed",
 ): RedemptionCostModel {
-  return { kind: "dynamic-or-unclear", feeDescription, confidence };
+  const feeModelKind =
+    confidence === "formula"
+      ? "formula"
+      : feeDescription === NO_PUBLIC_NUMERIC_REDEMPTION_FEE
+        ? "undisclosed-reviewed"
+        : "documented-variable";
+  return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind };
+}
+
+export function sourceRef(
+  label: string,
+  url: string,
+  supports?: RedemptionDocSourceSupport[],
+): RedemptionDocSource {
+  return supports && supports.length > 0 ? { label, url, supports } : { label, url };
 }
 
 export const NO_PUBLIC_NUMERIC_REDEMPTION_FEE = "Public docs reviewed do not publish a numeric redemption fee.";

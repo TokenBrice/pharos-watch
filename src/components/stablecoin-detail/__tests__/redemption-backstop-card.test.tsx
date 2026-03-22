@@ -23,10 +23,12 @@ const BASE_ENTRY: RedemptionBackstopEntry = {
   sourceMode: "estimated",
   resolutionState: "resolved",
   capacityConfidence: "heuristic",
+  capacitySemantics: "eventual-only",
   feeConfidence: "undisclosed-reviewed",
+  feeModelKind: "undisclosed-reviewed",
   modelConfidence: "low",
-  immediateCapacityUsd: 1_000_000,
-  immediateCapacityRatio: 1,
+  immediateCapacityUsd: null,
+  immediateCapacityRatio: null,
   feeBps: null,
   feeDescription: undefined,
   queueEnabled: false,
@@ -64,6 +66,7 @@ describe("RedemptionBackstopCard", () => {
           stablecoinId: "bold-liquity",
           routeFamily: "collateral-redeem",
           settlementModel: "atomic",
+          feeModelKind: "formula",
           feeDescription: "Minimum 50 bps + baseRate (decays over time).",
         }}
       />,
@@ -71,15 +74,23 @@ describe("RedemptionBackstopCard", () => {
 
     expect(html).toContain("Redemption Fee");
     expect(html).toContain("Minimum 50 bps + baseRate");
-    expect(html).toContain("Protocol or issuer docs publish this fee logic");
+    expect(html).toContain("publish a fee formula");
   });
 
   it("renders an explicit unknown-fee fallback when no fixed fee is modeled", () => {
     const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
 
     expect(html).toContain("Redemption Fee");
-    expect(html).toContain("Variable / not explicitly modeled");
-    expect(html).toContain("No fixed fee is configured in the current model");
+    expect(html).toContain("Reviewed, but not published");
+    expect(html).toContain("do not publish a bounded numeric redemption fee");
+  });
+
+  it("renders eventual-only capacity without pretending it is immediate", () => {
+    const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
+
+    expect(html).toContain("Immediate Capacity");
+    expect(html).toContain("Not separately quantified");
+    expect(html).toContain("eventual redeemability");
   });
 
   it("renders configured-but-unrated state when the route has no usable score", () => {

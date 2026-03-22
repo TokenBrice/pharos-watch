@@ -15,6 +15,34 @@ interface OpenEdenReserveCompositionResponse {
 }
 
 function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResponse): AdapterResult {
+  const componentTotal =
+    payload.totalTbillAmountInUsd
+    + payload.usdcAmount
+    + payload.buidlAmount
+    + payload.vbillAmount
+    + payload.usycAmountInUsd
+    + payload.benjiAmount;
+  if (
+    payload.reserveAssetsInUsd > 0
+    && Math.abs(componentTotal - payload.reserveAssetsInUsd) / payload.reserveAssetsInUsd > 0.01
+  ) {
+    throw new Error(
+      `openeden-usdo reserve components sum to ${componentTotal.toFixed(2)}, expected ${payload.reserveAssetsInUsd.toFixed(2)}`,
+    );
+  }
+
+  const normalizedRatio = payload.ratio > 2 ? payload.ratio / 100 : payload.ratio;
+  const derivedRatio = payload.usdoAmount > 0 ? payload.reserveAssetsInUsd / payload.usdoAmount : null;
+  if (
+    normalizedRatio > 0
+    && derivedRatio != null
+    && Math.abs(normalizedRatio - derivedRatio) / normalizedRatio > 0.02
+  ) {
+    throw new Error(
+      `openeden-usdo reserve ratio ${normalizedRatio.toFixed(6)} does not match derived ratio ${derivedRatio.toFixed(6)}`,
+    );
+  }
+
   const slices = slicesFromValues([
     {
       name: "OpenEden TBILL",
@@ -56,9 +84,10 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
     slices,
     metadata: {
       reserveAssetsInUsd: payload.reserveAssetsInUsd,
-      reserveRatio: payload.ratio,
+      reserveRatio: normalizedRatio,
       supplyUsd: payload.usdoAmount,
       totalReserveUsd: payload.reserveAssetsInUsd,
+      componentTotalUsd: componentTotal,
       immediateRedeemableUsd: payload.usdcAmount,
       immediateRedeemableRatio:
         payload.usdoAmount > 0 ? payload.usdcAmount / payload.usdoAmount : null,

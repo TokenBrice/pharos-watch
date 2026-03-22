@@ -93,12 +93,9 @@ export function adaptCollateralPositions(
 ): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const values: Array<{ name: string; usd: number; risk: ReserveSlice["risk"]; coinId?: string }> = [];
+  const missingPriceSymbols = new Set<string>();
 
   for (const entry of Object.values(details)) {
-    const priceInfo = prices[entry.address.toLowerCase()];
-    const usdPrice = priceInfo?.price?.usd;
-    if (typeof usdPrice !== "number" || usdPrice <= 0) continue;
-
     const totalBalance = entry.positions.reduce((acc, position) => {
       if (position.closed || position.denied) return acc;
       const raw = Number(position.collateralBalance ?? "0");
@@ -106,6 +103,13 @@ export function adaptCollateralPositions(
     }, 0);
 
     if (totalBalance <= 0) continue;
+
+    const priceInfo = prices[entry.address.toLowerCase()];
+    const usdPrice = priceInfo?.price?.usd;
+    if (typeof usdPrice !== "number" || usdPrice <= 0) {
+      missingPriceSymbols.add(entry.symbol);
+      continue;
+    }
 
     const risk = inferRisk(entry.symbol);
     if (!isKnownAsset(entry.symbol)) {
@@ -122,6 +126,12 @@ export function adaptCollateralPositions(
       risk,
       coinId: inferCoinId(entry.symbol),
     });
+  }
+
+  if (missingPriceSymbols.size > 0) {
+    throw new Error(
+      `collateral-positions-api missing USD price(s) for active collateral: ${Array.from(missingPriceSymbols).join(", ")}`,
+    );
   }
 
   const total = values.reduce((acc, value) => acc + value.usd, 0);

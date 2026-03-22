@@ -358,6 +358,58 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 0): ReserveSl
     .sort((a, b) => b.pct - a.pct);
 }
 
+export function decimalNumberFromBigInt(value: bigint, decimals: number): number {
+  if (decimals === 0) return Number(value);
+
+  const negative = value < 0n;
+  const absolute = negative ? -value : value;
+  const digits = absolute.toString().padStart(decimals + 1, "0");
+  const integerPart = digits.slice(0, digits.length - decimals) || "0";
+  const fractionalPart = digits.slice(digits.length - decimals).replace(/0+$/, "");
+  const formatted = fractionalPart.length > 0
+    ? `${negative ? "-" : ""}${integerPart}.${fractionalPart}`
+    : `${negative ? "-" : ""}${integerPart}`;
+
+  return Number(formatted);
+}
+
+export function slicesFromPercentages(
+  values: Array<{
+    pct: number;
+    name: string;
+    risk: ReserveSlice["risk"];
+    coinId?: string;
+    depType?: ReserveSlice["depType"];
+  }>,
+  options?: {
+    decimals?: number;
+    tolerancePct?: number;
+    context?: string;
+  },
+): ReserveSlice[] {
+  const filtered = values.filter((value) => Number.isFinite(value.pct) && value.pct > 0);
+  const total = filtered.reduce((acc, value) => acc + value.pct, 0);
+  if (total <= 0) return [];
+
+  const tolerancePct = options?.tolerancePct ?? 1.5;
+  if (Math.abs(total - 100) > tolerancePct) {
+    throw new Error(
+      `${options?.context ?? "reserve percentages"} sum to ${total.toFixed(1)}% (expected 100% ± ${tolerancePct}%)`,
+    );
+  }
+
+  return normalizeSlices(
+    filtered.map((value) => ({
+      name: value.name,
+      pct: value.pct,
+      risk: value.risk,
+      ...(value.coinId ? { coinId: value.coinId } : {}),
+      ...(value.depType ? { depType: value.depType } : {}),
+    })),
+    options?.decimals ?? 1,
+  );
+}
+
 /**
  * Convert absolute values into percentage-based ReserveSlice[].
  * Filters out zero-value entries, calculates pct relative to total, and normalizes

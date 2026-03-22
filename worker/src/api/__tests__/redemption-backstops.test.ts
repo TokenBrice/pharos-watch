@@ -79,7 +79,9 @@ describe("handleRedemptionBackstops", () => {
             details_json: JSON.stringify({
               resolutionState: "resolved",
               capacityConfidence: "heuristic",
+              capacitySemantics: "eventual-only",
               feeConfidence: "undisclosed-reviewed",
+              feeModelKind: "undisclosed-reviewed",
               modelConfidence: "low",
               capsApplied: [],
               feeDescription: "Fixed redemption fee, but public docs do not publish the current rate",
@@ -108,7 +110,7 @@ describe("handleRedemptionBackstops", () => {
     };
 
     expect(body.updatedAt).toBe(updatedAt);
-    expect(body.methodology.version).toBe("1.1");
+    expect(body.methodology.version).toBe("1.2");
     expect(body.coins["cusd-cap"]?.effectiveExitScore).toBe(56);
     expect(body.coins["cusd-cap"]?.resolutionState).toBe("resolved");
     expect(body.coins["cusd-cap"]?.modelConfidence).toBe("low");

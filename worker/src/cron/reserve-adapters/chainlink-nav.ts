@@ -8,6 +8,7 @@ const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
 /** Ondo-style getPrice() — returns single uint256 with 18 decimals. */
 const GET_PRICE_SELECTOR = "0x98d5fdca";
+const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * 86400;
 
 export interface ChainlinkNavParams {
   oracleAddress: string;
@@ -19,6 +20,7 @@ export interface ChainlinkNavParams {
   oracleMethod?: "latestRoundData" | "getPrice";
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+  maxOracleAgeSec?: number;
 }
 
 export interface ChainlinkNavData {
@@ -71,7 +73,7 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
       tokenDecimals: data.tokenDecimals,
       oracleRoundId: data.roundId.toString(),
       oracleUpdatedAt: data.updatedAt,
-      oracleTimestampSource: data.roundId === 0n ? "adapter-invocation" : "oracle-round",
+      oracleTimestampSource: data.roundId === 0n ? "unavailable" : "oracle-round",
     },
   };
 }
@@ -114,12 +116,12 @@ export async function fetchChainlinkNavReserves(
   let navDecimals: number;
   let roundId: bigint;
   let updatedAt: number;
+  const warnings = [];
 
   if (method === "getPrice") {
     // Ondo-style: getPrice() returns a single uint256 with 18 decimals.
-    // No round ID or timestamp is available on-chain — we use Date.now() as a
-    // best-effort approximation.  Consumers should be aware that updatedAt
-    // reflects the adapter invocation time, not the oracle's own update time.
+    // The oracle does not expose an update timestamp, so freshness cannot be
+    // verified here. Surface that explicitly instead of fabricating one.
     const rawPrice = await fetchOnchainUint256({ ...oracleCallBase, data: GET_PRICE_SELECTOR });
     if (rawPrice == null) {
       throw new Error("chainlink-nav: getPrice() call failed");
@@ -127,7 +129,12 @@ export async function fetchChainlinkNavReserves(
     navPerToken = rawPrice;
     navDecimals = 18;
     roundId = 0n;
-    updatedAt = Math.floor(Date.now() / 1000);
+    updatedAt = 0;
+    warnings.push({
+      code: "oracle-freshness-unverified",
+      message: "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
+      severity: "warning" as const,
+    });
   } else {
     // Standard AggregatorV3Interface: decimals() + latestRoundData()
     const rawOracleDecimals = await fetchOnchainUint256({ ...oracleCallBase, data: DECIMALS_SELECTOR });
@@ -147,6 +154,12 @@ export async function fetchChainlinkNavReserves(
     navPerToken = parsed.answer;
     roundId = parsed.roundId;
     updatedAt = parsed.updatedAt;
+
+    const maxOracleAgeSec = params.maxOracleAgeSec ?? DEFAULT_MAX_ORACLE_AGE_SEC;
+    const ageSec = Math.max(0, Math.floor(Date.now() / 1000) - updatedAt);
+    if (ageSec > maxOracleAgeSec) {
+      throw new Error(`chainlink-nav: oracle data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
+    }
   }
 
   const [rawTokenDecimals, rawTotalSupply] = await Promise.all([tokenDecimalsP, totalSupplyP]);
@@ -157,7 +170,7 @@ export async function fetchChainlinkNavReserves(
     throw new Error("chainlink-nav: token totalSupply() call failed");
   }
 
-  return adaptChainlinkNavResponse(
+  const adapted = adaptChainlinkNavResponse(
     {
       navPerToken,
       navDecimals,
@@ -168,4 +181,5 @@ export async function fetchChainlinkNavReserves(
     },
     params,
   );
+  return warnings.length > 0 ? { ...adapted, warnings } : adapted;
 }

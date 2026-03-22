@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.1",
+  currentVersion: "1.2",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.2",
+      title: "Failure-safe snapshots and evidence-aware capacity semantics",
+      date: "2026-03-22",
+      effectiveAt: 1774137600,
+      summary:
+        "Redemption backstop snapshots now materialize failed rows safely, separate eventual redeemability from immediate capacity, and reuse more live reserve metadata.",
+      impact: [
+        "Failed per-coin syncs now write fresh failed rows instead of leaving stale resolved rows live",
+        "`supply-full` routes no longer expose full current supply as immediate capacity on the detail surface",
+        "OpenEden USDO, GHO, and wsrUSD now reuse live reserve metadata for immediate redeemable capacity; infiniFi ratio now uses supply as the denominator",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.1",
       title: "Fee-source coverage expansion",

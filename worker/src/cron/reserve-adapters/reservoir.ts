@@ -94,6 +94,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
 
   const bucketTotals = new Map<string, number>();
   const unknownAssets: string[] = [];
+  let unknownAssetsUsd = 0;
 
   for (const asset of payload.assets) {
     const value = Number(asset.totalBalanceValue);
@@ -102,6 +103,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     const bucket = RESERVOIR_BUCKETS.find((candidate) => candidate.match(asset));
     if (!bucket) {
       unknownAssets.push(asset.label);
+      unknownAssetsUsd += value;
       continue;
     }
 
@@ -121,6 +123,14 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     })
     .filter((slice) => slice.pct >= 0.05)
     .sort((a, b) => b.pct - a.pct);
+
+  if (unknownAssetsUsd > 0) {
+    slices.push({
+      name: "Unmapped reserve positions",
+      pct: (unknownAssetsUsd / totalAssets) * 100,
+      risk: "high",
+    });
+  }
 
   return {
     slices: normalizeSlices(slices),
@@ -146,6 +156,16 @@ export async function fetchReservoirReserves(
     message: `Unmapped reserve position: ${label}`,
     severity: "warning",
   }));
+  const totalLiabilities = Number(payload.totalLiabilities);
+  const totalLiabilitiesUsd = Number.isFinite(totalLiabilities) && totalLiabilities > 0 ? totalLiabilities : null;
+  const usdcBucket = RESERVOIR_BUCKETS.find((bucket) => bucket.key === "usdc");
+  const immediateRedeemableUsd = usdcBucket
+    ? payload.assets.reduce((sum, asset) => {
+        if (!usdcBucket.match(asset)) return sum;
+        const value = Number(asset.totalBalanceValue);
+        return Number.isFinite(value) && value > 0 ? sum + value : sum;
+      }, 0)
+    : 0;
 
   return {
     slices: adapted.slices,
@@ -157,6 +177,14 @@ export async function fetchReservoirReserves(
       totalLiabilities: payload.totalLiabilities,
       equity: payload.equity,
       unknownAssetCount: adapted.unknownAssets.length,
+      ...(totalLiabilitiesUsd != null
+        ? {
+            supplyUsd: totalLiabilitiesUsd,
+            immediateRedeemableUsd,
+            immediateRedeemableRatio:
+              totalLiabilitiesUsd > 0 ? immediateRedeemableUsd / totalLiabilitiesUsd : null,
+          }
+        : {}),
     },
   };
 }

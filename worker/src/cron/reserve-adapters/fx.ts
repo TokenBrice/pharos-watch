@@ -20,6 +20,14 @@ const TOKEN_META = {
 
 export function adaptFx(payload: FxPayload): Array<{ key: keyof typeof TOKEN_META; amount: number }> {
   const poolInfo = payload.data?.poolInfo ?? {};
+  const unexpectedPositiveKeys = Object.entries(poolInfo)
+    .filter(([key]) => !(key in TOKEN_META))
+    .filter(([, info]) => Number(info?.collateralBalance ?? "0") > 0)
+    .map(([key]) => key);
+  if (unexpectedPositiveKeys.length > 0) {
+    throw new Error(`fx adapter found unsupported collateral key(s): ${unexpectedPositiveKeys.join(", ")}`);
+  }
+
   return (Object.keys(TOKEN_META) as Array<keyof typeof TOKEN_META>)
     .map((key) => {
       const balance = Number(poolInfo[key]?.collateralBalance ?? "0");

@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.0 (2026-02-25 → 2026-03-21).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.2 (2026-02-25 → 2026-03-22).
 
 ---
 
@@ -275,7 +275,7 @@ Weights and grade thresholds are unchanged from v5.6.
 
 Collateral quality scoring now consumes live reserve snapshots when available:
 
-- For coins with `liveReservesConfig`, the collateral quality score uses the hourly live snapshot from `reserve_composition` instead of curated `StablecoinMeta.reserves` when the snapshot is fresh (< 48h) and has >= 2 slices.
+- For coins with `liveReservesConfig`, the collateral quality score uses the hourly live snapshot from `reserve_composition` instead of curated `StablecoinMeta.reserves` when a fresh live snapshot is available.
 - The `collateralFromLive` flag in `RawDimensionInputs` indicates which source was used.
 - A delta alert fires when the live-derived score diverges from curated by >15 points, signaling that curated metadata may need human review.
 - Dependency inference (`deriveDependencies`) remains on curated data because live adapter slices do not carry `coinId` links.
@@ -303,6 +303,27 @@ Weights and grade thresholds are unchanged from v5.8.
 - Wrapper governance exempted from chain infrastructure penalty
 - Deployment multipliers: canonical-bridge 0.85→0.90, native-multichain 0.40→0.75
 
+## v6.1 — Redemption confidence gating and capacity semantics (2026-03-22)
+
+Safety Score structure is unchanged, but the liquidity dimension is now stricter about what redemption evidence can improve it:
+
+- Low-confidence / heuristic redemption routes remain visible in detail surfaces, but they no longer uplift the Safety Score liquidity dimension
+- When the reused DEX liquidity snapshot is stale, report-card liquidity does not blend it into `effectiveExitScore`; the dimension falls back to redemption-only logic or `NR`
+- Redemption detail surfaces now distinguish immediate redeemable buffer from eventual issuer/protocol redeemability, so `supply-full` models no longer present full supply as immediately available capacity
+
+Weights and grade thresholds are unchanged from v6.0.
+
+## v6.2 — Independent live reserve contract tightening (2026-03-22)
+
+Safety Score structure is unchanged, but the collateral-quality live reserve passthrough is now more precise about which live feeds qualify:
+
+- Live collateral passthrough now uses fresh authoritative snapshots only: `reserve_composition` must match `reserve_sync_state.last_success_at` and the slice set must be non-empty
+- Only independent live feed classes can override curated collateral scoring: `dynamic-mix` and `single-bucket`
+- `validated-static` feeds such as `curated-validated` and `frax` remain reserve-detail/status data, but they no longer count as independent live collateral inputs
+- Single-bucket live feeds now count for collateral passthrough and reserve drift; the old implicit `>= 2 slices` gate is no longer the scoring contract
+
+Weights and grade thresholds are unchanged from v6.1.
+
 ---
 
 ## Quick Reference: Weight Evolution
@@ -317,7 +338,7 @@ Weights and grade thresholds are unchanged from v5.8.
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v6.0–6.2** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

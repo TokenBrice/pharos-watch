@@ -7,6 +7,7 @@ const SAMPLE: GhoFacilitatorData = {
   ],
   gsmUsdc: 30_000_000_000_000_000_000_000_000n, // 30M in 18 decimals
   gsmUsdt: 15_000_000_000_000_000_000_000_000n, // 15M in 18 decimals
+  totalSupply: 300_000_000_000_000_000_000_000_000n, // 300M in 18 decimals
 };
 
 describe("adaptGhoFacilitators", () => {
@@ -35,5 +36,13 @@ describe("adaptGhoFacilitators", () => {
     const gsmUsdc = result.slices.find((s) => s.name.includes("USDC") && s.name.includes("GSM"));
     expect(gsmUsdc?.coinId).toBe("usdc-circle");
     expect(gsmUsdc?.risk).toBe("low");
+  });
+
+  it("emits immediate redeemable metadata against total supply", () => {
+    const result = adaptGhoFacilitators(SAMPLE);
+
+    expect(result.metadata?.supplyUsd).toBe(300_000_000);
+    expect(result.metadata?.immediateRedeemableUsd).toBe(45_000_000);
+    expect(result.metadata?.immediateRedeemableRatio).toBe(0.15);
   });
 });

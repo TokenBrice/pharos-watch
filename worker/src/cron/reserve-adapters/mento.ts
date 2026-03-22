@@ -1,7 +1,7 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromValues } from "./helpers";
+import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromPercentages } from "./helpers";
 
 interface MentoReserveEntry {
   symbol: string;
@@ -79,15 +79,7 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
   }
 
   const totalPct = entries.reduce((sum, e) => sum + e.percent, 0);
-  if (totalPct < 50) {
-    warnings.push({
-      code: "mento-low-total-pct",
-      message: `Mento reserve composition total is ${totalPct.toFixed(1)}% (expected >= 50%)`,
-      severity: "warning",
-    });
-  }
-
-  const slices = slicesFromValues(
+  const slices = slicesFromPercentages(
     entries.map((entry) => {
       const config = TOKEN_CONFIG[entry.symbol];
       if (!config) {
@@ -100,15 +92,19 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
       const resolved = config ?? { name: entry.symbol, risk: "medium" as const };
       return {
         name: resolved.name,
-        value: entry.percent,
+        pct: entry.percent,
         risk: resolved.risk,
         ...(resolved.coinId ? { coinId: resolved.coinId } : {}),
       };
     }),
-    1,
+    { decimals: 1, context: "Mento reserve composition" },
   );
 
-  return { slices, ...(warnings.length > 0 ? { warnings } : {}) };
+  return {
+    slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
+    metadata: { entryCount: entries.length, totalPct },
+  };
 }
 
 export async function fetchMentoReserves(

@@ -558,7 +558,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `GECKO_TERMINAL_PROBE`               | `geckoterminal-probe`         | `enrich-prices` GeckoTerminal price probe fallback                           |
 | `TWITTER_API`                        | `twitter-api`                 | `daily-digest` social posting                                                |
 | `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
-| Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured source or exact shared-source cluster    |
+| Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured breaker scope; some adapters also opt into source-invariant within-run result sharing |
 
 Primary-oracle implementation notes:
 
@@ -746,7 +746,7 @@ The three crons below were previously only listed by filename in [Architecture](
 **Schedule:** `11 * * * *` (hourly at :11 UTC)
 **Data source:** Protocol-specific reserve APIs and on-chain vault/accounting reads via adapter registry (`worker/src/cron/reserve-adapters/`)
 
-**Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table and records per-coin operational state in `reserve_sync_state`. Each coin with `liveReservesConfig` declares an adapter, semantics, source inputs, and optional breaker scope. The cron iterates configured coins sequentially, applies per-source circuit breaker logic, reuses exact duplicate HTTP source configs within a run, and persists both successful snapshots and failed/degraded sync state. For the full adapter/config/API contract, see [live-reserves.md](./live-reserves.md).
+**Purpose:** Syncs live reserve composition from protocol data APIs into the `reserve_composition` D1 table and records per-coin operational state in `reserve_sync_state`. Each coin with `liveReservesConfig` declares an adapter, semantics, source inputs, and optional breaker scope. The cron iterates configured coins sequentially, applies per-source circuit breaker logic, only reuses fetched results for adapters explicitly marked `source-invariant`, and persists both successful snapshots and failed/degraded sync state. For the full adapter/config/API contract, see [live-reserves.md](./live-reserves.md).
 
 **D1 table: `reserve_composition`**
 
@@ -804,6 +804,20 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 | `sky-makercore`            | `usds-sky`, `dai-makerdao`                                               | `inputs.primary.kind = "http-json"` -> `https://api.llama.fi/protocol/makerdao` (DefiLlama protocol TVL breakdown)                                                                                                                                                                                                                                                                                               |
 | `tether`                   | `usdt-tether`                                                            | `inputs.primary.kind = "http-json"` -> `https://app.tether.to/transparency.json`                                                                                                                                                                                                                                                                                                                                 |
 
+**Operational behavior:**
+
+- Circuit breakers are keyed per source identity (`live-reserves:<scope>`), not as one global `live-reserves` source.
+- Within-run fetched-result reuse is opt-in via adapter registry metadata (`sharedSourceMode = "source-invariant"`). This currently applies to M0, Mento, and Sky/MakerCore; coin-aware adapters such as Frax do not share cached results across coins.
+- The cron writes `reserve_sync_state` on every path, including degraded/error/skipped outcomes.
+- Successful snapshots write `reserve_composition` and `reserve_sync_state` together in one D1 batch, and downstream readers ignore orphaned composition rows that do not have a matching successful sync state.
+- Adapter warnings are reserved for unresolved material mapping drift. Known Ethena alt-collateral that is intentionally bucketed into `Other crypto collateral` does not emit warnings, and infiniFi dust farms that round to `0%` in the displayed mix do not keep the run-level cron degraded.
+- Cron result status is explicit:
+  - `ok` when at least one configured coin synced and `failed + skipped <= ceil(total * 0.1)`
+  - `degraded` when at least one configured coin synced and `failed + skipped > ceil(total * 0.1)`
+  - `error` when no configured coin synced successfully and at least one coin failed or was skipped
+
+**Adding a new adapter:** Create `worker/src/cron/reserve-adapters/<protocol>.ts`, register it in `index.ts`, and add a structured `liveReservesConfig` to the coin metadata. The cron, reserve API, status surface, and detail-page fallback logic all consume that config.
+
 ### sync-redemption-backstops
 
 **File:** `worker/src/cron/sync-redemption-backstops.ts`  
@@ -813,19 +827,6 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 **Purpose:** Builds the current `redemption_backstop` dataset for redeemable assets and writes daily rows to `redemption_backstop_history`. This sync is deliberately separate from report-card generation so redeemability remains a first-class worker dataset with its own cron visibility, API surface, and methodology versioning.
 
 Current dynamic reserve-metadata support is used for `iusd-infinifi`, whose immediate redeemable capacity is derived from the live reserve lane’s standardized metadata (`immediateRedeemableUsd`, `immediateRedeemableRatio`). Other covered assets currently use conservative modelled capacity rules such as full-supply redeemability or configured liquid-buffer ratios, depending on route family.
-
-**Operational behavior:**
-
-- Circuit breakers are keyed per source identity (`live-reserves:<scope>`), not as one global `live-reserves` source. Exact duplicates that intentionally share one upstream payload, such as the M0 GraphQL feed or the Mento reserve page, can share a breaker scope and one fetched result inside a run. Distinct URLs should not share a breaker scope.
-- The cron writes `reserve_sync_state` on every path, including degraded/error/skipped outcomes.
-- Successful snapshots write `reserve_composition` and `reserve_sync_state` together in one D1 batch, and downstream readers ignore orphaned composition rows that do not have a matching successful sync state.
-- Adapter warnings are reserved for unresolved material mapping drift. Known Ethena alt-collateral that is intentionally bucketed into `Other crypto collateral` does not emit warnings, and infiniFi dust farms that round to `0%` in the displayed mix do not keep the cron degraded.
-- Cron result status is explicit:
-  - `ok` when all configured coins sync cleanly
-  - `degraded` when any sync fails, is skipped, or returns warnings
-  - `error` when no configured coin syncs successfully
-
-**Adding a new adapter:** Create `worker/src/cron/reserve-adapters/<protocol>.ts`, register it in `index.ts`, and add a structured `liveReservesConfig` to the coin metadata. The cron, reserve API, status surface, and detail-page fallback logic all consume that config.
 
 ### sync-bluechip
 

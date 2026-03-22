@@ -132,6 +132,13 @@ function adaptAccountableDashboard(
 
   const riskMap = params.riskMap ?? {};
   const renameMap = params.renameMap ?? {};
+  const warnings = breakdown
+    .filter(({ name }) => !(name in riskMap))
+    .map((entry) => ({
+      code: "unmapped-bucket",
+      message: `Accountable bucket defaulted to medium risk: ${entry.name}`,
+      severity: "warning" as const,
+    }));
   const slices = slicesFromValues(
     breakdown.map(({ name, value }) => ({
       name: renameMap[name] ?? name,
@@ -147,6 +154,7 @@ function adaptAccountableDashboard(
 
   return {
     slices,
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       collateralization: payload.data.collateralization,
       interval: payload.data.reserves.interval,

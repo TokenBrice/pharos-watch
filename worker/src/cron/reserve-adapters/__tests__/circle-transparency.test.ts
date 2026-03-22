@@ -6,14 +6,14 @@ const USDC_HTML = `
   data-usdc-us-treasuries="47.08"
   data-usdc-months="19.87"
   data-usdc-cash="11.35"
-  data-usdc-in-circulation="0.64">
+  data-usdc-in-circulation="21.70">
 </canvas>
 `;
 
 const EURC_HTML = `
 <canvas id="eurocoin_chartjs_canvas"
-  data-eurocoin-cash="386.76"
-  data-eurocoin-tokens="4.66">
+  data-eurocoin-cash="80.34"
+  data-eurocoin-tokens="19.66">
 </canvas>
 `;
 

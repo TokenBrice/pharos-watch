@@ -17,7 +17,10 @@ import {
   GovernanceType,
   GovernanceTypeSchema,
 } from "./core";
-import { RedemptionRouteFamilySchema } from "./redemption";
+import {
+  RedemptionModelConfidenceSchema,
+  RedemptionRouteFamilySchema,
+} from "./redemption";
 
 export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";
 const REPORT_CARD_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const;
@@ -66,6 +69,8 @@ const RawDimensionInputsSchema = z.object({
   effectiveExitScore: z.number().nullable(),
   redemptionBackstopScore: z.number().nullable(),
   redemptionRouteFamily: RedemptionRouteFamilySchema.nullable(),
+  redemptionModelConfidence: RedemptionModelConfidenceSchema.nullable(),
+  redemptionUsedForLiquidity: z.boolean(),
   redemptionImmediateCapacityUsd: z.number().nullable(),
   redemptionImmediateCapacityRatio: z.number().nullable(),
   concentrationHhi: z.number().nullable(),

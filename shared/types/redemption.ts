@@ -71,6 +71,14 @@ export type RedemptionCapacityConfidence = z.infer<
   typeof RedemptionCapacityConfidenceSchema
 >;
 
+export const RedemptionCapacitySemanticsSchema = z.enum([
+  "immediate-bounded",
+  "eventual-only",
+]);
+export type RedemptionCapacitySemantics = z.infer<
+  typeof RedemptionCapacitySemanticsSchema
+>;
+
 export const RedemptionFeeConfidenceSchema = z.enum([
   "fixed",
   "formula",
@@ -78,6 +86,16 @@ export const RedemptionFeeConfidenceSchema = z.enum([
 ]);
 export type RedemptionFeeConfidence = z.infer<
   typeof RedemptionFeeConfidenceSchema
+>;
+
+export const RedemptionFeeModelKindSchema = z.enum([
+  "fixed-bps",
+  "formula",
+  "documented-variable",
+  "undisclosed-reviewed",
+]);
+export type RedemptionFeeModelKind = z.infer<
+  typeof RedemptionFeeModelKindSchema
 >;
 
 export const RedemptionModelConfidenceSchema = z.enum([
@@ -89,9 +107,29 @@ export type RedemptionModelConfidence = z.infer<
   typeof RedemptionModelConfidenceSchema
 >;
 
+export const RedemptionDocSourceSupportSchema = z.enum([
+  "route",
+  "capacity",
+  "fees",
+  "access",
+  "settlement",
+]);
+export type RedemptionDocSourceSupport = z.infer<
+  typeof RedemptionDocSourceSupportSchema
+>;
+
+const RedemptionDocSourceSchema = z.object({
+  label: z.string(),
+  url: z.string().url(),
+  supports: z.array(RedemptionDocSourceSupportSchema).optional(),
+});
+export type RedemptionDocSource = z.infer<typeof RedemptionDocSourceSchema>;
+
 const RedemptionDocsSchema = z.object({
   label: z.string().optional(),
   url: z.string().url().optional(),
+  reviewedAt: z.string().optional(),
+  sources: z.array(RedemptionDocSourceSchema).optional(),
 });
 
 export const RedemptionBackstopEntrySchema = z.object({
@@ -114,7 +152,9 @@ export const RedemptionBackstopEntrySchema = z.object({
   sourceMode: RedemptionSourceModeSchema,
   resolutionState: RedemptionResolutionStateSchema,
   capacityConfidence: RedemptionCapacityConfidenceSchema,
+  capacitySemantics: RedemptionCapacitySemanticsSchema,
   feeConfidence: RedemptionFeeConfidenceSchema,
+  feeModelKind: RedemptionFeeModelKindSchema,
   modelConfidence: RedemptionModelConfidenceSchema,
   immediateCapacityUsd: z.number().nullable(),
   immediateCapacityRatio: z.number().nullable(),

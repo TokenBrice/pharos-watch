@@ -63,9 +63,9 @@ describe("computeCapacityScore", () => {
   });
 
   it("scores exact breakpoints for coverage ratio", () => {
-    // ratio=0 → 10, ratio=0.5 → 100
+    // ratio=0 → 0, ratio=0.5 → 100
     const zero = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0 });
-    expect(zero.coverageRatioScore).toBe(10);
+    expect(zero.coverageRatioScore).toBe(0);
 
     const full = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.5 });
     expect(full.coverageRatioScore).toBe(100);
@@ -85,9 +85,9 @@ describe("computeCapacityScore", () => {
     const result = computeCapacityScore({ immediateCapacityUsd: 250_000_000, immediateCapacityRatio: 0.5 });
     expect(result.score).toBe(100);
 
-    // ratio=0→10, usd=0→0 → 10*0.6 + 0*0.4 = 6
+    // ratio=0→0, usd=0→0 → 0
     const low = computeCapacityScore({ immediateCapacityUsd: 0, immediateCapacityRatio: 0 });
-    expect(low.score).toBe(6);
+    expect(low.score).toBe(0);
   });
 
   it("uses available score when only one dimension exists", () => {

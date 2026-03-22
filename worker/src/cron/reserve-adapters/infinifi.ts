@@ -120,6 +120,7 @@ export async function fetchInfiniFiReserves(
     payload.data.stats.asset.totalLiquidAssetNormalized ?? 0;
   const illiquidReserveUsd =
     payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
+  const supplyUsd = payload.data.receipt?.totalSupplyNormalized;
 
   return {
     slices: adapted.slices,
@@ -132,12 +133,12 @@ export async function fetchInfiniFiReserves(
       immediateRedeemableUsd,
       illiquidReserveUsd,
       immediateRedeemableRatio:
-        totalReserveUsd > 0
-          ? immediateRedeemableUsd / totalReserveUsd
+        supplyUsd != null && supplyUsd > 0
+          ? immediateRedeemableUsd / supplyUsd
           : null,
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
-      supplyUsd: payload.data.receipt?.totalSupplyNormalized,
+      supplyUsd,
     },
   };
 }

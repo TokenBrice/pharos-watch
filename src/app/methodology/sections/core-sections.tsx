@@ -560,7 +560,6 @@ export function CoreMethodologySections() {
                 <p className="text-xs text-muted-foreground mt-0.5">BEDROCK through MELTDOWN</p>
               </div>
             </div>
-
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Components</h3>
               <div className="overflow-x-auto">
@@ -608,7 +607,6 @@ export function CoreMethodologySections() {
                 </table>
               </div>
             </div>
-
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Depeg Handling Rules</h3>
               <ul className="list-disc list-inside space-y-1">
@@ -625,7 +623,6 @@ export function CoreMethodologySections() {
                 factor = ageDays &le; 30 ? 1.0 : max(0.25, 1.0 &minus; (ageDays &minus; 30)/120)
               </code>
             </div>
-
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Condition Bands</h3>
               <div className="overflow-x-auto">
@@ -880,19 +877,21 @@ export function CoreMethodologySections() {
               <p>
                 The standalone Liquidity Score remains a pure DEX market-depth metric. Safety Scores now use an
                 <span className="text-foreground font-medium"> effective exit score</span> for the Liquidity dimension:
-                DEX liquidity is preserved as the floor, while redeemable assets can gain uplift from protocol or
-                issuer redemption quality.
+                DEX liquidity is preserved as the floor, while redeemable assets can gain uplift from protocol or issuer
+                redemption quality when the redemption route is both resolved and supported by more than a heuristic
+                capacity model.
               </p>
               <p className="font-mono">
                 effectiveExit = max(liquidity, liquidity * 0.55 + redemption * 0.45), with redemption-only capped at 70
               </p>
               <p>
-                Redemption backstops are scored across access, settlement, execution certainty, immediate capacity,
-                output-asset quality, and cost. Queue-based and offchain issuer routes are capped so they do not look
-                unrealistically liquid.
+                Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset
+                quality, and cost. Queue-based and offchain issuer routes are capped so they do not look unrealistically
+                liquid. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
+                liquidity dimension, stale DEX inputs are not blended into effective exit, and eventual issuer
+                redemption is reported separately from immediate redeemable buffer capacity.
               </p>
             </div>
-
             {/* Peg multiplier */}
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Peg Stability Multiplier</h3>
@@ -904,7 +903,6 @@ export function CoreMethodologySections() {
                 since peg tracking does not apply to them.
               </p>
             </div>
-
             {/* No-liquidity penalty */}
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">No-Liquidity-Data Penalty</h3>
@@ -915,7 +913,6 @@ export function CoreMethodologySections() {
                 liquidity data by applying a flat 10% penalty.
               </p>
             </div>
-
             {/* Resilience sub-factors */}
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Resilience Scoring</h3>
@@ -956,11 +953,13 @@ export function CoreMethodologySections() {
                 </table>
               </div>
               <p>
-                Collateral quality is derived from curated reserve compositions when available &mdash; each reserve
-                slice is classified into one of five risk tiers and the score is their weighted average. Direct ETH
-                and canonical WETH slices share the same Very Low tier, while ETH liquid staking tokens remain Low.
-                For coins without curated reserves, a coarser enum-based fallback is used. Explicit overrides exist
-                for coins where defaults are incorrect (e.g., protocols on Solana, coins with CEX custody).
+                Collateral quality is derived from reserve compositions when available &mdash; curated metadata by
+                default, or a fresh authoritative independent live reserve snapshot for coins covered by the live
+                reserve sync. Each reserve slice is classified into one of five risk tiers and the score is their
+                weighted average. Direct ETH and canonical WETH slices share the same Very Low tier, while ETH liquid
+                staking tokens remain Low. For coins without usable reserve compositions, a coarser enum-based
+                fallback is used. Explicit overrides exist for coins where defaults are incorrect (e.g., protocols on
+                Solana, coins with CEX custody).
               </p>
             </div>
 

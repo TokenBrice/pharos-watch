@@ -77,7 +77,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.metadata).toEqual({ branchCount: 2 });
   });
 
-  it("filters out branches with null balances", async () => {
+  it("fails when any branch balance cannot be read", async () => {
     vi.mocked(fetchErc20Balance)
       .mockResolvedValueOnce(null) // first branch returns null
       .mockResolvedValueOnce(500_000_000n); // 5 WBTC (8 dec)
@@ -111,11 +111,9 @@ describe("fetchEvmBranchBalancesReserves", () => {
       },
     };
 
-    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].name).toBe("WBTC");
-    expect(result.slices[0].pct).toBe(100);
-    expect(result.metadata).toEqual({ branchCount: 1 });
+    await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
+      "could not read balances for: wstETH",
+    );
   });
 
   it("filters out branches with zero balances", async () => {
@@ -208,7 +206,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     };
 
     await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
-      "no non-zero balances",
+      "could not read balances for: wstETH",
     );
   });
 

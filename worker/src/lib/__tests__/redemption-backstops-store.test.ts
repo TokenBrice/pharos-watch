@@ -25,8 +25,8 @@ function makeRealisticRow(overrides: Record<string, unknown> = {}) {
     output_asset_type: "stable-single",
     provider: "supply-full-model",
     source_mode: "estimated",
-    immediate_capacity_usd: 1_000_000,
-    immediate_capacity_ratio: 1,
+    immediate_capacity_usd: null,
+    immediate_capacity_ratio: null,
     fee_bps: null,
     queue_enabled: 0,
     updated_at: 1_700_000_000,
@@ -34,7 +34,9 @@ function makeRealisticRow(overrides: Record<string, unknown> = {}) {
     details_json: JSON.stringify({
       resolutionState: "resolved",
       capacityConfidence: "heuristic",
+      capacitySemantics: "eventual-only",
       feeConfidence: "undisclosed-reviewed",
+      feeModelKind: "undisclosed-reviewed",
       modelConfidence: "low",
       capsApplied: ["offchain-route-cap"],
       feeDescription: "EEA burn fee is 0 bps; other Circle redemption fees may vary",
@@ -74,7 +76,9 @@ describe("loadRedemptionBackstopMap", () => {
     // Inferred from row columns when details_json is malformed
     expect(result["usdc-circle"]?.resolutionState).toBe("resolved");
     expect(result["usdc-circle"]?.capacityConfidence).toBe("dynamic");
+    expect(result["usdc-circle"]?.capacitySemantics).toBe("eventual-only");
     expect(result["usdc-circle"]?.feeConfidence).toBe("fixed");
+    expect(result["usdc-circle"]?.feeModelKind).toBe("fixed-bps");
     expect(result["usdc-circle"]?.modelConfidence).toBe("high");
   });
 
@@ -106,7 +110,9 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry).toBeDefined();
     expect(entry!.resolutionState).toBe("resolved");
     expect(entry!.capacityConfidence).toBe("heuristic");
+    expect(entry!.capacitySemantics).toBe("eventual-only");
     expect(entry!.feeConfidence).toBe("undisclosed-reviewed");
+    expect(entry!.feeModelKind).toBe("undisclosed-reviewed");
     expect(entry!.modelConfidence).toBe("low");
     expect(entry!.capsApplied).toEqual(["offchain-route-cap"]);
     expect(entry!.feeDescription).toBe("EEA burn fee is 0 bps; other Circle redemption fees may vary");
@@ -137,9 +143,11 @@ describe("loadRedemptionBackstopMap", () => {
     const entry = result["dai-makerdao"];
 
     expect(entry).toBeDefined();
-    expect(entry!.capacityConfidence).toBe("documented-bound");
+    expect(entry!.capacityConfidence).toBe("heuristic");
+    expect(entry!.capacitySemantics).toBe("immediate-bounded");
     expect(entry!.feeConfidence).toBe("fixed");
-    expect(entry!.modelConfidence).toBe("medium");
+    expect(entry!.feeModelKind).toBe("fixed-bps");
+    expect(entry!.modelConfidence).toBe("low");
   });
 
   it("infers missing-capacity resolution when score is null and details omit resolutionState", async () => {

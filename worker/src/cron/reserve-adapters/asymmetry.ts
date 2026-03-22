@@ -1,4 +1,4 @@
-import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./types";
 import { requireJsonInput, fetchJsonWithRetry, getAdapterTimeout, normalizeSlices } from "./helpers";
@@ -28,8 +28,9 @@ const BRANCH_RISK_MAP: Record<string, BranchRiskConfig> = {
   WBTC: { risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium" },
 };
 
-export function adaptAsymmetry(payload: AsymmetryPayload): ReserveSlice[] {
+export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
   const branches = payload.usdaf?.branch ?? {};
+  const warnings: LiveReserveWarning[] = [];
   const entries = Object.entries(branches)
     .map(([name, stats]) => ({
       name,
@@ -38,20 +39,30 @@ export function adaptAsymmetry(payload: AsymmetryPayload): ReserveSlice[] {
     .filter((entry) => Number.isFinite(entry.usd) && entry.usd > 0);
 
   const total = entries.reduce((acc, entry) => acc + entry.usd, 0);
-  if (total <= 0) return [];
+  if (total <= 0) return { slices: [] };
 
-  return normalizeSlices(
-    entries.map((entry) => {
-      const config = BRANCH_RISK_MAP[entry.name] ?? { risk: "medium" as const };
-      return {
-        name: entry.name,
-        pct: (entry.usd / total) * 100,
-        risk: config.risk,
-        ...(config.coinId ? { coinId: config.coinId } : {}),
-        ...(config.depType ? { depType: config.depType } : {}),
-      };
-    }),
-  );
+  return {
+    slices: normalizeSlices(
+      entries.map((entry) => {
+        const config = BRANCH_RISK_MAP[entry.name] ?? { risk: "medium" as const };
+        if (!(entry.name in BRANCH_RISK_MAP)) {
+          warnings.push({
+            code: "unknown-branch",
+            message: `Asymmetry branch defaulted to medium risk: ${entry.name}`,
+            severity: "warning",
+          });
+        }
+        return {
+          name: entry.name,
+          pct: (entry.usd / total) * 100,
+          risk: config.risk,
+          ...(config.coinId ? { coinId: config.coinId } : {}),
+          ...(config.depType ? { depType: config.depType } : {}),
+        };
+      }),
+    ),
+    ...(warnings.length > 0 ? { warnings } : {}),
+  };
 }
 
 export async function fetchAsymmetryReserves(
@@ -61,7 +72,5 @@ export async function fetchAsymmetryReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "asymmetry");
   const payload = await fetchJsonWithRetry<AsymmetryPayload>(input.url, signal, getAdapterTimeout(config, 12_000));
-  return {
-    slices: adaptAsymmetry(payload),
-  };
+  return adaptAsymmetry(payload);
 }

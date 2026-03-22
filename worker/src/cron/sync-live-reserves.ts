@@ -1,11 +1,12 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import type { LiveReserveAdapterKey } from "@shared/lib/live-reserve-adapters";
 import type { CronResult } from "../lib/cron-logger";
-import { getReserveAdapter, type AdapterContext, type AdapterResult } from "./reserve-adapters/index";
+import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { validateAdapterOutput } from "./reserve-adapters/validate";
 import { buildInClause } from "../lib/db";
 import {
-  getReserveSyncState,
+  loadReserveSyncStateMap,
   upsertReserveSnapshot,
   upsertReserveSyncState,
   type ReserveSyncStateRecord,
@@ -19,7 +20,14 @@ function breakerKeyForConfig(config: LiveReserveConfig): string {
   return `live-reserves:${config.breakerScope ?? config.adapter}`;
 }
 
-function buildSharedSourceCacheKey(config: LiveReserveConfig): string | null {
+function buildSharedSourceCacheKey(
+  config: LiveReserveConfig,
+  adapter: ReserveAdapterDefinition,
+): string | null {
+  if (adapter.sharedSourceMode !== "source-invariant") {
+    return null;
+  }
+
   const primary = config.inputs.primary;
   if (primary.kind !== "http-json" && primary.kind !== "http-html") {
     return null;
@@ -64,6 +72,44 @@ function buildReserveSyncStateRecord(args: {
   };
 }
 
+const ADAPTER_TIMEOUT_MS = 20_000;
+
+function createAbortableAttemptSignal(
+  parentSignal: AbortSignal,
+  timeoutMs: number,
+): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController();
+  const abortFromParent = () => controller.abort(parentSignal.reason ?? new Error("sync-live-reserves aborted"));
+  if (parentSignal.aborted) {
+    abortFromParent();
+  } else {
+    parentSignal.addEventListener("abort", abortFromParent, { once: true });
+  }
+
+  const timer = setTimeout(() => controller.abort(new Error("adapter-timeout")), timeoutMs);
+  const cleanup = () => {
+    clearTimeout(timer);
+    parentSignal.removeEventListener("abort", abortFromParent);
+  };
+
+  return { signal: controller.signal, cleanup };
+}
+
+async function runAdapterAttempt(
+  coin: ConfiguredCoin,
+  config: LiveReserveConfig,
+  adapter: ReserveAdapterDefinition,
+  signal: AbortSignal,
+  adapterCtx?: AdapterContext,
+): Promise<AdapterResult> {
+  const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(signal, ADAPTER_TIMEOUT_MS);
+  try {
+    return await adapter.fetch(coin, config, attemptSignal, adapterCtx);
+  } finally {
+    cleanup();
+  }
+}
+
 export async function syncLiveReserves(
   db: D1Database,
   signal: AbortSignal,
@@ -78,47 +124,40 @@ export async function syncLiveReserves(
   const coinsWithWarnings: string[] = [];
   const breakerKeys = new Set<string>();
   const sharedSourceResults = new Map<string, Promise<AdapterResult>>();
+  const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
   const breakerOutcomes = new Map<string, boolean>();
+  const breakerCanFetch = new Map<string, boolean>();
 
   const tryPrimary = (
     coin: ConfiguredCoin,
     config: LiveReserveConfig,
-    adapter: NonNullable<ReturnType<typeof getReserveAdapter>>,
+    adapter: ReserveAdapterDefinition,
   ): Promise<AdapterResult> => {
-    const cacheKey = buildSharedSourceCacheKey(config);
+    const cacheKey = buildSharedSourceCacheKey(config, adapter);
     if (!cacheKey) {
-      return adapter(coin, config, signal, adapterCtx);
+      return runAdapterAttempt(coin, config, adapter, signal, adapterCtx);
     }
 
     const cached = sharedSourceResults.get(cacheKey);
     if (cached) return cached;
 
-    const resultPromise = adapter(coin, config, signal, adapterCtx);
+    const resultPromise = runAdapterAttempt(coin, config, adapter, signal, adapterCtx);
     sharedSourceResults.set(cacheKey, resultPromise);
     return resultPromise;
   };
 
-  const ADAPTER_TIMEOUT_MS = 20_000;
-  const withAdapterTimeout = <T>(p: Promise<T>): Promise<T> =>
-    Promise.race([
-      p,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("adapter-timeout")), ADAPTER_TIMEOUT_MS),
-      ),
-    ]);
-
   const runAdapter = async (
     coin: ConfiguredCoin,
     config: LiveReserveConfig,
-    adapter: NonNullable<ReturnType<typeof getReserveAdapter>>,
+    adapter: ReserveAdapterDefinition,
   ): Promise<AdapterResult> => {
     try {
-      return await withAdapterTimeout(tryPrimary(coin, config, adapter));
+      return await tryPrimary(coin, config, adapter);
     } catch (primaryError) {
       for (const fb of config.inputs.fallbacks ?? []) {
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
-          return await withAdapterTimeout(adapter(coin, fbConfig, signal, adapterCtx));
+          return await runAdapterAttempt(coin, fbConfig, adapter, signal, adapterCtx);
         } catch { continue; }
       }
       throw primaryError;
@@ -130,7 +169,7 @@ export async function syncLiveReserves(
     const config = coin.liveReservesConfig!;
     const adapter = getReserveAdapter(config.adapter);
     const breakerKey = breakerKeyForConfig(config);
-    const previousState = await getReserveSyncState(db, coin.id);
+    const previousState = syncStates.get(coin.id) ?? null;
     const prevSuccessAt = previousState?.lastSuccessAt ?? null;
     breakerKeys.add(breakerKey);
 
@@ -144,7 +183,10 @@ export async function syncLiveReserves(
       metadata: { reason },
     }));
 
-    const canFetch = await shouldAttemptFetch(db, breakerKey);
+    const canFetch = breakerCanFetch.has(breakerKey)
+      ? breakerCanFetch.get(breakerKey)!
+      : await shouldAttemptFetch(db, breakerKey);
+    breakerCanFetch.set(breakerKey, canFetch);
     if (!canFetch) {
       skipped++;
       await recordFailure("skipped", null, "circuit-open");
@@ -163,7 +205,7 @@ export async function syncLiveReserves(
     try {
       const result = await runAdapter(coin, config, adapter);
 
-      const validation = validateAdapterOutput(result);
+      const validation = validateAdapterOutput(result, { feedClass: adapter.feedClass });
       if (!validation.valid) {
         const msg = validation.warnings.map(w => w.message).join("; ");
         console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${msg}`);
@@ -209,7 +251,12 @@ export async function syncLiveReserves(
             stablecoinId: coin.id, config, breakerKey,
             previousLastSuccessAt: prevSuccessAt, now,
             status: warnings.length > 0 ? "degraded" : "ok",
-            warnings, metadata: result.metadata ?? {},
+            warnings,
+            metadata: {
+              ...(result.metadata ?? {}),
+              adapterFeedClass: adapter.feedClass,
+              adapterKey: adapter.key as LiveReserveAdapterKey,
+            },
             lastSuccessAt: now,
           }),
         ).finally(() => clearTimeout(dbTimer)),

@@ -3,9 +3,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchStablecoinReserves } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
+import type { StablecoinReservesResponse } from "@shared/types";
 
-const STALE_TIME = 60 * 60 * 1000; // 1 hour — hourly cron
-const REFETCH_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
+const LIVE_STALE_TIME = 60 * 60 * 1000; // 1 hour — hourly cron
+const LIVE_REFETCH_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
+const FALLBACK_STALE_TIME = 60 * 1000; // fallback/live-stale responses are intentionally short-lived
+const FALLBACK_REFETCH_INTERVAL = 2 * 60 * 1000;
+
+function reserveQueryStaleTime(query: { state: { data?: StablecoinReservesResponse } }): number {
+  return query.state.data?.mode === "live" ? LIVE_STALE_TIME : FALLBACK_STALE_TIME;
+}
+
+function reserveQueryRefetchInterval(query: { state: { data?: StablecoinReservesResponse } }): number {
+  return query.state.data?.mode === "live" ? LIVE_REFETCH_INTERVAL : FALLBACK_REFETCH_INTERVAL;
+}
 
 export interface StablecoinReservesQueryState {
   reserveResult: ReserveResult | null;
@@ -24,8 +35,8 @@ export function useStablecoinReserves(
     queryKey: ["stablecoin-reserves", stablecoinId],
     queryFn: () => fetchStablecoinReserves(stablecoinId),
     enabled,
-    staleTime: STALE_TIME,
-    refetchInterval: REFETCH_INTERVAL,
+    staleTime: reserveQueryStaleTime,
+    refetchInterval: reserveQueryRefetchInterval,
     retry: 1,
   });
 

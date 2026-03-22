@@ -51,6 +51,7 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): { slices: ReserveSlic
   const markets = payload.chains?.ethereum?.data ?? [];
   const buckets = new Map<string, { usd: number; risk: ReserveSlice["risk"] }>();
   const warnings: LiveReserveWarning[] = [];
+  let unknownUsd = 0;
 
   for (const market of markets) {
     const symbol = market.collateral_token?.symbol;
@@ -64,6 +65,7 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): { slices: ReserveSlic
         message: `Unmapped crvUSD collateral market: ${symbol}`,
         severity: "warning",
       });
+      unknownUsd += usd;
       continue;
     }
 
@@ -77,12 +79,20 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): { slices: ReserveSlic
   }
 
   const total = Array.from(buckets.values()).reduce((acc, bucket) => acc + bucket.usd, 0);
-  if (total <= 0) return { slices: [], warnings };
+  const totalWithUnknown = total + unknownUsd;
+  if (totalWithUnknown <= 0) return { slices: [], warnings };
+
+  if (unknownUsd > 0) {
+    buckets.set("Other / unmapped collateral markets", {
+      usd: unknownUsd,
+      risk: "high",
+    });
+  }
 
   const slices = normalizeSlices(
     Array.from(buckets.entries()).map(([name, bucket]) => ({
       name,
-      pct: (bucket.usd / total) * 100,
+      pct: (bucket.usd / totalWithUnknown) * 100,
       risk: bucket.risk,
     })),
   );

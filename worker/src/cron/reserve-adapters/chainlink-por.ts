@@ -5,6 +5,7 @@ import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from ".
 
 const DECIMALS_SELECTOR = "0x313ce567";
 const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
+const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * 86400;
 
 export interface ChainlinkPorParams {
   porFeedAddress: string;
@@ -12,6 +13,7 @@ export interface ChainlinkPorParams {
   assetRisk: ReserveSlice["risk"];
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+  maxOracleAgeSec?: number;
 }
 
 interface ChainlinkPorData {
@@ -91,6 +93,11 @@ export async function fetchChainlinkPorReserves(
   }
 
   const { roundId, answer, updatedAt } = parseChainlinkLatestRoundData(rawRoundData, "chainlink-por");
+  const maxOracleAgeSec = params.maxOracleAgeSec ?? DEFAULT_MAX_ORACLE_AGE_SEC;
+  const ageSec = Math.max(0, Math.floor(Date.now() / 1000) - updatedAt);
+  if (ageSec > maxOracleAgeSec) {
+    throw new Error(`chainlink-por: feed data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
+  }
 
   return adaptChainlinkPorResponse(
     { reserves: answer, decimals, roundId, updatedAt },

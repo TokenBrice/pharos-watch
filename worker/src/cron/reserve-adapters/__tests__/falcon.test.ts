@@ -70,7 +70,7 @@ describe("adaptFalconTransparency", () => {
         breakdown: {
           assets: [
             { label: "USDC", ceffu: "50" },
-            { label: "UNKNOWN_TOKEN_XYZ", ceffu: "5" },
+            { label: "UNKNOWN_TOKEN_XYZ", ceffu: "0.01" },
           ],
         },
       },

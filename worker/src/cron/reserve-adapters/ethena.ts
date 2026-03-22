@@ -42,11 +42,22 @@ export function listUnexpectedEthenaAssets(payload: EthenaCollateralResponse): s
 
 export function adaptEthenaCollateral(payload: EthenaCollateralResponse): AdapterResult {
   const bucketTotals = new Map<EthenaBucket, number>();
+  let computedTotalBackingAssetsInUsd = 0;
 
   for (const row of payload.collateral) {
     if (!Number.isFinite(row.usdAmount) || row.usdAmount <= 0) continue;
+    computedTotalBackingAssetsInUsd += row.usdAmount;
     const bucket = bucketForEthenaAsset(row.asset);
     bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + row.usdAmount);
+  }
+
+  if (
+    payload.totalBackingAssetsInUsd > 0
+    && Math.abs(computedTotalBackingAssetsInUsd - payload.totalBackingAssetsInUsd) / payload.totalBackingAssetsInUsd > 0.02
+  ) {
+    throw new Error(
+      `Ethena collateral total ${computedTotalBackingAssetsInUsd.toFixed(2)} does not match totalBackingAssetsInUsd ${payload.totalBackingAssetsInUsd.toFixed(2)}`,
+    );
   }
 
   const slices = slicesFromValues([
@@ -82,6 +93,7 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
     slices,
     metadata: {
       assetCount,
+      computedTotalBackingAssetsInUsd,
       totalBackingAssetsInUsd: payload.totalBackingAssetsInUsd,
       lastUpdatedAt,
     },

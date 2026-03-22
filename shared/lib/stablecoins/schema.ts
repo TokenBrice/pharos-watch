@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
+import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 
 const BACKING_TYPE_VALUES = ["rwa-backed", "crypto-backed", "algorithmic"] as const;
 const PEG_CURRENCY_VALUES = [
@@ -45,13 +46,6 @@ const GOVERNANCE_QUALITY_VALUES = [
   "wrapper",
 ] as const;
 const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
-const LIVE_RESERVE_SEMANTICS_VALUES = [
-  "collateral-mix",
-  "protocol-reserve",
-  "attestation-mix",
-  "single-asset",
-] as const;
-const LIVE_RESERVE_RPC_MODE_VALUES = ["etherscan-proxy", "alchemy", "public-rpc"] as const;
 const YIELD_TYPE_VALUES = [
   "lending-vault",
   "rebase",
@@ -124,42 +118,6 @@ const CoinNoticeAssetSchema = z.object({
   message: z.string(),
 }).strict();
 
-const LiveReserveInputAssetSchema = z.union([
-  z.object({
-    kind: z.literal("http-json"),
-    url: z.string(),
-  }).strict(),
-  z.object({
-    kind: z.literal("http-html"),
-    url: z.string(),
-  }).strict(),
-  z.object({
-    kind: z.literal("indexer"),
-    url: z.string(),
-  }).strict(),
-  z.object({
-    kind: z.literal("onchain-evm"),
-    chain: z.string(),
-    rpcMode: z.enum(LIVE_RESERVE_RPC_MODE_VALUES),
-  }).strict(),
-]);
-
-const LiveReservesConfigAssetSchema = z.object({
-  adapter: z.string(),
-  version: z.number(),
-  semantics: z.enum(LIVE_RESERVE_SEMANTICS_VALUES),
-  breakerScope: z.string().optional(),
-  display: z.object({
-    url: z.string().optional(),
-    label: z.string().optional(),
-  }).strict().optional(),
-  inputs: z.object({
-    primary: LiveReserveInputAssetSchema,
-    fallbacks: z.array(LiveReserveInputAssetSchema).optional(),
-  }).strict(),
-  params: z.record(z.string(), z.unknown()).optional(),
-}).strict();
-
 const YieldConfigAssetSchema = z.object({
   defiLlamaPoolId: z.string().optional(),
   yieldSource: z.string(),
@@ -202,7 +160,7 @@ export const StablecoinMetaAssetSchema = z.object({
   custodyModel: z.enum(CUSTODY_MODEL_VALUES).optional(),
   governanceQuality: z.enum(GOVERNANCE_QUALITY_VALUES).optional(),
   reserves: z.array(ReserveSliceAssetSchema).optional(),
-  liveReservesConfig: LiveReservesConfigAssetSchema.optional(),
+  liveReservesConfig: LiveReservesConfigSchema.optional(),
   notices: z.array(CoinNoticeAssetSchema).optional(),
   tags: z.array(z.string()).optional(),
   yieldConfig: YieldConfigAssetSchema.optional(),

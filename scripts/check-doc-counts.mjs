@@ -7,7 +7,7 @@
  * Covered counts:
  *   - Tracked stablecoins (CANONICAL_ORDER)
  *   - Shadow stablecoins (SHADOW_STABLECOINS)
- *   - Reserve adapters (ADAPTERS record)
+ *   - Reserve adapters (LIVE_RESERVE_ADAPTER_DEFINITIONS)
  *   - Bluechip slugs (BLUECHIP_SLUG_MAP)
  *   - Live-enabled stablecoins (liveReservesConfig declarations)
  *
@@ -51,14 +51,14 @@ const psiCount = trackedCount + shadowCount;
 
 // 3. Reserve adapters
 const adapterSrc = readFileSync(
-  resolve(root, "worker/src/cron/reserve-adapters/index.ts"),
+  resolve(root, "shared/lib/live-reserve-adapters.ts"),
   "utf-8",
 );
 const adapterBlock = adapterSrc.match(
-  /const ADAPTERS:\s*Record<[\s\S]*?>\s*=\s*\{([\s\S]*?)\};/,
+  /export const LIVE_RESERVE_ADAPTER_DEFINITIONS\s*=\s*\{([\s\S]*?)\}\s*as const satisfies Record</,
 );
 if (!adapterBlock) {
-  console.error("FATAL: Could not find ADAPTERS record in reserve-adapters/index.ts");
+  console.error("FATAL: Could not find LIVE_RESERVE_ADAPTER_DEFINITIONS in shared/lib/live-reserve-adapters.ts");
   process.exit(1);
 }
 const adapterCount = (adapterBlock[1].match(/^\s+(?:"[a-z][a-z0-9-]+"|\w+)\s*:/gm) || []).length;

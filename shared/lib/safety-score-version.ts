@@ -1,9 +1,39 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "6.0",
+  currentVersion: "6.2",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.2",
+      title: "Independent live reserve contract tightening",
+      date: "2026-03-22",
+      effectiveAt: 1774180800,
+      summary:
+        "Collateral-quality passthrough now only uses fresh authoritative independent live reserve feeds, preventing validated-static probes from overriding curated scoring and allowing single-bucket live feeds to count.",
+      impact: [
+        "Live collateral passthrough now requires a fresh authoritative snapshot matched to reserve_sync_state, not just a fresh reserve_composition row",
+        "Only dynamic-mix and single-bucket live feeds can override curated collateral quality; validated-static feeds stay reserve-detail/status only",
+        "Single-bucket live feeds now contribute to collateral drift and curated-fallback tracking instead of being excluded by an implicit >=2-slice gate",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "6.1",
+      title: "Redemption confidence gating and capacity semantics",
+      date: "2026-03-22",
+      effectiveAt: 1774137600,
+      summary:
+        "Liquidity scoring now distinguishes strong redemption evidence from heuristic routes and stops presenting eventual issuer redemption as immediate buffer capacity.",
+      impact: [
+        "Low-confidence redemption backstops no longer uplift the Safety Score liquidity dimension",
+        "Stale DEX liquidity no longer produces blended effective-exit inputs in report-card scoring",
+        "Redemption detail output now separates eventual redeemability from immediate redeemable capacity",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.0",
       title: "Custody model tiers, mature-alt-l1, 2-factor Resilience",
@@ -45,7 +75,7 @@ const safetyScore = createMethodologyVersion({
       summary:
         "Collateral quality scoring now consumes live reserve snapshots when available, using hourly data from reserve_composition instead of curated metadata.",
       impact: [
-        "Coins with liveReservesConfig use fresh (<48h) live snapshots for collateral quality when >= 2 slices exist",
+        "Coins with liveReservesConfig use fresh (<48h) live snapshots for collateral quality instead of curated metadata",
         "Delta alert fires when live-derived score diverges from curated by >15 points",
         "Dependency inference remains on curated data (live slices lack coinId links)",
       ],

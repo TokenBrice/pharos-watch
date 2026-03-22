@@ -244,6 +244,10 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                           <MethodologyLabel topic="redemptionBackstop">Redemption backstop</MethodologyLabel>
                           <span className="tabular-nums text-foreground/80">
                             {card.rawInputs.redemptionBackstopScore}/100
+                            {!card.rawInputs.redemptionUsedForLiquidity &&
+                            card.rawInputs.redemptionModelConfidence === "low"
+                              ? " (not used)"
+                              : ""}
                           </span>
                         </div>
                       ) : null}

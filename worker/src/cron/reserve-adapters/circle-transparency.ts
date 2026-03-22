@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromValues } from "./helpers";
+import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromPercentages } from "./helpers";
 
 interface CircleSliceConfig {
   attr: string;
@@ -20,9 +20,9 @@ const EURC_SLICES: CircleSliceConfig[] = [
 ];
 
 function extractAttrValue(html: string, attr: string): number | null {
-  // Match data-attr="value" — value is a decimal number like "47.08"
+  // Match data-attr="value" or data-attr='value' with optional whitespace around "=".
   // eslint-disable-next-line security/detect-non-literal-regexp -- attr is selected from adapter-owned config constants.
-  const re = new RegExp(`${attr}="([\\d.]+)"`, "i");
+  const re = new RegExp(`${attr}\\s*=\\s*["']([\\d.]+)["']`, "i");
   const m = html.match(re);
   if (!m) return null;
   const val = parseFloat(m[1]);
@@ -31,25 +31,38 @@ function extractAttrValue(html: string, attr: string): number | null {
 
 export function adaptCircleTransparency(html: string, coinType: string): AdapterResult {
   const sliceConfigs = coinType === "eurc" ? EURC_SLICES : USDC_SLICES;
+  const missingAttrs: string[] = [];
 
   const entries: Array<{ name: string; value: number; risk: "very-low" }> = [];
 
   for (const cfg of sliceConfigs) {
     const val = extractAttrValue(html, cfg.attr);
-    if (val != null) {
-      entries.push({ name: cfg.label, value: val, risk: "very-low" });
+    if (val == null) {
+      missingAttrs.push(cfg.attr);
+      continue;
     }
+    entries.push({ name: cfg.label, value: val, risk: "very-low" });
   }
 
-  if (entries.length === 0) {
-    throw new Error(`circle-transparency: no reserve data found in HTML for ${coinType}`);
+  if (missingAttrs.length > 0) {
+    throw new Error(
+      `circle-transparency: missing reserve attributes for ${coinType}: ${missingAttrs.join(", ")}`,
+    );
   }
 
   return {
-    slices: slicesFromValues(entries),
+    slices: slicesFromPercentages(
+      entries.map((entry) => ({
+        name: entry.name,
+        pct: entry.value,
+        risk: entry.risk,
+      })),
+      { context: `Circle ${coinType.toUpperCase()} reserve composition` },
+    ),
     metadata: {
       coinType,
       sliceCount: entries.length,
+      expectedSliceCount: sliceConfigs.length,
     },
   };
 }

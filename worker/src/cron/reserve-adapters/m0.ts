@@ -41,6 +41,22 @@ function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
     throw new Error("M0 GraphQL response missing CollateralCurrent");
   }
 
+  if (
+    current.totalTreasuries > 0
+    && Math.abs((current.eligibleTreasuries + current.nonEligibleTreasuries) - current.totalTreasuries) > 1
+  ) {
+    throw new Error("M0 GraphQL treasury subtotals do not reconcile to totalTreasuries");
+  }
+  const tokenCollateralTotal = current.totalTokenCollateral ?? 0;
+  const eligibleTokenCollateral = current.eligibleTokenCollateral ?? tokenCollateralTotal;
+  const nonEligibleTokenCollateral = current.nonEligibleTokenCollateral ?? 0;
+  if (
+    tokenCollateralTotal > 0
+    && Math.abs((eligibleTokenCollateral + nonEligibleTokenCollateral) - tokenCollateralTotal) > 1
+  ) {
+    throw new Error("M0 GraphQL token collateral subtotals do not reconcile to totalTokenCollateral");
+  }
+
   // The M0 dashboard renders treasury and token collateral fields in micro-USD,
   // while `totalCash` is surfaced in milli-USD. Upscale cash so the mix matches
   // the dashboard's reserve totals before converting to percentages.
@@ -53,7 +69,7 @@ function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
     },
     {
       name: "Tokenized treasury collateral",
-      value: current.eligibleTokenCollateral ?? current.totalTokenCollateral ?? 0,
+      value: eligibleTokenCollateral,
       risk: "low",
     },
     {
@@ -76,7 +92,11 @@ function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   return {
     slices,
     metadata: {
+      cashScaleApplied: 1_000,
       remainingTermDays: current.remainingTerm,
+      totalCashScaled: cashValue,
+      totalTokenCollateral: tokenCollateralTotal,
+      totalTreasuries: current.totalTreasuries,
       yieldToMaturity: current.yieldToMaturity,
     },
   };

@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromValues } from "./helpers";
+import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromPercentages } from "./helpers";
 
 const FDUSD_LABEL_MAP: Record<string, string> = {
   "US Treasury Bills": "U.S. Treasury Bills",
@@ -46,11 +46,13 @@ export function adaptFdusdTransparency(html: string): AdapterResult {
   const asOf = parseFdusdAsOf(html);
 
   return {
-    slices: slicesFromValues(
+    slices: slicesFromPercentages(
       entries.map((entry) => ({
-        ...entry,
+        name: entry.name,
+        pct: entry.value,
         risk: "very-low" as const,
       })),
+      { context: "FDUSD reserve composition" },
     ),
     metadata: {
       sliceCount: entries.length,

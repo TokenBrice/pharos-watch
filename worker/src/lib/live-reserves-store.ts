@@ -1,4 +1,8 @@
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
+import {
+  getLiveReserveAdapterDefinition,
+  type LiveReserveFeedClass,
+} from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { LiveReserveWarning, ReserveSlice, ReserveSyncStateView, StablecoinMeta } from "@shared/types";
 import { buildInClause } from "./db";
@@ -6,6 +10,7 @@ import { chunkArray } from "./collections";
 import { decodeJsonString } from "./cache-json";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * 86400;
+const INDEPENDENT_LIVE_RESERVE_FEED_CLASSES: LiveReserveFeedClass[] = ["dynamic-mix", "single-bucket"];
 
 export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
 
@@ -58,6 +63,14 @@ export interface ReserveCompositionOverview {
   errorCoins: number;
   lastSuccessAt: number | null;
   oldestFreshAgeSec: number | null;
+}
+
+export interface AuthoritativeReserveSnapshot {
+  stablecoinId: string;
+  slices: ReserveSlice[];
+  fetchedAt: number;
+  source: string;
+  feedClass: LiveReserveFeedClass;
 }
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
@@ -295,6 +308,39 @@ export async function loadReserveSyncStateMap(
   return result;
 }
 
+async function loadReserveCompositionMap(
+  db: D1Database,
+  stablecoinIds: readonly string[],
+): Promise<Map<string, ReserveCompositionRecord>> {
+  if (stablecoinIds.length === 0) return new Map();
+
+  const BATCH_SIZE = 50;
+  const result = new Map<string, ReserveCompositionRecord>();
+
+  for (const batch of chunkArray(stablecoinIds, BATCH_SIZE)) {
+    const inClause = buildInClause(batch);
+    const rows = await db
+      .prepare(
+        `SELECT stablecoin_id, slices, fetched_at, source
+           FROM reserve_composition
+          WHERE stablecoin_id IN (${inClause.sql})`,
+      )
+      .bind(...inClause.binds)
+      .all<ReserveCompositionRow>();
+
+    for (const row of rows.results ?? []) {
+      result.set(row.stablecoin_id, {
+        stablecoinId: row.stablecoin_id,
+        slices: parseSlices(row.slices),
+        fetchedAt: row.fetched_at,
+        source: row.source,
+      });
+    }
+  }
+
+  return result;
+}
+
 function hasConsistentSnapshotRow(
   sync: ReserveSyncStateRow | undefined,
   composition: ReserveCompositionRow | undefined,
@@ -435,37 +481,79 @@ export async function getMaxSyncAge(
   return now - row.max_ts;
 }
 
-/**
- * Load all fresh live reserve snapshots as a Map<stablecoinId, ReserveSlice[]>.
- * Only includes snapshots with ≥2 slices that are fresher than `freshnessSec`.
- */
-export async function loadFreshLiveReserveMap(
+async function loadFreshAuthoritativeReserveSnapshots(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
-  minSlices = 2,
-): Promise<Map<string, ReserveSlice[]>> {
-  const cutoff = now - freshnessSec;
-  const rows = await db
-    .prepare(
-      "SELECT stablecoin_id, slices FROM reserve_composition WHERE fetched_at > ?",
-    )
-    .bind(cutoff)
-    .all<{ stablecoin_id: string; slices: string }>();
+  options?: {
+    minSlices?: number;
+    feedClasses?: readonly LiveReserveFeedClass[];
+  },
+): Promise<Map<string, AuthoritativeReserveSnapshot>> {
+  const configuredCoins = getConfiguredLiveReserveCoins();
+  const coinIds = configuredCoins.map((coin) => coin.id);
+  const [syncById, compositionById] = await Promise.all([
+    loadReserveSyncStateMap(db, coinIds),
+    loadReserveCompositionMap(db, coinIds),
+  ]);
+  const allowedFeedClasses = options?.feedClasses ? new Set(options.feedClasses) : null;
+  const minSlices = options?.minSlices ?? 1;
+  const snapshots = new Map<string, AuthoritativeReserveSnapshot>();
 
-  const map = new Map<string, ReserveSlice[]>();
-  for (const row of rows.results) {
-    try {
-      const raw: unknown[] = JSON.parse(row.slices);
-      const slices = raw.filter(isValidSlice);
-      if (slices.length >= minSlices) {
-        map.set(row.stablecoin_id, slices);
-      }
-    } catch {
-      console.warn(`[live-reserves-store] Skipping malformed slices JSON for ${row.stablecoin_id}`);
+  for (const coin of configuredCoins) {
+    const syncState = syncById.get(coin.id) ?? null;
+    const composition = compositionById.get(coin.id) ?? null;
+    const authoritativeSnapshot = hasConsistentSnapshotRecord(syncState, composition)
+      ? composition
+      : null;
+    if (!authoritativeSnapshot) continue;
+    if (now - authoritativeSnapshot.fetchedAt > freshnessSec) continue;
+    if (authoritativeSnapshot.slices.length < minSlices) continue;
+
+    const feedClass = getLiveReserveAdapterDefinition(coin.liveReservesConfig!.adapter).feedClass;
+    if (allowedFeedClasses && !allowedFeedClasses.has(feedClass)) {
+      continue;
     }
+
+    snapshots.set(coin.id, {
+      stablecoinId: coin.id,
+      slices: authoritativeSnapshot.slices,
+      fetchedAt: authoritativeSnapshot.fetchedAt,
+      source: authoritativeSnapshot.source,
+      feedClass,
+    });
   }
-  return map;
+
+  return snapshots;
+}
+
+/**
+ * Load all fresh, authoritative reserve snapshots as a Map<stablecoinId, ReserveSlice[]>.
+ * This uses the same sync-state consistency contract as the detail-page API.
+ */
+async function loadFreshLiveReserveMap(
+  db: D1Database,
+  now = Math.floor(Date.now() / 1000),
+  freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
+  options?: {
+    minSlices?: number;
+    feedClasses?: readonly LiveReserveFeedClass[];
+  },
+): Promise<Map<string, ReserveSlice[]>> {
+  const snapshots = await loadFreshAuthoritativeReserveSnapshots(db, now, freshnessSec, options);
+  return new Map(Array.from(snapshots.entries()).map(([coinId, snapshot]) => [coinId, snapshot.slices]));
+}
+
+export async function loadFreshIndependentLiveReserveMap(
+  db: D1Database,
+  now = Math.floor(Date.now() / 1000),
+  freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
+  minSlices = 1,
+): Promise<Map<string, ReserveSlice[]>> {
+  return loadFreshLiveReserveMap(db, now, freshnessSec, {
+    minSlices,
+    feedClasses: INDEPENDENT_LIVE_RESERVE_FEED_CLASSES,
+  });
 }
 
 function buildSyncView(

@@ -8,7 +8,7 @@ import {
   loadRedemptionBackstopMap,
   RedemptionBackstopSnapshotUnavailableError,
 } from "./redemption-backstops-store";
-import { loadFreshLiveReserveMap } from "./live-reserves-store";
+import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -97,7 +97,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
       getCache(db, "bluechip-ratings"),
       loadDexLiquiditySnapshot(db),
       loadRedemptionBackstopMap(db),
-      loadFreshLiveReserveMap(db),
+      loadFreshIndependentLiveReserveMap(db),
     ]);
   } catch (error) {
     if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
@@ -163,6 +163,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
       overallScores,
       blacklistableIds,
       liveReserveMap,
+      liquidityStale,
     });
     liveCards.push(card);
     if (card.overallScore !== null) {
@@ -211,6 +212,8 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
         effectiveExitScore: null,
         redemptionBackstopScore: null,
         redemptionRouteFamily: null,
+        redemptionModelConfidence: null,
+        redemptionUsedForLiquidity: false,
         redemptionImmediateCapacityUsd: null,
         redemptionImmediateCapacityRatio: null,
         concentrationHhi: null,
@@ -270,14 +273,27 @@ interface ComputeCardInput {
   overallScores: Map<string, number>;
   blacklistableIds: ReadonlySet<string>;
   liveReserveMap: Map<string, ReserveSlice[]>;
+  liquidityStale: boolean;
 }
 
 function computeCard(input: ComputeCardInput): ReportCard {
-  const { meta, pegDataById, dexLiqMap, redemptionBackstopMap, bluechipMap, overallScores, blacklistableIds, liveReserveMap } = input;
+  const {
+    meta,
+    pegDataById,
+    dexLiqMap,
+    redemptionBackstopMap,
+    bluechipMap,
+    overallScores,
+    blacklistableIds,
+    liveReserveMap,
+    liquidityStale,
+  } = input;
   const peg = pegDataById.get(meta.id);
-  const liq = dexLiqMap[meta.id];
+  const liq = liquidityStale ? undefined : dexLiqMap[meta.id];
   const redemption = redemptionBackstopMap[meta.id];
   const rating = bluechipMap[meta.id];
+  const redemptionUsedForLiquidity =
+    redemption?.resolutionState === "resolved" && redemption?.modelConfidence !== "low";
 
   const canBeBlacklisted = isBlacklistable(meta, blacklistableIds);
   const resilienceFactors = resolveResilienceFactors(meta);
@@ -304,6 +320,8 @@ function computeCard(input: ComputeCardInput): ReportCard {
     effectiveExitScore: dimensions.liquidity.score,
     redemptionBackstopScore: redemption?.score ?? null,
     redemptionRouteFamily: redemption?.routeFamily ?? null,
+    redemptionModelConfidence: redemption?.modelConfidence ?? null,
+    redemptionUsedForLiquidity,
     redemptionImmediateCapacityUsd: redemption?.immediateCapacityUsd ?? null,
     redemptionImmediateCapacityRatio: redemption?.immediateCapacityRatio ?? null,
     concentrationHhi: liq?.concentrationHhi ?? null,

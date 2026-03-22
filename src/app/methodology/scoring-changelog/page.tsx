@@ -124,6 +124,129 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
+      {/* ──────────── v6.2 ──────────── */}
+      <VersionCard
+        version="v6.2"
+        title="Independent live reserve contract tightening"
+        date="Mar 22, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Safety Score structure is unchanged, but the collateral-quality live reserve
+          passthrough is now stricter about which hourly reserve feeds qualify.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Live collateral passthrough now requires a
+            <span className="text-foreground font-medium"> fresh authoritative snapshot</span>:
+            the reserve row must be non-empty and matched to the coin&apos;s latest successful
+            sync state.
+          </li>
+          <li>
+            Only <code className="text-xs bg-muted px-1 py-0.5 rounded">dynamic-mix</code> and{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">single-bucket</code> feeds
+            count as independent live collateral inputs.{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">validated-static</code> feeds
+            stay visible on reserve detail/status surfaces but no longer override curated
+            collateral scoring.
+          </li>
+          <li>
+            Single-bucket live feeds now participate in collateral drift and fallback tracking;
+            the old implicit <code className="text-xs bg-muted px-1 py-0.5 rounded">&gt;= 2 slices</code>{" "}
+            gate is no longer the scoring contract.
+          </li>
+        </ul>
+      </VersionCard>
+
+      {/* ──────────── v6.1 ──────────── */}
+      <VersionCard
+        version="v6.1"
+        title="Redemption confidence gating and capacity semantics"
+        date="Mar 22, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Safety Score structure is unchanged, but the Liquidity dimension is now
+          stricter about what redemption evidence can improve it.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Low-confidence redemption routes remain visible in detail surfaces,
+            but they no longer uplift the Safety Score liquidity dimension.
+          </li>
+          <li>
+            When the reused DEX liquidity snapshot is stale, it is no longer
+            blended into <code className="text-xs bg-muted px-1 py-0.5 rounded">effectiveExitScore</code>.
+          </li>
+          <li>
+            Redemption detail output now distinguishes immediate redeemable
+            capacity from eventual issuer/protocol redeemability.
+          </li>
+        </ul>
+      </VersionCard>
+
+      {/* ──────────── v6.0 ──────────── */}
+      <VersionCard
+        version="v6.0"
+        title="Custody model tiers, mature-alt-l1, 2-factor Resilience"
+        date="Mar 21, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Four structural changes landed together in the safety methodology:
+          a wider custody model, a new chain tier for Solana and BNB Chain,
+          a simpler 2-factor Resilience score, and a steeper 5-band chain
+          penalty.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Custody model expanded from 3 to 6 tiers: onchain, institutional-top,
+            institutional-regulated, institutional-unregulated,
+            institutional-sanctioned, and cex.
+          </li>
+          <li>
+            Added <span className="text-foreground font-medium">mature-alt-l1</span> for Solana
+            and BNB Chain with score 45.
+          </li>
+          <li>
+            Resilience became <code className="text-xs bg-muted px-1 py-0.5 rounded">(collateral + custody) / 2</code>;
+            blacklist capability is now descriptive only.
+          </li>
+          <li>
+            Chain-risk penalty moved to 5 bands, and wrapper governance became
+            exempt from that penalty.
+          </li>
+        </ul>
+      </VersionCard>
+
+      {/* ──────────── v5.9 ──────────── */}
+      <VersionCard
+        version="v5.9"
+        title="Classification corrections: centralized-custody DeFi coins"
+        date="Mar 20, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Three DeFi-classified coins were corrected after live reserve review
+          showed majority centralized custody exposure.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            <span className="text-foreground font-medium">meUSD</span>, <span className="text-foreground font-medium">ALUSD</span>, and{" "}
+            <span className="text-foreground font-medium">BtcUSD</span> were reclassified from
+            decentralized to centralized-dependent.
+          </li>
+          <li>
+            ALUSD&apos;s earlier v4.1 correction was explicitly reversed after
+            reserve review showed majority direct USDC/USDT exposure.
+          </li>
+          <li>
+            meUSD and BtcUSD were corrected after live reserves confirmed
+            custodial BTC-variant backing.
+          </li>
+        </ul>
+      </VersionCard>
+
       {/* ──────────── v5.8 ──────────── */}
       <VersionCard
         version="v5.8"
@@ -140,7 +263,7 @@ const route = createMethodologyChangelogRoute({
         <ul className="list-disc list-inside space-y-1">
           <li>
             Coins with <code className="text-xs bg-muted px-1 py-0.5 rounded">liveReservesConfig</code> use
-            fresh (&lt;48h) live snapshots for collateral quality when &ge;&nbsp;2 slices exist.
+            fresh (&lt;48h) live snapshots for collateral quality instead of curated metadata.
           </li>
           <li>
             Delta alert fires when live-derived score diverges from curated by &gt;15 points.

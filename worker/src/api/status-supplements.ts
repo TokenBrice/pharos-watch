@@ -16,7 +16,7 @@ import type {
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
-import { loadFreshLiveReserveMap } from "../lib/live-reserves-store";
+import { loadFreshIndependentLiveReserveMap } from "../lib/live-reserves-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 
@@ -255,7 +255,7 @@ export async function loadStatusSupplements(
 
   let reserveDrift: ReserveDriftEntry[] | undefined;
   try {
-    const liveReserveMap = await loadFreshLiveReserveMap(db, now);
+    const liveReserveMap = await loadFreshIndependentLiveReserveMap(db, now);
     const driftEntries: ReserveDriftEntry[] = [];
     for (const [coinId, liveSlices] of liveReserveMap) {
       const meta = ACTIVE_STABLECOINS.find((c) => c.id === coinId);

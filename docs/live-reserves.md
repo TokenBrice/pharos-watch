@@ -13,26 +13,40 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
 
-This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8) collateral quality scoring in report cards. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
+This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8, tightened in v6.2) collateral quality scoring in report cards. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
 
 ---
 
 ## Metadata Contract
 
-Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/index.ts`, loaded from `shared/data/stablecoins/*.json` via `shared/lib/stablecoins/index.ts`).
+Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, loaded from `shared/data/stablecoins/*.json` via `shared/lib/stablecoins/index.ts` and validated by `shared/lib/stablecoins/schema.ts`).
 
 `LiveReservesConfig` fields:
 
 | Field | Meaning |
 |-------|---------|
-| `adapter` | Registered adapter key from `worker/src/cron/reserve-adapters/index.ts` |
+| `adapter` | Registered adapter key from `shared/lib/live-reserve-adapters.ts` |
 | `version` | Increment when adapter semantics or parsing change materially |
 | `semantics` | One of `collateral-mix`, `protocol-reserve`, `attestation-mix`, `single-asset` |
 | `breakerScope` | Optional circuit-breaker grouping override; defaults to adapter key |
 | `display` | Optional UI/source link metadata (`url`, `label`) |
 | `inputs.primary` | Primary source input |
 | `inputs.fallbacks` | Optional fallback inputs |
-| `params` | Adapter-specific validated settings |
+| `params` | Adapter-specific validated settings enforced by the shared live-reserve config schema |
+
+### Registry-Defined Adapter Classes
+
+The shared registry in `shared/lib/live-reserve-adapters.ts` defines two important adapter properties that are not user-configured per coin:
+
+| Property | Meaning |
+|----------|---------|
+| `feedClass` | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve feeds |
+| `sharedSourceMode` | Distinguishes per-coin fetches (`none`) from explicitly source-invariant result sharing (`source-invariant`) |
+
+- `dynamic-mix`: independently measured reserve compositions that can drive both the reserve detail card and report-card collateral quality.
+- `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they do not count as independent live collateral inputs for report-card scoring.
+- `single-bucket`: one-slice live proofs/attestations. These are independent live inputs and can drive report-card collateral quality even with only one slice.
+- `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
 
 ### Fallback Inputs
 
@@ -69,8 +83,9 @@ Supported input kinds:
 
 **Adapter output validation:** After each adapter returns, `validateAdapterOutput()` checks
 that all slice `risk` values are valid enum members, all `pct` values are finite and non-negative,
-and the sum is within 5 points of 100%. Invalid output is treated as an error. Sum deviation
-is propagated as a warning.
+the slice list is non-empty, and the sum is within 2 points of 100%. Invalid output is treated as
+an error. Sum deviation above 0.5 points is propagated as a warning, while deviation above 2 points
+hard-fails the adapter output.
 
 **Circuit breaker recording:** Breaker outcomes are deferred until the entire sync loop
 completes, recording the worst outcome per breaker key (failure trumps success). This
@@ -87,7 +102,7 @@ Cron result statuses:
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
-The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable.
+The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins.
 
 ---
 
@@ -126,6 +141,9 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 - `LIVE_RESERVE_FRESHNESS_SEC = 172800` (48 hours)
 - A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at`
 - Empty slice arrays never count as a valid live snapshot
+- `loadFreshAuthoritativeReserveSnapshots()` is the canonical resolver used by `GET /api/stablecoin-reserves/:id` and reserve-sync status surfaces
+- `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to independent feed classes (`dynamic-mix`, `single-bucket`) for report-card collateral quality, reserve drift, and fallback tracking
+- `loadFreshMultiSliceLiveReserveMap()` remains available for analyses that explicitly require `>= 2` slices
 
 `computeReserveCompositionOverview()` aggregates the status-card summary used by `/status`:
 
@@ -243,7 +261,7 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 
 ## Frontend Consumers
 
-- `src/hooks/use-stablecoin-reserves.ts` fetches the resolved API shape with `staleTime = 1 hour` and `refetchInterval = 2 hours`
+- `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: `live` responses keep `staleTime = 1 hour` / `refetchInterval = 2 hours`, while stale or fallback modes tighten to `1 minute` / `2 minutes` so the UI re-checks recovery faster
 - `src/hooks/use-stablecoin-detail-view-model.ts` injects the reserve result into the detail-page view model
 - `src/lib/coverage.ts` uses `coin.liveReservesConfig` for the structural `Live` reserve-coverage state on `/coverage`
 - `worker/src/api/status.ts` uses `computeReserveCompositionOverview()` to surface reserve-sync health on `/status`
@@ -253,10 +271,8 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 ## Scope Boundaries
 
 - Live reserve sync is detail-page and status-surface infrastructure, not a replacement for curated reserve metadata everywhere else.
-- [Risk Lab](./report-cards.md) uses live reserve snapshots for collateral quality scoring when
-  available (v5.8+). Dependency inference, blacklist-inherited checks, and all other scoring
-  dimensions still use curated reserve metadata.
-- `isBlacklistable()` inherited detection still uses curated `meta.reserves` (which carry `coinId` links). Most live adapter slices lack `coinId`, so inherited blacklist scoring cannot use live data — except for `curated-validated` coins, which pass through `coinId` and `depType` from curated metadata. The collateral drift alert flags when these two sources diverge; for `curated-validated` coins drift is always zero by construction since live slices equal curated slices.
+- [Risk Lab](./report-cards.md) uses fresh authoritative independent live reserve snapshots for collateral quality scoring when available. In practice this means `dynamic-mix` and `single-bucket` feeds can override curated collateral scoring, while `validated-static` feeds remain detail-card/status data only. Dependency inference, blacklist-inherited checks, and all other scoring dimensions still use curated reserve metadata.
+- `isBlacklistable()` inherited detection still uses curated `meta.reserves` (which carry `coinId` links). Most live adapter slices lack `coinId`, so inherited blacklist scoring cannot use live data even when collateral quality is using an independent live snapshot. The collateral drift alert flags when live collateral quality diverges materially from curated metadata.
 - [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
 
 ---
@@ -265,7 +281,8 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 
 | File | Role |
 |------|------|
-| `shared/types/index.ts` | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types |
+| `shared/types/live-reserves.ts` | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types |
+| `shared/lib/live-reserve-adapters.ts` | Shared adapter registry, feed classes, and config schemas |
 | `shared/lib/stablecoins/index.ts` | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/*.json` |
 | `worker/src/cron/sync-live-reserves.ts` | Hourly sync orchestration and cron result statuses |
 | `worker/src/cron/reserve-adapters/index.ts` | Adapter registry |

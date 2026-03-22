@@ -47,12 +47,10 @@ describe("mento adapter", () => {
     expect(result.warnings!.some((w) => w.code === "mento-low-entry-count")).toBe(true);
   });
 
-  it("emits a structural integrity warning when total percentages are below 50%", () => {
+  it("rejects reserve payloads whose percentages do not cover the full reserve mix", () => {
     const lowPctHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":10},{\\"symbol\\":\\"ETH\\",\\"percent\\":5},{\\"symbol\\":\\"CELO\\",\\"percent\\":3}],\\"reserveHoldings\\":{}..."]);
 </script></body></html>`;
-    const result = adaptMentoReserveComposition(lowPctHtml);
-    expect(result.warnings).toBeDefined();
-    expect(result.warnings!.some((w) => w.code === "mento-low-total-pct")).toBe(true);
+    expect(() => adaptMentoReserveComposition(lowPctHtml)).toThrow("sum to 18.0%");
   });
 
   it("throws on missing reserveComposition marker", () => {

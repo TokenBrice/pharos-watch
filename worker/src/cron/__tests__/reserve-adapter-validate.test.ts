@@ -17,8 +17,8 @@ describe("validateAdapterOutput", () => {
     const result = validateAdapterOutput({
       slices: [{ name: "A", pct: 80, risk: "low" }],
     });
-    expect(result.valid).toBe(true);
-    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.valid).toBe(false);
+    expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0].code).toBe("pct-sum-deviation");
   });
 
@@ -74,30 +74,30 @@ describe("validateAdapterOutput", () => {
     expect(result.warnings[0].code).toBe("invalid-pct");
   });
 
-  it("warns at 95% sum (within tolerance)", () => {
+  it("rejects a 95% total as incomplete", () => {
     const result = validateAdapterOutput({
       slices: [{ name: "A", pct: 95, risk: "low" }],
     });
-    expect(result.valid).toBe(true);
-    expect(result.warnings).toHaveLength(0);
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0].code).toBe("pct-sum-deviation");
   });
 
-  it("warns at 105% sum (within tolerance)", () => {
+  it("rejects a 105% total as overcounted", () => {
     const result = validateAdapterOutput({
       slices: [
         { name: "A", pct: 55, risk: "low" },
         { name: "B", pct: 50, risk: "medium" },
       ],
     });
-    expect(result.valid).toBe(true);
-    expect(result.warnings).toHaveLength(0);
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0].code).toBe("pct-sum-deviation");
   });
 
-  it("warns at 94% sum (outside tolerance)", () => {
+  it("rejects a 94% total as incomplete", () => {
     const result = validateAdapterOutput({
       slices: [{ name: "A", pct: 94, risk: "low" }],
     });
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0].code).toBe("pct-sum-deviation");
   });

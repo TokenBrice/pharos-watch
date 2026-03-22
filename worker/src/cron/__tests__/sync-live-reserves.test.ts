@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
@@ -21,8 +22,12 @@ describe("syncLiveReserves", () => {
     .filter((coin) => coin.liveReservesConfig)
     .reduce((keys, coin) => {
       const config = coin.liveReservesConfig!;
+      const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter];
       const primary = config.inputs.primary;
-      if (primary.kind !== "http-json" && primary.kind !== "http-html") {
+      if (
+        definition.sharedSourceMode !== "source-invariant"
+        || (primary.kind !== "http-json" && primary.kind !== "http-html")
+      ) {
         keys.add(`coin:${coin.id}`);
         return keys;
       }
@@ -41,6 +46,22 @@ describe("syncLiveReserves", () => {
     }, new Set<string>())
     .size;
 
+  function mockAdapterRegistry(
+    fetchImpl: () => Promise<{ slices: Array<{ name: string; pct: number; risk: "low" }> } | {
+      slices: Array<{ name: string; pct: number; risk: "low" }>;
+      warnings: Array<{ code: string; message: string; severity: "warning" }>;
+    }>,
+  ) {
+    const fetch = vi.fn(fetchImpl);
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
+      key: adapterKey,
+      fetch,
+      feedClass: LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].feedClass,
+      sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].sharedSourceMode,
+    }));
+    return fetch;
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     shouldAttemptFetchMock.mockResolvedValue(true);
@@ -48,7 +69,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("persists reserve snapshot + sync state and returns ok on a clean run", async () => {
-    getReserveAdapterMock.mockReturnValue(
+    mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 
@@ -70,21 +91,20 @@ describe("syncLiveReserves", () => {
   });
 
   it("reuses identical shared HTTP reserve sources within a run", async () => {
-    const adapterFn = vi.fn(async () => ({
+    const adapterFetch = mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
-    getReserveAdapterMock.mockReturnValue(adapterFn);
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
     await syncLiveReserves(db, new AbortController().signal, {});
 
-    expect(adapterFn).toHaveBeenCalledTimes(sharedSourceInvocationCount);
+    expect(adapterFetch).toHaveBeenCalledTimes(sharedSourceInvocationCount);
     expect(sharedSourceInvocationCount).toBeLessThan(configuredCoinCount);
   });
 
   it("returns ok with warning metadata when the adapter yields warnings (warnings are metadata-only)", async () => {
-    getReserveAdapterMock.mockReturnValue(
+    mockAdapterRegistry(
       async () => ({
         slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
         warnings: [{ code: "unknown-position", message: "Unmapped reserve position: new-farm", severity: "warning" as const }],
@@ -102,7 +122,7 @@ describe("syncLiveReserves", () => {
 
   it("records a skipped sync state when the circuit is open", async () => {
     shouldAttemptFetchMock.mockResolvedValue(false);
-    getReserveAdapterMock.mockReturnValue(async () => {
+    mockAdapterRegistry(async () => {
       throw new Error("adapter should not run when circuit is open");
     });
 
@@ -117,7 +137,7 @@ describe("syncLiveReserves", () => {
   });
 
   it("records circuit breaker outcome only once per unique breakerKey per run", async () => {
-    getReserveAdapterMock.mockReturnValue(
+    mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
 

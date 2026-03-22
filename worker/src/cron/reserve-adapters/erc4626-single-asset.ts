@@ -76,6 +76,10 @@ export async function fetchErc4626SingleAssetReserves(
   if (!totalAssetsResult) {
     throw new Error(`ERC-4626 totalAssets() call failed for ${coin.id}`);
   }
+  const totalAssetsRaw = BigInt(totalAssetsResult);
+  if (totalAssetsRaw <= 0n) {
+    throw new Error(`ERC-4626 totalAssets() is zero for ${coin.id}`);
+  }
 
   const warnings: LiveReserveWarning[] = [];
   const assetAddress = assetResult ? parseEvmAddressResult(assetResult) : null;
@@ -105,7 +109,7 @@ export async function fetchErc4626SingleAssetReserves(
     metadata: {
       chain: primaryInput.chain,
       contractAddress,
-      totalAssetsRaw: BigInt(totalAssetsResult).toString(),
+      totalAssetsRaw: totalAssetsRaw.toString(),
       ...(assetAddress ? { assetAddress } : {}),
     },
   };

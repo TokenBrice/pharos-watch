@@ -114,6 +114,8 @@ describe("scoreLiquidity", () => {
       immediateCapacityUsd: null,
       immediateCapacityRatio: null,
       resolutionState: "missing-capacity",
+      modelConfidence: "medium",
+      capacitySemantics: "immediate-bounded",
     });
 
     expect(result.grade).toBe("NR");
@@ -124,7 +126,15 @@ describe("scoreLiquidity", () => {
   it("blends DEX liquidity with a resolved redemption backstop score", () => {
     const result = scoreLiquidity(
       { liquidityScore: 40, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },
-      { score: 85, routeFamily: "stablecoin-redeem", immediateCapacityUsd: 50_000_000, immediateCapacityRatio: 0.5, resolutionState: "resolved" },
+      {
+        score: 85,
+        routeFamily: "stablecoin-redeem",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.5,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "immediate-bounded",
+      },
     );
 
     expect(result.grade).not.toBe("NR");
@@ -141,6 +151,8 @@ describe("scoreLiquidity", () => {
       immediateCapacityUsd: 100_000_000,
       immediateCapacityRatio: 1.0,
       resolutionState: "resolved",
+      modelConfidence: "medium",
+      capacitySemantics: "immediate-bounded",
     });
 
     // min(70, 90 * 0.75) = min(70, 67.5) = 68
@@ -152,10 +164,36 @@ describe("scoreLiquidity", () => {
   it("high DEX liquidity dominates over low redemption score", () => {
     const result = scoreLiquidity(
       { liquidityScore: 95, concentrationHhi: 0.1, poolCount: 10, chainCount: 3 },
-      { score: 30, routeFamily: "queue-redeem", immediateCapacityUsd: 1_000_000, immediateCapacityRatio: 0.1, resolutionState: "resolved" },
+      {
+        score: 30,
+        routeFamily: "queue-redeem",
+        immediateCapacityUsd: 1_000_000,
+        immediateCapacityRatio: 0.1,
+        resolutionState: "resolved",
+        modelConfidence: "medium",
+        capacitySemantics: "immediate-bounded",
+      },
     );
 
     expect(result.score).toBe(95);
+  });
+
+  it("does not let low-confidence redemption uplift liquidity", () => {
+    const result = scoreLiquidity(
+      { liquidityScore: 40, concentrationHhi: 0.3, poolCount: 5, chainCount: 2 },
+      {
+        score: 85,
+        routeFamily: "stablecoin-redeem",
+        immediateCapacityUsd: 50_000_000,
+        immediateCapacityRatio: 0.5,
+        resolutionState: "resolved",
+        modelConfidence: "low",
+        capacitySemantics: "immediate-bounded",
+      },
+    );
+
+    expect(result.score).toBe(40);
+    expect(result.detail).toContain("not used for Safety Score uplift");
   });
 });
 

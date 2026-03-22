@@ -1,6 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
-import { loadFreshLiveReserveMap } from "./live-reserves-store";
+import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
 
 const DRIFT_THRESHOLD = 15;
 
@@ -21,7 +21,7 @@ export interface CollateralDriftResult {
  * Returns coins with score drift > 15 points and coins that fell back to curated.
  */
 export async function checkCollateralDrift(db: D1Database): Promise<CollateralDriftResult> {
-  const liveReserveMap = await loadFreshLiveReserveMap(db);
+  const liveReserveMap = await loadFreshIndependentLiveReserveMap(db);
   const driftCoins: CollateralDriftEntry[] = [];
   const fallbackCoins: string[] = [];
 

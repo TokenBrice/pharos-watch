@@ -1,6 +1,7 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
   fetchErc20Balance,
   requireOnchainInput,
@@ -63,10 +64,17 @@ export async function fetchEvmBranchBalancesReserves(
       );
       return {
         branch,
-        balance: raw == null ? null : Number(raw) / (10 ** branch.token.decimals),
+        balance: raw == null ? null : decimalNumberFromBigInt(raw, branch.token.decimals),
       };
     }),
   );
+
+  const unreadableBranches = balances
+    .filter((entry) => entry.balance == null)
+    .map((entry) => entry.branch.name);
+  if (unreadableBranches.length > 0) {
+    throw new Error(`evm-branch-balances adapter could not read balances for: ${unreadableBranches.join(", ")}`);
+  }
 
   const pricedBranches = balances.filter((entry) => entry.balance != null && entry.balance > 0);
   if (pricedBranches.length === 0) {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { LiveReservesConfig } from "./live-reserves";
 
 // --- Flag-based classification ---
 
@@ -126,69 +127,6 @@ export interface CoinNotice {
   type: "danger" | "warning" | "info";
   title: string;
   message: string;
-}
-
-export type LiveReserveSemantics =
-  | "collateral-mix"
-  | "protocol-reserve"
-  | "attestation-mix"
-  | "single-asset";
-
-export type LiveReserveInput =
-  | { kind: "http-json"; url: string }
-  | { kind: "http-html"; url: string }
-  | { kind: "indexer"; url: string }
-  | { kind: "onchain-evm"; chain: string; rpcMode: "etherscan-proxy" | "alchemy" | "public-rpc" };
-
-export interface LiveReserveWarning {
-  code: string;
-  message: string;
-  severity: "info" | "warning";
-}
-
-export interface LiveReservesConfig {
-  adapter: string;
-  version: number;
-  semantics: LiveReserveSemantics;
-  breakerScope?: string;
-  display?: {
-    url?: string;
-    label?: string;
-  };
-  inputs: {
-    primary: LiveReserveInput;
-    fallbacks?: LiveReserveInput[];
-  };
-  params?: Record<string, unknown>;
-}
-
-export type ReservePresentationMode =
-  | "live"
-  | "live-stale"
-  | "curated-fallback"
-  | "template-fallback"
-  | "unavailable";
-
-export interface ReserveSyncStateView {
-  enabled: boolean;
-  status: "ok" | "degraded" | "error" | "skipped";
-  stale: boolean;
-  bootstrap: boolean;
-  lastAttemptedAt?: number;
-  lastSuccessAt?: number;
-  warnings?: string[];
-  lastError?: string;
-}
-
-export interface StablecoinReservesResponse {
-  stablecoinId: string;
-  mode: ReservePresentationMode;
-  reserves: ReserveSlice[];
-  estimated: boolean;
-  liveAt?: number;
-  source?: string;
-  displayUrl?: string;
-  sync?: ReserveSyncStateView;
 }
 
 export type YieldType =

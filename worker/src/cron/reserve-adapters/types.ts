@@ -1,4 +1,5 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReserveAdapterKey, LiveReserveFeedClass, LiveReserveSourceSharingMode } from "@shared/types";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
@@ -20,3 +21,10 @@ export type AdapterFn = (
   signal: AbortSignal,
   ctx?: AdapterContext,
 ) => Promise<AdapterResult>;
+
+export interface ReserveAdapterDefinition {
+  key: LiveReserveAdapterKey;
+  fetch: AdapterFn;
+  feedClass: LiveReserveFeedClass;
+  sharedSourceMode: LiveReserveSourceSharingMode;
+}

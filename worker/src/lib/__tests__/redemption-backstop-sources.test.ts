@@ -40,8 +40,9 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.resolutionState).toBe("resolved");
     expect(entry.sourceMode).toBe("estimated");
-    expect(entry.immediateCapacityUsd).toBe(100_000_000);
-    expect(entry.immediateCapacityRatio).toBe(1);
+    expect(entry.capacitySemantics).toBe("eventual-only");
+    expect(entry.immediateCapacityUsd).toBeNull();
+    expect(entry.immediateCapacityRatio).toBeNull();
     expect(entry.score).not.toBeNull();
     expect(entry.score).toBeLessThanOrEqual(65); // offchain-issuer cap
     expect(entry.capsApplied).toContain("offchain-route-cap");
@@ -296,6 +297,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.immediateCapacityUsd).toBe(7_500_000);
     expect(entry.immediateCapacityRatio).toBe(0.15);
     expect(entry.capacityConfidence).toBe("dynamic");
+    expect(entry.capacitySemantics).toBe("immediate-bounded");
   });
 
   it("falls back to ratio when reserve-sync has no immediate capacity data", async () => {
@@ -344,6 +346,30 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.resolutionState).toBe("missing-capacity");
     expect(entry.score).toBeNull();
+    expect(entry.effectiveExitScore).toBeNull();
+  });
+
+  it("does not emit an effective-exit score when the redemption route is unresolved", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "queue-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "queued",
+        executionModel: "rules-based-nav",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "dynamic-or-unclear" },
+      },
+      50_000_000,
+      55,
+      now,
+      { reserveSyncState: null },
+    );
+
+    expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.effectiveExitScore).toBeNull();
   });
 
   it("computes effective exit score blending liquidity and redemption", async () => {

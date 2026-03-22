@@ -212,21 +212,35 @@ export function scoreLiquidity(
   liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
   redemption?: Pick<
     RedemptionBackstopEntry,
-    "score" | "routeFamily" | "immediateCapacityUsd" | "immediateCapacityRatio" | "resolutionState"
+    | "score"
+    | "routeFamily"
+    | "immediateCapacityUsd"
+    | "immediateCapacityRatio"
+    | "resolutionState"
+    | "modelConfidence"
+    | "capacitySemantics"
   >,
 ): ReportCardDimension {
   const dexScore = liq?.liquidityScore ?? null;
+  const redemptionEligibleForLiquidity =
+    redemption?.resolutionState === "resolved" && redemption?.modelConfidence !== "low";
   const redemptionScore = redemption?.score ?? null;
-  const effectiveScore = computeEffectiveExitScore(dexScore, redemptionScore);
+  const effectiveScore = computeEffectiveExitScore(
+    dexScore,
+    redemptionEligibleForLiquidity ? redemptionScore : null,
+  );
   const hasConfiguredRedemption = !!redemption;
   const hasResolvedRedemption = redemption?.resolutionState === "resolved";
+  const hasLowConfidenceRedemption = redemption?.modelConfidence === "low";
 
   if (effectiveScore === null) {
     return {
       grade: "NR",
       score: null,
       detail: hasConfiguredRedemption
-        ? "DEX liquidity unavailable. Redemption route is configured but currently unrated"
+        ? hasLowConfidenceRedemption
+          ? "DEX liquidity unavailable. A low-confidence redemption route exists, but it is excluded from Safety Score liquidity until evidence improves"
+          : "DEX liquidity unavailable. Redemption route is configured but currently unrated"
         : "No DEX liquidity data",
     };
   }
@@ -260,8 +274,13 @@ export function scoreLiquidity(
     if (redemption?.routeFamily) {
       parts.push(REDEMPTION_ROUTE_FAMILY_LABELS[redemption.routeFamily]);
     }
+    if (!redemptionEligibleForLiquidity) {
+      parts.push("not used for Safety Score uplift (low confidence)");
+    }
     if (redemption?.immediateCapacityRatio != null) {
       parts.push(`immediate capacity ${(redemption.immediateCapacityRatio * 100).toFixed(1)}% of supply`);
+    } else if (redemption?.capacitySemantics === "eventual-only") {
+      parts.push("eventual redeemability modeled; immediate buffer not separately quantified");
     } else if (redemption?.immediateCapacityUsd != null) {
       parts.push(`immediate capacity ${formatCapacityUsd(redemption.immediateCapacityUsd)}`);
     }

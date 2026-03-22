@@ -1,5 +1,11 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { documentedVariableFee, fixedFee, NO_PUBLIC_NUMERIC_REDEMPTION_FEE, stablecoinRedeemBase } from "./shared";
+import {
+  documentedVariableFee,
+  fixedFee,
+  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  sourceRef,
+  stablecoinRedeemBase,
+} from "./shared";
 
 export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "dusd-dtrinity": {
@@ -62,7 +68,12 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "wsrusd-reservoir": {
     ...stablecoinRedeemBase,
     executionModel: "rules-based-nav",
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee("ERC-4626 unwrap to rUSD, then PSM exit to USDC; no separate fee disclosed"),
+    reviewedAt: "2026-03-22",
+    docs: [
+      sourceRef("Reservoir Proof of Reserves", "https://app.reservoir.xyz/reserves", ["route", "capacity"]),
+    ],
   },
   "usdf-astherus": {
     ...stablecoinRedeemBase,

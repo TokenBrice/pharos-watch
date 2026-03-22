@@ -140,7 +140,7 @@ describe("isReserveRisk", () => {
 
 describe("getAdapterTimeout", () => {
   const baseConfig = {
-    adapter: "test",
+    adapter: "single-asset",
     version: 1,
     semantics: "single-asset" as const,
     inputs: { primary: { kind: "http-json" as const, url: "https://example.com" } },

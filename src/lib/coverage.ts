@@ -436,6 +436,18 @@ export function resolveRedemptionCoverage(
     );
   }
 
+  if (entry.modelConfidence === "low") {
+    return createStatus(
+      "modeled-heuristic",
+      "Heur.",
+      "amber",
+      false,
+      1,
+      "A redemption route is modeled, but the current snapshot is still heuristic / low-confidence and does not count as strong redemption coverage.",
+      "Heuristic route",
+    );
+  }
+
   switch (entry.routeFamily) {
     case "offchain-issuer":
       return createStatus(

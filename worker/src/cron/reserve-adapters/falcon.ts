@@ -94,14 +94,22 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
 
   const warnings: LiveReserveWarning[] = [];
   const bucketTotals = new Map<FalconBucket, number>();
-  for (const asset of assets) {
-    const value = sumFalconAssetValue(asset);
+  const valuedAssets = assets
+    .map((asset) => ({ asset, value: sumFalconAssetValue(asset) }))
+    .filter(({ value }) => Number.isFinite(value) && value > 0);
+  const totalAssetUsd = valuedAssets.reduce((sum, { value }) => sum + value, 0);
+  for (const { asset, value } of valuedAssets) {
     if (!Number.isFinite(value) || value <= 0) continue;
     const bucket = bucketForFalconAsset(asset.label);
-    if (bucket === "other" && !FALCON_OTHER_KNOWN.has(asset.label) && value > FALCON_UNKNOWN_WARN_THRESHOLD) {
+    const sharePct = totalAssetUsd > 0 ? (value / totalAssetUsd) * 100 : 0;
+    if (
+      bucket === "other"
+      && !FALCON_OTHER_KNOWN.has(asset.label)
+      && (value > FALCON_UNKNOWN_WARN_THRESHOLD || sharePct >= 0.25)
+    ) {
       warnings.push({
         code: "unknown-asset",
-        message: `Unmapped Falcon asset: ${asset.label} ($${value.toFixed(0)})`,
+        message: `Unmapped Falcon asset: ${asset.label} ($${value.toFixed(0)}, ${sharePct.toFixed(2)}%)`,
         severity: "warning",
       });
     }

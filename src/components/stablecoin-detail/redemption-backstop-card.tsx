@@ -82,17 +82,19 @@ function getFeeSummary(entry: RedemptionBackstopEntry): {
     return {
       headline: entry.feeDescription,
       detail:
-        (entry.costScore ?? 0) <= 20
-          ? "Pharos does not model a bounded fixed redemption fee for this route."
-          : "Protocol or issuer docs publish this fee logic, but it is variable, conditional, or not a single fixed bps value.",
+        entry.feeModelKind === "formula"
+          ? "Protocol or issuer docs publish a fee formula rather than a single fixed bps rate."
+          : entry.feeModelKind === "documented-variable"
+            ? "Protocol or issuer docs publish fee logic, but it is variable, conditional, or not a single fixed bps value."
+            : "Public route docs were reviewed, but they do not publish a bounded numeric redemption fee.",
     };
   }
 
-  if ((entry.costScore ?? 0) <= 20) {
+  if (entry.feeModelKind === "undisclosed-reviewed") {
     return {
-      headline: "Manual / potentially unbounded",
+      headline: "Reviewed, but not published",
       detail:
-        "Pharos does not model a bounded fixed redemption fee for this route.",
+        "Public route docs were reviewed, but they do not publish a bounded numeric redemption fee.",
     };
   }
 
@@ -103,17 +105,43 @@ function getFeeSummary(entry: RedemptionBackstopEntry): {
   };
 }
 
-export function RedemptionBackstopCard({
-  entry,
-}: {
-  entry: RedemptionBackstopEntry;
-}) {
+function getCapacitySummary(entry: RedemptionBackstopEntry): {
+  headline: string;
+  detail: string;
+} {
   const capacityUsd = formatCapacityUsd(entry.immediateCapacityUsd);
   const capacityRatio =
     entry.immediateCapacityRatio != null && Number.isFinite(entry.immediateCapacityRatio)
       ? `${(entry.immediateCapacityRatio * 100).toFixed(1)}% of supply`
       : null;
+
+  if (entry.capacitySemantics === "eventual-only") {
+    return {
+      headline: "Not separately quantified",
+      detail: "Modeled as eventual redeemability of current supply, not as an immediate cash buffer.",
+    };
+  }
+
+  if (capacityUsd || capacityRatio) {
+    return {
+      headline: [capacityUsd, capacityRatio].filter(Boolean).join(" · "),
+      detail: "Current modeled immediate redeemable capacity.",
+    };
+  }
+
+  return {
+    headline: "Unavailable",
+    detail: "Current snapshot did not produce a usable immediate-capacity estimate.",
+  };
+}
+
+export function RedemptionBackstopCard({
+  entry,
+}: {
+  entry: RedemptionBackstopEntry;
+}) {
   const feeSummary = getFeeSummary(entry);
+  const capacitySummary = getCapacitySummary(entry);
   const resolutionSummary = getResolutionSummary(entry);
 
   return (
@@ -184,10 +212,8 @@ export function RedemptionBackstopCard({
             <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
               Immediate Capacity
             </p>
-            <p className="mt-1 font-medium">
-              {capacityUsd ?? "Unavailable"}
-              {capacityRatio ? ` · ${capacityRatio}` : ""}
-            </p>
+            <p className="mt-1 font-medium">{capacitySummary.headline}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{capacitySummary.detail}</p>
           </div>
         </div>
 
@@ -228,14 +254,19 @@ export function RedemptionBackstopCard({
         ) : null}
 
         {entry.docs?.url ? (
-          <a
-            href={entry.docs.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex text-sm underline underline-offset-2 transition-colors hover:text-foreground"
-          >
-            {entry.docs.label ?? "Source"}
-          </a>
+          <div className="space-y-1">
+            <a
+              href={entry.docs.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex text-sm underline underline-offset-2 transition-colors hover:text-foreground"
+            >
+              {entry.docs.label ?? "Source"}
+            </a>
+            {entry.docs.reviewedAt ? (
+              <p className="text-xs text-muted-foreground">Reviewed {entry.docs.reviewedAt}</p>
+            ) : null}
+          </div>
         ) : null}
 
         <MethodologyCardActions topic="redemptionBackstop" />

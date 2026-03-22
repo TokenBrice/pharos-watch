@@ -117,14 +117,16 @@ describe("buildReportCardsSnapshot", () => {
         settlementModel: "atomic",
         executionModel: "deterministic-basket",
         outputAssetType: "stable-basket",
-        provider: "supply-full-model",
+        provider: "supply-ratio-model",
         sourceMode: "estimated",
         resolutionState: "resolved",
-        capacityConfidence: "heuristic",
+        capacityConfidence: "documented-bound",
+        capacitySemantics: "immediate-bounded",
         feeConfidence: "undisclosed-reviewed",
-        modelConfidence: "low",
+        feeModelKind: "documented-variable",
+        modelConfidence: "medium",
         immediateCapacityUsd: 10_000_000,
-        immediateCapacityRatio: 1,
+        immediateCapacityRatio: 0.5,
         feeBps: null,
         queueEnabled: false,
         methodologyVersion: "1.0",
@@ -137,6 +139,7 @@ describe("buildReportCardsSnapshot", () => {
     const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
     expect(card?.rawInputs.liquidityScore).toBe(29);
     expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
     expect(card?.rawInputs.effectiveExitScore).toBe(56);
     expect(card?.dimensions.liquidity.score).toBe(56);
   });

@@ -1,3 +1,7 @@
+import {
+  LIVE_RESERVE_ADAPTER_DEFINITIONS,
+  type LiveReserveAdapterKey,
+} from "@shared/lib/live-reserve-adapters";
 import { fetchAccountableReserves } from "./accountable";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchBtcfiReserves } from "./btcfi";
@@ -25,11 +29,11 @@ import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchTetherReserves } from "./tether";
-import type { AdapterFn } from "./types";
+import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
-export type { AdapterContext, AdapterResult, AdapterFn } from "./types";
+export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
 
-const ADAPTERS: Record<string, AdapterFn> = {
+const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   accountable: fetchAccountableReserves,
   asymmetry: fetchAsymmetryReserves,
   btcfi: fetchBtcfiReserves,
@@ -41,8 +45,8 @@ const ADAPTERS: Record<string, AdapterFn> = {
   "curated-validated": fetchCuratedValidatedReserves,
   "dola-inverse": fetchDolaInverseReserves,
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
-  "evm-branch-balances": fetchEvmBranchBalancesReserves,
   ethena: fetchEthenaReserves,
+  "evm-branch-balances": fetchEvmBranchBalancesReserves,
   falcon: fetchFalconReserves,
   "fdusd-transparency": fetchFdusdTransparencyReserves,
   frax: fetchFraxReserves,
@@ -59,7 +63,19 @@ const ADAPTERS: Record<string, AdapterFn> = {
   tether: fetchTetherReserves,
 };
 
-/** Returns the adapter function for the given key, or null if unknown. */
-export function getReserveAdapter(adapterKey: string): AdapterFn | null {
-  return ADAPTERS[adapterKey] ?? null;
+const ADAPTERS = Object.fromEntries(
+  Object.entries(LIVE_RESERVE_ADAPTER_DEFINITIONS).map(([key, definition]) => [
+    key,
+    {
+      key,
+      fetch: ADAPTER_FNS[key as LiveReserveAdapterKey],
+      feedClass: definition.feedClass,
+      sharedSourceMode: definition.sharedSourceMode,
+    },
+  ]),
+) as Record<LiveReserveAdapterKey, ReserveAdapterDefinition>;
+
+/** Returns the adapter definition for the given key, or null if unknown. */
+export function getReserveAdapter(adapterKey: string): ReserveAdapterDefinition | null {
+  return ADAPTERS[adapterKey as LiveReserveAdapterKey] ?? null;
 }

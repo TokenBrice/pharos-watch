@@ -4,7 +4,11 @@ import { batchExecute } from "../lib/db";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
 import { loadReserveSyncStateMap } from "../lib/live-reserves-store";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
-import { buildRedemptionBackstopEntry, resolveRedemptionBackstopEntry } from "../lib/redemption-backstop-sources";
+import {
+  buildFailedRedemptionBackstopEntry,
+  buildRedemptionBackstopEntry,
+  resolveRedemptionBackstopEntry,
+} from "../lib/redemption-backstop-sources";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 async function pruneRemovedRedemptionBackstops(
@@ -78,12 +82,14 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       if (asset) {
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
           reserveSyncState: reserveSyncStateById.get(stablecoinId) ?? null,
+          suppressEffectiveExitScore: liquidityStale,
         });
       } else {
         const config = configById.get(stablecoinId);
         if (config) {
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
             reserveSyncState: reserveSyncStateById.get(stablecoinId) ?? null,
+            suppressEffectiveExitScore: liquidityStale,
           });
         }
       }
@@ -92,6 +98,10 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     } catch (error) {
       console.error(`[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failedIds.push(stablecoinId);
+      const config = configById.get(stablecoinId);
+      if (config) {
+        snapshots.push(buildFailedRedemptionBackstopEntry(stablecoinId, config, now));
+      }
     }
   }
 
@@ -109,7 +119,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const status: CronResult["status"] =
     resolvedCount === 0 && (failedIds.length > 0 || missingFromCache.length > 0 || unresolvedCount > 0)
       ? "error"
-      : failedIds.length > 0 || missingFromCache.length > 0 || unresolvedCount > 0
+      : failedIds.length > 0 || missingFromCache.length > 0 || unresolvedCount > 0 || liquidityStale
         ? "degraded"
         : "ok";
 

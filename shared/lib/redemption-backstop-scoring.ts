@@ -65,7 +65,7 @@ export const REDEMPTION_OUTPUT_ASSET_SCORES: Record<
 };
 
 const COVERAGE_RATIO_BREAKPOINTS = [
-  { value: 0, score: 10 },
+  { value: 0, score: 0 },
   { value: 0.01, score: 20 },
   { value: 0.05, score: 40 },
   { value: 0.10, score: 60 },

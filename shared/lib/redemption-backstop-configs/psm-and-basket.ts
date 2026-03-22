@@ -5,6 +5,7 @@ import {
   fixedFee,
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
   psmSwapBase,
+  sourceRef,
 } from "./shared";
 
 export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -30,8 +31,12 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "gho-aave": {
     ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.13 },
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(10, "GSM exit fee is governance-set; recent Aave docs show roughly 8-10 bps on redemption"),
+    reviewedAt: "2026-03-22",
+    docs: [
+      sourceRef("Aave GHO", "https://aave.com/gho", ["route", "capacity", "fees"]),
+    ],
   },
   "usdd-tron-dao-reserve": {
     ...psmSwapBase,

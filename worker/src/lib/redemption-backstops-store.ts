@@ -10,7 +10,9 @@ import type {
   RedemptionSourceMode,
   RedemptionResolutionState,
   RedemptionCapacityConfidence,
+  RedemptionCapacitySemantics,
   RedemptionFeeConfidence,
+  RedemptionFeeModelKind,
   RedemptionModelConfidence,
 } from "@shared/types";
 import { batchExecute } from "./db";
@@ -27,7 +29,9 @@ import {
 import {
   deriveModelConfidence,
   inferStoredCapacityConfidence,
+  inferStoredCapacitySemantics,
   inferStoredFeeConfidence,
+  inferStoredFeeModelKind,
 } from "@shared/lib/redemption-backstop-confidence";
 import { decodeJsonString } from "./cache-json";
 
@@ -79,7 +83,9 @@ type RedemptionBackstopDetails = Partial<
     | "feeDescription"
     | "resolutionState"
     | "capacityConfidence"
+    | "capacitySemantics"
     | "feeConfidence"
+    | "feeModelKind"
     | "modelConfidence"
   >
 >;
@@ -92,7 +98,9 @@ function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetai
   if (typeof raw.feeDescription === "string") result.feeDescription = raw.feeDescription;
   if (typeof raw.resolutionState === "string") result.resolutionState = raw.resolutionState as RedemptionResolutionState;
   if (typeof raw.capacityConfidence === "string") result.capacityConfidence = raw.capacityConfidence as RedemptionCapacityConfidence;
+  if (typeof raw.capacitySemantics === "string") result.capacitySemantics = raw.capacitySemantics as RedemptionCapacitySemantics;
   if (typeof raw.feeConfidence === "string") result.feeConfidence = raw.feeConfidence as RedemptionFeeConfidence;
+  if (typeof raw.feeModelKind === "string") result.feeModelKind = raw.feeModelKind as RedemptionFeeModelKind;
   if (typeof raw.modelConfidence === "string") result.modelConfidence = raw.modelConfidence as RedemptionModelConfidence;
   return result;
 }
@@ -116,10 +124,22 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
       provider: row.provider,
       sourceMode: row.source_mode,
     });
+  const capacitySemantics =
+    details.capacitySemantics ??
+    inferStoredCapacitySemantics({
+      provider: row.provider,
+    });
   const feeConfidence =
     details.feeConfidence ??
     inferStoredFeeConfidence({
       feeBps: row.fee_bps,
+    });
+  const feeModelKind =
+    details.feeModelKind ??
+    inferStoredFeeModelKind({
+      feeBps: row.fee_bps,
+      feeConfidence,
+      feeDescription: details.feeDescription,
     });
   const modelConfidence =
     details.modelConfidence ??
@@ -149,7 +169,9 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry {
     sourceMode: row.source_mode,
     resolutionState,
     capacityConfidence,
+    capacitySemantics,
     feeConfidence,
+    feeModelKind,
     modelConfidence,
     immediateCapacityUsd: row.immediate_capacity_usd,
     immediateCapacityRatio: row.immediate_capacity_ratio,
@@ -164,7 +186,9 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify({
     resolutionState: record.resolutionState,
     capacityConfidence: record.capacityConfidence,
+    capacitySemantics: record.capacitySemantics,
     feeConfidence: record.feeConfidence,
+    feeModelKind: record.feeModelKind,
     modelConfidence: record.modelConfidence,
     ...(record.docs ? { docs: record.docs } : {}),
     ...(record.notes ? { notes: record.notes } : {}),
