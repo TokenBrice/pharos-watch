@@ -29,6 +29,7 @@ import { loadStablecoinsIntake } from "./sync-stablecoins/intake";
 import { buildStablecoinsSyncResult } from "./sync-stablecoins/metadata";
 import { queueTrackedAdditionsNotice } from "./sync-stablecoins/telegram-tracked-additions";
 import type { ChainRpcConfig } from "../lib/chain-registry";
+import { createEmptyGtProbeStats } from "../lib/geckoterminal-price-probe";
 import { MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcome } from "../lib/circuit-breaker";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
@@ -353,6 +354,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     fxFallbackRates = freshFxFallbackRates;
   }
   const validationContexts = createValidationContextResolver();
+  let gtProbe = { updatedCount: 0, stats: createEmptyGtProbeStats() };
   // Extract DL list prices before primary consensus overwrites them
   const dlListPrices = new Map<string, number>();
   for (const asset of assets) {
@@ -444,9 +446,10 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const gtProbeAbort = returnIfAborted(signal, "gt-probe");
   if (gtProbeAbort) return gtProbeAbort;
   try {
-    const { updatedCount: gtUpdated } = await runGtProbePass(
-      assets, primaryPriceResults, db, signal, validationReferences,
+    gtProbe = await runGtProbePass(
+      assets, primaryPriceResults, db, signal, validationReferences, coingeckoApiKey,
     );
+    const { updatedCount: gtUpdated } = gtProbe;
     if (gtUpdated > 0) {
       for (const asset of assets) {
         const primary = primaryPriceResults.get(asset.id);
@@ -614,6 +617,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     priceValidationStats,
     rejectedCount,
     stalenessWarning,
+    gtProbe,
     depegErrorCount,
     depegErrors,
   });

@@ -169,3 +169,6 @@ export const GT_PROBE_MIN_TVL_USD = 10_000;
 
 /** Maximum time (ms) for a single GT probe request */
 export const GT_PROBE_TIMEOUT_MS = 5_000;
+
+/** Retries for the serialized GT probe path. */
+export const GT_PROBE_MAX_RETRIES = 1;

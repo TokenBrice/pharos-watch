@@ -1,10 +1,11 @@
 import { GT_API_BASE } from "./dex-constants";
 import { RATE_LIMITS } from "./rate-limit";
 import { fetchWithRetry } from "./fetch-retry";
-import { USER_AGENT, GT_PROBE_MIN_TVL_USD, GT_PROBE_TIMEOUT_MS, CIRCUIT_SOURCE } from "./constants";
+import { cgHeaders, cgUrl } from "./coingecko";
+import { USER_AGENT, GT_PROBE_MIN_TVL_USD, GT_PROBE_TIMEOUT_MS, GT_PROBE_MAX_RETRIES, CIRCUIT_SOURCE } from "./constants";
 import { shouldAttemptFetch, recordOutcome } from "./circuit-breaker";
 import { sleepWithSignal, throwIfAborted } from "./abort";
-import { GT_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
+import { CG_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { GtPool } from "../cron/dex-liquidity/types";
 import type { SourcePrice } from "./price-consensus";
@@ -15,6 +16,15 @@ export interface GtProbeResult {
   side: "base" | "quote";
   chain: string;
   poolAddress: string;
+}
+
+type ProbeTransport = "coingecko-onchain" | "geckoterminal-public";
+
+interface GtProbeTransportStats {
+  attempted: number;
+  priced: number;
+  lookupMisses: number;
+  upstreamErrors: number;
 }
 
 /**
@@ -64,10 +74,111 @@ export interface GtProbeStats {
   skippedLowTvl: number;
   lookupMisses: number;
   upstreamErrors: number;
+  publicFallbacks: number;
+  transports: {
+    coingeckoOnchain: GtProbeTransportStats;
+    geckoTerminalPublic: GtProbeTransportStats;
+  };
+}
+
+export function createEmptyGtProbeStats(): GtProbeStats {
+  return {
+    probed: 0,
+    pricesObtained: 0,
+    divergences500bps: 0,
+    skippedLowTvl: 0,
+    lookupMisses: 0,
+    upstreamErrors: 0,
+    publicFallbacks: 0,
+    transports: {
+      coingeckoOnchain: {
+        attempted: 0,
+        priced: 0,
+        lookupMisses: 0,
+        upstreamErrors: 0,
+      },
+      geckoTerminalPublic: {
+        attempted: 0,
+        priced: 0,
+        lookupMisses: 0,
+        upstreamErrors: 0,
+      },
+    },
+  };
 }
 
 function isGtLookupMissStatus(status: number | undefined): boolean {
   return status === 404 || status === 422;
+}
+
+function getTransportStats(stats: GtProbeStats, transport: ProbeTransport): GtProbeTransportStats {
+  return transport === "coingecko-onchain"
+    ? stats.transports.coingeckoOnchain
+    : stats.transports.geckoTerminalPublic;
+}
+
+type ProbeFetchOutcome =
+  | { kind: "priced"; transport: ProbeTransport; result: GtProbeResult }
+  | { kind: "lookup-miss"; transport: ProbeTransport }
+  | { kind: "low-tvl"; transport: ProbeTransport }
+  | { kind: "upstream-error"; transport: ProbeTransport };
+
+async function fetchProbeOutcome(
+  transport: ProbeTransport,
+  network: string,
+  tokenAddress: string,
+  stats: GtProbeStats,
+  signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
+): Promise<ProbeFetchOutcome> {
+  const transportStats = getTransportStats(stats, transport);
+  transportStats.attempted++;
+
+  const url = transport === "coingecko-onchain"
+    ? cgUrl(`/onchain/networks/${network}/tokens/${tokenAddress}/pools?include=base_token,quote_token&page=1`, coingeckoApiKey ?? null)
+    : `${GT_API_BASE}/networks/${network}/tokens/${tokenAddress}/pools?page=1`;
+  const headers = transport === "coingecko-onchain"
+    ? cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, coingeckoApiKey ?? null)
+    : { "User-Agent": USER_AGENT, Accept: "application/json" };
+
+  try {
+    const res = await fetchWithRetry(
+      url,
+      { headers, signal },
+      GT_PROBE_MAX_RETRIES,
+      { passthroughStatuses: [404, 422], timeoutMs: GT_PROBE_TIMEOUT_MS },
+    );
+
+    if (!res?.ok) {
+      if (isGtLookupMissStatus(res?.status)) {
+        transportStats.lookupMisses++;
+        await res?.body?.cancel();
+        return { kind: "lookup-miss", transport };
+      }
+      transportStats.upstreamErrors++;
+      await res?.body?.cancel();
+      return { kind: "upstream-error", transport };
+    }
+
+    const json = (await res.json()) as { data?: GtPool[] };
+    const pools = Array.isArray(json.data) ? json.data : [];
+    if (pools.length === 0) {
+      transportStats.lookupMisses++;
+      return { kind: "lookup-miss", transport };
+    }
+
+    const result = extractPoolPrice(pools, tokenAddress);
+    if (!result) {
+      return { kind: "low-tvl", transport };
+    }
+
+    transportStats.priced++;
+    return { kind: "priced", transport, result };
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    transportStats.upstreamErrors++;
+    return { kind: "upstream-error", transport };
+  }
 }
 
 /**
@@ -79,16 +190,10 @@ export async function probeGeckoTerminalPrices(
   singleSourceCgAssets: { id: string; price: number }[],
   db: D1Database,
   signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
 ): Promise<{ prices: Map<string, SourcePrice>; stats: GtProbeStats }> {
   const prices = new Map<string, SourcePrice>();
-  const stats: GtProbeStats = {
-    probed: 0,
-    pricesObtained: 0,
-    divergences500bps: 0,
-    skippedLowTvl: 0,
-    lookupMisses: 0,
-    upstreamErrors: 0,
-  };
+  const stats = createEmptyGtProbeStats();
 
   if (singleSourceCgAssets.length === 0) return { prices, stats };
 
@@ -116,7 +221,7 @@ export async function probeGeckoTerminalPrices(
     if (!contract) continue;
 
     const gtChain = GT_CHAIN_MAP[contract.chain];
-    const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${contract.address}/pools?page=1`;
+    const cgChain = coingeckoApiKey ? CG_CHAIN_MAP[contract.chain] : undefined;
 
     if (stats.probed > 0) {
       await sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, signal);
@@ -125,13 +230,47 @@ export async function probeGeckoTerminalPrices(
     stats.probed++;
 
     try {
-      const res = await fetchWithRetry(url, {
-        headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(GT_PROBE_TIMEOUT_MS)]) : AbortSignal.timeout(GT_PROBE_TIMEOUT_MS),
-      }, 0);
+      const outcomes: ProbeFetchOutcome[] = [];
+      let pricedOutcome: Extract<ProbeFetchOutcome, { kind: "priced" }> | null = null;
 
-      if (!res?.ok) {
-        if (isGtLookupMissStatus(res?.status)) {
+      if (cgChain) {
+        const onchainOutcome = await fetchProbeOutcome(
+          "coingecko-onchain",
+          cgChain,
+          contract.address,
+          stats,
+          signal,
+          coingeckoApiKey,
+        );
+        if (onchainOutcome.kind === "priced") {
+          pricedOutcome = onchainOutcome;
+        } else {
+          outcomes.push(onchainOutcome);
+        }
+      }
+
+      if (!pricedOutcome) {
+        if (cgChain) stats.publicFallbacks++;
+        const publicOutcome = await fetchProbeOutcome(
+          "geckoterminal-public",
+          gtChain,
+          contract.address,
+          stats,
+          signal,
+        );
+        if (publicOutcome.kind === "priced") {
+          pricedOutcome = publicOutcome;
+        } else {
+          outcomes.push(publicOutcome);
+        }
+      }
+
+      if (!pricedOutcome) {
+        if (outcomes.some((outcome) => outcome.kind === "low-tvl")) {
+          stats.skippedLowTvl++;
+          continue;
+        }
+        if (outcomes.some((outcome) => outcome.kind === "lookup-miss")) {
           stats.lookupMisses++;
           continue;
         }
@@ -140,15 +279,7 @@ export async function probeGeckoTerminalPrices(
         continue;
       }
 
-      const json = (await res.json()) as { data?: GtPool[] };
-      const pools = json.data ?? [];
-
-      const result = extractPoolPrice(pools, contract.address);
-      if (!result) {
-        stats.skippedLowTvl++;
-        continue;
-      }
-
+      const result = pricedOutcome.result;
       result.chain = contract.chain;
       stats.pricesObtained++;
 
@@ -163,7 +294,13 @@ export async function probeGeckoTerminalPrices(
         source: "geckoterminal",
         price: result.price,
         weight: 1,
-        metadata: { tvlUsd: result.tvlUsd, chain: result.chain, poolAddress: result.poolAddress, side: result.side },
+        metadata: {
+          tvlUsd: result.tvlUsd,
+          chain: result.chain,
+          poolAddress: result.poolAddress,
+          side: result.side,
+          transport: pricedOutcome.transport,
+        },
       });
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -181,7 +318,9 @@ export async function probeGeckoTerminalPrices(
   console.log(
     `[gt-probe] Probed ${stats.probed} assets: ${stats.pricesObtained} prices obtained, ` +
     `${stats.divergences500bps} divergences >500bps, ${stats.skippedLowTvl} skipped (low TVL), ` +
-    `${stats.lookupMisses} lookup misses, ${stats.upstreamErrors} upstream errors`,
+    `${stats.lookupMisses} lookup misses, ${stats.upstreamErrors} upstream errors, ` +
+    `${stats.publicFallbacks} public fallbacks, onchain ${stats.transports.coingeckoOnchain.attempted}/${stats.transports.coingeckoOnchain.priced} priced, ` +
+    `public ${stats.transports.geckoTerminalPublic.attempted}/${stats.transports.geckoTerminalPublic.priced} priced`,
   );
 
   return { prices, stats };

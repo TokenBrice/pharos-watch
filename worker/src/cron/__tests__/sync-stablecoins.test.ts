@@ -120,7 +120,19 @@ vi.mock("../enrich-prices", () => ({
   })),
   runGtProbePass: vi.fn(async () => ({
     updatedCount: 0,
-    stats: { probed: 0, pricesObtained: 0, divergences500bps: 0, skippedLowTvl: 0 },
+    stats: {
+      probed: 0,
+      pricesObtained: 0,
+      divergences500bps: 0,
+      skippedLowTvl: 0,
+      lookupMisses: 0,
+      upstreamErrors: 0,
+      publicFallbacks: 0,
+      transports: {
+        coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
+        geckoTerminalPublic: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
+      },
+    },
   })),
 }));
 
@@ -320,6 +332,11 @@ describe("syncStablecoins", () => {
           skippedLowTvl: 0,
           lookupMisses: 0,
           upstreamErrors: 0,
+          publicFallbacks: 0,
+          transports: {
+            coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
+            geckoTerminalPublic: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
+          },
         },
       };
     });
@@ -333,6 +350,44 @@ describe("syncStablecoins", () => {
     await syncStablecoins(db);
 
     expect(order).toEqual(["enrich", "gt"]);
+  });
+
+  it("persists GT probe stats into sync metadata", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+
+    vi.mocked(runGtProbePass).mockResolvedValueOnce({
+      updatedCount: 1,
+      stats: {
+        probed: 2,
+        pricesObtained: 1,
+        divergences500bps: 1,
+        skippedLowTvl: 0,
+        lookupMisses: 0,
+        upstreamErrors: 0,
+        publicFallbacks: 1,
+        transports: {
+          coingeckoOnchain: { attempted: 1, priced: 0, lookupMisses: 1, upstreamErrors: 0 },
+          geckoTerminalPublic: { attempted: 1, priced: 1, lookupMisses: 0, upstreamErrors: 0 },
+        },
+      },
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const gtProbe = metadata.gtProbe as Record<string, unknown>;
+    const transports = gtProbe.transports as Record<string, unknown>;
+
+    expect(gtProbe.updatedCount).toBe(1);
+    expect(gtProbe.publicFallbacks).toBe(1);
+    expect((transports.coingeckoOnchain as Record<string, unknown>).lookupMisses).toBe(1);
+    expect((transports.geckoTerminalPublic as Record<string, unknown>).priced).toBe(1);
   });
 
   it("applies protocol-backed price overrides before caching", async () => {
@@ -430,6 +485,11 @@ describe("syncStablecoins", () => {
           skippedLowTvl: 0,
           lookupMisses: 0,
           upstreamErrors: 0,
+          publicFallbacks: 0,
+          transports: {
+            coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
+            geckoTerminalPublic: { attempted: 1, priced: 1, lookupMisses: 0, upstreamErrors: 0 },
+          },
         },
       };
     });

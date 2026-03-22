@@ -596,8 +596,9 @@ export async function runGtProbePass(
   db: D1Database,
   signal?: AbortSignal,
   references?: PriceValidationReferences,
+  coingeckoApiKey?: string | null,
 ): Promise<{ updatedCount: number; stats: import("../lib/geckoterminal-price-probe").GtProbeStats }> {
-  const { probeGeckoTerminalPrices } = await import("../lib/geckoterminal-price-probe");
+  const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../lib/geckoterminal-price-probe");
 
   // Identify single-source CG-only assets
   const cgOnlyAssets: { id: string; price: number }[] = [];
@@ -616,18 +617,11 @@ export async function runGtProbePass(
   if (cgOnlyAssets.length === 0) {
     return {
       updatedCount: 0,
-      stats: {
-        probed: 0,
-        pricesObtained: 0,
-        divergences500bps: 0,
-        skippedLowTvl: 0,
-        lookupMisses: 0,
-        upstreamErrors: 0,
-      },
+      stats: createEmptyGtProbeStats(),
     };
   }
 
-  const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(cgOnlyAssets, db, signal);
+  const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(cgOnlyAssets, db, signal, coingeckoApiKey);
 
   // Re-run consensus for assets that got a GT price
   let updatedCount = 0;

@@ -1,5 +1,11 @@
 import { sleepWithSignal, throwIfAborted } from "./abort";
 
+interface FetchWithRetryOptions {
+  passthrough404?: boolean;
+  passthroughStatuses?: number[];
+  timeoutMs?: number;
+}
+
 /**
  * Fetch with retry and exponential backoff.
  * Respects Retry-After header on 429 responses.
@@ -12,9 +18,11 @@ export async function fetchWithRetry(
   url: string,
   opts?: RequestInit,
   maxRetries = 2,
-  options?: { passthrough404?: boolean; timeoutMs?: number }
+  options?: FetchWithRetryOptions,
 ): Promise<Response | null> {
   const passthrough404 = options?.passthrough404 ?? false;
+  const passthroughStatuses = new Set<number>(options?.passthroughStatuses ?? []);
+  if (passthrough404) passthroughStatuses.add(404);
   const timeoutMs = options?.timeoutMs ?? 15_000;
   const signal = opts?.signal ?? undefined;
 
@@ -30,7 +38,7 @@ export async function fetchWithRetry(
         signal: combinedSignal,
       });
       if (res.ok) return res;
-      if (res.status === 404 && passthrough404) return res;
+      if (passthroughStatuses.has(res.status)) return res;
 
       if (res.status === 429 && i < maxRetries) {
         const retryAfter = res.headers.get("Retry-After");

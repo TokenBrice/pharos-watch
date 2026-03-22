@@ -1,6 +1,7 @@
 import { hasMissingPrice, type PeggedAsset } from "../enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth } from "./shared";
 import type { CanonicalDeduplicationResult } from "./stages";
+import type { GtProbeStats } from "../../lib/geckoterminal-price-probe";
 
 const INDIVIDUAL_SOURCE_KEYS = new Set<string>([
   "coingecko", "defillama", "defillama-list", "protocol-redeem", "defillama-contract",
@@ -96,6 +97,7 @@ export function buildStablecoinsSyncResult(input: {
   priceValidationStats: unknown;
   rejectedCount: number;
   stalenessWarning: boolean;
+  gtProbe: { updatedCount: number; stats: GtProbeStats };
   depegErrorCount: number;
   depegErrors: string[];
 }): CronResult {
@@ -113,6 +115,10 @@ export function buildStablecoinsSyncResult(input: {
     canonicalDeduplication: input.canonicalDeduplication,
     assetCount: input.assets.length,
     enrichment: input.enrichStats,
+    gtProbe: {
+      updatedCount: input.gtProbe.updatedCount,
+      ...input.gtProbe.stats,
+    },
     priceValidation: input.priceValidationStats,
     rejectedPrices: input.rejectedCount,
     missingPrices: finalMissing,

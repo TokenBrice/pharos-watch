@@ -14,6 +14,12 @@ vi.mock("../fetch-retry", () => ({
   fetchWithRetry: fetchWithRetryMock,
 }));
 
+vi.mock("../coingecko", () => ({
+  cgHeaders: (extra?: Record<string, string>) => extra ?? {},
+  cgUrl: (path: string, apiKey: string | null = null) =>
+    `${apiKey ? "https://pro-api.coingecko.com/api/v3" : "https://api.coingecko.com/api/v3"}${path}`,
+}));
+
 vi.mock("../circuit-breaker", () => ({
   shouldAttemptFetch: shouldAttemptFetchMock,
   recordOutcome: recordOutcomeMock,
@@ -26,6 +32,9 @@ vi.mock("../rate-limit", () => ({
 }));
 
 vi.mock("@shared/lib/chain-provider-registry", () => ({
+  CG_CHAIN_MAP: {
+    ethereum: "eth",
+  },
   GT_CHAIN_MAP: {
     ethereum: "eth",
   },
@@ -40,6 +49,10 @@ vi.mock("@shared/lib/stablecoins", () => ({
     {
       id: "asset-429",
       contracts: [{ chain: "ethereum", address: "0xasset429" }],
+    },
+    {
+      id: "asset-cg",
+      contracts: [{ chain: "ethereum", address: "0xassetcg" }],
     },
   ],
 }));
@@ -189,8 +202,12 @@ describe("probeGeckoTerminalPrices", () => {
     );
 
     expect(result.prices.size).toBe(0);
+    expect(result.stats.probed).toBe(1);
     expect(result.stats.lookupMisses).toBe(1);
     expect(result.stats.upstreamErrors).toBe(0);
+    expect(result.stats.publicFallbacks).toBe(0);
+    expect(result.stats.transports.geckoTerminalPublic.attempted).toBe(1);
+    expect(result.stats.transports.geckoTerminalPublic.lookupMisses).toBe(1);
     expect(recordOutcomeMock).toHaveBeenCalledWith(
       expect.anything(),
       CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
@@ -210,6 +227,7 @@ describe("probeGeckoTerminalPrices", () => {
 
     expect(result.stats.lookupMisses).toBe(0);
     expect(result.stats.upstreamErrors).toBe(1);
+    expect(result.stats.transports.geckoTerminalPublic.upstreamErrors).toBe(1);
     expect(recordOutcomeMock).toHaveBeenCalledWith(
       expect.anything(),
       CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
@@ -243,6 +261,84 @@ describe("probeGeckoTerminalPrices", () => {
     );
   });
 
+  it("prefers authenticated CoinGecko onchain pools when available", async () => {
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({
+        data: [
+          makePool({
+            reserveUsd: "250000",
+            basePriceUsd: "0.998",
+            quotePriceUsd: "1.002",
+            baseTokenId: "eth_0xassetcg",
+            quoteTokenId: "eth_0xquote",
+          }),
+        ],
+      }), { status: 200 }),
+    );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-cg", price: 1 }],
+      {} as D1Database,
+      undefined,
+      "cg-key",
+    );
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+    expect(fetchWithRetryMock.mock.calls[0]?.[0]).toContain("/onchain/networks/eth/tokens/0xassetcg/pools");
+    expect(result.prices.get("asset-cg")?.metadata).toMatchObject({
+      transport: "coingecko-onchain",
+      poolAddress: "0xpool",
+    });
+    expect(result.stats.publicFallbacks).toBe(0);
+    expect(result.stats.transports.coingeckoOnchain.attempted).toBe(1);
+    expect(result.stats.transports.coingeckoOnchain.priced).toBe(1);
+    expect(result.stats.transports.geckoTerminalPublic.attempted).toBe(0);
+  });
+
+  it("falls back to public GeckoTerminal when onchain does not yield a usable pool", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          data: [
+            makePool({
+              reserveUsd: "300000",
+              basePriceUsd: "0.999",
+              quotePriceUsd: "1.001",
+              baseTokenId: "eth_0xassetcg",
+              quoteTokenId: "eth_0xquote",
+            }),
+          ],
+        }), { status: 200 }),
+      );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-cg", price: 1 }],
+      {} as D1Database,
+      undefined,
+      "cg-key",
+    );
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+    expect(fetchWithRetryMock.mock.calls[0]?.[0]).toContain("/onchain/networks/eth/tokens/0xassetcg/pools");
+    expect(fetchWithRetryMock.mock.calls[1]?.[0]).toContain("/networks/eth/tokens/0xassetcg/pools");
+    expect(result.prices.get("asset-cg")?.metadata).toMatchObject({
+      transport: "geckoterminal-public",
+      poolAddress: "0xpool",
+    });
+    expect(result.stats.lookupMisses).toBe(0);
+    expect(result.stats.publicFallbacks).toBe(1);
+    expect(result.stats.transports.coingeckoOnchain.attempted).toBe(1);
+    expect(result.stats.transports.coingeckoOnchain.lookupMisses).toBe(1);
+    expect(result.stats.transports.geckoTerminalPublic.attempted).toBe(1);
+    expect(result.stats.transports.geckoTerminalPublic.priced).toBe(1);
+    expect(recordOutcomeMock).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
+      true,
+    );
+  });
+
   it("does not mark the source unhealthy when nothing was probeable", async () => {
     const result = await probeGeckoTerminalPrices(
       [{ id: "unknown-asset", price: 1 }],
@@ -251,6 +347,8 @@ describe("probeGeckoTerminalPrices", () => {
 
     expect(result.stats.probed).toBe(0);
     expect(fetchWithRetryMock).not.toHaveBeenCalled();
+    expect(result.stats.transports.coingeckoOnchain.attempted).toBe(0);
+    expect(result.stats.transports.geckoTerminalPublic.attempted).toBe(0);
     expect(recordOutcomeMock).toHaveBeenCalledWith(
       expect.anything(),
       CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
