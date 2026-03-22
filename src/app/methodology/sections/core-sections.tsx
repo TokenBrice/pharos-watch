@@ -44,9 +44,7 @@ export function CoreMethodologySections() {
             live voices, requires fully pairwise agreement inside each cluster, and selects the highest-confidence result.
             Kraken and Bitstamp extend the direct venue set, a pool challenge
             guard downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools
-            diverge from aggregator consensus. DEX bridge identity is now canonical-only at runtime, so addressed unknown
-            tokens are dropped instead of being reinterpreted by symbol, and promoted protocol DEX prices only enter
-            consensus when they are corroborated or no non-DEX voices exist. Fresh RedStone prices need timestamped venue breakdowns. Protocol-level
+            diverge from aggregator consensus. DEX bridge identity is now canonical-only at runtime, so addressed unknown tokens are dropped instead of being reinterpreted by symbol, and promoted protocol DEX prices only enter consensus when they are corroborated or no non-DEX voices exist. Fresh RedStone prices need timestamped venue breakdowns. Protocol-level
             redemption prices override market data for wrapper assets, Chainlink refreshes supported FX and commodity
             reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack when
             Frankfurter is unavailable, with ExchangeRate-API as a tertiary daily fallback if both primary FX paths are down.
@@ -1204,10 +1202,7 @@ export function CoreMethodologySections() {
             replace overlapping DeFiLlama pools before staged or fallback discovery sources are merged.
           </p>
           <p>
-            Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is
-            unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is
-            dropped instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity
-            keys, so legitimate same-pair pools are not collapsed just because their token set matches.
+            Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is dropped instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity keys, so legitimate same-pair pools are not collapsed just because their token set matches.
           </p>
           <p>
             When direct APIs expose pool-inventory metadata, Balancer, Raydium, and Orca now contribute measured
