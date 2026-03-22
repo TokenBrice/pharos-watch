@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { StablecoinData } from "@shared/types";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { LlamaPool } from "../dex-liquidity/types";
@@ -20,7 +21,11 @@ vi.mock("../dex-liquidity/fetch-primary", () => ({
   buildCurveLookups: vi.fn(async () => ({ curvePoolMap: new Map(), priceObservations: new Map() })),
   fetchUniV3Data: vi.fn(async () => ({ uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map() })),
   fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
-  buildKnownPoolAddresses: vi.fn(() => new Set<string>()),
+  buildKnownPoolAddresses: vi.fn(() => ({
+    exactKeys: new Set<string>(),
+    derivedKeyCounts: new Map<string, number>(),
+    derivedToExactKeys: new Map<string, Set<string>>(),
+  })),
 }));
 
 vi.mock("../dex-liquidity/process-pools", () => ({
@@ -47,8 +52,29 @@ vi.mock("../dex-liquidity/fetch-fluid", () => ({ fetchFluidPools: vi.fn(async ()
 vi.mock("../dex-liquidity/fetch-balancer", () => ({ fetchBalancerPools: vi.fn(async () => makeDirectApiResult()) }));
 vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(async () => makeDirectApiResult()) }));
 vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => makeDirectApiResult()) }));
+vi.mock("../../lib/stablecoins-cache", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/stablecoins-cache")>("../../lib/stablecoins-cache");
+  return {
+    ...actual,
+    loadStablecoinsCache: vi.fn(async () => ({
+      kind: "error" as const,
+      reason: "missing-cache" as const,
+      updatedAt: null,
+    })),
+  };
+});
+vi.mock("../../lib/dex-api-common", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/dex-api-common")>("../../lib/dex-api-common");
+  return {
+    ...actual,
+    convertToGtNewPools: vi.fn(() => new Map()),
+    extractPriceObservations: vi.fn(() => new Map()),
+  };
+});
 
 import { syncDexLiquidity } from "../dex-liquidity";
+import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
 import { fetchAerodromeData, fetchDataSources, fetchUniV3Data } from "../dex-liquidity/fetch-primary";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
@@ -70,6 +96,30 @@ const db = {
   dump: async () => new ArrayBuffer(0),
 } as unknown as D1Database;
 
+function makeTrackedStablecoin(id: string, symbol: string, price: number): StablecoinData {
+  return {
+    id,
+    name: symbol,
+    symbol,
+    geckoId: null,
+    pegType: "peggedUSD",
+    pegMechanism: "fiat-backed",
+    price,
+    priceSource: "defillama-list",
+    priceConfidence: "single-source",
+    priceUpdatedAt: null,
+    consensusSources: [],
+    agreeSources: [],
+    supplySource: "defillama",
+    circulating: { peggedUSD: 1_000_000 },
+    circulatingPrevDay: {},
+    circulatingPrevWeek: {},
+    circulatingPrevMonth: {},
+    chainCirculating: {},
+    chains: [],
+  };
+}
+
 describe("syncDexLiquidity", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -82,6 +132,13 @@ describe("syncDexLiquidity", () => {
       dlYieldsAvailable: true,
       dlProtocolsAvailable: true,
     });
+    vi.mocked(loadStablecoinsCache).mockResolvedValue({
+      kind: "error",
+      reason: "missing-cache",
+      updatedAt: null,
+    });
+    vi.mocked(convertToGtNewPools).mockReturnValue(new Map());
+    vi.mocked(extractPriceObservations).mockReturnValue(new Map());
   });
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
@@ -196,6 +253,72 @@ describe("syncDexLiquidity", () => {
     await syncDexLiquidity(db, "graph-key", undefined, undefined, chainRpcs);
 
     expect(fetchFluidPools).toHaveBeenCalledWith(undefined, chainRpcs);
+  });
+
+  it("threads tracked stablecoin cache prices into direct API conversion and observations", async () => {
+    const fluidPool: DexApiPool = {
+      source: "fluid",
+      chain: "Ethereum",
+      poolAddress: "0x1111111111111111111111111111111111111111",
+      poolType: "fluid-dex",
+      tokens: [
+        { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 },
+        { address: "0xdac17f958d2ee523a2206206994597c13d831ec7", symbol: "USDT", decimals: 6 },
+      ],
+      price: 1,
+      tvlUsd: 500_000,
+      volume24hUsd: 120_000,
+      feeRate: 0.0001,
+      balances: [250_000, 250_000],
+    };
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      updatedAt: 123,
+      payload: {
+        peggedAssets: [
+          makeTrackedStablecoin("usdc-circle", "USDC", 0.97),
+          makeTrackedStablecoin("usdt-tether", "USDT", 1.01),
+          makeTrackedStablecoin("ignored-zero", "ZERO", 0),
+        ],
+      },
+    });
+    vi.mocked(fetchFluidPools).mockResolvedValueOnce(Object.assign([fluidPool], { ok: true, degraded: false, errors: [] as string[] }));
+    vi.mocked(convertToGtNewPools).mockReturnValueOnce(new Map([
+      ["usdc-circle", []],
+    ]));
+    vi.mocked(extractPriceObservations).mockReturnValueOnce(new Map([
+      ["usdc-circle", []],
+    ]));
+
+    await syncDexLiquidity(db, "graph-key");
+
+    const convertCall = vi.mocked(convertToGtNewPools).mock.calls[0];
+    expect(convertCall).toBeDefined();
+    const convertStablecoinPrices = convertCall?.[5];
+    expect(convertStablecoinPrices).toBeInstanceOf(Map);
+    expect(Array.from(convertStablecoinPrices?.entries() ?? [])).toEqual([
+      ["usdc-circle", 0.97],
+      ["usdt-tether", 1.01],
+    ]);
+
+    const observationCall = vi.mocked(extractPriceObservations).mock.calls[0];
+    expect(observationCall).toBeDefined();
+    const observationStablecoinPrices = observationCall?.[4];
+    expect(observationStablecoinPrices).toBeInstanceOf(Map);
+    expect(Array.from(observationStablecoinPrices?.entries() ?? [])).toEqual([
+      ["usdc-circle", 0.97],
+      ["usdt-tether", 1.01],
+    ]);
+  });
+
+  it("warns and falls back to reference pricing when the stablecoins cache is unusable", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await syncDexLiquidity(db, "graph-key");
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback",
+    );
   });
 });
 

@@ -27,102 +27,22 @@ import {
 } from "./sync-stablecoins/post-enrichment";
 import { loadStablecoinsIntake } from "./sync-stablecoins/intake";
 import { buildStablecoinsSyncResult } from "./sync-stablecoins/metadata";
+import {
+  applyGtProbeResults,
+  applyPrimaryPriceResults,
+  applyProtocolPriceOverrides,
+  buildDlListPrices,
+  createValidationContextResolver,
+  prevalidatePrices,
+  priceValidationModeForAsset,
+  validatePublishablePrice,
+} from "./sync-stablecoins/pricing";
 import { queueTrackedAdditionsNotice } from "./sync-stablecoins/telegram-tracked-additions";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { createEmptyGtProbeStats } from "../lib/geckoterminal-price-probe";
 import { MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcome } from "../lib/circuit-breaker";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
-import {
-  buildPriceValidationContext,
-  isSevereFixedPegDownside,
-  validatePriceCandidate,
-  type PriceValidationContext,
-  type PriceValidationReferences,
-} from "../lib/price-validation";
-import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO } from "../lib/pricing-source-policy";
-
-function priceValidationModeForAsset(asset: PeggedAsset): "primary_authoritative" | "fallback_enrichment" {
-  return asset.priceConfidence === "fallback" ||
-    asset.priceSource === "coinmarketcap" ||
-    asset.priceSource === "dexscreener" ||
-    asset.priceSource === "cached"
-    ? "fallback_enrichment"
-    : "primary_authoritative";
-}
-
-function createValidationContextResolver(): {
-  get: (asset: PeggedAsset) => PriceValidationContext;
-} {
-  const cache = new Map<string, PriceValidationContext>();
-  return {
-    get(asset: PeggedAsset): PriceValidationContext {
-      const key = String(asset.id);
-      const existing = cache.get(key);
-      if (existing) return existing;
-      const context = buildPriceValidationContext({
-        stablecoinId: key,
-        pegType: asset.pegType as string | undefined,
-        navToken: asset.navToken,
-        commodityOunces: asset.commodityOunces,
-      });
-      cache.set(key, context);
-      return context;
-    },
-  };
-}
-
-function allowsSevereDownsidePublication(input: {
-  price: number;
-  source: string | null | undefined;
-  confidence: PeggedAsset["priceConfidence"];
-  agreeSources?: string[];
-  context: PriceValidationContext;
-  references?: PriceValidationReferences;
-}): boolean {
-  if (!isSevereFixedPegDownside(input.price, input.context, input.references, FIXED_PEG_SEVERE_DOWNSIDE_RATIO)) {
-    return true;
-  }
-
-  if (input.source === "protocol-redeem" || input.source === "pool-tvl-weighted") {
-    return true;
-  }
-
-  return input.confidence === "high" && (input.agreeSources?.length ?? 0) >= 2;
-}
-
-function validatePublishablePrice(input: {
-  price: number;
-  source: string | null | undefined;
-  confidence: PeggedAsset["priceConfidence"];
-  agreeSources?: string[];
-  mode: "primary_authoritative" | "fallback_enrichment";
-  validationContext: PriceValidationContext;
-  validationReferences?: PriceValidationReferences;
-}): { accepted: boolean; reason: string } {
-  const decision = validatePriceCandidate(
-    input.price,
-    input.validationContext,
-    input.mode,
-    input.validationReferences,
-  );
-  if (!decision.accepted) {
-    return { accepted: false, reason: decision.reasonCode };
-  }
-
-  if (!allowsSevereDownsidePublication({
-    price: input.price,
-    source: input.source,
-    confidence: input.confidence,
-    agreeSources: input.agreeSources,
-    context: input.validationContext,
-    references: input.validationReferences,
-  })) {
-    return { accepted: false, reason: "severe_downside_requires_corroboration" };
-  }
-
-  return { accepted: true, reason: decision.reasonCode };
-}
 
 function abortResult(signal: AbortSignal | undefined, stage: string): CronResult {
   const reasonRaw = signal?.reason;
@@ -236,32 +156,14 @@ async function syncViaCoingeckoFallback(
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(db, syncStartSec, "[sync-stablecoins:fallback]");
   const validationContexts = createValidationContextResolver();
   const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
-  let authoritativeOverrideCount = 0;
-  for (const asset of assets) {
-    const override = authoritativeOverrides.get(asset.id);
-    if (!override) continue;
-
-    const decision = validatePublishablePrice({
-      price: override.price,
-      source: override.source,
-      confidence: override.confidence,
-      agreeSources: [override.source],
-      mode: "primary_authoritative",
-      validationContext: validationContexts.get(asset),
-      validationReferences,
-    });
-    if (!decision.accepted) {
-      console.warn(
-        `[sync-stablecoins] Rejected fallback authoritative override for ${asset.symbol} (id=${asset.id}): ` +
-        `$${override.price} (${decision.reason})`,
-      );
-      continue;
-    }
-
-    asset.price = override.price;
-    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source]);
-    authoritativeOverrideCount++;
-  }
+  const authoritativeOverrideCount = applyProtocolPriceOverrides({
+    assets,
+    overrides: authoritativeOverrides,
+    validationContexts,
+    validationReferences,
+    syncStartSec,
+    validatePublishablePrice,
+  });
 
   for (const asset of assets) {
     if (!asset.supplySource) {
@@ -269,26 +171,14 @@ async function syncViaCoingeckoFallback(
     }
   }
 
-  for (const asset of assets) {
-    if (asset.price == null || typeof asset.price !== "number" || asset.price === 0) continue;
-    const decision = validatePublishablePrice({
-      price: asset.price,
-      source: asset.priceSource,
-      confidence: asset.priceConfidence ?? null,
-      agreeSources: asset.agreeSources,
-      mode: "primary_authoritative",
-      validationContext: validationContexts.get(asset),
-      validationReferences,
-    });
-    if (!decision.accepted) {
-      console.warn(
-        `[sync-stablecoins] Pre-rejected fallback price for ${asset.symbol} (id=${asset.id}): ` +
-        `$${asset.price} (${decision.reason})`,
-      );
-      asset.price = 0;
-      stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
-    }
-  }
+  prevalidatePrices({
+    assets,
+    validationContexts,
+    validationReferences,
+    validatePublishablePrice,
+    modeResolver: () => "primary_authoritative",
+    logLabel: "Pre-rejected fallback price",
+  });
 
   const missingBefore = new Set(assets.filter(hasMissingPrice).map((asset) => asset.id));
 
@@ -426,18 +316,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
   const validationContexts = createValidationContextResolver();
   let gtProbe = { updatedCount: 0, stats: createEmptyGtProbeStats() };
-  // Extract DL list prices before primary consensus overwrites them
-  const dlListPrices = new Map<string, number>();
-  for (const asset of assets) {
-    if (
-      asset.price != null &&
-      typeof asset.price === "number" &&
-      Number.isFinite(asset.price) &&
-      asset.price > 0
-    ) {
-      dlListPrices.set(asset.id, asset.price);
-    }
-  }
+  const dlListPrices = buildDlListPrices(assets);
   // --- Primary price validation ---
   // Cross-validate CG and independent sources for higher confidence
   const primaryPricesAbort = returnIfAborted(signal, "primary-prices");
@@ -446,67 +325,22 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     assets, db, signal, validationReferences, coingeckoApiKey, chainRpcs, dlListPrices,
   );
   const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
-  let protocolOverrideCount = 0;
-  // Apply primary price results — these override the DL list endpoint prices
-  for (const asset of assets) {
-    const primary = primaryPriceResults.get(asset.id);
-    if (primary) {
-      const decision = validatePublishablePrice({
-        price: primary.price,
-        source: primary.source,
-        confidence: primary.confidence,
-        agreeSources: primary.agreeSources,
-        mode: "primary_authoritative",
-        validationContext: validationContexts.get(asset),
-        validationReferences,
-      });
-      if (decision.accepted) {
-        asset.price = primary.price;
-        stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec, primary.candidateSources, primary.agreeSources);
-      } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
-        console.warn(
-          `[sync-stablecoins] Rejected primary consensus price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${primary.price} from ${primary.source} (${decision.reason})`,
-        );
-        stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec, [asset.priceSource || "defillama"], [asset.priceSource || "defillama"]);
-      }
-    } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
-      // DL list provided a price but no primary price result — single-source
-      stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec, [asset.priceSource || "defillama"], [asset.priceSource || "defillama"]);
-    }
-  }
-  // Tag all DL-sourced assets with supplySource
-  for (const asset of assets) {
-    if (!asset.supplySource) {
-      asset.supplySource = "defillama";
-    }
-  }
-  // Pre-validate: route unreasonable prices through enrichment
-  for (const asset of assets) {
-    if (
-      asset.price != null &&
-      typeof asset.price === "number" &&
-      asset.price !== 0
-    ) {
-      const decision = validatePublishablePrice({
-        price: asset.price,
-        source: asset.priceSource,
-        confidence: asset.priceConfidence ?? null,
-        agreeSources: asset.agreeSources,
-        mode: "primary_authoritative",
-        validationContext: validationContexts.get(asset),
-        validationReferences,
-      });
-      if (!decision.accepted) {
-        console.warn(
-          `[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${asset.price} (${decision.reason})`,
-        );
-        asset.price = 0; // hasMissingPrice() treats 0 as missing
-        stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
-      }
-    }
-  }
+  applyPrimaryPriceResults({
+    assets,
+    primaryPriceResults,
+    validationContexts,
+    validationReferences,
+    syncStartSec,
+    validatePublishablePrice,
+  });
+  prevalidatePrices({
+    assets,
+    validationContexts,
+    validationReferences,
+    validatePublishablePrice,
+    modeResolver: () => "primary_authoritative",
+    logLabel: "Pre-rejected bad price",
+  });
   // Enrich any assets that still have missing prices
   const missingBefore = new Set(
     assets.filter(hasMissingPrice).map((a) => a.id)
@@ -531,29 +365,14 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     );
     const { updatedCount: gtUpdated } = gtProbe;
     if (gtUpdated > 0) {
-      for (const asset of assets) {
-        const primary = primaryPriceResults.get(asset.id);
-        if (primary && primary.candidateSources.includes("geckoterminal")) {
-          const decision = validatePublishablePrice({
-            price: primary.price,
-            source: primary.source,
-            confidence: primary.confidence,
-            agreeSources: primary.agreeSources,
-            mode: "primary_authoritative",
-            validationContext: validationContexts.get(asset),
-            validationReferences,
-          });
-          if (decision.accepted) {
-            asset.price = primary.price;
-            stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec, primary.candidateSources, primary.agreeSources);
-          } else {
-            console.warn(
-              `[sync-stablecoins] Rejected GT-probed price for ${asset.symbol} (id=${asset.id}): ` +
-              `$${primary.price} from ${primary.source} (${decision.reason})`,
-            );
-          }
-        }
-      }
+      applyGtProbeResults({
+        assets,
+        primaryPriceResults,
+        validationContexts,
+        validationReferences,
+        syncStartSec,
+        validatePublishablePrice,
+      });
       console.log(`[sync-stablecoins] GT probe updated ${gtUpdated} asset prices`);
     }
   } catch (err) {
@@ -561,45 +380,14 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     console.warn("[sync-stablecoins] GT probe failed (non-fatal):", err);
   }
 
-  // Protocol-backed overrides supersede market-source prices when direct redemption
-  // or protocol accounting provides a more authoritative mark. This still runs after
-  // the GT probe so later market cross-checks cannot overwrite an authoritative mark.
-  for (const asset of assets) {
-    const override = protocolPriceOverrides.get(asset.id);
-    if (!override) continue;
-
-    const decision = validatePublishablePrice({
-      price: override.price,
-      source: override.source,
-      confidence: override.confidence,
-      agreeSources: [override.source],
-      mode: "primary_authoritative",
-      validationContext: validationContexts.get(asset),
-      validationReferences,
-    });
-    if (!decision.accepted) {
-      console.warn(
-        `[sync-stablecoins] Rejected protocol-backed override for ${asset.symbol} (id=${asset.id}): ` +
-        `$${override.price} (${decision.reason})`,
-      );
-      continue;
-    }
-
-    // Warn if protocol override diverges significantly from market consensus
-    if (asset.price != null && asset.price > 0 && override.price > 0) {
-      const divergenceBps = Math.abs(Math.round(((override.price / asset.price) - 1) * 10000));
-      if (divergenceBps > 100) {
-        console.warn(
-          `[sync] Protocol override for ${asset.symbol} diverges ${divergenceBps}bps from consensus ` +
-          `(override=$${override.price.toFixed(4)}, consensus=$${asset.price.toFixed(4)})`,
-        );
-      }
-    }
-
-    asset.price = override.price;
-    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source]);
-    protocolOverrideCount++;
-  }
+  const protocolOverrideCount = applyProtocolPriceOverrides({
+    assets,
+    overrides: protocolPriceOverrides,
+    validationContexts,
+    validationReferences,
+    syncStartSec,
+    validatePublishablePrice,
+  });
   if (protocolOverrideCount > 0) {
     console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);
   }

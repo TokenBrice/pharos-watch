@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { handleStablecoinSummary } from "../stablecoin-summary";
 
@@ -71,28 +71,33 @@ describe("handleStablecoinSummary", () => {
 
   it("returns compact per-coin summary with freshness headers", async () => {
     const now = Math.floor(Date.now() / 1000);
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const db = mockD1([
       { match: "cache", rows: [], first: { value: makeStablecoinsCacheValue(), updated_at: now - 42 } },
     ]);
-    const res = await handleStablecoinSummary(db, "usdt-tether");
-    const body = await res.json() as {
-      id: string;
-      symbol: string;
-      supplyUsd: { current: number; change1d: number; change7d: number; change30d: number };
-      chainCount: number;
-      updatedAt: number;
-    };
+    try {
+      const res = await handleStablecoinSummary(db, "usdt-tether");
+      const body = await res.json() as {
+        id: string;
+        symbol: string;
+        supplyUsd: { current: number; change1d: number; change7d: number; change30d: number };
+        chainCount: number;
+        updatedAt: number;
+      };
 
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=60, max-age=10");
-    expect(res.headers.get("X-Data-Age")).toBe("42");
-    expect(body.id).toBe("usdt-tether");
-    expect(body.symbol).toBe("USDT");
-    expect(body.supplyUsd.current).toBe(100);
-    expect(body.supplyUsd.change1d).toBe(10);
-    expect(body.supplyUsd.change7d).toBe(20);
-    expect(body.supplyUsd.change30d).toBe(30);
-    expect(body.chainCount).toBe(2);
-    expect(body.updatedAt).toBe(now - 42);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=60, max-age=10");
+      expect(res.headers.get("X-Data-Age")).toBe("42");
+      expect(body.id).toBe("usdt-tether");
+      expect(body.symbol).toBe("USDT");
+      expect(body.supplyUsd.current).toBe(100);
+      expect(body.supplyUsd.change1d).toBe(10);
+      expect(body.supplyUsd.change7d).toBe(20);
+      expect(body.supplyUsd.change30d).toBe(30);
+      expect(body.chainCount).toBe(2);
+      expect(body.updatedAt).toBe(now - 42);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });
