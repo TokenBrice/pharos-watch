@@ -295,6 +295,8 @@ export function PortfolioClient() {
         effectiveExitScore: null,
         redemptionBackstopScore: null,
         redemptionRouteFamily: null,
+        redemptionModelConfidence: null,
+        redemptionUsedForLiquidity: false,
         redemptionImmediateCapacityUsd: null,
         redemptionImmediateCapacityRatio: null,
         concentrationHhi: null,

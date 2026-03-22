@@ -10,11 +10,11 @@ const LIVE_REFETCH_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
 const FALLBACK_STALE_TIME = 60 * 1000; // fallback/live-stale responses are intentionally short-lived
 const FALLBACK_REFETCH_INTERVAL = 2 * 60 * 1000;
 
-function reserveQueryStaleTime(query: { state: { data?: StablecoinReservesResponse } }): number {
+function reserveQueryStaleTime(query: { state: { data?: StablecoinReservesResponse | null } }): number {
   return query.state.data?.mode === "live" ? LIVE_STALE_TIME : FALLBACK_STALE_TIME;
 }
 
-function reserveQueryRefetchInterval(query: { state: { data?: StablecoinReservesResponse } }): number {
+function reserveQueryRefetchInterval(query: { state: { data?: StablecoinReservesResponse | null } }): number {
   return query.state.data?.mode === "live" ? LIVE_REFETCH_INTERVAL : FALLBACK_REFETCH_INTERVAL;
 }
 
@@ -31,7 +31,7 @@ export function useStablecoinReserves(
   stablecoinId: string,
   enabled: boolean,
 ): StablecoinReservesQueryState {
-  const { data, error } = useQuery({
+  const { data, error } = useQuery<StablecoinReservesResponse | null>({
     queryKey: ["stablecoin-reserves", stablecoinId],
     queryFn: () => fetchStablecoinReserves(stablecoinId),
     enabled,
