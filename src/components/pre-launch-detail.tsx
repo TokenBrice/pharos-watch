@@ -253,6 +253,21 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         </div>
       </header>
 
+      {/* ── At-a-Glance Grid ─────────────────────────────────────── */}
+      <section className="pharos-card-shell p-4 sm:p-5">
+        <h3 className="mb-3 text-lg font-semibold tracking-tight">At a Glance</h3>
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <InfoGridItem label="Backing" value={BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} />
+          <InfoGridItem label="Governance" value={GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} />
+          <InfoGridItem
+            label="Peg Currency"
+            value={PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
+          />
+          {jurisdictionDisplay && <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />}
+          {coin.flags.yieldBearing && <InfoGridItem label="Yield-Bearing" value="Yes" />}
+        </dl>
+      </section>
+
       {/* ── Launch Timeline ───────────────────────────────────────── */}
       {coin.announcedDate && coin.expectedLaunchDate ? (
         <section className="pharos-card-shell p-4 sm:p-5">
@@ -296,21 +311,6 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
           )}
         </section>
       ) : null}
-
-      {/* ── At-a-Glance Grid ─────────────────────────────────────── */}
-      <section className="pharos-card-shell p-4 sm:p-5">
-        <h3 className="mb-3 text-lg font-semibold tracking-tight">At a Glance</h3>
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <InfoGridItem label="Backing" value={BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} />
-          <InfoGridItem label="Governance" value={GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} />
-          <InfoGridItem
-            label="Peg Currency"
-            value={PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
-          />
-          {jurisdictionDisplay && <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />}
-          {coin.flags.yieldBearing && <InfoGridItem label="Yield-Bearing" value="Yes" />}
-        </dl>
-      </section>
 
       {/* ── Activity Timeline (milestones) ─────────────────────────── */}
       {coin.milestones && coin.milestones.length > 0 && (
