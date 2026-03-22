@@ -255,17 +255,15 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       now,
       {
-        reserveSyncState: {
+        reserveSnapshotMetadata: {
           stablecoinId: "test-coin",
-          adapterKey: "single-asset",
-          breakerKey: "live-reserves:test-coin",
-          lastAttemptedAt: now - 300,
-          lastSuccessAt: now - 300,
-          lastStatus: "ok",
+          fetchedAt: now - 300,
+          source: "single-asset",
+          metadata: { redemptionFeeBps: 50 },
           warningCount: 0,
           warnings: [],
-          lastError: null,
-          metadata: { redemptionFeeBps: 50 },
+          sourceModel: "single-bucket",
+          evidenceClass: "weak-live-probe",
         },
       },
     );
@@ -319,20 +317,18 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       now,
       {
-        reserveSyncState: {
+        reserveSnapshotMetadata: {
           stablecoinId: "test-coin",
-          adapterKey: "test",
-          breakerKey: "test",
-          lastAttemptedAt: now - 1800,
-          lastSuccessAt: now - 1800, // 30 min ago = fresh
-          lastStatus: "ok",
-          warningCount: 0,
-          warnings: [],
-          lastError: null,
+          fetchedAt: now - 1800,
+          source: "test",
           metadata: {
             immediateRedeemableUsd: 7_500_000,
             immediateRedeemableRatio: 0.15,
           },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
         },
       },
     );
@@ -361,13 +357,14 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       null,
       now,
-      { reserveSyncState: null },
+      { reserveSnapshotMetadata: null },
     );
 
     expect(entry.sourceMode).toBe("estimated");
     expect(entry.resolutionState).toBe("resolved");
     expect(entry.immediateCapacityUsd).toBe(7_500_000); // 50M * 0.15
     expect(entry.provider).toBe("reserve-sync-fallback");
+    expect(entry.capacityConfidence).toBe("heuristic");
   });
 
   it("returns missing-capacity when reserve-sync has no data and no fallback", async () => {
@@ -386,7 +383,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       null,
       now,
-      { reserveSyncState: null },
+      { reserveSnapshotMetadata: null },
     );
 
     expect(entry.resolutionState).toBe("missing-capacity");
@@ -410,7 +407,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       55,
       now,
-      { reserveSyncState: null },
+      { reserveSnapshotMetadata: null },
     );
 
     expect(entry.resolutionState).toBe("missing-capacity");
@@ -458,17 +455,15 @@ describe("buildRedemptionBackstopEntry", () => {
       null,
       now,
       {
-        reserveSyncState: {
+        reserveSnapshotMetadata: {
           stablecoinId: "test-coin",
-          adapterKey: "test",
-          breakerKey: "test",
-          lastAttemptedAt: now - 100,
-          lastSuccessAt: now - 100,
-          lastStatus: "ok",
+          fetchedAt: now - 100,
+          source: "test",
+          metadata: { immediateRedeemableUsd: 5_000_000, immediateRedeemableRatio: 0.1 },
           warningCount: 0,
           warnings: [],
-          lastError: null,
-          metadata: { immediateRedeemableUsd: 5_000_000, immediateRedeemableRatio: 0.1 },
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
         },
       },
     );
@@ -518,6 +513,80 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(lowEntry.modelConfidence).toBe("low");
   });
 
+  it("stops using stale reserve capacity metadata when no safe fallback exists", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "psm-swap",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "fee-bps", feeBps: 10 },
+      },
+      50_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "test-coin",
+          fetchedAt: now - 7_200,
+          source: "test",
+          metadata: { immediateRedeemableUsd: 10_000_000, immediateRedeemableRatio: 0.2 },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.score).toBeNull();
+    expect(entry.notes).toContain("Live reserve metadata stale; fresh metadata required");
+  });
+
+  it("uses fresh live redemption fee telemetry for fixed-fee routes", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "psm-swap",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        costModel: {
+          kind: "fee-bps",
+          feeBps: 10,
+          feeDescription: "Reviewed fallback bound is 10 bps",
+        },
+      },
+      50_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "test-coin",
+          fetchedAt: now - 120,
+          source: "test",
+          metadata: { redemptionFeeBps: 7 },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+        },
+      },
+    );
+
+    expect(entry.feeBps).toBe(7);
+    expect(entry.costScore).toBe(100);
+    expect(entry.notes).toContain("Using fresh live redemption fee telemetry in place of the reviewed fallback bound");
+  });
+
   it("populates docs from proofOfReserves when available", async () => {
     const meta = TRACKED_META_BY_ID.get("usdt-tether");
     expect(meta?.proofOfReserves?.url).toBeTruthy();
@@ -542,6 +611,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.docs).toBeDefined();
     expect(entry.docs!.url).toBe(meta!.proofOfReserves!.url);
     expect(entry.docs!.label).toContain("feed");
+    expect(entry.docs!.provenance).toBe("proof-of-reserves");
   });
 
   it("falls back to preferred link labels when no proofOfReserves", async () => {
@@ -570,6 +640,7 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.docs).toBeDefined();
     expect(preferredLabels).toContain(entry.docs!.label);
+    expect(entry.docs!.provenance).toBe("preferred-link");
   });
 
   it("returns no docs for unknown coins", async () => {

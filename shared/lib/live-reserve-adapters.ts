@@ -103,6 +103,8 @@ export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
   immediateRedeemableUsd?: number;
   immediateRedeemableRatio?: number;
   redemptionFeeBps?: number;
+  buyFeeBpsMin?: number;
+  buyFeeBpsMax?: number;
   details?: Record<string, unknown>;
 }
 

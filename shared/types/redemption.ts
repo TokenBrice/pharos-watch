@@ -118,6 +118,16 @@ export type RedemptionDocSourceSupport = z.infer<
   typeof RedemptionDocSourceSupportSchema
 >;
 
+export const RedemptionDocsProvenanceSchema = z.enum([
+  "config-reviewed",
+  "live-reserve-display",
+  "proof-of-reserves",
+  "preferred-link",
+]);
+export type RedemptionDocsProvenance = z.infer<
+  typeof RedemptionDocsProvenanceSchema
+>;
+
 const RedemptionDocSourceSchema = z.object({
   label: z.string(),
   url: z.string().url(),
@@ -129,6 +139,7 @@ const RedemptionDocsSchema = z.object({
   label: z.string().optional(),
   url: z.string().url().optional(),
   reviewedAt: z.string().optional(),
+  provenance: RedemptionDocsProvenanceSchema.optional(),
   sources: z.array(RedemptionDocSourceSchema).optional(),
 });
 

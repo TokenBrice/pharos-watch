@@ -7,7 +7,7 @@ describe("getRedemptionBackstopConfig", () => {
       ["usds-sky", "psm-swap"],
       ["lisusd-lista", "psm-swap"],
       ["usdd-tron-dao-reserve", "psm-swap"],
-      ["honey-berachain", "stablecoin-redeem"],
+      ["honey-berachain", "basket-redeem"],
       ["ousd-origin-protocol", "stablecoin-redeem"],
       ["eusd-electronic-usd", "basket-redeem"],
       ["usdcv-societe-generale-forge", "offchain-issuer"],
@@ -58,8 +58,9 @@ describe("getRedemptionBackstopConfig", () => {
     });
 
     expect(getRedemptionBackstopConfig("honey-berachain")).toMatchObject({
-      routeFamily: "stablecoin-redeem",
-      outputAssetType: "stable-single",
+      routeFamily: "basket-redeem",
+      outputAssetType: "stable-basket",
+      executionModel: "deterministic-basket",
       costModel: { kind: "dynamic-or-unclear" },
     });
 

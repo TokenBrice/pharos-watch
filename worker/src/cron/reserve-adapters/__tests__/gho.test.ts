@@ -86,6 +86,7 @@ describe("adaptGhoFacilitators", () => {
     expect(result.metadata?.trackedGsmBackingUsd).toBe(60_000_000);
     expect(result.metadata?.residualSupplyUsd).toBe(240_000_000);
     expect(result.metadata?.swappableTrackedGsmCount).toBe(1);
+    expect(result.metadata?.redemptionFeeBps).toBe(10);
     expect(result.metadata?.buyFeeBpsMin).toBe(7);
     expect(result.metadata?.buyFeeBpsMax).toBe(10);
   });

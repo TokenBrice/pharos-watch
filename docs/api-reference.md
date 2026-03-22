@@ -1318,6 +1318,8 @@ Current redemption-backstop dataset for redeemable assets.
 
 `effectiveExitScore` is the blended exit score written into the redemption snapshot when the route resolved cleanly and the reused DEX liquidity input was fresh. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence gating.
 
+`methodology.version` is attributed from the latest stored redemption snapshot row. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
+
 `sourceMode`:
 
 - `dynamic` = live reserve/protocol telemetry
@@ -1362,7 +1364,7 @@ Top-level fields:
 | `feeBps`                 | `number \| null`                                | Explicit bounded fee when configured                                                                        |
 | `feeDescription`         | `string \| undefined`                           | Docs-backed fee description for variable, conditional, flat-minimum, or undisclosed redemption schedules    |
 | `queueEnabled`           | `boolean`                                       | Whether the modeled route is explicitly queued/serial                                                       |
-| `docs`                   | `{ label?: string, url?: string, reviewedAt?: string, sources?: { label: string, url: string, supports?: string[] }[] } \| undefined` | Optional documentation / transparency metadata with reviewed provenance |
+| `docs`                   | `{ label?: string, url?: string, reviewedAt?: string, provenance?: string, sources?: { label: string, url: string, supports?: string[] }[] } \| undefined` | Optional documentation / transparency metadata. `provenance` is `config-reviewed`, `live-reserve-display`, `proof-of-reserves`, or `preferred-link` |
 | `notes`                  | `string[] \| undefined`                         | Runtime notes such as stale reserve metadata fallback                                                       |
 | `capsApplied`            | `string[] \| undefined`                         | Applied score caps (`queue-route-cap`, `offchain-route-cap`, `config-cap`)                                  |
 

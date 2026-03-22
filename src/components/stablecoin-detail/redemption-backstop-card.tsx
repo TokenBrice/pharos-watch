@@ -135,6 +135,24 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): {
   };
 }
 
+function formatDocsProvenance(value: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["provenance"]>): string {
+  switch (value) {
+    case "config-reviewed":
+      return "Reviewed route source";
+    case "live-reserve-display":
+      return "Fallback live reserve source";
+    case "proof-of-reserves":
+      return "Fallback proof-of-reserves source";
+    case "preferred-link":
+      return "Fallback project link";
+  }
+}
+
+function formatDocSupports(source: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>[number]): string | null {
+  if (!source.supports || source.supports.length === 0) return null;
+  return source.supports.join(", ");
+}
+
 export function RedemptionBackstopCard({
   entry,
 }: {
@@ -143,6 +161,12 @@ export function RedemptionBackstopCard({
   const feeSummary = getFeeSummary(entry);
   const capacitySummary = getCapacitySummary(entry);
   const resolutionSummary = getResolutionSummary(entry);
+  const docs = entry.docs ?? null;
+  const docSources = docs?.sources && docs.sources.length > 0
+    ? docs.sources
+    : docs?.url
+      ? [{ label: docs.label ?? "Source", url: docs.url }]
+      : [];
 
   return (
     <Card>
@@ -253,18 +277,30 @@ export function RedemptionBackstopCard({
           </div>
         ) : null}
 
-        {entry.docs?.url ? (
+        {docSources.length > 0 ? (
           <div className="space-y-1">
-            <a
-              href={entry.docs.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex text-sm underline underline-offset-2 transition-colors hover:text-foreground"
-            >
-              {entry.docs.label ?? "Source"}
-            </a>
-            {entry.docs.reviewedAt ? (
-              <p className="text-xs text-muted-foreground">Reviewed {entry.docs.reviewedAt}</p>
+            {docSources.map((source) => {
+              const supports = formatDocSupports(source);
+              return (
+                <div key={`${source.label}:${source.url}`} className="text-sm">
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex underline underline-offset-2 transition-colors hover:text-foreground"
+                  >
+                    {source.label}
+                  </a>
+                  {supports ? (
+                    <span className="ml-2 text-xs text-muted-foreground">Supports {supports}</span>
+                  ) : null}
+                </div>
+              );
+            })}
+            {docs?.reviewedAt ? (
+              <p className="text-xs text-muted-foreground">Reviewed {docs.reviewedAt}</p>
+            ) : docs?.provenance ? (
+              <p className="text-xs text-muted-foreground">{formatDocsProvenance(docs.provenance)}</p>
             ) : null}
           </div>
         ) : null}

@@ -3,7 +3,7 @@ import { adaptOpenEdenUsdo } from "../openeden";
 
 describe("adaptOpenEdenUsdo", () => {
   it("maps reserve composition fields into reserve slices", () => {
-    const slices = adaptOpenEdenUsdo({
+    const result = adaptOpenEdenUsdo({
       usdoAmount: 62_283_070,
       totalTbillAmountInUsd: 46_831_981.32,
       usdcAmount: 4_767_161.22,
@@ -15,11 +15,16 @@ describe("adaptOpenEdenUsdo", () => {
       ratio: 100.4116,
     });
 
-    expect(slices).toEqual([
+    expect(result.slices).toEqual([
       { name: "OpenEden TBILL", pct: 74.9, risk: "very-low", coinId: "tbill-openeden" },
       { name: "BlackRock BUIDL", pct: 7.3, risk: "low", coinId: "buidl-blackrock" },
       { name: "OpenEden VBILL", pct: 10.2, risk: "low" },
       { name: "USDC buffer", pct: 7.6, risk: "low", coinId: "usdc-circle" },
     ]);
+    expect(result.metadata).toMatchObject({
+      reserveAssetsInUsd: 62_539_444.54,
+      supplyUsd: 62_283_070,
+      immediateRedeemableUsd: 4_767_161.22,
+    });
   });
 });

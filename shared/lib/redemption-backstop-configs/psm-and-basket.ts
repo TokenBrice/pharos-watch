@@ -13,6 +13,19 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...basketRedeemBase,
     costModel: documentedVariableFee("Fixed redemption fee, but public docs do not publish the current rate"),
   },
+  "honey-berachain": {
+    ...basketRedeemBase,
+    costModel: documentedVariableFee(
+      "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
+    ),
+    reviewedAt: "2026-03-22",
+    docs: [
+      sourceRef("Berachain Honey docs", "https://docs.berachain.com/general/tokens/honey", ["route", "fees"]),
+    ],
+    notes: [
+      "Modeled against Basket Mode because the stress-state redemption path turns exits into proportional basket withdrawals when collateral becomes unstable",
+    ],
+  },
   "dai-makerdao": {
     ...psmSwapBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.33 },
@@ -34,7 +47,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(
       10,
-      "Reviewed live mainnet GSM modules currently charge 7-10 bps buy fees on redemption; scoring uses the conservative 10 bps bound",
+      "Fresh live mainnet GSM telemetry uses the current worst tracked buy fee; the reviewed fallback bound is 10 bps when telemetry is unavailable",
     ),
     reviewedAt: "2026-03-22",
     docs: [

@@ -40,7 +40,7 @@ function makeRealisticRow(overrides: Record<string, unknown> = {}) {
       modelConfidence: "low",
       capsApplied: ["offchain-route-cap"],
       feeDescription: "EEA burn fee is 0 bps; other Circle redemption fees may vary",
-      docs: { label: "Reserve feed", url: "https://example.com/reserves" },
+      docs: { label: "Reserve feed", url: "https://example.com/reserves", provenance: "proof-of-reserves" },
       notes: ["Some note"],
     }),
     ...overrides,
@@ -75,11 +75,11 @@ describe("loadRedemptionBackstopMap", () => {
     expect(result["usdc-circle"]?.feeDescription).toBeUndefined();
     // Inferred from row columns when details_json is malformed
     expect(result["usdc-circle"]?.resolutionState).toBe("resolved");
-    expect(result["usdc-circle"]?.capacityConfidence).toBe("dynamic");
+    expect(result["usdc-circle"]?.capacityConfidence).toBe("heuristic");
     expect(result["usdc-circle"]?.capacitySemantics).toBe("eventual-only");
     expect(result["usdc-circle"]?.feeConfidence).toBe("fixed");
     expect(result["usdc-circle"]?.feeModelKind).toBe("fixed-bps");
-    expect(result["usdc-circle"]?.modelConfidence).toBe("high");
+    expect(result["usdc-circle"]?.modelConfidence).toBe("low");
   });
 
   it("throws a typed error when the current map query fails", async () => {
@@ -116,7 +116,11 @@ describe("loadRedemptionBackstopMap", () => {
     expect(entry!.modelConfidence).toBe("low");
     expect(entry!.capsApplied).toEqual(["offchain-route-cap"]);
     expect(entry!.feeDescription).toBe("EEA burn fee is 0 bps; other Circle redemption fees may vary");
-    expect(entry!.docs).toEqual({ label: "Reserve feed", url: "https://example.com/reserves" });
+    expect(entry!.docs).toEqual({
+      label: "Reserve feed",
+      url: "https://example.com/reserves",
+      provenance: "proof-of-reserves",
+    });
     expect(entry!.notes).toEqual(["Some note"]);
   });
 

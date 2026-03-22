@@ -111,4 +111,30 @@ describe("RedemptionBackstopCard", () => {
     expect(html).toContain("confidence: low");
     expect(html).toContain("configured, but the current snapshot could not resolve enough capacity data");
   });
+
+  it("renders source provenance and support tags for fallback docs", () => {
+    const html = renderToStaticMarkup(
+      <RedemptionBackstopCard
+        entry={{
+          ...BASE_ENTRY,
+          docs: {
+            label: "Reserve feed",
+            url: "https://example.com/reserves",
+            provenance: "proof-of-reserves",
+            sources: [
+              {
+                label: "Reserve feed",
+                url: "https://example.com/reserves",
+                supports: ["capacity"],
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain("Reserve feed");
+    expect(html).toContain("Supports capacity");
+    expect(html).toContain("Fallback proof-of-reserves source");
+  });
 });

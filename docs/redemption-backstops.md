@@ -6,7 +6,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.4`
+- **Current methodology version:** `v1.5`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
@@ -19,7 +19,7 @@ There is no standalone changelog page yet. The public methodology link currently
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
 - **Configured coins:** 137
-- **Route families:** 78 `offchain-issuer`, 18 `stablecoin-redeem`, 18 `collateral-redeem`, 12 `queue-redeem`, 9 `psm-swap`, 2 `basket-redeem`
+- **Route families:** 78 `offchain-issuer`, 17 `stablecoin-redeem`, 18 `collateral-redeem`, 12 `queue-redeem`, 9 `psm-swap`, 3 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
@@ -37,7 +37,7 @@ The cron reads:
 
 1. The strict `stablecoins` cache via `loadStablecoinsCache(...)`
 2. The latest DEX liquidity snapshot via `loadDexLiquiditySnapshot(db)` so both the liquidity map and freshness can be reused
-3. Reserve-sync state in one bulk `loadReserveSyncStateMap(...)` read for route freshness/status context, plus latest successful reserve snapshot metadata for routes using `capacityModel.kind = "reserve-sync-metadata"`
+3. The latest successful authoritative reserve snapshot metadata on demand for routes that use live reserve telemetry for capacity or fee inputs
 
 No external HTTP calls happen during the redemption-backstop pass itself; any live reserve telemetry is reused from D1.
 
@@ -121,12 +121,12 @@ Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `supply-full`           | Scores against full current supply as eventual redeemability, but leaves `immediateCapacity*` empty because immediate buffer is not separately quantified |
 | `supply-ratio`          | Immediate modeled capacity equals `supplyUsd * ratio`; this is heuristic unless the config explicitly opts into stronger confidence |
-| `reserve-sync-metadata` | Reads `reserve_composition.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio` from the latest successful authoritative live snapshot; falls back to configured ratio when provided |
+| `reserve-sync-metadata` | Reads `reserve_composition.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio` from the latest successful authoritative live snapshot while it is fresh; otherwise falls back to a configured ratio when provided or leaves the route unrated |
 
 The resulting row is tagged with one `sourceMode`:
 
-- `dynamic` when fresh latest-success live reserve snapshot metadata is available
-- `estimated` when static supply models or stale last-success reserve metadata are used
+- `dynamic` when fresh latest-success authoritative live reserve snapshot metadata is available
+- `estimated` when static supply models or configured reserve-sync fallback ratios are used
 - `static` when the route remains configured but the current snapshot could not resolve a usable score, including failure-safe rows written after per-coin sync errors
 
 Each row also carries:
@@ -157,15 +157,17 @@ Each row also carries:
 ### Docs / Notes
 
 - `docs` prefers explicit config-reviewed sources first (`docs[]` + `reviewedAt`), then live-reserve display links for reserve-sync routes, then the coin metadata's `proofOfReserves.url`, then preferred public links (`Docs`, `Proof of Reserve`, `Transparency`, `Website`)
+- `docs.provenance` distinguishes reviewed route docs from fallback live-reserve, proof-of-reserves, or generic project-link sources so detail pages do not overstate evidence quality
 - `docs.sources[]` records structured provenance for what the linked source supports (`route`, `capacity`, `fees`, `access`, `settlement`)
 - `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
-- `notes` merges config notes plus runtime notes such as stale reserve metadata fallback
+- `notes` merges config notes plus runtime notes such as stale reserve metadata expiry, conservative fallback use, or live fee fallback
 - `capsApplied` records any score caps triggered during scoring
 
 ### Cost Modeling
 
 - `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
 - Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
+- Reviewed fixed-fee routes may also consume fresh authoritative live fee telemetry when the protocol exposes the current active redemption fee and the static config is only a safe fallback bound
 - `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails
 - `feeDescription` is used to surface:
   - dynamic formulas such as Liquity-style `min 50 bps + baseRate`
@@ -239,7 +241,7 @@ The cron upserts both current and history rows together through `upsertRedemptio
 
 - Returns `503` with `{ "error": "Data not yet available" }` until at least one hourly sync has written rows
 - Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when the current snapshot cannot be read cleanly from D1
-- Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`
+- Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest stored snapshot row and `currentVersion` preserved as the live code version
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
 
 See [API Reference](./api-reference.md) for the exact response shape.

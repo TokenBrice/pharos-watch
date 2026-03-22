@@ -20,6 +20,7 @@ import {
   REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
   REDEMPTION_BACKSTOP_VERSION,
   REDEMPTION_BACKSTOP_VERSION_LABEL,
+  getRedemptionBackstopVersionAt,
 } from "@shared/lib/redemption-backstop-version";
 import {
   EFFECTIVE_EXIT_WEIGHTS,
@@ -33,6 +34,7 @@ import {
   inferStoredFeeConfidence,
   inferStoredFeeModelKind,
 } from "@shared/lib/redemption-backstop-confidence";
+import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
 
 interface RedemptionBackstopRow {
@@ -195,6 +197,27 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
     ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),
     ...(record.feeDescription ? { feeDescription: record.feeDescription } : {}),
   });
+}
+
+function resolveSnapshotMethodologyVersion(
+  coins: RedemptionBackstopMap,
+  updatedAt: number,
+): { version: string; versionLabel: string } {
+  if (updatedAt > 0) {
+    const latestEntry = Object.values(coins).find((entry) => entry.updatedAt === updatedAt);
+    if (latestEntry?.methodologyVersion) {
+      return {
+        version: latestEntry.methodologyVersion,
+        versionLabel: `v${latestEntry.methodologyVersion}`,
+      };
+    }
+  }
+
+  const version = getRedemptionBackstopVersionAt(updatedAt);
+  return {
+    version,
+    versionLabel: `v${version}`,
+  };
 }
 
 function buildCurrentUpsert(db: D1Database, record: RedemptionBackstopSnapshotRecord): D1PreparedStatement {
@@ -371,17 +394,19 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
   }
 
   const updatedAt = latest?.updated_at ?? 0;
+  const snapshotMethodology = resolveSnapshotMethodologyVersion(coins, updatedAt);
 
   return {
     coins,
     methodology: {
-      version: REDEMPTION_BACKSTOP_VERSION,
-      versionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
-      currentVersion: REDEMPTION_BACKSTOP_VERSION,
-      currentVersionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
-      changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
-      asOf: updatedAt,
-      isCurrent: true,
+      ...buildMethodologyEnvelope({
+        version: snapshotMethodology.version,
+        versionLabel: snapshotMethodology.versionLabel,
+        currentVersion: REDEMPTION_BACKSTOP_VERSION,
+        currentVersionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
+        changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+        asOf: updatedAt,
+      }),
       componentWeights: {
         access: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.access,
         settlement: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.settlement,

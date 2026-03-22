@@ -2,7 +2,6 @@ import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from 
 import type { CronResult } from "../lib/cron-logger";
 import { batchExecute } from "../lib/db";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
-import { loadReserveSyncStateMap } from "../lib/live-reserves-store";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
 import {
   buildFailedRedemptionBackstopEntry,
@@ -10,13 +9,6 @@ import {
   resolveRedemptionBackstopEntry,
 } from "../lib/redemption-backstop-sources";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-
-function configNeedsReserveSyncState(config: NonNullable<ReturnType<typeof getRedemptionBackstopConfig>>): boolean {
-  return (
-    config.capacityModel.kind === "reserve-sync-metadata"
-    || (config.costModel.kind === "dynamic-or-unclear" && config.costModel.confidence === "formula")
-  );
-}
 
 async function pruneRemovedRedemptionBackstops(
   db: D1Database,
@@ -57,15 +49,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const stablecoinAssetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
   const { map: dexLiquidityMap, latestUpdatedAt } = await loadDexLiquiditySnapshot(db);
   const now = Math.floor(Date.now() / 1000);
-  const reserveSyncStateById = await loadReserveSyncStateMap(
-    db,
-    configuredIds.filter(
-      (stablecoinId) => {
-        const config = configById.get(stablecoinId);
-        return !!config && configNeedsReserveSyncState(config);
-      },
-    ),
-  );
 
   let liquidityStale = false;
   if (latestUpdatedAt != null) {
@@ -91,14 +74,12 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
 
       if (asset) {
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
-          reserveSyncState: reserveSyncStateById.get(stablecoinId) ?? null,
           suppressEffectiveExitScore: liquidityStale,
         });
       } else {
         const config = configById.get(stablecoinId);
         if (config) {
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
-            reserveSyncState: reserveSyncStateById.get(stablecoinId) ?? null,
             suppressEffectiveExitScore: liquidityStale,
           });
         }

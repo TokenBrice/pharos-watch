@@ -8,7 +8,6 @@ const resolveRedemptionBackstopEntryMock = vi.fn();
 const buildRedemptionBackstopEntryMock = vi.fn();
 const buildFailedRedemptionBackstopEntryMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
-const loadReserveSyncStateMapMock = vi.fn();
 let configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
 
 function makeResolvedSnapshot(stablecoinId: string, now: number, overrides: Record<string, unknown> = {}) {
@@ -60,10 +59,6 @@ vi.mock("../../lib/dex-liquidity", () => ({
   loadDexLiquiditySnapshot: loadDexLiquiditySnapshotMock,
 }));
 
-vi.mock("../../lib/live-reserves-store", () => ({
-  loadReserveSyncStateMap: loadReserveSyncStateMapMock,
-}));
-
 vi.mock("../../lib/redemption-backstop-sources", () => ({
   buildFailedRedemptionBackstopEntry: buildFailedRedemptionBackstopEntryMock,
   buildRedemptionBackstopEntry: buildRedemptionBackstopEntryMock,
@@ -112,7 +107,6 @@ describe("syncRedemptionBackstops", () => {
       },
       latestUpdatedAt: now,
     });
-    loadReserveSyncStateMapMock.mockResolvedValue(new Map());
     buildRedemptionBackstopEntryMock.mockResolvedValue({
       stablecoinId: "iusd-infinifi",
       score: null,
@@ -302,7 +296,7 @@ describe("syncRedemptionBackstops", () => {
       null,
       47,
       expect.any(Number),
-      { reserveSyncState: null, suppressEffectiveExitScore: false },
+      { suppressEffectiveExitScore: false },
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),

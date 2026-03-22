@@ -42,7 +42,7 @@ const SAMPLE_RESPONSE: InfiniFiProtocolData = {
 
 describe("adaptInfiniFi", () => {
   it("converts farm data to ReserveSlice[], skips PROTOCOL and zero-asset farms", () => {
-    const { slices } = adaptInfiniFi(SAMPLE_RESPONSE);
+    const { slices, immediateRedeemableUsd, supplyUsd } = adaptInfiniFi(SAMPLE_RESPONSE);
     expect(slices).toHaveLength(3);
     expect(slices.find((s) => s.name.includes("Fasanara"))).toMatchObject({
       pct: 40,
@@ -54,6 +54,8 @@ describe("adaptInfiniFi", () => {
       coinId: "usdc-circle",
       depType: "wrapper",
     });
+    expect(immediateRedeemableUsd).toBe(0);
+    expect(supplyUsd).toBeUndefined();
   });
 
   it("sums to 100 after rounding", () => {

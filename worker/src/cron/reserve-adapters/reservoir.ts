@@ -84,12 +84,14 @@ const RESERVOIR_BUCKETS: ReservoirBucketConfig[] = [
 export interface AdaptReservoirResult {
   slices: ReserveSlice[];
   unknownAssets: string[];
+  immediateRedeemableUsd: number;
+  supplyUsd: number | null;
 }
 
 export function adaptReservoirReserves(payload: ReservoirReservesResponse): AdaptReservoirResult {
   const totalAssets = Number(payload.totalAssets);
   if (!Number.isFinite(totalAssets) || totalAssets <= 0) {
-    return { slices: [], unknownAssets: [] };
+    return { slices: [], unknownAssets: [], immediateRedeemableUsd: 0, supplyUsd: null };
   }
 
   const bucketTotals = new Map<string, number>();
@@ -131,9 +133,22 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     });
   }
 
+  const totalLiabilities = Number(payload.totalLiabilities);
+  const supplyUsd = Number.isFinite(totalLiabilities) && totalLiabilities > 0 ? totalLiabilities : null;
+  const usdcBucket = RESERVOIR_BUCKETS.find((bucket) => bucket.key === "usdc");
+  const immediateRedeemableUsd = usdcBucket
+    ? payload.assets.reduce((sum, asset) => {
+        if (!usdcBucket.match(asset)) return sum;
+        const value = Number(asset.totalBalanceValue);
+        return Number.isFinite(value) && value > 0 ? sum + value : sum;
+      }, 0)
+    : 0;
+
   return {
     slices: normalizeSlices(slices),
     unknownAssets,
+    immediateRedeemableUsd,
+    supplyUsd,
   };
 }
 
@@ -159,16 +174,6 @@ export async function fetchReservoirReserves(
     "unknown-position",
     `Unmapped reserve position: ${label}`,
   ));
-  const totalLiabilities = Number(payload.totalLiabilities);
-  const totalLiabilitiesUsd = Number.isFinite(totalLiabilities) && totalLiabilities > 0 ? totalLiabilities : null;
-  const usdcBucket = RESERVOIR_BUCKETS.find((bucket) => bucket.key === "usdc");
-  const immediateRedeemableUsd = usdcBucket
-    ? payload.assets.reduce((sum, asset) => {
-        if (!usdcBucket.match(asset)) return sum;
-        const value = Number(asset.totalBalanceValue);
-        return Number.isFinite(value) && value > 0 ? sum + value : sum;
-      }, 0)
-    : 0;
 
   return {
     slices: adapted.slices,
@@ -187,11 +192,13 @@ export async function fetchReservoirReserves(
             .filter((slice) => slice.name === "Unmapped reserve positions")
             .reduce((sum, slice) => sum + slice.pct, 0)
           : 0,
-      ...(totalLiabilitiesUsd != null
+      ...(adapted.supplyUsd != null
         ? {
-            supplyUsd: totalLiabilitiesUsd,
-            immediateRedeemableUsd,
-            ...(totalLiabilitiesUsd > 0 ? { immediateRedeemableRatio: immediateRedeemableUsd / totalLiabilitiesUsd } : {}),
+            supplyUsd: adapted.supplyUsd,
+            immediateRedeemableUsd: adapted.immediateRedeemableUsd,
+            ...(adapted.supplyUsd > 0
+              ? { immediateRedeemableRatio: adapted.immediateRedeemableUsd / adapted.supplyUsd }
+              : {}),
           }
         : {}),
     },

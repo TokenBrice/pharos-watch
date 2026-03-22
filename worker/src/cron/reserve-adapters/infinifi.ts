@@ -60,12 +60,22 @@ export interface AdaptInfiniFiResult {
   /** Farm names not found in FARM_RISK_MAP (for operator awareness). */
   unknownFarms: string[];
   unknownExposurePct: number;
+  immediateRedeemableUsd: number;
+  supplyUsd?: number;
 }
 
 /** Convert raw InfiniFi protocol data to ReserveSlice[]. Pure function — no I/O. */
 export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResult {
   const tvl = payload.data.stats.asset.totalTVLAssetNormalized;
-  if (!tvl || tvl <= 0) return { slices: [], unknownFarms: [], unknownExposurePct: 0 };
+  if (!tvl || tvl <= 0) {
+    return {
+      slices: [],
+      unknownFarms: [],
+      unknownExposurePct: 0,
+      immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
+      ...(payload.data.receipt?.totalSupplyNormalized != null ? { supplyUsd: payload.data.receipt.totalSupplyNormalized } : {}),
+    };
+  }
 
   const activeFarms = payload.data.farms.filter(
     (f) => f.type !== "PROTOCOL" && f.assetsNormalized > 0,
@@ -94,7 +104,13 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     } satisfies ReserveSlice);
   }
 
-  return { slices: normalizeSlices(rawSlices), unknownFarms, unknownExposurePct };
+  return {
+    slices: normalizeSlices(rawSlices),
+    unknownFarms,
+    unknownExposurePct,
+    immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
+    ...(payload.data.receipt?.totalSupplyNormalized != null ? { supplyUsd: payload.data.receipt.totalSupplyNormalized } : {}),
+  };
 }
 
 /** Fetch + adapt infiniFi protocol data. Uses fetchWithRetry for resilience. */
@@ -119,11 +135,7 @@ export async function fetchInfiniFiReserves(
   ));
 
   const totalReserveUsd = payload.data.stats.asset.totalTVLAssetNormalized;
-  const immediateRedeemableUsd =
-    payload.data.stats.asset.totalLiquidAssetNormalized ?? 0;
-  const illiquidReserveUsd =
-    payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
-  const supplyUsd = payload.data.receipt?.totalSupplyNormalized;
+  const illiquidReserveUsd = payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
 
   return {
     slices: adapted.slices,
@@ -135,14 +147,14 @@ export async function fetchInfiniFiReserves(
       unknownExposurePct: adapted.unknownExposurePct,
       freshnessMode: "unverified",
       totalReserveUsd,
-      immediateRedeemableUsd,
+      immediateRedeemableUsd: adapted.immediateRedeemableUsd,
       illiquidReserveUsd,
-      ...(supplyUsd != null && supplyUsd > 0
-        ? { immediateRedeemableRatio: immediateRedeemableUsd / supplyUsd }
+      ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
+        ? { immediateRedeemableRatio: adapted.immediateRedeemableUsd / adapted.supplyUsd }
         : {}),
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
-      supplyUsd,
+      ...(adapted.supplyUsd != null ? { supplyUsd: adapted.supplyUsd } : {}),
     },
   };
 }

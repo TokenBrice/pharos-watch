@@ -110,7 +110,7 @@ describe("handleRedemptionBackstops", () => {
     };
 
     expect(body.updatedAt).toBe(updatedAt);
-    expect(body.methodology.version).toBe("1.4");
+    expect(body.methodology.version).toBe("1.1");
     expect(body.coins["cusd-cap"]?.effectiveExitScore).toBe(56);
     expect(body.coins["cusd-cap"]?.resolutionState).toBe("resolved");
     expect(body.coins["cusd-cap"]?.modelConfidence).toBe("low");

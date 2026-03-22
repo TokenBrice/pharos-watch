@@ -26,11 +26,9 @@ import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-ver
 import type { RedemptionBackstopEntry, StablecoinData } from "@shared/types";
 import {
   getLatestSuccessfulReserveSnapshotMetadata,
-  getReserveSyncState,
-  LIVE_RESERVE_FRESHNESS_SEC,
   type ReserveSnapshotMetadataRecord,
-  type ReserveSyncStateRecord,
 } from "./live-reserves-store";
+import { readRedemptionBackstopLiveMetadata } from "./redemption-backstop-live-metadata";
 
 interface CapacityResolution {
   immediateCapacityUsd: number | null;
@@ -46,7 +44,6 @@ interface CapacityResolution {
 }
 
 interface RedemptionBackstopBuildOptions {
-  reserveSyncState?: ReserveSyncStateRecord | null;
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
   suppressEffectiveExitScore?: boolean;
 }
@@ -66,56 +63,58 @@ interface RedemptionStaticFields {
   notes: string[];
 }
 
-function coerceFiniteNumber(value: unknown): number | null {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function resolveDocs(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
 ): RedemptionBackstopEntry["docs"] | undefined {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  if (config.docs && config.docs.length > 0) {
-    const [primary] = config.docs;
+  function buildDocs(
+    provenance: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["provenance"]>,
+    sources: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>,
+  ): RedemptionBackstopEntry["docs"] | undefined {
+    if (sources.length === 0) return undefined;
+    const [primary] = sources;
     return {
       label: primary.label,
       url: primary.url,
+      provenance,
       ...(config.reviewedAt ? { reviewedAt: config.reviewedAt } : {}),
-      sources: config.docs,
+      sources,
     };
   }
 
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  if (config.docs && config.docs.length > 0) {
+    return buildDocs("config-reviewed", config.docs);
+  }
+
   if (!meta) return undefined;
+
+  const sources: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]> = [];
+  const seen = new Set<string>();
+  const pushSource = (source: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>[number]) => {
+    const key = `${source.label}:${source.url}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    sources.push(source);
+  };
 
   if (
     config.capacityModel.kind === "reserve-sync-metadata" &&
     meta.liveReservesConfig?.display?.url
   ) {
-    const liveSource: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>[number] = {
+    pushSource({
       label: meta.liveReservesConfig.display.label ?? "Live reserve source",
       url: meta.liveReservesConfig.display.url,
       supports: ["capacity"],
-    };
-    return {
-      label: liveSource.label,
-      url: liveSource.url,
-      sources: [liveSource],
-    };
+    });
   }
 
   if (meta.proofOfReserves?.url) {
-    return {
+    pushSource({
       label: meta.proofOfReserves.provider ? `${meta.proofOfReserves.provider} feed` : "Reserve feed",
       url: meta.proofOfReserves.url,
-      sources: [
-        {
-          label: meta.proofOfReserves.provider ? `${meta.proofOfReserves.provider} feed` : "Reserve feed",
-          url: meta.proofOfReserves.url,
-          supports: ["capacity"],
-        },
-      ],
-    };
+      supports: ["capacity"],
+    });
   }
 
   const preferredLink = meta.links?.find(
@@ -125,18 +124,21 @@ function resolveDocs(
       link.label === "Transparency" ||
       link.label === "Website",
   );
-  if (!preferredLink) return undefined;
+  if (preferredLink) {
+    pushSource({
+      label: preferredLink.label,
+      url: preferredLink.url,
+    });
+  }
 
-  return {
-    label: preferredLink.label,
-    url: preferredLink.url,
-    sources: [
-      {
-        label: preferredLink.label,
-        url: preferredLink.url,
-      },
-    ],
-  };
+  if (sources.length === 0) return undefined;
+  if (config.capacityModel.kind === "reserve-sync-metadata" && meta.liveReservesConfig?.display?.url) {
+    return buildDocs("live-reserve-display", sources);
+  }
+  if (meta.proofOfReserves?.url) {
+    return buildDocs("proof-of-reserves", sources);
+  }
+  return buildDocs("preferred-link", sources);
 }
 
 function resolveBoundedFeeScore(feeBps: number): number {
@@ -148,7 +150,6 @@ function resolveBoundedFeeScore(feeBps: number): number {
 
 function resolveCostScore(
   costModel: RedemptionCostModel,
-  reserveSyncState?: ReserveSyncStateRecord | null,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
 ): {
@@ -161,21 +162,37 @@ function resolveCostScore(
 } {
   const feeConfidence = resolveFeeConfidence(costModel);
   const feeModelKind = resolveFeeModelKind(costModel);
-  const metadata = reserveSnapshotMetadata?.metadata ?? reserveSyncState?.metadata ?? {};
-  const liveFeeBps = coerceFiniteNumber(metadata.redemptionFeeBps);
-  const reserveUpdatedAt = reserveSnapshotMetadata?.fetchedAt
-    ?? (typeof reserveSyncState?.lastSuccessAt === "number" ? reserveSyncState.lastSuccessAt : null);
-  const isFresh = reserveUpdatedAt != null && now - reserveUpdatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
+  const liveMetadata = readRedemptionBackstopLiveMetadata(reserveSnapshotMetadata, now);
 
-  if (costModel.kind === "dynamic-or-unclear" && feeConfidence === "formula" && liveFeeBps != null) {
-    const feeBps = Math.max(0, Math.round(liveFeeBps));
+  if (
+    liveMetadata.isFresh
+    && liveMetadata.redemptionFeeBps != null
+    && costModel.kind === "dynamic-or-unclear"
+    && feeConfidence === "formula"
+  ) {
+    const feeBps = Math.max(0, Math.round(liveMetadata.redemptionFeeBps));
     return {
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
       feeConfidence,
       feeModelKind,
       ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
-      notes: isFresh ? [] : ["Live redemption fee metadata stale; using last successful sync"],
+      notes: [],
+    };
+  }
+
+  if (liveMetadata.isFresh && liveMetadata.redemptionFeeBps != null && costModel.kind === "fee-bps") {
+    const feeBps = Math.max(0, Math.round(liveMetadata.redemptionFeeBps));
+    return {
+      score: resolveBoundedFeeScore(feeBps),
+      feeBps,
+      feeConfidence,
+      feeModelKind,
+      ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
+      notes:
+        feeBps !== Math.max(0, costModel.feeBps)
+          ? ["Using fresh live redemption fee telemetry in place of the reviewed fallback bound"]
+          : [],
     };
   }
 
@@ -188,7 +205,10 @@ function resolveCostScore(
       feeConfidence,
       feeModelKind,
       ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
-      notes: [],
+      notes:
+        feeConfidence === "formula" && liveMetadata.updatedAt != null && !liveMetadata.isFresh
+          ? ["Live redemption fee telemetry stale; using reviewed fee model instead"]
+          : [],
     };
   }
 
@@ -206,7 +226,6 @@ function resolveCostScore(
 function resolveStaticFields(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
-  reserveSyncState?: ReserveSyncStateRecord | null,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
 ): RedemptionStaticFields {
@@ -221,7 +240,7 @@ function resolveStaticFields(
     feeConfidence,
     feeModelKind,
     notes,
-  } = resolveCostScore(config.costModel, reserveSyncState, reserveSnapshotMetadata, now);
+  } = resolveCostScore(config.costModel, reserveSnapshotMetadata, now);
 
   return {
     accessScore,
@@ -245,32 +264,30 @@ async function resolveCapacityFromReserveSyncMetadata(
   supplyUsd: number | null,
   fallbackRatio: number | undefined,
   now: number,
-  reserveSyncState?: ReserveSyncStateRecord | null,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
 ): Promise<CapacityResolution> {
-  const capacityConfidence = resolveCapacityConfidence({
-    kind: "reserve-sync-metadata",
-    fallbackRatio,
-  });
+  const liveCapacityConfidence: RedemptionBackstopEntry["capacityConfidence"] = "dynamic";
+  const fallbackCapacityConfidence: RedemptionBackstopEntry["capacityConfidence"] = "heuristic";
   const capacitySemantics = resolveCapacitySemantics({
     kind: "reserve-sync-metadata",
     fallbackRatio,
   });
-  const syncState = reserveSyncState !== undefined ? reserveSyncState : await getReserveSyncState(db, stablecoinId);
   const snapshotMetadata = reserveSnapshotMetadata !== undefined
     ? reserveSnapshotMetadata
     : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
-  const metadata = snapshotMetadata?.metadata ?? syncState?.metadata ?? {};
-  const immediateCapacityUsd = coerceFiniteNumber(metadata.immediateRedeemableUsd);
-  const suppliedRatio = coerceFiniteNumber(metadata.immediateRedeemableRatio);
-  const reserveUpdatedAt = snapshotMetadata?.fetchedAt
-    ?? (typeof syncState?.lastSuccessAt === "number" ? syncState.lastSuccessAt : null);
-  const isFresh = reserveUpdatedAt != null && now - reserveUpdatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
+  const liveMetadata = readRedemptionBackstopLiveMetadata(snapshotMetadata, now);
 
-  if (immediateCapacityUsd != null) {
+  if (
+    liveMetadata.isFresh
+    && (liveMetadata.immediateRedeemableUsd != null || (liveMetadata.immediateRedeemableRatio != null && supplyUsd != null))
+  ) {
+    const immediateCapacityUsd =
+      liveMetadata.immediateRedeemableUsd != null
+        ? liveMetadata.immediateRedeemableUsd
+        : (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
     const derivedRatio =
-      suppliedRatio != null
-        ? Math.max(0, Math.min(1, suppliedRatio))
+      liveMetadata.immediateRedeemableRatio != null
+        ? Math.max(0, Math.min(1, liveMetadata.immediateRedeemableRatio))
         : supplyUsd != null && supplyUsd > 0
           ? Math.max(0, Math.min(1, immediateCapacityUsd / supplyUsd))
           : null;
@@ -281,11 +298,11 @@ async function resolveCapacityFromReserveSyncMetadata(
       scoringCapacityUsd: immediateCapacityUsd,
       scoringCapacityRatio: derivedRatio,
       provider: "reserve-sync-metadata",
-      sourceMode: isFresh ? "dynamic" : "estimated",
+      sourceMode: "dynamic",
       resolutionState: "resolved",
-      capacityConfidence,
+      capacityConfidence: liveCapacityConfidence,
       capacitySemantics,
-      notes: [...(isFresh ? [] : ["Live reserve metadata stale; using last successful sync"])],
+      notes: [],
     };
   }
 
@@ -298,9 +315,13 @@ async function resolveCapacityFromReserveSyncMetadata(
       provider: "reserve-sync-fallback",
       sourceMode: "estimated",
       resolutionState: "resolved",
-      capacityConfidence,
+      capacityConfidence: fallbackCapacityConfidence,
       capacitySemantics,
-      notes: ["Live reserve metadata unavailable; using configured fallback ratio"],
+      notes: [
+        liveMetadata.updatedAt != null && !liveMetadata.isFresh
+          ? "Live reserve metadata stale; using configured fallback ratio"
+          : "Live reserve metadata unavailable; using configured fallback ratio",
+      ],
     };
   }
 
@@ -312,9 +333,13 @@ async function resolveCapacityFromReserveSyncMetadata(
     provider: "reserve-sync-metadata",
     sourceMode: "static",
     resolutionState: supplyUsd == null ? "missing-cache" : "missing-capacity",
-    capacityConfidence,
+    capacityConfidence: liveCapacityConfidence,
     capacitySemantics,
-    notes: ["Live reserve metadata unavailable"],
+    notes: [
+      liveMetadata.updatedAt != null && !liveMetadata.isFresh
+        ? "Live reserve metadata stale; fresh metadata required"
+        : "Live reserve metadata unavailable",
+    ],
   };
 }
 
@@ -392,7 +417,6 @@ async function resolveCapacity(
     supplyUsd,
     model.fallbackRatio,
     now,
-    options.reserveSyncState,
     options.reserveSnapshotMetadata,
   );
 }
@@ -427,24 +451,19 @@ export async function buildRedemptionBackstopEntry(
   now = Math.floor(Date.now() / 1000),
   options: RedemptionBackstopBuildOptions = {},
 ): Promise<RedemptionBackstopEntry> {
-  const reserveSyncState =
-    options.reserveSyncState !== undefined
-      ? options.reserveSyncState
-      : await getReserveSyncState(db, stablecoinId);
   const reserveSnapshotMetadata =
     options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
   const capacity = await resolveCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
     ...options,
-    reserveSyncState,
     reserveSnapshotMetadata,
   });
   const capacityScoring = computeCapacityScore({
     immediateCapacityUsd: capacity.scoringCapacityUsd,
     immediateCapacityRatio: capacity.scoringCapacityRatio,
   });
-  const staticFields = resolveStaticFields(stablecoinId, config, reserveSyncState, reserveSnapshotMetadata, now);
+  const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
     accessScore: staticFields.accessScore,

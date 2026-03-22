@@ -41,8 +41,7 @@ export function inferStoredCapacityConfidence(args: {
   provider: string;
   sourceMode: RedemptionSourceMode;
 }): RedemptionCapacityConfidence {
-  if (args.sourceMode === "dynamic") return "dynamic";
-  if (args.provider === "reserve-sync-metadata") return "dynamic";
+  if (args.provider === "reserve-sync-metadata" && args.sourceMode === "dynamic") return "dynamic";
   return "heuristic";
 }
 

@@ -459,6 +459,7 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
       ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: scale18ToUsd(data.totalSupply) } : {}),
       ...(buyFeeBpsValues.length > 0
         ? {
+            redemptionFeeBps: Math.max(...buyFeeBpsValues),
             buyFeeBpsMin: Math.min(...buyFeeBpsValues),
             buyFeeBpsMax: Math.max(...buyFeeBpsValues),
           }

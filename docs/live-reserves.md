@@ -84,6 +84,7 @@ Common metadata fields:
 | `supplyUsd`, `totalReserveUsd` | Adapter-level balance-sheet totals when exposed |
 | `immediateRedeemableUsd`, `immediateRedeemableRatio` | Current redeemable-capacity telemetry reused by redemption backstops |
 | `redemptionFeeBps` | Current live redemption fee telemetry when the source exposes it |
+| `buyFeeBpsMin`, `buyFeeBpsMax` | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps` |
 
 Warnings now carry both a display `severity` and an execution `effect`:
 
@@ -298,7 +299,7 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `tether` | `http-json` | `attestation-mix` | 1 |
 
 GHO-specific note:
-the `gho` adapter now values reviewed mainnet GSM backing directly from live onchain GSM state and leaves the remainder of GHO supply in an aggregated residual issuance / reserve-buffer slice. `immediateRedeemableUsd` only counts GSM modules that are not frozen or seized.
+the `gho` adapter now values reviewed mainnet GSM backing directly from live onchain GSM state and leaves the remainder of GHO supply in an aggregated residual issuance / reserve-buffer slice. `immediateRedeemableUsd` only counts GSM modules that are not frozen or seized, while `redemptionFeeBps` is normalized to the current worst tracked GSM buy fee and the raw min/max values are retained as `buyFeeBpsMin` / `buyFeeBpsMax`.
 
 Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`:
 

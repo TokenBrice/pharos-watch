@@ -826,7 +826,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 **Purpose:** Builds the current `redemption_backstop` dataset for redeemable assets and writes daily rows to `redemption_backstop_history`. This sync is deliberately separate from report-card generation so redeemability remains a first-class worker dataset with its own cron visibility, API surface, and methodology versioning.
 
-Current dynamic reserve-metadata support is used for `iusd-infinifi`, whose immediate redeemable capacity is derived from the live reserve lane’s standardized metadata (`immediateRedeemableUsd`, `immediateRedeemableRatio`). Other covered assets currently use conservative modelled capacity rules such as full-supply redeemability or configured liquid-buffer ratios, depending on route family.
+Current dynamic reserve-metadata support covers `usdo-openeden`, `gho-aave`, `wsrusd-reservoir`, and `iusd-infinifi` for immediate-capacity inputs, plus fresh live fee telemetry on reviewed routes such as `gho-aave`, `bold-liquity`, and `lusd-liquity`. These routes now require a fresh authoritative reserve snapshot; stale reserve metadata no longer stays resolved indefinitely and instead falls back conservatively or leaves the route unrated.
 
 ### sync-bluechip
 

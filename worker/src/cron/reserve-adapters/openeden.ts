@@ -1,4 +1,4 @@
-import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
@@ -97,8 +97,8 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
 
 export function adaptOpenEdenUsdo(
   payload: OpenEdenReserveCompositionResponse,
-): ReserveSlice[] {
-  return adaptOpenEdenReserveComposition(payload).slices;
+): AdapterResult {
+  return adaptOpenEdenReserveComposition(payload);
 }
 
 export async function fetchOpenEdenUsdoReserves(

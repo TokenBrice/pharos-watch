@@ -86,7 +86,7 @@ export interface ReserveSyncStateRecord {
   warningCount: number;
   warnings: LiveReserveWarning[];
   lastError: string | null;
-  metadata: Record<string, unknown>;
+  metadata: LiveReserveSnapshotMetadata;
 }
 
 export interface ReserveSyncAttemptHistoryRecord {
@@ -98,7 +98,7 @@ export interface ReserveSyncAttemptHistoryRecord {
   warningCount: number;
   warnings: LiveReserveWarning[];
   lastError: string | null;
-  metadata: Record<string, unknown>;
+  metadata: LiveReserveSnapshotMetadata;
 }
 
 export interface ReserveCompositionOverview {
@@ -164,6 +164,8 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     "immediateRedeemableUsd",
     "immediateRedeemableRatio",
     "redemptionFeeBps",
+    "buyFeeBpsMin",
+    "buyFeeBpsMax",
   ];
 
   for (const key of knownNumberKeys) {
@@ -632,7 +634,7 @@ export async function getReserveSyncState(
     warningCount: row.warning_count,
     warnings: parseWarnings(row.warnings),
     lastError: row.last_error,
-    metadata: parseJsonObject(row.metadata),
+    metadata: parseSnapshotMetadata(row.metadata),
   };
 }
 
@@ -668,7 +670,7 @@ export async function loadReserveSyncStateMap(
         warningCount: row.warning_count,
         warnings: parseWarnings(row.warnings),
         lastError: row.last_error,
-        metadata: parseJsonObject(row.metadata),
+        metadata: parseSnapshotMetadata(row.metadata),
       });
     }
   }

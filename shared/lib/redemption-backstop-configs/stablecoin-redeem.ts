@@ -15,15 +15,6 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     capacityModel: { kind: "supply-ratio", ratio: 0.4 },
     costModel: fixedFee(50, "Protocol docs describe redemption fees of up to 50 bps"),
   },
-  "honey-berachain": {
-    ...stablecoinRedeemBase,
-    costModel: documentedVariableFee(
-      "Current redeem fees are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe",
-    ),
-    notes: [
-      "Basket Mode activates when any collateral asset depegs and turns redemptions into proportional basket exits",
-    ],
-  },
   "ousd-origin-protocol": {
     ...stablecoinRedeemBase,
     costModel: fixedFee(25, "Origin docs list a 0.25% exit fee on OUSD redemptions"),

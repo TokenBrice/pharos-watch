@@ -19,7 +19,7 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
 
 describe("adaptReservoirReserves", () => {
   it("groups live balance-sheet assets into reserve slices", () => {
-    const { slices } = adaptReservoirReserves(SAMPLE_RESPONSE);
+    const { slices, immediateRedeemableUsd, supplyUsd } = adaptReservoirReserves(SAMPLE_RESPONSE);
 
     expect(slices).toEqual([
       { name: "USD1 lending markets", pct: 30, risk: "medium", coinId: "usd1-world-liberty-financial", depType: "wrapper" },
@@ -29,6 +29,8 @@ describe("adaptReservoirReserves", () => {
       { name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "wrapper" },
       { name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
     ]);
+    expect(immediateRedeemableUsd).toBe(5);
+    expect(supplyUsd).toBe(95);
   });
 
   it("returns empty slices for zero total assets", () => {

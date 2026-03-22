@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.4",
+  currentVersion: "1.5",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.5",
+      title: "Fresh live-metadata gating and clearer route provenance",
+      date: "2026-03-22",
+      effectiveAt: 1774222200,
+      summary:
+        "Reserve-backed redemption routes now stop scoring against stale live metadata, the API methodology envelope tracks stored snapshot rows, and detail surfaces disclose clearer source provenance.",
+      impact: [
+        "Reserve-sync capacity now requires a fresh authoritative live snapshot; stale metadata falls back conservatively or leaves the route unrated",
+        "GHO normalizes current tracked GSM buy fees into redemption fee telemetry, while the API methodology version now reflects the latest stored row version instead of the live code constant",
+        "Detail pages now show reviewed-vs-fallback source provenance, and Honey is modeled as a basket exit under stress-state redemption semantics",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.4",
       title: "Live Liquity fee telemetry for formula routes",

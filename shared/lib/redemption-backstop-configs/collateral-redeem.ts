@@ -6,6 +6,7 @@ import {
   fixedFee,
   LIQUITY_STYLE_REDEMPTION_FEE,
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  sourceRef,
 } from "./shared";
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -17,11 +18,19 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ...collateralRedeemBase,
     capacityModel: { kind: "supply-full", confidence: "documented-bound" },
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+    reviewedAt: "2026-03-22",
+    docs: [
+      sourceRef("Liquity V2 redemption docs", "https://docs.liquity.org/v2-faq/redemptions-and-delegation", ["route", "capacity", "fees"]),
+    ],
   },
   "lusd-liquity": {
     ...collateralRedeemBase,
     capacityModel: { kind: "supply-full", confidence: "documented-bound" },
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+    reviewedAt: "2026-03-22",
+    docs: [
+      sourceRef("Liquity redemption docs", "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions", ["route", "capacity", "fees"]),
+    ],
   },
   "feusd-felix": {
     ...collateralRedeemBase,
