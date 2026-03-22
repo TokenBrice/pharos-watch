@@ -336,33 +336,36 @@ export async function computeReserveCompositionOverview(
     };
   }
 
-  const idClause = buildInClause(configuredCoins.map((coin) => coin.id));
-  const [syncRowsResult, compositionRowsResult] = await Promise.all([
-    db
-      .prepare(
-        `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
-                last_status, warning_count, warnings, last_error, metadata
-           FROM reserve_sync_state
-          WHERE stablecoin_id IN (${idClause.sql})`,
-      )
-      .bind(...idClause.binds)
-      .all<ReserveSyncStateRow>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id, slices, fetched_at, source
-           FROM reserve_composition
-          WHERE stablecoin_id IN (${idClause.sql})`,
-      )
-      .bind(...idClause.binds)
-      .all<ReserveCompositionRow>(),
-  ]);
+  const BATCH_SIZE = 50;
+  const coinIds = configuredCoins.map((coin) => coin.id);
+  const syncById = new Map<string, ReserveSyncStateRow>();
+  const compositionById = new Map<string, ReserveCompositionRow>();
 
-  const syncById = new Map(
-    (syncRowsResult.results ?? []).map((row) => [row.stablecoin_id, row]),
-  );
-  const compositionById = new Map(
-    (compositionRowsResult.results ?? []).map((row) => [row.stablecoin_id, row]),
-  );
+  for (const batch of chunkArray(coinIds, BATCH_SIZE)) {
+    const idClause = buildInClause(batch);
+    const [syncRowsResult, compositionRowsResult] = await Promise.all([
+      db
+        .prepare(
+          `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
+                  last_status, warning_count, warnings, last_error, metadata
+             FROM reserve_sync_state
+            WHERE stablecoin_id IN (${idClause.sql})`,
+        )
+        .bind(...idClause.binds)
+        .all<ReserveSyncStateRow>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id, slices, fetched_at, source
+             FROM reserve_composition
+            WHERE stablecoin_id IN (${idClause.sql})`,
+        )
+        .bind(...idClause.binds)
+        .all<ReserveCompositionRow>(),
+    ]);
+
+    for (const row of syncRowsResult.results ?? []) syncById.set(row.stablecoin_id, row);
+    for (const row of compositionRowsResult.results ?? []) compositionById.set(row.stablecoin_id, row);
+  }
 
   let freshCoins = 0;
   let staleCoins = 0;
