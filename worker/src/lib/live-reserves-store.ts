@@ -608,7 +608,7 @@ export async function getReserveComposition(
   return parseReserveCompositionRow(row, syncState).record;
 }
 
-export async function getReserveSyncState(
+async function getReserveSyncState(
   db: D1Database,
   stablecoinId: string,
 ): Promise<ReserveSyncStateRecord | null> {
