@@ -20,8 +20,8 @@
     "branchCount": 82
   },
   "src/app/methodology/sections/core-sections.tsx": {
-    "fileLines": 1736,
-    "maxFunctionLines": 1720,
+    "fileLines": 1743,
+    "maxFunctionLines": 1718,
     "branchCount": 0
   },
   "src/app/coverage/client.tsx": {
