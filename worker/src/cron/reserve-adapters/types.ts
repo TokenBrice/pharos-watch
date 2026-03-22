@@ -1,6 +1,12 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
-import type { LiveReserveAdapterKey, LiveReserveFeedClass, LiveReserveSourceSharingMode } from "@shared/types";
+import type {
+  LiveReserveAdapterKey,
+  LiveReserveEvidenceClass,
+  LiveReserveSourceModel,
+  LiveReserveSourceSharingMode,
+} from "@shared/types";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { LiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
 export interface AdapterContext {
@@ -25,6 +31,8 @@ export type AdapterFn = (
 export interface ReserveAdapterDefinition {
   key: LiveReserveAdapterKey;
   fetch: AdapterFn;
-  feedClass: LiveReserveFeedClass;
+  sourceModel: LiveReserveSourceModel;
+  evidenceClass: LiveReserveEvidenceClass;
   sharedSourceMode: LiveReserveSourceSharingMode;
+  validation?: LiveReserveAdapterValidationPolicy;
 }

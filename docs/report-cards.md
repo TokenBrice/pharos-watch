@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.4)
+## Overall Grade (v6.5)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.4 keeps the v6.3 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough still only accepts fresh authoritative independent live reserve feeds (`dynamic-mix` or `single-bucket`), while `validated-static` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring.
+Current-version note: v6.5 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough now only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok`; `validated-static` and `weak-live-probe` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring.
 
 ## Dimensions
 
@@ -85,7 +85,7 @@ Blacklist capability is reported descriptively only and does not affect the Resi
 
 For coins with curated reserve compositions, collateral quality is computed as a weighted average of per-slice risk scores:
 
-#### Live Reserve Passthrough (v5.8, tightened in v6.2)
+#### Live Reserve Passthrough (v5.8, tightened in v6.2 and v6.5)
 
 For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
 can use the hourly live snapshot from `reserve_composition` instead of curated
@@ -93,8 +93,9 @@ can use the hourly live snapshot from `reserve_composition` instead of curated
 independent:
 
 - authoritative = fresh (< 48h), non-empty, and matched to `reserve_sync_state.last_success_at`
-- independent = adapter `feedClass` is `dynamic-mix` or `single-bucket`
-- `validated-static` feeds (for example `curated-validated` and `frax`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
+- clean = `reserve_sync_state.last_status === "ok"`; warning-bearing `degraded` snapshots stay visible on reserve detail/status surfaces but do not drive scoring
+- independent = adapter `evidenceClass` is `independent`
+- `validated-static` feeds (for example `curated-validated` and `frax`) and `weak-live-probe` feeds (for example `single-asset` and `tether`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
 
 This prevents collateral scores from drifting as protocol reserve compositions evolve.
 

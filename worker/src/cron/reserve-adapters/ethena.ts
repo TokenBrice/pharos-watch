@@ -43,11 +43,21 @@ export function listUnexpectedEthenaAssets(payload: EthenaCollateralResponse): s
 export function adaptEthenaCollateral(payload: EthenaCollateralResponse): AdapterResult {
   const bucketTotals = new Map<EthenaBucket, number>();
   let computedTotalBackingAssetsInUsd = 0;
+  let unknownExposureUsd = 0;
+  const knownAssets = new Set([
+    ...ETHENA_STABLE_ASSETS,
+    ...ETHENA_BTC_ASSETS,
+    ...ETHENA_ETH_ASSETS,
+    ...ETHENA_OTHER_ASSETS,
+  ]);
 
   for (const row of payload.collateral) {
     if (!Number.isFinite(row.usdAmount) || row.usdAmount <= 0) continue;
     computedTotalBackingAssetsInUsd += row.usdAmount;
     const bucket = bucketForEthenaAsset(row.asset);
+    if (!knownAssets.has(row.asset)) {
+      unknownExposureUsd += row.usdAmount;
+    }
     bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + row.usdAmount);
   }
 
@@ -96,6 +106,11 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
       computedTotalBackingAssetsInUsd,
       totalBackingAssetsInUsd: payload.totalBackingAssetsInUsd,
       lastUpdatedAt,
+      sourceTimestamp: lastUpdatedAt,
+      unknownExposurePct:
+        computedTotalBackingAssetsInUsd > 0
+          ? (unknownExposureUsd / computedTotalBackingAssetsInUsd) * 100
+          : 0,
     },
   };
 }

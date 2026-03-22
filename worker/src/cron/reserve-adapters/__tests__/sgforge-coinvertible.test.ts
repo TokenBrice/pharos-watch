@@ -22,13 +22,14 @@ describe("adaptSgForgeCoinvertible", () => {
     expect(result.slices).toEqual([
       { name: "Euro cash deposits at Societe Generale", pct: 100, risk: "very-low" },
     ]);
-    expect(result.metadata).toEqual({
+    expect(result.metadata).toMatchObject({
       coinType: "eur",
       circulationAmount: 92476840.64,
       cashAmount: 92476840.64,
       bankName: "Societe Generale",
       bankPct: 100,
       lastUpdate: "20/03/26",
+      sourceTimestamp: Date.UTC(2026, 2, 20) / 1000,
     });
   });
 

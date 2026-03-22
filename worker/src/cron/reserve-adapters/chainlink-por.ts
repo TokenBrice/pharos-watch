@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
 import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
@@ -24,11 +25,7 @@ interface ChainlinkPorData {
 }
 
 function readParams(config: LiveReservesConfig): ChainlinkPorParams {
-  const params = (config.params ?? {}) as Partial<ChainlinkPorParams>;
-  if (!params.porFeedAddress || !params.assetLabel || !params.assetRisk) {
-    throw new Error("chainlink-por adapter requires params.porFeedAddress, assetLabel, and assetRisk");
-  }
-  return params as ChainlinkPorParams;
+  return parseLiveReserveAdapterParams("chainlink-por", config.params);
 }
 
 /** Pure transformation from decoded Chainlink data + params → AdapterResult. Exported for testing. */

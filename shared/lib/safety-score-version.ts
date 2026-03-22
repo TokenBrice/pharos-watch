@@ -1,9 +1,25 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "6.4",
+  currentVersion: "6.5",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.5",
+      title: "Clean independent live reserve passthrough",
+      date: "2026-03-22",
+      effectiveAt: 1774195200,
+      summary:
+        "Collateral-quality passthrough now requires clean independent live reserve evidence, excluding weak probes and warning-bearing snapshots from Safety Score scoring.",
+      impact: [
+        "Live collateral passthrough now requires a fresh authoritative snapshot whose latest reserve sync status is ok",
+        "The live reserve adapter registry now separates reserve shape (sourceModel) from evidence strength (evidenceClass)",
+        "single-asset and tether style feeds now remain detail/status-visible only; they no longer override curated collateral scoring",
+        "Source-age and material unknown-exposure warnings now automatically keep affected snapshots out of collateral passthrough",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.4",
       title: "Live Liquity redemption fee telemetry",

@@ -61,7 +61,7 @@ if (!adapterBlock) {
   console.error("FATAL: Could not find LIVE_RESERVE_ADAPTER_DEFINITIONS in shared/lib/live-reserve-adapters.ts");
   process.exit(1);
 }
-const adapterCount = (adapterBlock[1].match(/^\s+(?:"[a-z][a-z0-9-]+"|\w+)\s*:/gm) || []).length;
+const adapterCount = (adapterBlock[1].match(/^ {2}(?:"[a-z][a-z0-9-]+"|\w+)\s*:/gm) || []).length;
 
 // 4. Bluechip slugs
 const bluechipSrc = readFileSync(

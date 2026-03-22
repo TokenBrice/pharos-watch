@@ -1,4 +1,5 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput } from "./helpers";
@@ -24,11 +25,7 @@ interface PositionsApiParams {
 }
 
 function readParams(config: LiveReservesConfig): PositionsApiParams {
-  const params = (config.params ?? {}) as Partial<PositionsApiParams>;
-  if (!params.pricesUrl) {
-    throw new Error("collateral-positions-api adapter requires params.pricesUrl");
-  }
-  return params as PositionsApiParams;
+  return parseLiveReserveAdapterParams("collateral-positions-api", config.params);
 }
 
 /**
@@ -94,6 +91,7 @@ export function adaptCollateralPositions(
   const warnings: LiveReserveWarning[] = [];
   const values: Array<{ name: string; usd: number; risk: ReserveSlice["risk"]; coinId?: string }> = [];
   const missingPriceSymbols = new Set<string>();
+  let unknownExposureUsd = 0;
 
   for (const entry of Object.values(details)) {
     const totalBalance = entry.positions.reduce((acc, position) => {
@@ -118,6 +116,7 @@ export function adaptCollateralPositions(
         message: `Unmapped collateral symbol: ${entry.symbol} (inferred risk: ${risk})`,
         severity: "warning",
       });
+      unknownExposureUsd += totalBalance * usdPrice;
     }
 
     values.push({
@@ -164,6 +163,11 @@ export function adaptCollateralPositions(
   return {
     slices: normalizeSlices(slices),
     ...(warnings.length > 0 ? { warnings } : {}),
+    metadata: {
+      assetCount: values.length,
+      unknownAssetCount: warnings.length,
+      unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
+    },
   };
 }
 

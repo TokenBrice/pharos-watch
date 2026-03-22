@@ -1,6 +1,12 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromPercentages } from "./helpers";
+import {
+  fetchTextWithRetry,
+  getAdapterTimeout,
+  parseTimestampLikeToUnixSeconds,
+  requireHtmlInput,
+  slicesFromPercentages,
+} from "./helpers";
 
 const FDUSD_LABEL_MAP: Record<string, string> = {
   "US Treasury Bills": "U.S. Treasury Bills",
@@ -44,6 +50,7 @@ export function adaptFdusdTransparency(html: string): AdapterResult {
   }
 
   const asOf = parseFdusdAsOf(html);
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(asOf);
 
   return {
     slices: slicesFromPercentages(
@@ -57,6 +64,7 @@ export function adaptFdusdTransparency(html: string): AdapterResult {
     metadata: {
       sliceCount: entries.length,
       ...(asOf ? { asOf } : {}),
+      ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
     },
   };
 }

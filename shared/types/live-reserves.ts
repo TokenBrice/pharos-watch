@@ -2,8 +2,10 @@ import type { ReserveSlice } from "./core";
 
 export type {
   LiveReserveAdapterKey,
+  LiveReserveEvidenceClass,
   LiveReserveFeedClass,
   LiveReserveInput,
+  LiveReserveSourceModel,
   LiveReserveSemantics,
   LiveReserveSourceSharingMode,
   LiveReserveWarning,

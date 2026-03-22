@@ -66,12 +66,17 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
 const ADAPTERS = Object.fromEntries(
   Object.entries(LIVE_RESERVE_ADAPTER_DEFINITIONS).map(([key, definition]) => [
     key,
-    {
+    (() => {
+      const validation = "validation" in definition ? definition.validation : undefined;
+      return {
       key,
       fetch: ADAPTER_FNS[key as LiveReserveAdapterKey],
-      feedClass: definition.feedClass,
+      sourceModel: definition.sourceModel,
+      evidenceClass: definition.evidenceClass,
       sharedSourceMode: definition.sharedSourceMode,
-    },
+      ...(validation ? { validation } : {}),
+    };
+    })(),
   ]),
 ) as Record<LiveReserveAdapterKey, ReserveAdapterDefinition>;
 

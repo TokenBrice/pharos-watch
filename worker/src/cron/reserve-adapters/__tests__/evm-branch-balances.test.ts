@@ -346,7 +346,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     };
 
     await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
-      "requires params.branches",
+      "evm-branch-balances adapter params invalid",
     );
   });
 
@@ -362,7 +362,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     };
 
     await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
-      "requires params.branches",
+      "evm-branch-balances adapter params invalid",
     );
   });
 
@@ -388,7 +388,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     };
 
     await expect(fetchEvmBranchBalancesReserves(coin, config, signal)).rejects.toThrow(
-      "invalid priceUsd",
+      "evm-branch-balances adapter params invalid",
     );
   });
 });

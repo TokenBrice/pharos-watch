@@ -1,7 +1,8 @@
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import {
   getLiveReserveAdapterDefinition,
-  type LiveReserveFeedClass,
+  type LiveReserveEvidenceClass,
+  type LiveReserveSourceModel,
 } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { LiveReserveWarning, ReserveSlice, ReserveSyncStateView, StablecoinMeta } from "@shared/types";
@@ -10,7 +11,7 @@ import { chunkArray } from "./collections";
 import { decodeJsonString } from "./cache-json";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * 86400;
-const INDEPENDENT_LIVE_RESERVE_FEED_CLASSES: LiveReserveFeedClass[] = ["dynamic-mix", "single-bucket"];
+const SCORING_LIVE_RESERVE_EVIDENCE_CLASSES: LiveReserveEvidenceClass[] = ["independent"];
 
 export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
 
@@ -70,7 +71,8 @@ export interface AuthoritativeReserveSnapshot {
   slices: ReserveSlice[];
   fetchedAt: number;
   source: string;
-  feedClass: LiveReserveFeedClass;
+  sourceModel: LiveReserveSourceModel;
+  evidenceClass: LiveReserveEvidenceClass;
 }
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
@@ -427,6 +429,15 @@ export async function computeReserveCompositionOverview(
     const hasSnapshot = hasConsistentSnapshotRow(sync, composition);
     const successAt = hasSnapshot ? sync!.last_success_at : null;
 
+    if (!hasSnapshot) {
+      if (sync?.last_status === "error") {
+        errorCoins++;
+        continue;
+      }
+      missingCoins++;
+      continue;
+    }
+
     if (!successAt || !composition) {
       missingCoins++;
       continue;
@@ -487,7 +498,9 @@ async function loadFreshAuthoritativeReserveSnapshots(
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
   options?: {
     minSlices?: number;
-    feedClasses?: readonly LiveReserveFeedClass[];
+    sourceModels?: readonly LiveReserveSourceModel[];
+    evidenceClasses?: readonly LiveReserveEvidenceClass[];
+    requireOkStatus?: boolean;
   },
 ): Promise<Map<string, AuthoritativeReserveSnapshot>> {
   const configuredCoins = getConfiguredLiveReserveCoins();
@@ -496,7 +509,8 @@ async function loadFreshAuthoritativeReserveSnapshots(
     loadReserveSyncStateMap(db, coinIds),
     loadReserveCompositionMap(db, coinIds),
   ]);
-  const allowedFeedClasses = options?.feedClasses ? new Set(options.feedClasses) : null;
+  const allowedSourceModels = options?.sourceModels ? new Set(options.sourceModels) : null;
+  const allowedEvidenceClasses = options?.evidenceClasses ? new Set(options.evidenceClasses) : null;
   const minSlices = options?.minSlices ?? 1;
   const snapshots = new Map<string, AuthoritativeReserveSnapshot>();
 
@@ -507,11 +521,15 @@ async function loadFreshAuthoritativeReserveSnapshots(
       ? composition
       : null;
     if (!authoritativeSnapshot) continue;
+    if (options?.requireOkStatus && syncState?.lastStatus !== "ok") continue;
     if (now - authoritativeSnapshot.fetchedAt > freshnessSec) continue;
     if (authoritativeSnapshot.slices.length < minSlices) continue;
 
-    const feedClass = getLiveReserveAdapterDefinition(coin.liveReservesConfig!.adapter).feedClass;
-    if (allowedFeedClasses && !allowedFeedClasses.has(feedClass)) {
+    const { sourceModel, evidenceClass } = getLiveReserveAdapterDefinition(coin.liveReservesConfig!.adapter);
+    if (allowedSourceModels && !allowedSourceModels.has(sourceModel)) {
+      continue;
+    }
+    if (allowedEvidenceClasses && !allowedEvidenceClasses.has(evidenceClass)) {
       continue;
     }
 
@@ -520,7 +538,8 @@ async function loadFreshAuthoritativeReserveSnapshots(
       slices: authoritativeSnapshot.slices,
       fetchedAt: authoritativeSnapshot.fetchedAt,
       source: authoritativeSnapshot.source,
-      feedClass,
+      sourceModel,
+      evidenceClass,
     });
   }
 
@@ -537,7 +556,9 @@ async function loadFreshLiveReserveMap(
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
   options?: {
     minSlices?: number;
-    feedClasses?: readonly LiveReserveFeedClass[];
+    sourceModels?: readonly LiveReserveSourceModel[];
+    evidenceClasses?: readonly LiveReserveEvidenceClass[];
+    requireOkStatus?: boolean;
   },
 ): Promise<Map<string, ReserveSlice[]>> {
   const snapshots = await loadFreshAuthoritativeReserveSnapshots(db, now, freshnessSec, options);
@@ -552,7 +573,8 @@ export async function loadFreshIndependentLiveReserveMap(
 ): Promise<Map<string, ReserveSlice[]>> {
   return loadFreshLiveReserveMap(db, now, freshnessSec, {
     minSlices,
-    feedClasses: INDEPENDENT_LIVE_RESERVE_FEED_CLASSES,
+    evidenceClasses: SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
+    requireOkStatus: true,
   });
 }
 

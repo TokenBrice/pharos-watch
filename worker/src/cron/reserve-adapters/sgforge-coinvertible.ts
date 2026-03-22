@@ -1,6 +1,12 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput } from "./helpers";
+import {
+  fetchTextWithRetry,
+  getAdapterTimeout,
+  parseTimestampLikeToUnixSeconds,
+  requireHtmlInput,
+} from "./helpers";
 
 type SgForgeCoinType = "eur" | "usd";
 
@@ -17,8 +23,7 @@ function normalizeLocalizedNumber(raw: string): number {
 }
 
 function readCoinType(config: LiveReservesConfig): SgForgeCoinType {
-  const params = config.params as Record<string, unknown> | undefined;
-  const coinType = params?.coinType;
+  const coinType = parseLiveReserveAdapterParams("sgforge-coinvertible", config.params).coinType;
   if (coinType === "eur" || coinType === "usd") {
     return coinType;
   }
@@ -59,6 +64,7 @@ export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType
   const bankName = bankMatch[1]?.replace(/\s+/g, " ").trim();
   const bankPct = Number.parseFloat(bankMatch[2] ?? "");
   const cashAmount = normalizeLocalizedNumber(cashMatch[1]);
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(lastUpdate ?? null);
 
   if (!bankName || !Number.isFinite(bankPct) || bankPct <= 0) {
     throw new Error("sgforge-coinvertible: incomplete reserve-bank metadata");
@@ -79,6 +85,7 @@ export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType
       bankName,
       bankPct,
       ...(lastUpdate ? { lastUpdate } : {}),
+      ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
     },
   };
 }

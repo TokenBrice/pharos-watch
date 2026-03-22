@@ -13,7 +13,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
 
-This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8, tightened in v6.2) collateral quality scoring in report cards. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
+This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8, tightened in v6.2 and v6.5) collateral quality scoring in report cards. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
 
 ---
 
@@ -40,12 +40,15 @@ The shared registry in `shared/lib/live-reserve-adapters.ts` defines two importa
 
 | Property | Meaning |
 |----------|---------|
-| `feedClass` | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve feeds |
+| `sourceModel` | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve shapes |
+| `evidenceClass` | Distinguishes scoring-eligible `independent` feeds from `static-validated` and `weak-live-probe` feeds |
 | `sharedSourceMode` | Distinguishes per-coin fetches (`none`) from explicitly source-invariant result sharing (`source-invariant`) |
 
-- `dynamic-mix`: independently measured reserve compositions that can drive both the reserve detail card and report-card collateral quality.
-- `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they do not count as independent live collateral inputs for report-card scoring.
-- `single-bucket`: one-slice live proofs/attestations. These are independent live inputs and can drive report-card collateral quality even with only one slice.
+- `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
+- `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.
+- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `btcfi`, `sgforge-coinvertible`), while weak liveness-only probes such as `single-asset` and generic attestation summaries such as `tether` are tagged `weak-live-probe`.
+- `independent`: scoring-eligible live evidence when the snapshot is fresh, authoritative, and the most recent sync status is `ok`.
+- `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring.
 - `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
 
 ### Fallback Inputs
@@ -86,6 +89,13 @@ that all slice `risk` values are valid enum members, all `pct` values are finite
 the slice list is non-empty, and the sum is within 2 points of 100%. Invalid output is treated as
 an error. Sum deviation above 0.5 points is propagated as a warning, while deviation above 2 points
 hard-fails the adapter output.
+
+Adapters can also declare shared validation policy in the registry:
+
+- `maxSourceAgeSec`: if adapter metadata includes `sourceTimestamp` and the upstream disclosure is older than the policy allows, the sync is marked `degraded`
+- `maxUnknownExposurePct`: if adapter metadata includes `unknownExposurePct` and unmapped reserve exposure is material, the sync is marked `degraded`
+
+These policy warnings still preserve the last-known live snapshot for detail/status surfaces, but they keep the snapshot out of report-card collateral passthrough because scoring only accepts independent snapshots whose latest sync state is `ok`.
 
 **Circuit breaker recording:** Breaker outcomes are deferred until the entire sync loop
 completes, recording the worst outcome per breaker key (failure trumps success). This
@@ -142,8 +152,7 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 - A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at`
 - Empty slice arrays never count as a valid live snapshot
 - `loadFreshAuthoritativeReserveSnapshots()` is the canonical resolver used by `GET /api/stablecoin-reserves/:id` and reserve-sync status surfaces
-- `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to independent feed classes (`dynamic-mix`, `single-bucket`) for report-card collateral quality, reserve drift, and fallback tracking
-- `loadFreshMultiSliceLiveReserveMap()` remains available for analyses that explicitly require `>= 2` slices
+- `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent` **and** `reserve_sync_state.last_status = "ok"` for report-card collateral quality, reserve drift, and fallback tracking
 
 `computeReserveCompositionOverview()` aggregates the status-card summary used by `/status`:
 
@@ -155,6 +164,8 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 - `errorCoins`
 - `lastSuccessAt`
 - `oldestFreshAgeSec`
+
+`errorCoins` includes active adapter failures even before a coin has ever produced a successful live snapshot; those rows no longer remain hidden inside `missingCoins`.
 
 ---
 
@@ -274,7 +285,7 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 ## Scope Boundaries
 
 - Live reserve sync is detail-page and status-surface infrastructure, not a replacement for curated reserve metadata everywhere else.
-- [Risk Lab](./report-cards.md) uses fresh authoritative independent live reserve snapshots for collateral quality scoring when available. In practice this means `dynamic-mix` and `single-bucket` feeds can override curated collateral scoring, while `validated-static` feeds remain detail-card/status data only. Dependency inference, blacklist-inherited checks, and all other scoring dimensions still use curated reserve metadata.
+- [Risk Lab](./report-cards.md) uses fresh authoritative independent live reserve snapshots for collateral quality scoring when available. In practice this now means: `dynamic-mix` adapters can qualify when their latest sync state is `ok`, only a subset of `single-bucket` adapters carry `evidenceClass = independent`, and `validated-static` / `weak-live-probe` feeds remain detail-card/status data only. Dependency inference, blacklist-inherited checks, and all other scoring dimensions still use curated reserve metadata.
 - `isBlacklistable()` inherited detection still uses curated `meta.reserves` (which carry `coinId` links). Most live adapter slices lack `coinId`, so inherited blacklist scoring cannot use live data even when collateral quality is using an independent live snapshot. The collateral drift alert flags when live collateral quality diverges materially from curated metadata.
 - [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
 
@@ -285,7 +296,7 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 | File | Role |
 |------|------|
 | `shared/types/live-reserves.ts` | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types |
-| `shared/lib/live-reserve-adapters.ts` | Shared adapter registry, feed classes, and config schemas |
+| `shared/lib/live-reserve-adapters.ts` | Shared adapter registry, source/evidence classes, validation policy, and config schemas |
 | `shared/lib/stablecoins/index.ts` | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/*.json` |
 | `worker/src/cron/sync-live-reserves.ts` | Hourly sync orchestration and cron result statuses |
 | `worker/src/cron/reserve-adapters/index.ts` | Adapter registry |

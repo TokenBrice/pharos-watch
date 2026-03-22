@@ -405,6 +405,59 @@ export function decimalNumberFromBigInt(value: bigint, decimals: number): number
   return Number(formatted);
 }
 
+export function parsePositiveNumericLike(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  return null;
+}
+
+function normalizeUnixTimestampSeconds(value: number): number | null {
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.floor(value >= 1_000_000_000_000 ? value / 1000 : value);
+}
+
+export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
+  if (typeof value === "number") {
+    return normalizeUnixTimestampSeconds(value);
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (/^\d+$/.test(trimmed)) {
+    return normalizeUnixTimestampSeconds(Number(trimmed));
+  }
+
+  const shortDateMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+  if (shortDateMatch) {
+    const [, day, month, year] = shortDateMatch;
+    const parsed = Date.UTC(2000 + Number(year), Number(month) - 1, Number(day));
+    return normalizeUnixTimestampSeconds(parsed);
+  }
+
+  const longDateOnlyMatch = trimmed.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),\s*(\d{4})$/);
+  if (longDateOnlyMatch) {
+    const parsed = Date.parse(`${trimmed} 00:00:00 UTC`);
+    return Number.isFinite(parsed) ? normalizeUnixTimestampSeconds(parsed) : null;
+  }
+
+  const parsed = Date.parse(trimmed);
+  return Number.isFinite(parsed) ? normalizeUnixTimestampSeconds(parsed) : null;
+}
+
 export function slicesFromPercentages(
   values: Array<{
     pct: number;

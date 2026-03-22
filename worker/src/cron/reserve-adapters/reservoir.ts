@@ -177,6 +177,12 @@ export async function fetchReservoirReserves(
       totalLiabilities: payload.totalLiabilities,
       equity: payload.equity,
       unknownAssetCount: adapted.unknownAssets.length,
+      unknownExposurePct:
+        Number(payload.totalAssets) > 0
+          ? adapted.slices
+            .filter((slice) => slice.name === "Unmapped reserve positions")
+            .reduce((sum, slice) => sum + slice.pct, 0)
+          : 0,
       ...(totalLiabilitiesUsd != null
         ? {
             supplyUsd: totalLiabilitiesUsd,

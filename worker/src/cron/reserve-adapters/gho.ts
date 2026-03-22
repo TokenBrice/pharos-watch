@@ -5,9 +5,16 @@ import type {
   ReserveSlice,
   StablecoinMeta,
 } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult } from "./evm";
-import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput, slicesFromValues } from "./helpers";
+import {
+  decimalNumberFromBigInt,
+  fetchOnchainRawCall,
+  fetchOnchainUint256,
+  requireOnchainInput,
+  slicesFromValues,
+} from "./helpers";
 
 const GHO_TOKEN = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f";
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
@@ -72,7 +79,7 @@ function normalizeAddress(value: string): string {
 }
 
 function scale18ToUsd(value: bigint): number {
-  return Number(value / 10n ** 12n) / 1_000_000;
+  return decimalNumberFromBigInt(value, 18);
 }
 
 function encodeAddressArg(address: string): string {
@@ -152,10 +159,7 @@ function decodeCurrentBacking(raw: string): { excess: bigint; deficit: bigint } 
 }
 
 function readParams(config: LiveReservesConfig): GhoParams {
-  const params = (config.params ?? {}) as Partial<GhoParams>;
-  if (!Array.isArray(params.gsmModules) || params.gsmModules.length === 0) {
-    throw new Error("gho adapter requires params.gsmModules");
-  }
+  const params = parseLiveReserveAdapterParams("gho", config.params);
   return {
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,

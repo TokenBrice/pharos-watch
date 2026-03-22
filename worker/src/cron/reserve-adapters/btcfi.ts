@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInput } from "./helpers";
 
@@ -18,11 +19,7 @@ interface BtcfiParams {
 }
 
 function readParams(config: LiveReservesConfig): BtcfiParams {
-  const params = (config.params ?? {}) as Partial<BtcfiParams>;
-  if (!params.handlersUrl) {
-    throw new Error("btcfi adapter requires params.handlersUrl");
-  }
-  return params as BtcfiParams;
+  return parseLiveReserveAdapterParams("btcfi", config.params);
 }
 
 export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]): ReserveSlice[] {

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { validateAdapterOutput } from "../reserve-adapters/validate";
 
 describe("validateAdapterOutput", () => {
@@ -100,5 +101,50 @@ describe("validateAdapterOutput", () => {
     expect(result.valid).toBe(false);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0].code).toBe("pct-sum-deviation");
+  });
+
+  it("warns when upstream source data is older than the adapter policy allows", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { sourceTimestamp: 1_000 },
+      },
+      {
+        adapter: {
+          key: "ethena",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
+        },
+        now: 1_000 + 4 * 86400,
+      },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === "stale-source-data")).toBe(true);
+  });
+
+  it("warns when material unknown exposure exceeds the adapter threshold", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { unknownExposurePct: 8 },
+      },
+      {
+        adapter: {
+          key: "reservoir",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.sharedSourceMode,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === "material-unknown-exposure")).toBe(true);
   });
 });

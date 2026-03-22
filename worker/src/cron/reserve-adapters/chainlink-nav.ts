@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
 import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
@@ -42,13 +43,7 @@ function formatUnits(value: bigint, decimals: number): string {
 }
 
 function readParams(config: LiveReservesConfig): ChainlinkNavParams {
-  const params = (config.params ?? {}) as Partial<ChainlinkNavParams>;
-  if (!params.oracleAddress || !params.tokenAddress || !params.assetLabel || !params.assetRisk) {
-    throw new Error(
-      "chainlink-nav adapter requires params.oracleAddress, tokenAddress, assetLabel, and assetRisk",
-    );
-  }
-  return params as ChainlinkNavParams;
+  return parseLiveReserveAdapterParams("chainlink-nav", config.params);
 }
 
 /** Pure transformation from decoded NAV oracle data + params → AdapterResult. Exported for testing. */

@@ -53,12 +53,18 @@ describe("syncLiveReserves", () => {
     }>,
   ) {
     const fetch = vi.fn(fetchImpl);
-    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => ({
-      key: adapterKey,
-      fetch,
-      feedClass: LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].feedClass,
-      sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].sharedSourceMode,
-    }));
+    getReserveAdapterMock.mockImplementation((adapterKey: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS) => {
+      const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+      const validation = "validation" in definition ? definition.validation : undefined;
+      return {
+        key: adapterKey,
+        fetch,
+        sourceModel: definition.sourceModel,
+        evidenceClass: definition.evidenceClass,
+        sharedSourceMode: definition.sharedSourceMode,
+        ...(validation ? { validation } : {}),
+      };
+    });
     return fetch;
   }
 

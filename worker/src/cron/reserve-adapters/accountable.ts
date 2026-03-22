@@ -1,6 +1,12 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import {
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  parseTimestampLikeToUnixSeconds,
+  requireJsonInputFromConfig,
+  slicesFromValues,
+} from "./helpers";
 import { toFiniteNumber } from "../../lib/number-utils";
 
 interface AccountableDashboardResponse {
@@ -151,6 +157,7 @@ function adaptAccountableDashboard(
     typeof payload.data.reserves.total_reserves === "object"
       ? payload.data.reserves.total_reserves?.value
       : payload.data.reserves.total_reserves;
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.data.ts);
 
   return {
     slices,
@@ -161,6 +168,7 @@ function adaptAccountableDashboard(
       verifiability: payload.data.reserves.verifiability,
       totalReserves,
       dashboardTimestamp: payload.data.ts,
+      ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
     },
   };
 }

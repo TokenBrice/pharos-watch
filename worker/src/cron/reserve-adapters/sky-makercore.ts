@@ -99,6 +99,10 @@ export async function fetchSkyMakercoreReserves(
 
   const totalUsd = Object.values(tokens).reduce((sum, v) => sum + (Number.isFinite(v) ? v : 0), 0);
   const unknown = listUnexpectedTokens(tokens);
+  const unknownExposureUsd = unknown.reduce((sum, token) => {
+    const value = tokens[token];
+    return sum + (Number.isFinite(value) && value > 0 ? value : 0);
+  }, 0);
   const warnings: LiveReserveWarning[] = unknown.map((token) => ({
     code: "unknown-asset" as const,
     message: `Sky collateral token bucketed into other: ${token}`,
@@ -111,6 +115,8 @@ export async function fetchSkyMakercoreReserves(
       tokenCount: Object.keys(tokens).length,
       totalCollateralUsd: Math.round(totalUsd),
       snapshotDate: latest.date,
+      sourceTimestamp: latest.date,
+      unknownExposurePct: totalUsd > 0 ? (unknownExposureUsd / totalUsd) * 100 : 0,
     },
     ...(warnings.length > 0 ? { warnings } : {}),
   };

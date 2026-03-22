@@ -205,7 +205,7 @@ export async function syncLiveReserves(
     try {
       const result = await runAdapter(coin, config, adapter);
 
-      const validation = validateAdapterOutput(result, { feedClass: adapter.feedClass });
+      const validation = validateAdapterOutput(result, { adapter, now });
       if (!validation.valid) {
         const msg = validation.warnings.map(w => w.message).join("; ");
         console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${msg}`);
@@ -254,7 +254,8 @@ export async function syncLiveReserves(
             warnings,
             metadata: {
               ...(result.metadata ?? {}),
-              adapterFeedClass: adapter.feedClass,
+              adapterSourceModel: adapter.sourceModel,
+              adapterEvidenceClass: adapter.evidenceClass,
               adapterKey: adapter.key as LiveReserveAdapterKey,
             },
             lastSuccessAt: now,

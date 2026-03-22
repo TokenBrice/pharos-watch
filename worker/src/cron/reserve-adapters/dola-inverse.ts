@@ -57,11 +57,17 @@ export function resolveBaseSymbol(market: FirmMarket): string {
 export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
   const bucketTotals = new Map<DolaBucket, number>();
   const seenSymbols = new Set<string>();
+  let totalDebt = 0;
+  let unknownDebt = 0;
 
   for (const market of payload.markets) {
     if (!Number.isFinite(market.totalDebt) || market.totalDebt <= 0) continue;
     const baseSymbol = resolveBaseSymbol(market);
     seenSymbols.add(baseSymbol);
+    totalDebt += market.totalDebt;
+    if (!KNOWN_ASSETS.has(baseSymbol)) {
+      unknownDebt += market.totalDebt;
+    }
     const bucket = bucketForAsset(baseSymbol);
     bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + market.totalDebt);
   }
@@ -102,6 +108,8 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
       activeMarkets,
       totalMarkets: payload.markets.length,
       timestamp: payload.timestamp,
+      sourceTimestamp: payload.timestamp,
+      unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
     },
   };
 }

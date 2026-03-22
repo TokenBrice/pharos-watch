@@ -41,9 +41,10 @@ describe("adaptFdusdTransparency", () => {
       { name: "Bank Deposits", pct: 6, risk: "very-low" },
       { name: "Overnight Reverse Repos", pct: 2, risk: "very-low" },
     ]);
-    expect(result.metadata).toEqual({
+    expect(result.metadata).toMatchObject({
       sliceCount: 4,
       asOf: "Feb 28, 2026",
+      sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
     });
   });
 

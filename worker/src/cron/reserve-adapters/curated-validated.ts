@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { probeOnchainTotalSupply } from "./helpers";
 
@@ -18,7 +19,7 @@ export async function fetchCuratedValidatedReserves(
     throw new Error("curated-validated adapter requires coin.reserves to be defined and non-empty");
   }
 
-  const params = (config.params ?? {}) as { rpcUrl?: string; fallbackRpcUrl?: string };
+  const params = parseLiveReserveAdapterParams("curated-validated", config.params);
   const totalSupply = await probeOnchainTotalSupply(
     coin, config.inputs.primary, signal, "curated-validated", ctx, params.rpcUrl, params.fallbackRpcUrl,
   );

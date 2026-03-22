@@ -47,7 +47,7 @@ function classifySymbol(symbol: string): { name: string; risk: ReserveSlice["ris
   return null;
 }
 
-export function adaptCrvUsd(payload: CurveMarketsPayload): { slices: ReserveSlice[]; warnings: LiveReserveWarning[] } {
+export function adaptCrvUsd(payload: CurveMarketsPayload): AdapterResult {
   const markets = payload.chains?.ethereum?.data ?? [];
   const buckets = new Map<string, { usd: number; risk: ReserveSlice["risk"] }>();
   const warnings: LiveReserveWarning[] = [];
@@ -97,7 +97,14 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): { slices: ReserveSlic
     })),
   );
 
-  return { slices, warnings };
+  return {
+    slices,
+    warnings,
+    metadata: {
+      marketCount: markets.length,
+      unknownExposurePct: totalWithUnknown > 0 ? (unknownUsd / totalWithUnknown) * 100 : 0,
+    },
+  };
 }
 
 export async function fetchCrvUsdReserves(

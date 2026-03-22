@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { getAdapterTimeout, isReserveRisk, normalizeSlices, slicesFromValues } from "../helpers";
+import {
+  getAdapterTimeout,
+  isReserveRisk,
+  normalizeSlices,
+  parsePositiveNumericLike,
+  parseTimestampLikeToUnixSeconds,
+  slicesFromValues,
+} from "../helpers";
 import type { LiveReservesConfig, ReserveSlice } from "@shared/types";
 
 describe("normalizeSlices", () => {
@@ -166,5 +173,34 @@ describe("getAdapterTimeout", () => {
 
   it("ignores non-numeric timeoutMs", () => {
     expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: "fast" } })).toBe(10_000);
+  });
+});
+
+describe("parsePositiveNumericLike", () => {
+  it("accepts finite positive numbers and numeric strings", () => {
+    expect(parsePositiveNumericLike(42)).toBe(42);
+    expect(parsePositiveNumericLike("42.5")).toBe(42.5);
+  });
+
+  it("rejects zero, negatives, blank strings, and non-scalars", () => {
+    expect(parsePositiveNumericLike(0)).toBeNull();
+    expect(parsePositiveNumericLike("-1")).toBeNull();
+    expect(parsePositiveNumericLike("")).toBeNull();
+    expect(parsePositiveNumericLike({ value: 1 })).toBeNull();
+  });
+});
+
+describe("parseTimestampLikeToUnixSeconds", () => {
+  it("parses unix seconds, unix milliseconds, natural-language dates, and dd/mm/yy dates", () => {
+    expect(parseTimestampLikeToUnixSeconds(1_773_316_982)).toBe(1_773_316_982);
+    expect(parseTimestampLikeToUnixSeconds("1773337492853")).toBe(1_773_337_492);
+    expect(parseTimestampLikeToUnixSeconds("Feb 28, 2026")).toBe(Date.UTC(2026, 1, 28) / 1000);
+    expect(parseTimestampLikeToUnixSeconds("20/03/26")).toBe(Date.UTC(2026, 2, 20) / 1000);
+  });
+
+  it("returns null for unsupported timestamp values", () => {
+    expect(parseTimestampLikeToUnixSeconds("")).toBeNull();
+    expect(parseTimestampLikeToUnixSeconds("not-a-date")).toBeNull();
+    expect(parseTimestampLikeToUnixSeconds(null)).toBeNull();
   });
 });

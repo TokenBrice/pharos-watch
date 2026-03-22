@@ -127,7 +127,7 @@ describe("fetchSingleAssetReserves", () => {
     };
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
-      .rejects.toThrow("invalid risk");
+      .rejects.toThrow("single-asset adapter params invalid");
   });
 
   it("throws when label is missing", async () => {
@@ -140,7 +140,7 @@ describe("fetchSingleAssetReserves", () => {
     };
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
-      .rejects.toThrow("params.label and params.risk");
+      .rejects.toThrow("single-asset adapter params invalid");
   });
 
   it("returns 100% slice in onchain mode when probe succeeds", async () => {

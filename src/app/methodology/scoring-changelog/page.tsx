@@ -124,6 +124,43 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
+      {/* ──────────── v6.5 ──────────── */}
+      <VersionCard
+        version="v6.5"
+        title="Clean independent live reserve passthrough"
+        date="Mar 22, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Safety Score structure is unchanged, but the collateral-quality live reserve
+          passthrough is now stricter about evidence quality and warning-bearing feeds.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Live collateral passthrough now requires a{" "}
+            <span className="text-foreground font-medium">fresh authoritative snapshot</span>{" "}
+            whose latest <code className="text-xs bg-muted px-1 py-0.5 rounded">reserve_sync_state.last_status</code>{" "}
+            is <code className="text-xs bg-muted px-1 py-0.5 rounded">ok</code>.
+          </li>
+          <li>
+            The live reserve adapter registry now separates reserve shape{" "}
+            (<code className="text-xs bg-muted px-1 py-0.5 rounded">sourceModel</code>) from
+            evidence strength (<code className="text-xs bg-muted px-1 py-0.5 rounded">evidenceClass</code>).
+          </li>
+          <li>
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">single-asset</code> and{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">tether</code> style feeds are
+            now treated as <code className="text-xs bg-muted px-1 py-0.5 rounded">weak-live-probe</code>{" "}
+            evidence, so they remain visible on reserve detail/status surfaces but no longer
+            override curated collateral scoring.
+          </li>
+          <li>
+            Source-age and material unknown-exposure warnings now degrade reserve sync health
+            and automatically keep those snapshots out of collateral passthrough.
+          </li>
+        </ul>
+      </VersionCard>
+
       {/* ──────────── v6.4 ──────────── */}
       <VersionCard
         version="v6.4"

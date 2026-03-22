@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchOnchainRateBps,
@@ -6,7 +7,7 @@ import {
   getAdapterTimeout,
   getJsonPath,
   isHttpJsonInput,
-  isReserveRisk,
+  parsePositiveNumericLike,
   probeOnchainTotalSupply,
   requireOnchainInput,
 } from "./helpers";
@@ -30,14 +31,7 @@ interface SingleAssetParams {
 }
 
 function readParams(config: LiveReservesConfig): SingleAssetParams {
-  const params = (config.params ?? {}) as Partial<SingleAssetParams>;
-  if (!params.label || !params.risk) {
-    throw new Error("single-asset adapter requires params.label and params.risk");
-  }
-  if (!isReserveRisk(params.risk)) {
-    throw new Error(`single-asset adapter: invalid risk value "${params.risk}"`);
-  }
-  return params as SingleAssetParams;
+  return parseLiveReserveAdapterParams("single-asset", config.params);
 }
 
 export async function fetchSingleAssetReserves(
@@ -56,8 +50,7 @@ export async function fetchSingleAssetReserves(
     }
     const payload = await fetchJsonWithRetry<Record<string, unknown>>(primary.url, signal, getAdapterTimeout(config, 12_000));
     const value = getJsonPath(payload, probe.path);
-    const asString = typeof value === "string" ? value : String(value ?? "");
-    if (!asString || asString === "0" || asString === "0.0") {
+    if (parsePositiveNumericLike(value) == null) {
       throw new Error("single-asset source returned zero/empty probe value");
     }
   } else {

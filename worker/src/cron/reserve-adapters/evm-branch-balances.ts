@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
@@ -35,7 +36,7 @@ interface BranchBalanceParams {
 }
 
 function readParams(config: LiveReservesConfig): BranchBalanceParams {
-  const params = (config.params ?? {}) as Partial<BranchBalanceParams>;
+  const params = parseLiveReserveAdapterParams("evm-branch-balances", config.params);
   if (!Array.isArray(params.branches) || params.branches.length === 0) {
     throw new Error("evm-branch-balances adapter requires params.branches");
   }
@@ -45,7 +46,7 @@ function readParams(config: LiveReservesConfig): BranchBalanceParams {
       throw new Error(`evm-branch-balances adapter received invalid priceUsd for ${branch.name}`);
     }
   }
-  return params as BranchBalanceParams;
+  return params;
 }
 
 export async function fetchEvmBranchBalancesReserves(

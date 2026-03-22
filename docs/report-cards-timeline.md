@@ -313,6 +313,17 @@ Safety Score structure is unchanged, but the liquidity dimension is now stricter
 
 Weights and grade thresholds are unchanged from v6.0.
 
+## v6.5 - Clean independent live reserve passthrough (2026-03-22)
+
+Safety Score structure is unchanged, but the collateral-quality live reserve passthrough is now stricter about evidence quality and warning-bearing feeds:
+
+- Live collateral passthrough now requires a fresh authoritative snapshot whose latest `reserve_sync_state.last_status` is `ok`
+- The live reserve adapter registry now separates reserve shape (`sourceModel`) from evidence strength (`evidenceClass`)
+- `single-asset` and `tether` style feeds are now tagged `weak-live-probe`, so they remain visible on reserve detail/status surfaces but no longer override curated collateral scoring
+- Source-age and material unknown-exposure warnings now degrade reserve sync health and automatically keep those snapshots out of report-card collateral passthrough
+
+Weights and grade thresholds are unchanged from v6.4.
+
 ## v6.4 - Live Liquity redemption fee telemetry (2026-03-22)
 
 Safety Score structure is unchanged, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available:
@@ -356,7 +367,7 @@ Weights and grade thresholds are unchanged from v6.1.
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0–6.4** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v6.0–6.5** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

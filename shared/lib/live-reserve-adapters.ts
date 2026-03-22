@@ -30,10 +30,16 @@ const LIVE_RESERVE_ADAPTER_KEYS = [
   "tether",
 ] as const;
 
-const _LIVE_RESERVE_FEED_CLASS_VALUES = [
+const _LIVE_RESERVE_SOURCE_MODEL_VALUES = [
   "dynamic-mix",
   "validated-static",
   "single-bucket",
+] as const;
+
+const _LIVE_RESERVE_EVIDENCE_CLASS_VALUES = [
+  "independent",
+  "static-validated",
+  "weak-live-probe",
 ] as const;
 
 const _LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES = [
@@ -53,7 +59,10 @@ const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] a
 const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
 
 export type LiveReserveAdapterKey = (typeof LIVE_RESERVE_ADAPTER_KEYS)[number];
-export type LiveReserveFeedClass = (typeof _LIVE_RESERVE_FEED_CLASS_VALUES)[number];
+export type LiveReserveSourceModel = (typeof _LIVE_RESERVE_SOURCE_MODEL_VALUES)[number];
+/** @deprecated Use LiveReserveSourceModel. */
+export type LiveReserveFeedClass = LiveReserveSourceModel;
+export type LiveReserveEvidenceClass = (typeof _LIVE_RESERVE_EVIDENCE_CLASS_VALUES)[number];
 export type LiveReserveSourceSharingMode = (typeof _LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES)[number];
 export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
 export type LiveReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
@@ -68,6 +77,11 @@ export interface LiveReserveWarning {
   code: string;
   message: string;
   severity: "info" | "warning";
+}
+
+export interface LiveReserveAdapterValidationPolicy {
+  maxSourceAgeSec?: number;
+  maxUnknownExposurePct?: number;
 }
 
 const LiveReserveSemanticsSchema = z.enum(LIVE_RESERVE_SEMANTICS_VALUES);
@@ -158,6 +172,7 @@ const collateralPositionsParamsSchema = z.object({
 
 const curatedValidatedParamsSchema = z.object({
   rpcUrl: z.string().optional(),
+  fallbackRpcUrl: z.string().optional(),
 }).strict();
 
 const reserveSliceDescriptorSchema = z.object({
@@ -279,37 +294,107 @@ export type LiveReserveAdapterParamsByKey = {
 
 export type LiveReserveAdapterParams = LiveReserveAdapterParamsByKey[LiveReserveAdapterKey];
 
+const MATERIAL_UNKNOWN_EXPOSURE_PCT = 5;
+const DASHBOARD_SOURCE_MAX_AGE_SEC = 3 * 86400;
+const DISCLOSURE_SOURCE_MAX_AGE_SEC = 7 * 86400;
+
 export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
-  accountable: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  asymmetry: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  btcfi: { feedClass: "single-bucket", sharedSourceMode: "none" },
-  "chainlink-nav": { feedClass: "single-bucket", sharedSourceMode: "none" },
-  "chainlink-por": { feedClass: "single-bucket", sharedSourceMode: "none" },
-  "circle-transparency": { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  "collateral-positions-api": { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  crvusd: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  "curated-validated": { feedClass: "validated-static", sharedSourceMode: "none" },
-  "dola-inverse": { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  "erc4626-single-asset": { feedClass: "single-bucket", sharedSourceMode: "none" },
-  ethena: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  "evm-branch-balances": { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  falcon: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  "fdusd-transparency": { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  frax: { feedClass: "validated-static", sharedSourceMode: "none" },
-  fx: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  gho: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  infinifi: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  m0: { feedClass: "dynamic-mix", sharedSourceMode: "source-invariant" },
-  mento: { feedClass: "dynamic-mix", sharedSourceMode: "source-invariant" },
-  "openeden-usdo": { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  reservoir: { feedClass: "dynamic-mix", sharedSourceMode: "none" },
-  "sgforge-coinvertible": { feedClass: "single-bucket", sharedSourceMode: "none" },
-  "single-asset": { feedClass: "single-bucket", sharedSourceMode: "none" },
-  "sky-makercore": { feedClass: "dynamic-mix", sharedSourceMode: "source-invariant" },
-  tether: { feedClass: "single-bucket", sharedSourceMode: "none" },
+  accountable: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+  },
+  asymmetry: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  btcfi: { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
+  "chainlink-nav": { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
+  "chainlink-por": { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
+  "circle-transparency": { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  "collateral-positions-api": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT },
+  },
+  crvusd: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT },
+  },
+  "curated-validated": { sourceModel: "validated-static", evidenceClass: "static-validated", sharedSourceMode: "none" },
+  "dola-inverse": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+  },
+  "erc4626-single-asset": { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
+  ethena: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+    },
+  },
+  "evm-branch-balances": { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  falcon: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+    },
+  },
+  "fdusd-transparency": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+  },
+  frax: { sourceModel: "validated-static", evidenceClass: "static-validated", sharedSourceMode: "none" },
+  fx: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  gho: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  infinifi: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT },
+  },
+  m0: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "source-invariant" },
+  mento: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "source-invariant" },
+  "openeden-usdo": { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  reservoir: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT },
+  },
+  "sgforge-coinvertible": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+  },
+  "single-asset": { sourceModel: "single-bucket", evidenceClass: "weak-live-probe", sharedSourceMode: "none" },
+  "sky-makercore": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "source-invariant",
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+    },
+  },
+  tether: { sourceModel: "single-bucket", evidenceClass: "weak-live-probe", sharedSourceMode: "none" },
 } as const satisfies Record<LiveReserveAdapterKey, {
-  feedClass: LiveReserveFeedClass;
+  sourceModel: LiveReserveSourceModel;
+  evidenceClass: LiveReserveEvidenceClass;
   sharedSourceMode: LiveReserveSourceSharingMode;
+  validation?: LiveReserveAdapterValidationPolicy;
 }>;
 
 const liveReserveConfigVariants = LIVE_RESERVE_ADAPTER_KEYS.map((adapterKey) =>
@@ -340,4 +425,19 @@ export function getLiveReserveAdapterDefinition(
   adapterKey: LiveReserveAdapterKey,
 ): (typeof LIVE_RESERVE_ADAPTER_DEFINITIONS)[LiveReserveAdapterKey] {
   return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey];
+}
+
+export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(
+  adapterKey: K,
+  params: Record<string, unknown> | undefined,
+): LiveReserveAdapterParamsByKey[K] {
+  const schema = adapterParamsSchemas[adapterKey] as unknown as z.ZodType<LiveReserveAdapterParamsByKey[K]>;
+  const parsed = schema.safeParse(params ?? {});
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  const issue = parsed.error.issues[0];
+  const path = issue?.path.length ? `.${issue.path.join(".")}` : "";
+  throw new Error(`${adapterKey} adapter params invalid${path}: ${issue?.message ?? "unknown validation error"}`);
 }

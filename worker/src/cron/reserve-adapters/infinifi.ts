@@ -59,18 +59,20 @@ export interface AdaptInfiniFiResult {
   slices: ReserveSlice[];
   /** Farm names not found in FARM_RISK_MAP (for operator awareness). */
   unknownFarms: string[];
+  unknownExposurePct: number;
 }
 
 /** Convert raw InfiniFi protocol data to ReserveSlice[]. Pure function — no I/O. */
 export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResult {
   const tvl = payload.data.stats.asset.totalTVLAssetNormalized;
-  if (!tvl || tvl <= 0) return { slices: [], unknownFarms: [] };
+  if (!tvl || tvl <= 0) return { slices: [], unknownFarms: [], unknownExposurePct: 0 };
 
   const activeFarms = payload.data.farms.filter(
     (f) => f.type !== "PROTOCOL" && f.assetsNormalized > 0,
   );
 
   const unknownFarms: string[] = [];
+  let unknownExposurePct = 0;
 
   const rawSlices: ReserveSlice[] = [];
 
@@ -78,7 +80,10 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     const pct = (f.assetsNormalized / tvl) * 100;
     if (pct < 0.05) continue;
     const config = FARM_RISK_MAP[f.name];
-    if (!config) unknownFarms.push(f.name);
+    if (!config) {
+      unknownFarms.push(f.name);
+      unknownExposurePct += pct;
+    }
     const risk: ReserveSlice["risk"] = config?.risk
       ?? (f.type === "LIQUID" ? "low" : "medium");
     rawSlices.push({
@@ -90,7 +95,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     } satisfies ReserveSlice);
   }
 
-  return { slices: normalizeSlices(rawSlices), unknownFarms };
+  return { slices: normalizeSlices(rawSlices), unknownFarms, unknownExposurePct };
 }
 
 /** Fetch + adapt infiniFi protocol data. Uses fetchWithRetry for resilience. */
@@ -129,6 +134,7 @@ export async function fetchInfiniFiReserves(
       farmCount: payload.data.farms.length,
       activeFarmCount: adapted.slices.length,
       unknownFarmCount: adapted.unknownFarms.length,
+      unknownExposurePct: adapted.unknownExposurePct,
       totalReserveUsd,
       immediateRedeemableUsd,
       illiquidReserveUsd,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   computeReserveCompositionOverview,
+  loadFreshIndependentLiveReserveMap,
   resolveReserveResult,
   upsertReserveSnapshot,
 } from "../live-reserves-store";
@@ -232,6 +233,37 @@ describe("live-reserves-store", () => {
     expect(overview.errorCoins).toBeGreaterThanOrEqual(1);
   });
 
+  it("counts pre-bootstrap adapter failures as error coins instead of missing coins", async () => {
+    const emptyOverview = await computeReserveCompositionOverview(mockD1(), 2_000);
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: 2_000,
+            last_success_at: null,
+            last_status: "error",
+            warning_count: 0,
+            warnings: null,
+            last_error: "HTTP 503",
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, 2_100);
+    expect(overview.errorCoins).toBe(emptyOverview.errorCoins + 1);
+    expect(overview.missingCoins).toBe(emptyOverview.missingCoins - 1);
+  });
+
   it("includes lastError in sync view when sync state has an error", async () => {
     const db = mockD1([
       {
@@ -382,5 +414,61 @@ describe("live-reserves-store", () => {
       },
     });
     expect(result?.sync).not.toHaveProperty("warnings");
+  });
+
+  it("uses only independent ok-status live reserve snapshots for scoring passthrough", async () => {
+    const now = 10_000;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "degraded",
+            warning_count: 1,
+            warnings: JSON.stringify([{ code: "unknown-position", message: "warn", severity: "warning" }]),
+            last_error: null,
+            metadata: "{}",
+          },
+          {
+            stablecoin_id: "pyusd-paypal",
+            adapter_key: "single-asset",
+            breaker_key: "live-reserves:single-asset",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
+            fetched_at: now,
+            source: "infinifi",
+          },
+          {
+            stablecoin_id: "pyusd-paypal",
+            slices: JSON.stringify([{ name: "Issuer reserves", pct: 100, risk: "very-low" }]),
+            fetched_at: now,
+            source: "single-asset",
+          },
+        ],
+      },
+    ]);
+
+    const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
+    expect(scoringMap.has("iusd-infinifi")).toBe(false);
+    expect(scoringMap.has("pyusd-paypal")).toBe(false);
   });
 });
