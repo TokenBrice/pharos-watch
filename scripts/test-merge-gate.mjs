@@ -1,22 +1,13 @@
 #!/usr/bin/env node
 import { execSync, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import {
+  hasPagesDeployImpact,
+  normalizeRepoPath,
+} from "./lib/deploy-impact.mjs";
 
 export function normalizePath(path) {
-  return path.replaceAll("\\", "/");
-}
-
-export function hasBuildOrSeoImpact(files) {
-  return files.some(
-    (file) =>
-      file.startsWith("src/app/") ||
-      file.startsWith("src/components/") ||
-      file.startsWith("public/") ||
-      file === "next.config.ts" ||
-      file === "next.config.mjs" ||
-      file === "scripts/check-seo-static.mjs" ||
-      file === "scripts/generate-redirects.ts",
-  );
+  return normalizeRepoPath(path);
 }
 
 export const NON_NEGOTIABLE_VALIDATE_COMMANDS = [
@@ -36,6 +27,11 @@ export const NON_NEGOTIABLE_VALIDATE_COMMANDS = [
   "cd worker && npx tsc --noEmit",
 ];
 
+export const PAGES_VALIDATE_COMMANDS = [
+  "npm run build",
+  "npm run seo:check",
+];
+
 function addCommand(plan, cmd, reason) {
   const existing = plan.find((item) => item.cmd === cmd);
   if (existing) {
@@ -51,12 +47,22 @@ export function buildCommandPlan(changedFiles) {
     addCommand(plan, cmd, "Local merge gate mirrors the shared CI validate core");
   }
 
-  if (hasBuildOrSeoImpact(changedFiles)) {
-    addCommand(plan, "npm run build", "Frontend export or SEO-critical files changed");
-    addCommand(plan, "npm run seo:check", "Frontend export or SEO-critical files changed");
+  if (hasPagesDeployImpact(changedFiles)) {
+    for (const cmd of PAGES_VALIDATE_COMMANDS) {
+      addCommand(plan, cmd, "Pages-impacting files changed");
+    }
   }
 
   return plan;
+}
+
+export function buildCiValidateCommands() {
+  const testIndex = NON_NEGOTIABLE_VALIDATE_COMMANDS.indexOf("npm test");
+  return [
+    ...NON_NEGOTIABLE_VALIDATE_COMMANDS.slice(0, testIndex),
+    ...PAGES_VALIDATE_COMMANDS,
+    ...NON_NEGOTIABLE_VALIDATE_COMMANDS.slice(testIndex),
+  ];
 }
 
 export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", exec = execSync } = {}) {
@@ -79,11 +85,27 @@ export function getChangedFiles({ stagedMode = false, baseRef = "origin/main", e
   return raw
     .split(/\r?\n/g)
     .map((line) => normalizePath(line.trim()))
-    .filter(Boolean);
+      .filter(Boolean);
 }
 
-function runCommand(cmd) {
-  const result = spawnSync("bash", ["-lc", cmd], { stdio: "inherit" });
+export function getCommandEnv(cmd, changedFiles) {
+  if (cmd !== "npm run coverage:critical") {
+    return {};
+  }
+
+  return {
+    CRITICAL_COVERAGE_CHANGED_FILES: changedFiles.join(","),
+  };
+}
+
+function runCommand(cmd, extraEnv = {}) {
+  const result = spawnSync("bash", ["-lc", cmd], {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      ...extraEnv,
+    },
+  });
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
@@ -124,7 +146,7 @@ export function runMergeGate({ argv = process.argv.slice(2), env = process.env }
 
   for (const item of plan) {
     console.log(`[merge-gate] Running: ${item.cmd}`);
-    runCommand(item.cmd);
+    runCommand(item.cmd, getCommandEnv(item.cmd, changedFiles));
   }
 
   console.log("[merge-gate] All checks passed.");

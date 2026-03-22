@@ -40,9 +40,9 @@ npm run test:merge-gate
 git push origin main
 ```
 
-## Optional Pre-Push Hook (Recommended)
+## Repo Pre-Push Hook
 
-To auto-run the merge gate when pushing `main`, enable repo hooks:
+In the standard npm setup, `package.json` runs `git config core.hooksPath .githooks` via the `prepare` script, so the repo pre-push hook is configured automatically after install. If hooks were disabled or overridden locally, re-enable them with:
 
 ```bash
 git config core.hooksPath .githooks
@@ -50,8 +50,8 @@ git config core.hooksPath .githooks
 
 Hook behavior:
 
-1. Push to non-`main` branch: no gate.
-2. Push to `main`: runs `npm run test:merge-gate` and blocks push on failure.
+1. Any push: runs `npm run test:merge-gate`.
+2. Push is blocked on failure.
 
 ## What `test:merge-gate` Does
 
@@ -74,11 +74,11 @@ Default policy:
    - `npm test`
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
-2. If Pages export / SEO-critical files changed, additionally run:
+2. If Pages-impacting files changed, additionally run:
    - `npm run build`
    - `npm run seo:check`
 
-The gate still skips deploy-time smoke suites locally. The only diff-driven part is whether export validation (`build` + `seo:check`) is required.
+Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, and the Pages release workflow files all require local export validation. The gate still skips deploy-time smoke suites locally. The only diff-driven part is whether export validation (`build` + `seo:check`) is required.
 
 Useful merge-gate controls:
 
@@ -107,14 +107,18 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run check:redemption-backstops`
    - includes `npm run check:unused-code`
    - includes `npm run check:hotspot-ratchet`
+   - includes `npm run build`
+   - includes `npm run seo:check`
 2. `detect-changes`
    - diffs `github.event.before..github.sha` on `push`
    - decides separately whether worker/API deploy work and Pages deploy work are actually required for that push
+   - treats Pages release workflow changes (`.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`) as Pages-impacting so workflow-only changes still rehearse the Pages path
    - defaults to the full deploy path on `workflow_dispatch`
 3. `deploy-worker`
    - applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`
    - runs `cd worker && npx --no-install wrangler deploy`
    - runs `cd worker && npx --no-install wrangler triggers deploy` to explicitly sync cron/routes/domain triggers after the worker deploy
+   - relies on the `check:migrations` rollout-safety contract for new migrations: standard deploy only supports backward-compatible D1 changes because the old worker can still receive traffic until the new deploy is live
    - skipped on Pages-only or docs-only `push` events where `detect-changes` reports no worker/API-impacting files
 4. `smoke-api`
    - also skipped on those Pages-only or docs-only `push` events
@@ -127,10 +131,11 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
      - `build-pages` downloads that artifact into `data/`, then runs `npm run build` and `npm run seo:check`, and uploads `out/`
      - `smoke-ui` downloads the same artifact, serves it locally with `scripts/serve-static-export.mjs`, and proxies `/api/*` to the configured public API base
      - `deploy-pages` publishes that verified artifact through Wrangler with the existing retry loop
-7. `smoke-ui-live`
+     - `smoke-ui-live` then runs `npm run test:smoke-ui -- --url https://pharos.watch` against the real public host
+6. `smoke-ui-live`
    - worker-only deploy path that runs `npm run test:smoke-ui -- --url https://pharos.watch`
    - verifies the live Pages frontend still works against the newly deployed worker/API when no static rebuild is needed
-8. `smoke-ops`
+7. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
@@ -138,7 +143,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
 1. `pages-release`
-   - reuses the same `.github/workflows/pages-release.yml` build/smoke/deploy path as push/manual production deploys
+   - reuses the same `.github/workflows/pages-release.yml` build/smoke/deploy path as push/manual production deploys, including the post-publish live public-host smoke
 2. `smoke-ops`
    - runs the normal post-deploy ops smoke
 
@@ -148,7 +153,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 
 Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The repo now uses a root npm workspace, so the workflows install the shared toolchain from the root `package-lock.json` and run Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
 
-Deployment stops on the first failed job. Because the shared `pages-release` workflow now fetches digests once into an artifact and still requires the local `smoke-ui` gate before `deploy-pages`, a bad static export is blocked before Cloudflare Pages production publish and the build itself no longer depends on the live production digest endpoint. On `push`, worker deploy and API smoke are skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files, and Pages build/deploy are skipped entirely when the diff does not touch frontend/Pages/shared build paths. Both production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs on the same ref, while the Pages rebuild workflow waits behind an active production deploy instead of canceling it mid-flight.
+Deployment stops on the first failed job. Because the shared `validate` gate now also runs `npm run build` and `npm run seo:check`, pull requests and push/manual deploy validation catch static-export failures before any production-changing job starts. The shared `pages-release` workflow still fetches digests once into an artifact and still requires the local `smoke-ui` gate before `deploy-pages`, so a bad static export is blocked before Cloudflare Pages production publish and the build itself no longer depends on the live production digest endpoint. After publish, the same shared Pages workflow now also runs a live public-host smoke against `https://pharos.watch`, which closes the remaining gap between local artifact smoke and the actual Pages domain. On `push`, worker deploy and API smoke are skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files, and Pages build/deploy are skipped entirely when the diff does not touch Pages-impacting paths (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, or Pages/deploy workflow files). Both production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs on the same ref, while the Pages rebuild workflow waits behind an active production deploy instead of canceling it mid-flight. The worker deploy step still applies D1 migrations before `wrangler deploy`, so the normal path now explicitly supports only backward-compatible D1 migrations; destructive cleanup requires a separate coordinated rollout after the new worker code is serving.
 
 ## Operator Origins
 

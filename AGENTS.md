@@ -52,9 +52,8 @@ cd worker && npx wrangler dev
 npm run test:merge-gate
 ```
 
-This mirrors the full CI validation suite (lint, all checks, tests, coverage, worker typecheck). Do NOT push until it passes. The git pre-push hook enforces this automatically for pushes to `main`, but you should run it manually for any branch to catch failures before CI.
-
-If the merge gate fails, fix the issue locally and re-run — do not push hoping CI will pass.
+This mirrors the full CI validation suite (lint, all checks, tests, coverage, worker typecheck), plus the Pages build and SEO checks that now run in shared CI. Do NOT push until it passes. In the standard npm setup, the repo pre-push hook is configured automatically via `prepare` and runs the merge gate for every push. If hooks are disabled locally, run it manually before pushing.
+If the merge gate fails, fix the issue locally and re-run. Do not push hoping CI will pass.
 
 ## High-Value Gotchas
 
@@ -67,6 +66,7 @@ If the merge gate fails, fix the issue locally and re-run — do not push hoping
 - Worker cron jobs share Cloudflare's per-trigger 6-connection pool across all `ctx.waitUntil()` work; consume response bodies before opening more fetches.
 - Do not multiply DefiLlama list-endpoint supply values by price. The detail endpoint differs for non-USD pegs.
 - Do not add manual/on-chain/CMC/DEX supply overrides. Primary supply is DefiLlama, with the existing fallback path only.
+- Standard deploy applies D1 migrations before the new Worker is live. New migrations must stay backward-compatible; destructive cleanup needs a separate coordinated rollout.
 
 ## Documentation
 

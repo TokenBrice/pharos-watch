@@ -43,9 +43,13 @@ describe("hasPagesDeployImpact", () => {
 
   it("returns true for frontend, shared, and deploy-infra changes", () => {
     expect(hasPagesDeployImpact(["src/app/page.tsx"])).toBe(true);
+    expect(hasPagesDeployImpact(["src/lib/api.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["src/hooks/use-stablecoins.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
     expect(hasPagesDeployImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
+    expect(hasPagesDeployImpact([".github/workflows/pages-release.yml"])).toBe(true);
+    expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
   });
 });
 
@@ -109,5 +113,20 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "shared/lib/classification.ts"]);
+  });
+
+  it("treats pages workflow-only changes as Pages-impacting", () => {
+    const exec = () => ".github/workflows/pages-release.yml\n";
+
+    const result = classifyDeployChanges({
+      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
+      eventName: "push",
+      exec,
+      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    });
+
+    expect(result.workerChanged).toBe(false);
+    expect(result.pagesChanged).toBe(true);
+    expect(result.changedFiles).toEqual([".github/workflows/pages-release.yml"]);
   });
 });

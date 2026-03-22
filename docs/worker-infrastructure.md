@@ -1000,4 +1000,4 @@ Currently at 76 D1 SQL migrations. When the count approaches ~150, perform a one
 3. Reset D1's internal migration tracking
 4. Verify with a fresh `wrangler d1 migrations apply --remote`
 
-See also [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the rollback runbook.
+Normal production deploy still applies D1 migrations before the new worker binary is live. Because of that ordering, the default path only supports backward-compatible migrations: new migration files starting at `0071` must include `-- rollout-safety: backward-compatible` and avoid destructive table/column drop-or-rename patterns. Any destructive cleanup needs a separate coordinated rollout after the new worker code is already serving. See also [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the rollback runbook and the enforced rollout-safety contract.

@@ -57,13 +57,13 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15/30 min)    |
 | [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
-| Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as cUSD, iUSD, and crvUSD                    | 15 min                            |
+| Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as cUSD, iUSD, and crvUSD                     | 15 min                            |
 | Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Hourly                            |
 | [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains)                                                | Hourly                            |
 | [TronGrid](https://www.trongrid.io/)                                    | USDT freeze events on Tron                                                                                 | Hourly                            |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | Hourly / 20 min                   |
 | [frankfurter.app](https://frankfurter.app/)                             | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN                      | 15 min                            |
-| [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set     | 15 min cron (rate-limited to 1/h) |
+| [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set      | 15 min cron (rate-limited to 1/h) |
 | [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live CNH, RUB, UAH, and ARS rates for peg coverage outside the ECB set                                     | 15 min                            |
 | [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 15 min                            |
 | [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO)       | 3-month Treasury yield for yield benchmarking (risk-free rate, PYS `excessYield`)                          | Daily                             |
@@ -265,15 +265,15 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 
 GitHub Actions now runs the shared validate gate on pull requests to `main` via `.github/workflows/pull-request-checks.yml`, while production deploys still run only from `.github/workflows/deploy-cloudflare.yml` on push to `main`, the daily scheduled rebuild, or manual `workflow_dispatch`:
 
-For the full operator runbook (including worktree merge flow and pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
+For the canonical delivery workflow (including worktree merge flow and the repo pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
+1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run build` → `npm run seo:check` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler deploy` → `cd worker && npx --no-install wrangler triggers deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`)
 4. **Pages release path:** `npm ci` → `npm run sync:digests` → `npm run build` → `npm run seo:check` → serve `out/` locally through `scripts/serve-static-export.mjs` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173` → `npx --no-install wrangler pages deploy out` (with retry in CI)
-5. **Worker-only UI smoke:** when `worker_changed=true` and `pages_changed=false`, CI runs `npm run test:smoke-ui -- --url https://pharos.watch` to verify the unchanged live frontend against the new worker/API
+5. **Live public-host UI smoke:** worker-only deploys still smoke `https://pharos.watch` against the new worker/API, and Pages-including deploys now also smoke the real public host after the Pages publish
 6. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `pages-release` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`

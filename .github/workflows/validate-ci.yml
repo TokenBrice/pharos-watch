@@ -32,6 +32,8 @@ jobs:
       - run: npm run check:redemption-backstops
       - run: npm run check:unused-code
       - run: npm run check:hotspot-ratchet
+      - run: npm run build
+      - run: npm run seo:check
       - run: npm test
       - run: npm run coverage:critical
         env:
