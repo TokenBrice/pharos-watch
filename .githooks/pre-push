@@ -1,17 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-should_gate=0
-
-while read -r local_ref local_sha remote_ref remote_sha; do
-  if [[ "${local_ref}" == "refs/heads/main" ]]; then
-    should_gate=1
-  fi
-done
-
-if [[ "${should_gate}" -eq 0 ]]; then
-  exit 0
-fi
-
-echo "[pre-push] Detected push to main. Running merge gate..."
+echo "[pre-push] Running merge gate before push..."
 npm run test:merge-gate

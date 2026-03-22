@@ -44,6 +44,18 @@ cd worker && npx tsc --noEmit
 cd worker && npx wrangler dev
 ```
 
+## Pre-Push Validation
+
+**Before pushing to any branch, always run the local merge gate:**
+
+```bash
+npm run test:merge-gate
+```
+
+This mirrors the full CI validation suite (lint, all checks, tests, coverage, worker typecheck). Do NOT push until it passes. The git pre-push hook enforces this automatically for pushes to `main`, but you should run it manually for any branch to catch failures before CI.
+
+If the merge gate fails, fix the issue locally and re-run — do not push hoping CI will pass.
+
 ## High-Value Gotchas
 
 - Tailwind classes must be static strings.

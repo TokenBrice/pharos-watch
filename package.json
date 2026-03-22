@@ -38,7 +38,8 @@
     "check:duplicate-exports": "node scripts/check-duplicate-exports.mjs",
     "check:migrations": "node scripts/check-worker-migrations.mjs",
     "seo:check": "node scripts/check-seo-static.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

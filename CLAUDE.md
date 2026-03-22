@@ -48,6 +48,18 @@ cd worker && npx wrangler dev      # Worker dev server (binds to localhost:8787)
 cd worker && npx tsc --noEmit      # Worker type-check
 ```
 
+## Pre-Push Validation
+
+**Before pushing to any branch, always run the local merge gate:**
+
+```bash
+npm run test:merge-gate
+```
+
+This mirrors the full CI validation suite (lint, all checks, tests, coverage, worker typecheck). Do NOT push until it passes. The git pre-push hook enforces this automatically for pushes to `main`, but you should run it manually for any branch to catch failures before CI.
+
+If the merge gate fails, fix the issue locally and re-run — do not push hoping CI will pass.
+
 ## Web Fetching
 
 - **APIs first**: When fetching data from CoinGecko, Etherscan, DefiLlama, etc., always prefer their API endpoints over scraping web pages. APIs are structured, reliable, and rarely return 403s.

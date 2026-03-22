@@ -81,7 +81,7 @@ next-env.d.ts
 
 .claude/commands
 
-.claude/settings.json
+# .claude/settings.json is tracked (pre-push hook enforcement)
 
 # cmcs
 .cmcs/
