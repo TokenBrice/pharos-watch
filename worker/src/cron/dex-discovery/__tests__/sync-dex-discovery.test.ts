@@ -44,7 +44,7 @@ vi.mock("../persistence", () => ({
   upsertStagedPools: vi.fn(async () => {}),
 }));
 
-import { syncDexDiscovery } from "../orchestrator";
+import { DEX_DISCOVERY_RUN_BUDGET_MS, syncDexDiscovery } from "../orchestrator";
 import { crawlCoin } from "../crawl-sources";
 import { loadPriceValidationReferences } from "../../../lib/price-validation";
 import {
@@ -142,5 +142,43 @@ describe("syncDexDiscovery", () => {
         skipped: 1,
       },
     });
+  });
+
+  it("returns degraded when the run budget is exhausted before the queue completes", async () => {
+    vi.mocked(incrementRunSeq).mockResolvedValue(3);
+
+    let nowMs = 1_700_000_000_000;
+    const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    vi.mocked(crawlCoin).mockImplementation(async () => {
+      nowMs += DEX_DISCOVERY_RUN_BUDGET_MS + 1_000;
+      return {
+        pools: [makeStagedPool("ethereum:0xpool1")],
+        priceObs: [],
+        unresolvedChains: [],
+      };
+    });
+
+    const result = await syncDexDiscovery(db, null);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(1);
+    expect(vi.mocked(crawlCoin)).toHaveBeenCalledTimes(1);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata).toMatchObject({
+      coinsCrawled: 1,
+      poolsDiscovered: 1,
+      budgetExhausted: true,
+      runSeq: 3,
+      tierBreakdown: {
+        t1: 1,
+        t2: 1,
+        t3: 0,
+        dormant: 0,
+        skipped: 0,
+      },
+    });
+
+    dateNowSpy.mockRestore();
   });
 });

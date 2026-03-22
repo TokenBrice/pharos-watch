@@ -11,6 +11,7 @@ async function fetchGtTokenPoolsInternal(
   gtChain: string,
   signal?: AbortSignal,
   maxRetries = 0,
+  timeoutMs = 15_000,
 ): Promise<GtPool[]> {
   const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=1`;
   const res = await fetchWithRetry(
@@ -23,6 +24,7 @@ async function fetchGtTokenPoolsInternal(
       signal,
     },
     maxRetries,
+    { timeoutMs },
   );
   if (!res?.ok) return [];
   const json = (await res.json()) as { data?: GtPool[] };
@@ -34,8 +36,9 @@ export function fetchGtTokenPools(
   gtChain: string,
   signal?: AbortSignal,
   maxRetries = 0,
+  timeoutMs = 15_000,
 ): Promise<GtPool[]> {
-  return fetchGtTokenPoolsInternal(tokenAddress, gtChain, signal, maxRetries);
+  return fetchGtTokenPoolsInternal(tokenAddress, gtChain, signal, maxRetries, timeoutMs);
 }
 
 export function parseGtPool(pool: GtPool): ParsedPool | null {

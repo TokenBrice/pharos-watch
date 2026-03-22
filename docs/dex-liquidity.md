@@ -116,6 +116,8 @@ DexScreener runs in two complementary paths:
 1. **Discovery cron** (`sync-dex-discovery`): Populates `dex_pool_staging` with pool data for later merge during scoring.
 2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After primary sources and staged-pool merge, any tracked stablecoin that still has zero pools or no usable DEX price observation is queried directly via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains. The fallback shares a 2-minute time budget with the CG tickers fallback.
 
+The discovery cron is intentionally best-effort rather than all-or-nothing. It now runs with a 12-minute shared wall-clock budget, a 25-second per-coin cap, and short no-retry request timeouts for late-stage fallback sources so heavier tier-2 passes return `status="degraded"` with `budgetExhausted=true` instead of drifting into a hard timeout and leaving stale in-flight telemetry behind.
+
 Address matching uses both canonical `contracts` and optional `tradedContracts` metadata. `tradedContracts` is reserved for wrapper / secondary-market token addresses that are meaningfully used for DEX discovery even when issuer metadata points to a different canonical deployment.
 
 Quality gates:

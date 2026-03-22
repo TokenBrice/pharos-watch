@@ -320,6 +320,7 @@ Dedicated trigger for the critical mint/burn lane. Uses Alchemy JSON-RPC plus th
 | `sync-dex-discovery` | `syncDexDiscovery()` | `worker/src/cron/dex-discovery/orchestrator.ts` | [DEX Liquidity Score](./dex-liquidity.md) |
 
 Dedicated trigger for DEX pool discovery. Uses strictly sequential fetches (1 connection at a time) from CoinGecko/GeckoTerminal/DexScreener. Stages pools for later merge by `sync-dex-liquidity`.
+The lane is best-effort by design: a 12-minute shared budget plus 25-second per-coin cap force partial `degraded` completion before the Worker nears its platform wall-clock ceiling.
 
 ### Trigger 5: `13,33,53 * * * *` (every 20 minutes, offset at :13/:33/:53)
 
@@ -475,7 +476,7 @@ async function logCronRun(
 
 ### In-flight Cron Progress
 
-Long-running leased jobs can now surface active progress through `cron_run_progress`, which powers `/api/status` while the run is still live.
+Long-running leased jobs can now surface active progress through `cron_run_progress`, which powers `/api/status` while the run is still live. The status handler now cross-checks that progress row against an active matching `cron_leases` entry before exposing it as `crons[*].inFlight`, so orphaned progress from a hard-killed invocation no longer masquerades as a live run.
 
 ```sql
 CREATE TABLE cron_run_progress (
@@ -509,7 +510,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | Default                   | 5 min   | Standard jobs complete in <60s                                                                                                                                                                            |
 | `sync-stablecoins`        | 8 min   | Core quarter-hour pipeline entrypoint now includes dual-primary pricing, supplemental overlays, multi-pass enrichment, and depeg processing; explicit headroom avoids timing out on bounded fallback work |
 | `sync-dex-liquidity`      | 13 min  | 150+ pool crawl, with headroom below the platform wall-clock limit                                                                                                                                        |
-| `sync-dex-discovery`      | 23 min  | Multi-source pool staging; dedicated 30-minute trigger allows extended runtime                                                                                                                            |
+| `sync-dex-discovery`      | 13 min  | Multi-source pool staging with explicit 12-minute self-budget so the wrapper still has headroom to log a controlled degraded/error result                                                                  |
 | `sync-blacklist`          | 12 min  | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime                                                                                                                           |
 | `sync-mint-burn`          | 10 min  | Multi-contract EVM log scan; isolated trigger allows extended runtime                                                                                                                                     |
 | `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state                                                                                                                                                           |
@@ -916,7 +917,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `weekly-recap`                  | 604,800s (7d)  | `5 8 * * *`                                 |
 | `discovery-scan`                | 604,800s (7d)  | `5 8 * * *` (Monday-only)                   |
 
-A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating.
+A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.
 
 The status handler now surfaces per-subsection loader failures through `sectionErrors` instead of silently swallowing them. When a subsection query fails, the affected field degrades to `null`/empty and the response still returns `200` with a machine-readable error entry for that subsection.
 

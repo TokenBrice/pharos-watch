@@ -225,6 +225,33 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
 
   let cronProgressByJob = new Map<string, CronInFlight>();
   let cronProgressQueryFailed = false;
+  let cronLeaseByJob: Map<string, { leaseOwner: string; leaseUntil: number }> | null = null;
+  let cronLeaseQueryFailed = false;
+  try {
+    const leaseRows = await db
+      .prepare(
+        `SELECT job, lease_owner, lease_until
+           FROM cron_leases
+           WHERE job IN (${cronJobInClause.sql})`,
+      )
+      .bind(...cronJobInClause.binds)
+      .all<{
+        job: string;
+        lease_owner: string;
+        lease_until: number;
+      }>();
+
+    cronLeaseByJob = new Map(
+      (leaseRows.results ?? []).map((row) => [row.job, {
+        leaseOwner: row.lease_owner,
+        leaseUntil: row.lease_until,
+      }]),
+    );
+  } catch (err) {
+    cronLeaseQueryFailed = true;
+    console.warn("[status] cron_leases unavailable:", err);
+  }
+
   try {
     const progressRows = await db
       .prepare(
@@ -245,8 +272,17 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
         metadata: string | null;
       }>();
 
+    const filteredProgressRows = (progressRows.results ?? []).filter((row) => {
+      if (cronLeaseQueryFailed || cronLeaseByJob == null || !row.lease_owner) {
+        return true;
+      }
+
+      const lease = cronLeaseByJob.get(row.job);
+      return lease != null && lease.leaseOwner === row.lease_owner && lease.leaseUntil >= now;
+    });
+
     cronProgressByJob = new Map(
-      (progressRows.results ?? []).map((row) => {
+      filteredProgressRows.map((row) => {
         const parsedMeta = parseMetadataObject(row.metadata);
 
         return [row.job, {

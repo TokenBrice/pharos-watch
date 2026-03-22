@@ -84,8 +84,10 @@ export async function fetchDsTokenPools(
   chain: string,
   tokenAddress: string,
   signal?: AbortSignal,
+  timeoutMs = 10_000,
+  maxRetries = 2,
 ): Promise<DsPair[]> {
-  const result = await fetchDsTokenPoolsWithStatus(chain, tokenAddress, signal);
+  const result = await fetchDsTokenPoolsWithStatus(chain, tokenAddress, signal, timeoutMs, maxRetries);
   return result.pairs;
 }
 
@@ -94,6 +96,7 @@ export async function fetchDsTokenPoolsWithStatus(
   tokenAddress: string,
   signal?: AbortSignal,
   timeoutMs = 10_000,
+  maxRetries = 2,
 ): Promise<DsFetchPoolsResult> {
   const dsChain = DS_CHAIN_MAP[chain];
   if (!dsChain) return { ok: false, pairs: [] };
@@ -103,7 +106,7 @@ export async function fetchDsTokenPoolsWithStatus(
   const res = await fetchWithRetry(url, {
     headers: { "User-Agent": USER_AGENT },
     signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-  });
+  }, maxRetries, { timeoutMs });
   if (!res?.ok) return { ok: false, pairs: [] };
 
   try {

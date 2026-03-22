@@ -632,6 +632,10 @@ describe("handleStatus", () => {
       { match: "stress_signals", rows: [], first: { age: 300 } },
       { match: "cron_runs", rows: [makeCronRow("sync-blacklist", "ok", 30)] },
       {
+        match: "cron_leases",
+        rows: [{ job: "sync-blacklist", lease_owner: "lease-123", lease_until: now + 600 }],
+      },
+      {
         match: "cron_run_progress",
         rows: [
           {
@@ -697,6 +701,10 @@ describe("handleStatus", () => {
       { match: "stress_signals", rows: [], first: { age: 60 } },
       { match: "cron_runs", rows: cronRows },
       {
+        match: "cron_leases",
+        rows: [{ job: "sync-blacklist", lease_owner: "lease-456", lease_until: now + 600 }],
+      },
+      {
         match: "cron_run_progress",
         rows: [
           {
@@ -734,6 +742,52 @@ describe("handleStatus", () => {
     expect(body.summary.unhealthyCrons).toBe(0);
     expect(body.summary.cronErrors).toBe(0);
     expect(body.availabilityStatus).toBe("healthy");
+  });
+
+  it("ignores orphaned in-flight progress when the lease is no longer active", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-blacklist", "error", 30)] },
+      { match: "cron_leases", rows: [] },
+      {
+        match: "cron_run_progress",
+        rows: [
+          {
+            job: "sync-blacklist",
+            started_at: now - 120,
+            updated_at: now - 10,
+            stage: "scan-config",
+            items_done: 4,
+            items_total: 7,
+            message: "Scanning USDT on Ethereum",
+            lease_owner: "stale-lease",
+            metadata: JSON.stringify({ budgetUsed: 31, budgetLimit: 900 }),
+          },
+        ],
+      },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      crons: Record<string, { healthy: boolean; inFlight?: unknown | null }>;
+      summary: { unhealthyCrons: number };
+      availabilityStatus: string;
+    };
+
+    expect(body.crons["sync-blacklist"]?.inFlight).toBeNull();
+    expect(body.crons["sync-blacklist"]?.healthy).toBe(false);
+    expect(body.summary.unhealthyCrons).toBeGreaterThan(0);
+    expect(body.availabilityStatus).toBe("stale");
   });
 
   it("includes Telegram bot subscriber stats when Telegram tables are present", async () => {

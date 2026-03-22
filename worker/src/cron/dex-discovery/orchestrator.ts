@@ -35,6 +35,11 @@ interface DiscoveryCandidate {
   meta: DiscoveryMeta | undefined;
 }
 
+// Keep discovery comfortably below the wrapper timeout so partial staging runs
+// degrade cleanly instead of dying mid-flight and leaving stale progress behind.
+export const DEX_DISCOVERY_RUN_BUDGET_MS = 12 * 60_000;
+export const DEX_DISCOVERY_PER_COIN_BUDGET_MS = 25_000;
+
 function summarizeDiscoveryError(err: unknown): string {
   if (err instanceof Error) {
     const name = err.name && err.name !== "Error" ? `${err.name}: ` : "";
@@ -176,11 +181,7 @@ export async function syncDexDiscovery(
       (a, b) => discoveryTierPriority(a.tier) - discoveryTierPriority(b.tier) || compareDiscoveryMeta(a.meta, b.meta),
     );
 
-    // M5: Deadline is checked at coin boundaries only (not mid-crawl), which is
-    // acceptable with a 20-min budget — individual coin crawls take 5-30s, so
-    // overshoot is bounded. Mid-crawl checks would add complexity for negligible
-    // benefit and risk leaving a coin in a partial-crawl state.
-    const deadlineMs = Date.now() + 20 * 60_000;
+    const deadlineMs = Date.now() + DEX_DISCOVERY_RUN_BUDGET_MS;
     const knownPoolIds = new Set<string>();
     await onProgress?.({
       stage: "queue-built",
@@ -210,8 +211,7 @@ export async function syncDexDiscovery(
       });
 
       try {
-        const PER_COIN_BUDGET_MS = 60_000;
-        const coinDeadline = Math.min(deadlineMs, Date.now() + PER_COIN_BUDGET_MS);
+        const coinDeadline = Math.min(deadlineMs, Date.now() + DEX_DISCOVERY_PER_COIN_BUDGET_MS);
         const result = await crawlCoin(
           candidate.stablecoinId,
           candidate.targets,
@@ -281,7 +281,7 @@ export async function syncDexDiscovery(
     });
 
     return {
-      status: failedCoins.length > 0 ? "degraded" : "ok",
+      status: failedCoins.length > 0 || budgetExhausted ? "degraded" : "ok",
       itemCount: coinsCrawled,
       metadata: JSON.stringify({
         coinsCrawled,

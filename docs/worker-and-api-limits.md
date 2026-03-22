@@ -59,7 +59,8 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 
 | Area                                   | Current repo budget | Source                                                            | Notes                                                                       |
 | -------------------------------------- | ------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| DEX discovery overall deadline         | `20 minutes`        | `worker/src/cron/dex-discovery/orchestrator.ts`                   | Shared deadline for the discovery pass before persistence/cleanup tail work |
+| DEX discovery overall deadline         | `12 minutes`        | `worker/src/cron/dex-discovery/orchestrator.ts`                   | Shared deadline for the discovery pass before persistence/cleanup tail work |
+| DEX discovery per-coin budget          | `25 seconds`        | `worker/src/cron/dex-discovery/orchestrator.ts`                   | Prevents one slow coin from consuming the whole staging lane |
 | Blacklist sync runtime budget          | `7 minutes`         | `worker/src/cron/sync-blacklist.ts`                               | Guardrail before the trigger wrapper times out                              |
 | Blacklist sync subrequest budget       | `900`               | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/evm-logs.ts` | Covers explorer/RPC calls for a single run                                  |
 | Mint/burn global request budget        | `200`               | `worker/src/cron/sync-mint-burn.ts`                               | Shared per-run request ceiling                                              |
@@ -88,6 +89,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 ### What this means operationally
 
 - `sync-dex-liquidity` no longer owns discovery. It consumes staged output written by `sync-dex-discovery`.
+- `sync-dex-discovery` is deliberately best-effort. Short per-source request timeouts and the 12-minute shared budget are there to force a partial `degraded` result before the platform can hard-kill the invocation.
 - Missing-price fallback is intentionally time-bounded so a bad upstream day cannot consume the whole `sync-stablecoins` slot.
 - Any new provider added to discovery or price enrichment should come with both a throttle and a hard stop budget.
 

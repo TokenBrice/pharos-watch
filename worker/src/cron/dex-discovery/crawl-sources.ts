@@ -26,6 +26,23 @@ import {
 } from "../dex-liquidity/coingecko-tickers-shared";
 import type { StagedPool } from "./types";
 
+const DISCOVERY_STAGE_TIMEOUT_MS = {
+  cgOnchain: 8_000,
+  geckoTerminal: 8_000,
+  dexscreener: 6_000,
+  cgTickers: 6_000,
+} as const;
+
+function buildStageSignal(
+  signal: AbortSignal | undefined,
+  deadlineMs: number | undefined,
+  timeoutMs: number,
+): AbortSignal {
+  const remainingMs = deadlineMs == null ? timeoutMs : Math.max(1, Math.min(timeoutMs, deadlineMs - Date.now()));
+  const timeout = AbortSignal.timeout(remainingMs);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
 export interface CrawlResult {
   pools: StagedPool[];
   priceObs: Array<{
@@ -86,7 +103,13 @@ export async function crawlCoin(
       cgQueriedChains.add(chain);
 
       try {
-        const rawPools = await fetchCgTokenPools(cgNetwork, address.toLowerCase(), signal, cgApiKey);
+        const rawPools = await fetchCgTokenPools(
+          cgNetwork,
+          address.toLowerCase(),
+          buildStageSignal(signal, deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain),
+          cgApiKey,
+          { maxRetries: 0, timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain },
+        );
         for (const pool of rawPools) {
           const parsed = parseCgPool(pool);
           if (!parsed) continue;
@@ -214,7 +237,14 @@ export async function crawlCoin(
         if (requestCount > 0) await sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, signal);
         return true;
       },
-      fetchPools: fetchGtTokenPools,
+      fetchPools: (tokenAddress, sourceChain, requestSignal) =>
+        fetchGtTokenPools(
+          tokenAddress,
+          sourceChain,
+          buildStageSignal(requestSignal, deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.geckoTerminal),
+          0,
+          DISCOVERY_STAGE_TIMEOUT_MS.geckoTerminal,
+        ),
       parsePool: parseGtPool,
       buildNewPool: ({ parsed, chain, price, cappedTvlUsd, maturityDays }) => ({
         address: parsed.poolAddress,
@@ -303,7 +333,13 @@ export async function crawlCoin(
       dsRequests++;
 
       try {
-        const pairs = await fetchDsTokenPools(chain, address, signal);
+        const pairs = await fetchDsTokenPools(
+          chain,
+          address,
+          buildStageSignal(signal, deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.dexscreener),
+          DISCOVERY_STAGE_TIMEOUT_MS.dexscreener,
+          0,
+        );
         if (pairs.length === 0) continue;
 
         for (const pair of pairs) {
@@ -390,11 +426,10 @@ export async function crawlCoin(
     if (geckoId) {
       try {
         const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`, cgApiKey);
-        const timeout = AbortSignal.timeout(10_000);
         const res = await fetchWithRetry(url, {
           headers: cgHeaders({ "User-Agent": USER_AGENT }, cgApiKey),
-          signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-        });
+          signal: buildStageSignal(signal, deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.cgTickers),
+        }, 0, { timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgTickers });
         if (res?.ok) {
           const data = (await res.json()) as { tickers?: CgTicker[] };
           const exchangeSummaries = buildCgTickerExchangeSummaries(

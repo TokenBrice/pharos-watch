@@ -64,6 +64,11 @@ export interface CgToken {
   attributes: CgTokenAttributes;
 }
 
+export interface CgFetchOptions {
+  maxRetries?: number;
+  timeoutMs?: number;
+}
+
 // ---------------------------------------------------------------------------
 // API functions
 // ---------------------------------------------------------------------------
@@ -85,12 +90,13 @@ export async function fetchCgTokenPools(
   address: string,
   signal?: AbortSignal,
   apiKey: string | null = null,
+  options?: CgFetchOptions,
 ): Promise<CgPool[]> {
   const url = cgUrl(`/onchain/networks/${network}/tokens/${address}/pools?include=base_token,quote_token&page=1`, apiKey);
   const res = await fetchWithRetry(url, {
     headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
     signal,
-  }, 1); // 1 retry max to keep wall time bounded
+  }, options?.maxRetries ?? 1, { timeoutMs: options?.timeoutMs });
   if (!res?.ok) return [];
   const json = (await res.json()) as { data?: unknown };
   return Array.isArray(json.data) ? (json.data as CgPool[]) : [];
