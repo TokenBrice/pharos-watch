@@ -1090,6 +1090,54 @@ describe("syncStablecoins", () => {
     expect(pgold?.circulating).toEqual({ peggedGOLD: 99_913_387.23420689 });
   });
 
+  it("keeps protocol-backed gold assets in the stablecoins cache when DefiLlama spot pricing disappears", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    const fetchSpy = mockFetch([
+      {
+        match: "api.coingecko.com",
+        body: {
+          "pleasing-gold": {
+            usd: 4_327.46,
+            usd_market_cap: 84_407_122.82446626,
+          },
+        },
+      },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+      {
+        match: "api.llama.fi/protocol/pleasing-gold",
+        body: {
+          name: "Pleasing Gold",
+          mcap: null,
+          tvl: [{ date: 1_774_183_907, totalLiquidityUSD: 84_407_122 }],
+        },
+      },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(61);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const pgold = payload?.peggedAssets.find((asset) => asset.id === "pgold-pleasing");
+
+    expect(
+      fetchSpy.mock.calls.some(
+        ([url]) => String(url).includes("api.coingecko.com") && String(url).includes("pleasing-gold"),
+      ),
+    ).toBe(true);
+    expect(pgold).toBeDefined();
+    expect(pgold?.price).toBe(4_327.46);
+    expect(pgold?.priceSource).toBe("coingecko");
+    expect(pgold?.supplySource).toBe("coingecko-fallback");
+    expect(pgold?.circulating).toEqual({ peggedGOLD: 84_407_122.82446626 });
+  });
+
   it("reuses fresh cached prices during CG supply fallback when CoinGecko spot values fail validation", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([

@@ -401,7 +401,9 @@ async function fetchFiatCoinGeckoTokens(
 
 export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSignal, coingeckoApiKey?: string | null): Promise<CoinGeckoMcapData> {
   const ids = [
-    ...COMMODITY_TOKENS.filter((token) => !token.protocolSlug).map((token) => token.geckoId).filter(Boolean),
+    // Protocol-backed commodity tokens still need CoinGecko spot + mcap fallback
+    // when DefiLlama omits their `coins.llama.fi` price or protocol mcap.
+    ...COMMODITY_TOKENS.map((token) => token.geckoId).filter(Boolean),
     ...FIAT_CG_METAS.map((token) => token.geckoId).filter(Boolean),
   ].join(",");
 
