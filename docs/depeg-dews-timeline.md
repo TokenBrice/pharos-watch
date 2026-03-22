@@ -1,6 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v4.7` (2026-02-18 -> 2026-03-21).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v4.8` (2026-02-18 -> 2026-03-22).
+
+---
+
+## v4.8 — Contradicted live depegs now retire into pending confirmation (Mar 22, 2026)
+
+**Commit:** `unreleased`
+
+- Opposite-direction live depeg rows no longer remain active just because the correcting primary price is still `confirm_required`
+- When a low-confidence/cached/stale/fallback primary price flips across the peg, detection closes the stale live row immediately
+- The replacement move still respects the two-stage guardrail by routing into `depeg_pending` until confirmation arrives
 
 ---
 

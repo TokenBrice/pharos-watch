@@ -82,7 +82,9 @@ function handleExistingEvent(
   } = ctx;
   const stmts: D1PreparedStatement[] = [];
 
-  // Direction change: close old event and open a new one
+  // Direction change: a live event cannot stay open in the opposite direction.
+  // Low-confidence contradictory prices still route the replacement through pending
+  // confirmation, but they retire the stale live row immediately.
   if (existing.direction !== direction) {
     if (primaryTrust === "authoritative" || dexConfirmsDirection) {
       stmts.push(
@@ -95,6 +97,17 @@ function handleExistingEvent(
       } else {
         stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(direction, bps, price, pegRef)));
       }
+    } else if (primaryTrust === "confirm_required") {
+      console.warn(
+        `[depeg] Retiring contradicted live event for ${asset.symbol} (id=${existing.id}): ` +
+        `existing=${existing.direction}, primary=${direction} (${bps}bps) requires confirmation`
+      );
+      stmts.push(
+        db.prepare(
+          "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+        ).bind(now, price, existing.id)
+      );
+      stmts.push(buildInsertPendingStmt(direction, bps, price, pegRef, pendingReason));
     } else {
       seen.add(existing.id);
     }

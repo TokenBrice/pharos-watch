@@ -318,6 +318,11 @@ export function MonitoringMethodologySections() {
             candidates.
           </p>
           <p>
+            When a live event is later contradicted across the peg by a low-confidence primary price, the detector now
+            retires the stale live row immediately and routes the replacement move through pending confirmation instead
+            of leaving the wrong direction active.
+          </p>
+          <p>
             DEX cross-validation uses explicit trust gates. Detection and pending confirmation only trust fresh DEX rows
             with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still
             non-trivial floor of $250K.

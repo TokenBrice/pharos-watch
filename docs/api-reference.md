@@ -524,10 +524,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "events": [DepegEvent, ...],
   "total": 4080,
   "methodology": {
-    "version": "4.6",
-    "versionLabel": "v4.6",
-    "currentVersion": "4.6",
-    "currentVersionLabel": "v4.6",
+    "version": "4.8",
+    "versionLabel": "v4.8",
+    "currentVersion": "4.8",
+    "currentVersionLabel": "v4.8",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -560,7 +560,7 @@ Results are ordered by `startedAt` descending (most recent first).
 | Field                 | Type      | Description                                                             |
 | --------------------- | --------- | ----------------------------------------------------------------------- |
 | `version`             | `string`  | Methodology version attributed from the latest returned event timestamp |
-| `versionLabel`        | `string`  | Display label (e.g. `"v4.6"`)                                           |
+| `versionLabel`        | `string`  | Display label (e.g. `"v4.8"`)                                           |
 | `currentVersion`      | `string`  | Latest methodology version                                              |
 | `currentVersionLabel` | `string`  | Display label for latest methodology version                            |
 | `changelogPath`       | `string`  | Relative URL to the methodology changelog page                          |
@@ -582,10 +582,10 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "4.6",
-    "versionLabel": "v4.6",
-    "currentVersion": "4.6",
-    "currentVersionLabel": "v4.6",
+    "version": "4.8",
+    "versionLabel": "v4.8",
+    "currentVersion": "4.8",
+    "currentVersionLabel": "v4.8",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1746,16 +1746,16 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "price": { "value": 1, "available": true }
       },
       "computedAt": 1740000000,
-      "methodologyVersion": "4.6"
+      "methodologyVersion": "4.8"
     }
   },
   "updatedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "4.6",
-    "versionLabel": "v4.6",
-    "currentVersion": "4.6",
-    "currentVersionLabel": "v4.6",
+    "version": "4.8",
+    "versionLabel": "v4.8",
+    "currentVersion": "4.8",
+    "currentVersionLabel": "v4.8",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -1775,7 +1775,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       "price": { "value": 1, "available": true }
     },
     "computedAt": 1740000000,
-    "methodologyVersion": "4.6"
+    "methodologyVersion": "4.8"
   },
   "history": [
     {
@@ -1791,10 +1791,10 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "4.6",
-    "versionLabel": "v4.6",
-    "currentVersion": "4.6",
-    "currentVersionLabel": "v4.6",
+    "version": "4.8",
+    "versionLabel": "v4.8",
+    "currentVersion": "4.8",
+    "currentVersionLabel": "v4.8",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

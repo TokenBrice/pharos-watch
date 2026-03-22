@@ -268,6 +268,53 @@ describe("detectDepegEvents", () => {
     expect(inserts.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("retires a stale live event and routes the opposite low-confidence move into pending", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "above", peak_deviation_bps: 220, started_at: now - 3600,
+          start_price: 1.022, peak_price: 1.022, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 0.55,
+        priceSource: "coingecko",
+        priceConfidence: "low",
+        priceUpdatedAt: now,
+      }),
+    ]);
+
+    const closures = preparedSqls.filter((sql) =>
+      sql.includes("UPDATE depeg_events SET ended_at")
+    );
+    const pending = preparedSqls.filter((sql) =>
+      sql.includes("INSERT INTO depeg_pending")
+    );
+    const liveInserts = preparedSqls.filter((sql) =>
+      sql.includes("INSERT INTO depeg_events")
+    );
+
+    expect(closures.length).toBeGreaterThanOrEqual(1);
+    expect(pending.length).toBeGreaterThanOrEqual(1);
+    expect(liveInserts).toHaveLength(0);
+  });
+
   it("merges duplicate open events: keeps earliest, absorbs worst peak", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];

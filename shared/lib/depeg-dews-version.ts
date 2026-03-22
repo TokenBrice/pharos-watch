@@ -1,14 +1,29 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "4.7",
+  currentVersion: "4.8",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "4.8",
+    title: "Contradicted live depegs now retire into pending confirmation",
+    date: "2026-03-22",
+    effectiveAt: 1774173665,
+    summary:
+      "When a low-confidence primary price now contradicts an open live depeg across the peg, the stale live row is retired immediately and the replacement move waits in pending confirmation instead of leaving the wrong direction active.",
+    impact: [
+      "Opposite-direction live depeg rows no longer remain active just because the correcting primary price is still confirm_required",
+      "Direction flips from cached, fallback, low-confidence, or stale primary inputs now close the stale live row and insert a replacement pending candidate",
+      "Public active-depeg state stops claiming the wrong side of the peg while confirmation catches up on the corrected move",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.7",
     title: "Early peg score: minimum data threshold lowered from 30 to 7 days",
     date: "2026-03-21",
-    effectiveAt: 1774310400,
+    effectiveAt: 1774051200,
     summary:
       "Peg score is now emitted after 7 days of tracking instead of 30, with an 'Early score' label for the 7–30 day window.",
     impact: [

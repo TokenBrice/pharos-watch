@@ -125,7 +125,8 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path A -- Deviation >= threshold AND event already open**
 
-- If direction changed: only flip the live event when the primary price is authoritative or a trusted DEX row corroborates the new direction
+- If direction changed and the primary price is authoritative (or a trusted DEX row corroborates it): close the old event and open the replacement immediately
+- If direction changed but the primary price is `confirm_required`: retire the stale live row immediately and route the replacement move through `depeg_pending` instead of leaving the wrong direction active
 - Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a trusted DEX row corroborates the move
 - DEX cross-validation for ongoing events: if a **trusted** DEX row disagrees AND event is >= 30 min old, auto-close the event
 
@@ -251,7 +252,8 @@ Special case:
 
 While event is open:
   - Peak deviation updated if worse price seen
-  - Direction change: close old, open new
+  - Direction change with authoritative or DEX-confirmed input: close old, open new
+  - Direction change with `confirm_required` input: close old, insert replacement pending candidate
   - Trusted DEX row disagrees + event >= 30min: auto-close
   - Price recovers below threshold: close with recovery_price
 
