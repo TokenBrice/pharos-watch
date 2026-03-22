@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.2)
+## Overall Grade (v6.3)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.2 keeps the v6.1 structure. Redemption uplift remains confidence-gated, and collateral-quality passthrough now only accepts fresh authoritative independent live reserve feeds (`dynamic-mix` or `single-bucket`). `validated-static` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring.
+Current-version note: v6.3 keeps the v6.2 structure. Redemption uplift remains confidence-gated, but documented-bound immutable full-system routes such as LUSD and BOLD can now count as stronger eventual redemption evidence without being presented as immediate redeemable buffer capacity. Collateral-quality passthrough still only accepts fresh authoritative independent live reserve feeds (`dynamic-mix` or `single-bucket`), while `validated-static` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring.
 
 ## Dimensions
 
