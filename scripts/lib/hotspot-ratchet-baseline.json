@@ -40,8 +40,8 @@
     "branchCount": 122
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 740,
-    "maxFunctionLines": 575,
-    "branchCount": 84
+    "fileLines": 776,
+    "maxFunctionLines": 611,
+    "branchCount": 86
   }
 }
