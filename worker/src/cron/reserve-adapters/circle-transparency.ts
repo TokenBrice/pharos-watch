@@ -1,11 +1,19 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromPercentages } from "./helpers";
+import {
+  fetchTextWithRetry,
+  getAdapterTimeout,
+  requireHtmlInput,
+  slicesFromPercentages,
+  slicesFromValues,
+} from "./helpers";
 
 interface CircleSliceConfig {
   attr: string;
   label: string;
 }
+
+const CIRCLE_AMOUNT_MODE_MAX_RELATIVE_DIFF = 0.1;
 
 const USDC_SLICES: CircleSliceConfig[] = [
   { attr: "data-usdc-us-treasuries", label: "<3-Month U.S. Treasuries" },
@@ -29,6 +37,23 @@ function extractAttrValue(html: string, attr: string): number | null {
   return Number.isFinite(val) && val > 0 ? val : null;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractTagById(html: string, id: string): string | null {
+  const escapedId = escapeRegExp(id);
+  // eslint-disable-next-line security/detect-non-literal-regexp -- id is selected from adapter-owned constants and escaped before interpolation.
+  const re = new RegExp(`<[^>]*\\sid\\s*=\\s*["']${escapedId}["'][^>]*>`, "i");
+  return html.match(re)?.[0] ?? null;
+}
+
+function extractDisplayAmount(html: string, coinType: string): number | null {
+  const displayId = coinType === "eurc" ? "euro-in-circulation" : "usdc-in-circulation";
+  const tag = extractTagById(html, displayId);
+  return tag ? extractAttrValue(tag, "data-point") : null;
+}
+
 export function adaptCircleTransparency(html: string, coinType: string): AdapterResult {
   const sliceConfigs = coinType === "eurc" ? EURC_SLICES : USDC_SLICES;
   const missingAttrs: string[] = [];
@@ -50,20 +75,40 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
     );
   }
 
-  return {
-    slices: slicesFromPercentages(
+  const rawValueSum = entries.reduce((sum, entry) => sum + entry.value, 0);
+  const displayAmount = extractDisplayAmount(html, coinType);
+  const useAbsoluteValues = displayAmount != null
+    && displayAmount > 0
+    && Math.abs(rawValueSum - displayAmount) / Math.max(rawValueSum, displayAmount) <= CIRCLE_AMOUNT_MODE_MAX_RELATIVE_DIFF;
+
+  const slices = useAbsoluteValues
+    ? slicesFromValues(
+      entries.map((entry) => ({
+        name: entry.name,
+        value: entry.value,
+        risk: entry.risk,
+      })),
+      1,
+    )
+    : slicesFromPercentages(
       entries.map((entry) => ({
         name: entry.name,
         pct: entry.value,
         risk: entry.risk,
       })),
       { context: `Circle ${coinType.toUpperCase()} reserve composition` },
-    ),
+    );
+
+  return {
+    slices,
     metadata: {
       coinType,
       sliceCount: entries.length,
       expectedSliceCount: sliceConfigs.length,
       freshnessMode: "unverified",
+      valueMode: useAbsoluteValues ? "absolute" : "percentage",
+      rawValueSum,
+      ...(displayAmount != null ? { displayAmount } : {}),
     },
   };
 }
