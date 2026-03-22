@@ -437,7 +437,7 @@ export function CoreMethodologySections() {
             </Link>
           </div>
           <p className="text-xs text-muted-foreground">
-            Version increments when PSI formula, caps, bands, or component definitions change.
+            Version increments when PSI formula, caps, bands, component definitions, or other score-affecting input semantics change.
           </p>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
@@ -465,7 +465,11 @@ export function CoreMethodologySections() {
             <MethodologyFacts
               facts={[
                 { label: "Minimum data", value: "Scorer accepts empty depeg sets, but requires total market cap > 0" },
-                { label: "Required sources", value: "Market-cap totals + active depeg inputs (DEWS breadth optional)" },
+                {
+                  label: "Required sources",
+                  value:
+                    "Market-cap totals + active depeg inputs (current stablecoins price, or recent replay-safe price_cache fallback for already-open depegs; DEWS breadth optional)",
+                },
                 {
                   label: "Failure behavior",
                   value:

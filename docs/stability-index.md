@@ -4,7 +4,7 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.0`
+- **Current methodology version:** `v3.1`
 - **Public changelog page:** `/methodology/stability-index-changelog/`
 - **Canonical source:** `shared/lib/stability-index-version.ts`
 
@@ -42,7 +42,9 @@ Severity and breadth iterate over **active depegs only** (unique coins currently
 
 ### Deviation source
 
-The cron computes **live deviation** from current price: `bps = ((current_price / peg_reference) - 1) × 10000`. It does not use `peak_deviation_bps` from the depeg event — a coin that peaked at 500bps but is currently at 120bps contributes only 120bps of severity.
+The cron computes **live deviation** from the current stablecoins snapshot price when available: `bps = ((current_price / peg_reference) - 1) × 10000`. It does not use `peak_deviation_bps` from the depeg event — a coin that peaked at 500bps but is currently at 120bps contributes only 120bps of severity.
+
+For **already-open depegs only**, if the current stablecoins snapshot temporarily lacks a usable positive price, PSI falls back to the last replay-safe positive `price_cache` entry as long as it is no older than 6 hours. This preserves contributor continuity through transient price-validation gaps without anchoring PSI to arbitrarily stale prices.
 
 ### Depreciation
 
@@ -106,7 +108,7 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 
 | Input | Source |
 |-------|--------|
-| Active depegs (bps + mcap) | `depeg_events` where `ended_at IS NULL`, with current price from stablecoins cache |
+| Active depegs (bps + mcap) | `depeg_events` where `ended_at IS NULL`, with current price from stablecoins cache or, for already-open depegs missing a current price, a replay-safe `price_cache` fallback ≤6h old |
 | Total market cap | Sum of the PSI-eligible stablecoins present in the DefiLlama cache (`PSI_ELIGIBLE_IDS` = tracked + shadow) |
 | 7-day market cap change | Current vs previous week total from stablecoins cache |
 | DEWS stress breadth | Latest `stress_signals` rows in warning bands (`ALERT`, `WARNING`, `DANGER`) |
@@ -115,7 +117,7 @@ If `totalMcapUsd` is missing or `<= 0`, `computeStabilityIndex()` returns `null`
 
 ## Cron & Storage
 
-- **30-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **30 minutes** (`10,40 * * * *`) after `compute-dews` on the shared half-hourly lane. Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
+- **30-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **30 minutes** (`10,40 * * * *`) after `compute-dews` on the shared half-hourly lane. Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. For already-open depegs whose current stablecoins snapshot price is temporarily missing, the cron can reuse a replay-safe positive `price_cache` price if it is at most 6 hours old; otherwise that coin is skipped for that sample. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
 - **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 30-minute samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
 - **Tables**: `stability_index_samples` (migration 0026, columns added by 0035) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`. `stability_index` (migration 0022, columns added by 0035) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`

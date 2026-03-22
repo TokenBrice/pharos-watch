@@ -1,6 +1,14 @@
 # Stability Index Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.0` (2026-02-25 -> 2026-03-01).
+Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.1` (2026-02-25 -> 2026-03-23).
+
+---
+
+## v3.1 — Open-depeg replay-price fallback (Mar 23, 2026)
+
+- Active depegs can now keep contributing to PSI when the current stablecoins snapshot temporarily lacks a usable price
+- Severity/breadth now fall back to the last replay-safe positive `price_cache` value for already-open depegs, capped to a 6-hour TTL
+- Prevents transient omissions from the Top Contributors table and the PSI sample input set during price-validation churn
 
 ---
 

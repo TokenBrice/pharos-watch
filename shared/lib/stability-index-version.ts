@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const psi = createMethodologyVersion({
-  currentVersion: "3.0",
+  currentVersion: "3.1",
   changelogPath: "/methodology/stability-index-changelog/",
   changelog: [
+  {
+    version: "3.1",
+    title: "Open-depeg replay-price fallback",
+    date: "2026-03-23",
+    effectiveAt: 1774221219,
+    summary:
+      "Active depegs now stay in PSI when the current stablecoins snapshot temporarily loses a usable price but a recent replay-safe price-cache entry still exists.",
+    impact: [
+      "Severity and breadth now fall back to the last replay-safe positive `price_cache` value for already-open depegs when the current stablecoins snapshot price is missing",
+      "Replay fallback is capped to recent cache entries (6-hour TTL) rather than unbounded historical prices",
+      "Prevents transient contributor/sample omissions during price-validation churn without changing the PSI formula, caps, or bands",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.0",
     title: "DEWS stress breadth component",

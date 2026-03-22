@@ -2,8 +2,11 @@ import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 import type { CronResult } from "../lib/cron-logger";
+import { getPriceCache } from "../lib/db-cache";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+
+const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 
 export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
@@ -51,12 +54,34 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     activeDepegs = { results: [], success: true, meta: { duration: 0, last_row_id: 0, changes: 0, changed_db: false, size_after: 0, rows_read: 0, rows_written: 0 } };
   }
 
+  const now = Math.floor(Date.now() / 1000);
+
   // Build price lookup from stablecoins cache
   const priceById = new Map<string, number>();
   for (const coin of tracked) {
     if (coin.price != null && typeof coin.price === "number" && coin.price > 0) {
       priceById.set(coin.id, coin.price);
     }
+  }
+
+  // Keep already-open depegs in PSI when the current stablecoins snapshot temporarily
+  // lacks a usable price but we still have a recent replay-safe positive cached price.
+  const replayPriceById = new Map<string, number>();
+  try {
+    const replayPriceCache = await getPriceCache(db);
+    for (const [assetId, cached] of replayPriceCache) {
+      if (
+        cached.price != null &&
+        Number.isFinite(cached.price) &&
+        cached.price > 0 &&
+        Number.isFinite(cached.updatedAt) &&
+        (now - cached.updatedAt) < REPLAY_PRICE_CACHE_TTL_SEC
+      ) {
+        replayPriceById.set(assetId, cached.price);
+      }
+    }
+  } catch (error) {
+    console.warn("[stability-index] replay price cache unavailable; open-depeg fallback disabled:", error);
   }
 
   // Read DEWS stress signals (from previous 15-min cycle) for stress breadth
@@ -96,16 +121,21 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     grouped.set(r.stablecoin_id, list);
   }
 
-  const now = Math.floor(Date.now() / 1000);
   const depegs: { bps: number; mcapUsd: number; depegAgeDays: number }[] = [];
   const contributors: {
     id: string; symbol: string; bps: number; mcapUsd: number;
     ageDays: number; factor: number;
   }[] = [];
+  let replayPriceFallbackCount = 0;
 
   for (const [coinId, events] of grouped) {
-    const price = priceById.get(coinId);
+    const currentPrice = priceById.get(coinId);
+    const replayPrice = replayPriceById.get(coinId);
+    const price = currentPrice ?? replayPrice;
     if (!price) continue;
+    if (currentPrice == null && replayPrice != null) {
+      replayPriceFallbackCount++;
+    }
 
     let worstBps = 0;
     let earliestStart = Infinity;
@@ -170,6 +200,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsStressBreadth,
         dewsUnavailable,
         dewsFailureReason,
+        replayPriceFallbackCount,
         contributors,
         methodologyVersion: PSI_METHODOLOGY_VERSION,
       }),
@@ -192,6 +223,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       dewsStressBreadth,
       dewsUnavailable,
       dewsFailureReason,
+      replayPriceFallbackCount,
     }),
   };
 }
