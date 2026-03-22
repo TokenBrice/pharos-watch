@@ -390,6 +390,33 @@ describe("syncStablecoins", () => {
     expect((transports.geckoTerminalPublic as Record<string, unknown>).priced).toBe(1);
   });
 
+  it("keeps default GT probe metadata when the non-fatal GT pass throws", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    vi.mocked(runGtProbePass).mockRejectedValueOnce(new Error("gt transient failure"));
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const gtProbe = metadata.gtProbe as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(gtProbe.updatedCount).toBe(0);
+    expect(gtProbe.upstreamErrors).toBe(0);
+    expect(gtProbe.publicFallbacks).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[sync-stablecoins] GT probe failed (non-fatal):",
+      expect.any(Error),
+    );
+  });
+
   it("applies protocol-backed price overrides before caching", async () => {
     const db = makeDb();
     const writes = trackCacheWrites(db);
