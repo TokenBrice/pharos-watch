@@ -140,6 +140,7 @@ Each row also carries:
   - `dynamic` for live reserve-sync backed capacity
   - `documented-bound` only when a bounded model is explicitly configured that way after source review
   - `heuristic` by default for `supply-full`, `supply-ratio`, and inferred legacy rows without stronger evidence
+- Immutable fully on-chain systems can still use `documented-bound` with `eventual-only` semantics when the protocol mechanics establish full-system redeemability directly, even if no separate immediate buffer is measured (current examples: LUSD and BOLD)
 - `capacitySemantics`:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer
   - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity

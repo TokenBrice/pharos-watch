@@ -124,6 +124,37 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
+      {/* ──────────── v6.3 ──────────── */}
+      <VersionCard
+        version="v6.3"
+        title="Documented-bound Liquity redemption confidence"
+        date="Mar 22, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Safety Score structure is unchanged, but a narrow class of immutable on-chain
+          redemption routes now counts as stronger exit evidence than heuristic capacity models.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            <span className="text-foreground font-medium">LUSD</span> and{" "}
+            <span className="text-foreground font-medium">BOLD</span> now use{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">documented-bound</code>{" "}
+            eventual redemption capacity instead of generic heuristic{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">supply-full</code> modeling.
+          </li>
+          <li>
+            These routes still present as{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">eventual-only</code>, so
+            Pharos does not treat full current supply as an immediate redeemable buffer.
+          </li>
+          <li>
+            Liquity-style <code className="text-xs bg-muted px-1 py-0.5 rounded">min 50 bps + baseRate</code>{" "}
+            fees remain reviewed formula inputs rather than fixed-fee assumptions.
+          </li>
+        </ul>
+      </VersionCard>
+
       {/* ──────────── v6.2 ──────────── */}
       <VersionCard
         version="v6.2"

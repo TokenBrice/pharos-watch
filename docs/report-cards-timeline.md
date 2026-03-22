@@ -313,6 +313,14 @@ Safety Score structure is unchanged, but the liquidity dimension is now stricter
 
 Weights and grade thresholds are unchanged from v6.0.
 
+## v6.3 - Documented-bound Liquity redemption confidence (2026-03-22)
+
+Safety Score structure is unchanged, but the liquidity dimension now recognizes a narrow class of fully on-chain redemption routes as stronger evidence than heuristic capacity models:
+
+- LUSD and BOLD now use `documented-bound` eventual redemption capacity instead of generic heuristic `supply-full` modeling
+- These routes still render as eventual-only redemption paths, so Pharos does not present full current supply as an immediate redeemable buffer
+- Reviewed Liquity-style `min 50 bps + baseRate` fee formulas remain dynamic formula inputs rather than fixed-fee assumptions
+
 ## v6.2 — Independent live reserve contract tightening (2026-03-22)
 
 Safety Score structure is unchanged, but the collateral-quality live reserve passthrough is now more precise about which live feeds qualify:

@@ -429,6 +429,30 @@ describe("buildRedemptionBackstopEntry", () => {
     );
     expect(highEntry.modelConfidence).toBe("high");
 
+    // Documented eventual redeemability + reviewed formula fee -> medium
+    const mediumEntry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "collateral-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "bluechip-collateral",
+        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        costModel: {
+          kind: "dynamic-or-unclear",
+          feeDescription: "Minimum 50 bps + baseRate",
+          confidence: "formula",
+        },
+      },
+      100_000_000,
+      null,
+      now,
+    );
+    expect(mediumEntry.modelConfidence).toBe("medium");
+    expect(mediumEntry.capacitySemantics).toBe("eventual-only");
+
     // Supply-full (heuristic capacity) → low
     const lowEntry = await buildRedemptionBackstopEntry(
       mockD1(),

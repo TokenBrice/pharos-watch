@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "6.2",
+  currentVersion: "6.3",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.3",
+      title: "Documented-bound Liquity redemption confidence",
+      date: "2026-03-22",
+      effectiveAt: 1774184400,
+      summary:
+        "Fully on-chain Liquity redemption routes with documented full-system redeemability now qualify as stronger exit-liquidity evidence without being presented as immediate buffer capacity.",
+      impact: [
+        "LUSD and BOLD now use documented-bound eventual redemption capacity instead of heuristic supply-full modeling",
+        "These routes remain eventual-only on detail surfaces, but they can now uplift the Safety Score liquidity dimension",
+        "Liquity-style base-rate fee formulas remain reviewed formula inputs rather than fixed-fee assumptions",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.2",
       title: "Independent live reserve contract tightening",

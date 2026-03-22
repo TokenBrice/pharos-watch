@@ -15,10 +15,12 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   ),
   "bold-liquity": {
     ...collateralRedeemBase,
+    capacityModel: { kind: "supply-full", confidence: "documented-bound" },
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
   "lusd-liquity": {
     ...collateralRedeemBase,
+    capacityModel: { kind: "supply-full", confidence: "documented-bound" },
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
   "feusd-felix": {

@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.2",
+  currentVersion: "1.3",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.3",
+      title: "Documented-bound full-system redemption for Liquity routes",
+      date: "2026-03-22",
+      effectiveAt: 1774184400,
+      summary:
+        "Immutable Liquity-style routes can now be marked documented-bound when protocol mechanics establish full-system redeemability, while still preserving eventual-only capacity semantics.",
+      impact: [
+        "LUSD and BOLD now resolve capacity confidence as documented-bound instead of heuristic",
+        "These routes stay eventual-only and do not claim a separately measured immediate redeemable buffer",
+        "Reviewed Liquity-style fee formulas remain dynamic formula inputs rather than fixed bps placeholders",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.2",
       title: "Failure-safe snapshots and evidence-aware capacity semantics",
