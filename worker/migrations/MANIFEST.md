@@ -79,6 +79,8 @@
 | 0069     | `0069_chain_supply_history.sql`                 | Create chain_supply_history table                                                               |
 | 0070     | `0070_dex_price_challengers.sql`                | Create published DEX challenger snapshot tables for pool-challenge and depeg-confirmation reads |
 | 0071     | `0071_live_reserve_snapshot_metadata_and_history.sql` | Add live reserve snapshot metadata columns and sync history tables                         |
+| 0072     | `0072_telegram_launch_alerts.sql`               | Add launch alert flags to telegram subscribers and subscriptions                                |
+| 0073     | `0073_price_cache_provenance.sql`               | Add price-cache provenance and timestamp metadata columns                                        |
 
 ## Known Anomalies
 

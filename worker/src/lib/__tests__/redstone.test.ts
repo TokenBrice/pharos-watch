@@ -62,7 +62,7 @@ describe("fetchRedstonePrices", () => {
     ));
 
     const results = await fetchRedstonePrices(["USDe", "crvUSD"]);
-    expect(results.get("USDe")?.price).toBeCloseTo(1.0002, 4);
+    expect(results.get("USDe")?.price).toBeCloseTo(1.0001, 4);
     expect(results.get("crvUSD")?.price).toBeCloseTo(0.9996, 4);
   });
 

@@ -15,6 +15,8 @@ export interface PeggedAsset {
   priceSource?: string;
   priceConfidence?: PriceConfidence | null;
   priceUpdatedAt?: number | null;
+  priceObservedAt?: number | null;
+  priceSyncedAt?: number | null;
   supplySource?: string;
   pegType?: string;
   pegMechanism?: string;
@@ -43,5 +45,7 @@ export function applyResolvedPrice(
   asset.priceSource = source;
   asset.priceConfidence = confidence;
   asset.priceUpdatedAt = updatedAtSec;
+  asset.priceObservedAt = updatedAtSec;
+  asset.priceSyncedAt = updatedAtSec;
   asset.consensusSources = [source];
 }

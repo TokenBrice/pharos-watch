@@ -7,6 +7,8 @@ import {
   DEX_PRICE_CHECK_UI_MIN_TVL_USD,
 } from "./constants";
 import type { DepegPrimaryTrust, PriceConfidence } from "@shared/types";
+import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import {
   loadPublishedDexPoolChallengers,
   type DexPriceChallengerLoadRow,
@@ -46,6 +48,8 @@ interface PrimaryPriceTrustInput {
   priceSource?: string | null;
   priceConfidence?: PriceConfidence | null;
   priceUpdatedAt?: number | null;
+  priceObservedAt?: number | null;
+  agreeSources?: string[] | null;
 }
 
 export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexPriceRow>> {
@@ -69,6 +73,7 @@ export interface DexPoolSource {
   chain: string;
   price: number;
   tvl: number;
+  updatedAt: number;
 }
 
 /**
@@ -83,7 +88,7 @@ export async function loadDexPoolChallengers(
   minPoolTvlUsd: number,
   maxAgeSec: number,
   nowSec: number,
-): Promise<Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string }>>> {
+): Promise<Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>>> {
   const { challengersByStablecoin, diagnostics } = await loadPublishedDexPoolChallengers(
     db,
     minPoolTvlUsd,
@@ -117,6 +122,7 @@ export async function loadDexPoolChallengers(
         tvlUsd: row.tvlUsd,
         protocol: row.protocol,
         chain: row.chain,
+        observedAt: row.snapshotAt,
       })),
     ]),
   );
@@ -139,7 +145,13 @@ export async function loadDexPriceSources(
       let sources: DexPoolSource[];
       try { sources = JSON.parse(row.price_sources_json); } catch { continue; }
       if (!Array.isArray(sources) || sources.length === 0) continue;
-      result.set(row.stablecoin_id, sources);
+      result.set(
+        row.stablecoin_id,
+        sources.map((source) => ({
+          ...source,
+          updatedAt: row.updated_at,
+        })),
+      );
     }
     return result;
   } catch (err) {
@@ -170,9 +182,15 @@ export function classifyPrimaryDepegTrust(
   }
 
   const ageSec =
-    typeof input.priceUpdatedAt === "number" && Number.isFinite(input.priceUpdatedAt)
-      ? Math.max(0, nowSec - input.priceUpdatedAt)
+    typeof input.priceObservedAt === "number" && Number.isFinite(input.priceObservedAt)
+      ? Math.max(0, nowSec - input.priceObservedAt)
+      : typeof input.priceUpdatedAt === "number" && Number.isFinite(input.priceUpdatedAt)
+        ? Math.max(0, nowSec - input.priceUpdatedAt)
       : Number.POSITIVE_INFINITY;
+
+  const trustSources = input.agreeSources && input.agreeSources.length > 0
+    ? input.agreeSources
+    : splitCompositePriceSource(input.priceSource ?? "");
 
   if (
     input.priceSource === "cached" ||
@@ -183,7 +201,10 @@ export function classifyPrimaryDepegTrust(
     return "confirm_required";
   }
 
-  if (input.priceConfidence === "high" || input.priceConfidence === "single-source") {
+  if (
+    (input.priceConfidence === "high" || input.priceConfidence === "single-source") &&
+    hasDepegAuthoritativeSource(trustSources)
+  ) {
     return "authoritative";
   }
 

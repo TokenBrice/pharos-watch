@@ -48,7 +48,7 @@ function makeAsset(overrides: {
     id: overrides.id,
     symbol: overrides.symbol,
     price: overrides.price,
-    priceSource: overrides.priceSource ?? "defillama",
+    priceSource: overrides.priceSource ?? "pyth",
     priceConfidence: overrides.priceConfidence ?? "single-source",
     priceUpdatedAt: overrides.priceUpdatedAt ?? Math.floor(Date.now() / 1000),
     pegType: overrides.pegType ?? "peggedUSD",

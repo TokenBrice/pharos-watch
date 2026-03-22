@@ -38,6 +38,7 @@ import {
   isGtProbeEligibleSingleSource,
   isPoolChallengeEligibleConsensus,
 } from "../lib/pricing-source-policy";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
 
@@ -63,11 +64,16 @@ export { applyResolvedPrice, hasMissingPrice } from "./enrich-prices-shared";
 export interface PrimaryPriceResult {
   price: number;
   source: string;
+  selectedSource?: string;
   confidence: PriceConfidence;
   dlPrice: number | null;
   cgPrice: number | null;
   candidateSources: string[];
   agreeSources: string[];
+  disagreeSources?: string[];
+  allPrices?: Record<string, number>;
+  observedAt?: number | null;
+  observedAtBySource?: Record<string, number | null>;
   softOnly?: boolean;
 }
 
@@ -83,6 +89,16 @@ function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number)
   const mid = (left + right) / 2;
   if (mid <= 0) return false;
   return (Math.abs(left - right) / mid) * 10000 <= thresholdBps;
+}
+
+const INVALID_GECKO_ID_SENTINEL = "wrong";
+
+function isUsableGeckoId(geckoId: unknown): geckoId is string {
+  return typeof geckoId === "string" && geckoId.length > 0 && !geckoId.includes(INVALID_GECKO_ID_SENTINEL);
+}
+
+function getSourceDefaultWeight(source: string): number {
+  return getPricingSourceRegistryEntry(source)?.defaultWeight ?? 1;
 }
 
 /**
@@ -117,7 +133,7 @@ export async function fetchPrimaryPrices(
   const candidates = assets.filter((asset) => {
     const meta = metaById.get(asset.id);
     const symbolUpper = asset.symbol.toUpperCase();
-    const hasValidGeckoId = !!asset.geckoId && typeof asset.geckoId === "string" && !asset.geckoId.includes("wrong");
+    const hasValidGeckoId = isUsableGeckoId(asset.geckoId);
     return hasValidGeckoId ||
       (dlListPrices?.has(asset.id) ?? false) ||
       !!meta?.pythFeedId ||
@@ -148,7 +164,7 @@ export async function fetchPrimaryPrices(
   const geckoIds = [...new Set(
     candidates
       .map((asset) => asset.geckoId)
-      .filter((geckoId): geckoId is string => !!geckoId && !geckoId.includes("wrong")),
+      .filter(isUsableGeckoId),
   )];
   const BATCH_SIZE = 250; // CG supports 250 IDs per call
 
@@ -162,14 +178,21 @@ export async function fetchPrimaryPrices(
       pythFeedIds.set(asset.id, meta.pythFeedId);
     }
   }
-  const pythPrices = new Map<string, { price: number; confidenceBps: number }>();
+  const pythPrices = new Map<string, { price: number; confidenceBps: number; publishTime: number }>();
   const binancePrices = new Map<string, number>();
   const krakenPrices = new Map<string, number>();
   const bitstampPrices = new Map<string, number>();
   const coinbasePrices = new Map<string, number>();
-  const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number }>();
+  const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }>();
   const curvePrices = new Map<string, number>();
   let curveOraclePrice: number | null = null; // crvUSD PriceAggregator TWAP
+  let cgObservedAt: number | null = null;
+  let binanceObservedAt: number | null = null;
+  let krakenObservedAt: number | null = null;
+  let bitstampObservedAt: number | null = null;
+  let coinbaseObservedAt: number | null = null;
+  let curveObservedAt: number | null = null;
+  let curveOracleObservedAt: number | null = null;
 
   // Coinbase uses uppercased product symbols. RedStone is exact-case and only
   // queried for the known-supported tracked subset to keep request volume bounded.
@@ -205,6 +228,9 @@ export async function fetchPrimaryPrices(
                   cgPrices.set(gId, val.usd);
                 }
               }
+              if (Object.keys(data).length > 0) {
+                cgObservedAt = Math.floor(Date.now() / 1000);
+              }
             } else {
               hadBatchFailure = true;
               console.warn(`[primary-prices] CG price API returned ${res?.status ?? "no response"}`);
@@ -226,7 +252,11 @@ export async function fetchPrimaryPrices(
         try {
           const results = await fetchPythPrices(pythFeedIds, signal);
           for (const [coinId, result] of results) {
-            pythPrices.set(coinId, { price: result.price, confidenceBps: result.confidenceBps });
+            pythPrices.set(coinId, {
+              price: result.price,
+              confidenceBps: result.confidenceBps,
+              publishTime: result.publishTime,
+            });
           }
           await recordOutcome(db, CIRCUIT_SOURCE.PYTH_PRICES, results.size > 0);
         } catch (err) {
@@ -245,6 +275,7 @@ export async function fetchPrimaryPrices(
           try {
             const prices = await fetchBinancePrices(signal);
             for (const [symbol, price] of prices) binancePrices.set(symbol, price);
+            if (prices.size > 0) binanceObservedAt = Math.floor(Date.now() / 1000);
             await recordOutcome(db, CIRCUIT_SOURCE.BINANCE_PRICES, prices.size > 0);
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -257,6 +288,7 @@ export async function fetchPrimaryPrices(
           try {
             const prices = await fetchKrakenPrices(krakenSymbols, signal);
             for (const [symbol, price] of prices) krakenPrices.set(symbol, price);
+            if (prices.size > 0) krakenObservedAt = Math.floor(Date.now() / 1000);
             await recordOutcome(db, CIRCUIT_SOURCE.KRAKEN_PRICES, prices.size > 0);
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -269,6 +301,7 @@ export async function fetchPrimaryPrices(
           try {
             const prices = await fetchBitstampPrices(signal);
             for (const [symbol, price] of prices) bitstampPrices.set(symbol, price);
+            if (prices.size > 0) bitstampObservedAt = Math.floor(Date.now() / 1000);
             await recordOutcome(db, CIRCUIT_SOURCE.BITSTAMP_PRICES, prices.size > 0);
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -281,6 +314,7 @@ export async function fetchPrimaryPrices(
           try {
             const prices = await fetchCoinbasePrices(coinbaseSymbols, signal);
             for (const [symbol, price] of prices) coinbasePrices.set(symbol, price);
+            if (prices.size > 0) coinbaseObservedAt = Math.floor(Date.now() / 1000);
             await recordOutcome(db, CIRCUIT_SOURCE.COINBASE_PRICES, prices.size > 0);
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -302,6 +336,7 @@ export async function fetchPrimaryPrices(
               price: result.price,
               venueCount: result.venueCount,
               venueAgreementPct: result.venueAgreementPct,
+              timestamp: result.timestamp,
             });
           }
           await recordOutcome(db, CIRCUIT_SOURCE.REDSTONE_PRICES, prices.size > 0);
@@ -320,6 +355,7 @@ export async function fetchPrimaryPrices(
         try {
           const prices = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
           for (const [id, price] of prices) curvePrices.set(id, price);
+          if (prices.size > 0) curveObservedAt = Math.floor(Date.now() / 1000);
           await recordOutcome(db, CIRCUIT_SOURCE.CURVE_ONCHAIN, prices.size > 0);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -337,7 +373,10 @@ export async function fetchPrimaryPrices(
           );
           if (hex) {
             const price = Number(BigInt(hex)) / 1e18;
-            if (price > 0 && price < 10) curveOraclePrice = price;
+            if (price > 0 && price < 10) {
+              curveOraclePrice = price;
+              curveOracleObservedAt = Math.floor(Date.now() / 1000);
+            }
           }
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -355,43 +394,55 @@ export async function fetchPrimaryPrices(
   const DEX_API_WEIGHTS: Record<string, number> = { fluid: 3, balancer: 3, raydium: 2, orca: 2 };
 
   for (const asset of candidates) {
-    const gId = asset.geckoId && !asset.geckoId.includes("wrong") ? asset.geckoId : null;
+    const gId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cg = gId ? (cgPrices.get(gId) ?? null) : null;
     const pyth = pythPrices.get(asset.id);
 
     const sources: SourcePrice[] = [];
-    if (cg != null) sources.push({ source: "coingecko", price: cg, weight: 2 });
+    if (cg != null) sources.push({ source: "coingecko", price: cg, weight: 2, observedAt: cgObservedAt });
     const dlListPrice = dlListPrices?.get(asset.id);
     if (dlListPrice != null && dlListPrice > 0) {
-      sources.push({ source: "defillama-list", price: dlListPrice, weight: 1 });
+      sources.push({
+        source: "defillama-list",
+        price: dlListPrice,
+        weight: 1,
+        observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+      });
     }
     if (pyth != null) {
       const pythWeight = pyth.confidenceBps > 200 ? 0 : pyth.confidenceBps > 100 ? 1 : 2;
       if (pythWeight > 0) {
-        sources.push({ source: "pyth", price: pyth.price, weight: pythWeight, metadata: { confidenceBps: pyth.confidenceBps } });
+        sources.push({
+          source: "pyth",
+          price: pyth.price,
+          weight: pythWeight,
+          observedAt: pyth.publishTime,
+          metadata: { confidenceBps: pyth.confidenceBps },
+        });
       }
     }
     const binancePrice = binancePrices.get(asset.symbol.toUpperCase());
-    if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2 });
+    if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2, observedAt: binanceObservedAt });
     const krakenPrice = krakenPrices.get(asset.symbol.toUpperCase());
-    if (krakenPrice != null) sources.push({ source: "kraken", price: krakenPrice, weight: 2 });
+    if (krakenPrice != null) sources.push({ source: "kraken", price: krakenPrice, weight: 2, observedAt: krakenObservedAt });
     const bitstampPrice = bitstampPrices.get(asset.symbol.toUpperCase());
-    if (bitstampPrice != null) sources.push({ source: "bitstamp", price: bitstampPrice, weight: 1 });
+    if (bitstampPrice != null) sources.push({ source: "bitstamp", price: bitstampPrice, weight: 1, observedAt: bitstampObservedAt });
     const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
-    if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2 });
+    if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2, observedAt: coinbaseObservedAt });
     const redstoneResult = redstonePrices.get(asset.symbol);
     if (redstoneResult != null && redstoneResult.venueCount >= 2 && redstoneResult.venueAgreementPct >= 50) {
       sources.push({
         source: "redstone",
         price: redstoneResult.price,
         weight: 1,
+        observedAt: redstoneResult.timestamp,
         metadata: { venueCount: redstoneResult.venueCount, venueAgreementPct: redstoneResult.venueAgreementPct },
       });
     }
     const curvePrice = curvePrices.get(asset.id);
-    if (curvePrice != null) sources.push({ source: "curve-onchain", price: curvePrice, weight: 3 });
+    if (curvePrice != null) sources.push({ source: "curve-onchain", price: curvePrice, weight: 3, observedAt: curveObservedAt });
     if (asset.id === "crvusd-curve" && curveOraclePrice != null) {
-      sources.push({ source: "curve-oracle", price: curveOraclePrice, weight: 3 });
+      sources.push({ source: "curve-oracle", price: curveOraclePrice, weight: 3, observedAt: curveOracleObservedAt });
     }
     const protocolSources = dexPriceSources.get(asset.id);
     const promotedDexProtocolSources: SourcePrice[] = [];
@@ -405,6 +456,7 @@ export async function fetchPrimaryPrices(
           source: `${ps.protocol}-dex`,
           price: ps.price,
           weight: w,
+          observedAt: ps.updatedAt,
           metadata: { tvl: ps.tvl, chain: ps.chain },
         });
       }
@@ -432,6 +484,7 @@ export async function fetchPrimaryPrices(
         source: "dex-promoted",
         price: dexRow.dex_price_usd,
         weight: 1,
+        observedAt: dexRow.updated_at,
         metadata: { poolCount: dexRow.source_pool_count, tvl: dexRow.source_total_tvl },
       });
     }
@@ -454,11 +507,16 @@ export async function fetchPrimaryPrices(
     results.set(asset.id, {
       price: consensus.price,
       source: consensus.source,
+      selectedSource: consensus.selectedSource,
       confidence: consensus.confidence,
       dlPrice: dlListPrices?.get(asset.id) ?? null,
       cgPrice: cg ?? null,
       candidateSources: sources.map((s) => s.source),
       agreeSources: consensus.agreeSources,
+      disagreeSources: consensus.disagreeSources,
+      allPrices: consensus.allPrices,
+      observedAt: consensus.observedAt,
+      observedAtBySource: consensus.observedAtBySource,
     });
 
     if (consensus.confidence === "high") stats.high++;
@@ -484,17 +542,8 @@ export async function fetchPrimaryPrices(
     }
   }
 
-  // --- Pool challenge pass ---
-  const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, nowSec);
-  const assetPegTypes = new Map(candidates.map((a) => [a.id, a.pegType]));
-  const poolChallengeDowngrades = applyPoolChallenge(results, poolChallengers, assetPegTypes, stats);
-  if (poolChallengeDowngrades > 0) {
-    console.log(`[primary-prices] Pool challenge downgraded ${poolChallengeDowngrades} soft-only results to low confidence`);
-  }
-
   // Downgrade CG+DL-only "high" to "single-source" — these soft aggregators
-  // may share upstream data, creating illusory agreement. Runs after pool
-  // challenge so pool-challenged assets get caught at "high" confidence first.
+  // may share upstream data, creating illusory agreement.
   for (const result of results.values()) {
     if (
       result.confidence === "high" &&
@@ -505,9 +554,19 @@ export async function fetchPrimaryPrices(
       stats.high--;
       stats.singleSource++;
     }
+  }
 
-    // Annotate soft-only high-confidence results for observability
-    if (result.confidence === "high" && isPoolChallengeEligibleConsensus(result.agreeSources)) {
+  // --- Pool challenge pass ---
+  const poolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, nowSec);
+  const assetPegTypes = new Map(candidates.map((a) => [a.id, a.pegType]));
+  const poolChallengeDowngrades = applyPoolChallenge(results, poolChallengers, assetPegTypes, stats);
+  if (poolChallengeDowngrades > 0) {
+    console.log(`[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
+  }
+
+  for (const result of results.values()) {
+    const challengeSources = result.confidence === "low" ? result.candidateSources : result.agreeSources;
+    if (isPoolChallengeEligibleConsensus(challengeSources)) {
       result.softOnly = true;
     }
   }
@@ -534,14 +593,15 @@ export async function fetchPrimaryPrices(
  */
 export function applyPoolChallenge(
   results: Map<string, PrimaryPriceResult>,
-  poolChallengers: Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string }>>,
+  poolChallengers: Map<string, Array<{ price: number; tvlUsd: number; protocol: string; chain: string; observedAt?: number }>>,
   assetPegTypes: Map<string, string | undefined>,
   stats: PriceValidationStats,
 ): number {
   let downgrades = 0;
   for (const [assetId, result] of results) {
-    if (result.confidence !== "high") continue;
-    if (!isPoolChallengeEligibleConsensus(result.agreeSources)) continue;
+    if (result.confidence !== "high" && result.confidence !== "single-source" && result.confidence !== "low") continue;
+    const challengeSources = result.confidence === "low" ? result.candidateSources : result.agreeSources;
+    if (!isPoolChallengeEligibleConsensus(challengeSources)) continue;
 
     const pools = poolChallengers.get(assetId);
     if (!pools?.length) continue;
@@ -567,10 +627,15 @@ export function applyPoolChallenge(
       }
     }
     if (divergingProtocols.size > 0) {
-      // Always downgrade confidence when any pool diverges
-      result.confidence = "low";
-      stats.high--;
-      stats.low++;
+      if (result.confidence === "high") {
+        result.confidence = "low";
+        stats.high--;
+        stats.low++;
+      } else if (result.confidence === "single-source") {
+        result.confidence = "low";
+        stats.singleSource--;
+        stats.low++;
+      }
       downgrades++;
 
       // Only replace the price when ≥2 independent protocols corroborate
@@ -586,6 +651,13 @@ export function applyPoolChallenge(
         if (tvlSum > 0) {
           result.price = tvlWeightedSum / tvlSum;
           result.source = "pool-tvl-weighted";
+          result.selectedSource = "pool-tvl-weighted";
+          const poolObservedAts = pools
+            .map((pool) => pool.observedAt)
+            .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+          result.observedAt = poolObservedAts.length > 0
+            ? Math.min(...poolObservedAts)
+            : result.observedAt;
         }
       }
     }
@@ -608,17 +680,20 @@ export async function runGtProbePass(
 ): Promise<{ updatedCount: number; stats: import("../lib/geckoterminal-price-probe").GtProbeStats }> {
   const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../lib/geckoterminal-price-probe");
 
-  // Identify single-source eligible assets.
-  const singleSourceAssets: Array<{ id: string; price: number; source: string }> = [];
+  // Identify weak soft-source assets that can benefit from an independent GT pool check.
+  const singleSourceAssets: Array<{ id: string; price: number }> = [];
   for (const asset of assets) {
     const primary = primaryResults.get(asset.id);
+    if (!primary) continue;
+    const hasHardAuthoritativeSource = primary.candidateSources.some((source) => (
+      getPricingSourceRegistryEntry(source)?.canBeDepegAuthoritative ?? false
+    ));
     if (
-      primary &&
-      primary.confidence === "single-source" &&
-      primary.candidateSources.length === 1 &&
-      isGtProbeEligibleSingleSource(primary.candidateSources[0]!)
+      !hasHardAuthoritativeSource &&
+      (primary.confidence === "single-source" || primary.confidence === "low") &&
+      primary.candidateSources.some((source) => isGtProbeEligibleSingleSource(source))
     ) {
-      singleSourceAssets.push({ id: asset.id, price: primary.price, source: primary.candidateSources[0]! });
+      singleSourceAssets.push({ id: asset.id, price: primary.price });
     }
   }
 
@@ -640,16 +715,18 @@ export async function runGtProbePass(
     const primary = primaryResults.get(asset.id);
     if (!primary) continue;
 
-    // Build source list: original CG + GT
-    const originalSource = primary.candidateSources[0]!;
-    const originalPrice = originalSource === "defillama-list"
-      ? (primary.dlPrice ?? primary.price)
-      : (primary.cgPrice ?? primary.price);
-    const originalWeight = originalSource === "defillama-list" ? 1 : 2;
-    const sources: SourcePrice[] = [
-      { source: originalSource, price: originalPrice, weight: originalWeight },
-      gtSource,
-    ];
+    const sources: SourcePrice[] = [];
+    for (const source of primary.candidateSources) {
+      const price = primary.allPrices?.[source];
+      if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
+      sources.push({
+        source,
+        price,
+        weight: getSourceDefaultWeight(source),
+        observedAt: primary.observedAtBySource?.[source] ?? null,
+      });
+    }
+    sources.push(gtSource);
 
     const context = buildPriceValidationContext({
       stablecoinId: String(asset.id),
@@ -667,9 +744,14 @@ export async function runGtProbePass(
     // Update the primary result
     primary.price = consensus.price;
     primary.source = consensus.source;
+    primary.selectedSource = consensus.selectedSource;
     primary.confidence = consensus.confidence;
     primary.candidateSources = sources.map((s) => s.source);
     primary.agreeSources = consensus.agreeSources;
+    primary.disagreeSources = consensus.disagreeSources;
+    primary.allPrices = consensus.allPrices;
+    primary.observedAt = consensus.observedAt;
+    primary.observedAtBySource = consensus.observedAtBySource;
     updatedCount++;
   }
 
@@ -733,56 +815,54 @@ export async function enrichMissingPrices(
   let passDexCount = 0;
 
   try {
-    // ── Pass 2: CoinMarketCap listings batch ──
     const cmcResult = await runCmcPass(assets, cmcApiKey, fxRates, db, signal);
     passCmcCount = cmcResult.resolved;
-
-    // ── Pass 3: Jupiter Price API (Solana-only fallback) ──
-    const jupiterResult = await runJupiterPass(assets, fxRates, db, signal);
-    passJupiterCount = jupiterResult.resolved;
-
-    // ── Pass 4: DexScreener search API (best-effort fallback) ──
-    const dexResult = await runDexScreenerPass(assets, fxRates, db, signal);
-    passDexCount = dexResult.resolved;
-
-    // ── Summary log ──
-    const finalMissing = assets.filter(hasMissingPrice).length;
-    const totalEnriched = pass1Count + pass1bCount + passCmcCount + passJupiterCount + passDexCount;
-    if (totalMissing > 0) {
-      console.log(
-        `[enrich] ${totalMissing} assets missing prices → ` +
-        `Pass 1: +${pass1Count}, Pass 1b (multi-chain): +${pass1bCount}, ` +
-        `Pass 2 (CMC): +${passCmcCount}, ` +
-        `Pass 3 (Jupiter): +${passJupiterCount}, ` +
-        `Pass 4 (DexScreener): +${passDexCount}, still missing: ${finalMissing}`
-      );
-    }
-    if (totalEnriched > 0) {
-      console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
-    }
-    return {
-      totalMissing,
-      pass1: pass1Count,
-      pass1b: pass1bCount,
-      passCmc: passCmcCount,
-      passJupiter: passJupiterCount,
-      passDex: passDexCount,
-      finalMissing,
-      failedPasses,
-    };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[sync-stablecoins] Price enrichment failed:", err);
-    failedPasses.push("passes-2-4");
-    return {
-      totalMissing,
-      pass1: pass1Count,
-      pass1b: pass1bCount,
-      passCmc: passCmcCount,
-      passJupiter: passJupiterCount,
-      passDex: passDexCount,
-      finalMissing: totalMissing,
-      failedPasses,
-    };
+    console.warn("[sync-stablecoins] CoinMarketCap enrichment failed:", err);
+    failedPasses.push("coinmarketcap");
   }
+
+  try {
+    const jupiterResult = await runJupiterPass(assets, fxRates, db, signal);
+    passJupiterCount = jupiterResult.resolved;
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn("[sync-stablecoins] Jupiter enrichment failed:", err);
+    failedPasses.push("jupiter");
+  }
+
+  try {
+    const dexResult = await runDexScreenerPass(assets, fxRates, db, signal);
+    passDexCount = dexResult.resolved;
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn("[sync-stablecoins] DexScreener enrichment failed:", err);
+    failedPasses.push("dexscreener");
+  }
+
+  const finalMissing = assets.filter(hasMissingPrice).length;
+  const totalEnriched = pass1Count + pass1bCount + passCmcCount + passJupiterCount + passDexCount;
+  if (totalMissing > 0) {
+    console.log(
+      `[enrich] ${totalMissing} assets missing prices → ` +
+      `Pass 1: +${pass1Count}, Pass 1b (multi-chain): +${pass1bCount}, ` +
+      `Pass 2 (CMC): +${passCmcCount}, ` +
+      `Pass 3 (Jupiter): +${passJupiterCount}, ` +
+      `Pass 4 (DexScreener): +${passDexCount}, still missing: ${finalMissing}`
+    );
+  }
+  if (totalEnriched > 0) {
+    console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
+  }
+  return {
+    totalMissing,
+    pass1: pass1Count,
+    pass1b: pass1bCount,
+    passCmc: passCmcCount,
+    passJupiter: passJupiterCount,
+    passDex: passDexCount,
+    finalMissing,
+    failedPasses,
+  };
 }

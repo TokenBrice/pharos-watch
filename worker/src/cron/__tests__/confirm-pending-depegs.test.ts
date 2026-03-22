@@ -66,6 +66,22 @@ function makeNeutralUsdAssets(count = 6) {
   );
 }
 
+function makeAuthoritativeUsdAsset(
+  nowSec: number,
+  overrides: Parameters<typeof makeAsset>[0] = {},
+) {
+  return makeAsset({
+    priceSource: "pyth",
+    priceConfidence: "single-source",
+    priceObservedAt: nowSec - 30,
+    priceUpdatedAt: nowSec - 30,
+    priceSyncedAt: nowSec - 30,
+    consensusSources: ["pyth"],
+    agreeSources: ["pyth"],
+    ...overrides,
+  });
+}
+
 function makeDb(config: {
   pendingRows?: PendingRow[];
   dexRows?: Array<{
@@ -156,7 +172,7 @@ describe("confirmPendingDepegs", () => {
         openRows: [{ stablecoin_id: "usdc-circle" }],
       }),
       [
-        makeAsset({ id: "usde-ethena", name: "USDe", symbol: "USDe", geckoId: "ethena-usde", price: 1.005 }),
+        makeAuthoritativeUsdAsset(nowSec, { id: "usde-ethena", name: "USDe", symbol: "USDe", geckoId: "ethena-usde", price: 1.005 }),
         makeAsset({ id: "usds-sky", name: "USDS", symbol: "USDS", geckoId: "usds", price: 0.94 }),
         makeAsset({ id: "cusd-cap", name: "CUSD", symbol: "CUSD", geckoId: undefined, price: 0.93 }),
         ...makeNeutralUsdAssets(),
@@ -255,8 +271,8 @@ describe("confirmPendingDepegs", () => {
         ],
       }),
       [
-        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.95 }),
-        makeAsset({ id: "usdc-circle", symbol: "USDC", geckoId: "usd-coin", price: 0.94 }),
+        makeAuthoritativeUsdAsset(nowSec, { id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.95 }),
+        makeAuthoritativeUsdAsset(nowSec, { id: "usdc-circle", symbol: "USDC", geckoId: "usd-coin", price: 0.94 }),
         makeAsset({ id: "usde-ethena", symbol: "USDe", geckoId: "ethena-usde", price: 0.93 }),
         makeAsset({ id: "usds-sky", symbol: "USDS", geckoId: "usds", price: 0.94 }),
         makeAsset({ id: "mystery-coin", name: "Mystery USD", symbol: "MYST", geckoId: undefined, price: 0.92 }),
@@ -367,10 +383,10 @@ describe("confirmPendingDepegs", () => {
       "USDT",
       "peggedUSD",
       "below",
-      -500,
+      -240,
       nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
       0.976,
-      0.95,
+      0.976,
       1,
     ]);
     expect(deletes).toEqual([31]);

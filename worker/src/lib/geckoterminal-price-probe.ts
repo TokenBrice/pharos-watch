@@ -294,6 +294,7 @@ export async function probeGeckoTerminalPrices(
         source: "geckoterminal",
         price: result.price,
         weight: 1,
+        observedAt: Math.floor(Date.now() / 1000),
         metadata: {
           tvlUsd: result.tvlUsd,
           chain: result.chain,

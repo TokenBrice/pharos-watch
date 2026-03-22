@@ -8,6 +8,8 @@ import {
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO } from "../../lib/pricing-source-policy";
 import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices";
 import { stampPriceMetadata } from "./shared";
+import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
+import { hasDepegAuthoritativeSource } from "../../lib/pricing-source-policy";
 
 export interface ValidationContextResolver {
   get: (asset: PeggedAsset) => PriceValidationContext;
@@ -18,6 +20,14 @@ export interface PublishablePriceDecision {
   reason: string;
 }
 
+export interface PreviousTrustedPrice {
+  price: number;
+  source: string | null;
+  confidence: PeggedAsset["priceConfidence"];
+  observedAt: number | null;
+  agreeSources: string[];
+}
+
 export interface ValidatePublishablePriceInput {
   price: number;
   source: string | null | undefined;
@@ -26,6 +36,7 @@ export interface ValidatePublishablePriceInput {
   mode: "primary_authoritative" | "fallback_enrichment";
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
+  previousTrustedPrice?: PreviousTrustedPrice | null;
 }
 
 export type ValidatePublishablePrice = (
@@ -38,8 +49,11 @@ export interface ProtocolPriceOverride {
   confidence: PeggedAsset["priceConfidence"];
 }
 
+const WEAK_FIXED_PEG_JUMP_QUARANTINE_BPS = 2_000;
+
 export function priceValidationModeForAsset(asset: PeggedAsset): "primary_authoritative" | "fallback_enrichment" {
   return asset.priceConfidence === "fallback" ||
+    asset.priceSource === "defillama-contract" ||
     asset.priceSource === "coinmarketcap" ||
     asset.priceSource === "dexscreener" ||
     asset.priceSource === "cached"
@@ -85,6 +99,35 @@ function allowsSevereDownsidePublication(input: {
   return input.confidence === "high" && (input.agreeSources?.length ?? 0) >= 2;
 }
 
+function isFixedPegValidationContext(context: PriceValidationContext): boolean {
+  return context.pegClass === "usd" || context.pegClass === "fiat_fx" || context.pegClass === "commodity";
+}
+
+function shouldQuarantineTemporalJump(input: ValidatePublishablePriceInput): boolean {
+  if (!isFixedPegValidationContext(input.validationContext)) return false;
+  const previousTrustedPrice = input.previousTrustedPrice?.price;
+  if (previousTrustedPrice == null || !Number.isFinite(previousTrustedPrice) || previousTrustedPrice <= 0) {
+    return false;
+  }
+
+  const authoritativeSources = input.agreeSources && input.agreeSources.length > 0
+    ? input.agreeSources
+    : input.source
+      ? [input.source]
+      : [];
+  const hasAuthoritativeAgreement =
+    (input.confidence === "high" || input.confidence === "single-source") &&
+    hasDepegAuthoritativeSource(authoritativeSources);
+  if (hasAuthoritativeAgreement || input.source === "protocol-redeem" || input.source === "pool-tvl-weighted") {
+    return false;
+  }
+
+  const mid = (input.price + previousTrustedPrice) / 2;
+  if (mid <= 0) return false;
+  const moveBps = Math.abs(input.price - previousTrustedPrice) / mid * 10_000;
+  return moveBps >= WEAK_FIXED_PEG_JUMP_QUARANTINE_BPS;
+}
+
 export function validatePublishablePrice(input: ValidatePublishablePriceInput): PublishablePriceDecision {
   const decision = validatePriceCandidate(
     input.price,
@@ -107,6 +150,10 @@ export function validatePublishablePrice(input: ValidatePublishablePriceInput): 
     return { accepted: false, reason: "severe_downside_requires_corroboration" };
   }
 
+  if (shouldQuarantineTemporalJump(input)) {
+    return { accepted: false, reason: "temporal_jump_requires_corroboration" };
+  }
+
   return { accepted: true, reason: decision.reasonCode };
 }
 
@@ -127,12 +174,40 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, number> {
 
 function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): void {
   const source = asset.priceSource || "defillama";
-  stampPriceMetadata(asset, source, "single-source", syncStartSec, [source], [source]);
+  stampPriceMetadata(
+    asset,
+    source,
+    "single-source",
+    asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+    [source],
+    [source],
+    syncStartSec,
+  );
+}
+
+export function buildPreviousTrustedPriceLookup(
+  previousAssetsById: Map<string, PeggedAsset>,
+  nowSec: number,
+): Map<string, PreviousTrustedPrice> {
+  const lookup = new Map<string, PreviousTrustedPrice>();
+  for (const [assetId, asset] of previousAssetsById) {
+    if (classifyPrimaryDepegTrust(asset, nowSec) !== "authoritative") continue;
+    if (asset.price == null || typeof asset.price !== "number" || !Number.isFinite(asset.price) || asset.price <= 0) continue;
+    lookup.set(assetId, {
+      price: asset.price,
+      source: asset.priceSource ?? null,
+      confidence: asset.priceConfidence ?? null,
+      observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+      agreeSources: asset.agreeSources ?? [],
+    });
+  }
+  return lookup;
 }
 
 export function applyPrimaryPriceResults(input: {
   assets: PeggedAsset[];
   primaryPriceResults: Map<string, PrimaryPriceResult>;
+  previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
@@ -141,6 +216,7 @@ export function applyPrimaryPriceResults(input: {
   const {
     assets,
     primaryPriceResults,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     syncStartSec,
@@ -158,10 +234,19 @@ export function applyPrimaryPriceResults(input: {
         mode: "primary_authoritative",
         validationContext: validationContexts.get(asset),
         validationReferences,
+        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
       });
       if (decision.accepted) {
         asset.price = primary.price;
-        stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec, primary.candidateSources, primary.agreeSources);
+        stampPriceMetadata(
+          asset,
+          primary.source,
+          primary.confidence,
+          primary.observedAt ?? null,
+          primary.candidateSources,
+          primary.agreeSources,
+          syncStartSec,
+        );
       } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
         console.warn(
           `[sync-stablecoins] Rejected primary consensus price for ${asset.symbol} (id=${asset.id}): ` +
@@ -181,6 +266,7 @@ export function applyPrimaryPriceResults(input: {
 
 export function prevalidatePrices(input: {
   assets: PeggedAsset[];
+  previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   validatePublishablePrice: ValidatePublishablePrice;
@@ -189,6 +275,7 @@ export function prevalidatePrices(input: {
 }): void {
   const {
     assets,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     validatePublishablePrice: validate,
@@ -206,6 +293,7 @@ export function prevalidatePrices(input: {
       mode: modeResolver(asset),
       validationContext: validationContexts.get(asset),
       validationReferences,
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
     });
     if (!decision.accepted) {
       console.warn(
@@ -221,6 +309,7 @@ export function prevalidatePrices(input: {
 export function applyGtProbeResults(input: {
   assets: PeggedAsset[];
   primaryPriceResults: Map<string, PrimaryPriceResult>;
+  previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
@@ -229,6 +318,7 @@ export function applyGtProbeResults(input: {
   const {
     assets,
     primaryPriceResults,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     syncStartSec,
@@ -247,10 +337,19 @@ export function applyGtProbeResults(input: {
       mode: "primary_authoritative",
       validationContext: validationContexts.get(asset),
       validationReferences,
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
     });
     if (decision.accepted) {
       asset.price = primary.price;
-      stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec, primary.candidateSources, primary.agreeSources);
+      stampPriceMetadata(
+        asset,
+        primary.source,
+        primary.confidence,
+        primary.observedAt ?? null,
+        primary.candidateSources,
+        primary.agreeSources,
+        syncStartSec,
+      );
     } else {
       console.warn(
         `[sync-stablecoins] Rejected GT-probed price for ${asset.symbol} (id=${asset.id}): ` +
@@ -263,6 +362,7 @@ export function applyGtProbeResults(input: {
 export function applyProtocolPriceOverrides(input: {
   assets: PeggedAsset[];
   overrides: Map<string, ProtocolPriceOverride>;
+  previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
@@ -271,6 +371,7 @@ export function applyProtocolPriceOverrides(input: {
   const {
     assets,
     overrides,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     syncStartSec,
@@ -290,6 +391,7 @@ export function applyProtocolPriceOverrides(input: {
       mode: "primary_authoritative",
       validationContext: validationContexts.get(asset),
       validationReferences,
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
     });
     if (!decision.accepted) {
       console.warn(
@@ -310,7 +412,7 @@ export function applyProtocolPriceOverrides(input: {
     }
 
     asset.price = override.price;
-    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source]);
+    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source], syncStartSec);
     appliedCount++;
   }
 

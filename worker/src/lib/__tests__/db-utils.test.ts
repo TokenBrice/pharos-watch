@@ -209,8 +209,26 @@ describe("db utility helpers", () => {
     });
 
     const map = await getPriceCache(db);
-    expect(map.get("usdt-tether")).toEqual({ price: 1.01, updatedAt: 1700000000 });
-    expect(map.get("usdc-circle")).toEqual({ price: 0.99, updatedAt: 1700000100 });
+    expect(map.get("usdt-tether")).toEqual({
+      price: 1.01,
+      updatedAt: 1700000000,
+      source: null,
+      confidence: null,
+      observedAt: 1700000000,
+      syncedAt: 1700000000,
+      agreeSources: [],
+      consensusSources: [],
+    });
+    expect(map.get("usdc-circle")).toEqual({
+      price: 0.99,
+      updatedAt: 1700000100,
+      source: null,
+      confidence: null,
+      observedAt: 1700000100,
+      syncedAt: 1700000100,
+      agreeSources: [],
+      consensusSources: [],
+    });
 
     await savePriceCache(db, []);
     expect(batchCalls).toHaveLength(0);

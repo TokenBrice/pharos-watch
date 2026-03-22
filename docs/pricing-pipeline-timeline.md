@@ -1,6 +1,22 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.12` (2026-02-01 -> 2026-03-22).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.13` (2026-02-01 -> 2026-03-22).
+
+---
+
+## v2.13 - Source-aware trust, observed-time freshness, and weak-price jump quarantine (Mar 22, 2026)
+
+**Commit:** `unreleased`
+
+- Pricing source capabilities now come from one canonical registry shared by consensus, replay safety, pool challenge, GT probing, status health, and depeg trust classification
+- Cached stablecoin payloads now preserve `priceObservedAt` and `priceSyncedAt`; compatibility `priceUpdatedAt` now reflects the true observation timestamp instead of the sync write time
+- Soft single-source prices and soft-only high-confidence consensus can no longer mutate live depeg state directly; only fresh hard sources remain depeg-authoritative
+- Weak fixed-peg price jumps versus the previous trusted price now require corroboration before publication
+- Published DEX challenger snapshots now retain the live `$100K` pool threshold and no longer suppress per-coin publication just because an unrelated DEX source degraded globally
+- GeckoTerminal probing now revisits weak CoinGecko / DL-list soft outcomes, not only strict one-source cases
+- Direct-API DEX quote conversion now reuses only authoritative tracked stablecoin prices; weak tracked prices fall back to peg references instead of feeding the bridge loop
+- Replay cache now stores source/confidence/timestamps/source lists, and RedStone derives its price from the venue median rather than the provider aggregate
+- CoinMarketCap, Jupiter, and DexScreener enrichment passes now fail independently instead of aborting the whole late-enrichment block
 
 ---
 

@@ -64,6 +64,14 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         typeof asset.priceUpdatedAt === "number" && Number.isFinite(asset.priceUpdatedAt)
           ? asset.priceUpdatedAt
           : null;
+      const priceObservedAt =
+        typeof asset.priceObservedAt === "number" && Number.isFinite(asset.priceObservedAt)
+          ? asset.priceObservedAt
+          : priceUpdatedAt;
+      const priceSyncedAt =
+        typeof asset.priceSyncedAt === "number" && Number.isFinite(asset.priceSyncedAt)
+          ? asset.priceSyncedAt
+          : null;
       const normalizedConfidence =
         confidence === "high" || confidence === "single-source" || confidence === "low" || confidence === "fallback"
           ? confidence
@@ -73,7 +81,9 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         ...rest,
         geckoId: resolveGeckoId(asset),
         priceConfidence: normalizedConfidence,
-        priceUpdatedAt,
+        priceUpdatedAt: priceObservedAt ?? priceUpdatedAt,
+        priceObservedAt,
+        priceSyncedAt,
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
         circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
         circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
@@ -147,13 +157,16 @@ export function stampPriceMetadata(
   asset: PeggedAsset,
   source: string,
   confidence: PeggedAsset["priceConfidence"],
-  updatedAt: number | null,
+  observedAt: number | null,
   consensusSources?: string[],
   agreeSources?: string[],
+  syncedAt?: number | null,
 ): void {
   asset.priceSource = source;
   asset.priceConfidence = confidence ?? null;
-  asset.priceUpdatedAt = updatedAt;
+  asset.priceObservedAt = observedAt;
+  asset.priceSyncedAt = syncedAt ?? observedAt ?? null;
+  asset.priceUpdatedAt = observedAt ?? syncedAt ?? null;
   if (consensusSources !== undefined) {
     asset.consensusSources = consensusSources;
   }
@@ -219,6 +232,10 @@ export function mergeSupplementalLastKnownGood(
         merged.priceSource = asset.priceSource;
         merged.priceConfidence = asset.priceConfidence ?? null;
         merged.priceUpdatedAt = asset.priceUpdatedAt ?? null;
+        merged.priceObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
+        merged.priceSyncedAt = asset.priceSyncedAt ?? null;
+        merged.consensusSources = asset.consensusSources;
+        merged.agreeSources = asset.agreeSources;
       }
       resolved.set(id, merged);
       restoredCount++;

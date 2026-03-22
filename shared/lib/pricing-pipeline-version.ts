@@ -3,9 +3,31 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.12",
+  currentVersion: "2.13",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.13",
+      title: "Source-aware trust, observed-time freshness, and weak-price jump quarantine",
+      date: "2026-03-22",
+      effectiveAt: 1774230000,
+      summary:
+        "Centralized pricing-source trust policy, preserved true source-observation timestamps through consensus and replay, " +
+        "and hardened publication/depeg behavior so weak soft-source moves cannot silently become downstream-authoritative or self-reinforce through the DEX bridge.",
+      impact: [
+        "Pricing source capabilities now come from one canonical registry shared by consensus, replay safety, pool challenge, GT probing, status health, and depeg trust classification",
+        "Cached stablecoin payloads now preserve `priceObservedAt` and `priceSyncedAt`; compatibility `priceUpdatedAt` now reflects the true observation timestamp rather than the sync write time",
+        "Soft single-source prices and soft-only high-confidence consensus can no longer mutate live depeg state directly; hard single-source sources such as Pyth, CEX, Curve, and protocol-redemption can still be authoritative",
+        "Weak fixed-peg price jumps versus the previous trusted price now require corroboration before publication, closing the USR-style wrong-price path",
+        "Pool challenge now uses the live $100K threshold in its published challenger snapshots and can harden weak soft-source outcomes, not only pre-downgrade high-confidence clusters",
+        "GeckoTerminal probing now revisits weak CoinGecko / DL-list soft outcomes rather than only strict one-source cases",
+        "Direct-API DEX quote conversion now reuses only authoritative tracked stablecoin prices; weak or stale tracked prices fall back to peg references instead of feeding the bridge loop",
+        "Replay cache rows now keep source, confidence, observation time, sync time, and source lists; RedStone now derives its price from the venue median instead of the provider aggregate",
+        "CoinMarketCap, Jupiter, and DexScreener enrichment passes now fail independently instead of aborting the whole late-enrichment block",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.12",
       title: "Identity-safe enrichment, severe-downside publication guards, and replay-safe DEX quote derivation",

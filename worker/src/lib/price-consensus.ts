@@ -1,19 +1,25 @@
 import type { PriceConfidence } from "@shared/types";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { buildObservedAtRecord, pickConservativeObservedAt } from "./pricing-types";
 
 export interface SourcePrice {
   source: string;
   price: number;
   weight: number;
+  observedAt?: number | null;
   metadata?: Record<string, unknown>;
 }
 
 export interface ConsensusResult {
   price: number;
   source: string;
+  selectedSource: string;
   confidence: PriceConfidence;
   agreeSources: string[];
   disagreeSources: string[];
   allPrices: Record<string, number>;
+  observedAt: number | null;
+  observedAtBySource: Record<string, number | null>;
 }
 
 export interface ConsensusOptions {
@@ -41,16 +47,20 @@ export function computePriceConsensus(
 
   const allPrices: Record<string, number> = {};
   for (const s of sources) allPrices[s.source] = s.price;
+  const observedAtBySource = buildObservedAtRecord(sources);
 
   if (sources.length === 1) {
     const s = sources[0];
     return {
       price: s.price,
       source: s.source,
+      selectedSource: s.source,
       confidence: "single-source",
       agreeSources: [s.source],
       disagreeSources: [],
       allPrices,
+      observedAt: observedAtBySource[s.source] ?? null,
+      observedAtBySource,
     };
   }
 
@@ -68,26 +78,33 @@ export function computePriceConsensus(
 
   if (bestCluster.length >= 2) {
     const clusterRef = pegRef != null && pegRef > 0 ? pegRef : medianPrice(bestCluster);
-    const chosen = pickBestSource(bestCluster, clusterRef);
+    const chosen = pickBestClusterSource(bestCluster, clusterRef);
+    const agreeSources = bestCluster.map((s) => s.source);
     return {
       price: chosen.price,
       source: buildSourceLabel(bestCluster),
+      selectedSource: chosen.source,
       confidence: "high",
-      agreeSources: bestCluster.map((s) => s.source),
+      agreeSources,
       disagreeSources,
       allPrices,
+      observedAt: pickConservativeObservedAt(agreeSources, observedAtBySource),
+      observedAtBySource,
     };
   }
 
   const fallbackRef = pegRef != null && pegRef > 0 ? pegRef : medianPrice(sources);
-  const chosen = pickBestSource(sources, fallbackRef);
+  const chosen = pickLowConfidenceSource(sources, fallbackRef);
   return {
     price: chosen.price,
     source: chosen.source,
+    selectedSource: chosen.source,
     confidence: "low",
     agreeSources: [chosen.source],
     disagreeSources: sources.filter((s) => s !== chosen).map((s) => s.source),
     allPrices,
+    observedAt: observedAtBySource[chosen.source] ?? null,
+    observedAtBySource,
   };
 }
 
@@ -234,10 +251,56 @@ function pickBestCluster(clusters: SourcePrice[][], pegRef: number | null): Sour
   });
 }
 
-/** Pick highest-weight source; break ties by proximity to reference price. */
-function pickBestSource(cluster: SourcePrice[], ref: number): SourcePrice {
-  return cluster.reduce((a, b) => {
-    if (a.weight !== b.weight) return a.weight > b.weight ? a : b;
-    return Math.abs(a.price - ref) <= Math.abs(b.price - ref) ? a : b;
+const TRUST_TIER_PRIORITY = {
+  hard_oracle: 0,
+  hard_market: 1,
+  hard_protocol: 2,
+  soft_aggregator: 3,
+  soft_dex: 4,
+  fallback_search: 5,
+  cached_replay: 6,
+} as const;
+
+function getSourceTrustPriority(source: string): number {
+  const trustTier = getPricingSourceRegistryEntry(source)?.trustTier;
+  if (!trustTier) return Number.MAX_SAFE_INTEGER;
+  return TRUST_TIER_PRIORITY[trustTier];
+}
+
+function pickBestClusterSource(cluster: SourcePrice[], ref: number): SourcePrice {
+  return cluster.reduce((best, candidate) => {
+    const candidateTrust = getSourceTrustPriority(candidate.source);
+    const bestTrust = getSourceTrustPriority(best.source);
+    if (candidateTrust !== bestTrust) {
+      return candidateTrust < bestTrust ? candidate : best;
+    }
+    if (candidate.weight !== best.weight) {
+      return candidate.weight > best.weight ? candidate : best;
+    }
+    const candidateDistance = Math.abs(candidate.price - ref);
+    const bestDistance = Math.abs(best.price - ref);
+    if (candidateDistance !== bestDistance) {
+      return candidateDistance < bestDistance ? candidate : best;
+    }
+    return candidate.source.localeCompare(best.source) < 0 ? candidate : best;
+  });
+}
+
+function pickLowConfidenceSource(cluster: SourcePrice[], ref: number): SourcePrice {
+  return cluster.reduce((best, candidate) => {
+    const candidateTrust = getSourceTrustPriority(candidate.source);
+    const bestTrust = getSourceTrustPriority(best.source);
+    if (candidateTrust !== bestTrust) {
+      return candidateTrust < bestTrust ? candidate : best;
+    }
+    const candidateDistance = Math.abs(candidate.price - ref);
+    const bestDistance = Math.abs(best.price - ref);
+    if (candidateDistance !== bestDistance) {
+      return candidateDistance < bestDistance ? candidate : best;
+    }
+    if (candidate.weight !== best.weight) {
+      return candidate.weight > best.weight ? candidate : best;
+    }
+    return candidate.source.localeCompare(best.source) < 0 ? candidate : best;
   });
 }

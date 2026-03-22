@@ -1,11 +1,12 @@
 import type { CronResult } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { LlamaPool } from "./types";
+import type { LiquidityMetrics, LlamaPool } from "./types";
 import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
 import type { DexPriceObs } from "./types";
 import { buildSymbolLookups, classifyPoolType } from "./pool-helpers";
 import {
@@ -33,7 +34,7 @@ import {
   type DexApiFetchResult,
   type DexApiPool,
 } from "../../lib/dex-api-common";
-import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { CIRCUIT_SOURCE, POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
 import {
   buildPoolIdentity,
@@ -131,10 +132,23 @@ export async function syncDexLiquidity(
   const stablecoinPriceById = new Map<string, number>();
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   if (hasUsableStablecoinsPayload(stablecoinsCache)) {
+    let skippedWeakTrackedPrices = 0;
     for (const asset of stablecoinsCache.payload.peggedAssets) {
-      if (asset.price != null && Number.isFinite(asset.price) && asset.price > 0) {
+      if (
+        asset.price != null &&
+        Number.isFinite(asset.price) &&
+        asset.price > 0 &&
+        classifyPrimaryDepegTrust(asset, syncStartSec) === "authoritative"
+      ) {
         stablecoinPriceById.set(asset.id, asset.price);
+      } else {
+        skippedWeakTrackedPrices++;
       }
+    }
+    if (skippedWeakTrackedPrices > 0) {
+      console.log(
+        `[dex-liquidity] Ignoring ${skippedWeakTrackedPrices} tracked stablecoin price(s) as weak/stale quote legs`,
+      );
     }
   } else {
     console.warn("[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback");
@@ -447,8 +461,8 @@ export async function syncDexLiquidity(
   const {
     scores: scoreResults,
     globalAgg,
-    retainedPoolsByStablecoin,
-    tvlStabilityMap,
+    retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>(),
+    tvlStabilityMap = new Map<string, number>(),
   } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
   const currentCoverage = scoreResults.size;
   const [
@@ -558,13 +572,22 @@ export async function syncDexLiquidity(
   // 7. Persist primary tables. D1 in Workers rejects manual SQL transaction statements.
   await runWithOverloadRetry(() => persistScores(db, metrics, scoreResults, globalAgg, syncStartSec));
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
-    ACTIVE_STABLECOINS.map((meta) => [meta.id, criticalSourceFailures.length === 0]),
+    ACTIVE_STABLECOINS.map((meta) => {
+      const retainedPools = retainedPoolsByStablecoin.get(meta.id) ?? [];
+      const hasPublishedRows = retainedPools.some((pool) => (
+        Number.isFinite(pool.price) &&
+        (pool.price ?? 0) > 0 &&
+        Number.isFinite(pool.tvlUsd) &&
+        pool.tvlUsd >= POOL_CHALLENGE_MIN_TVL
+      ));
+      return [meta.id, criticalSourceFailures.length === 0 || hasPublishedRows];
+    }),
   );
   const challengerPublication = await publishDexPriceChallengerSnapshots(db, {
     snapshotAt: syncStartSec,
     retainedPoolsByStablecoin,
     sourceCoverageCompleteByStablecoin,
-    minPoolTvlUsd: 1_000_000,
+    minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
   });
   await computeDexPrices(db, priceObservations, syncStartSec);
 

@@ -91,6 +91,14 @@ function normalizeEntry(entry: RedstoneEntry | RedstoneEntry[] | undefined): Red
   return entry;
 }
 
+function median(values: number[]): number {
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length === 0) return Number.NaN;
+  if (sorted.length % 2 === 1) return sorted[middle]!;
+  return (sorted[middle - 1]! + sorted[middle]!) / 2;
+}
+
 async function fetchRedstoneBatch(
   symbols: string[],
   signal?: AbortSignal,
@@ -147,9 +155,16 @@ async function fetchRedstoneBatch(
       continue;
     }
 
+    const venuePrices = [...venues.values()];
+    const derivedPrice = median(venuePrices);
+    if (!Number.isFinite(derivedPrice) || derivedPrice <= 0) {
+      console.warn(`[redstone] Skipping ${apiSym}: unusable venue median`);
+      continue;
+    }
+
     let agreeCount = 0;
-    for (const venuePrice of venues.values()) {
-      const bps = Math.abs(((venuePrice / entry.value) - 1) * 10000);
+    for (const venuePrice of venuePrices) {
+      const bps = Math.abs(((venuePrice / derivedPrice) - 1) * 10000);
       if (bps <= 50) agreeCount++;
     }
     const venueAgreementPct = venues.size > 0
@@ -159,7 +174,7 @@ async function fetchRedstoneBatch(
     // Key results by metadata symbol so callers can look up by asset.symbol
     const metaSym = apiToMeta.get(apiSym) ?? apiSym;
     results.set(metaSym, {
-      price: entry.value,
+      price: derivedPrice,
       venues,
       venueCount: venues.size,
       venueAgreementPct,

@@ -32,6 +32,7 @@ import {
   applyPrimaryPriceResults,
   applyProtocolPriceOverrides,
   buildDlListPrices,
+  buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
   prevalidatePrices,
   priceValidationModeForAsset,
@@ -155,10 +156,12 @@ async function syncViaCoingeckoFallback(
 
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(db, syncStartSec, "[sync-stablecoins:fallback]");
   const validationContexts = createValidationContextResolver();
+  const previousTrustedPrices = buildPreviousTrustedPriceLookup(previousAssetsById, syncStartSec);
   const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
   const authoritativeOverrideCount = applyProtocolPriceOverrides({
     assets,
     overrides: authoritativeOverrides,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     syncStartSec,
@@ -173,6 +176,7 @@ async function syncViaCoingeckoFallback(
 
   prevalidatePrices({
     assets,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     validatePublishablePrice,
@@ -205,6 +209,7 @@ async function syncViaCoingeckoFallback(
     validationContexts,
     priceValidationModeForAsset,
     validatePublishablePrice,
+    previousTrustedPrices,
     returnIfAborted,
     abortResult,
   }, "fallback-");
@@ -315,6 +320,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     fxFallbackRates = freshFxFallbackRates;
   }
   const validationContexts = createValidationContextResolver();
+  const previousTrustedPrices = buildPreviousTrustedPriceLookup(previousAssetsById, syncStartSec);
   let gtProbe = { updatedCount: 0, stats: createEmptyGtProbeStats() };
   const dlListPrices = buildDlListPrices(assets);
   // --- Primary price validation ---
@@ -328,6 +334,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   applyPrimaryPriceResults({
     assets,
     primaryPriceResults,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     syncStartSec,
@@ -335,6 +342,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   });
   prevalidatePrices({
     assets,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     validatePublishablePrice,
@@ -368,6 +376,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       applyGtProbeResults({
         assets,
         primaryPriceResults,
+        previousTrustedPrices,
         validationContexts,
         validationReferences,
         syncStartSec,
@@ -383,6 +392,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const protocolOverrideCount = applyProtocolPriceOverrides({
     assets,
     overrides: protocolPriceOverrides,
+    previousTrustedPrices,
     validationContexts,
     validationReferences,
     syncStartSec,
@@ -404,6 +414,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     validationContexts,
     priceValidationModeForAsset,
     validatePublishablePrice,
+    previousTrustedPrices,
     returnIfAborted,
     abortResult,
   }, "");

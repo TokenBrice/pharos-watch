@@ -793,8 +793,8 @@ describe("fetchPrimaryPrices", () => {
     expect(result).toBeDefined();
     expect(result!.candidateSources).toEqual(["coingecko", "defillama-list"]);
     expect(result!.confidence).toBe("low");
-    expect(result!.source).toBe("coingecko");
-    expect(result!.price).toBe(0.145);
+    expect(result!.source).toBe("defillama-list");
+    expect(result!.price).toBe(0.549146);
   });
 
   it("keeps promoted DEX protocol sources when a non-DEX source corroborates them", async () => {
@@ -837,7 +837,7 @@ describe("fetchPrimaryPrices", () => {
     expect(result!.candidateSources).toEqual(["coingecko", "balancer-dex"]);
     expect(result!.confidence).toBe("high");
     expect(result!.source).toBe("balancer-dex+coingecko");
-    expect(result!.price).toBe(1.0002);
+    expect(result!.price).toBe(1.0001);
   });
 
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {
@@ -1007,8 +1007,8 @@ describe("fetchPrimaryPrices", () => {
     expect(results.size).toBe(1);
     const result = results.get("ousg-ondo-finance")!;
     expect(result.confidence).toBe("low");
-    expect(result.source).toBe("coingecko");
-    expect(result.price).toBe(1.01);
+    expect(result.source).toBe("defillama-list");
+    expect(result.price).toBe(110);
     expect(stats.low).toBe(1);
   });
 

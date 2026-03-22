@@ -33,7 +33,12 @@ vi.mock("../dex-liquidity/process-pools", () => ({
 }));
 
 vi.mock("../dex-liquidity/scoring", () => ({
-  computeStablecoinScores: vi.fn(async () => ({ scores: new Map([["usdt-tether", {}]]), globalAgg: {} })),
+  computeStablecoinScores: vi.fn(async () => ({
+    scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
+    globalAgg: { totalTvl: 0 },
+    retainedPoolsByStablecoin: new Map(),
+    tvlStabilityMap: new Map(),
+  })),
   computeDepthStability: vi.fn(async () => {}),
   computeDexPrices: vi.fn(async () => {}),
 }));
@@ -97,6 +102,7 @@ const db = {
 } as unknown as D1Database;
 
 function makeTrackedStablecoin(id: string, symbol: string, price: number): StablecoinData {
+  const nowSec = Math.floor(Date.now() / 1000);
   return {
     id,
     name: symbol,
@@ -105,11 +111,13 @@ function makeTrackedStablecoin(id: string, symbol: string, price: number): Stabl
     pegType: "peggedUSD",
     pegMechanism: "fiat-backed",
     price,
-    priceSource: "defillama-list",
+    priceSource: "pyth",
     priceConfidence: "single-source",
-    priceUpdatedAt: null,
-    consensusSources: [],
-    agreeSources: [],
+    priceUpdatedAt: nowSec,
+    priceObservedAt: nowSec,
+    priceSyncedAt: nowSec,
+    consensusSources: ["pyth"],
+    agreeSources: ["pyth"],
     supplySource: "defillama",
     circulating: { peggedUSD: 1_000_000 },
     circulatingPrevDay: {},

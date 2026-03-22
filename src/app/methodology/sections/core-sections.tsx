@@ -292,7 +292,7 @@ export function CoreMethodologySections() {
                       <td className="py-2 pr-4 text-foreground">GeckoTerminal</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">On-chain</td>
-                      <td className="py-2">Pool-level cross-check for eligible single-source CG or DL-list assets (&ge;$10K TVL)</td>
+                      <td className="py-2">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</td>
                     </tr>
                   </tbody>
                 </table>
@@ -312,14 +312,14 @@ export function CoreMethodologySections() {
                   (fixed pegs) or <code className="text-xs">500 bps</code> (NAV tokens)
                 </li>
                 <li>Break equal-size clusters by total weight, then tighter spread, then peg proximity when available</li>
-                <li>Within the winning cluster, select the source with the highest weight</li>
-                <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best single source</li>
+                <li>Within the winning cluster, select the best trusted source, then break ties by weight and peg proximity</li>
+                <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best trusted single source</li>
                 <li>
                   <span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible
                   (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger
-                  snapshot built from the full retained pool set. If any diverges &ge;500 bps from consensus, downgrade to <code className="text-xs">low</code> and
-                  replace the price with a TVL-weighted mean of all qualifying individual pool prices &mdash; on-chain liquidity is a more honest signal
-                  when aggregators share upstream data
+                  snapshot built from the full retained pool set. If any diverges &ge;500 bps from the weak result, downgrade to <code className="text-xs">low</code>, and
+                  only replace the price when at least two independent protocols corroborate that divergence &mdash; on-chain liquidity is a more honest signal
+                  when aggregators share upstream data, but a single protocol can still be wrong
                 </li>
               </ol>
               <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs font-mono">

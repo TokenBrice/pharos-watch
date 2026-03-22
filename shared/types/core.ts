@@ -445,6 +445,10 @@ export interface PegAssetBase {
   priceSource?: string | null;
   priceConfidence?: PriceConfidence | null;
   priceUpdatedAt?: number | null;
+  priceObservedAt?: number | null;
+  priceSyncedAt?: number | null;
+  consensusSources?: string[];
+  agreeSources?: string[];
   pegType?: string;
   circulating?: Record<string, number>;
 }

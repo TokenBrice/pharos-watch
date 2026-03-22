@@ -119,8 +119,8 @@ describe("computePriceConsensus", () => {
     const result = computePriceConsensus(sources, null, 50, { mode: "fixed" });
 
     expect(result!.confidence).toBe("low");
-    expect(result!.source).toBe("coingecko");
-    expect(result!.price).toBe(1.0);
+    expect(result!.source).toBe("defillama");
+    expect(result!.price).toBe(1.008);
   });
 
   it("breaks weight tie by choosing source closest to peg reference", () => {
