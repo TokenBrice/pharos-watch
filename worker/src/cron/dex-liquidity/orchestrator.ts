@@ -22,6 +22,7 @@ import { fetchFluidPools } from "./fetch-fluid";
 import { fetchBalancerPools } from "./fetch-balancer";
 import { fetchRaydiumPools } from "./fetch-raydium";
 import { fetchOrcaPools } from "./fetch-orca";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   convertToGtNewPools,
   extractPriceObservations,
@@ -117,6 +118,7 @@ export async function syncDexLiquidity(
   graphApiKey: string | null,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const failedSources: string[] = [];
@@ -162,64 +164,14 @@ export async function syncDexLiquidity(
     validationReferences,
   );
 
-  // Fetch direct API sources in parallel (non-fatal, circuit-breaker gated)
-  // Launched after Curve response bodies are consumed to stay within 6-connection pool limit.
+  // Defer direct API fetches until after subgraph enrichment so we do not overlap
+  // their connection usage with UniV3/Aerodrome fan-out in the same trigger.
   const directApiFetchers: Array<{ name: string; circuitKey: string; fn: (s?: AbortSignal) => Promise<DexApiFetchResult> }> = [
-    { name: "Fluid", circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API, fn: fetchFluidPools },
+    { name: "Fluid", circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API, fn: (fetchSignal) => fetchFluidPools(fetchSignal, chainRpcs) },
     { name: "Balancer", circuitKey: CIRCUIT_SOURCE.BALANCER_API, fn: fetchBalancerPools },
     { name: "Raydium", circuitKey: CIRCUIT_SOURCE.RAYDIUM_API, fn: fetchRaydiumPools },
     { name: "Orca", circuitKey: CIRCUIT_SOURCE.ORCA_API, fn: fetchOrcaPools },
   ];
-
-  const directApiPromise = Promise.all(
-    directApiFetchers.map(async ({ name, circuitKey, fn }) => {
-      if (!(await shouldAttemptFetch(db, circuitKey))) {
-        console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
-        failedSources.push(circuitKey);
-        criticalSourceFailures.push(circuitKey);
-        fallbackSignals.push(`${circuitKey}-circuit-open`);
-        return {
-          name,
-          circuitKey,
-          result: makeDexApiFetchResult([], {
-            ok: false,
-            degraded: true,
-            errors: ["circuit open"],
-          }),
-        };
-      }
-      try {
-        const result = await fn(signal);
-        await recordOutcomeSafe(db, circuitKey, result.ok);
-        if (!result.ok || result.degraded) {
-          failedSources.push(circuitKey);
-          criticalSourceFailures.push(circuitKey);
-        }
-        if (!result.ok) {
-          fallbackSignals.push(`${circuitKey}-unavailable`);
-        } else if (result.degraded) {
-          fallbackSignals.push(`${circuitKey}-partial`);
-        }
-        return { name, circuitKey, result };
-      } catch (err) {
-        if (signal?.aborted) throw err;
-        console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
-        await recordOutcomeSafe(db, circuitKey, false);
-        failedSources.push(circuitKey);
-        criticalSourceFailures.push(circuitKey);
-        fallbackSignals.push(`${circuitKey}-exception`);
-        return {
-          name,
-          circuitKey,
-          result: makeDexApiFetchResult([], {
-            ok: false,
-            degraded: true,
-            errors: [err instanceof Error ? err.message : String(err)],
-          }),
-        };
-      }
-    }),
-  );
 
   // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations
   let uniV3PoolFees = new Map<string, number>();
@@ -269,6 +221,57 @@ export async function syncDexLiquidity(
     failedSources.push("aerodrome-subgraph");
   }
 
+  const directApiResults: Array<{ name: string; circuitKey: string; result: DexApiFetchResult }> = [];
+  for (const { name, circuitKey, fn } of directApiFetchers) {
+    if (!(await shouldAttemptFetch(db, circuitKey))) {
+      console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
+      failedSources.push(circuitKey);
+      criticalSourceFailures.push(circuitKey);
+      fallbackSignals.push(`${circuitKey}-circuit-open`);
+      directApiResults.push({
+        name,
+        circuitKey,
+        result: makeDexApiFetchResult([], {
+          ok: false,
+          degraded: true,
+          errors: ["circuit open"],
+        }),
+      });
+      continue;
+    }
+
+    try {
+      const result = await fn(signal);
+      await recordOutcomeSafe(db, circuitKey, result.ok);
+      if (!result.ok || result.degraded) {
+        failedSources.push(circuitKey);
+        criticalSourceFailures.push(circuitKey);
+      }
+      if (!result.ok) {
+        fallbackSignals.push(`${circuitKey}-unavailable`);
+      } else if (result.degraded) {
+        fallbackSignals.push(`${circuitKey}-partial`);
+      }
+      directApiResults.push({ name, circuitKey, result });
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
+      await recordOutcomeSafe(db, circuitKey, false);
+      failedSources.push(circuitKey);
+      criticalSourceFailures.push(circuitKey);
+      fallbackSignals.push(`${circuitKey}-exception`);
+      directApiResults.push({
+        name,
+        circuitKey,
+        result: makeDexApiFetchResult([], {
+          ok: false,
+          degraded: true,
+          errors: [err instanceof Error ? err.message : String(err)],
+        }),
+      });
+    }
+  }
+
   // Merge all price observations into a single map
   for (const [id, obs] of uniV3PriceObs) {
     const existing = priceObservations.get(id) ?? [];
@@ -282,7 +285,6 @@ export async function syncDexLiquidity(
   }
   console.log(`[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
 
-  const directApiResults = await directApiPromise;
   const directApiPools = directApiResults.flatMap((entry) => entry.result);
 
   const {

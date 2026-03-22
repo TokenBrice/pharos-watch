@@ -6,14 +6,13 @@ import {
 } from "../../lib/dex-api-common";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
-import { buildChainRpcs } from "../../lib/chain-registry";
+import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
 const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
 const FLUID_GET_COLLATERAL_RESERVES_SELECTOR = "0x957755e6";
 const FLUID_GET_DEBT_RESERVES_SELECTOR = "0x55181f11";
 const FLUID_GET_POOL_FEE_SELECTOR = "0x42fcc6fb";
-const FLUID_CHAIN_RPCS = buildChainRpcs();
 
 /** Fluid API chain IDs mapped to our internal chain keys */
 const FLUID_CHAINS: Record<string, number> = {
@@ -63,6 +62,7 @@ function decodeUint256Words(resultHex: `0x${string}` | null, expectedWords: numb
 async function enrichFluidPool(
   chain: keyof typeof FLUID_CHAINS,
   pool: DexApiPool,
+  chainRpcs: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<void> {
   const resolver = FLUID_RESOLVER_BY_CHAIN[chain];
@@ -74,21 +74,21 @@ async function enrichFluidPool(
       resolver,
       encodeFluidAddressCall(FLUID_GET_COLLATERAL_RESERVES_SELECTOR, pool.poolAddress),
       "latest",
-      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs: FLUID_CHAIN_RPCS },
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs },
     ),
     fetchEvmCallHexAtBlock(
       chain,
       resolver,
       encodeFluidAddressCall(FLUID_GET_DEBT_RESERVES_SELECTOR, pool.poolAddress),
       "latest",
-      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs: FLUID_CHAIN_RPCS },
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs },
     ),
     fetchEvmCallHexAtBlock(
       chain,
       resolver,
       encodeFluidAddressCall(FLUID_GET_POOL_FEE_SELECTOR, pool.poolAddress),
       "latest",
-      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs: FLUID_CHAIN_RPCS },
+      { signal, gas: FLUID_RESOLVER_CALL_GAS, timeoutMs: 15_000, chainRpcs },
     ),
   ]);
 
@@ -115,17 +115,21 @@ async function enrichFluidPool(
   }
 }
 
-export async function fetchFluidPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
+export async function fetchFluidPools(
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
   let successfulChains = 0;
+  const resolvedChainRpcs = chainRpcs ?? buildChainRpcs();
 
   for (const [chain, chainId] of Object.entries(FLUID_CHAINS) as Array<[keyof typeof FLUID_CHAINS, number]>) {
     const url = `${FLUID_API_BASE}/${chainId}/dexes/stats/tickers`;
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": USER_AGENT },
-        signal,
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
       });
       if (!res.ok) {
         throw new Error(`${chain} returned ${res.status}`);
@@ -164,7 +168,7 @@ export async function fetchFluidPools(signal?: AbortSignal): Promise<DexApiFetch
 
       successfulChains++;
       for (const pool of pools) {
-        await enrichFluidPool(chain, pool, signal);
+        await enrichFluidPool(chain, pool, resolvedChainRpcs, signal);
       }
       results.push(...pools);
     } catch (error) {

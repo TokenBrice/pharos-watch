@@ -1,9 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DexApiPool } from "../../lib/dex-api-common";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { LlamaPool } from "../dex-liquidity/types";
 
 function makeDirectApiResult() {
   return Object.assign([], { ok: true, degraded: false, errors: [] as string[] });
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
 }
 
 vi.mock("../dex-liquidity/fetch-primary", () => ({
@@ -40,7 +49,8 @@ vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(asyn
 vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => makeDirectApiResult()) }));
 
 import { syncDexLiquidity } from "../dex-liquidity";
-import { fetchDataSources } from "../dex-liquidity/fetch-primary";
+import { fetchAerodromeData, fetchDataSources, fetchUniV3Data } from "../dex-liquidity/fetch-primary";
+import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator";
 
@@ -153,6 +163,39 @@ describe("syncDexLiquidity", () => {
     };
     expect(metadata.failedSources).toContain("raydium-api");
     expect(metadata.fallbackMode).toContain("raydium-api-unavailable");
+  });
+
+  it("waits for subgraph enrichment before starting direct API fetches", async () => {
+    const emptyUniV3 = { uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map() };
+    const emptyAerodrome = { aerodromePriceObs: new Map(), aerodromeIsStable: new Map() };
+    const uniV3Gate = deferred<typeof emptyUniV3>();
+    const aerodromeGate = deferred<typeof emptyAerodrome>();
+
+    vi.mocked(fetchUniV3Data).mockImplementationOnce(() => uniV3Gate.promise);
+    vi.mocked(fetchAerodromeData).mockImplementationOnce(() => aerodromeGate.promise);
+
+    const syncPromise = syncDexLiquidity(db, "graph-key");
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fetchFluidPools).not.toHaveBeenCalled();
+
+    uniV3Gate.resolve(emptyUniV3);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fetchFluidPools).not.toHaveBeenCalled();
+
+    aerodromeGate.resolve(emptyAerodrome);
+    await syncPromise;
+    expect(fetchFluidPools).toHaveBeenCalled();
+  });
+
+  it("passes scheduled chain RPCs into Fluid enrichment", async () => {
+    const chainRpcs = new Map<string, ChainRpcConfig>();
+
+    await syncDexLiquidity(db, "graph-key", undefined, undefined, chainRpcs);
+
+    expect(fetchFluidPools).toHaveBeenCalledWith(undefined, chainRpcs);
   });
 });
 
