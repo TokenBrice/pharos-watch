@@ -4,6 +4,7 @@ import {
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
   fetchErc20Balance,
+  fetchOnchainRateBps,
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
@@ -26,6 +27,11 @@ interface BranchBalanceParams {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   branches: BranchConfig[];
+  redemptionRateProbe?: {
+    contract: string;
+    selector: string;
+    decimals?: number;
+  };
 }
 
 function readParams(config: LiveReservesConfig): BranchBalanceParams {
@@ -51,23 +57,35 @@ export async function fetchEvmBranchBalancesReserves(
   const input = requireOnchainInput(config.inputs.primary, "evm-branch-balances");
   const params = readParams(config);
 
-  const balances = await Promise.all(
-    params.branches.map(async (branch) => {
-      const raw = await fetchErc20Balance(
-        input,
-        branch.token.address,
-        branch.holder,
-        signal,
-        ctx,
-        params.rpcUrl,
-        params.fallbackRpcUrl,
-      );
-      return {
-        branch,
-        balance: raw == null ? null : decimalNumberFromBigInt(raw, branch.token.decimals),
-      };
-    }),
-  );
+  const [balances, redemptionFeeBps] = await Promise.all([
+    Promise.all(
+      params.branches.map(async (branch) => {
+        const raw = await fetchErc20Balance(
+          input,
+          branch.token.address,
+          branch.holder,
+          signal,
+          ctx,
+          params.rpcUrl,
+          params.fallbackRpcUrl,
+        );
+        return {
+          branch,
+          balance: raw == null ? null : decimalNumberFromBigInt(raw, branch.token.decimals),
+        };
+      }),
+    ),
+    params.redemptionRateProbe
+      ? fetchOnchainRateBps(
+          input,
+          params.redemptionRateProbe,
+          signal,
+          ctx,
+          params.rpcUrl,
+          params.fallbackRpcUrl,
+        )
+      : Promise.resolve(null),
+  ]);
 
   const unreadableBranches = balances
     .filter((entry) => entry.balance == null)
@@ -109,6 +127,9 @@ export async function fetchEvmBranchBalancesReserves(
 
   return {
     slices,
-    metadata: { branchCount: pricedBranches.length },
+    metadata: {
+      branchCount: pricedBranches.length,
+      ...(redemptionFeeBps != null ? { redemptionFeeBps } : {}),
+    },
   };
 }

@@ -12,6 +12,7 @@ vi.mock("@shared/lib/stablecoins", () => ({
 
 import {
   buildPriceValidationContext,
+  isSevereFixedPegDownside,
   loadPriceValidationReferences,
   normalizePegTypeFromCurrency,
   validatePriceCandidate,
@@ -247,6 +248,17 @@ describe("validatePriceCandidate", () => {
 
     expect(authoritative.accepted).toBe(true);
     expect(fallback.accepted).toBe(false);
+  });
+
+  it("flags severe fixed-peg downside against tracked references", () => {
+    const usd = buildPriceValidationContext({ pegType: "peggedUSD", pegCurrency: "USD" });
+    const eur = buildPriceValidationContext({ pegType: "peggedEUR", pegCurrency: "EUR" });
+    const nav = buildPriceValidationContext({ stablecoinId: "ousg-ondo-finance" });
+
+    expect(isSevereFixedPegDownside(0.49, usd, freshRefs)).toBe(true);
+    expect(isSevereFixedPegDownside(0.7, usd, freshRefs)).toBe(false);
+    expect(isSevereFixedPegDownside(0.5, eur, freshRefs)).toBe(true);
+    expect(isSevereFixedPegDownside(50, nav, freshRefs)).toBe(false);
   });
 
   it("scales commodity references by unit size", () => {

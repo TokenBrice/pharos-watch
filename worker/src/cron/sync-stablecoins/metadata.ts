@@ -2,47 +2,21 @@ import { hasMissingPrice, type PeggedAsset } from "../enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth } from "./shared";
 import type { CanonicalDeduplicationResult } from "./stages";
 import type { GtProbeStats } from "../../lib/geckoterminal-price-probe";
-
-const INDIVIDUAL_SOURCE_KEYS = new Set<string>([
-  "coingecko", "defillama", "defillama-list", "protocol-redeem", "defillama-contract",
-  "coinmarketcap", "dexscreener", "jupiter", "pyth", "binance", "kraken", "bitstamp", "coinbase",
-  "redstone", "curve-onchain", "dex-promoted", "geckoterminal", "pool-tvl-weighted", "cached",
-]);
+import {
+  createEmptyPriceSourceHealthDistribution,
+  isPriceSourceHealthBucketKey,
+  splitCompositePriceSource,
+} from "@shared/lib/pricing-sources";
 
 function mapSourceToBucket(
   source: string,
-  dist: PriceSourceHealth["sourceDistribution"],
-): keyof PriceSourceHealth["sourceDistribution"] | null {
-  if (source in dist) return source as keyof typeof dist;
-  const firstSource = source.split("+")[0];
-  if (firstSource in dist) return firstSource as keyof typeof dist;
-  return null;
+  _dist: PriceSourceHealth["sourceDistribution"],
+) {
+  return isPriceSourceHealthBucketKey(source) ? source : null;
 }
 
 export function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth {
-  const sourceDistribution: PriceSourceHealth["sourceDistribution"] = {
-    "coingecko+defillama-list": 0,
-    coingecko: 0,
-    defillama: 0,
-    "defillama-list": 0,
-    "protocol-redeem": 0,
-    "defillama-contract": 0,
-    coinmarketcap: 0,
-    dexscreener: 0,
-    jupiter: 0,
-    pyth: 0,
-    binance: 0,
-    kraken: 0,
-    bitstamp: 0,
-    coinbase: 0,
-    redstone: 0,
-    "curve-onchain": 0,
-    "dex-promoted": 0,
-    geckoterminal: 0,
-    "pool-tvl-weighted": 0,
-    cached: 0,
-    missing: 0,
-  };
+  const sourceDistribution: PriceSourceHealth["sourceDistribution"] = createEmptyPriceSourceHealthDistribution();
   const confidenceDistribution: PriceSourceHealth["confidenceDistribution"] = {
     high: 0,
     "single-source": 0,
@@ -62,15 +36,25 @@ export function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth
         sourceDistribution["coingecko+defillama-list"]++;
       }
       for (const src of asset.agreeSources) {
-        if (INDIVIDUAL_SOURCE_KEYS.has(src)) {
-          sourceDistribution[src as keyof typeof sourceDistribution]++;
+        const bucket = mapSourceToBucket(src, sourceDistribution);
+        if (bucket) {
+          sourceDistribution[bucket]++;
         }
       }
     } else {
       const source = asset.priceSource;
-      const bucket = source ? mapSourceToBucket(source, sourceDistribution) : null;
-      if (bucket) {
-        sourceDistribution[bucket]++;
+      if (source) {
+        const exactBucket = mapSourceToBucket(source, sourceDistribution);
+        if (exactBucket) {
+          sourceDistribution[exactBucket]++;
+        } else {
+          for (const part of splitCompositePriceSource(source)) {
+            const partBucket = mapSourceToBucket(part, sourceDistribution);
+            if (partBucket) {
+              sourceDistribution[partBucket]++;
+            }
+          }
+        }
       }
     }
 

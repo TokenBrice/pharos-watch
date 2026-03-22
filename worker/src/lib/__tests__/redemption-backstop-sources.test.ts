@@ -231,6 +231,48 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.feeConfidence).toBe("formula");
   });
 
+  it("uses live fee metadata for formula routes when reserve sync exposes a current fee", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "collateral-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "bluechip-collateral",
+        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        costModel: {
+          kind: "dynamic-or-unclear",
+          feeDescription: "Minimum 50 bps + baseRate",
+          confidence: "formula",
+        },
+      },
+      100_000_000,
+      null,
+      now,
+      {
+        reserveSyncState: {
+          stablecoinId: "test-coin",
+          adapterKey: "single-asset",
+          breakerKey: "live-reserves:test-coin",
+          lastAttemptedAt: now - 300,
+          lastSuccessAt: now - 300,
+          lastStatus: "ok",
+          warningCount: 0,
+          warnings: [],
+          lastError: null,
+          metadata: { redemptionFeeBps: 50 },
+        },
+      },
+    );
+
+    expect(entry.costScore).toBe(80);
+    expect(entry.feeBps).toBe(50);
+    expect(entry.feeConfidence).toBe("formula");
+    expect(entry.feeModelKind).toBe("formula");
+  });
+
   it("scores undisclosed-reviewed dynamic fees as 40", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),

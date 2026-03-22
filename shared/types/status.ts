@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { LiquidityCoverageClass } from "./market";
 import type { MintBurnCoverageStatus } from "./mint-burn";
+import type { PriceSourceHealthBucketKey } from "../lib/pricing-sources";
 
 export interface CacheStatus {
   ageSeconds: number | null;
@@ -215,29 +216,7 @@ export interface DiscoveryCandidatesResponse {
 }
 
 export interface PriceSourceHealth {
-  sourceDistribution: {
-    coingecko: number;
-    "coingecko+defillama-list": number;
-    defillama: number;
-    "defillama-list": number;
-    "protocol-redeem": number;
-    "defillama-contract": number;
-    coinmarketcap: number;
-    dexscreener: number;
-    jupiter: number;
-    pyth: number;
-    binance: number;
-    kraken: number;
-    bitstamp: number;
-    coinbase: number;
-    redstone: number;
-    "curve-onchain": number;
-    "dex-promoted": number;
-    geckoterminal: number;
-    "pool-tvl-weighted": number;
-    cached: number;
-    missing: number;
-  };
+  sourceDistribution: Record<PriceSourceHealthBucketKey, number>;
   confidenceDistribution: {
     high: number;
     "single-source": number;

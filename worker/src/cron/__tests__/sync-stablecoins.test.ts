@@ -550,6 +550,67 @@ describe("syncStablecoins", () => {
     expect(cusd?.price).toBeCloseTo(0.99999266, 8);
   });
 
+  it("rejects severe downside single-source primary prices without replacing a sane DL list price", async () => {
+    const db = makeDb();
+    const writes = trackCacheWrites(db);
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "usdt-tether",
+      name: "Tether",
+      symbol: "USDT",
+      price: 1.0,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      circulating: { peggedUSD: 100_000_000 },
+    } as unknown as (typeof dlData.peggedAssets)[0];
+
+    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({
+      results: new Map([
+        [
+          "usdt-tether",
+          {
+            price: 0.15,
+            source: "coingecko",
+            confidence: "single-source",
+            dlPrice: 1.0,
+            cgPrice: 0.15,
+            candidateSources: ["coingecko"],
+            agreeSources: ["coingecko"],
+          },
+        ],
+      ]),
+      stats: { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 },
+      cgPrices: new Map([["tether", 0.15]]),
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
+    const cached = JSON.parse(stablecoinsWrite!.value) as {
+      peggedAssets: Array<{
+        id: string;
+        price: number | null;
+        priceSource: string;
+        priceConfidence: string | null;
+      }>;
+    };
+    const usdt = cached.peggedAssets.find((asset) => asset.id === "usdt-tether");
+    expect(usdt).toMatchObject({
+      id: "usdt-tether",
+      price: 1.0,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+    });
+  });
+
   it("fails the run when DL payload is structurally invalid and fallback is insufficient", async () => {
     const db = makeDb();
     const prepareSpy = vi.fn();
@@ -957,6 +1018,51 @@ describe("syncStablecoins", () => {
     expect(normalized?.priceUpdatedAt).toBe(nowSec - 60);
   });
 
+  it("does not replay price_cache entries older than the 6-hour replay TTL", async () => {
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "usdt-tether",
+      name: "Tether",
+      symbol: "USDT",
+      geckoId: "tether",
+      price: 0,
+      priceConfidence: null,
+      circulating: { peggedUSD: 100_000_000 },
+    } as unknown as (typeof dlData.peggedAssets)[0];
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT asset_id, price, updated_at FROM price_cache",
+        rows: [{ asset_id: "usdt-tether", price: 0.999, updated_at: nowSec - (7 * 3600) }],
+      },
+      { match: "cache", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "circuit", rows: [] },
+      { match: "price_cache", rows: [] },
+    ]);
+
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const normalized = payload?.peggedAssets.find((a) => a.id === "usdt-tether");
+    expect(normalized?.priceSource).not.toBe("cached");
+    expect(normalized?.price).not.toBe(0.999);
+  });
+
   it("allows deep downside prices in sync-time primary validation when FX cache is stale", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -1207,6 +1313,55 @@ describe("syncStablecoins", () => {
       (entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache"),
     );
     expect(savePriceCacheWrites.length).toBeGreaterThan(0);
+  });
+
+  it("does not write low-confidence prices into price_cache replay storage", async () => {
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "usdt-tether",
+      name: "Tether",
+      symbol: "USDT",
+      price: 1.0,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      circulating: { peggedUSD: 100_000_000 },
+    } as unknown as (typeof dlData.peggedAssets)[0];
+    const db = makeDb();
+
+    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({
+      results: new Map([
+        [
+          "usdt-tether",
+          {
+            price: 0.97,
+            source: "coingecko",
+            confidence: "low",
+            dlPrice: 1.0,
+            cgPrice: 0.97,
+            candidateSources: ["coingecko", "defillama-list"],
+            agreeSources: ["coingecko"],
+          },
+        ],
+      ]),
+      stats: { attempted: 1, high: 0, singleSource: 0, cgOnly: 0, low: 1 },
+      cgPrices: new Map([["tether", 0.97]]),
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    await syncStablecoins(db);
+
+    const priceCacheIds = (db as ReturnType<typeof mockD1>)
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO price_cache"))
+      .map((entry) => String(entry.binds[0]));
+
+    expect(priceCacheIds).not.toContain("usdt-tether");
   });
 
   it("restores last-known-good supplemental supply when CoinGecko market-cap fetch is unavailable", async () => {

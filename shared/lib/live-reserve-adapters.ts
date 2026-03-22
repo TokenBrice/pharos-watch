@@ -168,6 +168,12 @@ const reserveSliceDescriptorSchema = z.object({
   expectedAssetAddress: z.string().optional(),
 }).strict();
 
+const redemptionRateProbeSchema = z.object({
+  contract: z.string(),
+  selector: z.string().regex(/^0x[0-9a-fA-F]{8}$/),
+  decimals: z.number().int().positive().optional(),
+}).strict();
+
 const erc4626SingleAssetParamsSchema = z.object({
   slice: reserveSliceDescriptorSchema,
 }).strict();
@@ -190,6 +196,7 @@ const evmBranchBalancesParamsSchema = z.object({
   rpcUrl: z.string().optional(),
   fallbackRpcUrl: z.string().optional(),
   branches: z.array(evmBranchBalanceBranchSchema).min(1),
+  redemptionRateProbe: redemptionRateProbeSchema.optional(),
 }).strict();
 
 const ghoGsmModuleSchema = z.object({
@@ -222,6 +229,7 @@ const singleAssetParamsSchema = z.object({
   rpcUrl: z.string().optional(),
   fallbackRpcUrl: z.string().optional(),
   probe: singleAssetProbeSchema.optional(),
+  redemptionRateProbe: redemptionRateProbeSchema.optional(),
 }).strict();
 
 const baseLiveReserveConfigSchema = z.object({

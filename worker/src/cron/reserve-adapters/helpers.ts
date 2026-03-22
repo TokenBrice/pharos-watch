@@ -30,6 +30,12 @@ interface EvmCallOptions {
   timeoutMs?: number;
 }
 
+interface OnchainRateProbe {
+  contract: string;
+  selector: string;
+  decimals?: number;
+}
+
 export function isHttpJsonInput(input: LiveReserveInput): input is JsonInput {
   return input.kind === "http-json";
 }
@@ -211,6 +217,32 @@ export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigi
   }
 
   return null;
+}
+
+export async function fetchOnchainRateBps(
+  input: EvmInput,
+  probe: OnchainRateProbe,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+  rpcUrl?: string,
+  fallbackRpcUrl?: string,
+): Promise<number | null> {
+  const decimals = probe.decimals ?? 18;
+  const scale = 10n ** BigInt(decimals);
+  const raw = await fetchOnchainUint256({
+    contract: probe.contract,
+    data: probe.selector,
+    signal,
+    ctx,
+    rpcUrl,
+    fallbackRpcUrl,
+    rpcMode: input.rpcMode,
+    chain: input.chain,
+  });
+  if (raw == null) return null;
+
+  const roundedBps = (raw * 10_000n + scale / 2n) / scale;
+  return Number(roundedBps);
 }
 
 export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<string | null> {

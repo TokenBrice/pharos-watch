@@ -55,13 +55,19 @@ function convertToGtNewPools(
   pools: DexApiPool[],
   addressToId: Map<string, string>,
   symbolToIds: Map<string, string[]> = new Map(),
+  trackedStablecoinPrices?: Map<string, number>,
 ) {
   const chains = [...new Set(pools.map((pool) => pool.chain.toLowerCase()))];
+  const effectiveTrackedPrices = trackedStablecoinPrices ?? new Map(
+    [...new Set(addressToId.values())].map((stablecoinId) => [stablecoinId, 1]),
+  );
   return convertToGtNewPoolsImpl(
     pools,
     buildChainAddressToId(addressToId, chains),
     buildSymbolToChainScopedIds(symbolToIds, chains),
     symbolToIds,
+    undefined,
+    effectiveTrackedPrices,
   );
 }
 
@@ -69,12 +75,18 @@ function extractPriceObservations(
   pools: DexApiPool[],
   addressToId: Map<string, string>,
   symbolToIds: Map<string, string[]> = new Map(),
+  trackedStablecoinPrices?: Map<string, number>,
 ) {
   const chains = [...new Set(pools.map((pool) => pool.chain.toLowerCase()))];
+  const effectiveTrackedPrices = trackedStablecoinPrices ?? new Map(
+    [...new Set(addressToId.values())].map((stablecoinId) => [stablecoinId, 1]),
+  );
   return extractPriceObservationsImpl(
     pools,
     buildChainAddressToId(addressToId, chains),
     buildSymbolToChainScopedIds(symbolToIds, chains),
+    undefined,
+    effectiveTrackedPrices,
   );
 }
 
@@ -157,14 +169,48 @@ describe("convertToGtNewPools", () => {
 
   it("derives price for token[0] using pool.price directly", () => {
     // USDC is token[0], USDT is token[1] and is a USD reference symbol
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = new Map([
+      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
+      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
+    ]);
     const result = convertToGtNewPools([MOCK_POOL], addressToId, new Map());
     expect(result.get("usdc")![0].price).toBeCloseTo(0.9998);
   });
 
+  it("prefers tracked stablecoin live prices over unconditional $1 quote assumptions", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      tokens: [
+        { address: "0xusr", symbol: "USR", decimals: 18 },
+        { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6 },
+      ],
+      price: 0.25,
+    };
+    const addressToId = new Map([
+      ["0xusr", "usr-resolv"],
+      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc-circle"],
+    ]);
+
+    const result = convertToGtNewPools(
+      [pool],
+      addressToId,
+      new Map(),
+      new Map([
+        ["usr-resolv", 0.2],
+        ["usdc-circle", 1],
+      ]),
+    );
+
+    expect(result.get("usr-resolv")![0].price).toBeCloseTo(0.25);
+    expect(result.get("usdc-circle")![0].price).toBeCloseTo(0.8);
+  });
+
   it("inverts price for token[1]", () => {
     // Only track USDT (token[1]); USDC (token[0]) is a USD reference symbol
-    const addressToId = new Map([["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"]]);
+    const addressToId = new Map([
+      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
+      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
+    ]);
     const result = convertToGtNewPools([MOCK_POOL], addressToId, new Map());
     expect(result.get("usdt")![0].price).toBeCloseTo(1 / 0.9998);
   });
@@ -199,7 +245,10 @@ describe("convertToGtNewPools", () => {
         { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "USDT", decimals: 6 },
       ],
     };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = new Map([
+      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
+      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
+    ]);
 
     const result = convertToGtNewPools([pool], addressToId, new Map());
     const gtPool = result.get("usdc")![0];
@@ -404,6 +453,27 @@ describe("extractPriceObservations", () => {
     expect(result.get("gho-aave")![0].price).toBeCloseTo(1.002);
     // LUSD (token[1]): other side (GHO) is in addressToId → price = 1 / pool.price
     expect(result.get("lusd-liquity")![0].price).toBeCloseTo(1 / 1.002);
+  });
+
+  it("does not treat unknown addressed USD-reference symbols as automatic $1 quotes", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      tokens: [
+        { address: "0xusr", symbol: "USR", decimals: 18 },
+        { address: "0xspoof-usdc", symbol: "USDC", decimals: 6 },
+      ],
+      price: 0.25,
+    };
+    const addressToId = new Map([["0xusr", "usr-resolv"]]);
+
+    const result = extractPriceObservations(
+      [pool],
+      addressToId,
+      new Map(),
+      new Map([["usr-resolv", 0.2]]),
+    );
+
+    expect(result.size).toBe(0);
   });
 
   it("prefers per-token priceUsd over pool.price ratio", () => {

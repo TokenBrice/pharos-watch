@@ -3,9 +3,32 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.11",
+  currentVersion: "2.12",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.12",
+      title: "Identity-safe enrichment, severe-downside publication guards, and replay-safe DEX quote derivation",
+      date: "2026-03-22",
+      effectiveAt: 1774195200,
+      summary:
+        "Closed the main pricing-integrity gaps by constraining fallback identity to tracked deployments, " +
+        "requiring corroboration for severe fixed-peg downside publication, promoting only replay-safe cached prices, " +
+        "and deriving DEX quote USD values from tracked live stablecoin prices instead of unconditional `$1` symbol assumptions.",
+      impact: [
+        "Primary pricing candidates are no longer gated on `geckoId`; tracked assets can still enter consensus through Pyth, CEX, RedStone, Curve, DL-list, or DEX bridge inputs",
+        "DefiLlama pass 1b now probes only tracked alternate deployments instead of synthesizing same-address identities across chains",
+        "CoinMarketCap and DexScreener symbol fallbacks now require uniqueness within the tracked registry, reducing symbol-collision poisoning",
+        "RedStone prices now require at least two corroborating venues before entering primary consensus",
+        "Pool challenge now applies to DEX-inclusive soft consensus clusters unless an exempt hard source is present",
+        "GeckoTerminal probing now cross-checks eligible single-source DL-list results in addition to single-source CoinGecko results",
+        "Direct-API DEX pair conversion now prefers tracked cached stablecoin prices for quote legs and will not treat unknown addressed `USDC`/`USDT`-style symbols as automatic `$1` references",
+        "Price-cache replay now stores only replay-safe non-low, non-fallback prices and the replay window is shortened from 24h to 6h",
+        "Severe fixed-peg downside publication now requires corroboration unless the source is an explicit protocol-redemption or pool-challenge replacement mark",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.11",
       title: "Canonical DEX token identity and non-overlapping DEX consensus",

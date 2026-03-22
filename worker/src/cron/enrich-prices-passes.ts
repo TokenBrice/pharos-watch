@@ -40,15 +40,8 @@ const JUPITER_REQUEST_TIMEOUT_MS = 5_000;
 const JUPITER_MAX_RETRIES = 0;
 const JUPITER_MIN_LIQUIDITY_USD = 50_000;
 
-/** Map DL stablecoins API chain names → DL coins API prefixes */
-const CHAIN_PREFIX_MAP: Record<string, string> = {
-  "Ethereum": "ethereum",
-  "Arbitrum": "arbitrum",
-  "Polygon": "polygon",
-  "BSC": "bsc",
-  "Base": "base",
-  "Optimism": "optimism",
-  "Avalanche": "avax",
+const DL_COINS_CHAIN_PREFIX_BY_CHAIN: Record<string, string> = {
+  avalanche: "avax",
 };
 
 // ── Result type ─────────────────────────────────────────────────────
@@ -151,6 +144,17 @@ for (const [id, meta] of ACTIVE_META_BY_ID) {
   }
 }
 
+const ACTIVE_SYMBOL_COUNTS = new Map<string, number>();
+for (const meta of ACTIVE_META_BY_ID.values()) {
+  const symbol = meta.symbol.trim().toUpperCase();
+  ACTIVE_SYMBOL_COUNTS.set(symbol, (ACTIVE_SYMBOL_COUNTS.get(symbol) ?? 0) + 1);
+}
+const UNIQUE_ACTIVE_SYMBOLS = new Set(
+  [...ACTIVE_SYMBOL_COUNTS.entries()]
+    .filter(([, count]) => count === 1)
+    .map(([symbol]) => symbol),
+);
+
 const ADDRESS_CHAIN_ALIASES: Record<string, string> = {
   avax: "avalanche",
 };
@@ -158,6 +162,45 @@ const ADDRESS_CHAIN_ALIASES: Record<string, string> = {
 function resolveDexTargetChain(rawChain: string): string | null {
   const normalized = rawChain.trim().toLowerCase();
   return resolveChainId(ADDRESS_CHAIN_ALIASES[normalized] ?? normalized);
+}
+
+function buildDefiLlamaCoinIdForChainAddress(chain: string, address: string): string {
+  const prefix = DL_COINS_CHAIN_PREFIX_BY_CHAIN[chain] ?? chain;
+  return `${prefix}:${address}`;
+}
+
+function buildTrackedDeploymentCoinIds(asset: PeggedAsset): string[] {
+  const meta = ACTIVE_META_BY_ID.get(asset.id);
+  if (!meta) return [];
+
+  const ids = new Set<string>();
+  const deployments = [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
+  for (const deployment of deployments) {
+    const chain = resolveChainId(deployment.chain);
+    const address = deployment.address?.trim();
+    if (!chain || !address) continue;
+    ids.add(buildDefiLlamaCoinIdForChainAddress(chain, address));
+  }
+  return [...ids];
+}
+
+function buildAllowedDexSearchChains(asset: PeggedAsset): Set<string> {
+  const allowed = new Set<string>();
+  for (const rawChain of asset.chains ?? []) {
+    const chain = resolveChainId(rawChain);
+    if (!chain || !DS_CHAIN_MAP[chain]) continue;
+    allowed.add(DS_CHAIN_MAP[chain]);
+  }
+
+  if (asset.address?.includes(":")) {
+    const [rawChain] = asset.address.split(":");
+    const chain = resolveDexTargetChain(rawChain);
+    if (chain && DS_CHAIN_MAP[chain]) {
+      allowed.add(DS_CHAIN_MAP[chain]);
+    }
+  }
+
+  return allowed;
 }
 
 function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
@@ -273,24 +316,16 @@ export async function runDlContractPasses(
       }
     }
 
-    // ── Pass 1b: Multi-chain fallback for 0x addresses still missing ──
-    const stillMissingAddr = withAddress.filter(
-      (m) => hasMissingPrice(assets[m.index]) && m.coinId.startsWith("ethereum:")
-    );
+    // ── Pass 1b: exact tracked alternate deployments for still-missing assets ──
+    const stillMissingAddr = withAddress.filter((m) => hasMissingPrice(assets[m.index]));
     if (stillMissingAddr.length > 0) {
-      // Build alternate chain coinIds from the asset's chains field
       const altLookups: { index: number; coinId: string }[] = [];
       for (const m of stillMissingAddr) {
         const a = assets[m.index];
-        const chains = a.chains as string[] | undefined;
-        if (!chains || !a.address) continue;
-        const addr = a.address;
-        for (const chain of chains) {
-          if (chain === "Ethereum") continue; // already tried
-          const prefix = CHAIN_PREFIX_MAP[chain];
-          if (prefix) {
-            altLookups.push({ index: m.index, coinId: `${prefix}:${addr}` });
-          }
+        const primaryCoinId = a.address ? addressToCoinId(a.address) : null;
+        for (const coinId of buildTrackedDeploymentCoinIds(a)) {
+          if (coinId === primaryCoinId) continue;
+          altLookups.push({ index: m.index, coinId });
         }
       }
 
@@ -410,11 +445,15 @@ export async function runCmcPass(
         }
 
         for (const m of missingAfterPass1b) {
+          const symbolKey = m.asset.symbol.toUpperCase();
+          const allowSymbolFallback = UNIQUE_ACTIVE_SYMBOLS.has(symbolKey);
           // Prefer slug-based matching to avoid symbol collisions
           const slug = m.asset.cmcSlug;
           const cmcPrice = slug
-            ? cmcBySlug.get(slug.toLowerCase()) ?? cmcBySymbol.get(m.asset.symbol.toUpperCase())
-            : cmcBySymbol.get(m.asset.symbol.toUpperCase());
+            ? cmcBySlug.get(slug.toLowerCase()) ?? (allowSymbolFallback ? cmcBySymbol.get(symbolKey) : undefined)
+            : allowSymbolFallback
+              ? cmcBySymbol.get(symbolKey)
+              : undefined;
           if (cmcPrice != null && isReasonablePrice(
             cmcPrice,
             m.asset.pegType as string | undefined,
@@ -538,6 +577,13 @@ export async function runDexScreenerPass(
           break;
         }
 
+        const symbolKey = m.asset.symbol.toUpperCase();
+        if (!UNIQUE_ACTIVE_SYMBOLS.has(symbolKey)) {
+          continue;
+        }
+
+        const allowedChains = buildAllowedDexSearchChains(m.asset);
+
         if (dexAttempts > 0) {
           await sleepWithSignal(200, signal);
         }
@@ -563,9 +609,10 @@ export async function runDexScreenerPass(
 
         // Filter: matching symbol, has USD price, >$50K liquidity
         const candidates = data.pairs.filter((p) => {
-          if (p.baseToken.symbol.toUpperCase() !== m.asset.symbol.toUpperCase()) return false;
+          if (p.baseToken.symbol.toUpperCase() !== symbolKey) return false;
           if (!p.priceUsd || !p.liquidity?.usd) return false;
           if (p.liquidity.usd < DEXSCREENER_MIN_LIQUIDITY_USD) return false;
+          if (allowedChains.size > 0 && !allowedChains.has(String(p.chainId).toLowerCase())) return false;
           return true;
         });
 

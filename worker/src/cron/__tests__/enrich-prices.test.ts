@@ -627,6 +627,43 @@ describe("enrichMissingPrices", () => {
     });
   });
 
+  it("skips ambiguous tracked symbols without a slug in CMC fallback", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "gusd-gemini", name: "Gemini Dollar", symbol: "GUSD", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["cmc_last_fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    mockFetch([
+      {
+        match: "pro-api.coinmarketcap.com",
+        body: {
+          data: {
+            coins: [
+              { slug: "gemini-dollar", symbol: "GUSD", quote: { USD: { price: 1.0001 } } },
+            ],
+          },
+        },
+      },
+    ]);
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
   it("skips the Jupiter breaker check when there are no Solana fallback candidates", async () => {
     const assets: PeggedAsset[] = [
       {
@@ -657,6 +694,28 @@ describe("enrichMissingPrices", () => {
       resolved: 0,
       failures: [],
     });
+  });
+
+  it("skips DexScreener symbol search for ambiguous tracked symbols without an address", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "gusd-gemini", name: "Gemini Dollar", symbol: "GUSD", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    const db = mockD1([
+      { match: "circuit", rows: [] },
+      { match: "cache", rows: [] },
+    ], { requireMatch: true });
+
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDexScreenerPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -977,7 +1036,7 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.singleSource).toBe(1);
   });
 
-  it("skips assets without geckoId", async () => {
+  it("can still evaluate assets without geckoId when other primary-source metadata exists", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "NoGecko", symbol: "NG", pegType: "peggedUSD", circulating: {} },
     ];
@@ -990,10 +1049,10 @@ describe("fetchPrimaryPrices", () => {
     const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(0);
-    expect(stats.attempted).toBe(0);
+    expect(stats.attempted).toBe(1);
   });
 
-  it("filters out assets with 'wrong' in geckoId", async () => {
+  it("filters wrong geckoIds out of CoinGecko fetches while still allowing other primary sources", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "BadGecko", symbol: "BG", geckoId: "something-wrong", pegType: "peggedUSD", circulating: {} },
     ];
@@ -1006,7 +1065,7 @@ describe("fetchPrimaryPrices", () => {
     const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(0);
-    expect(stats.attempted).toBe(0);
+    expect(stats.attempted).toBe(1);
   });
 
   it("tracks cgOnly in stats for CG-only single-source assets", async () => {
@@ -1063,6 +1122,36 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.singleSource).toBe(1);
   });
 
+  it("can price tracked assets without a geckoId when another primary source exists", async () => {
+    const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
+    const assets: PeggedAsset[] = [
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("hermes.pyth.network")) {
+        return new Response(JSON.stringify({
+          parsed: [
+            {
+              id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+              price: { price: "100010000", expo: -8, conf: "5000", publish_time: freshPublishTime },
+            },
+          ],
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    }));
+
+    const db = makeTestDb();
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
+
+    expect(results.get("usdt-tether")).toMatchObject({
+      source: "pyth",
+      confidence: "single-source",
+    });
+    expect(stats.singleSource).toBe(1);
+  });
+
   it("uses exact-case RedStone symbols and recovers batch-dropped results with solo retry", async () => {
     const assets: PeggedAsset[] = [
       { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe", geckoId: "ethena-usde", pegType: "peggedUSD", circulating: {} },
@@ -1084,7 +1173,7 @@ describe("fetchPrimaryPrices", () => {
           return new Response(JSON.stringify({
             USDe: {
               value: 1.0003,
-              source: { curve: 1.0003 },
+              source: { curve: 1.0003, uniswap: 1.0002 },
               timestamp: Date.now(),
             },
           }), { status: 200 });
@@ -1093,7 +1182,7 @@ describe("fetchPrimaryPrices", () => {
           return new Response(JSON.stringify({
             fxUSD: {
               value: 0.9997,
-              source: { curve: 0.9997 },
+              source: { curve: 0.9997, chainlink: 0.9998 },
               timestamp: Date.now(),
             },
           }), { status: 200 });
@@ -1115,6 +1204,38 @@ describe("fetchPrimaryPrices", () => {
     expect(results.get("fxusd-f-x-protocol")?.source).toBe("redstone");
     expect(results.get("fxusd-f-x-protocol")?.price).toBeCloseTo(0.9997, 4);
     expect(stats.singleSource).toBe(2);
+  });
+
+  it("excludes single-venue RedStone prices from primary consensus", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe", geckoId: "ethena-usde", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("hermes.pyth.network")) {
+        return new Response(JSON.stringify({ parsed: [] }), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("api.redstone.finance")) {
+        return new Response(JSON.stringify({
+          USDe: {
+            value: 1.0003,
+            source: { curve: 1.0003 },
+            timestamp: Date.now(),
+          },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const db = makeTestDb();
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
+
+    expect(results.size).toBe(0);
+    expect(stats.attempted).toBe(1);
+    expect(stats.singleSource).toBe(0);
   });
 });
 
@@ -1438,6 +1559,31 @@ describe("applyPoolChallenge", () => {
     // Same protocol (balancer) → price preserved despite massive TVL
     expect(results.get("xusd-test")!.price).toBe(1.0);
     expect(results.get("xusd-test")!.source).not.toBe("pool-tvl-weighted");
+  });
+
+  it("treats promoted DEX sources as pool-challenge eligible when no exempt hard source agrees", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0, source: "balancer-dex+coingecko",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "balancer-dex"],
+        agreeSources: ["coingecko", "balancer-dex"],
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [
+        { price: 0.80, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(downgrades).toBe(1);
+    expect(results.get("dusd-test")!.confidence).toBe("low");
+    expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
   });
 
   it("skips results with hard sources in agreeSources", () => {

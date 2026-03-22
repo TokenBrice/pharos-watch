@@ -7,11 +7,12 @@ vi.mock("../helpers", async (importOriginal) => {
     ...actual,
     fetchErc20Balance: vi.fn(),
     fetchDefiLlamaPrices: vi.fn(),
+    fetchOnchainRateBps: vi.fn(),
   };
 });
 
 import { fetchEvmBranchBalancesReserves } from "../evm-branch-balances";
-import { fetchErc20Balance, fetchDefiLlamaPrices } from "../helpers";
+import { fetchDefiLlamaPrices, fetchErc20Balance, fetchOnchainRateBps } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
 const coin = { id: "test-coin" } as unknown as StablecoinMeta;
@@ -75,6 +76,43 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.slices[1].pct).toBeCloseTo(96.8, 0);
 
     expect(result.metadata).toEqual({ branchCount: 2 });
+  });
+
+  it("includes live redemption fee metadata when a probe is configured", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(1_000_000_000_000_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
+      new Map([["wstETH", 2000]]),
+    );
+    vi.mocked(fetchOnchainRateBps).mockResolvedValue(50);
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "wstETH",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 18 },
+            risk: "low",
+          },
+        ],
+        redemptionRateProbe: {
+          contract: "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+          selector: "0xc52861f2",
+        },
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.metadata).toEqual({
+      branchCount: 1,
+      redemptionFeeBps: 50,
+    });
   });
 
   it("fails when any branch balance cannot be read", async () => {

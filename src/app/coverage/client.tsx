@@ -42,21 +42,7 @@ import {
 } from "@/lib/coverage-page-config";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
-
-const SOURCE_DISPLAY_NAMES: Record<string, string> = {
-  coingecko: "CoinGecko",
-  defillama: "DefiLlama",
-  coinmarketcap: "CoinMarketCap",
-  pyth: "Pyth Network",
-  binance: "Binance",
-  coinbase: "Coinbase",
-  redstone: "RedStone",
-  "curve-onchain": "Curve on-chain",
-  "curve-oracle": "Curve oracle",
-  "dex-promoted": "DEX prices",
-  "defillama-contract": "DefiLlama (contract)",
-  "protocol-redeem": "Protocol Redeem",
-};
+import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 
 function buildSourceTooltip(status: CoverageStatus): string {
   if (!status.sourceNames?.length) return status.detail;
@@ -65,7 +51,7 @@ function buildSourceTooltip(status: CoverageStatus): string {
     ? `${status.priceConfidence.charAt(0).toUpperCase()}${status.priceConfidence.slice(1).replace("-", " ")} confidence`
     : "";
   const sourceList = status.sourceNames
-    .map((s) => SOURCE_DISPLAY_NAMES[s] ?? s)
+    .map((s) => getPricingSourceLabel(s))
     .join(", ");
 
   return confidenceLabel
@@ -535,7 +521,7 @@ export default function CoveragePageClient() {
                   className="flex flex-col items-center gap-1.5 rounded-[1.15rem] border border-border/60 bg-background/40 px-4 py-4"
                 >
                   <span className="text-sm font-semibold text-foreground">
-                    {SOURCE_DISPLAY_NAMES[src.name] ?? src.name}
+                    {getPricingSourceLabel(src.name)}
                   </span>
                   <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
                     {src.count}
@@ -563,7 +549,7 @@ export default function CoveragePageClient() {
                       className="flex flex-col items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-4"
                     >
                       <span className="text-sm font-semibold text-violet-800 dark:text-violet-300">
-                        {SOURCE_DISPLAY_NAMES[src.name] ?? src.name}
+                        {getPricingSourceLabel(src.name)}
                       </span>
                       <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
                         {src.count}

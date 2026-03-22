@@ -6,7 +6,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.3`
+- **Current methodology version:** `v1.4`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
@@ -165,12 +165,14 @@ Each row also carries:
 ### Cost Modeling
 
 - `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
+- Formula-based routes can also populate `feeBps` from fresh live reserve telemetry when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
 - `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails
 - `feeDescription` is used to surface:
   - dynamic formulas such as Liquity-style `min 50 bps + baseRate`
   - conditional fee schedules such as borrower-vs-non-borrower redemptions
   - flat minimums or bank/network charges that do not map cleanly to one global bps number
   - cases where public docs were reviewed but no numeric redemption-fee schedule is published
+- If live formula telemetry is missing, the route falls back to the reviewed-formula bucket rather than pretending a fixed fee is known
 - `costScore` remains driven by the existing bounded-fee buckets; descriptive variable-fee routes still use the conservative variable / unclear bucket
 
 ---

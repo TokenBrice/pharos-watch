@@ -3179,6 +3179,10 @@
         }
       },
       "params": {
+        "redemptionRateProbe": {
+          "contract": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+          "selector": "0xc52861f2"
+        },
         "branches": [
           {
             "name": "wstETH (Lido)",
@@ -3362,7 +3366,11 @@
       },
       "params": {
         "label": "ETH",
-        "risk": "very-low"
+        "risk": "very-low",
+        "redemptionRateProbe": {
+          "contract": "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+          "selector": "0xc52861f2"
+        }
       }
     }
   },

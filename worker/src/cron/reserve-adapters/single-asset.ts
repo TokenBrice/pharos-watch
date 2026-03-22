@@ -1,12 +1,14 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  fetchOnchainRateBps,
   fetchJsonWithRetry,
   getAdapterTimeout,
   getJsonPath,
   isHttpJsonInput,
   isReserveRisk,
   probeOnchainTotalSupply,
+  requireOnchainInput,
 } from "./helpers";
 
 interface SingleAssetParams {
@@ -19,6 +21,11 @@ interface SingleAssetParams {
   probe?: {
     kind: "json-path";
     path: string[];
+  };
+  redemptionRateProbe?: {
+    contract: string;
+    selector: string;
+    decimals?: number;
   };
 }
 
@@ -54,7 +61,39 @@ export async function fetchSingleAssetReserves(
       throw new Error("single-asset source returned zero/empty probe value");
     }
   } else {
-    await probeOnchainTotalSupply(coin, primary, signal, "single-asset", ctx, params.rpcUrl, params.fallbackRpcUrl);
+    const onchainInput = requireOnchainInput(primary, "single-asset");
+    const supplyProbe = probeOnchainTotalSupply(
+      coin,
+      onchainInput,
+      signal,
+      "single-asset",
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    );
+    const redemptionFeeProbe = params.redemptionRateProbe
+      ? fetchOnchainRateBps(
+          onchainInput,
+          params.redemptionRateProbe,
+          signal,
+          ctx,
+          params.rpcUrl,
+          params.fallbackRpcUrl,
+        )
+      : Promise.resolve(null);
+
+    const [, redemptionFeeBps] = await Promise.all([supplyProbe, redemptionFeeProbe]);
+
+    return {
+      slices: [{
+        name: params.label,
+        pct: 100,
+        risk: params.risk,
+        ...(params.coinId ? { coinId: params.coinId } : {}),
+        ...(params.depType ? { depType: params.depType } : {}),
+      }],
+      ...(redemptionFeeBps != null ? { metadata: { redemptionFeeBps } } : {}),
+    };
   }
 
   return {

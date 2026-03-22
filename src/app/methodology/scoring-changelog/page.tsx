@@ -124,6 +124,38 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
+      {/* ──────────── v6.4 ──────────── */}
+      <VersionCard
+        version="v6.4"
+        title="Live Liquity redemption fee telemetry"
+        date="Mar 22, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Safety Score structure is unchanged, but Liquity-style formula routes can now
+          use current on-chain redemption fees when live reserve telemetry is available.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            <span className="text-foreground font-medium">LUSD</span> and{" "}
+            <span className="text-foreground font-medium">BOLD</span> now reuse live reserve
+            sync metadata for current redemption fee bps instead of always sitting in the
+            generic reviewed-formula bucket.
+          </li>
+          <li>
+            These routes remain labeled as{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">formula</code> fee models
+            and <code className="text-xs bg-muted px-1 py-0.5 rounded">eventual-only</code>{" "}
+            capacity routes, so Pharos does not present them as having an immediate redeemable
+            buffer.
+          </li>
+          <li>
+            If live fee telemetry is unavailable, the liquidity dimension falls back to the
+            prior reviewed-formula treatment.
+          </li>
+        </ul>
+      </VersionCard>
+
       {/* ──────────── v6.3 ──────────── */}
       <VersionCard
         version="v6.3"

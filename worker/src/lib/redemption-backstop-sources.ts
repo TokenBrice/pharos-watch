@@ -56,6 +56,7 @@ interface RedemptionStaticFields {
   feeModelKind: RedemptionBackstopEntry["feeModelKind"];
   docs?: RedemptionBackstopEntry["docs"];
   queueEnabled: boolean;
+  notes: string[];
 }
 
 function coerceFiniteNumber(value: unknown): number | null {
@@ -131,15 +132,44 @@ function resolveDocs(
   };
 }
 
-function resolveCostScore(costModel: RedemptionCostModel): {
+function resolveBoundedFeeScore(feeBps: number): number {
+  if (feeBps <= 10) return 100;
+  if (feeBps <= 50) return 80;
+  if (feeBps <= 100) return 60;
+  return 40;
+}
+
+function resolveCostScore(
+  costModel: RedemptionCostModel,
+  reserveSyncState?: ReserveSyncStateRecord | null,
+  now = Math.floor(Date.now() / 1000),
+): {
   score: number;
   feeBps: number | null;
   feeDescription?: string;
   feeConfidence: RedemptionBackstopEntry["feeConfidence"];
   feeModelKind: RedemptionBackstopEntry["feeModelKind"];
+  notes: string[];
 } {
   const feeConfidence = resolveFeeConfidence(costModel);
   const feeModelKind = resolveFeeModelKind(costModel);
+  const metadata = reserveSyncState?.metadata ?? {};
+  const liveFeeBps = coerceFiniteNumber(metadata.redemptionFeeBps);
+  const reserveUpdatedAt = typeof reserveSyncState?.lastSuccessAt === "number" ? reserveSyncState.lastSuccessAt : null;
+  const isFresh = reserveUpdatedAt != null && now - reserveUpdatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
+
+  if (costModel.kind === "dynamic-or-unclear" && feeConfidence === "formula" && liveFeeBps != null) {
+    const feeBps = Math.max(0, Math.round(liveFeeBps));
+    return {
+      score: resolveBoundedFeeScore(feeBps),
+      feeBps,
+      feeConfidence,
+      feeModelKind,
+      ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
+      notes: isFresh ? [] : ["Live redemption fee metadata stale; using last successful sync"],
+    };
+  }
+
   if (costModel.kind === "dynamic-or-unclear") {
     // Documented variable fees score higher than truly opaque ones
     const score = costModel.feeDescription && costModel.confidence !== "undisclosed-reviewed" ? 60 : 40;
@@ -149,6 +179,7 @@ function resolveCostScore(costModel: RedemptionCostModel): {
       feeConfidence,
       feeModelKind,
       ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
+      notes: [],
     };
   }
 
@@ -158,22 +189,29 @@ function resolveCostScore(costModel: RedemptionCostModel): {
     feeConfidence,
     feeModelKind,
     ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
+    notes: [] as string[],
   };
-  if (feeBps <= 10) return { score: 100, ...base };
-  if (feeBps <= 50) return { score: 80, ...base };
-  if (feeBps <= 100) return { score: 60, ...base };
-  return { score: 40, ...base };
+  return { score: resolveBoundedFeeScore(feeBps), ...base };
 }
 
 function resolveStaticFields(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
+  reserveSyncState?: ReserveSyncStateRecord | null,
+  now = Math.floor(Date.now() / 1000),
 ): RedemptionStaticFields {
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
   const settlementScore = REDEMPTION_SETTLEMENT_SCORES[config.settlementModel];
   const executionCertaintyScore = REDEMPTION_EXECUTION_SCORES[config.executionModel];
   const outputAssetQualityScore = REDEMPTION_OUTPUT_ASSET_SCORES[config.outputAssetType];
-  const { score: costScore, feeBps, feeDescription, feeConfidence, feeModelKind } = resolveCostScore(config.costModel);
+  const {
+    score: costScore,
+    feeBps,
+    feeDescription,
+    feeConfidence,
+    feeModelKind,
+    notes,
+  } = resolveCostScore(config.costModel, reserveSyncState, now);
 
   return {
     accessScore,
@@ -187,6 +225,7 @@ function resolveStaticFields(
     feeModelKind,
     docs: resolveDocs(stablecoinId, config),
     queueEnabled: config.routeFamily === "queue-redeem" || config.settlementModel === "queued",
+    notes,
   };
 }
 
@@ -372,12 +411,19 @@ export async function buildRedemptionBackstopEntry(
   now = Math.floor(Date.now() / 1000),
   options: RedemptionBackstopBuildOptions = {},
 ): Promise<RedemptionBackstopEntry> {
-  const capacity = await resolveCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, options);
+  const reserveSyncState =
+    options.reserveSyncState !== undefined
+      ? options.reserveSyncState
+      : await getReserveSyncState(db, stablecoinId);
+  const capacity = await resolveCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
+    ...options,
+    reserveSyncState,
+  });
   const capacityScoring = computeCapacityScore({
     immediateCapacityUsd: capacity.scoringCapacityUsd,
     immediateCapacityRatio: capacity.scoringCapacityRatio,
   });
-  const staticFields = resolveStaticFields(stablecoinId, config);
+  const staticFields = resolveStaticFields(stablecoinId, config, reserveSyncState, now);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
     accessScore: staticFields.accessScore,
@@ -435,7 +481,7 @@ export async function buildRedemptionBackstopEntry(
     methodologyVersion: REDEMPTION_BACKSTOP_VERSION,
     updatedAt: now,
     ...(staticFields.docs ? { docs: staticFields.docs } : {}),
-    notes: [...(config.notes ?? []), ...capacity.notes],
+    notes: [...(config.notes ?? []), ...capacity.notes, ...staticFields.notes],
     capsApplied: scored.capsApplied,
   };
 }

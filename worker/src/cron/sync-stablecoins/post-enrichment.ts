@@ -12,7 +12,6 @@ import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { hasMissingPrice } from "../enrich-prices";
 import type { PeggedAsset } from "../enrich-prices";
 import {
-  validatePriceCandidate,
   type PriceValidationContext,
   type PriceValidationReferences,
 } from "../../lib/price-validation";
@@ -26,8 +25,9 @@ import {
   type StablecoinsPayload,
   type CronResult,
 } from "./shared";
+import { isReplaySafePriceSource } from "../../lib/pricing-source-policy";
 
-const PRICE_CACHE_TTL = 24 * 60 * 60;
+const PRICE_CACHE_TTL = 6 * 60 * 60;
 
 // ---------------------------------------------------------------------------
 // Input / output interfaces
@@ -43,6 +43,15 @@ export interface PostEnrichmentInput {
   validationReferences?: PriceValidationReferences;
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
   priceValidationModeForAsset: (asset: PeggedAsset) => "primary_authoritative" | "fallback_enrichment";
+  validatePublishablePrice: (input: {
+    price: number;
+    source: string | null | undefined;
+    confidence: PeggedAsset["priceConfidence"];
+    agreeSources?: string[];
+    mode: "primary_authoritative" | "fallback_enrichment";
+    validationContext: PriceValidationContext;
+    validationReferences?: PriceValidationReferences;
+  }) => { accepted: boolean; reason: string };
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
 }
@@ -86,6 +95,7 @@ export async function runPostEnrichmentPricePipeline(
     validationReferences,
     validationContexts,
     priceValidationModeForAsset,
+    validatePublishablePrice,
     returnIfAborted,
   } = input;
 
@@ -93,23 +103,35 @@ export async function runPostEnrichmentPricePipeline(
   let rejectedCount = 0;
   for (const asset of assets) {
     if (asset.price == null || typeof asset.price !== "number") continue;
-    const decision = validatePriceCandidate(
-      asset.price,
-      validationContexts.get(asset),
-      priceValidationModeForAsset(asset),
+    const decision = validatePublishablePrice({
+      price: asset.price,
+      source: asset.priceSource,
+      confidence: asset.priceConfidence ?? null,
+      agreeSources: asset.agreeSources,
+      mode: priceValidationModeForAsset(asset),
+      validationContext: validationContexts.get(asset),
       validationReferences,
-    );
+    });
     if (!decision.accepted) {
-      console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
+      console.warn(
+        `[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): ` +
+        `$${asset.price} (${decision.reason})`,
+      );
       asset.price = null;
       asset.priceUpdatedAt = null;
       rejectedCount++;
     }
   }
 
-  // --- Save ALL assets with valid prices to price_cache ---
+  // --- Save replay-safe assets with valid prices to price_cache ---
   const withValidPrices = assets.filter(
-    (asset) => asset.price != null && typeof asset.price === "number" && asset.price > 0,
+    (asset) =>
+      asset.price != null &&
+      typeof asset.price === "number" &&
+      asset.price > 0 &&
+      asset.priceConfidence !== "fallback" &&
+      asset.priceConfidence !== "low" &&
+      isReplaySafePriceSource(asset.priceSource),
   );
   if (withValidPrices.length > 0) {
     const priceCacheWriteAbort = returnIfAborted(signal, `${abortStagePrefix}save-price-cache`);
@@ -130,12 +152,15 @@ export async function runPostEnrichmentPricePipeline(
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
       if (!cached || (now - cached.updatedAt) >= PRICE_CACHE_TTL) continue;
-      const decision = validatePriceCandidate(
-        cached.price,
-        validationContexts.get(asset),
-        "fallback_enrichment",
+      const decision = validatePublishablePrice({
+        price: cached.price,
+        source: "cached",
+        confidence: "fallback",
+        agreeSources: ["cached"],
+        mode: "fallback_enrichment",
+        validationContext: validationContexts.get(asset),
         validationReferences,
-      );
+      });
       if (!decision.accepted) continue;
 
       asset.price = cached.price;

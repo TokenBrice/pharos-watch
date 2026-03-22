@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.3",
+  currentVersion: "1.4",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.4",
+      title: "Live Liquity fee telemetry for formula routes",
+      date: "2026-03-22",
+      effectiveAt: 1774191600,
+      summary:
+        "Formula-based Liquity redemption routes can now consume current on-chain fee telemetry from live reserve sync instead of relying only on the generic reviewed-formula bucket.",
+      impact: [
+        "LUSD and BOLD live reserve adapters now record current redemption fee bps from official protocol contracts",
+        "Redemption backstop cost scoring uses live fee bps when that telemetry is available, while keeping the route labeled as a formula model",
+        "If live fee telemetry is missing, these routes fall back to the prior reviewed-formula scoring bucket",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.3",
       title: "Documented-bound full-system redemption for Liquity routes",

@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.3)
+## Overall Grade (v6.4)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.3 keeps the v6.2 structure. Redemption uplift remains confidence-gated, but documented-bound immutable full-system routes such as LUSD and BOLD can now count as stronger eventual redemption evidence without being presented as immediate redeemable buffer capacity. Collateral-quality passthrough still only accepts fresh authoritative independent live reserve feeds (`dynamic-mix` or `single-bucket`), while `validated-static` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring.
+Current-version note: v6.4 keeps the v6.3 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough still only accepts fresh authoritative independent live reserve feeds (`dynamic-mix` or `single-bucket`), while `validated-static` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring.
 
 ## Dimensions
 
@@ -51,6 +51,7 @@ Current-version note: v6.3 keeps the v6.2 structure. Redemption uplift remains c
 - If only redemption exists, `effectiveExitScore = round(min(70, redemptionBackstopScore * 0.75))`
 - Redemption uplift is only used when the redemption route is resolved and above the low-confidence / heuristic tier
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
+- Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale, report cards do not reuse it for blended effective-exit scoring; the dimension falls back to redemption-only or `NR`
 - If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty

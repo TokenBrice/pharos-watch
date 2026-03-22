@@ -53,14 +53,14 @@ export function CoreMethodologySections() {
             live voices, requires fully pairwise agreement inside each cluster, and selects the highest-confidence result.
             Kraken and Bitstamp extend the direct venue set, a pool challenge
             guard downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools
-            diverge from aggregator consensus. DEX bridge identity is now canonical-only at runtime, so addressed unknown tokens are dropped instead of being reinterpreted by symbol, and promoted protocol DEX prices only enter consensus when they are corroborated or no non-DEX voices exist. Fresh RedStone prices need timestamped venue breakdowns. Protocol-level
+            diverge from aggregator consensus, including DEX-inclusive soft clusters unless an exempt hard source is present. DEX bridge identity is now canonical-only at runtime, so addressed unknown tokens are dropped instead of being reinterpreted by symbol, promoted protocol DEX prices only enter consensus when they are corroborated or no non-DEX voices exist, and direct-API quote legs prefer tracked live stablecoin prices instead of unconditional `$1` symbol assumptions. Fresh RedStone prices need timestamped multi-venue breakdowns. Protocol-level
             redemption prices override market data for wrapper assets, Chainlink refreshes supported FX and commodity
             reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack when
             Frankfurter is unavailable, with ExchangeRate-API as a tertiary daily fallback if both primary FX paths are down.
             If those live FX fetches still fail but the last published daily references remain within cadence, Pharos
             carries those dated references forward as a healthy refresh. A 5-pass enrichment pipeline fills gaps for
             long-tail coins. Each asset is tagged with a confidence level
-            so downstream systems can react to data quality.
+            so downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration unless it comes from an explicit protocol redemption or pool-challenge replacement mark.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
@@ -292,7 +292,7 @@ export function CoreMethodologySections() {
                       <td className="py-2 pr-4 text-foreground">GeckoTerminal</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">On-chain</td>
-                      <td className="py-2">Pool-level cross-check for single-source CG-only assets (&ge;$10K TVL)</td>
+                      <td className="py-2">Pool-level cross-check for eligible single-source CG or DL-list assets (&ge;$10K TVL)</td>
                     </tr>
                   </tbody>
                 </table>
@@ -315,8 +315,8 @@ export function CoreMethodologySections() {
                 <li>Within the winning cluster, select the source with the highest weight</li>
                 <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best single source</li>
                 <li>
-                  <span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are soft aggregators
-                  (CG, DL-list, DEX average), check each large priced DEX pool (&ge;$100K TVL) from the published challenger
+                  <span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible
+                  (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger
                   snapshot built from the full retained pool set. If any diverges &ge;500 bps from consensus, downgrade to <code className="text-xs">low</code> and
                   replace the price with a TVL-weighted mean of all qualifying individual pool prices &mdash; on-chain liquidity is a more honest signal
                   when aggregators share upstream data
@@ -353,10 +353,10 @@ export function CoreMethodologySections() {
               </p>
               <ol className="list-decimal list-inside space-y-1">
                 <li><span className="text-foreground font-medium">Pass 1:</span> Contract address &rarr; DefiLlama coins API</li>
-                <li><span className="text-foreground font-medium">Pass 1b:</span> Multi-chain contract fallback (alternate chain addresses via DefiLlama)</li>
-                <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (symbol match, rate-limited to 1 call/hour)</li>
+                <li><span className="text-foreground font-medium">Pass 1b:</span> Tracked alternate deployment fallback only (no synthetic same-address cross-chain probing)</li>
+                <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (slug first; symbol fallback only when the tracked symbol is unique, rate-limited to 1 call/hour)</li>
                 <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (liquidity-gated)</li>
-                <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first, then symbol search (filtered by &gt;$50K liquidity, capped at 10 requests per run)</li>
+                <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first, then unique-symbol search (filtered by &gt;$50K liquidity, capped at 10 requests per run)</li>
               </ol>
             </div>
 
@@ -402,17 +402,17 @@ export function CoreMethodologySections() {
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Price Validation</h3>
               <p>
-                Every price is validated before entering the 24-hour cache. Validation is context-aware with four modes:
+                Every price is validated before entering the replay cache. Validation is context-aware with four modes:
               </p>
               <ul className="list-disc list-inside space-y-1">
-                <li><span className="text-foreground font-medium">Authoritative primary:</span> allows deep downside for fixed pegs (genuine crash detection)</li>
+                <li><span className="text-foreground font-medium">Authoritative primary:</span> can admit deep downside for fixed pegs, but publication still requires corroboration unless the mark is protocol redemption or a pool-challenge replacement</li>
                 <li><span className="text-foreground font-medium">Fallback enrichment:</span> rejects isolated bad prints below a lower bound</li>
                 <li><span className="text-foreground font-medium">DEX observation:</span> requires consistent $50K post-confidence TVL floor</li>
                 <li><span className="text-foreground font-medium">Historical backfill:</span> validates against per-timestamp peg references</li>
               </ul>
               <p>
                 Commodity tokens (gold, silver) scale references by <code className="text-xs">commodityOunces</code> for
-                gram- and 1/1000-ounce assets. NAV tokens use broad positive-price checks.
+                gram- and 1/1000-ounce assets. NAV tokens use broad positive-price checks. Replay-safe cache storage is limited to strong, replayable prices and now expires after 6 hours.
               </p>
             </div>
           </MethodologyDetails>
@@ -888,8 +888,9 @@ export function CoreMethodologySections() {
                 Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset
                 quality, and cost. Queue-based and offchain issuer routes are capped so they do not look unrealistically
                 liquid. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
-                liquidity dimension, stale DEX inputs are not blended into effective exit, and eventual issuer
-                redemption is reported separately from immediate redeemable buffer capacity.
+                liquidity dimension, stale DEX inputs are not blended into effective exit, live on-chain fee telemetry
+                can replace placeholder formula buckets when available, and eventual issuer redemption is reported
+                separately from immediate redeemable buffer capacity.
               </p>
             </div>
             {/* Peg multiplier */}

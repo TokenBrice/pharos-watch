@@ -11,6 +11,13 @@ import {
 } from "../lib/redemption-backstop-sources";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
+function configNeedsReserveSyncState(config: NonNullable<ReturnType<typeof getRedemptionBackstopConfig>>): boolean {
+  return (
+    config.capacityModel.kind === "reserve-sync-metadata"
+    || (config.costModel.kind === "dynamic-or-unclear" && config.costModel.confidence === "formula")
+  );
+}
+
 async function pruneRemovedRedemptionBackstops(
   db: D1Database,
   configuredIds: readonly string[],
@@ -53,7 +60,10 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const reserveSyncStateById = await loadReserveSyncStateMap(
     db,
     configuredIds.filter(
-      (stablecoinId) => configById.get(stablecoinId)?.capacityModel.kind === "reserve-sync-metadata",
+      (stablecoinId) => {
+        const config = configById.get(stablecoinId);
+        return !!config && configNeedsReserveSyncState(config);
+      },
     ),
   );
 

@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "6.3",
+  currentVersion: "6.4",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.4",
+      title: "Live Liquity redemption fee telemetry",
+      date: "2026-03-22",
+      effectiveAt: 1774191600,
+      summary:
+        "The liquidity dimension keeps the same structure, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available.",
+      impact: [
+        "LUSD and BOLD now reuse live reserve sync metadata for current redemption fee bps instead of always sitting in the generic formula-fee bucket",
+        "These routes remain labeled as formula-based and eventual-only; Pharos still does not present them as having an immediate redeemable buffer",
+        "If live fee telemetry is unavailable, Safety Score liquidity falls back to the prior reviewed-formula treatment",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.3",
       title: "Documented-bound Liquity redemption confidence",

@@ -134,6 +134,7 @@ function deriveTokenUsdPrice(
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
 ): number | null {
   const token = pool.tokens[tokenIndex];
 
@@ -154,6 +155,7 @@ function deriveTokenUsdPrice(
     chainAddressToId,
     symbolToChainScopedIds,
     validationReferences,
+    trackedStablecoinPrices,
   );
   if (otherUsdRef == null) return null;
 
@@ -175,18 +177,30 @@ function getTokenReferenceUsdPrice(
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
 ): number | null {
-  const symbol = normalizeDexSymbol(token.symbol);
-  if (symbol && isUsdReferenceSymbol(symbol)) return 1;
-
   const resolved = resolveTrackedStablecoinId(
     { chain, address: token.address, symbol: token.symbol },
     { chainAddressToId, symbolToChainScopedIds },
   );
-  if (resolved.status !== "matched" || !resolved.stablecoinId) return null;
+  if (resolved.status === "matched" && resolved.stablecoinId) {
+    const trackedPrice = trackedStablecoinPrices?.get(resolved.stablecoinId);
+    if (trackedPrice != null && Number.isFinite(trackedPrice) && trackedPrice > 0) {
+      return trackedPrice;
+    }
 
-  const context = buildPriceValidationContext({ stablecoinId: resolved.stablecoinId });
-  return getReferencePriceForContext(context, validationReferences);
+    const context = buildPriceValidationContext({ stablecoinId: resolved.stablecoinId });
+    return getReferencePriceForContext(context, validationReferences);
+  }
+
+  const normalizedAddress = (token.address ?? "").trim().toLowerCase();
+  const allowSymbolUsdFallback = normalizedAddress.length === 0 || normalizedAddress === NATIVE_PLACEHOLDER_TOKEN;
+  const symbol = normalizeDexSymbol(token.symbol);
+  if (allowSymbolUsdFallback && symbol && isUsdReferenceSymbol(symbol)) {
+    return 1;
+  }
+
+  return null;
 }
 
 function derivePoolVolume24hUsd(
@@ -194,6 +208,7 @@ function derivePoolVolume24hUsd(
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
 ): number {
   if (!pool.tokenVolumes24h || pool.tokenVolumes24h.length !== pool.tokens.length) {
     return pool.volume24hUsd;
@@ -210,13 +225,21 @@ function derivePoolVolume24hUsd(
       chainAddressToId,
       symbolToChainScopedIds,
       validationReferences,
+      trackedStablecoinPrices,
     );
     if (ownReferencePrice != null && ownReferencePrice > 0) {
       candidates.push(rawVolume * ownReferencePrice);
       continue;
     }
 
-    const derivedPrice = deriveTokenUsdPrice(pool, i, chainAddressToId, symbolToChainScopedIds, validationReferences);
+    const derivedPrice = deriveTokenUsdPrice(
+      pool,
+      i,
+      chainAddressToId,
+      symbolToChainScopedIds,
+      validationReferences,
+      trackedStablecoinPrices,
+    );
     if (derivedPrice != null && derivedPrice > 0) {
       candidates.push(rawVolume * derivedPrice);
     }
@@ -233,6 +256,7 @@ function derivePoolBalanceMetrics(
   symbolToIds: Map<string, string[]>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
 ): {
   balanceRatio: number;
   balanceDetails: {
@@ -252,8 +276,22 @@ function derivePoolBalanceMetrics(
       const directPrice = token.priceUsd;
       const priceUsd = directPrice != null && Number.isFinite(directPrice) && directPrice > 0
         ? directPrice
-        : getTokenReferenceUsdPrice(token, pool.chain, chainAddressToId, symbolToChainScopedIds, validationReferences) ??
-          deriveTokenUsdPrice(pool, index, chainAddressToId, symbolToChainScopedIds, validationReferences);
+        : getTokenReferenceUsdPrice(
+          token,
+          pool.chain,
+          chainAddressToId,
+          symbolToChainScopedIds,
+          validationReferences,
+          trackedStablecoinPrices,
+        ) ??
+          deriveTokenUsdPrice(
+            pool,
+            index,
+            chainAddressToId,
+            symbolToChainScopedIds,
+            validationReferences,
+            trackedStablecoinPrices,
+          );
 
     if (priceUsd == null || !Number.isFinite(priceUsd) || priceUsd <= 0) return null;
     return balance * priceUsd;
@@ -307,18 +345,26 @@ export function convertToGtNewPools(
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   symbolToIds: Map<string, string[]>,
   validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
 ): Map<string, GtNewPool[]> {
   const result = new Map<string, GtNewPool[]>();
 
   for (const pool of pools) {
     if (!isEligibleDirectApiPool(pool)) continue;
-    const volume24hUsd = derivePoolVolume24hUsd(pool, chainAddressToId, symbolToChainScopedIds, validationReferences);
+    const volume24hUsd = derivePoolVolume24hUsd(
+      pool,
+      chainAddressToId,
+      symbolToChainScopedIds,
+      validationReferences,
+      trackedStablecoinPrices,
+    );
     const balanceMetrics = derivePoolBalanceMetrics(
       pool,
       chainAddressToId,
       symbolToIds,
       symbolToChainScopedIds,
       validationReferences,
+      trackedStablecoinPrices,
     );
     const feeTierBps = derivePoolFeeTierBps(pool.feeRate);
 
@@ -332,7 +378,14 @@ export function convertToGtNewPools(
       const symbolStr = pairSymbols.join(" / ");
 
       // Derive price for this specific stablecoin token
-      const tokenPrice = deriveTokenUsdPrice(pool, i, chainAddressToId, symbolToChainScopedIds, validationReferences);
+      const tokenPrice = deriveTokenUsdPrice(
+        pool,
+        i,
+        chainAddressToId,
+        symbolToChainScopedIds,
+        validationReferences,
+        trackedStablecoinPrices,
+      );
 
       const gtPool: GtNewPool = {
         address: pool.poolAddress,
@@ -373,6 +426,7 @@ export function extractPriceObservations(
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
 ): Map<string, DexPriceObs[]> {
   const result = new Map<string, DexPriceObs[]>();
 
@@ -393,7 +447,14 @@ export function extractPriceObservations(
       const stablecoinId = resolveStablecoinId(pool.chain, token, chainAddressToId, symbolToChainScopedIds);
       if (!stablecoinId) continue;
 
-      const price = deriveTokenUsdPrice(pool, i, chainAddressToId, symbolToChainScopedIds, validationReferences);
+      const price = deriveTokenUsdPrice(
+        pool,
+        i,
+        chainAddressToId,
+        symbolToChainScopedIds,
+        validationReferences,
+        trackedStablecoinPrices,
+      );
       if (price == null || price <= 0) continue;
 
       // Plausibility filter — matches existing code paths in fetch-primary.ts

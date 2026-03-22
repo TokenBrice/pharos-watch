@@ -313,6 +313,16 @@ Safety Score structure is unchanged, but the liquidity dimension is now stricter
 
 Weights and grade thresholds are unchanged from v6.0.
 
+## v6.4 - Live Liquity redemption fee telemetry (2026-03-22)
+
+Safety Score structure is unchanged, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available:
+
+- LUSD and BOLD now reuse live reserve sync metadata for current redemption fee bps instead of always sitting in the generic reviewed-formula bucket
+- These routes remain labeled as `formula` fee models and `eventual-only` capacity routes, so Pharos still does not present them as having an immediate redeemable buffer
+- If live fee telemetry is unavailable, the liquidity dimension falls back to the prior reviewed-formula treatment
+
+Weights and grade thresholds are unchanged from v6.3.
+
 ## v6.3 - Documented-bound Liquity redemption confidence (2026-03-22)
 
 Safety Score structure is unchanged, but the liquidity dimension now recognizes a narrow class of fully on-chain redemption routes as stronger evidence than heuristic capacity models:
@@ -346,7 +356,7 @@ Weights and grade thresholds are unchanged from v6.1.
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0–6.2** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v6.0–6.4** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

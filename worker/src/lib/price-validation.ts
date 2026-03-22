@@ -303,6 +303,28 @@ function getHardcodedBounds(context: PriceValidationContext): { min: number; max
   return null;
 }
 
+function isFixedPegContext(context: PriceValidationContext): boolean {
+  return context.pegClass === "usd" || context.pegClass === "fiat_fx" || context.pegClass === "commodity";
+}
+
+export function isSevereFixedPegDownside(
+  price: number,
+  context: PriceValidationContext,
+  references?: PriceValidationReferences,
+  downsideRatio = 0.5,
+): boolean {
+  if (!Number.isFinite(price) || price <= 0 || !isFixedPegContext(context)) {
+    return false;
+  }
+
+  const referencePrice = getReferencePriceForContext(context, references);
+  if (referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) {
+    return false;
+  }
+
+  return (price / referencePrice) < downsideRatio;
+}
+
 export function validatePriceCandidate(
   price: number,
   context: PriceValidationContext,

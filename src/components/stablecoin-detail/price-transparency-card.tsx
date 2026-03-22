@@ -4,28 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import { cn } from "@/lib/utils";
-
-/** Canonical known sources in display order */
-const KNOWN_SOURCES = [
-  { key: "coingecko", label: "CoinGecko" },
-  { key: "defillama", label: "DefiLlama" },
-  { key: "defillama-list", label: "DefiLlama (list)" },
-  { key: "geckoterminal", label: "GeckoTerminal" },
-  { key: "pyth", label: "Pyth Network" },
-  { key: "binance", label: "Binance" },
-  { key: "kraken", label: "Kraken" },
-  { key: "bitstamp", label: "Bitstamp" },
-  { key: "coinbase", label: "Coinbase" },
-  { key: "redstone", label: "RedStone" },
-  { key: "curve-onchain", label: "Curve on-chain" },
-  { key: "curve-oracle", label: "Curve oracle" },
-  { key: "dex-promoted", label: "DEX prices" },
-  { key: "fluid-dex", label: "Fluid" },
-  { key: "balancer-dex", label: "Balancer" },
-  { key: "raydium-dex", label: "Raydium" },
-  { key: "orca-dex", label: "Orca" },
-  { key: "jupiter", label: "Jupiter" },
-] as const;
+import {
+  PRICE_TRANSPARENCY_SOURCE_KEYS,
+  formatPricingSourceLabel,
+  getPricingSourceLabel,
+} from "@shared/lib/pricing-sources";
 
 type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
 
@@ -54,16 +37,6 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   low: "text-rose-600 dark:text-rose-400",
   fallback: "text-muted-foreground",
 };
-
-function formatPriceSource(source: string): string {
-  const labelMap: Record<string, string> = Object.fromEntries(
-    KNOWN_SOURCES.map((s) => [s.key, s.label]),
-  );
-  return source
-    .split("+")
-    .map((s) => labelMap[s.trim()] ?? s.trim())
-    .join(" + ");
-}
 
 function formatTimeAgo(updatedAtSec: number | null | undefined): string {
   if (updatedAtSec == null) return "\u2014";
@@ -116,7 +89,7 @@ export function PriceTransparencyCard({
           <div className="flex items-baseline gap-2">
             <span className="text-muted-foreground">Source:</span>
             <span className="font-medium">
-              {isProtocolRedeem ? "Protocol Redemption" : formatPriceSource(coinData.priceSource)}
+              {isProtocolRedeem ? "Protocol Redemption" : formatPricingSourceLabel(coinData.priceSource)}
             </span>
           </div>
           <div className="flex items-center justify-between">
@@ -149,7 +122,7 @@ export function PriceTransparencyCard({
             </div>
           ) : null}
           <div className="grid grid-cols-1 md:grid-cols-2">
-            {KNOWN_SOURCES.map(({ key, label }, index) => {
+            {PRICE_TRANSPARENCY_SOURCE_KEYS.map((key, index) => {
               const status = resolveSourceStatus(
                 key,
                 agreeSources,
@@ -159,7 +132,7 @@ export function PriceTransparencyCard({
               const config = STATUS_CONFIG[status];
               // Don't add a column divider to the last item when it sits alone in the left column
               const isLastAndAlone =
-                index === KNOWN_SOURCES.length - 1 && KNOWN_SOURCES.length % 2 === 1;
+                index === PRICE_TRANSPARENCY_SOURCE_KEYS.length - 1 && PRICE_TRANSPARENCY_SOURCE_KEYS.length % 2 === 1;
               return (
                 <div
                   key={key}
@@ -168,7 +141,7 @@ export function PriceTransparencyCard({
                     !isLastAndAlone && "md:[&:nth-child(odd)]:border-r",
                   )}
                 >
-                  <span className="font-medium">{label}</span>
+                  <span className="font-medium">{getPricingSourceLabel(key)}</span>
                   <span className="inline-flex items-center gap-1.5">
                     <span className={cn("inline-block h-2 w-2 rounded-full", config.dot)} />
                     <span className="text-xs text-muted-foreground">{config.label}</span>

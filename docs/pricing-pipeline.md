@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.11`
+- **Current methodology version:** `v2.12`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -49,7 +49,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 | Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Balancer price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
 | Raydium DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Raydium price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
 | Orca DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Orca price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
-| GeckoTerminal pool probe | 1 | `worker/src/lib/geckoterminal-price-probe.ts` | Pool-level cross-check for single-source CG-only assets |
+| GeckoTerminal pool probe | 1 | `worker/src/lib/geckoterminal-price-probe.ts` | Pool-level cross-check for eligible single-source CoinGecko or DL-list assets |
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
 
@@ -79,7 +79,7 @@ Source labels list all agreeing sources alphabetically:
 
 ### Pool Challenge (Soft-Source Guard)
 
-After consensus, results where all agreeing sources are **soft aggregators** (CoinGecko, DefiLlama-list, dex-promoted) are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from consensus beyond the threshold:
+After consensus, results where all agreeing sources are **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible clusters include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `raydium-dex`, `orca-dex`) as long as no exempt hard source is present. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from consensus beyond the threshold:
 
 1. Confidence is always downgraded to `low`.
 2. The consensus price is **replaced** with the TVL-weighted mean only when diverging pools span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs). When only one protocol diverges, the original consensus price is preserved but confidence stays `low`.
@@ -90,7 +90,7 @@ The DEX bridge and the pool challenge now deliberately read from different stora
 - `dex_price_challenger_snapshots` + `dex_price_challengers`: current individual challenger pools, published from the full retained DEX pool set for large-pool challenge / depeg confirmation
 - `dex_liquidity.top_pools_json`: display-oriented top pools for UI detail, no longer the canonical challenger source
 
-This catches cases where multiple aggregators agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus - large pools carry proportional weight. Hard sources (Pyth, Binance, Kraken, Bitstamp, Coinbase, Curve on-chain, RedStone, protocol-redeem) are exempt because they provide independent market/oracle data.
+This catches cases where multiple aggregators or DEX-derived bridge sources agree on a misleading price derived from small pools while ignoring large pools that show a depeg. When the challenge fires, on-chain pool liquidity provides a more honest price signal than aggregator consensus because large pools carry proportional weight. Hard sources (Pyth, Binance, Kraken, Bitstamp, Coinbase, Curve on-chain, Curve oracle, RedStone with multi-venue agreement, protocol-redeem) are exempt because they provide independent market/oracle data.
 
 ---
 
@@ -106,6 +106,7 @@ Several live providers need normalization before their prices can safely enter c
 - **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (36 symbols including `USDe`, `crvUSD`, `fxUSD`, `sUSDe`). Unsupported symbols are filtered out before transport. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_API_SYMBOL_MAP` and keys results by metadata symbol so callers don't need to know the mapping.
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **RedStone freshness + transparency gate:** RedStone entries are only admitted when they carry a timestamp newer than 5 minutes and a usable per-venue price breakdown. Timestamp-less or opaque aggregate-only responses are rejected.
+- **RedStone multi-venue gate:** RedStone prices now need at least 2 venues and at least 50% venue agreement before they can enter primary consensus; a single venue is treated as insufficient corroboration.
 - **Jupiter Price API V3 freshness semantics:** Jupiter documents `blockId` as the recency field for V3 responses. The fallback path therefore does not reject quotes based on optional `createdAt` metadata and instead relies on Jupiter's own price heuristics, liquidity gating, and peg-aware validation.
 - **Chainlink reference overlay:** `worker/src/cron/sync-fx-rates.ts` overlays curated Chainlink EUR/USD, GBP/USD, JPY/USD, XAU/USD, and XAG/USD feeds onto the shared `fx-rates` cache when their on-chain quotes are fresh and within 5% of the current reference stack. Frankfurter / secondary FX APIs and `gold-api.com` remain fallback sources for uncovered or divergent feeds.
 - **Secondary + tertiary FX fallbacks:** `sync-fx-rates.ts` compares the jsDelivr `@fawazahmed0/currency-api` mirror with the direct `latest.currency-api.pages.dev` endpoint and persists the fresher valid dated snapshot. CNH/RUB/UAH/ARS always use this daily secondary path, and when Frankfurter is unavailable the same feed can temporarily backstop the wider fiat FX set. If both Frankfurter and the secondary mirrors are unavailable, the worker falls through to ExchangeRate-API's daily USD snapshot before dropping into cached-fallback mode.
@@ -118,6 +119,7 @@ Several live providers need normalization before their prices can safely enter c
 - **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before they enter primary consensus, so one Balancer/Fluid/Raydium/Orca protocol can contribute at most one elevated source per asset.
 - **DEX bridge overlap guard:** when a promoted per-protocol DEX bridge source exists for an asset, the overlapping `dex-promoted` aggregate is withheld so the same bridge observation family cannot self-confirm.
 - **Promoted DEX corroboration gate:** a lone promoted DEX protocol is only admitted into primary consensus when it agrees with another promoted DEX protocol, agrees with a non-DEX source within the live threshold, or no non-DEX source exists for that asset.
+- **Direct-API tracked quote pricing:** direct-API pair conversion now prefers the latest tracked stablecoin prices from the cached stablecoins payload for quote legs before falling back to peg references. Unknown addressed `USDC`/`USDT`-style tokens no longer get unconditional `$1` treatment.
 - **DEX token matching and dedupe:** direct-API, staged, and fallback DEX pools resolve tracked assets by `chain + address` first. If an upstream token already carries an address and that address is unknown to the canonical registry, it is dropped instead of falling back to symbol; symbol fallback is reserved for addressless rows and must still be unique within the same chain. Repeated observations of the same physical pool are collapsed by exact pool id or a conservative derived identity before they enter `dex_prices`.
 - **Direct-API pair conversion:** non-USD tracked stablecoin pairs use peg-reference-aware conversion rather than treating every tracked stablecoin counterparty as `$1`.
 
@@ -154,10 +156,10 @@ The same registry also supports historical replay for backfills so admin rebuild
 Assets still missing prices after primary consensus run through `enrichMissingPrices()`:
 
 1. **Pass 1:** DefiLlama `coins.llama.fi` by current contract address
-2. **Pass 1b:** alternate-chain contract fallback via DefiLlama
-3. **Pass 2:** CoinMarketCap `listings/latest` batch — prefers `cmcSlug`-based matching over symbol to avoid cross-contamination in collision groups (e.g., two coins sharing "GUSD"). Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
+2. **Pass 1b:** alternate tracked deployment fallback via DefiLlama; only known tracked deployments are probed, never synthetic same-address cross-chain identities
+3. **Pass 2:** CoinMarketCap `listings/latest` batch — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation
-5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available, falling back to symbol search under the same liquidity and peg-aware validation gates
+5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available, falling back to symbol search only for unique tracked symbols under the same liquidity and peg-aware validation gates
 
 Operationally, missing-price enrichment runs before the slower GeckoTerminal single-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for CG-only assets and protocol overrides still apply after that probe.
 
@@ -165,7 +167,8 @@ The enrichment path is intentionally narrower than primary pricing:
 
 - it exists to fill holes, not overrule good consensus
 - fallback results are validated before they enter `price_cache`
-- invalid fallback prints are dropped instead of poisoning later runs
+- replay cache only stores replay-safe prices (no `low`, no `fallback`, no fragile search-derived sources) and expires after 6 hours
+- invalid or severely depegged single-source fallback prints are dropped instead of poisoning later runs
 
 ---
 

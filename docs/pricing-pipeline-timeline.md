@@ -1,6 +1,22 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.11` (2026-02-01 -> 2026-03-22).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.12` (2026-02-01 -> 2026-03-22).
+
+---
+
+## v2.12 - Identity-safe enrichment, severe-downside publication guards, and replay-safe DEX quote derivation (Mar 22, 2026)
+
+**Commit:** `unreleased`
+
+- Primary pricing candidates are no longer gated on `geckoId`; tracked assets can still enter consensus through non-CoinGecko voices
+- DefiLlama pass 1b now probes only tracked alternate deployments instead of synthesizing same-address identities across chains
+- CoinMarketCap and DexScreener symbol fallbacks now require uniqueness within the tracked registry
+- RedStone prices now require at least two corroborating venues before entering primary consensus
+- Pool challenge now applies to DEX-inclusive soft consensus clusters unless an exempt hard source is present
+- GeckoTerminal probing now cross-checks eligible single-source DL-list results in addition to single-source CoinGecko results
+- Direct-API DEX quote conversion now prefers tracked cached stablecoin prices and no longer treats unknown addressed USD-like symbols as automatic `$1` references
+- Replay cache now stores only replay-safe non-low, non-fallback prices and expires after 6 hours
+- Severe fixed-peg downside publication now requires corroboration unless the source is an explicit protocol-redemption or pool-challenge replacement mark
 
 ---
 

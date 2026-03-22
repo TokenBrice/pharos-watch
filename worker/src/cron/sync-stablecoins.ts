@@ -35,9 +35,12 @@ import { recordOutcome } from "../lib/circuit-breaker";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
 import {
   buildPriceValidationContext,
+  isSevereFixedPegDownside,
   validatePriceCandidate,
   type PriceValidationContext,
+  type PriceValidationReferences,
 } from "../lib/price-validation";
+import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO } from "../lib/pricing-source-policy";
 
 function priceValidationModeForAsset(asset: PeggedAsset): "primary_authoritative" | "fallback_enrichment" {
   return asset.priceConfidence === "fallback" ||
@@ -69,6 +72,58 @@ function createValidationContextResolver(): {
   };
 }
 
+function allowsSevereDownsidePublication(input: {
+  price: number;
+  source: string | null | undefined;
+  confidence: PeggedAsset["priceConfidence"];
+  agreeSources?: string[];
+  context: PriceValidationContext;
+  references?: PriceValidationReferences;
+}): boolean {
+  if (!isSevereFixedPegDownside(input.price, input.context, input.references, FIXED_PEG_SEVERE_DOWNSIDE_RATIO)) {
+    return true;
+  }
+
+  if (input.source === "protocol-redeem" || input.source === "pool-tvl-weighted") {
+    return true;
+  }
+
+  return input.confidence === "high" && (input.agreeSources?.length ?? 0) >= 2;
+}
+
+function validatePublishablePrice(input: {
+  price: number;
+  source: string | null | undefined;
+  confidence: PeggedAsset["priceConfidence"];
+  agreeSources?: string[];
+  mode: "primary_authoritative" | "fallback_enrichment";
+  validationContext: PriceValidationContext;
+  validationReferences?: PriceValidationReferences;
+}): { accepted: boolean; reason: string } {
+  const decision = validatePriceCandidate(
+    input.price,
+    input.validationContext,
+    input.mode,
+    input.validationReferences,
+  );
+  if (!decision.accepted) {
+    return { accepted: false, reason: decision.reasonCode };
+  }
+
+  if (!allowsSevereDownsidePublication({
+    price: input.price,
+    source: input.source,
+    confidence: input.confidence,
+    agreeSources: input.agreeSources,
+    context: input.validationContext,
+    references: input.validationReferences,
+  })) {
+    return { accepted: false, reason: "severe_downside_requires_corroboration" };
+  }
+
+  return { accepted: true, reason: decision.reasonCode };
+}
+
 function abortResult(signal: AbortSignal | undefined, stage: string): CronResult {
   const reasonRaw = signal?.reason;
   const reason =
@@ -77,10 +132,10 @@ function abortResult(signal: AbortSignal | undefined, stage: string): CronResult
       : typeof reasonRaw === "string" && reasonRaw.length > 0
         ? reasonRaw
         : "aborted";
-    return {
-      status: "degraded",
-      itemCount: 0,
-      metadata: buildSyncMetadata({ reason: "aborted", stage, detail: reason }),
+  return {
+    status: "degraded",
+    itemCount: 0,
+    metadata: buildSyncMetadata({ reason: "aborted", stage, detail: reason }),
   };
 }
 
@@ -186,13 +241,22 @@ async function syncViaCoingeckoFallback(
     const override = authoritativeOverrides.get(asset.id);
     if (!override) continue;
 
-    const decision = validatePriceCandidate(
-      override.price,
-      validationContexts.get(asset),
-      "primary_authoritative",
+    const decision = validatePublishablePrice({
+      price: override.price,
+      source: override.source,
+      confidence: override.confidence,
+      agreeSources: [override.source],
+      mode: "primary_authoritative",
+      validationContext: validationContexts.get(asset),
       validationReferences,
-    );
-    if (!decision.accepted) continue;
+    });
+    if (!decision.accepted) {
+      console.warn(
+        `[sync-stablecoins] Rejected fallback authoritative override for ${asset.symbol} (id=${asset.id}): ` +
+        `$${override.price} (${decision.reason})`,
+      );
+      continue;
+    }
 
     asset.price = override.price;
     stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source]);
@@ -207,14 +271,20 @@ async function syncViaCoingeckoFallback(
 
   for (const asset of assets) {
     if (asset.price == null || typeof asset.price !== "number" || asset.price === 0) continue;
-    const decision = validatePriceCandidate(
-      asset.price,
-      validationContexts.get(asset),
-      "primary_authoritative",
+    const decision = validatePublishablePrice({
+      price: asset.price,
+      source: asset.priceSource,
+      confidence: asset.priceConfidence ?? null,
+      agreeSources: asset.agreeSources,
+      mode: "primary_authoritative",
+      validationContext: validationContexts.get(asset),
       validationReferences,
-    );
+    });
     if (!decision.accepted) {
-      console.warn(`[sync-stablecoins] Pre-rejected fallback price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
+      console.warn(
+        `[sync-stablecoins] Pre-rejected fallback price for ${asset.symbol} (id=${asset.id}): ` +
+        `$${asset.price} (${decision.reason})`,
+      );
       asset.price = 0;
       stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
     }
@@ -244,6 +314,7 @@ async function syncViaCoingeckoFallback(
     validationReferences,
     validationContexts,
     priceValidationModeForAsset,
+    validatePublishablePrice,
     returnIfAborted,
     abortResult,
   }, "fallback-");
@@ -375,21 +446,28 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     assets, db, signal, validationReferences, coingeckoApiKey, chainRpcs, dlListPrices,
   );
   const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
-  const protocolOverrideCount = protocolPriceOverrides.size;
+  let protocolOverrideCount = 0;
   // Apply primary price results — these override the DL list endpoint prices
   for (const asset of assets) {
     const primary = primaryPriceResults.get(asset.id);
     if (primary) {
-      const decision = validatePriceCandidate(
-        primary.price,
-        validationContexts.get(asset),
-        "primary_authoritative",
+      const decision = validatePublishablePrice({
+        price: primary.price,
+        source: primary.source,
+        confidence: primary.confidence,
+        agreeSources: primary.agreeSources,
+        mode: "primary_authoritative",
+        validationContext: validationContexts.get(asset),
         validationReferences,
-      );
+      });
       if (decision.accepted) {
         asset.price = primary.price;
         stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec, primary.candidateSources, primary.agreeSources);
       } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
+        console.warn(
+          `[sync-stablecoins] Rejected primary consensus price for ${asset.symbol} (id=${asset.id}): ` +
+          `$${primary.price} from ${primary.source} (${decision.reason})`,
+        );
         stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec, [asset.priceSource || "defillama"], [asset.priceSource || "defillama"]);
       }
     } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
@@ -410,14 +488,20 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       typeof asset.price === "number" &&
       asset.price !== 0
     ) {
-      const decision = validatePriceCandidate(
-        asset.price,
-        validationContexts.get(asset),
-        "primary_authoritative",
+      const decision = validatePublishablePrice({
+        price: asset.price,
+        source: asset.priceSource,
+        confidence: asset.priceConfidence ?? null,
+        agreeSources: asset.agreeSources,
+        mode: "primary_authoritative",
+        validationContext: validationContexts.get(asset),
         validationReferences,
-      );
+      });
       if (!decision.accepted) {
-        console.warn(`[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
+        console.warn(
+          `[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): ` +
+          `$${asset.price} (${decision.reason})`,
+        );
         asset.price = 0; // hasMissingPrice() treats 0 as missing
         stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
       }
@@ -450,15 +534,23 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       for (const asset of assets) {
         const primary = primaryPriceResults.get(asset.id);
         if (primary && primary.candidateSources.includes("geckoterminal")) {
-          const decision = validatePriceCandidate(
-            primary.price,
-            validationContexts.get(asset),
-            "primary_authoritative",
+          const decision = validatePublishablePrice({
+            price: primary.price,
+            source: primary.source,
+            confidence: primary.confidence,
+            agreeSources: primary.agreeSources,
+            mode: "primary_authoritative",
+            validationContext: validationContexts.get(asset),
             validationReferences,
-          );
+          });
           if (decision.accepted) {
             asset.price = primary.price;
             stampPriceMetadata(asset, primary.source, primary.confidence, syncStartSec, primary.candidateSources, primary.agreeSources);
+          } else {
+            console.warn(
+              `[sync-stablecoins] Rejected GT-probed price for ${asset.symbol} (id=${asset.id}): ` +
+              `$${primary.price} from ${primary.source} (${decision.reason})`,
+            );
           }
         }
       }
@@ -476,13 +568,22 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     const override = protocolPriceOverrides.get(asset.id);
     if (!override) continue;
 
-    const decision = validatePriceCandidate(
-      override.price,
-      validationContexts.get(asset),
-      "primary_authoritative",
+    const decision = validatePublishablePrice({
+      price: override.price,
+      source: override.source,
+      confidence: override.confidence,
+      agreeSources: [override.source],
+      mode: "primary_authoritative",
+      validationContext: validationContexts.get(asset),
       validationReferences,
-    );
-    if (!decision.accepted) continue;
+    });
+    if (!decision.accepted) {
+      console.warn(
+        `[sync-stablecoins] Rejected protocol-backed override for ${asset.symbol} (id=${asset.id}): ` +
+        `$${override.price} (${decision.reason})`,
+      );
+      continue;
+    }
 
     // Warn if protocol override diverges significantly from market consensus
     if (asset.price != null && asset.price > 0 && override.price > 0) {
@@ -497,6 +598,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
     asset.price = override.price;
     stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, [override.source], [override.source]);
+    protocolOverrideCount++;
   }
   if (protocolOverrideCount > 0) {
     console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);
@@ -513,6 +615,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     validationReferences,
     validationContexts,
     priceValidationModeForAsset,
+    validatePublishablePrice,
     returnIfAborted,
     abortResult,
   }, "");

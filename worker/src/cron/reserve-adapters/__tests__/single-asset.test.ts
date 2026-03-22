@@ -6,12 +6,13 @@ vi.mock("../helpers", async (importOriginal) => {
   return {
     ...actual,
     fetchJsonWithRetry: vi.fn(),
+    fetchOnchainRateBps: vi.fn(),
     probeOnchainTotalSupply: vi.fn(),
   };
 });
 
 import { fetchSingleAssetReserves } from "../single-asset";
-import { fetchJsonWithRetry, probeOnchainTotalSupply } from "../helpers";
+import { fetchJsonWithRetry, fetchOnchainRateBps, probeOnchainTotalSupply } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
 
@@ -160,6 +161,33 @@ describe("fetchSingleAssetReserves", () => {
     expect(result.slices).toEqual([
       { name: "ETH collateral", pct: 100, risk: "low" },
     ]);
+  });
+
+  it("includes live redemption fee metadata when a probe is configured", async () => {
+    vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1000000n);
+    vi.mocked(fetchOnchainRateBps).mockResolvedValue(50);
+    const config: LiveReservesConfig = {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+      params: {
+        label: "ETH collateral",
+        risk: "low",
+        redemptionRateProbe: {
+          contract: "0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2",
+          selector: "0xc52861f2",
+        },
+      },
+    };
+
+    const result = await fetchSingleAssetReserves(
+      makeCoin([{ chain: "ethereum", address: "0x1234" }]),
+      config,
+      signal,
+    );
+
+    expect(result.metadata).toEqual({ redemptionFeeBps: 50 });
   });
 
   it("throws when on-chain probe fails", async () => {

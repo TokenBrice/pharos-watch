@@ -34,6 +34,10 @@ import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../lib/authorita
 import { fetchEvmCallHexAtBlock } from "../lib/evm-rpc";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
+import {
+  isGtProbeEligibleSingleSource,
+  isPoolChallengeEligibleConsensus,
+} from "../lib/pricing-source-policy";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
 
@@ -98,11 +102,33 @@ export async function fetchPrimaryPrices(
   throwIfAborted(signal);
   const results = new Map<string, PrimaryPriceResult>();
   const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 };
+  const metaById = new Map(ACTIVE_STABLECOINS.map((m) => [m.id, m]));
+  const nowSec = Math.floor(Date.now() / 1000);
+  const dexRows = await loadDexPriceRows(db);
+  const dexPriceSources = await loadDexPriceSources(db);
 
-  // Only consider assets with a valid geckoId (no "wrong" tag)
-  const candidates = assets.filter(
-    (a) => a.geckoId && typeof a.geckoId === "string" && !a.geckoId.includes("wrong"),
-  );
+  const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
+  const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
+  const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
+  const redstoneSymbolSet = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
+  const curveEligibleIds = new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
+  curveEligibleIds.add("crvusd-curve");
+
+  const candidates = assets.filter((asset) => {
+    const meta = metaById.get(asset.id);
+    const symbolUpper = asset.symbol.toUpperCase();
+    const hasValidGeckoId = !!asset.geckoId && typeof asset.geckoId === "string" && !asset.geckoId.includes("wrong");
+    return hasValidGeckoId ||
+      (dlListPrices?.has(asset.id) ?? false) ||
+      !!meta?.pythFeedId ||
+      coinbaseKnownSet.has(symbolUpper) ||
+      krakenKnownSet.has(symbolUpper) ||
+      bitstampKnownSet.has(symbolUpper) ||
+      redstoneSymbolSet.has(asset.symbol) ||
+      curveEligibleIds.has(asset.id) ||
+      dexRows.has(asset.id) ||
+      dexPriceSources.has(asset.id);
+  });
   if (candidates.length === 0) return { results, stats, cgPrices: new Map() };
 
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
@@ -115,18 +141,20 @@ export async function fetchPrimaryPrices(
   const curveAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN);
 
   if (!cgAllowed && !pythAllowed && !binanceAllowed && !krakenAllowed && !bitstampAllowed && !coinbaseAllowed && !redstoneAllowed && !curveAllowed) {
-    console.warn("[primary-prices] All primary price circuits are open, skipping");
-    return { results, stats, cgPrices: new Map() };
+    console.warn("[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only");
   }
 
   // Batch fetch sources in parallel
-  const geckoIds = candidates.map((a) => a.geckoId!);
+  const geckoIds = [...new Set(
+    candidates
+      .map((asset) => asset.geckoId)
+      .filter((geckoId): geckoId is string => !!geckoId && !geckoId.includes("wrong")),
+  )];
   const BATCH_SIZE = 250; // CG supports 250 IDs per call
 
   const cgPrices = new Map<string, number>();
 
   // Build Pyth feed map from tracked stablecoin metadata
-  const metaById = new Map(ACTIVE_STABLECOINS.map((m) => [m.id, m]));
   const pythFeedIds = new Map<string, string>();
   for (const asset of candidates) {
     const meta = metaById.get(asset.id);
@@ -146,13 +174,9 @@ export async function fetchPrimaryPrices(
   // Coinbase uses uppercased product symbols. RedStone is exact-case and only
   // queried for the known-supported tracked subset to keep request volume bounded.
   const candidateSymbolsUpper = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
-  const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
   const coinbaseSymbols = candidateSymbolsUpper.filter((s) => coinbaseKnownSet.has(s));
-  const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
   const krakenSymbols = candidateSymbolsUpper.filter((s) => krakenKnownSet.has(s));
-  const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
   const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
-  const redstoneSymbolSet = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);
   const redstoneSymbols = [...new Set(candidates.map((a) => a.symbol).filter((symbol) => redstoneSymbolSet.has(symbol)))];
 
   const fetches: Promise<void>[] = [];
@@ -326,18 +350,13 @@ export async function fetchPrimaryPrices(
   await Promise.all(fetches);
   throwIfAborted(signal);
 
-  // Load DEX prices for promotion into primary consensus
-  const nowSec = Math.floor(Date.now() / 1000);
-  const dexRows = await loadDexPriceRows(db);
-  const dexPriceSources = await loadDexPriceSources(db);
-
   // N-source consensus per asset
   const DIVERGENCE_THRESHOLD_BPS = 50;
   const DEX_API_WEIGHTS: Record<string, number> = { fluid: 3, balancer: 3, raydium: 2, orca: 2 };
 
   for (const asset of candidates) {
-    const gId = asset.geckoId!;
-    const cg = cgPrices.get(gId) ?? null;
+    const gId = asset.geckoId && !asset.geckoId.includes("wrong") ? asset.geckoId : null;
+    const cg = gId ? (cgPrices.get(gId) ?? null) : null;
     const pyth = pythPrices.get(asset.id);
 
     const sources: SourcePrice[] = [];
@@ -361,7 +380,7 @@ export async function fetchPrimaryPrices(
     const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
     if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2 });
     const redstoneResult = redstonePrices.get(asset.symbol);
-    if (redstoneResult != null && redstoneResult.venueAgreementPct >= 50) {
+    if (redstoneResult != null && redstoneResult.venueCount >= 2 && redstoneResult.venueAgreementPct >= 50) {
       sources.push({
         source: "redstone",
         price: redstoneResult.price,
@@ -488,7 +507,7 @@ export async function fetchPrimaryPrices(
     }
 
     // Annotate soft-only high-confidence results for observability
-    if (result.confidence === "high" && isAllSoftSources(result.agreeSources)) {
+    if (result.confidence === "high" && isPoolChallengeEligibleConsensus(result.agreeSources)) {
       result.softOnly = true;
     }
   }
@@ -522,7 +541,7 @@ export function applyPoolChallenge(
   let downgrades = 0;
   for (const [assetId, result] of results) {
     if (result.confidence !== "high") continue;
-    if (!isAllSoftSources(result.agreeSources)) continue;
+    if (!isPoolChallengeEligibleConsensus(result.agreeSources)) continue;
 
     const pools = poolChallengers.get(assetId);
     if (!pools?.length) continue;
@@ -574,19 +593,8 @@ export function applyPoolChallenge(
   return downgrades;
 }
 
-/** Sources that are independent exchanges/oracles — NOT aggregators that may share upstream data */
-const HARD_SOURCES = new Set([
-  "pyth", "binance", "kraken", "bitstamp", "coinbase", "curve-onchain", "curve-oracle", "redstone", "protocol-redeem",
-  "fluid-dex", "balancer-dex", "raydium-dex", "orca-dex",
-]);
-
-/** Returns true if all sources are soft aggregators (CG, DL, DEX average, etc.) */
-function isAllSoftSources(sources: string[]): boolean {
-  return sources.length > 0 && sources.every((s) => !HARD_SOURCES.has(s));
-}
-
 /**
- * For assets that are single-source CG-only after primary consensus,
+ * For assets that are single-source eligible soft-source results after primary consensus,
  * probe GeckoTerminal for an independent pool-level price and re-run
  * consensus with the additional source.
  */
@@ -600,28 +608,28 @@ export async function runGtProbePass(
 ): Promise<{ updatedCount: number; stats: import("../lib/geckoterminal-price-probe").GtProbeStats }> {
   const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../lib/geckoterminal-price-probe");
 
-  // Identify single-source CG-only assets
-  const cgOnlyAssets: { id: string; price: number }[] = [];
+  // Identify single-source eligible assets.
+  const singleSourceAssets: Array<{ id: string; price: number; source: string }> = [];
   for (const asset of assets) {
     const primary = primaryResults.get(asset.id);
     if (
       primary &&
       primary.confidence === "single-source" &&
       primary.candidateSources.length === 1 &&
-      primary.candidateSources[0] === "coingecko"
+      isGtProbeEligibleSingleSource(primary.candidateSources[0]!)
     ) {
-      cgOnlyAssets.push({ id: asset.id, price: primary.price });
+      singleSourceAssets.push({ id: asset.id, price: primary.price, source: primary.candidateSources[0]! });
     }
   }
 
-  if (cgOnlyAssets.length === 0) {
+  if (singleSourceAssets.length === 0) {
     return {
       updatedCount: 0,
       stats: createEmptyGtProbeStats(),
     };
   }
 
-  const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(cgOnlyAssets, db, signal, coingeckoApiKey);
+  const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(singleSourceAssets, db, signal, coingeckoApiKey);
 
   // Re-run consensus for assets that got a GT price
   let updatedCount = 0;
@@ -633,8 +641,13 @@ export async function runGtProbePass(
     if (!primary) continue;
 
     // Build source list: original CG + GT
+    const originalSource = primary.candidateSources[0]!;
+    const originalPrice = originalSource === "defillama-list"
+      ? (primary.dlPrice ?? primary.price)
+      : (primary.cgPrice ?? primary.price);
+    const originalWeight = originalSource === "defillama-list" ? 1 : 2;
     const sources: SourcePrice[] = [
-      { source: "coingecko", price: primary.cgPrice ?? primary.price, weight: 2 },
+      { source: originalSource, price: originalPrice, weight: originalWeight },
       gtSource,
     ];
 

@@ -5,6 +5,7 @@ import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { DexPriceObs } from "./types";
 import { buildSymbolLookups, classifyPoolType } from "./pool-helpers";
 import {
@@ -127,6 +128,17 @@ export async function syncDexLiquidity(
   console.log(`[dex-liquidity] Starting sync`);
   throwIfAborted(signal);
   const validationReferences = await loadPriceValidationReferences(db);
+  const stablecoinPriceById = new Map<string, number>();
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  if (hasUsableStablecoinsPayload(stablecoinsCache)) {
+    for (const asset of stablecoinsCache.payload.peggedAssets) {
+      if (asset.price != null && Number.isFinite(asset.price) && asset.price > 0) {
+        stablecoinPriceById.set(asset.id, asset.price);
+      }
+    }
+  } else {
+    console.warn("[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback");
+  }
 
   // 1. Fetch all external data sources
   const dataSources = await fetchDataSources(graphApiKey, db, signal);
@@ -347,6 +359,7 @@ export async function syncDexLiquidity(
         symbolToChainScopedIds,
         symbolToIds,
         validationReferences,
+        stablecoinPriceById,
       );
       if (directApiGtPools.size > 0) mergeGtPools(metrics, directApiGtPools);
 
@@ -355,6 +368,7 @@ export async function syncDexLiquidity(
         chainAddressToId,
         symbolToChainScopedIds,
         validationReferences,
+        stablecoinPriceById,
       );
       for (const [id, obs] of directApiPriceObs) {
         const existing = priceObservations.get(id) ?? [];
