@@ -1,6 +1,18 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.10` (2026-02-01 -> 2026-03-20).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.11` (2026-02-01 -> 2026-03-22).
+
+---
+
+## v2.11 - Canonical DEX token identity and non-overlapping DEX consensus (Mar 22, 2026)
+
+**Commit:** `unreleased`
+
+- Runtime DEX parsing no longer learns new token ownership from DeFiLlama or subgraph symbol strings
+- Addressed unknown tokens are dropped instead of falling back to symbol matches in price-bearing DEX paths
+- DeFiLlama pools with `underlyingTokens` now match tracked assets by canonical addresses only
+- Promoted per-protocol DEX bridge sources now require corroboration, or the absence of non-DEX voices, before entering primary consensus
+- The overlapping `dex-promoted` aggregate is now withheld whenever promoted per-protocol DEX bridge data exists for the same asset
 
 ---
 

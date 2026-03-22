@@ -37,10 +37,7 @@ import {
   type KnownPoolIdentityIndex,
 } from "./pool-identity";
 import {
-  getChainScopedSymbolIds,
-  getUniqueChainScopedSymbolId,
-  learnResolvedChainAddress,
-  makeChainAddressKey,
+  resolveTrackedStablecoinId,
 } from "./token-resolution";
 import { appendTokenBatchPriceObservations } from "./token-price-observations";
 
@@ -223,19 +220,11 @@ export async function buildCurveLookups(
           balanceRatio = maxBal > 0 ? minBal / maxBal : 0;
         }
 
-        // v2: Per-token balance details + learn addresses for disambiguation
+        // v2: Per-token balance details
         const balanceDetails = pool.coins.map((c) => {
           const raw = parseFloat(c.poolBalance);
           const decimals = parseInt(c.decimals, 10);
           const usdBal = isNaN(raw) || isNaN(decimals) ? 0 : raw / 10 ** decimals * (c.usdPrice || 1);
-          // Learn address→stablecoinId from unambiguous symbol matches
-          if (c.address) {
-            const sym = normalizeDexSymbol(c.symbol);
-            const id = getUniqueChainScopedSymbolId(sym, chain, { symbolToChainScopedIds });
-            if (id) {
-              learnResolvedChainAddress({ chainAddressToId }, chain, c.address, id);
-            }
-          }
           return {
             symbol: c.symbol,
             balancePct: totalUsd > 0 ? Math.round((usdBal / totalUsd) * 1000) / 10 : 0,
@@ -294,31 +283,24 @@ export async function buildCurveLookups(
           });
           for (const coin of pool.coins) {
             if (!coin.usdPrice || coin.usdPrice <= 0) continue;
-            // Resolve stablecoin ID: prefer address match, fall back to symbol
-            let resolvedIds: string[] | undefined;
-            if (coin.address) {
-              const addrId = chainAddressToId.get(makeChainAddressKey(chain, coin.address));
-              if (addrId) resolvedIds = [addrId];
-            }
-            if (!resolvedIds) {
-              resolvedIds = getChainScopedSymbolIds(coin.symbol, chain, { symbolToChainScopedIds });
-            }
-            if (!resolvedIds || resolvedIds.length === 0) continue;
-            for (const id of resolvedIds) {
-              if (!isPlausibleDexObservationPrice(id, coin.usdPrice, references)) continue;
-              const obs = priceObservations.get(id) ?? [];
-              obs.push({
-                price: coin.usdPrice,
-                tvl: metapoolAdjustedTvl,
-                chain,
-                protocol: "curve",
-                poolKey: identity.exactPoolKey ?? undefined,
-                derivedMatchKey: identity.derivedMatchKey ?? undefined,
-                identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
-                sourceFamily: "dl",
-              });
-              priceObservations.set(id, obs);
-            }
+            const resolved = resolveTrackedStablecoinId(
+              { chain, address: coin.address, symbol: coin.symbol },
+              { chainAddressToId, symbolToChainScopedIds },
+            );
+            if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
+            if (!isPlausibleDexObservationPrice(resolved.stablecoinId, coin.usdPrice, references)) continue;
+            const obs = priceObservations.get(resolved.stablecoinId) ?? [];
+            obs.push({
+              price: coin.usdPrice,
+              tvl: metapoolAdjustedTvl,
+              chain,
+              protocol: "curve",
+              poolKey: identity.exactPoolKey ?? undefined,
+              derivedMatchKey: identity.derivedMatchKey ?? undefined,
+              identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+              sourceFamily: "dl",
+            });
+            priceObservations.set(resolved.stablecoinId, obs);
           }
         }
       }
@@ -356,7 +338,7 @@ type AerodromeSubgraphPair = {
   isStable: boolean;
 };
 
-/** Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations. Mutates addressToId with learned addresses. */
+/** Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations. */
 export async function fetchUniV3Data(
   graphApiKey: string | null,
   symbolToIds: Map<string, string[]>,
@@ -404,15 +386,6 @@ export async function fetchUniV3Data(
           uniV3SymbolFees.set(symKey, feeTier);
         }
 
-        // Learn addresses for disambiguation from Uni V3 token data
-        for (const tok of [pool.token0, pool.token1]) {
-          const sym = normalizeDexSymbol(tok.symbol);
-          const id = getUniqueChainScopedSymbolId(sym, chain, { symbolToChainScopedIds });
-          if (id && tok.id) {
-            learnResolvedChainAddress({ chainAddressToId }, chain, tok.id, id);
-          }
-        }
-
         // Only for pools with TVL >= $50K
         if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
 
@@ -443,28 +416,25 @@ export async function fetchUniV3Data(
           feeTierBps: feeTier / 100,
         });
         for (const { symbol, address, usdPrice } of pricedTokens) {
-          let resolvedIds: string[] | undefined;
-          const addrId = chainAddressToId.get(makeChainAddressKey(chain, address));
-          if (addrId) resolvedIds = [addrId];
-          if (!resolvedIds) resolvedIds = getChainScopedSymbolIds(symbol, chain, { symbolToChainScopedIds });
-          if (!resolvedIds || resolvedIds.length === 0) continue;
-
-          for (const stablecoinId of resolvedIds) {
-            if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice, references)) continue;
-            mapped.push({
-              stablecoinId,
-              obs: {
-                price: usdPrice,
-                tvl,
-                chain,
-                protocol: "uniswap-v3",
-                poolKey: identity.exactPoolKey ?? undefined,
-                derivedMatchKey: identity.derivedMatchKey ?? undefined,
-                identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
-                sourceFamily: "dl",
-              },
-            });
-          }
+          const resolved = resolveTrackedStablecoinId(
+            { chain, address, symbol },
+            { chainAddressToId, symbolToChainScopedIds },
+          );
+          if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
+          if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
+          mapped.push({
+            stablecoinId: resolved.stablecoinId,
+            obs: {
+              price: usdPrice,
+              tvl,
+              chain,
+              protocol: "uniswap-v3",
+              poolKey: identity.exactPoolKey ?? undefined,
+              derivedMatchKey: identity.derivedMatchKey ?? undefined,
+              identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+              sourceFamily: "dl",
+            },
+          });
         }
         return mapped;
       },
@@ -557,28 +527,25 @@ export async function fetchAerodromeData(
           isStable: pair.isStable,
         });
         for (const { symbol, address, usdPrice } of pricedTokens) {
-          let resolvedIds: string[] | undefined;
-          const addrId = chainAddressToId.get(makeChainAddressKey(chain, address));
-          if (addrId) resolvedIds = [addrId];
-          if (!resolvedIds) resolvedIds = getChainScopedSymbolIds(symbol, chain, { symbolToChainScopedIds });
-          if (!resolvedIds || resolvedIds.length === 0) continue;
-
-          for (const stablecoinId of resolvedIds) {
-            if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice, references)) continue;
-            mapped.push({
-              stablecoinId,
-              obs: {
-                price: usdPrice,
-                tvl: reserveUSD,
-                chain,
-                protocol: "aerodrome",
-                poolKey: identity.exactPoolKey ?? undefined,
-                derivedMatchKey: identity.derivedMatchKey ?? undefined,
-                identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
-                sourceFamily: "dl",
-              },
-            });
-          }
+          const resolved = resolveTrackedStablecoinId(
+            { chain, address, symbol },
+            { chainAddressToId, symbolToChainScopedIds },
+          );
+          if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
+          if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
+          mapped.push({
+            stablecoinId: resolved.stablecoinId,
+            obs: {
+              price: usdPrice,
+              tvl: reserveUSD,
+              chain,
+              protocol: "aerodrome",
+              poolKey: identity.exactPoolKey ?? undefined,
+              derivedMatchKey: identity.derivedMatchKey ?? undefined,
+              identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+              sourceFamily: "dl",
+            },
+          });
         }
         return mapped;
       },

@@ -153,7 +153,6 @@ export async function syncDexLiquidity(
     chainAddressToId,
     contractMetaByChainAddress,
   } = buildSymbolLookups();
-  const initialChainAddressCount = chainAddressToId.size;
 
   // 3. Parse Curve data into pool lookups and price observations
   const { curvePoolMap, priceObservations } = await buildCurveLookups(
@@ -193,12 +192,6 @@ export async function syncDexLiquidity(
     rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] UniV3 fetch failed (non-fatal):", err);
     failedSources.push("univ3-subgraph");
-  }
-  const learnedChainAddresses = chainAddressToId.size - initialChainAddressCount;
-  if (learnedChainAddresses > 0) {
-    console.log(
-      `[dex-liquidity] Learned ${learnedChainAddresses} additional chain-aware token addresses for disambiguation`,
-    );
   }
 
   // 4b. Fetch Aerodrome subgraph data for price observations + pool stability flags

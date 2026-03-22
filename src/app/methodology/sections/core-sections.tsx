@@ -44,7 +44,9 @@ export function CoreMethodologySections() {
             live voices, requires fully pairwise agreement inside each cluster, and selects the highest-confidence result.
             Kraken and Bitstamp extend the direct venue set, a pool challenge
             guard downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools
-            diverge from aggregator consensus. Fresh RedStone prices need timestamped venue breakdowns. Protocol-level
+            diverge from aggregator consensus. DEX bridge identity is now canonical-only at runtime, so addressed unknown
+            tokens are dropped instead of being reinterpreted by symbol, and promoted protocol DEX prices only enter
+            consensus when they are corroborated or no non-DEX voices exist. Fresh RedStone prices need timestamped venue breakdowns. Protocol-level
             redemption prices override market data for wrapper assets, Chainlink refreshes supported FX and commodity
             reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack when
             Frankfurter is unavailable, with ExchangeRate-API as a tertiary daily fallback if both primary FX paths are down.
@@ -271,13 +273,13 @@ export function CoreMethodologySections() {
                       <td className="py-2 pr-4 text-foreground">DEX pools</td>
                       <td className="py-2 pr-4">1</td>
                       <td className="py-2 pr-4">On-chain</td>
-                      <td className="py-2">Promoted from depeg-only to primary voice</td>
+                      <td className="py-2">Aggregate DEX voice, but withheld when overlapping protocol-level DEX bridge data exists</td>
                     </tr>
                     <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td>
                       <td className="py-2 pr-4">2-3</td>
                       <td className="py-2 pr-4">On-chain / pool-state API</td>
-                      <td className="py-2">One aggregated source per protocol from Fluid, Balancer, Raydium, and Orca</td>
+                      <td className="py-2">One aggregated source per protocol from Fluid, Balancer, Raydium, and Orca; only promoted when corroborated or when no non-DEX voice exists</td>
                     </tr>
                     <tr className="hover:bg-muted/40 transition-colors">
                       <td className="py-2 pr-4 text-foreground">GeckoTerminal</td>
@@ -1203,8 +1205,9 @@ export function CoreMethodologySections() {
           </p>
           <p>
             Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is
-            unique on that chain. Pool dedupe uses exact ids plus conservative derived identity keys, so legitimate
-            same-pair pools are not collapsed just because their token set matches.
+            unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is
+            dropped instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity
+            keys, so legitimate same-pair pools are not collapsed just because their token set matches.
           </p>
           <p>
             When direct APIs expose pool-inventory metadata, Balancer, Raydium, and Orca now contribute measured

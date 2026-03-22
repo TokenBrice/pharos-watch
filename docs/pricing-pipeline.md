@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 
 ## Versioning
 
-- **Current methodology version:** `v2.10`
+- **Current methodology version:** `v2.11`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -44,11 +44,11 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, and `priceUp
 | RedStone | 1 | `worker/src/lib/redstone.ts` | Fresh per-venue oracle snapshot with venue-agreement gating |
 | Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
 | Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/enrich-prices.ts` | Additional primary-consensus voice for crvUSD |
-| Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only trusted DEX rows are promoted into primary pricing |
-| Fluid DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Fluid price per asset from `price_sources_json` |
-| Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Balancer price per asset from `price_sources_json` |
-| Raydium DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Raydium price per asset from `price_sources_json` |
-| Orca DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Orca price per asset from `price_sources_json` |
+| Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only used when no promoted per-protocol DEX bridge source exists for the same asset |
+| Fluid DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Fluid price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
+| Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Balancer price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
+| Raydium DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Raydium price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
+| Orca DEX (via `dex_prices`) | 2 | `worker/src/lib/depeg-helpers.ts` | One aggregated Orca price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
 | GeckoTerminal pool probe | 1 | `worker/src/lib/geckoterminal-price-probe.ts` | Pool-level cross-check for single-source CG-only assets |
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
@@ -113,7 +113,9 @@ Several live providers need normalization before their prices can safely enter c
 - **Circuit-breaker accounting:** for Pyth and RedStone, a transport-successful request that returns zero usable prices is still recorded as an unsuccessful outcome for breaker state. This avoids treating empty responses as healthy data.
 - **Curve on-chain sanity bound:** Implied prices from `get_dy` calls are capped at `< 10,000` (to accommodate commodity tokens like PAXG/XAUT at ~$2,900).
 - **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before they enter primary consensus, so one Balancer/Fluid/Raydium/Orca protocol can contribute at most one elevated source per asset.
-- **DEX token matching and dedupe:** direct-API, staged, and fallback DEX pools resolve tracked assets by `chain + address` first; symbol fallback is only allowed when it is unique within the same chain. Repeated observations of the same physical pool are collapsed by exact pool id or a conservative derived identity before they enter `dex_prices`.
+- **DEX bridge overlap guard:** when a promoted per-protocol DEX bridge source exists for an asset, the overlapping `dex-promoted` aggregate is withheld so the same bridge observation family cannot self-confirm.
+- **Promoted DEX corroboration gate:** a lone promoted DEX protocol is only admitted into primary consensus when it agrees with another promoted DEX protocol, agrees with a non-DEX source within the live threshold, or no non-DEX source exists for that asset.
+- **DEX token matching and dedupe:** direct-API, staged, and fallback DEX pools resolve tracked assets by `chain + address` first. If an upstream token already carries an address and that address is unknown to the canonical registry, it is dropped instead of falling back to symbol; symbol fallback is reserved for addressless rows and must still be unique within the same chain. Repeated observations of the same physical pool are collapsed by exact pool id or a conservative derived identity before they enter `dex_prices`.
 - **Direct-API pair conversion:** non-USD tracked stablecoin pairs use peg-reference-aware conversion rather than treating every tracked stablecoin counterparty as `$1`.
 
 These normalization rules live in code because they are provider quirks, not business-level scoring decisions.

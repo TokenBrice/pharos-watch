@@ -54,7 +54,7 @@ Defined centrally in `src/hooks/use-api-query.ts`.
 
 ## Notes
 
-- **DEX price bridge**: Direct API price observations flow from the half-hourly DEX liquidity cron into `dex_prices.price_sources_json` as one aggregate per protocol. The quarter-hourly pricing cron reads these via `loadDexPriceSources()` and promotes at most one individually-weighted consensus source per protocol: `fluid-dex` (weight 3), `balancer-dex` (weight 3), `raydium-dex` (weight 2), `orca-dex` (weight 2). The existing `dex-promoted` aggregate (weight 1) is kept unchanged for backward compatibility and to cover protocols without elevated weights.
+- **DEX price bridge**: Direct API price observations flow from the half-hourly DEX liquidity cron into `dex_prices.price_sources_json` as one aggregate per protocol. The quarter-hourly pricing cron reads these via `loadDexPriceSources()` and promotes at most one individually-weighted consensus source per protocol: `fluid-dex` (weight 3), `balancer-dex` (weight 3), `raydium-dex` (weight 2), `orca-dex` (weight 2). These promoted protocol sources only enter primary consensus when corroborated or when no non-DEX voices exist, and the overlapping `dex-promoted` aggregate (weight 1) is withheld whenever promoted per-protocol bridge data exists for the same asset.
 - Cache passthrough endpoints include freshness metadata via `_meta` and/or `X-Data-Age`.
 - `/api/dex-liquidity` is meta-aware on the frontend: the page uses worker freshness metadata (and degraded-run `Warning` headers) rather than client fetch time to assess staleness.
 - Liquidity history now carries `coverageClass` / `coverageConfidence`; trend and durability consumers should treat low-confidence snapshots as informational, not authoritative baselines.

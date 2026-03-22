@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.10",
+  currentVersion: "2.11",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.11",
+      title: "Canonical DEX token identity and non-overlapping DEX consensus",
+      date: "2026-03-22",
+      effectiveAt: 1774180800,
+      summary:
+        "Hardened DEX price intake so runtime pool parsing can no longer learn new token identities, " +
+        "unknown addressed tokens cannot fall back to symbol matches in price-bearing paths, and promoted DEX bridge sources cannot self-confirm inside primary consensus.",
+      impact: [
+        "DEX identity is now canonical-only at runtime: DeFiLlama and subgraph parsing no longer mutate chain-aware token ownership",
+        "Symbol fallback remains available only for addressless tokens; addressed unknown tokens are dropped instead of being reinterpreted by symbol",
+        "DeFiLlama pools with `underlyingTokens` now match tracked assets by canonical addresses only, preventing positional symbol/address poisoning",
+        "Promoted per-protocol DEX bridge sources are admitted into primary consensus only when corroborated or when no non-DEX voices exist",
+        "The overlapping `dex-promoted` aggregate is withheld whenever promoted per-protocol DEX bridge data exists for the same asset",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.10",
       title: "Cadence-valid FX carry-forward semantics",

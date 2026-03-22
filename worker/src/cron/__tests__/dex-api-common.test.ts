@@ -91,11 +91,32 @@ describe("convertToGtNewPools", () => {
     expect(result.get("usdc")![0].poolType).toBe("fluid-dex");
   });
 
-  it("falls back to symbol matching when address unknown", () => {
+  it("falls back to symbol matching when the token address is missing", () => {
     const addressToId = new Map<string, string>();
     const symbolToIds = new Map([["USDC", ["usdc"]]]);
-    const result = convertToGtNewPools([MOCK_POOL], addressToId, symbolToIds);
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      tokens: [
+        { address: "", symbol: "USDC", decimals: 6 },
+        MOCK_POOL.tokens[1]!,
+      ],
+    };
+    const result = convertToGtNewPools([pool], addressToId, symbolToIds);
     expect(result.get("usdc")).toHaveLength(1);
+  });
+
+  it("does not fall back to symbol matching when an unknown address is present", () => {
+    const addressToId = new Map<string, string>();
+    const symbolToIds = new Map([["USDC", ["usdc"]]]);
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      tokens: [
+        { address: "0xunknown-usdc", symbol: "USDC", decimals: 6 },
+        MOCK_POOL.tokens[1]!,
+      ],
+    };
+    const result = convertToGtNewPools([pool], addressToId, symbolToIds);
+    expect(result.size).toBe(0);
   });
 
   it("skips pools below TVL threshold", () => {
@@ -429,6 +450,19 @@ describe("extractPriceObservations", () => {
     expect(result.get("usdc")).toHaveLength(2);
     expect(result.get("usdc")![0].chain).toBe("ethereum");
     expect(result.get("usdc")![1].chain).toBe("arbitrum");
+  });
+
+  it("does not emit price observations for symbol-only matches when an unknown address is present", () => {
+    const symbolToIds = new Map([["USDC", ["usdc"]]]);
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      tokens: [
+        { address: "0xunknown-usdc", symbol: "USDC", decimals: 6 },
+        MOCK_POOL.tokens[1]!,
+      ],
+    };
+    const result = extractPriceObservations([pool], new Map(), symbolToIds);
+    expect(result.size).toBe(0);
   });
 });
 

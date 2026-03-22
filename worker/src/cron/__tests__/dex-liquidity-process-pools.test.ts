@@ -71,7 +71,7 @@ describe("processPoolMetrics", () => {
     vi.restoreAllMocks();
   });
 
-  it("matches pools, learns addresses, protects symbol collisions, and enriches pool extras", () => {
+  it("matches pools without mutating canonical addresses, protects symbol collisions, and enriches pool extras", () => {
     const nowMs = Date.UTC(2026, 0, 1);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -204,7 +204,7 @@ describe("processPoolMetrics", () => {
       aerodromeIsStable,
     );
 
-    expect(chainAddressToId.get("ethereum:0xusdc-new")).toBe("usdc-circle");
+    expect(chainAddressToId.get("ethereum:0xusdc-new")).toBeUndefined();
     expect(metrics.has("cusd-cap")).toBe(false);
     expect(metrics.has("cusd-celo")).toBe(false);
 
@@ -265,8 +265,8 @@ describe("processPoolMetrics", () => {
     });
 
     const usdc = metrics.get("usdc-circle");
-    expect(usdc?.poolCount).toBe(4);
-    expect(usdc?.totalTvlUsd).toBe(2_450_000);
+    expect(usdc?.poolCount).toBe(3);
+    expect(usdc?.totalTvlUsd).toBe(1_450_000);
 
     const uniSymbolPool = usdc?.topPools.find((pool) => pool.poolId === "ethereum:0xuni2");
     expect(uniSymbolPool).toMatchObject({
@@ -284,6 +284,45 @@ describe("processPoolMetrics", () => {
     const usde = metrics.get("usde-ethena");
     expect(usde?.poolCount).toBe(1);
     expect(usde?.topPools[0]?.poolType).toBe("uniswap-v3-30bp");
+  });
+
+  it("does not learn wrapper addresses from positional DeFiLlama symbols", () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const symbolToIds = new Map<string, string[]>([
+      ["USR", ["usr-resolv"]],
+    ]);
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["base"]);
+    const chainAddressToId = new Map<string, string>([
+      ["base:0xusr", "usr-resolv"],
+    ]);
+
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          chain: "Base",
+          project: "curve",
+          symbol: "AAVEGHO-USR",
+          underlyingTokens: ["0xusr", "0xwabasgho"],
+          tvlUsd: 200_000,
+          volumeUsd1d: 50_000,
+          volumeUsd7d: 350_000,
+        }),
+      ],
+      new Set(["curve"]),
+      symbolToIds,
+      symbolToChainScopedIds,
+      new Map(),
+      chainAddressToId,
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    expect(chainAddressToId.get("base:0xwabasgho")).toBeUndefined();
+    expect(metrics.get("usr-resolv")?.poolCount).toBe(1);
+    expect(metrics.get("usr-resolv")?.totalTvlUsd).toBe(200_000);
   });
 
   it("disables the DEX whitelist filter when the project index is empty", () => {

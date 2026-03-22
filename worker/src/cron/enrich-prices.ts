@@ -75,6 +75,12 @@ export interface PriceValidationStats {
   low: number;
 }
 
+function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
+  const mid = (left + right) / 2;
+  if (mid <= 0) return false;
+  return (Math.abs(left - right) / mid) * 10000 <= thresholdBps;
+}
+
 /**
  * Fetch prices from CG, Pyth, CEX tickers, Curve on-chain, and DEX sources in parallel,
  * cross-validate within 50bps, and return a confidence-tagged result per asset.
@@ -368,31 +374,47 @@ export async function fetchPrimaryPrices(
     if (asset.id === "crvusd-curve" && curveOraclePrice != null) {
       sources.push({ source: "curve-oracle", price: curveOraclePrice, weight: 3 });
     }
-    const dexRow = dexRows.get(asset.id);
-    if (dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg")) {
-      sources.push({
-        source: "dex-promoted",
-        price: dexRow.dex_price_usd,
-        weight: 1,
-        metadata: { poolCount: dexRow.source_pool_count, tvl: dexRow.source_total_tvl },
-      });
-    }
-
-    // Disaggregate per-protocol prices from dex_prices.price_sources_json
     const protocolSources = dexPriceSources.get(asset.id);
+    const promotedDexProtocolSources: SourcePrice[] = [];
     if (protocolSources) {
       for (const ps of protocolSources) {
         const w = DEX_API_WEIGHTS[ps.protocol];
         if (w == null) continue; // only inject for protocols with elevated weights
         if (ps.tvl < 50_000) continue; // min TVL for pricing
         if (!Number.isFinite(ps.price) || ps.price <= 0) continue;
-        sources.push({
+        promotedDexProtocolSources.push({
           source: `${ps.protocol}-dex`,
           price: ps.price,
           weight: w,
           metadata: { tvl: ps.tvl, chain: ps.chain },
         });
       }
+    }
+    const hasPromotedDexProtocolSource = promotedDexProtocolSources.length > 0;
+    const hasDexCorroboration =
+      promotedDexProtocolSources.length > 1 ||
+      sources.length === 0 ||
+      promotedDexProtocolSources.some((dexSource) =>
+        sources.some((source) => pricesAgreeWithinBps(dexSource.price, source.price, DIVERGENCE_THRESHOLD_BPS))
+      );
+    if (hasPromotedDexProtocolSource && hasDexCorroboration) {
+      sources.push(...promotedDexProtocolSources);
+    } else if (hasPromotedDexProtocolSource) {
+      console.log(
+        `[primary-prices] ${asset.symbol}: suppressed ${promotedDexProtocolSources.length} uncorroborated promoted DEX source(s)`,
+      );
+    }
+
+    // Keep the aggregate DEX bridge only when it is not overlapping with a promoted
+    // per-protocol source from the same dex_prices observation family.
+    const dexRow = dexRows.get(asset.id);
+    if (dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg") && !hasPromotedDexProtocolSource) {
+      sources.push({
+        source: "dex-promoted",
+        price: dexRow.dex_price_usd,
+        weight: 1,
+        metadata: { poolCount: dexRow.source_pool_count, tvl: dexRow.source_total_tvl },
+      });
     }
 
     stats.attempted++;

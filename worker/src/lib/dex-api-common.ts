@@ -9,7 +9,6 @@ import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sani
 import { QUALITY_MULTIPLIERS, normalizeDexSymbol, isUsdReferenceSymbol } from "./dex-constants";
 import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
 import {
-  getChainScopedSymbolIds,
   makeChainAddressKey,
   resolveTrackedStablecoinId,
 } from "../cron/dex-liquidity/token-resolution";
@@ -93,7 +92,7 @@ export function hydrateDirectApiPoolMetadata(
   }
 }
 
-/** Resolve a token to a stablecoin ID via chain-aware address match first, then unique chain-scoped symbol fallback. */
+/** Resolve a token to a stablecoin ID via canonical address match, with symbol fallback only when no address is present. */
 function resolveStablecoinId(
   chain: string,
   token: DexApiPoolToken,
@@ -105,6 +104,19 @@ function resolveStablecoinId(
     { chainAddressToId, symbolToChainScopedIds },
   );
   return result.status === "matched" ? result.stablecoinId : undefined;
+}
+
+function isTrackedToken(
+  chain: string,
+  token: DexApiPoolToken,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+): boolean {
+  const resolved = resolveTrackedStablecoinId(
+    { chain, address: token.address, symbol: token.symbol },
+    { chainAddressToId, symbolToChainScopedIds },
+  );
+  return resolved.status === "matched";
 }
 
 /**
@@ -276,12 +288,10 @@ function derivePoolBalanceMetrics(
     balanceRatio: minShare / maxShare,
     balanceDetails: measuredBalances.map((usdBalance, index) => {
       const token = pool.tokens[index]!;
-      const symbol = normalizeDexSymbol(token.symbol);
-      const trackedBySymbol = symbol ? getChainScopedSymbolIds(symbol, pool.chain, { symbolToChainScopedIds }).length > 0 : false;
       return {
         symbol: getDisplayTokenSymbol(token),
         balancePct: Math.round((usdBalance / totalUsd) * 1000) / 10,
-        isTracked: chainAddressToId.has(makeChainAddressKey(pool.chain, token.address)) || trackedBySymbol,
+        isTracked: isTrackedToken(pool.chain, token, chainAddressToId, symbolToChainScopedIds),
       };
     }),
   };

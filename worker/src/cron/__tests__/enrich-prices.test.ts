@@ -624,6 +624,114 @@ describe("fetchPrimaryPrices", () => {
     ]);
   }
 
+  function makeDexBridgeDb({
+    dexRows,
+    poolSources,
+  }: {
+    dexRows?: Array<{
+      stablecoin_id: string;
+      dex_price_usd: number;
+      deviation_from_primary_bps: number | null;
+      source_pool_count: number;
+      source_total_tvl: number;
+      updated_at: number;
+    }>;
+    poolSources?: Array<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>;
+  }) {
+    return mockD1([
+      { match: "circuit", rows: [] },
+      { match: "dex_price_usd", rows: dexRows ?? [] },
+      { match: "price_sources_json", rows: poolSources ?? [] },
+    ]);
+  }
+
+  it("suppresses uncorroborated promoted DEX sources and overlapping dex-promoted aggregate", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "usr-resolv", name: "Resolv USD", symbol: "USR", geckoId: "resolv-usr", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "resolv-usr": { usd: 0.145 },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDexBridgeDb({
+      dexRows: [{
+        stablecoin_id: "usr-resolv",
+        dex_price_usd: 1.042315,
+        deviation_from_primary_bps: null,
+        source_pool_count: 2,
+        source_total_tvl: 14_000_000,
+        updated_at: nowSec - 60,
+      }],
+      poolSources: [{
+        stablecoin_id: "usr-resolv",
+        price_sources_json: JSON.stringify([
+          { protocol: "balancer", chain: "base", price: 1.042315, tvl: 14_000_000 },
+        ]),
+        updated_at: nowSec - 60,
+      }],
+    });
+
+    const dlListPrices = new Map([["usr-resolv", 0.549146]]);
+    const { results } = await fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
+
+    const result = results.get("usr-resolv");
+    expect(result).toBeDefined();
+    expect(result!.candidateSources).toEqual(["coingecko", "defillama-list"]);
+    expect(result!.confidence).toBe("low");
+    expect(result!.source).toBe("coingecko");
+    expect(result!.price).toBe(0.145);
+  });
+
+  it("keeps promoted DEX protocol sources when a non-DEX source corroborates them", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "usd-coin": { usd: 1.0001 },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDexBridgeDb({
+      dexRows: [{
+        stablecoin_id: "usdc-circle",
+        dex_price_usd: 1.0002,
+        deviation_from_primary_bps: null,
+        source_pool_count: 3,
+        source_total_tvl: 25_000_000,
+        updated_at: nowSec - 60,
+      }],
+      poolSources: [{
+        stablecoin_id: "usdc-circle",
+        price_sources_json: JSON.stringify([
+          { protocol: "balancer", chain: "base", price: 1.0002, tvl: 25_000_000 },
+        ]),
+        updated_at: nowSec - 60,
+      }],
+    });
+
+    const { results } = await fetchPrimaryPrices(assets, db);
+
+    const result = results.get("usdc-circle");
+    expect(result).toBeDefined();
+    expect(result!.candidateSources).toEqual(["coingecko", "balancer-dex"]);
+    expect(result!.confidence).toBe("high");
+    expect(result!.source).toBe("balancer-dex+coingecko");
+    expect(result!.price).toBe(1.0002);
+  });
+
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },

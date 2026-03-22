@@ -8,9 +8,8 @@ import {
 } from "./pool-helpers";
 import {
   getChainScopedSymbolIds,
-  getUniqueChainScopedSymbolId,
-  learnResolvedChainAddress,
   makeChainAddressKey,
+  normalizeTokenAddress,
 } from "./token-resolution";
 
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
@@ -44,39 +43,29 @@ export function processPoolMetrics(
     const poolSymbols = parsePoolSymbols(pool.symbol);
     const matchedIds = new Set<string>();
 
+    const hasUnderlyingTokenAddresses =
+      pool.underlyingTokens?.some((addr) => normalizeTokenAddress(addr).length > 0) ?? false;
+
     // Step 1: Address-based matching from underlyingTokens (most reliable)
-    if (pool.underlyingTokens?.length) {
-      for (const addr of pool.underlyingTokens) {
+    if (hasUnderlyingTokenAddresses) {
+      for (const addr of pool.underlyingTokens ?? []) {
         const id = chainAddressToId.get(makeChainAddressKey(pool.chain, addr));
         if (id) matchedIds.add(id);
       }
-      // Learn addresses for unambiguous symbols (enrich chainAddressToId for future pools)
-      if (poolSymbols.length === pool.underlyingTokens.length) {
-        // 1:1 correspondence possible — learn from unambiguous symbols
-        for (let ti = 0; ti < poolSymbols.length; ti++) {
-          const id = getUniqueChainScopedSymbolId(poolSymbols[ti], pool.chain, { symbolToChainScopedIds });
-          if (id) {
-            learnResolvedChainAddress(
-              { chainAddressToId },
-              pool.chain,
-              pool.underlyingTokens[ti] ?? "",
-              id,
-            );
-          }
-        }
-      }
     }
 
-    // Step 2: Symbol-based fallback (with collision avoidance)
-    for (const sym of poolSymbols) {
-      const ids = getChainScopedSymbolIds(sym, pool.chain, { symbolToChainScopedIds });
-      if (ids.length === 0) continue;
-      if (ids.length === 1) {
-        // Unambiguous symbol → always safe to add
-        matchedIds.add(ids[0]);
-      } else {
-        // Colliding symbol → only keep IDs already confirmed by address match
-        // (if no address resolved any of these IDs, this symbol is skipped entirely)
+    // Step 2: Symbol-based fallback is only allowed when the upstream pool has no usable addresses.
+    if (!hasUnderlyingTokenAddresses) {
+      for (const sym of poolSymbols) {
+        const ids = getChainScopedSymbolIds(sym, pool.chain, { symbolToChainScopedIds });
+        if (ids.length === 0) continue;
+        if (ids.length === 1) {
+          // Unambiguous symbol → always safe to add
+          matchedIds.add(ids[0]);
+        } else {
+          // Colliding symbol → only keep IDs already confirmed by address match
+          // (if no address resolved any of these IDs, this symbol is skipped entirely)
+        }
       }
     }
 

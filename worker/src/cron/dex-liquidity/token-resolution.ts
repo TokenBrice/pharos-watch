@@ -8,6 +8,11 @@ export interface TokenResolutionResult {
   matchType?: "chain-address" | "unique-chain-symbol";
 }
 
+export interface TokenResolutionOptions {
+  allowSymbolFallback?: boolean;
+  allowSymbolFallbackWhenAddressPresent?: boolean;
+}
+
 export function normalizeTokenAddress(address: string): string {
   return (address ?? "").trim().toLowerCase();
 }
@@ -22,15 +27,25 @@ export function resolveStablecoinToken(
   chain: string,
   token: Pick<DexApiPoolToken, "address" | "symbol">,
   lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
+  options?: TokenResolutionOptions,
 ): TokenResolutionResult {
-  const byChainAddress = lookups.chainAddressToId.get(buildChainAddressKey(chain, token.address));
-  if (byChainAddress) {
-    return {
-      status: "matched",
-      stablecoinId: byChainAddress,
-      matchType: "chain-address",
-    };
+  const normalizedAddress = normalizeTokenAddress(token.address);
+  if (normalizedAddress) {
+    const byChainAddress = lookups.chainAddressToId.get(buildChainAddressKey(chain, normalizedAddress));
+    if (byChainAddress) {
+      return {
+        status: "matched",
+        stablecoinId: byChainAddress,
+        matchType: "chain-address",
+      };
+    }
+
+    if (options?.allowSymbolFallbackWhenAddressPresent !== true) {
+      return { status: "unresolved" };
+    }
   }
+
+  if (options?.allowSymbolFallback === false) return { status: "unresolved" };
 
   const symbol = normalizeDexSymbol(token.symbol);
   if (!symbol) return { status: "unresolved" };
@@ -53,6 +68,7 @@ export function resolveStablecoinToken(
 export function resolveTrackedStablecoinId(
   input: { chain: string; address?: string | null; symbol?: string | null },
   lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
+  options?: TokenResolutionOptions,
 ): TokenResolutionResult {
   return resolveStablecoinToken(
     input.chain,
@@ -61,6 +77,7 @@ export function resolveTrackedStablecoinId(
       symbol: input.symbol ?? "",
     },
     lookups,
+    options,
   );
 }
 
@@ -81,13 +98,4 @@ export function getUniqueChainScopedSymbolId(
 ): string | undefined {
   const ids = getChainScopedSymbolIds(symbol, chain, lookups);
   return ids.length === 1 ? ids[0] : undefined;
-}
-
-export function learnResolvedChainAddress(
-  lookups: Pick<SymbolLookups, "chainAddressToId">,
-  chain: string,
-  address: string,
-  stablecoinId: string,
-): void {
-  lookups.chainAddressToId.set(buildChainAddressKey(chain, address), stablecoinId);
 }
