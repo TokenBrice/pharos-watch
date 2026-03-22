@@ -889,10 +889,7 @@ export function CoreMethodologySections() {
                 quality, and cost. Queue-based and offchain issuer routes are capped so they do not look unrealistically
                 liquid. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
                 liquidity dimension, stale DEX inputs are not blended into effective exit, and eventual issuer
-                redemption is reported separately from immediate redeemable buffer capacity. A small set of immutable
-                on-chain systems can still qualify with <span className="text-foreground font-medium">documented-bound</span>{" "}
-                eventual redeemability when the protocol mechanics themselves establish full-system redemption coverage
-                without relying on a heuristic liquidity ratio.
+                redemption is reported separately from immediate redeemable buffer capacity.
               </p>
             </div>
             {/* Peg multiplier */}
