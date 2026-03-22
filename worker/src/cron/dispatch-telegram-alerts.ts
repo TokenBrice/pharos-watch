@@ -1,5 +1,5 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID, ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 import { throwIfAborted } from "../lib/abort";
 import { getCache } from "../lib/db-cache";
 import { sendBatch } from "../lib/telegram";
@@ -16,6 +16,7 @@ import {
   type DepegResolved,
   type DepegWorsening,
   type SafetyChange,
+  type LaunchAlert,
 } from "../lib/telegram-alerts";
 import {
   SNAPSHOT_KEYS,
@@ -52,6 +53,7 @@ interface DispatchResult {
     depegResolved: number;
     depegWorsening: number;
     safety: number;
+    launch: number;
     suppressedMethodologyChanges: number;
   };
   subscribersNotified: number;
@@ -77,12 +79,14 @@ const ALERT_COLUMN_BY_TYPE = {
   dews: "alert_dews",
   depeg: "alert_depeg",
   safety: "alert_safety",
+  launch: "alert_launch",
 } as const;
 
 const GLOBAL_ALERT_COLUMN_BY_TYPE = {
   dews: "global_alert_dews",
   depeg: "global_alert_depeg",
   safety: "global_alert_safety",
+  launch: "global_alert_launch",
 } as const;
 
 type AlertType = keyof typeof ALERT_COLUMN_BY_TYPE;
@@ -113,6 +117,7 @@ function emptyAlerts(): ConsolidatedAlerts {
     depegResolved: [],
     depegWorsening: [],
     safety: [],
+    launch: [],
   };
 }
 
@@ -125,6 +130,7 @@ function emptyResult(snapshotSeeded: boolean): DispatchResult {
       depegResolved: 0,
       depegWorsening: 0,
       safety: 0,
+      launch: 0,
       suppressedMethodologyChanges: 0,
     },
     subscribersNotified: 0,
@@ -347,6 +353,7 @@ export async function dispatchTelegramAlerts(
       dewsAlertable: buildDewsAlertableSnapshot(dewsRows, previousDewsAlertableSnapshot),
       depeg: buildDepegSnapshot(activeDepegRows),
       safety: buildSafetySnapshot(safetyRows),
+      launch: PRE_LAUNCH_STABLECOINS.map((c) => c.id),
     };
 
     const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(depegCache);
@@ -498,6 +505,28 @@ export async function dispatchTelegramAlerts(
       });
     }
 
+    // -- Detect launch promotions (pre-launch coins that moved to active) -----
+    const prevLaunchCache = await getCache(db, SNAPSHOT_KEYS.launch);
+    const prevLaunchIds: Set<string> = prevLaunchCache
+      ? new Set(JSON.parse(prevLaunchCache.value) as string[])
+      : new Set();
+    const currentLaunchIds = new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.id));
+
+    const launchPromoted: LaunchAlert[] = [];
+    // An ID that was previously pre-launch but is no longer, AND exists in ACTIVE_IDS = promoted
+    for (const id of prevLaunchIds) {
+      if (!currentLaunchIds.has(id) && ACTIVE_IDS.has(id)) {
+        const coin = TRACKED_META_BY_ID.get(id);
+        if (coin) {
+          launchPromoted.push({
+            stablecoinId: id,
+            symbol: coin.symbol,
+            name: coin.name,
+          });
+        }
+      }
+    }
+
     const dewsIds = dewsChanges.map((c) => c.stablecoinId);
     const depegIds = [
       ...depegTriggered.map((e) => e.stablecoinId),
@@ -505,14 +534,17 @@ export async function dispatchTelegramAlerts(
       ...depegWorsening.map((e) => e.stablecoinId),
     ];
     const safetyIds = safetyChanges.map((c) => c.stablecoinId);
+    const launchIds = launchPromoted.map((e) => e.stablecoinId);
 
-    const [dewsSubs, depegSubs, safetySubs, globalDewsSubs, globalDepegSubs, globalSafetySubs] = await Promise.all([
+    const [dewsSubs, depegSubs, safetySubs, launchSubs, globalDewsSubs, globalDepegSubs, globalSafetySubs, globalLaunchSubs] = await Promise.all([
       loadSubscriberRowsBatch(db, dewsIds, "dews"),
       loadSubscriberRowsBatch(db, depegIds, "depeg"),
       loadSubscriberRowsBatch(db, safetyIds, "safety"),
+      loadSubscriberRowsBatch(db, launchIds, "launch"),
       loadGlobalSubscriberRows(db, "dews"),
       loadGlobalSubscriberRows(db, "depeg"),
       loadGlobalSubscriberRows(db, "safety"),
+      loadGlobalSubscriberRows(db, "launch"),
     ]);
 
     throwIfAborted(signal);
@@ -611,6 +643,18 @@ export async function dispatchTelegramAlerts(
         if (specificChatIds.has(sub.chat_id)) continue;
         if (!shouldIncludeSafetyChange(change, sub.safety_mode)) continue;
         addToChat(sub, (alerts) => alerts.safety, change);
+      }
+    }
+
+    for (const event of launchPromoted) {
+      const specificSubscribers = launchSubs.get(event.stablecoinId) ?? [];
+      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
+      for (const sub of specificSubscribers) {
+        addToChat(sub, (alerts) => alerts.launch, event);
+      }
+      for (const sub of globalLaunchSubs) {
+        if (specificChatIds.has(sub.chat_id)) continue;
+        addToChat(sub, (alerts) => alerts.launch, event);
       }
     }
 
@@ -732,6 +776,7 @@ export async function dispatchTelegramAlerts(
         depegResolved: depegResolved.length,
         depegWorsening: depegWorsening.length,
         safety: safetyChanges.length,
+        launch: launchPromoted.length,
         suppressedMethodologyChanges,
       },
       subscribersNotified,

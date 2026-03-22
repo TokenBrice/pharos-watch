@@ -17,6 +17,7 @@ import {
   Network,
   Newspaper,
   Radio,
+  Rocket,
   ShieldAlert,
   ShieldCheck,
   Skull,
@@ -27,7 +28,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 
 const DATA_SOURCE_GROUPS = [
   {
@@ -232,6 +233,14 @@ export default function AboutPage() {
       title: `${ACTIVE_STABLECOINS.length} stablecoins`,
       description: "Coverage across every major chain, classified by governance, backing, and peg currency.",
       icon: BarChart3,
+    },
+    {
+      title: `${PRE_LAUNCH_STABLECOINS.length} upcoming stablecoins`,
+      description:
+        "Pre-launch projects tracked from announcement to launch, with milestones, timelines, and featured content.",
+      icon: Rocket,
+      href: "/upcoming/",
+      linkLabel: "View upcoming",
     },
     {
       title: `${DEAD_STABLECOINS.length} coins in the Cemetery`,

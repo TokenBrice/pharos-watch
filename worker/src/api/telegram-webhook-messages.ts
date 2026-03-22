@@ -108,6 +108,9 @@ export function describeSubscriptionSettings(row: SubscriptionRow): string {
       labels.push("Safety");
     }
   }
+  if (row.alert_launch) {
+    labels.push("Launch");
+  }
 
   return labels.join(", ") || "Muted";
 }
@@ -124,6 +127,9 @@ export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): s
   }
   if (subscriber.global_alert_safety) {
     labels.push("Safety");
+  }
+  if (subscriber.global_alert_launch) {
+    labels.push("Launch");
   }
 
   return labels.join(", ") || "None";

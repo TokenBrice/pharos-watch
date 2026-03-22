@@ -8353,7 +8353,22 @@
         "source": "CoinDesk"
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "milestones": [
+      {
+        "date": "2025-10-28",
+        "type": "announcement",
+        "title": "Western Union announces USDPT on Solana with Anchorage Digital",
+        "description": "USDPT to be issued by Anchorage Digital Bank, connecting on-chain dollar transfers to Western Union's cash network spanning 200+ countries.",
+        "sourceUrl": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2025/Western-Union-Announces-USDPT-Stablecoin-on-Solana-and-Digital-Asset-Network/default.aspx"
+      },
+      {
+        "date": "2025-10-28",
+        "type": "partnership",
+        "title": "Anchorage Digital Bank named as federally regulated issuer",
+        "sourceUrl": "https://www.coindesk.com/business/2025/10/28/western-union-to-launch-stablecoin-on-solana-with-anchorage-digital"
+      }
+    ]
   },
   {
     "id": "roughrider-bnd",
@@ -8389,7 +8404,7 @@
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-09",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Pilot pending ND Industrial Commission approval (Mar 25, 2026 meeting)",
+    "launchPhaseDetail": "ND Industrial Commission reviewing pilot at March 25 meeting; September 2026 launch target",
     "featuredContent": [
       {
         "type": "tweet",
@@ -8406,7 +8421,29 @@
         "source": "Bank of North Dakota"
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "milestones": [
+      {
+        "date": "2025-10-08",
+        "type": "announcement",
+        "title": "Bank of North Dakota announces Roughrider Coin",
+        "description": "North Dakota's first stablecoin, targeting bank-to-bank transactions for state banking system.",
+        "sourceUrl": "https://bnd.nd.gov/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin/"
+      },
+      {
+        "date": "2025-10-08",
+        "type": "partnership",
+        "title": "Fiserv confirmed as technology and platform partner",
+        "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+      },
+      {
+        "date": "2026-03-09",
+        "type": "regulatory",
+        "title": "ND Industrial Commission to review stablecoin pilot at March 25 meeting",
+        "description": "Review includes utilization plan, risk assessment, safeguards, and cost projections. September 2026 launch pending approval.",
+        "sourceUrl": "https://northdakotamonitor.com/2026/03/09/next-steps-for-bank-of-north-dakota-stablecoin-to-be-reviewed-this-month/"
+      }
+    ]
   },
   {
     "id": "fiusd-fiserv",
@@ -8438,7 +8475,7 @@
     "announcedDate": "2025-06",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Platform built; end-of-2025 target slipped, no confirmed production launch",
+    "launchPhaseDetail": "Platform live; Mastercard and PayPal partnerships announced; bank onboarding underway",
     "featuredContent": [
       {
         "type": "article",
@@ -8449,7 +8486,34 @@
         "source": "CoinDesk"
       }
     ],
-    "custodyModel": "institutional-regulated"
+    "custodyModel": "institutional-regulated",
+    "milestones": [
+      {
+        "date": "2025-06-23",
+        "type": "announcement",
+        "title": "Fiserv announces FIUSD stablecoin on Solana",
+        "description": "FIUSD built for 10,000 financial institution clients and 6 million merchant locations, leveraging Paxos and Circle infrastructure.",
+        "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions"
+      },
+      {
+        "date": "2025-06-23",
+        "type": "partnership",
+        "title": "Mastercard partnership to integrate FIUSD across 150M+ merchants",
+        "sourceUrl": "https://www.mastercard.com/us/en/news-and-trends/press/2025/june/mastercard-fiserv-stablecoin-adoption.html"
+      },
+      {
+        "date": "2025-06-23",
+        "type": "partnership",
+        "title": "PayPal partnership for FIUSD interoperability",
+        "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2849/fiserv-and-paypal-expand-partnership-to-advance-stablecoin-payments"
+      },
+      {
+        "date": "2025-10-08",
+        "type": "partnership",
+        "title": "Fiserv powers Roughrider Coin for Bank of North Dakota",
+        "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+      }
+    ]
   },
   {
     "id": "pusd-polaris",
@@ -8494,6 +8558,21 @@
         "image": "/featured/polaris-pusd-no-counterparty.png",
         "source": "Polaris Finance Blog"
       }
+    ],
+    "milestones": [
+      {
+        "date": "2026-01-27",
+        "type": "announcement",
+        "title": "Polaris introduces self-scaling stablecoin operating system",
+        "description": "Three-token model (pETH, pUSD, POLAR) with immutable code design and uncorrelated yield from protocol revenues.",
+        "sourceUrl": "https://x.com/polarisfinance_/status/2016180350087549420"
+      },
+      {
+        "date": "2026-03-04",
+        "type": "testnet",
+        "title": "Private testnet goes live",
+        "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      }
     ]
   },
   {
@@ -8526,14 +8605,37 @@
     "status": "pre-launch",
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "announced",
-    "launchPhaseDetail": "CDP stablecoin backed by productive DeFi collateral (Curve LP, Pendle PT); peg via dynamic rates inspired by crvUSD",
+    "launchPhase": "auditing",
+    "launchPhaseDetail": "Sherlock audit contest active ($50K USDC pool); CDP backed by Curve LP, Pendle PT",
     "featuredContent": [
       {
         "type": "tweet",
         "url": "https://x.com/Tangent_fi/status/2033564442982592623",
         "title": "USG announcement thread",
         "source": "@Tangent_fi"
+      },
+      {
+        "type": "article",
+        "url": "https://audits.sherlock.xyz/contests/1073",
+        "title": "USG — Tangent Sherlock Audit Contest ($50K USDC)",
+        "description": "Competitive audit covering lending mechanism, dynamic interest rate model, LP oracle, and integrations with Curve, Convex, and Pendle.",
+        "source": "Sherlock"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-03-01",
+        "type": "announcement",
+        "title": "Tangent announces USG stablecoin backed by productive DeFi collateral",
+        "description": "0% interest borrowing, backed by Curve LP and Pendle PT positions. sUSG (ERC4626) as yield-bearing wrapper.",
+        "sourceUrl": "https://www.tangent.finance/"
+      },
+      {
+        "date": "2026-03-15",
+        "type": "audit",
+        "title": "Sherlock audit contest launched ($50K USDC prize pool)",
+        "description": "Competitive audit covering lending mechanism, dynamic interest rate model, LP oracle, Curve/Convex/Pendle integrations.",
+        "sourceUrl": "https://audits.sherlock.xyz/contests/1073"
       }
     ]
   },
@@ -8567,7 +8669,7 @@
     "announcedDate": "2025-11",
     "expectedLaunchDate": "2026",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "Live on Tempo testnet since Nov 2025",
+    "launchPhaseDetail": "Live on Tempo testnet since Nov 2025; mainnet launch in 2026",
     "featuredContent": [
       {
         "type": "tweet",
@@ -8576,6 +8678,27 @@
         "source": "Klarna"
       }
     ],
-    "custodyModel": "institutional-unregulated"
+    "custodyModel": "institutional-unregulated",
+    "milestones": [
+      {
+        "date": "2025-11-25",
+        "type": "announcement",
+        "title": "Klarna announces KlarnaUSD, first bank stablecoin on Tempo",
+        "description": "Built on Bridge (Stripe) Open Issuance infrastructure. 114M customers, $112B annual GMV as adoption base.",
+        "sourceUrl": "https://investors.klarna.com/News--Events/news/news-details/2025/Klarna-Launches-KlarnaUSD-as-Stablecoin-Transactions-Hit-27-Trillion-Annually/default.aspx"
+      },
+      {
+        "date": "2025-11-25",
+        "type": "partnership",
+        "title": "Built on Bridge (Stripe) Open Issuance; first bank token on Tempo blockchain",
+        "sourceUrl": "https://www.theblock.co/post/380365/bnpl-firm-klarna-announces-usd-stablecoin-on-stripe-paradigms-tempo-blockchain-to-cut-payment-costs"
+      },
+      {
+        "date": "2025-11-25",
+        "type": "testnet",
+        "title": "Live on Tempo testnet for early integration and prototyping",
+        "sourceUrl": "https://fintechobserve.com/klarnausd-stablecoin-launch/"
+      }
+    ]
   }
 ]

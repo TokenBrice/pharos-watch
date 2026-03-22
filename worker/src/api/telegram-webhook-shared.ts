@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 
 export const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
@@ -9,9 +9,11 @@ I send opt-in alerts for the stablecoins you follow, or for all tracked stableco
 - <b>dews</b> — DEWS reaches ALERT, WARNING, or DANGER
 - <b>depeg</b> — Depeg triggered, worsened, or resolved
 - <b>safety</b> — Safety grade changes
+- <b>launch</b> — Pre-launch stablecoin goes live on Pharos
 
 <b>Quick start</b>
 <code>/subscribe dews depeg USDC BOLD</code>
+<code>/subscribe launch USDPT</code>
 <code>/subscribe safety all</code>
 <code>/set USDC depeg-step 250</code>
 <code>/mute 22-07</code>
@@ -21,7 +23,7 @@ Use /help for commands.`;
 export const HELP_MESSAGE = `<b>Commands</b>
 
 <code>/subscribe &lt;types&gt; &lt;tickers&gt;</code>
-Enable alert types for one or more coins
+Enable alert types (dews, depeg, safety, launch) for one or more coins
 
 <code>/subscribe &lt;types&gt; all</code>
 Enable alert types across all tracked stablecoins
@@ -87,9 +89,11 @@ export interface SubscriberRow {
   alert_dews: number;
   alert_depeg: number;
   alert_safety: number;
+  alert_launch: number;
   global_alert_dews?: number | null;
   global_alert_depeg?: number | null;
   global_alert_safety?: number | null;
+  global_alert_launch?: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
@@ -100,6 +104,7 @@ export interface SubscriptionRow {
   alert_dews: number;
   alert_depeg: number;
   alert_safety: number;
+  alert_launch: number;
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
@@ -146,7 +151,7 @@ export type PendingAction =
     };
 
 export const STABLECOIN_BY_ID = new Map<string, ResolvedCoin>(
-  ACTIVE_STABLECOINS.map((coin) => [
+  [...ACTIVE_STABLECOINS, ...PRE_LAUNCH_STABLECOINS].map((coin) => [
     coin.id,
     {
       id: coin.id,

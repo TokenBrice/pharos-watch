@@ -56,6 +56,7 @@ const YIELD_TYPE_VALUES = [
   "lending-opportunity",
 ] as const;
 const LAUNCH_PHASE_VALUES = ["announced", "testnet", "auditing", "beta", "launching-soon"] as const;
+const LAUNCH_MILESTONE_TYPE_VALUES = ["announcement", "milestone", "delay", "partnership", "regulatory", "audit", "testnet"] as const;
 const FEATURED_CONTENT_TYPE_VALUES = ["tweet", "blog", "video", "article"] as const;
 const STATUS_VALUES = ["pre-launch", "active"] as const;
 const CAUSE_OF_DEATH_VALUES = [
@@ -124,6 +125,19 @@ const YieldConfigAssetSchema = z.object({
   yieldType: z.enum(YIELD_TYPE_VALUES),
 }).strict();
 
+const LaunchMilestoneAssetSchema = z.object({
+  date: z.string(),
+  type: z.enum(LAUNCH_MILESTONE_TYPE_VALUES),
+  title: z.string(),
+  description: z.string().optional(),
+  sourceUrl: z.string().optional(),
+}).strict();
+
+const DateHistoryEntryAssetSchema = z.object({
+  date: z.string(),
+  setOn: z.string(),
+}).strict();
+
 const FeaturedContentAssetSchema = z.object({
   type: z.enum(FEATURED_CONTENT_TYPE_VALUES),
   url: z.string(),
@@ -170,6 +184,8 @@ export const StablecoinMetaAssetSchema = z.object({
   launchPhase: z.enum(LAUNCH_PHASE_VALUES).optional(),
   launchPhaseDetail: z.string().optional(),
   featuredContent: z.array(FeaturedContentAssetSchema).optional(),
+  milestones: z.array(LaunchMilestoneAssetSchema).optional(),
+  dateHistory: z.array(DateHistoryEntryAssetSchema).optional(),
 }).strict();
 
 export const StablecoinMetaAssetArraySchema = z.array(StablecoinMetaAssetSchema);

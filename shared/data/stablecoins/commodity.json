@@ -680,6 +680,28 @@
         "image": "/featured/polaris-mints-anything.png",
         "source": "Polaris Finance Blog"
       }
+    ],
+    "milestones": [
+      {
+        "date": "2026-01-27",
+        "type": "announcement",
+        "title": "Polaris reveals multi-asset stablecoin OS including pGOLD",
+        "description": "pGOLD part of the Stablecoin OS vision: tokenize any unit of value using pETH as common collateral.",
+        "sourceUrl": "https://x.com/polarisfinance_/status/2016180350087549420"
+      },
+      {
+        "date": "2026-02-24",
+        "type": "announcement",
+        "title": "pGOLD formally presented: Finishing what DigixDAO started",
+        "description": "Decentralized gold stablecoin without physical backing, using pETH collateral via CDP infrastructure.",
+        "sourceUrl": "https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/"
+      },
+      {
+        "date": "2026-03-04",
+        "type": "testnet",
+        "title": "Private testnet live (shared infrastructure with pUSD)",
+        "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      }
     ]
   }
 ]

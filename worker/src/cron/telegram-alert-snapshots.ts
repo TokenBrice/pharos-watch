@@ -8,6 +8,7 @@ export const SNAPSHOT_KEYS = {
   dewsAlertable: "alert:dews-alertable-snapshot",
   depeg: "alert:depeg-snapshot",
   safety: "alert:safety-snapshot",
+  launch: "alert:launch-snapshot",
 } as const;
 
 export const SNAPSHOT_MAX_AGE_SEC = 86400; // 24h
@@ -191,6 +192,7 @@ export async function writeSnapshots(
     dewsAlertable: DewsSnapshot;
     depeg: DepegSnapshot;
     safety: SafetySnapshot;
+    launch: string[];
   },
 ): Promise<void> {
   await Promise.all([
@@ -198,5 +200,6 @@ export async function writeSnapshots(
     setCache(db, SNAPSHOT_KEYS.dewsAlertable, JSON.stringify(snapshots.dewsAlertable)),
     setCache(db, SNAPSHOT_KEYS.depeg, JSON.stringify(snapshots.depeg)),
     setCache(db, SNAPSHOT_KEYS.safety, JSON.stringify(snapshots.safety)),
+    setCache(db, SNAPSHOT_KEYS.launch, JSON.stringify(snapshots.launch)),
   ]);
 }

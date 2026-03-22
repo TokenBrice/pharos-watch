@@ -7,75 +7,16 @@ import {
   PEG_LABELS_SHORT,
 } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@/lib/urls";
+import {
+  LAUNCH_PHASE_LABELS,
+  PHASE_BADGE,
+  PHASE_RING,
+  dateScore,
+  formatFuzzyDate,
+  truncateTeaser,
+} from "@/lib/pre-launch";
 import type { LaunchPhase, StablecoinMeta } from "@shared/types";
 import aiSummaries from "../../data/ai-summaries.json";
-
-// ---------------------------------------------------------------------------
-// Constants & styles
-// ---------------------------------------------------------------------------
-
-const LAUNCH_PHASE_LABELS: Record<LaunchPhase, string> = {
-  announced: "Announced",
-  testnet: "Testnet",
-  auditing: "Auditing",
-  beta: "Beta",
-  "launching-soon": "Launching Soon",
-};
-
-/** Phase → full badge class string (static for Tailwind scanner). */
-const PHASE_BADGE: Record<LaunchPhase, string> = {
-  announced:
-    "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  testnet:
-    "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-  auditing:
-    "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  beta: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  "launching-soon":
-    "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
-};
-
-/** Phase → ring color around logo node (static for Tailwind scanner). */
-const PHASE_RING: Record<LaunchPhase, string> = {
-  announced: "ring-amber-500/40 hover:ring-amber-500/70",
-  testnet: "ring-indigo-500/40 hover:ring-indigo-500/70",
-  auditing: "ring-violet-500/40 hover:ring-violet-500/70",
-  beta: "ring-emerald-500/40 hover:ring-emerald-500/70",
-  "launching-soon": "ring-sky-500/40 hover:ring-sky-500/70",
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Convert fuzzy date strings to a numeric score for chronological sorting. */
-function dateScore(raw?: string): number {
-  if (!raw) return 999999;
-  const q = raw.match(/^(\d{4})-Q(\d)$/);
-  if (q) return Number(q[1]) * 13 + Number(q[2]) * 3 + 1;
-  const m = raw.match(/^(\d{4})-(\d{2})$/);
-  if (m) return Number(m[1]) * 13 + Number(m[2]);
-  const y = raw.match(/^(\d{4})$/);
-  if (y) return Number(y[1]) * 13 + 13;
-  return 999999;
-}
-
-function formatExpectedDate(raw: string): string {
-  const q = raw.match(/^(\d{4})-Q(\d)$/);
-  if (q) return `Q${q[2]} ${q[1]}`;
-  const m = raw.match(/^(\d{4})-(\d{2})$/);
-  if (m) {
-    const d = new Date(Number(m[1]), Number(m[2]) - 1);
-    return d.toLocaleString("en-US", { month: "short", year: "numeric" });
-  }
-  return raw;
-}
-
-function truncateTeaser(text: string, max = 120): string {
-  if (text.length <= max) return text;
-  const cut = text.lastIndexOf(" ", max);
-  return text.slice(0, cut > 0 ? cut : max) + "\u2026";
-}
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -169,7 +110,7 @@ function TimelineNode({
           {/* Date */}
           {coin.expectedLaunchDate && (
             <p className="mt-2 font-mono text-[10px] text-muted-foreground/50">
-              Expected {formatExpectedDate(coin.expectedLaunchDate)}
+              Expected {formatFuzzyDate(coin.expectedLaunchDate)}
             </p>
           )}
         </div>
@@ -194,7 +135,7 @@ function TimelineNode({
       </span>
       {coin.expectedLaunchDate && (
         <span className="font-mono text-[10px] text-muted-foreground/50">
-          {formatExpectedDate(coin.expectedLaunchDate)}
+          {formatFuzzyDate(coin.expectedLaunchDate)}
         </span>
       )}
     </div>
@@ -266,7 +207,7 @@ function MobileEntry({
 
         {coin.expectedLaunchDate && (
           <p className="mt-1.5 font-mono text-[10px] text-muted-foreground/50">
-            Expected {formatExpectedDate(coin.expectedLaunchDate)}
+            Expected {formatFuzzyDate(coin.expectedLaunchDate)}
           </p>
         )}
       </div>
@@ -301,9 +242,17 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
       <div className="space-y-1.5">
         <p className="pharos-kicker">Upcoming Stablecoins</p>
         <div className="space-y-1">
-          <h2 id="upcoming-heading" className="text-2xl font-semibold tracking-tight text-foreground">
-            {PRE_LAUNCH_STABLECOINS.length} stablecoins on the horizon
-          </h2>
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 id="upcoming-heading" className="text-2xl font-semibold tracking-tight text-foreground">
+              {PRE_LAUNCH_STABLECOINS.length} stablecoins on the horizon
+            </h2>
+            <Link
+              href="/upcoming"
+              className="shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              View all &rarr;
+            </Link>
+          </div>
           <p className="text-sm text-muted-foreground">
             Pre-launch projects tracked by Pharos. Hover a coin for details, or click to view the full profile.
           </p>

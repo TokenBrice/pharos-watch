@@ -26,7 +26,7 @@ export interface ParsedSubscribeArgs {
 
 // ---------- Constants ----------
 
-const ALERT_TYPES = new Set(["dews", "depeg", "safety"]);
+const ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch"]);
 const GLOBAL_SUBSCRIBE_TOKEN = "all";
 
 // ---------- Ticker Resolution ----------
@@ -242,12 +242,23 @@ export function formatSafetyLine(e: SafetyChange): string {
   return `<b>${escapeHtml(e.symbol)}</b> — ${e.oldGrade} → ${e.newGrade}${scores}`;
 }
 
+export interface LaunchAlert {
+  stablecoinId: string;
+  symbol: string;
+  name: string;
+}
+
+export function formatLaunchLine(e: LaunchAlert): string {
+  return `<b>${escapeHtml(e.symbol)}</b> — ${escapeHtml(e.name)} has launched and is now tracked by Pharos`;
+}
+
 export interface ConsolidatedAlerts {
   dews: DewsChange[];
   depegTriggered: DepegAlertPayload[];
   depegResolved: DepegResolved[];
   depegWorsening: DepegWorsening[];
   safety: SafetyChange[];
+  launch: LaunchAlert[];
 }
 
 /** Build a consolidated HTML message for one subscriber. */
@@ -270,6 +281,9 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   if (alerts.safety.length > 0) {
     sections.push(`<b>Safety Grade Change</b>\n${alerts.safety.map(formatSafetyLine).join("\n\n")}`);
   }
+  if (alerts.launch.length > 0) {
+    sections.push(`<b>Stablecoin Launched</b>\n${alerts.launch.map(formatLaunchLine).join("\n\n")}`);
+  }
 
   const body = sections.join("\n\n");
   const allIds = [
@@ -278,6 +292,7 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
     ...alerts.depegResolved.map((e) => e.stablecoinId),
     ...depegWorsening.map((e) => e.stablecoinId),
     ...alerts.safety.map((e) => e.stablecoinId),
+    ...alerts.launch.map((e) => e.stablecoinId),
   ];
   const uniqueIds = new Set(allIds);
   const url =
@@ -342,13 +357,14 @@ export function splitMessage(html: string, limit = 4000): string[] {
 // ---------- List Output Formatting ----------
 
 export function formatListOutput(
-  alertFlags: { dews: boolean; depeg: boolean; safety: boolean },
+  alertFlags: { dews: boolean; depeg: boolean; safety: boolean; launch: boolean },
   coins: { symbol: string; id: string }[],
 ): string {
   const types: string[] = [];
   if (alertFlags.dews) types.push("DEWS");
   if (alertFlags.depeg) types.push("Depeg");
   if (alertFlags.safety) types.push("Safety");
+  if (alertFlags.launch) types.push("Launch");
 
   const typesStr = types.length > 0 ? types.join(", ") : "None";
   const coinsStr = coins.length > 0 ? coins.map((c) => `- ${c.symbol} (${c.id})`).join("\n") : "None";

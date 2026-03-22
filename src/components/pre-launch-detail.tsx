@@ -8,19 +8,17 @@ import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { StablecoinMeta, LaunchPhase, FeaturedContent } from "@shared/types";
-
-// ---------------------------------------------------------------------------
-// Launch-phase labels
-// ---------------------------------------------------------------------------
-
-const LAUNCH_PHASE_LABELS: Record<LaunchPhase, string> = {
-  announced: "Announced",
-  testnet: "Testnet",
-  auditing: "Auditing",
-  beta: "Beta",
-  "launching-soon": "Launching Soon",
-};
+import {
+  LAUNCH_PHASE_LABELS,
+  MILESTONE_TYPE_LABELS,
+  MILESTONE_TYPE_BADGE,
+  DRIFT_STATUS_BADGE,
+  DRIFT_STATUS_LABEL,
+  getDriftStatus,
+  formatFuzzyDate,
+  parseFuzzyDate,
+} from "@/lib/pre-launch";
+import type { StablecoinMeta, LaunchPhase, LaunchMilestone, FeaturedContent } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Link icon mapping
@@ -60,43 +58,6 @@ function ContentTypeIcon({ type }: { type: FeaturedContent["type"] }) {
 function extractTweetId(url: string): string | null {
   const match = url.match(/\/status\/(\d+)/);
   return match ? match[1] : null;
-}
-
-// ---------------------------------------------------------------------------
-// Date helpers — parse YYYY, YYYY-MM, YYYY-QN
-// ---------------------------------------------------------------------------
-
-function parseFuzzyDate(raw: string): Date | null {
-  // YYYY-QN
-  const qMatch = raw.match(/^(\d{4})-Q(\d)$/);
-  if (qMatch) {
-    const year = Number(qMatch[1]);
-    const quarter = Number(qMatch[2]);
-    // Use the first month of the quarter
-    return new Date(year, (quarter - 1) * 3, 1);
-  }
-  // YYYY-MM
-  const mMatch = raw.match(/^(\d{4})-(\d{2})$/);
-  if (mMatch) {
-    return new Date(Number(mMatch[1]), Number(mMatch[2]) - 1, 1);
-  }
-  // YYYY
-  const yMatch = raw.match(/^(\d{4})$/);
-  if (yMatch) {
-    return new Date(Number(yMatch[1]), 0, 1);
-  }
-  return null;
-}
-
-function formatFuzzyDate(raw: string): string {
-  const qMatch = raw.match(/^(\d{4})-Q(\d)$/);
-  if (qMatch) return `Q${qMatch[2]} ${qMatch[1]}`;
-  const mMatch = raw.match(/^(\d{4})-(\d{2})$/);
-  if (mMatch) {
-    const d = new Date(Number(mMatch[1]), Number(mMatch[2]) - 1, 1);
-    return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-  }
-  return raw;
 }
 
 // ---------------------------------------------------------------------------
@@ -160,6 +121,72 @@ function InfoGridItem({ label, value }: { label: string; value: string }) {
     <div className="space-y-1">
       <dt className="pharos-kicker">{label}</dt>
       <dd className="text-sm font-medium">{value}</dd>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Milestones timeline
+// ---------------------------------------------------------------------------
+
+function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
+  const sorted = [...milestones].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+
+  return (
+    <div className="space-y-0">
+      {sorted.map((m, i) => {
+        const isLast = i === sorted.length - 1;
+        const dateDisplay = new Date(m.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+
+        return (
+          <div key={`${m.date}-${m.title}`} className="relative flex gap-3">
+            {/* Vertical connector */}
+            {!isLast && (
+              <div className="absolute bottom-0 left-[7px] top-5 w-px bg-border/40" />
+            )}
+
+            {/* Dot */}
+            <div className="relative mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-border bg-background" />
+
+            {/* Content */}
+            <div className="min-w-0 flex-1 pb-4">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="font-mono text-xs text-muted-foreground">
+                  {dateDisplay}
+                </span>
+                <span
+                  className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${MILESTONE_TYPE_BADGE[m.type]}`}
+                >
+                  {MILESTONE_TYPE_LABELS[m.type]}
+                </span>
+              </div>
+              <p className="mt-1 text-sm font-medium text-foreground">{m.title}</p>
+              {m.description && (
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  {m.description}
+                </p>
+              )}
+              {m.sourceUrl && (
+                <a
+                  href={m.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground"
+                >
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  Source
+                </a>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -229,8 +256,23 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Launch Timeline ───────────────────────────────────────── */}
       {coin.announcedDate && coin.expectedLaunchDate ? (
         <section className="pharos-card-shell p-4 sm:p-5">
-          <h3 className="mb-3 text-lg font-semibold tracking-tight">Launch Timeline</h3>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-lg font-semibold tracking-tight">Launch Timeline</h3>
+            {coin.dateHistory && coin.dateHistory.length > 0 && (
+              <span
+                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${DRIFT_STATUS_BADGE[getDriftStatus(coin.dateHistory, coin.expectedLaunchDate)]}`}
+              >
+                {DRIFT_STATUS_LABEL[getDriftStatus(coin.dateHistory, coin.expectedLaunchDate)]}
+              </span>
+            )}
+          </div>
           <TimelineBar announcedDate={coin.announcedDate} expectedLaunchDate={coin.expectedLaunchDate} />
+          {coin.dateHistory && coin.dateHistory.length > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground/60">
+              {coin.dateHistory.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}{" → "}
+              {formatFuzzyDate(coin.expectedLaunchDate)} (current)
+            </p>
+          )}
         </section>
       ) : coin.expectedLaunchDate ? (
         <section className="pharos-card-shell p-4 sm:p-5">
@@ -238,9 +280,45 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
             <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <span className="text-muted-foreground">Expected Launch:</span>
             <span className="font-medium">{formatFuzzyDate(coin.expectedLaunchDate)}</span>
+            {coin.dateHistory && coin.dateHistory.length > 0 && (
+              <span
+                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${DRIFT_STATUS_BADGE[getDriftStatus(coin.dateHistory, coin.expectedLaunchDate)]}`}
+              >
+                {DRIFT_STATUS_LABEL[getDriftStatus(coin.dateHistory, coin.expectedLaunchDate)]}
+              </span>
+            )}
           </div>
+          {coin.dateHistory && coin.dateHistory.length > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground/60">
+              {coin.dateHistory.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}{" → "}
+              {formatFuzzyDate(coin.expectedLaunchDate)} (current)
+            </p>
+          )}
         </section>
       ) : null}
+
+      {/* ── At-a-Glance Grid ─────────────────────────────────────── */}
+      <section className="pharos-card-shell p-4 sm:p-5">
+        <h3 className="mb-3 text-lg font-semibold tracking-tight">At a Glance</h3>
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <InfoGridItem label="Backing" value={BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} />
+          <InfoGridItem label="Governance" value={GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} />
+          <InfoGridItem
+            label="Peg Currency"
+            value={PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
+          />
+          {jurisdictionDisplay && <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />}
+          {coin.flags.yieldBearing && <InfoGridItem label="Yield-Bearing" value="Yes" />}
+        </dl>
+      </section>
+
+      {/* ── Activity Timeline (milestones) ─────────────────────────── */}
+      {coin.milestones && coin.milestones.length > 0 && (
+        <section className="pharos-card-shell p-4 sm:p-5">
+          <h3 className="mb-3 text-lg font-semibold tracking-tight">Activity Timeline</h3>
+          <MilestoneTimeline milestones={coin.milestones} />
+        </section>
+      )}
 
       {/* ── Editorial Summary ─────────────────────────────────────── */}
       {summary && (
@@ -312,21 +390,6 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
           </div>
         </section>
       )}
-
-      {/* ── At-a-Glance Grid ─────────────────────────────────────── */}
-      <section className="pharos-card-shell p-4 sm:p-5">
-        <h3 className="mb-3 text-lg font-semibold tracking-tight">At a Glance</h3>
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <InfoGridItem label="Backing" value={BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} />
-          <InfoGridItem label="Governance" value={GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} />
-          <InfoGridItem
-            label="Peg Currency"
-            value={PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
-          />
-          {jurisdictionDisplay && <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />}
-          {coin.flags.yieldBearing && <InfoGridItem label="Yield-Bearing" value="Yes" />}
-        </dl>
-      </section>
 
       {/* ── Planned Reserves ──────────────────────────────────────── */}
       {coin.reserves && coin.reserves.length > 0 && (

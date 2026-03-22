@@ -13,6 +13,7 @@ import {
   ArrowLeftRight,
   ArrowUpDown,
   Newspaper,
+  Rocket,
   Send,
   Wallet,
   Network,
@@ -75,6 +76,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Info",
     items: [
+      { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins" },
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Dead stablecoins" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily market digest" },
     ],

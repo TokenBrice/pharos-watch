@@ -73,9 +73,11 @@ export async function loadSubscriberByChat(
          alert_dews,
          alert_depeg,
          alert_safety,
+         alert_launch,
          global_alert_dews,
          global_alert_depeg,
          global_alert_safety,
+         global_alert_launch,
          quiet_hours_enabled,
          quiet_hours_start_utc,
          quiet_hours_end_utc
@@ -101,18 +103,21 @@ export async function upsertGlobalAlertTypes(
         alert_dews,
         alert_depeg,
         alert_safety,
+        alert_launch,
         global_alert_dews,
         global_alert_depeg,
         global_alert_safety,
+        global_alert_launch,
         created_at,
         last_active_at
       )
-      VALUES (?, ?, 0, 0, 0, ?, ?, ?, ?, ?)
+      VALUES (?, ?, 0, 0, 0, 0, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET
         username = COALESCE(excluded.username, telegram_subscribers.username),
         global_alert_dews = MAX(telegram_subscribers.global_alert_dews, excluded.global_alert_dews),
         global_alert_depeg = MAX(telegram_subscribers.global_alert_depeg, excluded.global_alert_depeg),
         global_alert_safety = MAX(telegram_subscribers.global_alert_safety, excluded.global_alert_safety),
+        global_alert_launch = MAX(telegram_subscribers.global_alert_launch, excluded.global_alert_launch),
         last_active_at = excluded.last_active_at
     `)
     .bind(
@@ -121,6 +126,7 @@ export async function upsertGlobalAlertTypes(
       alertTypes.has("dews") ? 1 : 0,
       alertTypes.has("depeg") ? 1 : 0,
       alertTypes.has("safety") ? 1 : 0,
+      alertTypes.has("launch") ? 1 : 0,
       now,
       now,
     )
@@ -139,6 +145,7 @@ export async function upsertSubscriberAndSubscriptions(
   const alertDews = alertTypes.has("dews") ? 1 : 0;
   const alertDepeg = alertTypes.has("depeg") ? 1 : 0;
   const alertSafety = alertTypes.has("safety") ? 1 : 0;
+  const alertLaunch = alertTypes.has("launch") ? 1 : 0;
   const uniqueStablecoinIds = Array.from(new Set(stablecoinIds));
 
   const statements: D1PreparedStatement[] = [];
@@ -156,18 +163,21 @@ export async function upsertSubscriberAndSubscriptions(
         alert_dews,
         alert_depeg,
         alert_safety,
+        alert_launch,
         global_alert_dews,
         global_alert_depeg,
         global_alert_safety,
+        global_alert_launch,
         created_at,
         last_active_at
       )
-      VALUES (?, ?, ?, ?, ?, 0, 0, 0, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET
         username = COALESCE(excluded.username, telegram_subscribers.username),
         alert_dews = MAX(telegram_subscribers.alert_dews, excluded.alert_dews),
         alert_depeg = MAX(telegram_subscribers.alert_depeg, excluded.alert_depeg),
         alert_safety = MAX(telegram_subscribers.alert_safety, excluded.alert_safety),
+        alert_launch = MAX(telegram_subscribers.alert_launch, excluded.alert_launch),
         last_active_at = excluded.last_active_at
     `).bind(
       chatId,
@@ -175,6 +185,7 @@ export async function upsertSubscriberAndSubscriptions(
       alertDews,
       alertDepeg,
       alertSafety,
+      alertLaunch,
       now,
       now,
     ),
@@ -188,14 +199,16 @@ export async function upsertSubscriberAndSubscriptions(
           stablecoin_id,
           alert_dews,
           alert_depeg,
-          alert_safety
+          alert_safety,
+          alert_launch
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
           alert_dews = MAX(telegram_subscriptions.alert_dews, excluded.alert_dews),
           alert_depeg = MAX(telegram_subscriptions.alert_depeg, excluded.alert_depeg),
-          alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety)
-      `).bind(chatId, stablecoinId, alertDews, alertDepeg, alertSafety),
+          alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety),
+          alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch)
+      `).bind(chatId, stablecoinId, alertDews, alertDepeg, alertSafety, alertLaunch),
     );
   }
 

@@ -96,7 +96,7 @@ describe("dispatchTelegramAlerts", () => {
     expect(result.itemCount).toBe(0);
     expect(metadata.snapshotSeeded).toBe(true);
     expect(metadata.subscribersNotified).toBe(0);
-    expect(mockSetCache).toHaveBeenCalledTimes(4);
+    expect(mockSetCache).toHaveBeenCalledTimes(5);
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });
 

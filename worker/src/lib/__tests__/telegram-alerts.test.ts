@@ -218,6 +218,7 @@ describe("formatConsolidatedMessage", () => {
       depegResolved: [],
       depegWorsening: [],
       safety: [],
+      launch: [],
     });
     expect(msg).toContain("DEWS");
     expect(msg).toContain("Depeg Detected");
@@ -242,6 +243,7 @@ describe("formatConsolidatedMessage", () => {
         },
       ],
       safety: [],
+      launch: [],
     });
     expect(msg).toContain("Depeg Worsening");
     expect(msg).toContain("1.2% → 2.6%");
@@ -263,6 +265,7 @@ describe("formatConsolidatedMessage", () => {
       depegResolved: [],
       depegWorsening: [],
       safety: [],
+      launch: [],
     });
     expect(msg).toContain("https://pharos.watch/stablecoin/usdc-circle");
   });
@@ -292,6 +295,7 @@ describe("formatConsolidatedMessage", () => {
       depegResolved: [],
       depegWorsening: [],
       safety: [],
+      launch: [],
     });
     expect(msg).toContain('href="https://pharos.watch"');
   });
@@ -315,7 +319,7 @@ describe("splitMessage", () => {
 describe("formatListOutput", () => {
   it("formats active subscriptions", () => {
     const output = formatListOutput(
-      { dews: true, depeg: true, safety: false },
+      { dews: true, depeg: true, safety: false, launch: false },
       [
         { symbol: "USDC", id: "usdc-circle" },
         { symbol: "BOLD", id: "bold-liquity" },
@@ -327,7 +331,7 @@ describe("formatListOutput", () => {
   });
 
   it("shows None when no types or coins", () => {
-    const output = formatListOutput({ dews: false, depeg: false, safety: false }, []);
+    const output = formatListOutput({ dews: false, depeg: false, safety: false, launch: false }, []);
     expect(output).toContain("Alert types: None");
     expect(output).toContain("Coins (0):\nNone");
   });

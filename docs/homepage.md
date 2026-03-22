@@ -149,7 +149,7 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 5. `MarketHighlights`
 6. `DailyDigest` in `preview` mode
 7. `Key Stablecoin Data` section
-8. `UpcomingStablecoinsSection`
+8. `UpcomingStablecoinsSection` (includes "View all" link to `/upcoming`)
 9. `Core Monitoring` band
 10. `Research Surfaces` band
 11. Bottom summary / last-updated footer copy

@@ -158,6 +158,28 @@ interface YieldConfig {
 
 export type LaunchPhase = "announced" | "testnet" | "auditing" | "beta" | "launching-soon";
 
+export type LaunchMilestoneType =
+  | "announcement"
+  | "milestone"
+  | "delay"
+  | "partnership"
+  | "regulatory"
+  | "audit"
+  | "testnet";
+
+export interface LaunchMilestone {
+  date: string;
+  type: LaunchMilestoneType;
+  title: string;
+  description?: string;
+  sourceUrl?: string;
+}
+
+export interface DateHistoryEntry {
+  date: string;
+  setOn: string;
+}
+
 export type FeaturedContentType = "tweet" | "blog" | "video" | "article";
 
 export interface FeaturedContent {
@@ -206,6 +228,8 @@ export interface StablecoinMeta {
   launchPhase?: LaunchPhase;
   launchPhaseDetail?: string;
   featuredContent?: FeaturedContent[];
+  milestones?: LaunchMilestone[];
+  dateHistory?: DateHistoryEntry[];
 }
 
 export type FilterTag =

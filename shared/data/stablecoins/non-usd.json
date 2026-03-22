@@ -2868,7 +2868,7 @@
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026-Q4",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Seeking Dutch Central Bank EMI license; in talks with crypto exchanges",
+    "launchPhaseDetail": "12-bank consortium; seeking Dutch Central Bank EMI license under MiCA; in advanced talks with exchanges for day-one liquidity",
     "featuredContent": [
       {
         "type": "article",
@@ -2877,6 +2877,35 @@
         "description": "Spanish banking giant CaixaBank partners with Qivalis to develop a fully regulated euro stablecoin under MiCA, targeting crypto exchanges and DeFi protocols.",
         "image": "/featured/qivalis-caixabank.png",
         "source": "CaixaBank"
+      },
+      {
+        "type": "article",
+        "url": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin",
+        "title": "BNP Paribas joins European consortium to launch euro-backed stablecoin",
+        "description": "12 European banks — including ING, UniCredit, BNP Paribas, CaixaBank, and BBVA — unite under Qivalis for a MiCA-compliant euro stablecoin targeting H2 2026.",
+        "source": "BNP Paribas"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2025-09-15",
+        "type": "announcement",
+        "title": "CaixaBank and Qivalis announce euro stablecoin initiative",
+        "sourceUrl": "https://www.caixabank.com/comunicacion/noticia/caixabank-and-qivalis-partner-to-launch-a-euro-stablecoin_en.html"
+      },
+      {
+        "date": "2026-02-15",
+        "type": "partnership",
+        "title": "BNP Paribas joins consortium, bringing total to 12 European banks",
+        "description": "ING, UniCredit, BNP Paribas, CaixaBank, BBVA, Banca Sella, Danske Bank, DekaBank, DZ BANK, KBC, Raiffeisen Bank International, and SEB.",
+        "sourceUrl": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin"
+      },
+      {
+        "date": "2026-03-02",
+        "type": "milestone",
+        "title": "Advanced talks with crypto exchanges for day-one liquidity",
+        "description": "Qivalis in discussions with exchanges, market makers, and liquidity providers for regulated platform listings.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/03/02/eu-banks-euro-pegged-stablecoin-in-talks-with-crypto-exchanges-to-ensure-liquidity"
       }
     ]
   }
