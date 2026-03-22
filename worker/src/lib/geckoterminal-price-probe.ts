@@ -62,6 +62,12 @@ export interface GtProbeStats {
   pricesObtained: number;
   divergences500bps: number;
   skippedLowTvl: number;
+  lookupMisses: number;
+  upstreamErrors: number;
+}
+
+function isGtLookupMissStatus(status: number | undefined): boolean {
+  return status === 404 || status === 422;
 }
 
 /**
@@ -75,7 +81,14 @@ export async function probeGeckoTerminalPrices(
   signal?: AbortSignal,
 ): Promise<{ prices: Map<string, SourcePrice>; stats: GtProbeStats }> {
   const prices = new Map<string, SourcePrice>();
-  const stats: GtProbeStats = { probed: 0, pricesObtained: 0, divergences500bps: 0, skippedLowTvl: 0 };
+  const stats: GtProbeStats = {
+    probed: 0,
+    pricesObtained: 0,
+    divergences500bps: 0,
+    skippedLowTvl: 0,
+    lookupMisses: 0,
+    upstreamErrors: 0,
+  };
 
   if (singleSourceCgAssets.length === 0) return { prices, stats };
 
@@ -118,7 +131,12 @@ export async function probeGeckoTerminalPrices(
       }, 0);
 
       if (!res?.ok) {
+        if (isGtLookupMissStatus(res?.status)) {
+          stats.lookupMisses++;
+          continue;
+        }
         failures++;
+        stats.upstreamErrors++;
         continue;
       }
 
@@ -150,15 +168,20 @@ export async function probeGeckoTerminalPrices(
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
       failures++;
+      stats.upstreamErrors++;
       console.warn(`[gt-probe] Failed for ${asset.id}:`, String(err).slice(0, 200));
     }
   }
 
-  await recordOutcome(db, CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE, failures < stats.probed);
+  // Source health should reflect GeckoTerminal reachability, not whether each
+  // token lookup resolves to an indexed pool. 404/422 lookup misses are common
+  // for thin assets and should not open the source-level circuit breaker.
+  await recordOutcome(db, CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE, stats.probed === 0 || failures < stats.probed);
 
   console.log(
     `[gt-probe] Probed ${stats.probed} assets: ${stats.pricesObtained} prices obtained, ` +
-    `${stats.divergences500bps} divergences >500bps, ${stats.skippedLowTvl} skipped (low TVL)`,
+    `${stats.divergences500bps} divergences >500bps, ${stats.skippedLowTvl} skipped (low TVL), ` +
+    `${stats.lookupMisses} lookup misses, ${stats.upstreamErrors} upstream errors`,
   );
 
   return { prices, stats };

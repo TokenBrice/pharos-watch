@@ -1,5 +1,51 @@
-import { describe, it, expect } from "vitest";
-import { extractPoolPrice } from "../geckoterminal-price-probe";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const {
+  fetchWithRetryMock,
+  shouldAttemptFetchMock,
+  recordOutcomeMock,
+} = vi.hoisted(() => ({
+  fetchWithRetryMock: vi.fn(),
+  shouldAttemptFetchMock: vi.fn(),
+  recordOutcomeMock: vi.fn(),
+}));
+
+vi.mock("../fetch-retry", () => ({
+  fetchWithRetry: fetchWithRetryMock,
+}));
+
+vi.mock("../circuit-breaker", () => ({
+  shouldAttemptFetch: shouldAttemptFetchMock,
+  recordOutcome: recordOutcomeMock,
+}));
+
+vi.mock("../rate-limit", () => ({
+  RATE_LIMITS: {
+    GECKO_TERMINAL_MS: 0,
+  },
+}));
+
+vi.mock("@shared/lib/chain-provider-registry", () => ({
+  GT_CHAIN_MAP: {
+    ethereum: "eth",
+  },
+}));
+
+vi.mock("@shared/lib/stablecoins", () => ({
+  ACTIVE_STABLECOINS: [
+    {
+      id: "asset-404",
+      contracts: [{ chain: "ethereum", address: "0xasset404" }],
+    },
+    {
+      id: "asset-429",
+      contracts: [{ chain: "ethereum", address: "0xasset429" }],
+    },
+  ],
+}));
+
+import { CIRCUIT_SOURCE } from "../constants";
+import { extractPoolPrice, probeGeckoTerminalPrices } from "../geckoterminal-price-probe";
 import type { GtPool } from "../../cron/dex-liquidity/types";
 
 describe("extractPoolPrice", () => {
@@ -119,6 +165,97 @@ describe("extractPoolPrice", () => {
     const result = extractPoolPrice(pools, baseAddress);
     expect(result).not.toBeNull();
     expect(result!.price).toBe(0.99);
+  });
+});
+
+describe("probeGeckoTerminalPrices", () => {
+  beforeEach(() => {
+    fetchWithRetryMock.mockReset();
+    shouldAttemptFetchMock.mockReset();
+    recordOutcomeMock.mockReset();
+
+    shouldAttemptFetchMock.mockResolvedValue(true);
+    recordOutcomeMock.mockResolvedValue(undefined);
+  });
+
+  it("treats lookup misses as source-healthy for breaker accounting", async () => {
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ errors: [{ status: "404", title: "Not Found" }] }), { status: 404 }),
+    );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-404", price: 1 }],
+      {} as D1Database,
+    );
+
+    expect(result.prices.size).toBe(0);
+    expect(result.stats.lookupMisses).toBe(1);
+    expect(result.stats.upstreamErrors).toBe(0);
+    expect(recordOutcomeMock).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
+      true,
+    );
+  });
+
+  it("records breaker failure when every probe is a hard upstream error", async () => {
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: "rate limited" }), { status: 429 }),
+    );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-429", price: 1 }],
+      {} as D1Database,
+    );
+
+    expect(result.stats.lookupMisses).toBe(0);
+    expect(result.stats.upstreamErrors).toBe(1);
+    expect(recordOutcomeMock).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
+      false,
+    );
+  });
+
+  it("keeps the breaker closed when at least one probe reaches the source", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ errors: [{ status: "404", title: "Not Found" }] }), { status: 404 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "rate limited" }), { status: 429 }),
+      );
+
+    const result = await probeGeckoTerminalPrices(
+      [
+        { id: "asset-404", price: 1 },
+        { id: "asset-429", price: 1 },
+      ],
+      {} as D1Database,
+    );
+
+    expect(result.stats.lookupMisses).toBe(1);
+    expect(result.stats.upstreamErrors).toBe(1);
+    expect(recordOutcomeMock).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
+      true,
+    );
+  });
+
+  it("does not mark the source unhealthy when nothing was probeable", async () => {
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "unknown-asset", price: 1 }],
+      {} as D1Database,
+    );
+
+    expect(result.stats.probed).toBe(0);
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
+    expect(recordOutcomeMock).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
+      true,
+    );
   });
 });
 

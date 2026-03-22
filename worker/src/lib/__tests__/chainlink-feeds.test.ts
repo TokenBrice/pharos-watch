@@ -7,6 +7,7 @@ vi.mock("../evm-rpc", () => ({
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import {
   CHAINLINK_REFERENCE_FEEDS,
+  fetchChainlinkReferenceQuoteSnapshot,
   fetchChainlinkReferenceQuotes,
   parseChainlinkLatestRoundData,
   parseSignedInt256Word,
@@ -92,5 +93,31 @@ describe("fetchChainlinkReferenceQuotes", () => {
 
     const quotes = await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000);
     expect(quotes.has("peggedEUR")).toBe(false);
+  });
+
+  it("reports summary counts for unavailable and stale feeds", async () => {
+    const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
+    const gbpFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedGBP");
+    expect(eurFeed).toBeDefined();
+    expect(gbpFeed).toBeDefined();
+
+    mockFetchEvmCallHexAtBlock.mockImplementation(async (_chainId, address, data) => {
+      if (address === eurFeed!.proxyAddress && data === "0x313ce567") {
+        return "0x0000000000000000000000000000000000000000000000000000000000000008";
+      }
+      if (address === eurFeed!.proxyAddress && data === "0xfeaf968c") {
+        return buildLatestRoundDataHex(115_820_000n, 1_763_800_000);
+      }
+      if (address === gbpFeed!.proxyAddress && data === "0x313ce567") {
+        return "0x0000000000000000000000000000000000000000000000000000000000000008";
+      }
+      return null;
+    });
+
+    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000);
+    expect(snapshot.quotes.size).toBe(0);
+    expect(snapshot.summary.usableQuotes).toBe(0);
+    expect(snapshot.summary.staleQuotes).toBe(1);
+    expect(snapshot.summary.roundDataUnavailable).toBeGreaterThanOrEqual(1);
   });
 });

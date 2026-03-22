@@ -4,7 +4,7 @@ import { validatePayloadWithSchema } from "../lib/api-utils";
 import { RUB_FALLBACK, USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { fetchRealtimeFxRates } from "../lib/fx-realtime";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { fetchChainlinkReferenceQuotes } from "../lib/chainlink-feeds";
+import { fetchChainlinkReferenceQuoteSnapshot } from "../lib/chainlink-feeds";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { FxRateSourceMode, FxRateSyncMode, FxSourceCadence } from "../lib/fx-rate-state";
 import { getFxSourceStatus, loadFxRateState, persistFxRateState } from "../lib/fx-rate-state";
@@ -287,6 +287,20 @@ export async function syncFxRates(
       chainlink: "unavailable",
       openExchangeRates: "unavailable",
     };
+    let chainlinkSummary:
+      | {
+        configuredFeeds: number;
+        usableQuotes: number;
+        appliedQuotes: number;
+        decimalsUnavailable: number;
+        roundDataUnavailable: number;
+        staleQuotes: number;
+        invalidDecimals: number;
+        invalidAnswers: number;
+        invalidPrices: number;
+        fetchErrors: number;
+      }
+      | undefined;
 
     const markLive = (
       pegKey: string,
@@ -720,7 +734,8 @@ export async function syncFxRates(
         const chainlinkAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS);
         if (chainlinkAllowed) {
           try {
-            const quotes = await fetchChainlinkReferenceQuotes(signal, chainRpcs, syncStartSec);
+            const snapshot = await fetchChainlinkReferenceQuoteSnapshot(signal, chainRpcs, syncStartSec);
+            const quotes = snapshot.quotes;
             let applied = 0;
             for (const [pegKey, quote] of quotes) {
               const existing = usableRates[pegKey];
@@ -746,6 +761,10 @@ export async function syncFxRates(
               }
             }
 
+            chainlinkSummary = {
+              ...snapshot.summary,
+              appliedQuotes: applied,
+            };
             chainlinkSource = quotes.size > 0
               ? (applied === quotes.size ? "ok" : "partial")
               : "unavailable";
@@ -827,6 +846,7 @@ export async function syncFxRates(
       ecbDate: ecbDate ?? undefined,
       consecutiveFallbackRuns: meta.consecutiveFallbackRuns,
       sources,
+      chainlinkSummary,
     };
     return {
       status: mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4 ? "degraded" : undefined,

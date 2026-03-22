@@ -614,7 +614,17 @@ export async function runGtProbePass(
   }
 
   if (cgOnlyAssets.length === 0) {
-    return { updatedCount: 0, stats: { probed: 0, pricesObtained: 0, divergences500bps: 0, skippedLowTvl: 0 } };
+    return {
+      updatedCount: 0,
+      stats: {
+        probed: 0,
+        pricesObtained: 0,
+        divergences500bps: 0,
+        skippedLowTvl: 0,
+        lookupMisses: 0,
+        upstreamErrors: 0,
+      },
+    };
   }
 
   const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(cgOnlyAssets, db, signal);

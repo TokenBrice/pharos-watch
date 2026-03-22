@@ -631,6 +631,11 @@ describe("syncFxRates", () => {
     const result = await syncFxRates(db, undefined, undefined, chainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.sources.chainlink).toBe("ok");
+    expect(metadata.chainlinkSummary).toMatchObject({
+      configuredFeeds: 5,
+      usableQuotes: 1,
+      appliedQuotes: 1,
+    });
 
     const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;

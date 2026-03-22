@@ -313,7 +313,14 @@ describe("syncStablecoins", () => {
       order.push("gt");
       return {
         updatedCount: 0,
-        stats: { probed: 0, pricesObtained: 0, divergences500bps: 0, skippedLowTvl: 0 },
+        stats: {
+          probed: 0,
+          pricesObtained: 0,
+          divergences500bps: 0,
+          skippedLowTvl: 0,
+          lookupMisses: 0,
+          upstreamErrors: 0,
+        },
       };
     });
 
@@ -416,7 +423,14 @@ describe("syncStablecoins", () => {
       });
       return {
         updatedCount: 1,
-        stats: { probed: 1, pricesObtained: 1, divergences500bps: 0, skippedLowTvl: 0 },
+        stats: {
+          probed: 1,
+          pricesObtained: 1,
+          divergences500bps: 0,
+          skippedLowTvl: 0,
+          lookupMisses: 0,
+          upstreamErrors: 0,
+        },
       };
     });
 

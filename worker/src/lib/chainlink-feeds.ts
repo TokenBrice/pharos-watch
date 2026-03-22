@@ -19,6 +19,23 @@ export interface ChainlinkReferenceQuote {
   proxyAddress: string;
 }
 
+export interface ChainlinkReferenceQuoteSummary {
+  configuredFeeds: number;
+  usableQuotes: number;
+  decimalsUnavailable: number;
+  roundDataUnavailable: number;
+  staleQuotes: number;
+  invalidDecimals: number;
+  invalidAnswers: number;
+  invalidPrices: number;
+  fetchErrors: number;
+}
+
+export interface ChainlinkReferenceQuoteSnapshot {
+  quotes: Map<string, ChainlinkReferenceQuote>;
+  summary: ChainlinkReferenceQuoteSummary;
+}
+
 // Verified against official Chainlink feed pages on 2026-03-19.
 export const CHAINLINK_REFERENCE_FEEDS: readonly ChainlinkReferenceFeed[] = [
   {
@@ -95,12 +112,37 @@ export async function fetchChainlinkReferenceQuotes(
   chainRpcs?: Map<string, ChainRpcConfig>,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<Map<string, ChainlinkReferenceQuote>> {
+  const snapshot = await fetchChainlinkReferenceQuoteSnapshot(signal, chainRpcs, nowSec);
+  return snapshot.quotes;
+}
+
+export async function fetchChainlinkReferenceQuoteSnapshot(
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  nowSec = Math.floor(Date.now() / 1000),
+): Promise<ChainlinkReferenceQuoteSnapshot> {
   const quotes = new Map<string, ChainlinkReferenceQuote>();
+  const summary: ChainlinkReferenceQuoteSummary = {
+    configuredFeeds: CHAINLINK_REFERENCE_FEEDS.length,
+    usableQuotes: 0,
+    decimalsUnavailable: 0,
+    roundDataUnavailable: 0,
+    staleQuotes: 0,
+    invalidDecimals: 0,
+    invalidAnswers: 0,
+    invalidPrices: 0,
+    fetchErrors: 0,
+  };
 
   for (const feed of CHAINLINK_REFERENCE_FEEDS) {
     try {
       const decimals = await fetchFeedDecimals(feed, signal, chainRpcs);
-      if (decimals == null || !Number.isFinite(decimals) || decimals < 0 || decimals > 36) {
+      if (decimals == null) {
+        summary.decimalsUnavailable++;
+        continue;
+      }
+      if (!Number.isFinite(decimals) || decimals < 0 || decimals > 36) {
+        summary.invalidDecimals++;
         continue;
       }
 
@@ -111,15 +153,26 @@ export async function fetchChainlinkReferenceQuotes(
         "latest",
         { signal, chainRpcs },
       );
-      if (!roundHex) continue;
+      if (!roundHex) {
+        summary.roundDataUnavailable++;
+        continue;
+      }
 
       const { answer, updatedAt } = parseChainlinkLatestRoundData(roundHex);
-      if (answer <= 0n || updatedAt <= 0 || (nowSec - updatedAt) > feed.staleAfterSec) {
+      if (answer <= 0n || updatedAt <= 0) {
+        summary.invalidAnswers++;
+        continue;
+      }
+      if ((nowSec - updatedAt) > feed.staleAfterSec) {
+        summary.staleQuotes++;
         continue;
       }
 
       const price = Number(answer) / (10 ** decimals);
-      if (!Number.isFinite(price) || price <= 0) continue;
+      if (!Number.isFinite(price) || price <= 0) {
+        summary.invalidPrices++;
+        continue;
+      }
 
       quotes.set(feed.pegKey, {
         pegKey: feed.pegKey,
@@ -129,9 +182,22 @@ export async function fetchChainlinkReferenceQuotes(
         proxyAddress: feed.proxyAddress,
       });
     } catch (err) {
+      summary.fetchErrors++;
       console.warn(`[chainlink-feeds] ${feed.pegKey} fetch failed:`, err);
     }
   }
 
-  return quotes;
+  summary.usableQuotes = quotes.size;
+
+  if (summary.usableQuotes === 0) {
+    console.warn(
+      `[chainlink-feeds] No usable quotes: configured=${summary.configuredFeeds}, ` +
+      `decimalsUnavailable=${summary.decimalsUnavailable}, roundDataUnavailable=${summary.roundDataUnavailable}, ` +
+      `stale=${summary.staleQuotes}, invalidDecimals=${summary.invalidDecimals}, ` +
+      `invalidAnswers=${summary.invalidAnswers}, invalidPrices=${summary.invalidPrices}, ` +
+      `fetchErrors=${summary.fetchErrors}`,
+    );
+  }
+
+  return { quotes, summary };
 }
