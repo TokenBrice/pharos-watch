@@ -72,7 +72,6 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "gusd-gate",
       "usyc-hashnote",
       "ustb-superstate",
-      "mtbill-midas",
       "tbill-openeden",
       "cetes-etherfuse",
       "usdn-noble",
@@ -198,6 +197,14 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   "pusd-plume": {
     ...issuerBase,
     costModel: fixedFee(0, "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation"),
+  },
+  "mtbill-midas": {
+    ...issuerBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.11 },
+    costModel: fixedFee(7, "Midas documents a 0.07% redemption fee"),
+    notes: [
+      "Instant USDC redemption limited to on-chain liquidity buffer (~11% of supply per transparency page); overflow enters 1–7 business day queue with up to 3 business days to replenish",
+    ],
   },
   "usdy-ondo-finance": {
     ...issuerBase,

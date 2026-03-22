@@ -12,7 +12,7 @@ Before starting, confirm the coin belongs on the dashboard:
 
 | Question | Guidance |
 |----------|----------|
-| Is it pegged to a fiat currency (USD, EUR, etc.) or a commodity (gold, silver)? | Yes → proceed. Pure NAV-appreciation tokens with no peg target (e.g. private credit fund tokens) are **not** tracked. |
+| Is it pegged to a fiat currency (USD, EUR, etc.), a commodity (gold, silver), or a macro index (CPI)? | Yes → proceed. Pure NAV-appreciation tokens with no peg target (e.g. private credit fund tokens) are **not** tracked. |
 | Is its target price approximately constant (whether $1, $1+rebase, or NAV-accreting from a stable base)? | Yes → proceed. A NAV token that started at $10 and accretes is fine; one started at any price and moves with market sentiment is not. |
 | Does it have a supply that is verifiably on-chain or third-party attested? | Some supply data is acceptable — no supply tracking doesn't block adding metadata. |
 | Is it at least $5M in circulating supply? | Soft threshold. Below that, document why it merits tracking (e.g. strategic importance, notable issuer). |
