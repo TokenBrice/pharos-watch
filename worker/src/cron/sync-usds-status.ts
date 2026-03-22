@@ -1,6 +1,8 @@
 import { shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchEtherscanProxyHex } from "../lib/evm-rpc";
+import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../lib/constants";
 
 const CACHE_KEY = "usds-status";
 const STALE_HOURS = 20;
@@ -77,7 +79,12 @@ export async function syncUsdsStatus(
     return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
   }
 
+  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN))) {
+    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "etherscan-circuit-open" }) };
+  }
+
   const implementationAddress = await readImplementationSlot(etherscanApiKey, signal);
+  await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, implementationAddress != null);
   if (!implementationAddress) {
     console.warn("[usds-status] Failed to read implementation slot");
     return {

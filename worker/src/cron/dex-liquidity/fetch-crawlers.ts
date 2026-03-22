@@ -135,7 +135,7 @@ export function mergeCgPools(
       const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
       const lockedLiquidityPct = pool.lockedLiquidityPct ?? STAGED_POOL_DEFAULTS.lockedLiquidityFallback;
       const coinPairQuality = computePoolPairQuality(
-        pool.symbol.split(/\s*\/\s*/).map((s) => s.trim()),
+        (pool.symbol ?? "").split(/\s*\/\s*/).map((s) => s.trim()),
         meta.symbol,
       );
       const combinedQuality = pool.qualityMultiplier * balanceHealth * coinPairQuality;
@@ -313,7 +313,7 @@ export function mergeGtPools(
       // organicTvlWeightedSum to avoid diluting those signals with neutral defaults.
       // Only Curve (balance) and DeFiLlama-APY (organic) pools contribute real data.
       const coinPairQuality = computePoolPairQuality(
-        pool.symbol.split(/\s*\/\s*/).map((s) => s.trim()),
+        (pool.symbol ?? "").split(/\s*\/\s*/).map((s) => s.trim()),
         meta.symbol,
       );
       const combinedQuality = pool.qualityMultiplier * balanceHealth * coinPairQuality;

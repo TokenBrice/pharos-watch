@@ -157,6 +157,8 @@ export const CIRCUIT_SOURCE = {
   ORCA_API: "orca-api",
   DRPC: "drpc",
   TRONGRID: "trongrid",
+  ANTHROPIC: "anthropic-api",
+  BLUECHIP: "bluechip-api",
 } as const;
 
 /** Minimum per-pool TVL for DEX pool challenge and pool-level depeg confirmation */

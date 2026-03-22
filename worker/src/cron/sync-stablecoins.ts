@@ -344,7 +344,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     droppedMalformedAssets,
     canonicalDeduplication,
   } = intake;
-  const previousAssetsById = await loadPreviousStablecoinsById(db);
+  const previousAssetsById = intake.previousAssetsById;
   let fxFallbackRates = intake.fxFallbackRates;
 
   // Load FX rates early for dynamic price bounds in validatePriceCandidate

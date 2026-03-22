@@ -98,18 +98,27 @@ export async function syncLiveReserves(
     return resultPromise;
   };
 
+  const ADAPTER_TIMEOUT_MS = 20_000;
+  const withAdapterTimeout = <T>(p: Promise<T>): Promise<T> =>
+    Promise.race([
+      p,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("adapter-timeout")), ADAPTER_TIMEOUT_MS),
+      ),
+    ]);
+
   const runAdapter = async (
     coin: ConfiguredCoin,
     config: LiveReserveConfig,
     adapter: NonNullable<ReturnType<typeof getReserveAdapter>>,
   ): Promise<AdapterResult> => {
     try {
-      return await tryPrimary(coin, config, adapter);
+      return await withAdapterTimeout(tryPrimary(coin, config, adapter));
     } catch (primaryError) {
       for (const fb of config.inputs.fallbacks ?? []) {
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
-          return await adapter(coin, fbConfig, signal, adapterCtx);
+          return await withAdapterTimeout(adapter(coin, fbConfig, signal, adapterCtx));
         } catch { continue; }
       }
       throw primaryError;

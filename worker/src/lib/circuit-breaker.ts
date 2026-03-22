@@ -114,7 +114,7 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
         webhookUrl ?? null,
         `Circuit closed: ${source}`,
         `Source "${source}" has recovered after being open.`,
-      ).catch(() => {});
+      ).catch((err) => { console.warn("[circuit-breaker] alert delivery failed:", err); });
     }
     return;
   }
@@ -136,7 +136,7 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
       webhookUrl ?? null,
       `Circuit OPEN: ${source}`,
       `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
-    ).catch(() => {});
+    ).catch((err) => { console.warn("[circuit-breaker] alert delivery failed:", err); });
   }
 
   await setCache(db, cacheKey(source), JSON.stringify(record));

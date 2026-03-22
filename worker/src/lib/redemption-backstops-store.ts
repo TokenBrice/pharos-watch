@@ -299,8 +299,8 @@ export async function upsertRedemptionBackstopSnapshots(
   }
 
   // Each coin produces 2 statements (current: 24 params, history: 8 params = 32 total).
-  // D1 limits total bound params per batch, so use a smaller chunk than the default 100.
-  await batchExecute(db, stmts, 50);
+  // D1 limits total bound params per batch (~1000), so chunk at 20 (20×32=640).
+  await batchExecute(db, stmts, 20);
 }
 
 export async function loadRedemptionBackstopMap(db: D1Database): Promise<RedemptionBackstopMap> {

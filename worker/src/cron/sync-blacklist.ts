@@ -125,7 +125,7 @@ async function fetchTronEventsIncremental(
 
     const tsFilter = lastTimestampMs > 0 ? `&min_block_timestamp=${lastTimestampMs}` : "";
     let url: string | null =
-      `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${eventName}&limit=200&order_by=block_timestamp,desc${tsFilter}`;
+      `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${eventName}&limit=200&order_by=block_timestamp,asc${tsFilter}`;
 
     while (url) {
       throwIfAborted(signal);

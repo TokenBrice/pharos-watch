@@ -1,5 +1,6 @@
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { bigIntToDecimal } from "./bigint";
+import { fetchWithRetry } from "./fetch-retry";
 
 const MAX_RECURSION_DEPTH = 8;
 const ETHERSCAN_MAX_RESULTS = 1000;
@@ -208,12 +209,14 @@ export async function fetchEvmLogsForTopics(
   budget.count++;
   const timeout = AbortSignal.timeout(30_000);
   const json = await rateLimit(async () => {
-    const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, {
+    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, {
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-    });
-    if (!res.ok) {
-      console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${res.status}`);
-      await res.body?.cancel();
+    }, 1);
+    if (!res || !res.ok) {
+      if (res) {
+        console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${res.status}`);
+        await res.body?.cancel();
+      }
       return null;
     }
     return res.json() as Promise<{ status: string; message: string; result: EtherscanLogEntry[] }>;
@@ -232,10 +235,10 @@ export async function fetchEvmLogsForTopics(
     const mid = Math.floor((fromBlock + toBlock) / 2);
     if (mid === fromBlock) return logs;
 
-    const [first, second] = await Promise.all([
-      fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget, signal),
-      fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget, signal),
-    ]);
+    // Sequential splits to avoid fanning out into 2^depth concurrent connections.
+    // Matches the sequential pattern in alchemy-logs.ts.
+    const first = await fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget, signal);
+    const second = await fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget, signal);
     // Combine partial results; propagate null only if both halves failed
     if (first === null && second === null) return null;
     return [...(first ?? []), ...(second ?? [])];

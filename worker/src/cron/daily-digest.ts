@@ -603,6 +603,9 @@ export async function generateDailyDigest(
   console.log("[daily-digest] Calling Claude API with data:\n" + userPromptContent);
 
   // --- Call Claude API ---
+  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.ANTHROPIC))) {
+    throw new Error("Anthropic circuit open — skipping LLM call");
+  }
   const response = await fetchWithRetry(
     "https://api.anthropic.com/v1/messages",
     {
@@ -625,11 +628,13 @@ export async function generateDailyDigest(
   );
 
   if (!response || !response.ok) {
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.ANTHROPIC, false);
     const errorText = response ? await response.text() : "no response after retries";
     throw new Error(
       `Claude API error ${response?.status ?? "null"}: ${typeof errorText === "string" ? errorText.slice(0, 500) : errorText}`,
     );
   }
+  await recordOutcomeSafe(db, CIRCUIT_SOURCE.ANTHROPIC, true);
 
   const result = (await response.json()) as {
     content?: { type: string; text: string }[];
@@ -752,7 +757,9 @@ export async function generateDailyDigest(
 
       try {
         const date = new Date(now * 1000).toISOString().slice(0, 10);
-        // Commit appendix state BEFORE sending to avoid duplicate appendices if send succeeds but commit fails
+        // Design tradeoff: commit appendix state BEFORE sending the Telegram message.
+        // If commit succeeds but send fails, appendix content is "consumed" and won't retry.
+        // This is intentionally the safer failure mode (missing appendix < duplicate appendix).
         if (telegramAppendices) {
           try {
             await telegramAppendices.commitSuccess();

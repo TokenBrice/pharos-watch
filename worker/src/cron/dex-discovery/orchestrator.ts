@@ -252,10 +252,15 @@ export async function syncDexDiscovery(
         failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(err);
         // Count crawl errors as misses so perpetually-failing coins get demoted
         // instead of staying at T1 and consuming budget every run.
-        try {
-          await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec);
-        } catch {
-          /* non-blocking */
+        // Skip demotion for coins with existing pool coverage to avoid permanent
+        // dormant state after transient crawl failures.
+        const existingCoverage = liquidityCoverage.get(candidate.stablecoinId);
+        if (!existingCoverage || existingCoverage.poolCount === 0) {
+          try {
+            await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec);
+          } catch {
+            /* non-blocking */
+          }
         }
       }
 

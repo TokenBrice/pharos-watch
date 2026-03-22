@@ -12,6 +12,7 @@ export interface LlamaPool {
   apyBase: number | null;
   apyReward: number | null;
   apy: number;
+  apyMean30d?: number;
   sigma: number;
   exposure: string;
   count: number;

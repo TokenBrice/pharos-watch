@@ -97,5 +97,14 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
   }
 
   console.log(`[snapshot-supply] Inserted ${stmts.length} rows for date ${new Date(snapshotDate * 1000).toISOString().slice(0, 10)}`);
+
+  // Prune supply_history rows older than 2 years
+  try {
+    const twoYearsAgoSec = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
+    await db.prepare("DELETE FROM supply_history WHERE snapshot_date < ?").bind(twoYearsAgoSec).run();
+  } catch (pruneErr) {
+    console.warn("[snapshot-supply] Failed to prune old supply history:", pruneErr);
+  }
+
   return { itemCount: stmts.length };
 }

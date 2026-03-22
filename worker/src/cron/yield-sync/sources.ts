@@ -120,30 +120,37 @@ export async function fetchOnChainRates(
     return { rates: new Map(), failureBreakdown: { "no-chain-rpcs": ON_CHAIN_RATE_CONFIGS.length } };
   }
 
-  // Fetch all vault exchange rates in parallel. The Workers runtime queues
-  // excess connections behind the 6-connection limit, so this completes in
-  // ceil(N/6) × timeout instead of N × 2 × timeout sequentially.
-  const tasks = ON_CHAIN_RATE_CONFIGS.map(async (config): Promise<{ id: string; rate: number; status: "ok" } | { id: string; status: "no-rpc" | "null" | "error"; error?: string }> => {
-    const rpc = getChainRpc(chainRpcs, config.chain);
-    if (!rpc) return { id: config.stablecoinId, status: "no-rpc" };
+  // Fetch vault exchange rates in batches of 4 to stay within the 6-connection
+  // pool shared with co-scheduled jobs (e.g. sync-dex-liquidity).
+  const RATE_BATCH_SIZE = 4;
+  type RateResult = { id: string; rate: number; status: "ok" } | { id: string; status: "no-rpc" | "null" | "error"; error?: string };
+  const allResults: PromiseSettledResult<RateResult>[] = [];
+  for (let i = 0; i < ON_CHAIN_RATE_CONFIGS.length; i += RATE_BATCH_SIZE) {
+    const batch = ON_CHAIN_RATE_CONFIGS.slice(i, i + RATE_BATCH_SIZE);
+    const tasks = batch.map(async (config): Promise<RateResult> => {
+      const rpc = getChainRpc(chainRpcs, config.chain);
+      if (!rpc) return { id: config.stablecoinId, status: "no-rpc" };
 
-    try {
-      const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
-      const raw = await fetchEvmUint256AtBlock(config.chain, config.contract, callData, "latest", {
-        extraRpcUrls: [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-          (url): url is string => typeof url === "string" && url.length > 0,
-        ),
-        signal,
-        timeoutMs: 10_000,
-      });
-      if (raw == null) return { id: config.stablecoinId, status: "null" };
-      return { id: config.stablecoinId, rate: Number(raw) / 10 ** config.decimals, status: "ok" };
-    } catch (err) {
-      return { id: config.stablecoinId, status: "error", error: err instanceof Error ? err.message : String(err) };
-    }
-  });
+      try {
+        const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
+        const raw = await fetchEvmUint256AtBlock(config.chain, config.contract, callData, "latest", {
+          extraRpcUrls: [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+            (url): url is string => typeof url === "string" && url.length > 0,
+          ),
+          signal,
+          timeoutMs: 10_000,
+        });
+        if (raw == null) return { id: config.stablecoinId, status: "null" };
+        return { id: config.stablecoinId, rate: Number(raw) / 10 ** config.decimals, status: "ok" };
+      } catch (err) {
+        return { id: config.stablecoinId, status: "error", error: err instanceof Error ? err.message : String(err) };
+      }
+    });
+    const batchSettled = await Promise.allSettled(tasks);
+    allResults.push(...batchSettled);
+  }
 
-  const settled = await Promise.allSettled(tasks);
+  const settled = allResults;
   const rates = new Map<string, { rate: number }>();
   const failureCounts: Record<string, number> = {};
 

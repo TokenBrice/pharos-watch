@@ -86,7 +86,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
             .map((p) => ({
               pool: p.pool, chain: p.chain, project: p.project, symbol: p.symbol,
               tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
-              apyReward: p.apyReward, apyMean30d: p.apy, stablecoin: p.stablecoin, exposure: p.exposure,
+              apyReward: p.apyReward, apyMean30d: p.apyMean30d ?? p.apy, stablecoin: p.stablecoin, exposure: p.exposure,
               underlyingTokens: p.underlyingTokens ?? null,
             }));
           await setCache(db, "dl-stablecoin-pools", buildDlStablecoinPoolsCache(minimalPools));

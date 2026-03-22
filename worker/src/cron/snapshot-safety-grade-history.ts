@@ -23,7 +23,17 @@ export async function snapshotSafetyGradeHistory(
   const snapshotDay = Math.floor(nowSec / 86_400) * 86_400;
   const methodologyVersion = SAFETY_SCORE_VERSION;
 
-  const snapshot = await buildReportCardsSnapshot(db);
+  let snapshot;
+  try {
+    snapshot = await buildReportCardsSnapshot(db);
+  } catch (err) {
+    console.error("[snapshot-safety-grade-history] buildReportCardsSnapshot failed:", err);
+    return {
+      status: "error" as const,
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "snapshot-build-failed", error: String(err).slice(0, 200) }),
+    };
+  }
   const liveCards = snapshot.cards.filter((card) => card.isDefunct !== true);
 
   const latestRows = await db

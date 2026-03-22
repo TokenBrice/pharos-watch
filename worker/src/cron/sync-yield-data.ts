@@ -212,6 +212,28 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
     }
   }
 
+  // Coverage regression guard: skip persistence if yield coverage drops below 60%
+  // Only applies when there are enough tracked coins to make the ratio meaningful.
+  const MIN_YIELD_COVERAGE_RATIO = 0.6;
+  const MIN_YIELD_COINS_FOR_GUARD = 10;
+  const yieldCoverageRatio = yieldCoins.length > 0 ? resolvedIds.length / yieldCoins.length : 1;
+  if (yieldCoins.length >= MIN_YIELD_COINS_FOR_GUARD && yieldCoverageRatio < MIN_YIELD_COVERAGE_RATIO) {
+    console.error(
+      `[sync-yield-data] Yield coverage regression: ${resolvedIds.length}/${yieldCoins.length} ` +
+      `(${(yieldCoverageRatio * 100).toFixed(1)}%) — skipping persistence`,
+    );
+    return {
+      status: "degraded" as const,
+      itemCount: resolvedIds.length,
+      metadata: JSON.stringify({
+        reason: "coverage-regression",
+        coverage: yieldCoverageRatio,
+        resolvedCount: resolvedIds.length,
+        totalCount: yieldCoins.length,
+      }),
+    };
+  }
+
   const {
     updatedCount,
     rankingProvenanceByKey,

@@ -172,9 +172,11 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
     const mcapMap: Record<string, number> = {};
     const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
     const tvlHistoryMap: Record<string, { date: number; totalLiquidityUSD: number }[]> = {};
-    const protocolFetches = GOLD_METAS
-      .filter((token) => token.protocolSlug)
-      .map(async (token) => {
+    const tokensWithProtocol = GOLD_METAS.filter((token) => token.protocolSlug);
+    const PROTOCOL_BATCH = 3;
+    for (let pi = 0; pi < tokensWithProtocol.length; pi += PROTOCOL_BATCH) {
+      const batch = tokensWithProtocol.slice(pi, pi + PROTOCOL_BATCH);
+      await Promise.all(batch.map(async (token) => {
         try {
           const res = await fetchWithRetry(`${DEFILLAMA_API}/protocol/${token.protocolSlug}`, {
             headers: { "User-Agent": USER_AGENT },
@@ -192,8 +194,8 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn(`[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}:`, err);
         }
-      });
-    await Promise.all(protocolFetches);
+      }));
+    }
 
     for (const token of GOLD_METAS) {
       if (mcapMap[token.id] != null && mcapMap[token.id] > 0) continue;

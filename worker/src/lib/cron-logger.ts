@@ -169,24 +169,23 @@ export async function logCronRun(
         console.warn(`[db] Failed to clear cron progress for ${job}:`, err);
       }
     }
-  }
-  // Prune rows older than 7 days
-  try {
-    await db
-      .prepare("DELETE FROM cron_runs WHERE started_at < ?")
-      .bind(Math.floor(Date.now() / 1000) - SECONDS.ONE_WEEK)
-      .run();
-  } catch (e) {
-    console.error("[db] Failed to prune old cron runs:", e);
-    // Safety valve: if time-based prune fails, keep only most recent 5000 rows
+    // Prune rows older than 7 days (runs on both success and error paths)
     try {
       await db
-        .prepare(
-          "DELETE FROM cron_runs WHERE rowid NOT IN (SELECT rowid FROM cron_runs ORDER BY started_at DESC LIMIT 5000)",
-        )
+        .prepare("DELETE FROM cron_runs WHERE started_at < ?")
+        .bind(Math.floor(Date.now() / 1000) - SECONDS.ONE_WEEK)
         .run();
-    } catch (e2) {
-      console.error("[db] Safety valve prune also failed:", e2);
+    } catch (pruneErr) {
+      console.error("[db] Failed to prune old cron runs:", pruneErr);
+      try {
+        await db
+          .prepare(
+            "DELETE FROM cron_runs WHERE rowid NOT IN (SELECT rowid FROM cron_runs ORDER BY started_at DESC LIMIT 5000)",
+          )
+          .run();
+      } catch (e2) {
+        console.error("[db] Safety valve prune also failed:", e2);
+      }
     }
   }
   return resolvedResult;

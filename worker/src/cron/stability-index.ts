@@ -155,7 +155,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
 
   await db
     .prepare(
-      `INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot, methodology_version)
+      `INSERT OR REPLACE INTO stability_index_samples (stored_at, score, band, components, input_snapshot, methodology_version)
        VALUES (?, ?, ?, ?, ?, ?)`
     )
     .bind(

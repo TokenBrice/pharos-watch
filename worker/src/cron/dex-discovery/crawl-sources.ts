@@ -81,6 +81,9 @@ export async function crawlCoin(
   };
 
   // Stage 1: CoinGecko Onchain (requires API key)
+  if (!cgApiKey?.trim()) {
+    console.warn(`[dex-discovery] CG API key not configured — Stage 1 (CG onchain) skipped for ${stablecoinId}`);
+  }
   if (cgApiKey?.trim()) {
     let cgRequests = 0;
 

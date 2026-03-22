@@ -35,7 +35,7 @@ export async function runWithOverloadRetry<T>(
         throw err;
       }
       if (signal?.aborted) throw signal.reason ?? new Error("aborted");
-      const delayMs = 150 * 2 ** attempt;
+      const delayMs = Math.round(150 * 2 ** attempt * (0.5 + Math.random() * 0.5));
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       attempt++;
     }
@@ -140,7 +140,7 @@ export async function runCronWithLease<T>(
   const maxRenewFailures = opts?.maxRenewFailures ?? 2;
   const owner = opts?.owner ?? createLeaseOwner(job);
 
-  const acquired = await acquireCronLease(db, job, owner, ttlSec);
+  const acquired = await runWithOverloadRetry(() => acquireCronLease(db, job, owner, ttlSec));
   if (!acquired) {
     return {
       status: "skipped_locked",

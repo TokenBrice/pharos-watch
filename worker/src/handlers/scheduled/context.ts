@@ -104,9 +104,10 @@ export function createScheduledRuntimeContext(
       logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
         const leaseOwner = createLeaseOwner(job);
         const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
-          const mergedSignal = typeof AbortSignal.any === "function"
-            ? AbortSignal.any([signal, leaseSignal])
-            : signal;
+          if (typeof AbortSignal.any !== "function") {
+            throw new Error("AbortSignal.any is required (available since Workers runtime 2023)");
+          }
+          const mergedSignal = AbortSignal.any([signal, leaseSignal]);
           await reportProgress({
             stage: "lease-acquired",
             message: `Lease acquired for ${job}`,

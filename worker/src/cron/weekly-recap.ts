@@ -172,6 +172,9 @@ export async function generateWeeklyRecap(
 
   const userPrompt = buildWeeklyPrompt(weeklyData);
 
+  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.ANTHROPIC))) {
+    return { metadata: "skipped: anthropic circuit open" };
+  }
   const response = await fetchWithRetry(
     "https://api.anthropic.com/v1/messages",
     {
@@ -194,9 +197,11 @@ export async function generateWeeklyRecap(
   );
 
   if (!response || !response.ok) {
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.ANTHROPIC, false);
     const errorText = response ? await response.text() : "no response after retries";
     throw new Error(`Claude API error: ${typeof errorText === "string" ? errorText.slice(0, 500) : errorText}`);
   }
+  await recordOutcomeSafe(db, CIRCUIT_SOURCE.ANTHROPIC, true);
 
   const result = (await response.json()) as { content?: { type: string; text: string }[] };
   const rawText = result.content?.[0]?.text ?? "";

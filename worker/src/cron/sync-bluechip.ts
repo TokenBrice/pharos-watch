@@ -4,7 +4,8 @@ import { shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { validatePayloadWithSchema } from "../lib/api-utils";
-import { USER_AGENT } from "../lib/constants";
+import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
+import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { z } from "zod";
 
 const CACHE_KEY = "bluechip-ratings";
@@ -71,6 +72,10 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
   }
 
+  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.BLUECHIP))) {
+    return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "bluechip-circuit-open" }) };
+  }
+
   const entries = Object.entries(BLUECHIP_SLUG_MAP);
 
   // Process in batches of 3 with 500ms delay to avoid flooding backend.bluechip.org
@@ -130,6 +135,8 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
       count++;
     }
   }
+
+  await recordOutcomeSafe(db, CIRCUIT_SOURCE.BLUECHIP, count > 0);
 
   if (count === 0) {
     console.warn("[bluechip] No ratings fetched, preserving cache");
