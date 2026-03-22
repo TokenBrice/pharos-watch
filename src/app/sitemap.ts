@@ -28,6 +28,7 @@ const LAST_EDITED: Record<string, string> = {
   "/methodology/yield-changelog/": "2026-03-04",
   "/methodology/chain-health-changelog/": "2026-03-16",
   "/portfolio/": "2026-03-09",
+  "/upcoming/": "2026-03-22",
   "/depeg/": "2026-03-02",
   "/yield/": "2026-03-02",
   "/flows/": "2026-03-10",
@@ -92,6 +93,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(LAST_EDITED["/portfolio/"]!),
       changeFrequency: "daily",
       priority: 0.7,
+    },
+    {
+      url: "https://pharos.watch/upcoming/",
+      lastModified: new Date(LAST_EDITED["/upcoming/"]!),
+      changeFrequency: "daily",
+      priority: 0.6,
     },
     {
       url: "https://pharos.watch/digest/",
