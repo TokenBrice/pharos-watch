@@ -349,6 +349,9 @@ export async function runCmcPass(
   const missingAfterPass1b = assets
     .map((a, i) => ({ asset: a, index: i }))
     .filter((m) => hasMissingPrice(m.asset));
+  if (missingAfterPass1b.length === 0) {
+    return { resolved, failures: [] };
+  }
 
   const cmcAllowed =
     cmcApiKey != null && db != null
@@ -466,6 +469,9 @@ export async function runDexScreenerPass(
   const stillMissing = assets
     .map((a, i) => ({ asset: a, index: i }))
     .filter((m) => hasMissingPrice(m.asset));
+  if (stillMissing.length === 0) {
+    return { resolved, failures: [] };
+  }
 
   if (stillMissing.length > DEXSCREENER_MAX_REQUESTS) {
     console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_REQUESTS} requests`);
@@ -606,16 +612,16 @@ export async function runJupiterPass(
   signal?: AbortSignal,
 ): Promise<EnrichPassResult> {
   let resolved = 0;
-  const jupiterAllowed = db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.JUPITER_PRICES) : true;
-  if (!jupiterAllowed) {
-    console.warn("[enrich] Jupiter circuit open — skipping pass 3");
-    return { resolved, failures: [] };
-  }
-
   const candidates = assets
     .map((asset, index) => ({ asset, index, mint: SOLANA_MINT_BY_ID.get(asset.id) }))
     .filter((entry) => hasMissingPrice(entry.asset) && entry.mint);
   if (candidates.length === 0) {
+    return { resolved, failures: [] };
+  }
+
+  const jupiterAllowed = db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.JUPITER_PRICES) : true;
+  if (!jupiterAllowed) {
+    console.warn("[enrich] Jupiter circuit open — skipping pass 3");
     return { resolved, failures: [] };
   }
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice, applyPoolChallenge } from "../enrich-prices";
 import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../enrich-prices";
+import { runCmcPass, runDexScreenerPass, runJupiterPass } from "../enrich-prices-passes";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 
@@ -608,6 +609,54 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0.9998);
     expect(assets[0].priceSource).toBe("jupiter");
     expect(stats.finalMissing).toBe(0);
+  });
+
+  it("skips the CMC breaker check when no assets are missing", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 1,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    const db = mockD1([], { requireMatch: true });
+
+    await expect(runCmcPass(assets, "test-cmc-key", undefined, db)).resolves.toEqual({
+      resolved: 0,
+      failures: [],
+    });
+  });
+
+  it("skips the Jupiter breaker check when there are no Solana fallback candidates", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usbd-bima", name: "USBD", symbol: "USBD", price: 0,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    const db = mockD1([], { requireMatch: true });
+
+    await expect(runJupiterPass(assets, undefined, db)).resolves.toEqual({
+      resolved: 0,
+      failures: [],
+    });
+  });
+
+  it("skips the DexScreener breaker check when nothing is missing", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 1,
+        pegType: "peggedUSD", circulating: {},
+      },
+    ];
+
+    const db = mockD1([], { requireMatch: true });
+
+    await expect(runDexScreenerPass(assets, undefined, db)).resolves.toEqual({
+      resolved: 0,
+      failures: [],
+    });
   });
 });
 
