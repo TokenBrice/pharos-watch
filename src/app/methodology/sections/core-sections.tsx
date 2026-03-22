@@ -1,12 +1,21 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/liquidity-score-version";
+import {
+  LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+  LIQUIDITY_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/liquidity-score-version";
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/mint-burn-flow-version";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
-import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
+import {
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  SAFETY_SCORE_VERSION_LABEL,
+} from "@shared/lib/safety-score-version";
+import {
+  PSI_METHODOLOGY_CHANGELOG_PATH,
+  PSI_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/stability-index-version";
 import {
   PRICING_PIPELINE_CHANGELOG_PATH,
   PRICING_PIPELINE_VERSION_LABEL,
@@ -421,7 +430,7 @@ export function CoreMethodologySections() {
               {PSI_METHODOLOGY_VERSION_LABEL}
             </span>
             <Link
-              href="/methodology/stability-index-changelog"
+              href={PSI_METHODOLOGY_CHANGELOG_PATH}
               className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-700 dark:text-cyan-400 transition-colors"
             >
               Version history &rarr;
@@ -679,7 +688,7 @@ export function CoreMethodologySections() {
               {SAFETY_SCORE_VERSION_LABEL}
             </span>
             <Link
-              href="/methodology/scoring-changelog"
+              href={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
               className="text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors"
             >
               Version history &rarr;
@@ -1181,7 +1190,7 @@ export function CoreMethodologySections() {
               {LIQUIDITY_METHODOLOGY_VERSION_LABEL}
             </span>
             <Link
-              href="/methodology/liquidity-score-changelog"
+              href={LIQUIDITY_METHODOLOGY_CHANGELOG_PATH}
               className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-700 dark:text-cyan-400 transition-colors"
             >
               Version history &rarr;

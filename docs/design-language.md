@@ -1,6 +1,6 @@
 # Design Language Reference (Live Baseline)
 
-This document reflects the current UI baseline in the codebase and was re-verified on **March 11, 2026**.
+This document reflects the current UI baseline in the codebase and was re-verified on **March 22, 2026**.
 
 Use this as the visual source of truth for product-facing design decisions. For token definitions (primitive, semantic, component), see [`design-tokens.md`](design-tokens.md). The bridge layer lives in `src/app/globals.css`.
 
@@ -147,7 +147,7 @@ This pairing creates a "broadsheet newspaper" aesthetic that signals both author
 **Implementation**: Import styles from `@/lib/digest`:
 - `EDITORIAL_BODY_STYLE` — Courier italic for prose
 - `EDITORIAL_META_STYLE` — Courier upright for labels
-- `digestDisplay.className` — Newsreader (via next/font) for titles
+- `EDITORIAL_TITLE_CLASS` — serif font class for titles
 
 ### Cemetery (Special)
 

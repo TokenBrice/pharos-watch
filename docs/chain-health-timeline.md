@@ -1,6 +1,6 @@
 # Chain Health Score Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Chain Health Score `v1.0` through `v1.1` (2026-03-16 -> 2026-03-16).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Chain Health Score `v1.0` through `v1.1` (both released 2026-03-16).
 
 ---
 

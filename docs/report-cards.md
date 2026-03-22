@@ -146,8 +146,8 @@ For coins without curated reserves, the legacy enum-based scoring is used:
 
 | Backing + Governance                      | Chain Tier | Deployment Model | Collateral Quality | Custody Model |
 | ----------------------------------------- | ---------- | ---------------- | ------------------ | ------------- |
-| `rwa-backed` + `centralized`              | ethereum   | single-chain     | rwa                | institutional |
-| `rwa-backed` + `centralized-dependent`    | ethereum   | single-chain     | rwa                | institutional |
+| `rwa-backed` + `centralized`              | ethereum   | single-chain     | rwa                | institutional-regulated |
+| `rwa-backed` + `centralized-dependent`    | ethereum   | single-chain     | rwa                | institutional-regulated |
 | `crypto-backed` + `decentralized`         | ethereum   | single-chain     | native             | onchain       |
 | `crypto-backed` + `centralized-dependent` | ethereum   | single-chain     | eth-lst            | onchain       |
 | `algorithmic` + any                       | ethereum   | single-chain     | native             | onchain       |
