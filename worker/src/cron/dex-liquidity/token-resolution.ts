@@ -90,12 +90,3 @@ export function getChainScopedSymbolIds(
   if (!normalized) return [];
   return lookups.symbolToChainScopedIds.get(normalized)?.get(chain.toLowerCase()) ?? [];
 }
-
-export function getUniqueChainScopedSymbolId(
-  symbol: string,
-  chain: string,
-  lookups: Pick<SymbolLookups, "symbolToChainScopedIds">,
-): string | undefined {
-  const ids = getChainScopedSymbolIds(symbol, chain, lookups);
-  return ids.length === 1 ? ids[0] : undefined;
-}
