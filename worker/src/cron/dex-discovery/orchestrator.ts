@@ -38,7 +38,7 @@ interface DiscoveryCandidate {
 // Keep discovery comfortably below the wrapper timeout so partial staging runs
 // degrade cleanly instead of dying mid-flight and leaving stale progress behind.
 export const DEX_DISCOVERY_RUN_BUDGET_MS = 12 * 60_000;
-export const DEX_DISCOVERY_PER_COIN_BUDGET_MS = 25_000;
+const DEX_DISCOVERY_PER_COIN_BUDGET_MS = 25_000;
 
 function summarizeDiscoveryError(err: unknown): string {
   if (err instanceof Error) {
