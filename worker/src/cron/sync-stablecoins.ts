@@ -397,14 +397,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       stampPriceMetadata(asset, asset.priceSource || "defillama", "single-source", syncStartSec, [asset.priceSource || "defillama"], [asset.priceSource || "defillama"]);
     }
   }
-
   // Tag all DL-sourced assets with supplySource
   for (const asset of assets) {
     if (!asset.supplySource) {
       asset.supplySource = "defillama";
     }
   }
-
   // Pre-validate: route unreasonable prices through enrichment
   for (const asset of assets) {
     if (
@@ -425,7 +423,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       }
     }
   }
-
   // Enrich any assets that still have missing prices
   const missingBefore = new Set(
     assets.filter(hasMissingPrice).map((a) => a.id)
@@ -433,7 +430,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   const enrichAbort = returnIfAborted(signal, "enrich-prices");
   if (enrichAbort) return enrichAbort;
   const enrichStats = await enrichMissingPrices(assets, cmcApiKey, db, signal);
-
   // Tag enriched assets with fallback confidence
   for (const asset of assets) {
     if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
