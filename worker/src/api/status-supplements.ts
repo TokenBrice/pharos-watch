@@ -1,7 +1,9 @@
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
+import { STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT } from "@shared/lib/status-thresholds";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
   ClassificationWarning,
+  CoinGeckoPriceDiff,
   DiscoveryCandidate,
   LiquidityHealth,
   MintBurnReconciliationSummary,
@@ -12,7 +14,10 @@ import type {
   StatusSectionErrors,
 } from "@shared/types";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
+import { cgHeaders, cgUrl } from "../lib/coingecko";
+import { USER_AGENT } from "../lib/constants";
 import { loadFreshLiveReserveMap } from "../lib/live-reserves-store";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 
 function sectionError(code: string, message: string): StatusSectionError {
@@ -22,6 +27,7 @@ function sectionError(code: string, message: string): StatusSectionError {
 export interface StatusSupplements {
   liquidityHealth: LiquidityHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
+  coingeckoPriceDiff: CoinGeckoPriceDiff | null;
   discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveDrift?: ReserveDriftEntry[];
@@ -29,10 +35,113 @@ export interface StatusSupplements {
   sectionErrors: StatusSectionErrors;
 }
 
+async function fetchCoinGeckoUsdPrices(
+  geckoIds: string[],
+  coingeckoApiKey: string,
+): Promise<Map<string, number>> {
+  const BATCH_SIZE = 250;
+  const prices = new Map<string, number>();
+
+  for (let index = 0; index < geckoIds.length; index += BATCH_SIZE) {
+    const batch = geckoIds.slice(index, index + BATCH_SIZE);
+    const params = new URLSearchParams({
+      ids: batch.join(","),
+      vs_currencies: "usd",
+    });
+    const response = await fetch(cgUrl(`/simple/price?${params.toString()}`, coingeckoApiKey), {
+      headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey),
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`CoinGecko simple price fetch failed (${response.status})`);
+    }
+
+    const payload = await response.json() as Record<string, { usd?: number }>;
+    for (const [geckoId, quote] of Object.entries(payload)) {
+      if (typeof quote?.usd === "number" && Number.isFinite(quote.usd) && quote.usd > 0) {
+        prices.set(geckoId, quote.usd);
+      }
+    }
+  }
+
+  return prices;
+}
+
+async function loadCoinGeckoPriceDiff(
+  db: D1Database,
+  now: number,
+  coingeckoApiKey: string,
+): Promise<CoinGeckoPriceDiff> {
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  if (!hasUsableStablecoinsPayload(stablecoinsCache)) {
+    throw new Error(`stablecoins cache ${stablecoinsCache.reason}`);
+  }
+
+  const trackedWithGeckoId = stablecoinsCache.payload.peggedAssets.filter(
+    (asset) => typeof asset.geckoId === "string" && asset.geckoId.length > 0,
+  );
+  if (trackedWithGeckoId.length === 0) {
+    return {
+      checkedAt: now,
+      trackedWithGeckoId: 0,
+      comparedCoins: 0,
+      mismatchedCount: 0,
+      thresholdPct: STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
+      rows: [],
+    };
+  }
+
+  const geckoIds = [...new Set(trackedWithGeckoId.map((asset) => asset.geckoId).filter((value): value is string => Boolean(value)))];
+  const coingeckoPrices = await fetchCoinGeckoUsdPrices(geckoIds, coingeckoApiKey);
+
+  let comparedCoins = 0;
+  const rows = trackedWithGeckoId.flatMap((asset) => {
+    const ourPrice = typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0
+      ? asset.price
+      : null;
+    const geckoId = asset.geckoId;
+    const coinGeckoPrice = geckoId ? coingeckoPrices.get(geckoId) ?? null : null;
+    if (ourPrice == null || geckoId == null || coinGeckoPrice == null) {
+      return [];
+    }
+
+    comparedCoins++;
+    const diffPct = Math.abs(ourPrice - coinGeckoPrice) / coinGeckoPrice * 100;
+    if (diffPct <= STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT) {
+      return [];
+    }
+
+    return [{
+      stablecoinId: asset.id,
+      symbol: asset.symbol,
+      name: asset.name ?? asset.symbol,
+      geckoId,
+      ourPrice,
+      coinGeckoPrice,
+      diffPct,
+      priceSource: asset.priceSource ?? "unknown",
+      priceConfidence: asset.priceConfidence ?? null,
+    }];
+  });
+
+  rows.sort((left, right) => right.diffPct - left.diffPct);
+
+  return {
+    checkedAt: now,
+    trackedWithGeckoId: trackedWithGeckoId.length,
+    comparedCoins,
+    mismatchedCount: rows.length,
+    thresholdPct: STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
+    rows,
+  };
+}
+
 export async function loadStatusSupplements(
   db: D1Database,
   now: number,
   crons: StatusResponse["crons"],
+  coingeckoApiKey?: string | null,
 ): Promise<StatusSupplements> {
   const sectionErrors: StatusSectionErrors = {};
 
@@ -119,6 +228,19 @@ export async function loadStatusSupplements(
     );
   }
 
+  let coingeckoPriceDiff: CoinGeckoPriceDiff | null = null;
+  if (coingeckoApiKey) {
+    try {
+      coingeckoPriceDiff = await loadCoinGeckoPriceDiff(db, now, coingeckoApiKey);
+    } catch (err) {
+      console.warn("[status] CoinGecko price diff query failed:", err);
+      sectionErrors.coingeckoPriceDiff = sectionError(
+        "coingecko_price_diff_query_failed",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
   let mintBurnReconciliation: MintBurnReconciliationSummary | null = null;
   try {
     mintBurnReconciliation = await getMintBurnReconciliation(db, now);
@@ -182,6 +304,7 @@ export async function loadStatusSupplements(
   return {
     liquidityHealth,
     priceSourceHealth,
+    coingeckoPriceDiff,
     discoveryCandidates,
     mintBurnReconciliation,
     reserveDrift,

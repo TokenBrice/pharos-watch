@@ -2047,6 +2047,26 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "totalAssets": 156,
     "lastSync": 1771856400
   },
+  "coingeckoPriceDiff": {
+    "checkedAt": 1771856453,
+    "trackedWithGeckoId": 152,
+    "comparedCoins": 149,
+    "mismatchedCount": 2,
+    "thresholdPct": 5,
+    "rows": [
+      {
+        "stablecoinId": "pyusd-paypal",
+        "symbol": "PYUSD",
+        "name": "PayPal USD",
+        "geckoId": "paypal-usd",
+        "ourPrice": 0.944,
+        "coinGeckoPrice": 1.002,
+        "diffPct": 5.79,
+        "priceSource": "defillama",
+        "priceConfidence": "single-source"
+      }
+    ]
+  },
   "liquidityHealth": {
     "lastRunStatus": "degraded",
     "currentCoverage": 120,
@@ -2111,13 +2131,15 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 
 `telegramBot` is `null` when the Telegram tables are unavailable in the current environment (for example, migrations not yet applied in dev/staging). The rest of `/api/status` still resolves normally.
 
-`sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing `message`.
+`sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing `message`.
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `suppressedMethodologyChanges`).
 
 `datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
 
 `priceSourceHealth` is derived from the final `sync-stablecoins` asset payload and summarizes resolved price-source distribution, confidence buckets, recent CoinGecko-vs-DefiLlama divergences, and the timestamp of the latest successful price-health snapshot. This includes protocol-backed sources such as direct redemption quotes when they supersede market data.
+
+`coingeckoPriceDiff` is an admin-only live comparison block. It reads the cached tracked assets with `geckoId`, fetches current CoinGecko spot prices through one or more batched `simple/price` calls, and reports the rows where `abs(pharosPrice - coinGeckoPrice) / coinGeckoPrice > 0.05`. The field is `null` when the comparison is unavailable in the current environment or when the loader fails; failures are surfaced through `sectionErrors.coingeckoPriceDiff`.
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
 

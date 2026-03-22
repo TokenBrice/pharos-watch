@@ -71,6 +71,9 @@ export const STATUS_PRICE_CONFIDENCE_BANDS = {
   lowCountRed: 10,
 } as const;
 
+// --- CoinGecko comparison thresholds ---
+export const STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT = 5;
+
 // --- Mint/burn reconciliation thresholds ---
 export const STATUS_RECONCILIATION_THRESHOLDS = {
   criticalAbsoluteUsd: 100_000_000,

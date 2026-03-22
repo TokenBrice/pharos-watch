@@ -1,9 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
+import { mockFetch } from "./helpers/mock-fetch";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 stubCryptoForAuth();
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const { handleStatus } = await import("../status");
 
@@ -186,6 +191,7 @@ describe("handleStatus", () => {
       datasetFreshness: Record<string, number | null>;
       state: Record<string, unknown>;
       priceSourceHealth: Record<string, unknown> | null;
+      coingeckoPriceDiff: Record<string, unknown> | null;
       liquidityHealth: Record<string, unknown> | null;
       discoveryCandidates: Array<Record<string, unknown>> | null;
       mintBurnReconciliation: Record<string, unknown> | null;
@@ -203,6 +209,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("datasetFreshness");
     expect(body).toHaveProperty("state");
     expect(body).toHaveProperty("priceSourceHealth");
+    expect(body).toHaveProperty("coingeckoPriceDiff");
     expect(body).toHaveProperty("liquidityHealth");
     expect(body).toHaveProperty("discoveryCandidates");
     expect(body).toHaveProperty("mintBurnReconciliation");
@@ -226,6 +233,7 @@ describe("handleStatus", () => {
     expect(body.priceSourceHealth).toMatchObject({
       totalAssets: 156,
     });
+    expect(body.coingeckoPriceDiff).toBeNull();
     expect(body.liquidityHealth).toMatchObject({
       currentCoverage: 120,
       failedSources: ["defillama-yields"],
@@ -295,6 +303,164 @@ describe("handleStatus", () => {
     expect(body.crons["sync-stablecoins"]?.healthy).toBe(true);
     expect(body.crons["sync-stablecoins"]?.telemetryUnknown).toBe(true);
     expect(body.causes.availability.some((cause) => cause.code === "cron_history_query_failed")).toBe(true);
+  });
+
+  it("surfaces tracked CoinGecko price mismatches above threshold", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          name: "Tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          pegType: "peggedUSD",
+          pegMechanism: "fiat-backed",
+          price: 1,
+          priceSource: "coingecko+defillama-list",
+          priceConfidence: "high",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+        {
+          id: "pyusd-paypal",
+          name: "PayPal USD",
+          symbol: "PYUSD",
+          geckoId: "paypal-usd",
+          pegType: "peggedUSD",
+          pegMechanism: "fiat-backed",
+          price: 0.9,
+          priceSource: "defillama",
+          priceConfidence: "single-source",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+      ],
+    });
+
+    mockFetch([
+      {
+        match: "/simple/price",
+        body: {
+          tether: { usd: 1 },
+          "paypal-usd": { usd: 1 },
+        },
+      },
+    ]);
+
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request, "cg-test-key");
+    const body = (await res.json()) as {
+      coingeckoPriceDiff: {
+        checkedAt: number;
+        trackedWithGeckoId: number;
+        comparedCoins: number;
+        mismatchedCount: number;
+        thresholdPct: number;
+        rows: Array<{
+          stablecoinId: string;
+          symbol: string;
+          name: string;
+          ourPrice: number;
+          coinGeckoPrice: number;
+          diffPct: number;
+          priceSource: string;
+          priceConfidence: string | null;
+        }>;
+      } | null;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.coingeckoPriceDiff).toMatchObject({
+      trackedWithGeckoId: 2,
+      comparedCoins: 2,
+      mismatchedCount: 1,
+      thresholdPct: 5,
+    });
+    expect(body.coingeckoPriceDiff?.rows[0]).toMatchObject({
+      stablecoinId: "pyusd-paypal",
+      symbol: "PYUSD",
+      name: "PayPal USD",
+      ourPrice: 0.9,
+      coinGeckoPrice: 1,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+    });
+    expect(body.coingeckoPriceDiff?.rows[0].diffPct ?? 0).toBeGreaterThan(5);
+  });
+
+  it("surfaces CoinGecko comparison loader failures through sectionErrors", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          name: "Tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          pegType: "peggedUSD",
+          pegMechanism: "fiat-backed",
+          price: 1,
+          priceSource: "coingecko",
+          priceConfidence: "single-source",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+      ],
+    });
+
+    mockFetch([
+      {
+        match: "/simple/price",
+        body: { error: "cg down" },
+        status: 503,
+      },
+    ]);
+
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request, "cg-test-key");
+    const body = (await res.json()) as {
+      coingeckoPriceDiff: unknown;
+      sectionErrors: Record<string, { code: string; message: string } | undefined>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.coingeckoPriceDiff).toBeNull();
+    expect(body.sectionErrors.coingeckoPriceDiff).toEqual({
+      code: "coingecko_price_diff_query_failed",
+      message: "CoinGecko simple price fetch failed (503)",
+    });
   });
 
   it("emits cache warnings alongside degraded FX-source warnings", async () => {

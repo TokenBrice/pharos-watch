@@ -7,6 +7,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
+import { CoinGeckoPriceDiffCard } from "@/components/status/coingecko-price-diff";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { CronCard } from "@/components/status/cron-card";
 import { DataQualityCards } from "@/components/status/data-quality-cards";
@@ -312,6 +313,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
               className={getStatusTone(data.dataQualityStatus).badgeClassName}
             />
             <SummaryBadge label="Missing Prices" value={String(data.dataQuality.missingPrices)} />
+            <SummaryBadge label="CG Drift" value={String(data.coingeckoPriceDiff?.mismatchedCount ?? 0)} />
             <SummaryBadge label="Stale On-chain" value={String(data.dataQuality.staleOnchainSupply)} />
             <SummaryBadge label="Reserve Drift" value={String(data.reserveDrift?.length ?? 0)} />
             <SummaryBadge label="Class Warnings" value={String(data.classificationWarnings?.length ?? 0)} />
@@ -351,6 +353,12 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
             error={data.sectionErrors.liquidityHealth}
           />
         </div>
+
+        <CoinGeckoPriceDiffCard
+          summary={data.coingeckoPriceDiff}
+          error={data.sectionErrors.coingeckoPriceDiff}
+          nowSeconds={data.timestamp}
+        />
 
         <div className="grid gap-5 xl:grid-cols-2">
           <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />

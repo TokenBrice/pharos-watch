@@ -38,6 +38,10 @@ vi.mock("@/components/status/cache-freshness-table", () => ({
   CacheFreshnessTable: () => <div data-testid="cache-freshness">cache freshness</div>,
 }));
 
+vi.mock("@/components/status/coingecko-price-diff", () => ({
+  CoinGeckoPriceDiffCard: () => <div data-testid="coingecko-price-diff">coingecko diff</div>,
+}));
+
 vi.mock("@/components/status/circuit-breaker-table", () => ({
   CircuitBreakerTable: () => <div data-testid="circuit-breakers">circuit breakers</div>,
 }));
@@ -253,6 +257,7 @@ const BASE_STATUS: StatusResponse = {
   },
   liquidityHealth: null,
   priceSourceHealth: null,
+  coingeckoPriceDiff: null,
   discoveryCandidates: null,
   mintBurnReconciliation: null,
   reserveComposition: {

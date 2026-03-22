@@ -113,7 +113,7 @@ The active frontend operator mode is now:
 - The client now groups widgets into six operational lanes instead of one flat vertical list:
   - `Overview`: incident detail first, with the state-machine / probe diagnostics moved behind a secondary disclosure block
   - `Actions`: manual response tools promoted upward when recommendations exist; Telegram delivery telemetry is now secondary and collapsible
-  - `Pipeline`: data-quality threshold board, price-source health, liquidity health, pipeline freshness, live reserve sync health, mint/burn reconciliation, metadata-integrity watchlists (`reserveDrift`, `classificationWarnings`), and discovery backlog
+  - `Pipeline`: data-quality threshold board, price-source health, CoinGecko price drift watchlist, liquidity health, pipeline freshness, live reserve sync health, mint/burn reconciliation, metadata-integrity watchlists (`reserveDrift`, `classificationWarnings`), and discovery backlog
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
   - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, and cache freshness; manual action routes are no longer rendered as default `Not probed` noise
   - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers; unhealthy/degraded groups sort first and fully healthy groups collapse by default
@@ -252,6 +252,7 @@ Additional response fields:
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
 - `summary`: compact availability rollup (`unhealthyCrons`, `degradedCrons`, `cronErrors`, `worstCacheRatio`)
 - `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `lastSuccessAt`, `oldestFreshAgeSec`)
+- `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
 - `reserveDrift`: optional array of coins where the live-derived collateral quality score diverges from curated by more than 5 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
 - `classificationWarnings`: optional array of decentralized-governance coins where centralized custody fraction exceeds 50% (`coinId`, `governance`, `centralizedCustodyPct`, `threshold`). Signals potential governance reclassification candidates. Omitted when no warnings.
 
@@ -439,6 +440,26 @@ Renders after the Circuit Breakers section. Shows the current price confidence d
 - **Last sync age** — how old the price-health snapshot is
 
 Data is sourced from `sync-stablecoins` cron metadata stored in the most recent `cron_runs` row — no extra DB query required.
+
+## CoinGecko Price Drift Card
+
+**Component:** `CoinGeckoPriceDiffCard` (`src/components/status/coingecko-price-diff.tsx`)
+
+Renders in the pipeline lane after the price-source and liquidity health cards. It shows tracked assets that:
+
+- have a configured `geckoId`
+- still have a current comparable Pharos price in the cached stablecoins payload
+- differ from live CoinGecko spot by more than `5%`
+
+Each row displays:
+
+- stablecoin symbol and name
+- Pharos reported price
+- CoinGecko spot price
+- current Pharos price source and confidence tag
+- absolute percentage difference badge
+
+Data is sourced from the admin-only `GET /api/status` payload. The worker supplement reads the cached tracked asset list, batches a CoinGecko `simple/price` fetch, compares the current prices, and sorts flagged rows by `diffPct` descending. When the CoinGecko lookup fails, the card degrades to `null` and the worker records `sectionErrors.coingeckoPriceDiff`.
 
 ## Mint/Burn Reconciliation Card
 

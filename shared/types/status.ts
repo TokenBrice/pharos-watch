@@ -298,12 +298,34 @@ export interface ClassificationWarning {
   threshold: number;
 }
 
+export interface CoinGeckoPriceDiffRow {
+  stablecoinId: string;
+  symbol: string;
+  name: string;
+  geckoId: string;
+  ourPrice: number;
+  coinGeckoPrice: number;
+  diffPct: number;
+  priceSource: string;
+  priceConfidence: string | null;
+}
+
+export interface CoinGeckoPriceDiff {
+  checkedAt: number;
+  trackedWithGeckoId: number;
+  comparedCoins: number;
+  mismatchedCount: number;
+  thresholdPct: number;
+  rows: CoinGeckoPriceDiffRow[];
+}
+
 export type StatusSectionKey =
   | "statusState"
   | "telegramBot"
   | "reserveComposition"
   | "liquidityHealth"
   | "priceSourceHealth"
+  | "coingeckoPriceDiff"
   | "discoveryCandidates"
   | "mintBurnReconciliation"
   | "reserveDrift"
@@ -348,6 +370,7 @@ export interface StatusResponse {
   };
   liquidityHealth: LiquidityHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
+  coingeckoPriceDiff: CoinGeckoPriceDiff | null;
   discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveComposition: {

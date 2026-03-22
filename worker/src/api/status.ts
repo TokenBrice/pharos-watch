@@ -18,7 +18,7 @@ import type { StatusResponse } from "@shared/types";
 
 export const handleStatus = withErrorHandler(
   "status",
-  async (db: D1Database, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
+  async (db: D1Database, trustedAdmin?: boolean, request?: Request, coingeckoApiKey?: string | null): Promise<Response> => {
     return withAdmin(
       request,
       async () => {
@@ -53,7 +53,7 @@ export const handleStatus = withErrorHandler(
         const discrepancyStreak = await getDiscrepancyStreak(db, collectPersistenceIssue);
         const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
         const timeline = await listRecentStatusTransitions(db, 40, undefined, collectPersistenceIssue);
-        const supplements = await loadStatusSupplements(db, now, raw.crons);
+        const supplements = await loadStatusSupplements(db, now, raw.crons, coingeckoApiKey);
         const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
 
         const body: StatusResponse = {
@@ -88,6 +88,7 @@ export const handleStatus = withErrorHandler(
           reserveComposition: raw.reserveComposition,
           liquidityHealth: supplements.liquidityHealth,
           priceSourceHealth: supplements.priceSourceHealth,
+          coingeckoPriceDiff: supplements.coingeckoPriceDiff,
           discoveryCandidates: supplements.discoveryCandidates,
           mintBurnReconciliation: supplements.mintBurnReconciliation,
           reserveDrift: supplements.reserveDrift,
