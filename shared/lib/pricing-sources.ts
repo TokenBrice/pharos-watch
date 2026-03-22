@@ -1,4 +1,4 @@
-export const PRICING_SOURCE_LABELS = {
+const PRICING_SOURCE_LABELS = {
   coingecko: "CoinGecko",
   defillama: "DefiLlama",
   "defillama-list": "DefiLlama (list)",
@@ -95,10 +95,6 @@ export function createEmptyPriceSourceHealthDistribution(): Record<PriceSourceHe
 
 export function getPricingSourceLabel(sourceKey: string): string {
   return PRICING_SOURCE_LABELS[sourceKey as PricingSourceKey] ?? sourceKey;
-}
-
-export function getPriceSourceHealthBucketLabel(bucketKey: PriceSourceHealthBucketKey): string {
-  return PRICE_SOURCE_HEALTH_BUCKET_DEFS.find((bucket) => bucket.key === bucketKey)?.label ?? bucketKey;
 }
 
 export function getPriceSourceHealthBucketShortLabel(bucketKey: PriceSourceHealthBucketKey): string {

@@ -1,6 +1,6 @@
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 
-export const POOL_CHALLENGE_EXEMPT_SOURCES = new Set([
+const POOL_CHALLENGE_EXEMPT_SOURCES = new Set([
   "pyth",
   "binance",
   "kraken",
