@@ -64,7 +64,7 @@ export function adaptFdusdTransparency(html: string): AdapterResult {
     metadata: {
       sliceCount: entries.length,
       ...(asOf ? { asOf } : {}),
-      ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+      ...(sourceTimestamp != null ? { sourceTimestamp, freshnessMode: "verified" as const } : { freshnessMode: "unverified" as const }),
     },
   };
 }
@@ -73,13 +73,14 @@ export async function fetchFdusdTransparencyReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "fdusd-transparency");
   const html = await fetchTextWithRetry(
     input.url,
     signal,
     getAdapterTimeout(config, 15_000),
+    ctx,
   );
   return adaptFdusdTransparency(html);
 }

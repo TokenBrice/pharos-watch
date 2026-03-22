@@ -17,12 +17,12 @@ describe("adaptAsymmetry", () => {
     });
 
     expect(slices.slices).toEqual([
-      { name: "ysyBOLD", pct: 65, risk: "medium", coinId: "bold-liquity", depType: "wrapper" },
-      { name: "scrvUSD", pct: 23, risk: "medium", coinId: "crvusd-curve", depType: "wrapper" },
-      { name: "sUSDS", pct: 7, risk: "low", coinId: "usds-sky", depType: "wrapper" },
-      { name: "tBTC", pct: 2, risk: "medium" },
-      { name: "sfrxUSD", pct: 2, risk: "medium", coinId: "frax-frax", depType: "wrapper" },
-      { name: "WBTC", pct: 1, risk: "medium" },
+      { name: "ysyBOLD", pct: 65.3, risk: "medium", coinId: "bold-liquity", depType: "wrapper" },
+      { name: "scrvUSD", pct: 22.6, risk: "medium", coinId: "crvusd-curve", depType: "wrapper" },
+      { name: "sUSDS", pct: 7.4, risk: "low", coinId: "usds-sky", depType: "wrapper" },
+      { name: "tBTC", pct: 2.3, risk: "medium" },
+      { name: "sfrxUSD", pct: 1.9, risk: "medium", coinId: "frax-frax", depType: "wrapper" },
+      { name: "WBTC", pct: 0.5, risk: "medium" },
     ]);
   });
 });

@@ -1,7 +1,7 @@
-import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import type { AdapterResult } from "./types";
-import { fetchDefiLlamaPrices, fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, slicesFromValues } from "./helpers";
+import type { AdapterContext, AdapterResult } from "./types";
+import { fetchDefiLlamaPrices, fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, reserveDegradedWarning, slicesFromValues } from "./helpers";
 
 interface FxPoolInfo {
   collateralBalance?: string;
@@ -18,17 +18,18 @@ const TOKEN_META = {
   wbtc: { chain: "ethereum", address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", decimals: 8, risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium", name: "WBTC" },
 };
 
-export function adaptFx(payload: FxPayload): Array<{ key: keyof typeof TOKEN_META; amount: number }> {
+export function adaptFx(payload: FxPayload): {
+  balances: Array<{ key: keyof typeof TOKEN_META; amount: number }>;
+  unknownKeys: string[];
+} {
   const poolInfo = payload.data?.poolInfo ?? {};
   const unexpectedPositiveKeys = Object.entries(poolInfo)
     .filter(([key]) => !(key in TOKEN_META))
     .filter(([, info]) => Number(info?.collateralBalance ?? "0") > 0)
     .map(([key]) => key);
-  if (unexpectedPositiveKeys.length > 0) {
-    throw new Error(`fx adapter found unsupported collateral key(s): ${unexpectedPositiveKeys.join(", ")}`);
-  }
 
-  return (Object.keys(TOKEN_META) as Array<keyof typeof TOKEN_META>)
+  return {
+    balances: (Object.keys(TOKEN_META) as Array<keyof typeof TOKEN_META>)
     .map((key) => {
       const balance = Number(poolInfo[key]?.collateralBalance ?? "0");
       const decimals = TOKEN_META[key].decimals;
@@ -37,17 +38,20 @@ export function adaptFx(payload: FxPayload): Array<{ key: keyof typeof TOKEN_MET
         amount: Number.isFinite(balance) && balance > 0 ? balance / (10 ** decimals) : 0,
       };
     })
-    .filter((entry) => entry.amount > 0);
+    .filter((entry) => entry.amount > 0),
+    unknownKeys: unexpectedPositiveKeys,
+  };
 }
 
 export async function fetchFxReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "fx");
-  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, getAdapterTimeout(config, 12_000));
-  const balances = adaptFx(payload);
+  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
+  const { balances, unknownKeys } = adaptFx(payload);
   const priceMap = await fetchDefiLlamaPrices(
     balances.map(({ key }) => ({
       key,
@@ -71,5 +75,14 @@ export async function fetchFxReserves(
         };
       }),
     ),
+    ...(unknownKeys.length > 0
+      ? {
+          warnings: unknownKeys.map((key): LiveReserveWarning => reserveDegradedWarning(
+            "unknown-collateral-key",
+            `fx collateral key bucketed into other: ${key}`,
+          )),
+        }
+      : {}),
+    metadata: { freshnessMode: "unverified" },
   };
 }

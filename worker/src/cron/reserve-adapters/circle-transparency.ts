@@ -63,6 +63,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       coinType,
       sliceCount: entries.length,
       expectedSliceCount: sliceConfigs.length,
+      freshnessMode: "unverified",
     },
   };
 }
@@ -71,13 +72,14 @@ export async function fetchCircleReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "circle-transparency");
   const html = await fetchTextWithRetry(
     input.url,
     signal,
     getAdapterTimeout(config, 15_000),
+    ctx,
   );
   const params = config.params as Record<string, unknown> | undefined;
   const coinType = String(params?.coinType ?? "usdc");

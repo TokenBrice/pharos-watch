@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, LiveReserveWarning, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, reserveDegradedWarning, slicesFromValues } from "./helpers";
 
 interface EthenaCollateralRow {
   asset: string;
@@ -119,17 +119,20 @@ export async function fetchEthenaReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "ethena");
-  const payload = await fetchJsonWithRetry<EthenaCollateralResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<EthenaCollateralResponse>(
+    primaryInput.url,
+    signal,
+    getAdapterTimeout(config, 12_000),
+    ctx,
+  );
   const adapted = adaptEthenaCollateral(payload);
-  const unknownAssets = listUnexpectedEthenaAssets(payload);
-  const warnings: LiveReserveWarning[] = unknownAssets.map((asset) => ({
-    code: "unknown-asset",
-    message: `Ethena asset bucketed into other-crypto: ${asset}`,
-    severity: "warning",
-  }));
+  const warnings: LiveReserveWarning[] = listUnexpectedEthenaAssets(payload).map((asset) => reserveDegradedWarning(
+    "unknown-asset",
+    `Ethena asset bucketed into other-crypto: ${asset}`,
+  ));
 
   return {
     ...adapted,

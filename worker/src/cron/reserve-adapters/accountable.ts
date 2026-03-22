@@ -4,6 +4,7 @@ import {
   fetchJsonWithRetry,
   getAdapterTimeout,
   parseTimestampLikeToUnixSeconds,
+  reserveDegradedWarning,
   requireJsonInputFromConfig,
   slicesFromValues,
 } from "./helpers";
@@ -140,11 +141,10 @@ function adaptAccountableDashboard(
   const renameMap = params.renameMap ?? {};
   const warnings = breakdown
     .filter(({ name }) => !(name in riskMap))
-    .map((entry) => ({
-      code: "unmapped-bucket",
-      message: `Accountable bucket defaulted to medium risk: ${entry.name}`,
-      severity: "warning" as const,
-    }));
+    .map((entry) => reserveDegradedWarning(
+      "unmapped-bucket",
+      `Accountable bucket defaulted to medium risk: ${entry.name}`,
+    ));
   const slices = slicesFromValues(
     breakdown.map(({ name, value }) => ({
       name: renameMap[name] ?? name,
@@ -184,10 +184,15 @@ export async function fetchAccountableReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "accountable");
   const params = parseAccountableParams(config);
-  const payload = await fetchJsonWithRetry<AccountableDashboardResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<AccountableDashboardResponse>(
+    primaryInput.url,
+    signal,
+    getAdapterTimeout(config, 12_000),
+    ctx,
+  );
   return adaptAccountableDashboard(payload, params);
 }

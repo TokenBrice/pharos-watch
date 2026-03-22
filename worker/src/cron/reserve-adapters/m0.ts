@@ -92,6 +92,7 @@ function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   return {
     slices,
     metadata: {
+      freshnessMode: "unverified",
       cashScaleApplied: 1_000,
       remainingTermDays: current.remainingTerm,
       totalCashScaled: cashValue,
@@ -110,7 +111,7 @@ export async function fetchM0Reserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "m0");
   const payload = await fetchJsonPostWithRetry<M0GraphQlResponse>(
@@ -118,6 +119,7 @@ export async function fetchM0Reserves(
     { query: M0_COLLATERAL_QUERY },
     signal,
     getAdapterTimeout(config, 12_000),
+    ctx,
   );
   if (payload.errors?.length) {
     const message = payload.errors.map((error) => error.message).filter(Boolean).join("; ");

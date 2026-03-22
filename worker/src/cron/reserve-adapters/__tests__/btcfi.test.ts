@@ -16,8 +16,9 @@ describe("adaptBtcfi", () => {
       ],
     );
 
-    expect(slices).toEqual([
-      { name: "BTC / WBTC / BTCB / cbBTC", pct: 100, risk: "medium" },
-    ]);
+    expect(slices).toEqual({
+      slices: [{ name: "BTC / WBTC / BTCB / cbBTC", pct: 100, risk: "medium" }],
+      metadata: { handlerCount: 3, freshnessMode: "unverified" },
+    });
   });
 });

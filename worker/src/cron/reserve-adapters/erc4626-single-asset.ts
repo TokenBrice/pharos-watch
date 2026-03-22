@@ -11,7 +11,7 @@ import {
   parseEvmAddressResult,
   resolveCoinContractAddress,
 } from "./evm";
-import { getAdapterTimeout, isOnchainEvmInput, isReserveRisk } from "./helpers";
+import { getAdapterTimeout, isOnchainEvmInput, isReserveRisk, reserveDegradedWarning } from "./helpers";
 
 const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
@@ -88,11 +88,10 @@ export async function fetchErc4626SingleAssetReserves(
     && sliceConfig.expectedAssetAddress
     && assetAddress !== sliceConfig.expectedAssetAddress
   ) {
-    warnings.push({
-      code: "asset-mismatch",
-      message: `Vault asset() returned ${assetAddress}, expected ${sliceConfig.expectedAssetAddress}`,
-      severity: "warning",
-    });
+    warnings.push(reserveDegradedWarning(
+      "asset-mismatch",
+      `Vault asset() returned ${assetAddress}, expected ${sliceConfig.expectedAssetAddress}`,
+    ));
   }
 
   return {
@@ -107,6 +106,7 @@ export async function fetchErc4626SingleAssetReserves(
     ],
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      freshnessMode: "not-applicable",
       chain: primaryInput.chain,
       contractAddress,
       totalAssetsRaw: totalAssetsRaw.toString(),

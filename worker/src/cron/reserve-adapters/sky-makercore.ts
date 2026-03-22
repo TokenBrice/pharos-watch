@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, LiveReserveWarning, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, reserveDegradedWarning, slicesFromValues } from "./helpers";
 
 interface DefiLlamaProtocolResponse {
   tokensInUsd: Array<{
@@ -70,13 +70,14 @@ export async function fetchSkyMakercoreReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "sky-makercore");
   const payload = await fetchJsonWithRetry<DefiLlamaProtocolResponse>(
     primaryInput.url,
     signal,
     getAdapterTimeout(config, 15_000),
+    ctx,
   );
 
   const entries = payload.tokensInUsd;
@@ -103,11 +104,10 @@ export async function fetchSkyMakercoreReserves(
     const value = tokens[token];
     return sum + (Number.isFinite(value) && value > 0 ? value : 0);
   }, 0);
-  const warnings: LiveReserveWarning[] = unknown.map((token) => ({
-    code: "unknown-asset" as const,
-    message: `Sky collateral token bucketed into other: ${token}`,
-    severity: "warning" as const,
-  }));
+  const warnings: LiveReserveWarning[] = unknown.map((token) => reserveDegradedWarning(
+    "unknown-asset",
+    `Sky collateral token bucketed into other: ${token}`,
+  ));
 
   return {
     slices,

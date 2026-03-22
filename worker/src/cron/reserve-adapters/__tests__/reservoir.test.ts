@@ -77,7 +77,7 @@ describe("adaptReservoirReserves", () => {
     });
 
     const total = slices.reduce((acc, s) => acc + s.pct, 0);
-    expect(total).toBe(100);
+    expect(total).toBeCloseTo(100, 10);
     expect(slices).toHaveLength(3);
   });
 });

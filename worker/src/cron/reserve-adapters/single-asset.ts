@@ -48,7 +48,12 @@ export async function fetchSingleAssetReserves(
     if (!probe || probe.kind !== "json-path") {
       throw new Error("single-asset http-json mode requires params.probe.kind = json-path");
     }
-    const payload = await fetchJsonWithRetry<Record<string, unknown>>(primary.url, signal, getAdapterTimeout(config, 12_000));
+    const payload = await fetchJsonWithRetry<Record<string, unknown>>(
+      primary.url,
+      signal,
+      getAdapterTimeout(config, 12_000),
+      ctx,
+    );
     const value = getJsonPath(payload, probe.path);
     if (parsePositiveNumericLike(value) == null) {
       throw new Error("single-asset source returned zero/empty probe value");
@@ -85,7 +90,10 @@ export async function fetchSingleAssetReserves(
         ...(params.coinId ? { coinId: params.coinId } : {}),
         ...(params.depType ? { depType: params.depType } : {}),
       }],
-      ...(redemptionFeeBps != null ? { metadata: { redemptionFeeBps } } : {}),
+      metadata: {
+        freshnessMode: "not-applicable",
+        ...(redemptionFeeBps != null ? { redemptionFeeBps } : {}),
+      },
     };
   }
 
@@ -97,5 +105,8 @@ export async function fetchSingleAssetReserves(
       ...(params.coinId ? { coinId: params.coinId } : {}),
       ...(params.depType ? { depType: params.depType } : {}),
     }],
+    metadata: {
+      freshnessMode: "unverified",
+    },
   };
 }

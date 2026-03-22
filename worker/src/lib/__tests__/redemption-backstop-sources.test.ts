@@ -3,9 +3,11 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 const getReserveSyncStateMock = vi.fn();
+const getLatestSuccessfulReserveSnapshotMetadataMock = vi.fn();
 
 vi.mock("../live-reserves-store", () => ({
   getReserveSyncState: getReserveSyncStateMock,
+  getLatestSuccessfulReserveSnapshotMetadata: getLatestSuccessfulReserveSnapshotMetadataMock,
   LIVE_RESERVE_FRESHNESS_SEC: 3600,
 }));
 
@@ -16,6 +18,7 @@ describe("buildRedemptionBackstopEntry", () => {
   beforeEach(async () => {
     vi.resetModules();
     getReserveSyncStateMock.mockResolvedValue(null);
+    getLatestSuccessfulReserveSnapshotMetadataMock.mockResolvedValue(null);
     const mod = await import("../redemption-backstop-sources");
     buildRedemptionBackstopEntry = mod.buildRedemptionBackstopEntry;
   });

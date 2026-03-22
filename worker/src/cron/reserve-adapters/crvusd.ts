@@ -1,7 +1,7 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import type { AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput } from "./helpers";
+import type { AdapterContext, AdapterResult } from "./types";
+import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput, reserveDegradedWarning } from "./helpers";
 
 interface CurveMarketEntry {
   collateral_amount_usd?: number;
@@ -60,11 +60,7 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): AdapterResult {
 
     const bucket = classifySymbol(symbol);
     if (!bucket) {
-      warnings.push({
-        code: "unknown-market",
-        message: `Unmapped crvUSD collateral market: ${symbol}`,
-        severity: "warning",
-      });
+      warnings.push(reserveDegradedWarning("unknown-market", `Unmapped crvUSD collateral market: ${symbol}`));
       unknownUsd += usd;
       continue;
     }
@@ -95,6 +91,7 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): AdapterResult {
       pct: (bucket.usd / totalWithUnknown) * 100,
       risk: bucket.risk,
     })),
+    1,
   );
 
   return {
@@ -111,8 +108,9 @@ export async function fetchCrvUsdReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "crvusd");
-  const payload = await fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
   return adaptCrvUsd(payload);
 }

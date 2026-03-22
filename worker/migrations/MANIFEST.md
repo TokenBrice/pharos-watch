@@ -78,6 +78,7 @@
 | 0068     | `0068_dex_prices_index.sql`                     | Add index on dex_prices.updated_at                                                              |
 | 0069     | `0069_chain_supply_history.sql`                 | Create chain_supply_history table                                                               |
 | 0070     | `0070_dex_price_challengers.sql`                | Create published DEX challenger snapshot tables for pool-challenge and depeg-confirmation reads |
+| 0071     | `0071_live_reserve_snapshot_metadata_and_history.sql` | Add live reserve snapshot metadata columns and sync history tables                         |
 
 ## Known Anomalies
 

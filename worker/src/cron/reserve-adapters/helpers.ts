@@ -1,4 +1,10 @@
-import type { LiveReserveInput, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type {
+  LiveReserveInput,
+  LiveReserveWarning,
+  LiveReservesConfig,
+  ReserveSlice,
+  StablecoinMeta,
+} from "@shared/types";
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
@@ -34,6 +40,43 @@ interface OnchainRateProbe {
   contract: string;
   selector: string;
   decimals?: number;
+}
+
+const ADAPTER_USER_AGENT = "Mozilla/5.0";
+
+function getRequestCache(ctx?: AdapterContext): Map<string, Promise<unknown>> | null {
+  return ctx?.requestCache ?? null;
+}
+
+function getCachedRequest<T>(
+  key: string,
+  factory: () => Promise<T>,
+  ctx?: AdapterContext,
+): Promise<T> {
+  const cache = getRequestCache(ctx);
+  if (!cache) {
+    return factory();
+  }
+
+  const cached = cache.get(key) as Promise<T> | undefined;
+  if (cached) {
+    return cached;
+  }
+
+  const promise = factory().catch((error) => {
+    cache.delete(key);
+    throw error;
+  });
+  cache.set(key, promise);
+  return promise;
+}
+
+export function reserveInfoWarning(code: string, message: string): LiveReserveWarning {
+  return { code, message, severity: "info", effect: "info" };
+}
+
+export function reserveDegradedWarning(code: string, message: string): LiveReserveWarning {
+  return { code, message, severity: "warning", effect: "degraded" };
 }
 
 export function isHttpJsonInput(input: LiveReserveInput): input is JsonInput {
@@ -92,15 +135,23 @@ export async function fetchJsonWithRetry<T>(
   url: string,
   signal: AbortSignal,
   timeoutMs = 10_000,
+  ctx?: AdapterContext,
 ): Promise<T> {
-  const res = await fetchWithRetry(url, { signal, headers: { "User-Agent": "Mozilla/5.0" } }, 2, { timeoutMs });
-  if (!res) {
-    throw new Error(`Fetch failed for ${url}`);
-  }
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`);
-  }
-  return res.json() as Promise<T>;
+  return getCachedRequest(
+    `json-get:${url}:${timeoutMs}`,
+    async () => {
+      const res = await fetchWithRetry(url, { signal, headers: { "User-Agent": ADAPTER_USER_AGENT } }, 2, { timeoutMs });
+      if (!res) {
+        throw new Error(`Fetch failed for ${url}`);
+      }
+      if (!res.ok) {
+        await res.body?.cancel();
+        throw new Error(`HTTP ${res.status} for ${url}`);
+      }
+      return res.json() as Promise<T>;
+    },
+    ctx,
+  );
 }
 
 export async function fetchJsonPostWithRetry<T>(
@@ -108,48 +159,65 @@ export async function fetchJsonPostWithRetry<T>(
   body: unknown,
   signal: AbortSignal,
   timeoutMs = 10_000,
+  ctx?: AdapterContext,
 ): Promise<T> {
-  const res = await fetchWithRetry(
-    url,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
-      body: JSON.stringify(body),
-      signal,
+  const serializedBody = JSON.stringify(body);
+  return getCachedRequest(
+    `json-post:${url}:${timeoutMs}:${serializedBody}`,
+    async () => {
+      const res = await fetchWithRetry(
+        url,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "User-Agent": ADAPTER_USER_AGENT },
+          body: serializedBody,
+          signal,
+        },
+        2,
+        { timeoutMs },
+      );
+      if (!res) {
+        throw new Error(`POST fetch failed for ${url}`);
+      }
+      if (!res.ok) {
+        await res.body?.cancel();
+        throw new Error(`HTTP ${res.status} for POST ${url}`);
+      }
+      return res.json() as Promise<T>;
     },
-    2,
-    { timeoutMs },
+    ctx,
   );
-  if (!res) {
-    throw new Error(`POST fetch failed for ${url}`);
-  }
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for POST ${url}`);
-  }
-  return res.json() as Promise<T>;
 }
 
 export async function fetchTextWithRetry(
   url: string,
   signal: AbortSignal,
   timeoutMs = 10_000,
+  ctx?: AdapterContext,
 ): Promise<string> {
-  const res = await fetchWithRetry(
-    url,
-    {
-      signal,
-      headers: { "User-Agent": "Mozilla/5.0" },
+  return getCachedRequest(
+    `text-get:${url}:${timeoutMs}`,
+    async () => {
+      const res = await fetchWithRetry(
+        url,
+        {
+          signal,
+          headers: { "User-Agent": ADAPTER_USER_AGENT },
+        },
+        2,
+        { timeoutMs },
+      );
+      if (!res) {
+        throw new Error(`Fetch failed for ${url}`);
+      }
+      if (!res.ok) {
+        await res.body?.cancel();
+        throw new Error(`HTTP ${res.status} for ${url}`);
+      }
+      return res.text();
     },
-    2,
-    { timeoutMs },
+    ctx,
   );
-  if (!res) {
-    throw new Error(`Fetch failed for ${url}`);
-  }
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`);
-  }
-  return res.text();
 }
 
 export async function fetchDefiLlamaPrices(
@@ -356,7 +424,7 @@ export async function probeOnchainTotalSupply(
  * After rounding, the largest slice absorbs any remainder to maintain the 100% invariant.
  * Returns slices sorted by pct descending.
  */
-export function normalizeSlices(slices: ReserveSlice[], decimals = 0): ReserveSlice[] {
+export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSlice[] {
   const factor = 10 ** decimals;
   const grouped = new Map<string, ReserveSlice>();
 
@@ -372,20 +440,20 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 0): ReserveSl
   }
 
   const normalized = Array.from(grouped.values())
-    .map((slice) => ({ ...slice, pct: Math.round(slice.pct * factor) / factor }))
-    .filter((slice) => slice.pct > 0);
+    .map((slice) => ({ ...slice, pctUnits: Math.round(slice.pct * factor) }))
+    .filter((slice) => slice.pctUnits > 0);
 
-  if (normalized.length === 0) return normalized;
+  if (normalized.length === 0) return [];
 
-  const sum = normalized.reduce((acc, slice) => acc + slice.pct, 0);
+  const sumUnits = normalized.reduce((acc, slice) => acc + slice.pctUnits, 0);
   const maxIdx = normalized.reduce(
-    (maxIndex, slice, index, arr) => (slice.pct > arr[maxIndex].pct ? index : maxIndex),
+    (maxIndex, slice, index, arr) => (slice.pctUnits > arr[maxIndex].pctUnits ? index : maxIndex),
     0,
   );
-  const adjustment = Math.round((100 - sum) * factor) / factor;
-  normalized[maxIdx].pct = Math.round((normalized[maxIdx].pct + adjustment) * factor) / factor;
+  normalized[maxIdx].pctUnits += (100 * factor) - sumUnits;
 
   return normalized
+    .map(({ pctUnits, ...slice }) => ({ ...slice, pct: pctUnits / factor }))
     .filter((slice) => slice.pct > 0)
     .sort((a, b) => b.pct - a.pct);
 }

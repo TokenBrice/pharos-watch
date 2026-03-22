@@ -47,6 +47,8 @@ export function adaptChainlinkPorResponse(data: ChainlinkPorData, params: Chainl
       feedDecimals: data.decimals,
       feedRoundId: data.roundId.toString(),
       feedUpdatedAt: data.updatedAt,
+      sourceTimestamp: data.updatedAt,
+      freshnessMode: "verified",
     },
   };
 }
@@ -91,7 +93,7 @@ export async function fetchChainlinkPorReserves(
 
   const { roundId, answer, updatedAt } = parseChainlinkLatestRoundData(rawRoundData, "chainlink-por");
   const maxOracleAgeSec = params.maxOracleAgeSec ?? DEFAULT_MAX_ORACLE_AGE_SEC;
-  const ageSec = Math.max(0, Math.floor(Date.now() / 1000) - updatedAt);
+  const ageSec = Math.max(0, (ctx?.nowSec ?? Math.floor(Date.now() / 1000)) - updatedAt);
   if (ageSec > maxOracleAgeSec) {
     throw new Error(`chainlink-por: feed data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
   }

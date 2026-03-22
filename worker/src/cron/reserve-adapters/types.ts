@@ -1,4 +1,10 @@
-import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type {
+  LiveReserveSnapshotMetadata,
+  LiveReserveWarning,
+  LiveReservesConfig,
+  ReserveSlice,
+  StablecoinMeta,
+} from "@shared/types";
 import type {
   LiveReserveAdapterKey,
   LiveReserveEvidenceClass,
@@ -13,12 +19,14 @@ export interface AdapterContext {
   etherscanApiKey?: string;
   alchemyApiKey?: string;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  nowSec?: number;
+  requestCache?: Map<string, Promise<unknown>>;
 }
 
 export interface AdapterResult {
   slices: ReserveSlice[];
   warnings?: LiveReserveWarning[];
-  metadata?: Record<string, unknown>;
+  metadata?: LiveReserveSnapshotMetadata;
 }
 
 export type AdapterFn = (

@@ -1,7 +1,7 @@
-import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import type { AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInput } from "./helpers";
+import type { AdapterContext, AdapterResult } from "./types";
+import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, reserveDegradedWarning } from "./helpers";
 
 interface BtcfiMarketRow {
   token_handler_id: number;
@@ -22,10 +22,11 @@ function readParams(config: LiveReservesConfig): BtcfiParams {
   return parseLiveReserveAdapterParams("btcfi", config.params);
 }
 
-export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]): ReserveSlice[] {
+export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]): AdapterResult {
   const handlerMap = new Map(handlers.map((handler) => [handler.id, handler]));
   const btcSymbols = new Set(["BTC", "WBTC", "BTCB", "CBBTC", "SOLVBTC", "LBTC", "TBTC"]);
   const unexpectedSymbols = new Set<string>();
+  let unexpectedValue = 0;
 
   const total = market.reduce((acc, row) => {
     const handler = handlerMap.get(row.token_handler_id);
@@ -34,33 +35,52 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
     if (!Number.isFinite(value) || value <= 0) return acc;
     if (!btcSymbols.has(handler.symbol.toUpperCase())) {
       unexpectedSymbols.add(handler.symbol);
-      return acc;
+      unexpectedValue += value;
+      return acc + value;
     }
     return acc + value;
   }, 0);
 
-  if (total <= 0) return [];
-  if (unexpectedSymbols.size > 0) {
-    throw new Error(`btcfi adapter found non-BTC handler(s): ${Array.from(unexpectedSymbols).join(", ")}`);
+  if (total <= 0) return { slices: [] };
+
+  const slices: ReserveSlice[] = [{
+    name: "BTC / WBTC / BTCB / cbBTC",
+    pct: ((total - unexpectedValue) / total) * 100,
+    risk: "medium",
+  }];
+  if (unexpectedValue > 0) {
+    slices.push({
+      name: "Other BTC wrappers / unmapped handlers",
+      pct: (unexpectedValue / total) * 100,
+      risk: "high",
+    });
   }
 
-  return [{ name: "BTC / WBTC / BTCB / cbBTC", pct: 100, risk: "medium" }];
+  const warnings: LiveReserveWarning[] = Array.from(unexpectedSymbols).map((symbol) => reserveDegradedWarning(
+    "unknown-btc-wrapper",
+    `btcfi handler bucketed into other BTC wrappers: ${symbol}`,
+  ));
+
+  return {
+    slices,
+    metadata: { handlerCount: handlers.length, freshnessMode: "unverified" },
+    ...(warnings.length > 0 ? { warnings } : {}),
+  };
 }
 
 export async function fetchBtcfiReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "btcfi");
   const params = readParams(config);
   const timeout = getAdapterTimeout(config, 12_000);
   const [market, handlers] = await Promise.all([
-    fetchJsonWithRetry<BtcfiMarketRow[]>(input.url, signal, timeout),
-    fetchJsonWithRetry<BtcfiHandlerRow[]>(params.handlersUrl, signal, timeout),
+    fetchJsonWithRetry<BtcfiMarketRow[]>(input.url, signal, timeout, ctx),
+    fetchJsonWithRetry<BtcfiHandlerRow[]>(params.handlersUrl, signal, timeout, ctx),
   ]);
 
-  return {
-    slices: adaptBtcfi(market, handlers),
-  };
+  return adaptBtcfi(market, handlers);
 }

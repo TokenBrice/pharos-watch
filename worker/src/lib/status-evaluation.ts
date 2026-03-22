@@ -395,9 +395,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       message: err instanceof Error ? err.message : String(err),
     };
   }
-  const reserveCompositionBootstrap =
-    reserveComposition.configuredCoins > 0
-    && reserveComposition.lastSuccessAt == null;
+  const reserveCompositionBootstrap = reserveComposition.configuredCoins > 0 && reserveComposition.lastSuccessAt == null;
   const missingPriceRatio =
     dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
   const blacklistMissingRatio = dataQuality.blacklistMissingRatio;
@@ -408,17 +406,17 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   const onchainSupplyDivergences = hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0;
   const staleOnchainRatio = trackedOnchainCoins > 0 ? staleOnchainSupply / trackedOnchainCoins : 0;
   const onchainDivergenceRatio = trackedOnchainCoins > 0 ? onchainSupplyDivergences / trackedOnchainCoins : 0;
-  const reserveCompositionCritical =
-    !reserveCompositionBootstrap
+  const reserveIssueCount = reserveComposition.missingCoins
+    + reserveComposition.staleCoins
+    + reserveComposition.degradedCoins
+    + reserveComposition.errorCoins
+    + reserveComposition.corruptCoins;
+  const reserveCompositionCritical = !reserveCompositionBootstrap
     && reserveComposition.configuredCoins > 0
     && reserveComposition.freshCoins === 0
-    && (reserveComposition.missingCoins > 0 || reserveComposition.staleCoins > 0 || reserveComposition.degradedCoins > 0 || reserveComposition.errorCoins > 0);
-  const reserveIssueCount =
-    reserveComposition.missingCoins + reserveComposition.staleCoins + reserveComposition.degradedCoins + reserveComposition.errorCoins;
+    && reserveIssueCount > 0;
   const reserveWarningFloor = Math.max(3, Math.ceil(reserveComposition.configuredCoins * 0.1));
-  const reserveCompositionWarning =
-    !reserveCompositionBootstrap
-    && reserveIssueCount >= reserveWarningFloor;
+  const reserveCompositionWarning = !reserveCompositionBootstrap && reserveIssueCount >= reserveWarningFloor;
 
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
     cacheStatusFloor === "stale" || anyCronError || unhealthyCrons >= 3
@@ -734,7 +732,9 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       code: "reserve_sync_degraded",
       layer: "data-quality",
       severity: "warning",
-      message: `${reserveComposition.errorCoins} error, ${reserveComposition.missingCoins} missing, ${reserveComposition.staleCoins} stale, ${reserveComposition.degradedCoins} degraded live reserve feed(s).`,
+      message: `${reserveComposition.errorCoins} error, ${reserveComposition.missingCoins} missing, `
+        + `${reserveComposition.staleCoins} stale, ${reserveComposition.degradedCoins} degraded, `
+        + `${reserveComposition.corruptCoins} corrupt live reserve feed(s).`,
     });
   }
 

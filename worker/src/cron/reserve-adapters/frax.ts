@@ -25,6 +25,7 @@ export function adaptFraxCombinedData(payload: FraxCombinedDataResponse, coin?: 
   return {
     slices: coin?.reserves?.length ? coin.reserves : FALLBACK_SLICE,
     metadata: {
+      freshnessMode: "unverified",
       collateralRatio: collateral.ratio,
       decentralizationRatio: collateral.decentralization_ratio,
       totalCollateralUsd: collateral.total_dollar_value,
@@ -36,13 +37,14 @@ export async function fetchFraxReserves(
   coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "frax");
   const payload = await fetchJsonWithRetry<FraxCombinedDataResponse>(
-    primaryInput.url,
-    signal,
-    getAdapterTimeout(config, 12_000),
+      primaryInput.url,
+      signal,
+      getAdapterTimeout(config, 12_000),
+      ctx,
   );
   return adaptFraxCombinedData(payload, coin);
 }

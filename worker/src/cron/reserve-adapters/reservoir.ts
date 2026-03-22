@@ -1,6 +1,6 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices, reserveDegradedWarning } from "./helpers";
 
 interface ReservoirBalanceItem {
   label: string;
@@ -121,7 +121,6 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
         ...(config.depType ? { depType: config.depType } : {}),
       } satisfies ReserveSlice;
     })
-    .filter((slice) => slice.pct >= 0.05)
     .sort((a, b) => b.pct - a.pct);
 
   if (unknownAssetsUsd > 0) {
@@ -142,20 +141,24 @@ export async function fetchReservoirReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = config.inputs.primary;
   if (!isHttpJsonInput(primaryInput)) {
     throw new Error("reservoir adapter requires an http-json primary input");
   }
 
-  const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(
+    primaryInput.url,
+    signal,
+    getAdapterTimeout(config, 12_000),
+    ctx,
+  );
   const adapted = adaptReservoirReserves(payload);
-  const warnings: LiveReserveWarning[] = adapted.unknownAssets.map((label) => ({
-    code: "unknown-position",
-    message: `Unmapped reserve position: ${label}`,
-    severity: "warning",
-  }));
+  const warnings: LiveReserveWarning[] = adapted.unknownAssets.map((label) => reserveDegradedWarning(
+    "unknown-position",
+    `Unmapped reserve position: ${label}`,
+  ));
   const totalLiabilities = Number(payload.totalLiabilities);
   const totalLiabilitiesUsd = Number.isFinite(totalLiabilities) && totalLiabilities > 0 ? totalLiabilities : null;
   const usdcBucket = RESERVOIR_BUCKETS.find((bucket) => bucket.key === "usdc");
@@ -177,6 +180,7 @@ export async function fetchReservoirReserves(
       totalLiabilities: payload.totalLiabilities,
       equity: payload.equity,
       unknownAssetCount: adapted.unknownAssets.length,
+      freshnessMode: "unverified",
       unknownExposurePct:
         Number(payload.totalAssets) > 0
           ? adapted.slices
@@ -187,8 +191,7 @@ export async function fetchReservoirReserves(
         ? {
             supplyUsd: totalLiabilitiesUsd,
             immediateRedeemableUsd,
-            immediateRedeemableRatio:
-              totalLiabilitiesUsd > 0 ? immediateRedeemableUsd / totalLiabilitiesUsd : null,
+            ...(totalLiabilitiesUsd > 0 ? { immediateRedeemableRatio: immediateRedeemableUsd / totalLiabilitiesUsd } : {}),
           }
         : {}),
     },

@@ -1,6 +1,6 @@
 import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, reserveDegradedWarning, slicesFromValues } from "./helpers";
 
 interface FalconBreakdownAsset {
   label: string;
@@ -111,11 +111,10 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
       isUnmappedOther
       && (value > FALCON_UNKNOWN_WARN_THRESHOLD || sharePct >= 0.25)
     ) {
-      warnings.push({
-        code: "unknown-asset",
-        message: `Unmapped Falcon asset: ${asset.label} ($${value.toFixed(0)}, ${sharePct.toFixed(2)}%)`,
-        severity: "warning",
-      });
+      warnings.push(reserveDegradedWarning(
+        "unknown-asset",
+        `Unmapped Falcon asset: ${asset.label} ($${value.toFixed(0)}, ${sharePct.toFixed(2)}%)`,
+      ));
     }
     bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + value);
   }
@@ -176,9 +175,14 @@ export async function fetchFalconReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "falcon");
-  const payload = await fetchJsonWithRetry<FalconTransparencyResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<FalconTransparencyResponse>(
+    primaryInput.url,
+    signal,
+    getAdapterTimeout(config, 12_000),
+    ctx,
+  );
   return adaptFalconTransparency(payload);
 }

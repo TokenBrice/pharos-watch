@@ -19,7 +19,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
         <CardTitle className="text-base">Live Reserve Sync</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
           <div>
             <div className="text-muted-foreground">Configured</div>
             <div className="font-mono text-lg">{health.configuredCoins}</div>
@@ -31,6 +31,10 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <div>
             <div className="text-muted-foreground">Error</div>
             <div className="font-mono text-lg text-red-600 dark:text-red-400">{health.errorCoins}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Corrupt</div>
+            <div className="font-mono text-lg text-red-600 dark:text-red-400">{health.corruptCoins}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Degraded</div>

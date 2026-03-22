@@ -39,11 +39,11 @@ export function adaptTetherTransparency(payload: TetherTransparencyResponse): Ad
       },
     ],
     metadata: {
+      freshnessMode: "unverified",
       totalAssetsUsd: total_assets,
       totalLiabilitiesUsd: total_liabilities,
       shareholderEquityUsd: shareholder_eq,
-      collateralizationRatio:
-        total_liabilities > 0 ? total_assets / total_liabilities : null,
+      ...(total_liabilities > 0 ? { collateralizationRatio: total_assets / total_liabilities } : {}),
     },
   };
 }
@@ -52,13 +52,14 @@ export async function fetchTetherReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "tether");
   const payload = await fetchJsonWithRetry<TetherTransparencyResponse>(
-    primaryInput.url,
-    signal,
-    getAdapterTimeout(config, 12_000),
+      primaryInput.url,
+      signal,
+      getAdapterTimeout(config, 12_000),
+      ctx,
   );
   return adaptTetherTransparency(payload);
 }

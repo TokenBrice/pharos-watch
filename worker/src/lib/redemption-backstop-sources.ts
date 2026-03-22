@@ -24,7 +24,13 @@ import {
 } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
 import type { RedemptionBackstopEntry, StablecoinData } from "@shared/types";
-import { getReserveSyncState, LIVE_RESERVE_FRESHNESS_SEC, type ReserveSyncStateRecord } from "./live-reserves-store";
+import {
+  getLatestSuccessfulReserveSnapshotMetadata,
+  getReserveSyncState,
+  LIVE_RESERVE_FRESHNESS_SEC,
+  type ReserveSnapshotMetadataRecord,
+  type ReserveSyncStateRecord,
+} from "./live-reserves-store";
 
 interface CapacityResolution {
   immediateCapacityUsd: number | null;
@@ -41,6 +47,7 @@ interface CapacityResolution {
 
 interface RedemptionBackstopBuildOptions {
   reserveSyncState?: ReserveSyncStateRecord | null;
+  reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
   suppressEffectiveExitScore?: boolean;
 }
 
@@ -142,6 +149,7 @@ function resolveBoundedFeeScore(feeBps: number): number {
 function resolveCostScore(
   costModel: RedemptionCostModel,
   reserveSyncState?: ReserveSyncStateRecord | null,
+  reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
 ): {
   score: number;
@@ -153,9 +161,10 @@ function resolveCostScore(
 } {
   const feeConfidence = resolveFeeConfidence(costModel);
   const feeModelKind = resolveFeeModelKind(costModel);
-  const metadata = reserveSyncState?.metadata ?? {};
+  const metadata = reserveSnapshotMetadata?.metadata ?? reserveSyncState?.metadata ?? {};
   const liveFeeBps = coerceFiniteNumber(metadata.redemptionFeeBps);
-  const reserveUpdatedAt = typeof reserveSyncState?.lastSuccessAt === "number" ? reserveSyncState.lastSuccessAt : null;
+  const reserveUpdatedAt = reserveSnapshotMetadata?.fetchedAt
+    ?? (typeof reserveSyncState?.lastSuccessAt === "number" ? reserveSyncState.lastSuccessAt : null);
   const isFresh = reserveUpdatedAt != null && now - reserveUpdatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
 
   if (costModel.kind === "dynamic-or-unclear" && feeConfidence === "formula" && liveFeeBps != null) {
@@ -198,6 +207,7 @@ function resolveStaticFields(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
   reserveSyncState?: ReserveSyncStateRecord | null,
+  reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
 ): RedemptionStaticFields {
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
@@ -211,7 +221,7 @@ function resolveStaticFields(
     feeConfidence,
     feeModelKind,
     notes,
-  } = resolveCostScore(config.costModel, reserveSyncState, now);
+  } = resolveCostScore(config.costModel, reserveSyncState, reserveSnapshotMetadata, now);
 
   return {
     accessScore,
@@ -236,6 +246,7 @@ async function resolveCapacityFromReserveSyncMetadata(
   fallbackRatio: number | undefined,
   now: number,
   reserveSyncState?: ReserveSyncStateRecord | null,
+  reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
 ): Promise<CapacityResolution> {
   const capacityConfidence = resolveCapacityConfidence({
     kind: "reserve-sync-metadata",
@@ -246,10 +257,14 @@ async function resolveCapacityFromReserveSyncMetadata(
     fallbackRatio,
   });
   const syncState = reserveSyncState !== undefined ? reserveSyncState : await getReserveSyncState(db, stablecoinId);
-  const metadata = syncState?.metadata ?? {};
+  const snapshotMetadata = reserveSnapshotMetadata !== undefined
+    ? reserveSnapshotMetadata
+    : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
+  const metadata = snapshotMetadata?.metadata ?? syncState?.metadata ?? {};
   const immediateCapacityUsd = coerceFiniteNumber(metadata.immediateRedeemableUsd);
   const suppliedRatio = coerceFiniteNumber(metadata.immediateRedeemableRatio);
-  const reserveUpdatedAt = typeof syncState?.lastSuccessAt === "number" ? syncState.lastSuccessAt : null;
+  const reserveUpdatedAt = snapshotMetadata?.fetchedAt
+    ?? (typeof syncState?.lastSuccessAt === "number" ? syncState.lastSuccessAt : null);
   const isFresh = reserveUpdatedAt != null && now - reserveUpdatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
 
   if (immediateCapacityUsd != null) {
@@ -378,6 +393,7 @@ async function resolveCapacity(
     model.fallbackRatio,
     now,
     options.reserveSyncState,
+    options.reserveSnapshotMetadata,
   );
 }
 
@@ -415,15 +431,20 @@ export async function buildRedemptionBackstopEntry(
     options.reserveSyncState !== undefined
       ? options.reserveSyncState
       : await getReserveSyncState(db, stablecoinId);
+  const reserveSnapshotMetadata =
+    options.reserveSnapshotMetadata !== undefined
+      ? options.reserveSnapshotMetadata
+      : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
   const capacity = await resolveCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
     ...options,
     reserveSyncState,
+    reserveSnapshotMetadata,
   });
   const capacityScoring = computeCapacityScore({
     immediateCapacityUsd: capacity.scoringCapacityUsd,
     immediateCapacityRatio: capacity.scoringCapacityRatio,
   });
-  const staticFields = resolveStaticFields(stablecoinId, config, reserveSyncState, now);
+  const staticFields = resolveStaticFields(stablecoinId, config, reserveSyncState, reserveSnapshotMetadata, now);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
     accessScore: staticFields.accessScore,

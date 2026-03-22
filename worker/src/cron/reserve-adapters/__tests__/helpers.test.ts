@@ -10,7 +10,7 @@ import {
 import type { LiveReservesConfig, ReserveSlice } from "@shared/types";
 
 describe("normalizeSlices", () => {
-  it("rounds to integers by default and adjusts largest to sum to 100", () => {
+  it("rounds to one decimal by default and adjusts the largest slice to sum to 100", () => {
     const slices: ReserveSlice[] = [
       { name: "A", pct: 33.3, risk: "low" },
       { name: "B", pct: 33.3, risk: "medium" },
@@ -18,8 +18,8 @@ describe("normalizeSlices", () => {
     ];
     const result = normalizeSlices(slices);
     const sum = result.reduce((acc, s) => acc + s.pct, 0);
-    expect(sum).toBe(100);
-    expect(result[0].pct).toBe(34);
+    expect(sum).toBeCloseTo(100, 10);
+    expect(result[0].pct).toBe(33.4);
   });
 
   it("rounds to 1 decimal place when decimals=1", () => {

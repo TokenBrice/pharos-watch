@@ -187,7 +187,7 @@ describe("fetchSingleAssetReserves", () => {
       signal,
     );
 
-    expect(result.metadata).toEqual({ redemptionFeeBps: 50 });
+    expect(result.metadata).toEqual({ freshnessMode: "not-applicable", redemptionFeeBps: 50 });
   });
 
   it("throws when on-chain probe fails", async () => {

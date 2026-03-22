@@ -82,7 +82,7 @@ describe("adaptInfiniFi", () => {
     expect(result.unknownFarms).toContain("brand-new-farm");
   });
 
-  it("flags dust unknown farms but excludes them from final slices after rounding", () => {
+  it("flags dust unknown farms and preserves them in final slices when they remain material at one-decimal precision", () => {
     const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,
       data: {
@@ -96,10 +96,8 @@ describe("adaptInfiniFi", () => {
     };
 
     const result = adaptInfiniFi(response);
-    // Farm is detected as unknown (above 0.05% threshold)
     expect(result.unknownFarms).toContain("dust-farm");
-    // But normalizeSlices rounds 0.4% to 0 and filters it out
-    expect(result.slices.some((slice) => slice.name === "Dust Farm")).toBe(false);
+    expect(result.slices.some((slice) => slice.name === "Dust Farm")).toBe(true);
   });
 
   it("propagates coinId from FARM_RISK_MAP for dependency tracking", () => {

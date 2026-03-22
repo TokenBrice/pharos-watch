@@ -37,7 +37,7 @@ The cron reads:
 
 1. The strict `stablecoins` cache via `loadStablecoinsCache(...)`
 2. The latest DEX liquidity snapshot via `loadDexLiquiditySnapshot(db)` so both the liquidity map and freshness can be reused
-3. Reserve-sync state in one bulk `loadReserveSyncStateMap(...)` read for routes using `capacityModel.kind = "reserve-sync-metadata"`
+3. Reserve-sync state in one bulk `loadReserveSyncStateMap(...)` read for route freshness/status context, plus latest successful reserve snapshot metadata for routes using `capacityModel.kind = "reserve-sync-metadata"`
 
 No external HTTP calls happen during the redemption-backstop pass itself; any live reserve telemetry is reused from D1.
 
@@ -121,12 +121,12 @@ Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `supply-full`           | Scores against full current supply as eventual redeemability, but leaves `immediateCapacity*` empty because immediate buffer is not separately quantified |
 | `supply-ratio`          | Immediate modeled capacity equals `supplyUsd * ratio`; this is heuristic unless the config explicitly opts into stronger confidence |
-| `reserve-sync-metadata` | Reads `reserve_sync_state.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio`; falls back to configured ratio when provided |
+| `reserve-sync-metadata` | Reads `reserve_composition.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio` from the latest successful authoritative live snapshot; falls back to configured ratio when provided |
 
 The resulting row is tagged with one `sourceMode`:
 
-- `dynamic` when fresh reserve-sync metadata is available
-- `estimated` when static supply models or stale reserve metadata are used
+- `dynamic` when fresh latest-success live reserve snapshot metadata is available
+- `estimated` when static supply models or stale last-success reserve metadata are used
 - `static` when the route remains configured but the current snapshot could not resolve a usable score, including failure-safe rows written after per-coin sync errors
 
 Each row also carries:
@@ -165,7 +165,7 @@ Each row also carries:
 ### Cost Modeling
 
 - `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
-- Formula-based routes can also populate `feeBps` from fresh live reserve telemetry when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
+- Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
 - `feeModelKind` distinguishes fixed-fee routes from documented formulas, documented variable schedules, and reviewed-but-undisclosed fee rails
 - `feeDescription` is used to surface:
   - dynamic formulas such as Liquity-style `min 50 bps + baseRate`

@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices, reserveDegradedWarning } from "./helpers";
 
 interface InfiniFiFarm {
   name: string;
@@ -78,7 +78,6 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
 
   for (const f of activeFarms) {
     const pct = (f.assetsNormalized / tvl) * 100;
-    if (pct < 0.05) continue;
     const config = FARM_RISK_MAP[f.name];
     if (!config) {
       unknownFarms.push(f.name);
@@ -103,7 +102,7 @@ export async function fetchInfiniFiReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = config.inputs.primary;
   if (!isHttpJsonInput(primaryInput)) {
@@ -111,14 +110,13 @@ export async function fetchInfiniFiReserves(
   }
 
   const url = primaryInput.url;
-  const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal, getAdapterTimeout(config, 12_000), ctx);
   if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
   const adapted = adaptInfiniFi(payload);
-  const warnings: LiveReserveWarning[] = adapted.unknownFarms.map((farmName) => ({
-    code: "unknown-position",
-    message: `Unmapped reserve position: ${farmName}`,
-    severity: "warning",
-  }));
+  const warnings: LiveReserveWarning[] = adapted.unknownFarms.map((farmName) => reserveDegradedWarning(
+    "unknown-position",
+    `Unmapped reserve position: ${farmName}`,
+  ));
 
   const totalReserveUsd = payload.data.stats.asset.totalTVLAssetNormalized;
   const immediateRedeemableUsd =
@@ -135,13 +133,13 @@ export async function fetchInfiniFiReserves(
       activeFarmCount: adapted.slices.length,
       unknownFarmCount: adapted.unknownFarms.length,
       unknownExposurePct: adapted.unknownExposurePct,
+      freshnessMode: "unverified",
       totalReserveUsd,
       immediateRedeemableUsd,
       illiquidReserveUsd,
-      immediateRedeemableRatio:
-        supplyUsd != null && supplyUsd > 0
-          ? immediateRedeemableUsd / supplyUsd
-          : null,
+      ...(supplyUsd != null && supplyUsd > 0
+        ? { immediateRedeemableRatio: immediateRedeemableUsd / supplyUsd }
+        : {}),
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
       supplyUsd,

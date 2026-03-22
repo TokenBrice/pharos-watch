@@ -20,6 +20,18 @@ interface ValidationOptions {
 const PCT_SUM_WARNING_TOLERANCE = 0.5;
 const PCT_SUM_ERROR_TOLERANCE = 2;
 
+function infoWarning(code: string, message: string): LiveReserveWarning {
+  return { code, message, severity: "info", effect: "info" };
+}
+
+function degradedWarning(code: string, message: string): LiveReserveWarning {
+  return { code, message, severity: "warning", effect: "degraded" };
+}
+
+function fatalWarning(code: string, message: string): LiveReserveWarning {
+  return { code, message, severity: "warning", effect: "fatal" };
+}
+
 function getFiniteMetadataNumber(metadata: Record<string, unknown> | undefined, key: string): number | null {
   const value = metadata?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -30,17 +42,17 @@ export function validateAdapterOutput(
   options?: ValidationOptions,
 ): ValidationResult {
   if (input.slices.length === 0) {
-    return { valid: false, warnings: [{ code: "empty-slices", message: "Adapter returned zero reserve slices", severity: "warning" }] };
+    return { valid: false, warnings: [fatalWarning("empty-slices", "Adapter returned zero reserve slices")] };
   }
 
   const warnings: LiveReserveWarning[] = [];
 
   for (const slice of input.slices) {
     if (!Number.isFinite(slice.pct) || slice.pct < 0) {
-      return { valid: false, warnings: [{ code: "invalid-pct", message: `Slice "${slice.name}" has invalid pct: ${slice.pct}`, severity: "warning" }] };
+      return { valid: false, warnings: [fatalWarning("invalid-pct", `Slice "${slice.name}" has invalid pct: ${slice.pct}`)] };
     }
     if (!isReserveRisk(slice.risk)) {
-      return { valid: false, warnings: [{ code: "invalid-risk", message: `Slice "${slice.name}" has invalid risk: ${slice.risk}`, severity: "warning" }] };
+      return { valid: false, warnings: [fatalWarning("invalid-risk", `Slice "${slice.name}" has invalid risk: ${slice.risk}`)] };
     }
   }
 
@@ -52,19 +64,17 @@ export function validateAdapterOutput(
   if (deviation > PCT_SUM_ERROR_TOLERANCE) {
     return {
       valid: false,
-      warnings: [{
-        code: "pct-sum-deviation",
-        message: `Slice percentages sum to ${sum.toFixed(1)}%${adapterLabel} (expected 100% ± ${PCT_SUM_ERROR_TOLERANCE}%)`,
-        severity: "warning",
-      }],
+      warnings: [fatalWarning(
+        "pct-sum-deviation",
+        `Slice percentages sum to ${sum.toFixed(1)}%${adapterLabel} (expected 100% ± ${PCT_SUM_ERROR_TOLERANCE}%)`,
+      )],
     };
   }
   if (deviation > PCT_SUM_WARNING_TOLERANCE) {
-    warnings.push({
-      code: "pct-sum-deviation",
-      message: `Slice percentages sum to ${sum.toFixed(1)}%${adapterLabel} (expected 100% ± ${PCT_SUM_WARNING_TOLERANCE}%)`,
-      severity: "warning",
-    });
+    warnings.push(degradedWarning(
+      "pct-sum-deviation",
+      `Slice percentages sum to ${sum.toFixed(1)}%${adapterLabel} (expected 100% ± ${PCT_SUM_WARNING_TOLERANCE}%)`,
+    ));
   }
 
   const now = options?.now ?? Math.floor(Date.now() / 1000);
@@ -73,11 +83,10 @@ export function validateAdapterOutput(
   if (maxSourceAgeSec != null && sourceTimestamp != null) {
     const ageSec = Math.max(0, now - sourceTimestamp);
     if (ageSec > maxSourceAgeSec) {
-      warnings.push({
-        code: "stale-source-data",
-        message: `Upstream reserve source timestamp is ${ageSec}s old${adapterLabel} (max ${maxSourceAgeSec}s)`,
-        severity: "warning",
-      });
+      warnings.push(degradedWarning(
+        "stale-source-data",
+        `Upstream reserve source timestamp is ${ageSec}s old${adapterLabel} (max ${maxSourceAgeSec}s)`,
+      ));
     }
   }
 
@@ -88,14 +97,28 @@ export function validateAdapterOutput(
     && unknownExposurePct != null
     && unknownExposurePct > maxUnknownExposurePct
   ) {
-    warnings.push({
-      code: "material-unknown-exposure",
-      message:
-        `Unknown reserve exposure is ${unknownExposurePct.toFixed(2)}%${adapterLabel} `
-        + `(max ${maxUnknownExposurePct.toFixed(2)}%)`,
-      severity: "warning",
-    });
+    warnings.push(degradedWarning(
+      "material-unknown-exposure",
+      `Unknown reserve exposure is ${unknownExposurePct.toFixed(2)}%${adapterLabel} `
+      + `(max ${maxUnknownExposurePct.toFixed(2)}%)`,
+    ));
+  }
+
+  const freshnessMode = input.metadata?.freshnessMode;
+  if (maxSourceAgeSec != null && sourceTimestamp == null && freshnessMode === "unverified") {
+    warnings.push(infoWarning(
+      "freshness-unverified",
+      `Upstream reserve source timestamp is unavailable${adapterLabel}; freshness remains unverified`,
+    ));
   }
 
   return { valid: true, warnings };
+}
+
+export function hasDegradingWarnings(warnings: readonly LiveReserveWarning[] | undefined): boolean {
+  return (warnings ?? []).some((warning) => warning.effect === "degraded");
+}
+
+export function hasFatalWarnings(warnings: readonly LiveReserveWarning[] | undefined): boolean {
+  return (warnings ?? []).some((warning) => warning.effect === "fatal");
 }

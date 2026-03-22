@@ -128,6 +128,11 @@ describe("live-reserves-store", () => {
         slices: LIVE_SLICES,
         fetchedAt: 1_000,
         source: "infinifi",
+        metadata: {},
+        warningCount: 0,
+        warnings: [],
+        adapterSourceModel: "dynamic-mix",
+        adapterEvidenceClass: "independent",
       },
       {
         stablecoinId: "iusd-infinifi",
@@ -148,7 +153,7 @@ describe("live-reserves-store", () => {
     expect(history.some((sql) => sql.includes("reserve_sync_state"))).toBe(true);
   });
 
-  it("filters out malformed slices from D1 data during resolution", async () => {
+  it("fails closed on malformed stored slices and falls back instead of serving them as live", async () => {
     const now = Math.floor(Date.now() / 1000);
     const corruptSlices = [
       { name: "Valid Farm", pct: 60, risk: "low" },
@@ -188,9 +193,9 @@ describe("live-reserves-store", () => {
     ]);
 
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
-    expect(result?.reserves).toHaveLength(2);
-    expect(result?.reserves[0].name).toBe("Valid Farm");
-    expect(result?.reserves[1].name).toBe("Valid Too");
+    expect(result?.mode).toBe("curated-fallback");
+    expect(result?.sync?.status).toBe("degraded");
+    expect(result?.sync?.lastError).toContain("Stored live reserve snapshot rejected");
   });
 
   it("separates error coins from degraded coins in the overview", async () => {
@@ -293,7 +298,7 @@ describe("live-reserves-store", () => {
     expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
   });
 
-  it("filters slices with invalid risk enum values during resolution", async () => {
+  it("rejects stored snapshots with invalid risk enum values during resolution", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -328,11 +333,12 @@ describe("live-reserves-store", () => {
     ]);
 
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
-    expect(result!.reserves).toHaveLength(1);
-    expect(result!.reserves[0].name).toBe("Good");
+    expect(result?.mode).toBe("curated-fallback");
+    expect(result?.sync?.status).toBe("degraded");
+    expect(result?.sync?.lastError).toContain("Stored live reserve snapshot rejected");
   });
 
-  it("filters slices with negative pct during resolution", async () => {
+  it("rejects stored snapshots with negative pct during resolution", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -368,8 +374,9 @@ describe("live-reserves-store", () => {
     ]);
 
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
-    expect(result!.reserves).toHaveLength(1);
-    expect(result!.reserves[0].name).toBe("Valid");
+    expect(result?.mode).toBe("curated-fallback");
+    expect(result?.sync?.status).toBe("degraded");
+    expect(result?.sync?.lastError).toContain("Stored live reserve snapshot rejected");
   });
 
   it("ignores malformed warning and metadata JSON in sync state rows", async () => {

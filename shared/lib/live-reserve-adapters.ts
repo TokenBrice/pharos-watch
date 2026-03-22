@@ -47,6 +47,18 @@ const _LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES = [
   "source-invariant",
 ] as const;
 
+const _LIVE_RESERVE_WARNING_EFFECT_VALUES = [
+  "info",
+  "degraded",
+  "fatal",
+] as const;
+
+const _LIVE_RESERVE_FRESHNESS_MODE_VALUES = [
+  "verified",
+  "unverified",
+  "not-applicable",
+] as const;
+
 const LIVE_RESERVE_SEMANTICS_VALUES = [
   "collateral-mix",
   "protocol-reserve",
@@ -64,6 +76,8 @@ export type LiveReserveSourceModel = (typeof _LIVE_RESERVE_SOURCE_MODEL_VALUES)[
 export type LiveReserveFeedClass = LiveReserveSourceModel;
 export type LiveReserveEvidenceClass = (typeof _LIVE_RESERVE_EVIDENCE_CLASS_VALUES)[number];
 export type LiveReserveSourceSharingMode = (typeof _LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES)[number];
+export type LiveReserveWarningEffect = (typeof _LIVE_RESERVE_WARNING_EFFECT_VALUES)[number];
+export type LiveReserveFreshnessMode = (typeof _LIVE_RESERVE_FRESHNESS_MODE_VALUES)[number];
 export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
 export type LiveReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
 export type LiveReserveDependencyType = (typeof DEPENDENCY_TYPE_VALUES)[number];
@@ -77,6 +91,19 @@ export interface LiveReserveWarning {
   code: string;
   message: string;
   severity: "info" | "warning";
+  effect: LiveReserveWarningEffect;
+}
+
+export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
+  sourceTimestamp?: number;
+  freshnessMode?: LiveReserveFreshnessMode;
+  unknownExposurePct?: number;
+  supplyUsd?: number;
+  totalReserveUsd?: number;
+  immediateRedeemableUsd?: number;
+  immediateRedeemableRatio?: number;
+  redemptionFeeBps?: number;
+  details?: Record<string, unknown>;
 }
 
 export interface LiveReserveAdapterValidationPolicy {
@@ -309,7 +336,12 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   btcfi: { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
   "chainlink-nav": { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
   "chainlink-por": { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
-  "circle-transparency": { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  "circle-transparency": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+  },
   "collateral-positions-api": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
@@ -355,23 +387,54 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sharedSourceMode: "none",
     validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
   },
-  frax: { sourceModel: "validated-static", evidenceClass: "static-validated", sharedSourceMode: "none" },
-  fx: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  frax: {
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+  },
+  fx: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+  },
   gho: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
   infinifi: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+    },
   },
-  m0: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "source-invariant" },
-  mento: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "source-invariant" },
-  "openeden-usdo": { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  m0: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "source-invariant",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+  },
+  mento: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "source-invariant",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+  },
+  "openeden-usdo": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+  },
   reservoir: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+    },
   },
   "sgforge-coinvertible": {
     sourceModel: "single-bucket",
@@ -389,7 +452,12 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
     },
   },
-  tether: { sourceModel: "single-bucket", evidenceClass: "weak-live-probe", sharedSourceMode: "none" },
+  tether: {
+    sourceModel: "single-bucket",
+    evidenceClass: "weak-live-probe",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+  },
 } as const satisfies Record<LiveReserveAdapterKey, {
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;

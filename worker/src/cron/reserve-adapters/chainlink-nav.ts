@@ -2,7 +2,7 @@ import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/t
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
-import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
+import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput, reserveInfoWarning } from "./helpers";
 
 const DECIMALS_SELECTOR = "0x313ce567";
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
@@ -69,6 +69,7 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
       oracleRoundId: data.roundId.toString(),
       oracleUpdatedAt: data.updatedAt,
       oracleTimestampSource: data.roundId === 0n ? "unavailable" : "oracle-round",
+      ...(data.updatedAt > 0 ? { sourceTimestamp: data.updatedAt, freshnessMode: "verified" as const } : { freshnessMode: "unverified" as const }),
     },
   };
 }
@@ -125,11 +126,10 @@ export async function fetchChainlinkNavReserves(
     navDecimals = 18;
     roundId = 0n;
     updatedAt = 0;
-    warnings.push({
-      code: "oracle-freshness-unverified",
-      message: "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
-      severity: "warning" as const,
-    });
+    warnings.push(reserveInfoWarning(
+      "oracle-freshness-unverified",
+      "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
+    ));
   } else {
     // Standard AggregatorV3Interface: decimals() + latestRoundData()
     const rawOracleDecimals = await fetchOnchainUint256({ ...oracleCallBase, data: DECIMALS_SELECTOR });
@@ -151,7 +151,7 @@ export async function fetchChainlinkNavReserves(
     updatedAt = parsed.updatedAt;
 
     const maxOracleAgeSec = params.maxOracleAgeSec ?? DEFAULT_MAX_ORACLE_AGE_SEC;
-    const ageSec = Math.max(0, Math.floor(Date.now() / 1000) - updatedAt);
+    const ageSec = Math.max(0, (ctx?.nowSec ?? Math.floor(Date.now() / 1000)) - updatedAt);
     if (ageSec > maxOracleAgeSec) {
       throw new Error(`chainlink-nav: oracle data is stale (${ageSec}s > ${maxOracleAgeSec}s)`);
     }

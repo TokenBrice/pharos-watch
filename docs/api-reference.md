@@ -383,7 +383,7 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 - Unknown IDs or coins without live reserve support return `404`.
 - Live-enabled coins return `200` even before the first successful sync; the payload includes fallback mode + sync state.
 - This endpoint powers the stablecoin detail-page reserve card. The same underlying live-reserve dataset also feeds report-card collateral quality, reserve-drift monitoring, and `/status`, but those surfaces read D1-backed reserve snapshots directly rather than calling this endpoint.
-- A response is treated as `live` only when the stored reserve snapshot matches the latest successful sync state; orphaned partial writes fall back to the curated/template presentation instead of presenting stale live data as authoritative.
+- A response is treated as `live` only when the stored reserve snapshot matches the latest successful sync state and passes strict integrity validation; orphaned partial writes or corrupt stored snapshots fall back to the curated/template presentation instead of presenting malformed live data as authoritative.
 
 **Cache:** dynamic
 
@@ -401,7 +401,9 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `liveAt`       | `number?`        | Unix seconds of the last successful live snapshot. Present only when live data exists                                            |
 | `source`       | `string?`        | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`). Present only when live data exists        |
 | `displayUrl`   | `string?`        | Human-readable source link shown in the UI. Present only when configured                                                         |
-| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`). Present only when live-enabled |
+| `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`). Present only when live-enabled |
+
+`sync.warnings` can include both adapter-emitted warnings from the latest attempt and storage-integrity warnings when a stored live snapshot is rejected and the endpoint fails closed to a fallback presentation.
 
 **Response (404):** `{ "error": "Not found" }`
 

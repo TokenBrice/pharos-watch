@@ -1,14 +1,14 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { LiveReserveAdapterKey } from "@shared/lib/live-reserve-adapters";
 import type { CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { validateAdapterOutput } from "./reserve-adapters/validate";
+import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
 import { buildInClause } from "../lib/db";
 import {
   loadReserveSyncStateMap,
+  recordReserveSyncAttempt,
   upsertReserveSnapshot,
-  upsertReserveSyncState,
+  type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
 
@@ -127,6 +127,11 @@ export async function syncLiveReserves(
   const syncStates = await loadReserveSyncStateMap(db, CONFIGURED_COINS.map((coin) => coin.id));
   const breakerOutcomes = new Map<string, boolean>();
   const breakerCanFetch = new Map<string, boolean>();
+  const effectiveAdapterCtx: AdapterContext = {
+    ...(adapterCtx ?? {}),
+    nowSec: now,
+    requestCache: adapterCtx?.requestCache ?? new Map<string, Promise<unknown>>(),
+  };
 
   const tryPrimary = (
     coin: ConfiguredCoin,
@@ -135,13 +140,13 @@ export async function syncLiveReserves(
   ): Promise<AdapterResult> => {
     const cacheKey = buildSharedSourceCacheKey(config, adapter);
     if (!cacheKey) {
-      return runAdapterAttempt(coin, config, adapter, signal, adapterCtx);
+      return runAdapterAttempt(coin, config, adapter, signal, effectiveAdapterCtx);
     }
 
     const cached = sharedSourceResults.get(cacheKey);
     if (cached) return cached;
 
-    const resultPromise = runAdapterAttempt(coin, config, adapter, signal, adapterCtx);
+    const resultPromise = runAdapterAttempt(coin, config, adapter, signal, effectiveAdapterCtx);
     sharedSourceResults.set(cacheKey, resultPromise);
     return resultPromise;
   };
@@ -157,7 +162,7 @@ export async function syncLiveReserves(
       for (const fb of config.inputs.fallbacks ?? []) {
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
-          return await runAdapterAttempt(coin, fbConfig, adapter, signal, adapterCtx);
+          return await runAdapterAttempt(coin, fbConfig, adapter, signal, effectiveAdapterCtx);
         } catch { continue; }
       }
       throw primaryError;
@@ -177,9 +182,16 @@ export async function syncLiveReserves(
       status: ReserveSyncStateRecord["lastStatus"],
       lastError: string | null,
       reason: string,
-    ) => upsertReserveSyncState(db, buildReserveSyncStateRecord({
-      stablecoinId: coin.id, config, breakerKey,
-      previousLastSuccessAt: prevSuccessAt, now, status, lastError,
+      warnings: ReserveSyncStateRecord["warnings"] = [],
+    ) => recordReserveSyncAttempt(db, buildReserveSyncStateRecord({
+      stablecoinId: coin.id,
+      config,
+      breakerKey,
+      previousLastSuccessAt: prevSuccessAt,
+      now,
+      status,
+      lastError,
+      warnings,
       metadata: { reason },
     }));
 
@@ -211,14 +223,9 @@ export async function syncLiveReserves(
         console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${msg}`);
         failed++;
         coinsWithErrors.push(coin.id);
-        await recordFailure("error", `Validation failed: ${msg}`, "validation-failed");
+        await recordFailure("error", `Validation failed: ${msg}`, "validation-failed", validation.warnings);
         breakerOutcomes.set(breakerKey, false);
         continue;
-      }
-
-      // Propagate sum-deviation warnings to result warnings
-      if (validation.warnings.length > 0) {
-        result.warnings = [...(result.warnings ?? []), ...validation.warnings];
       }
 
       if (result.slices.length === 0) {
@@ -230,33 +237,52 @@ export async function syncLiveReserves(
         continue;
       }
 
-      const warnings = result.warnings ?? [];
+      const warnings = [...(result.warnings ?? []), ...validation.warnings];
+      if (hasFatalWarnings(warnings)) {
+        const msg = warnings
+          .filter((warning) => warning.effect === "fatal")
+          .map((warning) => warning.message)
+          .join("; ");
+        failed++;
+        coinsWithErrors.push(coin.id);
+        await recordFailure("error", msg || "Fatal reserve adapter warning", "fatal-warning", warnings);
+        breakerOutcomes.set(breakerKey, false);
+        continue;
+      }
       if (warnings.length > 0) {
         coinsWithWarnings.push(coin.id);
         warningMessages.push(...warnings.map((warning) => `${coin.id}:${warning.code}`));
       }
+
+      const compositionRecord: ReserveCompositionRecord = {
+        stablecoinId: coin.id,
+        slices: result.slices,
+        fetchedAt: now,
+        source: config.adapter,
+        metadata: result.metadata ?? {},
+        warningCount: warnings.length,
+        warnings,
+        adapterSourceModel: adapter.sourceModel,
+        adapterEvidenceClass: adapter.evidenceClass,
+      };
 
       // D1 write with 30s timeout to prevent hanging cron on slow DB
       let dbTimer: ReturnType<typeof setTimeout>;
       await Promise.race([
         upsertReserveSnapshot(
           db,
-          {
-            stablecoinId: coin.id,
-            slices: result.slices,
-            fetchedAt: now,
-            source: config.adapter,
-          },
+          compositionRecord,
           buildReserveSyncStateRecord({
             stablecoinId: coin.id, config, breakerKey,
             previousLastSuccessAt: prevSuccessAt, now,
-            status: warnings.length > 0 ? "degraded" : "ok",
+            status: hasDegradingWarnings(warnings) ? "degraded" : "ok",
             warnings,
             metadata: {
-              ...(result.metadata ?? {}),
-              adapterSourceModel: adapter.sourceModel,
-              adapterEvidenceClass: adapter.evidenceClass,
-              adapterKey: adapter.key as LiveReserveAdapterKey,
+              warningEffects: {
+                info: warnings.filter((warning) => warning.effect === "info").length,
+                degraded: warnings.filter((warning) => warning.effect === "degraded").length,
+                fatal: warnings.filter((warning) => warning.effect === "fatal").length,
+              },
             },
             lastSuccessAt: now,
           }),

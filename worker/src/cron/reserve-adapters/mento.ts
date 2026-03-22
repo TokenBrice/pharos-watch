@@ -1,7 +1,7 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromPercentages } from "./helpers";
+import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, reserveDegradedWarning, reserveInfoWarning, slicesFromPercentages } from "./helpers";
 
 interface MentoReserveEntry {
   symbol: string;
@@ -71,11 +71,10 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
 
   if (entries.length < 3) {
-    warnings.push({
-      code: "mento-low-entry-count",
-      message: `Mento reserve composition has only ${entries.length} entries (expected >= 3)`,
-      severity: "warning",
-    });
+    warnings.push(reserveInfoWarning(
+      "mento-low-entry-count",
+      `Mento reserve composition has only ${entries.length} entries (expected >= 3)`,
+    ));
   }
 
   const totalPct = entries.reduce((sum, e) => sum + e.percent, 0);
@@ -83,11 +82,7 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
     entries.map((entry) => {
       const config = TOKEN_CONFIG[entry.symbol];
       if (!config) {
-        warnings.push({
-          code: "unknown-asset",
-          message: `Unmapped Mento reserve symbol: ${entry.symbol}`,
-          severity: "warning",
-        });
+        warnings.push(reserveDegradedWarning("unknown-asset", `Unmapped Mento reserve symbol: ${entry.symbol}`));
       }
       const resolved = config ?? { name: entry.symbol, risk: "medium" as const };
       return {
@@ -103,7 +98,7 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
   return {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
-    metadata: { entryCount: entries.length, totalPct },
+    metadata: { entryCount: entries.length, totalPct, freshnessMode: "unverified" },
   };
 }
 
@@ -111,9 +106,9 @@ export async function fetchMentoReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "mento");
-  const html = await fetchTextWithRetry(input.url, signal, getAdapterTimeout(config, 12_000));
+  const html = await fetchTextWithRetry(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
   return adaptMentoReserveComposition(html);
 }

@@ -4,11 +4,14 @@ export type {
   LiveReserveAdapterKey,
   LiveReserveEvidenceClass,
   LiveReserveFeedClass,
+  LiveReserveFreshnessMode,
   LiveReserveInput,
+  LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveSemantics,
   LiveReserveSourceSharingMode,
   LiveReserveWarning,
+  LiveReserveWarningEffect,
   LiveReservesConfig,
 } from "../lib/live-reserve-adapters";
 

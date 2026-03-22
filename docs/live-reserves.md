@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Current coverage:** 114 live-enabled stablecoins across 27 registered adapters
-- **Storage:** `reserve_composition`, `reserve_sync_state`
+- **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
 
@@ -70,6 +70,29 @@ Supported input kinds:
 | `indexer` | Indexed external data feed |
 | `onchain-evm` | On-chain EVM reads via `etherscan-proxy`, `alchemy`, or `public-rpc` |
 
+### Snapshot Metadata and Warning Effects
+
+Successful adapters can attach structured snapshot metadata that is stored on the authoritative snapshot row (`reserve_composition.metadata`), not on the mutable latest-attempt state.
+
+Common metadata fields:
+
+| Field | Meaning |
+|-------|---------|
+| `sourceTimestamp` | Upstream disclosure timestamp, when independently verified |
+| `freshnessMode` | `verified`, `unverified`, or `not-applicable` |
+| `unknownExposurePct` | Share of reserve value that could not be mapped cleanly |
+| `supplyUsd`, `totalReserveUsd` | Adapter-level balance-sheet totals when exposed |
+| `immediateRedeemableUsd`, `immediateRedeemableRatio` | Current redeemable-capacity telemetry reused by redemption backstops |
+| `redemptionFeeBps` | Current live redemption fee telemetry when the source exposes it |
+
+Warnings now carry both a display `severity` and an execution `effect`:
+
+| Effect | Meaning |
+|--------|---------|
+| `info` | Informational only; the snapshot can still be stored and remain `ok` |
+| `degraded` | Snapshot is stored, but the per-coin sync state becomes `degraded` and the feed is excluded from independent scoring passthrough |
+| `fatal` | Snapshot is rejected and the attempt is recorded as an `error` |
+
 ---
 
 ## Cron Behavior
@@ -87,13 +110,14 @@ Supported input kinds:
 **Adapter output validation:** After each adapter returns, `validateAdapterOutput()` checks
 that all slice `risk` values are valid enum members, all `pct` values are finite and non-negative,
 the slice list is non-empty, and the sum is within 2 points of 100%. Invalid output is treated as
-an error. Sum deviation above 0.5 points is propagated as a warning, while deviation above 2 points
-hard-fails the adapter output.
+an error. Sum deviation above 0.5 points produces a `degraded` warning, while deviation above 2 points
+hard-fails the adapter output with a `fatal` warning.
 
 Adapters can also declare shared validation policy in the registry:
 
 - `maxSourceAgeSec`: if adapter metadata includes `sourceTimestamp` and the upstream disclosure is older than the policy allows, the sync is marked `degraded`
 - `maxUnknownExposurePct`: if adapter metadata includes `unknownExposurePct` and unmapped reserve exposure is material, the sync is marked `degraded`
+- when `maxSourceAgeSec` exists but the adapter can only attest freshness heuristically, `freshnessMode = "unverified"` produces an informational `freshness-unverified` warning instead of forcing a degraded status
 
 These policy warnings still preserve the last-known live snapshot for detail/status surfaces, but they keep the snapshot out of report-card collateral passthrough because scoring only accepts independent snapshots whose latest sync state is `ok`.
 
@@ -128,6 +152,13 @@ Latest successful live snapshot per live-enabled coin.
 | `slices` | JSON-serialized `ReserveSlice[]` |
 | `fetched_at` | Unix timestamp of the successful snapshot |
 | `source` | Adapter key that produced the snapshot |
+| `metadata` | Snapshot-scoped adapter telemetry (freshness, redeemable capacity, live fee, disclosure totals, etc.) |
+| `warning_count` / `warnings` | Warning summary persisted alongside the successful snapshot |
+| `adapter_source_model` / `adapter_evidence_class` | Registry-derived classification copied onto the snapshot row for authoritative reads |
+
+### `reserve_composition_history`
+
+Append-only history of successful live snapshots. Every successful upsert also inserts a history row carrying the same slices, metadata, warnings, and adapter classification fields as the latest-snapshot table.
 
 ### `reserve_sync_state`
 
@@ -144,15 +175,20 @@ Per-coin operational state for the most recent attempt.
 | `warning_count` | Number of adapter warnings |
 | `warnings` | JSON-serialized warning objects |
 | `last_error` | Latest failure message, if any |
-| `metadata` | Adapter-specific operational metadata |
+| `metadata` | Attempt-scoped operational metadata only (for example skip/failure reasons or warning-effect counts), not authoritative reserve telemetry |
+
+### `reserve_sync_attempt_history`
+
+Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata.
 
 Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 
 - `LIVE_RESERVE_FRESHNESS_SEC = 172800` (48 hours)
 - A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at`
-- Empty slice arrays never count as a valid live snapshot
+- Stored snapshots are parsed strictly: unreadable JSON, invalid payloads, empty slice arrays, invalid slices, or materially invalid sums are rejected instead of being partially served
 - `loadFreshAuthoritativeReserveSnapshots()` is the canonical resolver used by `GET /api/stablecoin-reserves/:id` and reserve-sync status surfaces
 - `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent` **and** `reserve_sync_state.last_status = "ok"` for report-card collateral quality, reserve drift, and fallback tracking
+- `getLatestSuccessfulReserveSnapshotMetadata()` is the canonical accessor for downstream consumers that need snapshot telemetry such as redeemable capacity or live redemption fees
 
 `computeReserveCompositionOverview()` aggregates the status-card summary used by `/status`:
 
@@ -162,10 +198,12 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 - `missingCoins`
 - `degradedCoins`
 - `errorCoins`
+- `corruptCoins`
 - `lastSuccessAt`
 - `oldestFreshAgeSec`
 
 `errorCoins` includes active adapter failures even before a coin has ever produced a successful live snapshot; those rows no longer remain hidden inside `missingCoins`.
+`corruptCoins` counts rows where a matching latest-success snapshot exists in D1 but fails strict integrity validation, so the system fails closed to fallback presentation instead of serving truncated or malformed live data.
 
 ---
 
@@ -189,6 +227,8 @@ Successful responses return `StablecoinReservesResponse` with one of these modes
 | `template-fallback` | Live snapshot unavailable; falling back to reserve templates from `getReserves()` |
 | `unavailable` | Coin is live-enabled, but neither live data nor fallback reserve presentation is available |
 
+`live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state and passes strict integrity validation. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
+
 Cache control:
 
 | Response mode | Cache-Control |
@@ -206,7 +246,7 @@ The optional `sync` object exposes the last operational state:
 | `bootstrap` | No successful live snapshot has been recorded yet |
 | `lastAttemptedAt` | Latest attempt timestamp, when present |
 | `lastSuccessAt` | Latest success timestamp, when present |
-| `warnings[]` | Warning messages surfaced by the adapter |
+| `warnings[]` | Warning messages surfaced by the latest attempt and, when relevant, storage-integrity warnings injected by the fail-closed resolver |
 | `lastError` | Most recent adapter error message (truncated to 200 chars), when present |
 
 ### Edge Cache Implications for Monitoring

@@ -83,14 +83,14 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
   return {
     slices,
     metadata: {
+      freshnessMode: "unverified",
       reserveAssetsInUsd: payload.reserveAssetsInUsd,
       reserveRatio: normalizedRatio,
       supplyUsd: payload.usdoAmount,
       totalReserveUsd: payload.reserveAssetsInUsd,
       componentTotalUsd: componentTotal,
       immediateRedeemableUsd: payload.usdcAmount,
-      immediateRedeemableRatio:
-        payload.usdoAmount > 0 ? payload.usdcAmount / payload.usdoAmount : null,
+      ...(payload.usdoAmount > 0 ? { immediateRedeemableRatio: payload.usdcAmount / payload.usdoAmount } : {}),
     },
   };
 }
@@ -105,9 +105,14 @@ export async function fetchOpenEdenUsdoReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "openeden-usdo");
-  const payload = await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
+    primaryInput.url,
+    signal,
+    getAdapterTimeout(config, 12_000),
+    ctx,
+  );
   return adaptOpenEdenReserveComposition(payload);
 }

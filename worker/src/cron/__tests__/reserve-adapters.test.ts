@@ -93,7 +93,7 @@ describe("adaptTetherTransparency", () => {
     expect(() => adaptTetherTransparency(payload)).toThrow("total_assets invalid or zero");
   });
 
-  it("returns null collateralizationRatio when liabilities are zero", () => {
+  it("omits collateralizationRatio when liabilities are zero", () => {
     const payload: TetherTransparencyResponse = {
       data: {
         usdt: {
@@ -105,7 +105,7 @@ describe("adaptTetherTransparency", () => {
     };
 
     const result = adaptTetherTransparency(payload);
-    expect(result.metadata!.collateralizationRatio).toBeNull();
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
   });
 });
 

@@ -1,7 +1,7 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import type { AdapterResult } from "./types";
-import { requireJsonInput, fetchJsonWithRetry, getAdapterTimeout, normalizeSlices } from "./helpers";
+import type { AdapterContext, AdapterResult } from "./types";
+import { requireJsonInput, fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, reserveDegradedWarning } from "./helpers";
 
 interface AsymmetryBranchStats {
   coll_value?: string;
@@ -47,9 +47,7 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
         const config = BRANCH_RISK_MAP[entry.name] ?? { risk: "medium" as const };
         if (!(entry.name in BRANCH_RISK_MAP)) {
           warnings.push({
-            code: "unknown-branch",
-            message: `Asymmetry branch defaulted to medium risk: ${entry.name}`,
-            severity: "warning",
+            ...reserveDegradedWarning("unknown-branch", `Asymmetry branch defaulted to medium risk: ${entry.name}`),
           });
         }
         return {
@@ -69,8 +67,9 @@ export async function fetchAsymmetryReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "asymmetry");
-  const payload = await fetchJsonWithRetry<AsymmetryPayload>(input.url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<AsymmetryPayload>(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
   return adaptAsymmetry(payload);
 }

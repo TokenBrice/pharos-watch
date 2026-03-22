@@ -12,6 +12,8 @@ import {
   decimalNumberFromBigInt,
   fetchOnchainRawCall,
   fetchOnchainUint256,
+  reserveDegradedWarning,
+  reserveInfoWarning,
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
@@ -28,6 +30,8 @@ const GET_FEE_STRATEGY_SELECTOR = "0x4101d9f4";
 const GET_BUY_FEE_SELECTOR = "0x45d6494d";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ONE_GHO = 10n ** 18n;
+const FACILITATOR_READ_CONCURRENCY = 4;
+const RESIDUAL_DEGRADED_THRESHOLD_PCT = 1;
 const textDecoder = new TextDecoder();
 
 interface GhoParams {
@@ -172,6 +176,27 @@ function readParams(config: LiveReservesConfig): GhoParams {
   };
 }
 
+async function mapWithConcurrency<T, TResult>(
+  values: readonly T[],
+  concurrency: number,
+  mapper: (value: T) => Promise<TResult>,
+): Promise<TResult[]> {
+  if (values.length === 0) return [];
+  const limit = Math.max(1, Math.min(concurrency, values.length));
+  const results = new Array<TResult>(values.length);
+  let nextIndex = 0;
+
+  await Promise.all(Array.from({ length: limit }, async () => {
+    while (nextIndex < values.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(values[currentIndex]);
+    }
+  }));
+
+  return results;
+}
+
 async function loadFacilitators(
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
@@ -192,11 +217,10 @@ async function loadFacilitators(
     return {
       facilitators: [],
       warnings: [
-        {
-          code: "facilitator-registry-unavailable",
-          message: "GHO facilitator registry could not be read; residual issuance remains unlabeled",
-          severity: "warning",
-        },
+        reserveDegradedWarning(
+          "facilitator-registry-unavailable",
+          "GHO facilitator registry could not be read; residual issuance remains unlabeled",
+        ),
       ],
     };
   }
@@ -206,17 +230,19 @@ async function loadFacilitators(
     return {
       facilitators: [],
       warnings: [
-        {
-          code: "facilitator-registry-unparseable",
-          message: "GHO facilitator registry response could not be decoded; residual issuance remains unlabeled",
-          severity: "warning",
-        },
+        reserveDegradedWarning(
+          "facilitator-registry-unparseable",
+          "GHO facilitator registry response could not be decoded; residual issuance remains unlabeled",
+        ),
       ],
     };
   }
 
   const facilitators: GhoFacilitatorSnapshot[] = [];
-  for (const address of facilitatorAddresses) {
+  const facilitatorResults = await mapWithConcurrency(
+    facilitatorAddresses,
+    FACILITATOR_READ_CONCURRENCY,
+    async (address) => {
     const facilitatorRaw = await fetchOnchainRawCall({
       contract: GHO_TOKEN,
       data: GET_FACILITATOR_SELECTOR + encodeAddressArg(address),
@@ -228,28 +254,40 @@ async function loadFacilitators(
       fallbackRpcUrl: callOpts.fallbackRpcUrl,
     });
     if (!facilitatorRaw) {
-      warnings.push({
-        code: "facilitator-read-failed",
-        message: `GHO facilitator metadata could not be read for ${address}`,
-        severity: "warning",
-      });
-      continue;
+      return {
+        facilitator: null,
+        warnings: [reserveDegradedWarning(
+          "facilitator-read-failed",
+          `GHO facilitator metadata could not be read for ${address}`,
+        )],
+      };
     }
     const decoded = decodeFacilitator(facilitatorRaw);
     if (!decoded) {
-      warnings.push({
-        code: "facilitator-read-unparseable",
-        message: `GHO facilitator metadata could not be decoded for ${address}`,
-        severity: "warning",
-      });
-      continue;
+      return {
+        facilitator: null,
+        warnings: [reserveDegradedWarning(
+          "facilitator-read-unparseable",
+          `GHO facilitator metadata could not be decoded for ${address}`,
+        )],
+      };
     }
-    facilitators.push({
-      address,
-      label: decoded.label,
-      bucketLevel: decoded.bucketLevel,
-      bucketCapacity: decoded.bucketCapacity,
-    });
+    return {
+      facilitator: {
+        address,
+        label: decoded.label,
+        bucketLevel: decoded.bucketLevel,
+        bucketCapacity: decoded.bucketCapacity,
+      } satisfies GhoFacilitatorSnapshot,
+      warnings: [] as LiveReserveWarning[],
+    };
+  });
+
+  for (const result of facilitatorResults) {
+    warnings.push(...result.warnings);
+    if (result.facilitator) {
+      facilitators.push(result.facilitator);
+    }
   }
 
   return { facilitators, warnings };
@@ -281,32 +319,29 @@ async function loadTrackedModule(
   ]);
 
   if (used == null || !currentBackingRaw) {
-    warnings.push({
-      code: "tracked-gsm-read-failed",
-      message: `GHO tracked GSM module "${trackedModule.label}" could not be read on-chain`,
-      severity: "warning",
-    });
+    warnings.push(reserveDegradedWarning(
+      "tracked-gsm-read-failed",
+      `GHO tracked GSM module "${trackedModule.label}" could not be read on-chain`,
+    ));
     return { module: null, warnings };
   }
 
   const currentBacking = decodeCurrentBacking(currentBackingRaw);
   if (!currentBacking) {
-    warnings.push({
-      code: "tracked-gsm-read-unparseable",
-      message: `GHO tracked GSM module "${trackedModule.label}" returned an unparseable backing response`,
-      severity: "warning",
-    });
+    warnings.push(reserveDegradedWarning(
+      "tracked-gsm-read-unparseable",
+      `GHO tracked GSM module "${trackedModule.label}" returned an unparseable backing response`,
+    ));
     return { module: null, warnings };
   }
 
   const isFrozen = decodeBool(isFrozenRaw ?? "");
   const isSeized = decodeBool(isSeizedRaw ?? "");
   if (isFrozen == null || isSeized == null) {
-    warnings.push({
-      code: "tracked-gsm-status-unavailable",
-      message: `GHO tracked GSM module "${trackedModule.label}" status could not be fully decoded; immediate redeemability is treated conservatively`,
-      severity: "warning",
-    });
+    warnings.push(reserveDegradedWarning(
+      "tracked-gsm-status-unavailable",
+      `GHO tracked GSM module "${trackedModule.label}" status could not be fully decoded; immediate redeemability is treated conservatively`,
+    ));
   }
 
   const currentBackingGho =
@@ -337,18 +372,16 @@ async function loadTrackedModule(
   }
 
   if (isFrozen) {
-    warnings.push({
-      code: "tracked-gsm-frozen",
-      message: `GHO tracked GSM module "${trackedModule.label}" is currently frozen and excluded from immediate redeemable capacity`,
-      severity: "warning",
-    });
+    warnings.push(reserveInfoWarning(
+      "tracked-gsm-frozen",
+      `GHO tracked GSM module "${trackedModule.label}" is currently frozen and excluded from immediate redeemable capacity`,
+    ));
   }
   if (isSeized) {
-    warnings.push({
-      code: "tracked-gsm-seized",
-      message: `GHO tracked GSM module "${trackedModule.label}" is currently seized and excluded from immediate redeemable capacity`,
-      severity: "warning",
-    });
+    warnings.push(reserveInfoWarning(
+      "tracked-gsm-seized",
+      `GHO tracked GSM module "${trackedModule.label}" is currently seized and excluded from immediate redeemable capacity`,
+    ));
   }
 
   return {
@@ -408,6 +441,7 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
   return {
     slices: slicesFromValues(values),
     metadata: {
+      freshnessMode: "not-applicable",
       facilitatorCount: data.facilitators.length,
       activeFacilitatorCount: activeFacilitators.length,
       trackedGsmCount: data.trackedModules.length,
@@ -418,6 +452,10 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
       trackedGsmBackingUsd: scale18ToUsd(trackedBackingRaw),
       residualSupplyUsd: residualRaw > 0n ? scale18ToUsd(residualRaw) : 0,
       immediateRedeemableUsd: scale18ToUsd(immediateRedeemableRaw),
+      ...(typeof data.totalSupply === "bigint" && data.totalSupply > 0n
+        ? { immediateRedeemableRatio: scale18ToUsd(immediateRedeemableRaw) / scale18ToUsd(data.totalSupply) }
+        : {}),
+      ...(typeof data.totalSupply === "bigint" ? { supplyUsd: scale18ToUsd(data.totalSupply), totalReserveUsd: scale18ToUsd(data.totalSupply) } : {}),
       ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: scale18ToUsd(data.totalSupply) } : {}),
       ...(buyFeeBpsValues.length > 0
         ? {
@@ -483,14 +521,16 @@ export async function fetchGhoReserves(
     const activeLabels = facilitators
       .filter((facilitator) => facilitator.bucketLevel > 0n)
       .map((facilitator) => facilitator.label);
-    warnings.push({
-      code: "aggregated-residual-issuance",
-      message:
-        activeLabels.length > 0
-          ? `Residual GHO issuance outside tracked GSM backing remains aggregated (${activeLabels.join(", ")})`
-          : "Residual GHO issuance outside tracked GSM backing remains aggregated",
-      severity: "warning",
-    });
+    const residualPct = totalSupply > 0n ? Number((totalSupply - trackedBackingRaw) * 10_000n / totalSupply) / 100 : 0;
+    const message =
+      activeLabels.length > 0
+        ? `Residual GHO issuance outside tracked GSM backing remains aggregated (${activeLabels.join(", ")})`
+        : "Residual GHO issuance outside tracked GSM backing remains aggregated";
+    warnings.push(
+      residualPct > RESIDUAL_DEGRADED_THRESHOLD_PCT
+        ? reserveDegradedWarning("aggregated-residual-issuance", `${message} (${residualPct.toFixed(2)}%)`)
+        : reserveInfoWarning("aggregated-residual-issuance", `${message} (${residualPct.toFixed(2)}%)`),
+    );
   }
 
   return warnings.length > 0 ? { ...adapted, warnings } : adapted;

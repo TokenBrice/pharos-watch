@@ -1,8 +1,8 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import type { AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput } from "./helpers";
+import type { AdapterContext, AdapterResult } from "./types";
+import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput, reserveDegradedWarning } from "./helpers";
 
 interface PositionDetailsEntry {
   address: string;
@@ -111,11 +111,10 @@ export function adaptCollateralPositions(
 
     const risk = inferRisk(entry.symbol);
     if (!isKnownAsset(entry.symbol)) {
-      warnings.push({
-        code: "unknown-asset",
-        message: `Unmapped collateral symbol: ${entry.symbol} (inferred risk: ${risk})`,
-        severity: "warning",
-      });
+      warnings.push(reserveDegradedWarning(
+        "unknown-asset",
+        `Unmapped collateral symbol: ${entry.symbol} (inferred risk: ${risk})`,
+      ));
       unknownExposureUsd += totalBalance * usdPrice;
     }
 
@@ -175,14 +174,15 @@ export async function fetchCollateralPositionsApiReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "collateral-positions-api");
   const params = readParams(config);
 
   const timeout = getAdapterTimeout(config, 12_000);
   const [details, prices] = await Promise.all([
-    fetchJsonWithRetry<PositionDetailsPayload>(input.url, signal, timeout),
-    fetchJsonWithRetry<PriceMappingPayload>(params.pricesUrl, signal, timeout),
+    fetchJsonWithRetry<PositionDetailsPayload>(input.url, signal, timeout, ctx),
+    fetchJsonWithRetry<PriceMappingPayload>(params.pricesUrl, signal, timeout, ctx),
   ]);
 
   return adaptCollateralPositions(details, prices, params.otherThresholdPct ?? 2);

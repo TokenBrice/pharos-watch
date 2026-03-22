@@ -1,7 +1,7 @@
 import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, reserveDegradedWarning, slicesFromValues } from "./helpers";
 
 export interface FirmMarket {
   name: string;
@@ -128,17 +128,20 @@ export async function fetchDolaInverseReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "dola-inverse");
-  const payload = await fetchJsonWithRetry<FirmMarketsResponse>(primaryInput.url, signal, getAdapterTimeout(config, 12_000));
+  const payload = await fetchJsonWithRetry<FirmMarketsResponse>(
+    primaryInput.url,
+    signal,
+    getAdapterTimeout(config, 12_000),
+    ctx,
+  );
   const adapted = adaptFirmMarkets(payload);
-  const unknownAssets = listUnexpectedDolaAssets(payload);
-  const warnings: LiveReserveWarning[] = unknownAssets.map((asset) => ({
-    code: "unknown-asset",
-    message: `DOLA FiRM asset bucketed into other: ${asset}`,
-    severity: "warning",
-  }));
+  const warnings: LiveReserveWarning[] = listUnexpectedDolaAssets(payload).map((asset) => reserveDegradedWarning(
+    "unknown-asset",
+    `DOLA FiRM asset bucketed into other: ${asset}`,
+  ));
 
   return {
     ...adapted,
