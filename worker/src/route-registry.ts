@@ -1,4 +1,10 @@
-import { ENDPOINT_DEFINITIONS, getEndpointDefinitionByKey, type EndpointKey } from "@shared/lib/api-endpoints";
+import {
+  ENDPOINT_DEFINITIONS,
+  getEndpointDefinitionByKey,
+  type EndpointDefinition,
+  type EndpointDependency,
+  type EndpointKey,
+} from "@shared/lib/api-endpoints";
 import {
   handleBluechipRatings,
   handleStablecoinCharts,
@@ -89,13 +95,7 @@ export interface ChainRpcRouteFields {
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
-export type RouteDependency =
-  | "alchemyApiKey"
-  | "anthropicApiKey"
-  | "feedbackEnv"
-  | "mintBurnFreshnessConfig"
-  | "coingeckoApiKey"
-  | "telegram";
+export type RouteDependency = EndpointDependency;
 
 /** Full context built by handleHttpRequest — union of core + all domain bags. */
 export type FullRouteContext = RouteContext &
@@ -109,15 +109,10 @@ export type StaticRouteHandler = (context: FullRouteContext) => Promise<Response
 
 type StaticRouteHandlerMap = Partial<Record<EndpointKey, StaticRouteHandler>>;
 
-export const ROUTE_DEPENDENCIES_BY_KEY: Partial<Record<EndpointKey, readonly RouteDependency[]>> = {
-  "stablecoin-detail-canary": ["coingeckoApiKey"],
-  health: ["mintBurnFreshnessConfig"],
-  "backfill-cg-prices": ["coingeckoApiKey"],
-  "backfill-mint-burn": ["alchemyApiKey"],
-  feedback: ["feedbackEnv"],
-  "telegram-webhook": ["telegram"],
-  "trigger-digest": ["anthropicApiKey", "telegram"],
-};
+export interface StaticRouteDefinition {
+  endpoint: EndpointDefinition;
+  handler: StaticRouteHandler;
+}
 
 const STATIC_ROUTE_HANDLERS_BY_KEY = {
   stablecoins: ({ db }) => handleStablecoins(db),
@@ -239,14 +234,18 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
     withAdmin(request, () => handleDiscoveryCandidates(db, url), trustedAdmin),
 } satisfies StaticRouteHandlerMap;
 
-export const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>(
+const STATIC_ROUTE_DEFINITIONS = new Map<string, StaticRouteDefinition>(
   ENDPOINT_DEFINITIONS.flatMap((endpoint) => {
     const handler = (STATIC_ROUTE_HANDLERS_BY_KEY as Record<string, StaticRouteHandler | undefined>)[endpoint.key];
-    return handler ? [[endpoint.path, handler] as const] : [];
+    return handler ? [[endpoint.path, { endpoint, handler }] as const] : [];
   }),
 );
 
-export const ROUTER_STATIC_PATHS = [...STATIC_ROUTE_HANDLERS.keys()];
+export function getStaticRouteDefinition(path: string): StaticRouteDefinition | undefined {
+  return STATIC_ROUTE_DEFINITIONS.get(path);
+}
+
+export const ROUTER_STATIC_PATHS = [...STATIC_ROUTE_DEFINITIONS.keys()];
 
 for (const key of Object.keys(STATIC_ROUTE_HANDLERS_BY_KEY) as Array<keyof typeof STATIC_ROUTE_HANDLERS_BY_KEY>) {
   if (!getEndpointDefinitionByKey(key)) {

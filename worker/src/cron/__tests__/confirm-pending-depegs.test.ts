@@ -8,7 +8,12 @@ vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
 }));
 
+vi.mock("../../lib/cex-tickers", () => ({
+  fetchBinancePrices: vi.fn(async () => new Map<string, number>()),
+}));
+
 import { batchExecute } from "../../lib/db";
+import { fetchBinancePrices } from "../../lib/cex-tickers";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
   DEPEG_PENDING_EXPIRY_SEC,
@@ -260,6 +265,7 @@ describe("confirmPendingDepegs", () => {
     );
 
     expect(fetchWithRetry).toHaveBeenCalledTimes(4);
+    expect(fetchBinancePrices).toHaveBeenCalledTimes(1);
     expect(batchExecute).toHaveBeenCalledTimes(1);
 
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;

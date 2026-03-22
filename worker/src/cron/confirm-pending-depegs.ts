@@ -88,6 +88,18 @@ export async function confirmPendingDepegs(
     .all<{ stablecoin_id: string }>();
   const openSet = new Set((openEvents.results ?? []).map((r) => r.stablecoin_id));
 
+  let cexPrices: Map<string, number> | null = null;
+  const cexAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
+  if (cexAllowed) {
+    throwIfAborted(signal);
+    try {
+      cexPrices = await fetchBinancePrices(signal);
+    } catch (err) {
+      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+      cexPrices = null;
+    }
+  }
+
   // Collect all mutation statements and execute as a batch at the end
   const stmts: D1PreparedStatement[] = [];
 
@@ -206,21 +218,15 @@ export async function confirmPendingDepegs(
 
     // 4b. CEX ticker check
     let cexAgrees: boolean | null = null;
-    const cexAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.BINANCE_PRICES);
-    if (cexAllowed) {
-      try {
-        const cexPrices = await fetchBinancePrices(signal);
-        const cexPrice = cexPrices.get(row.symbol.toUpperCase());
-        if (cexPrice && cexPrice > 0) {
-          const cexBps = Math.abs(Math.round(((cexPrice / row.peg_reference) - 1) * 10000));
-          cexAgrees = cexBps >= secondaryBar;
-          console.log(
-            `[depeg-confirm] ${row.symbol} CEX check: price=$${cexPrice}, deviation=${cexBps}bps, ` +
-            `bar=${secondaryBar}bps, agrees=${cexAgrees}`,
-          );
-        }
-      } catch (err) {
-        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    if (cexPrices) {
+      const cexPrice = cexPrices.get(row.symbol.toUpperCase());
+      if (cexPrice && cexPrice > 0) {
+        const cexBps = Math.abs(Math.round(((cexPrice / row.peg_reference) - 1) * 10000));
+        cexAgrees = cexBps >= secondaryBar;
+        console.log(
+          `[depeg-confirm] ${row.symbol} CEX check: price=$${cexPrice}, deviation=${cexBps}bps, ` +
+          `bar=${secondaryBar}bps, agrees=${cexAgrees}`,
+        );
       }
     }
 

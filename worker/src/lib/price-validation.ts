@@ -1,5 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getFxReferenceTypeFromState, loadFxRateState } from "./fx-rate-state";
+import { sanitizeRecordValues } from "./normalizers";
 
 export type PriceValidationMode =
   | "primary_authoritative"
@@ -87,14 +88,9 @@ const HARDCODED_PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
 export const PRICE_BOUNDS = HARDCODED_PRICE_BOUNDS;
 
 function sanitizeRates(input: unknown): Record<string, number> {
-  if (!input || typeof input !== "object") return {};
-  const out: Record<string, number> = {};
-  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-      out[key] = value;
-    }
-  }
-  return out;
+  return sanitizeRecordValues(input, (value) => (
+    typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined
+  ));
 }
 
 export function normalizePegTypeFromCurrency(pegCurrency: string | undefined): string | undefined {

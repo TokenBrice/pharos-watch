@@ -1,6 +1,6 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import type { AdapterResult } from "./index";
+import type { AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput } from "./helpers";
 
 interface CurveMarketEntry {

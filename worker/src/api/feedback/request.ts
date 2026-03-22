@@ -56,6 +56,11 @@ export async function prepareFeedbackSubmission(
     return errorResponse(503, "Service misconfigured");
   }
 
+  if (!env.GITHUB_PAT) {
+    console.error("[feedback] GITHUB_PAT secret not configured");
+    return errorResponse(503, "Feedback service temporarily unavailable");
+  }
+
   const allowed = await checkFeedbackRateLimit(
     db,
     resolveFeedbackClientIp(request),
@@ -65,11 +70,6 @@ export async function prepareFeedbackSubmission(
   );
   if (!allowed) {
     return errorResponse(429, "Too many submissions. Please wait a few minutes.");
-  }
-
-  if (!env.GITHUB_PAT) {
-    console.error("[feedback] GITHUB_PAT secret not configured");
-    return errorResponse(503, "Feedback service temporarily unavailable");
   }
 
   return {

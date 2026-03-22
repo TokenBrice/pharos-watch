@@ -4,6 +4,7 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
+import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
 import type { PriceConfidence } from "@shared/types";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
@@ -42,52 +43,8 @@ export interface DefiLlamaCoinPrice {
   timestamp: number;
   confidence: number;
 }
-
-export interface PeggedAsset {
-  id: string;
-  name: string;
-  symbol: string;
-  address?: string;
-  geckoId?: string;
-  /** Snake-case alias for geckoId as returned by the DL stablecoins API. Normalized by hydrateGeckoIdAliases. */
-  gecko_id?: string;
-  cmcSlug?: string;
-  navToken?: boolean;
-  commodityOunces?: number;
-  price?: number | null;
-  priceSource?: string;
-  priceConfidence?: PriceConfidence | null;
-  priceUpdatedAt?: number | null;
-  supplySource?: string;
-  pegType?: string;
-  pegMechanism?: string;
-  circulating?: Record<string, number>;
-  circulatingPrevDay?: Record<string, number> | null;
-  circulatingPrevWeek?: Record<string, number> | null;
-  circulatingPrevMonth?: Record<string, number> | null;
-  chains?: string[];
-  chainCirculating?: Record<string, Record<string, unknown>>;
-  consensusSources?: string[];
-  agreeSources?: string[];
-}
-
-export function hasMissingPrice(a: PeggedAsset): boolean {
-  return a.price == null || typeof a.price !== "number" || a.price === 0;
-}
-
-export function applyResolvedPrice(
-  asset: PeggedAsset,
-  price: number,
-  source: string,
-  confidence: PriceConfidence,
-  updatedAtSec = Math.floor(Date.now() / 1000),
-): void {
-  asset.price = price;
-  asset.priceSource = source;
-  asset.priceConfidence = confidence;
-  asset.priceUpdatedAt = updatedAtSec;
-  asset.consensusSources = [source];
-}
+export type { PeggedAsset } from "./enrich-prices-shared";
+export { applyResolvedPrice, hasMissingPrice } from "./enrich-prices-shared";
 
 /**
  * Enrich assets that are missing prices via a 4-pass pipeline:

@@ -74,8 +74,9 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - reusable workflow in `.github/workflows/pages-release.yml`
    - runs only when `pages_changed=true`
    - waits for `smoke-api` only when worker/API work was also required for that push
-   - executes `build-pages -> smoke-ui -> deploy-pages` as one shared Pages release path
-   - `build-pages` still runs `npm run sync:digests`, `npm run build`, and `npm run seo:check`, then uploads `out/`
+   - executes `prepare-digests -> build-pages -> smoke-ui -> deploy-pages` as one shared Pages release path
+   - `prepare-digests` fetches `/api/digest-archive` once from the target API environment into a normalized artifact
+   - `build-pages` downloads that artifact into `data/`, then runs `npm run build` and `npm run seo:check`, and uploads `out/`
    - `smoke-ui` still serves that exact artifact locally and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173`
    - `deploy-pages` still publishes the verified artifact with the Wrangler retry loop
 7. `smoke-ui-live` (worker-only push path):
@@ -90,24 +91,28 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - Runs after `pages-release` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
 - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
 
-11. `Rebuild Pages`:
+9. `Rebuild Pages`:
 
 - defined in `.github/workflows/rebuild-pages.yml`
 - runs on the daily schedule and on manual dispatch
 - skips `validate`, `deploy-worker`, and `smoke-api`
 - runs the shared `pages-release` workflow and then `smoke-ops`
 
-12. `CodeQL`:
+10. `CodeQL`:
 
 - defined in `.github/workflows/codeql.yml`
 - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
 - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
-This arrangement gives pull requests the same validate gate the push/manual deploy workflow depends on, skips worker deploy/API smoke for Pages-only pushes, skips Pages build/deploy for worker-only pushes, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, keeps the scheduled digest rebuild off the worker deploy path, and still runs the post-deploy ops-surface smoke after each production-changing workflow.
+This arrangement gives pull requests the same validate gate the push/manual deploy workflow depends on, skips worker deploy/API smoke for Pages-only pushes, skips Pages build/deploy for worker-only pushes, fetches digest data once before the Pages build so the build itself is network-independent with respect to digest data, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, keeps the scheduled digest rebuild off the worker deploy path, and still runs the post-deploy ops-surface smoke after each production-changing workflow.
 
 The workflows pin `actions/checkout@v6` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the push/manual deploy pipeline before deploy. The production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs, while the scheduled/manual Pages rebuild queues behind an active production deploy instead of interrupting it.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker now fails only on new undeclared duplicates and keeps the current allowlist visible in review.
+
+`npm run test:merge-gate` now mirrors the shared CI validate core locally: `audit:deps`, lint, worker-boundary, migrations, cron/doc sync checks, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, full test suite, critical coverage, and worker type-checking all run every time. The only remaining conditional part is frontend export validation: `npm run build` and `npm run seo:check` are added when Pages-export or SEO-critical files changed. It still skips deploy-time smoke suites.
+
+`npm run check:unused-code` now scans all runtime code under `src/`, `shared/`, `worker/src/`, and `functions/`, with explicit module/export allowlists for intentional exceptions. `npm run check:hotspot-ratchet` now guards nine tracked hotspot files, including `src/app/coverage/client.tsx`, `worker/src/cron/daily-digest/collectors.ts`, `worker/src/cron/sync-fx-rates.ts`, and `worker/src/lib/status-evaluation.ts`; refresh the baseline only after an intentional refactor with `npm run check:hotspot-ratchet:update-baseline`.
 
 `npm run check:cron-sync` is part of the shared CI validate gate. Run it locally whenever you change `worker/wrangler.toml` cron expressions or `shared/lib/cron-jobs.ts` so you catch schedule drift before pushing.
 

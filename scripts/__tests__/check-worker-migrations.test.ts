@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  LEGACY_DUPLICATE_PREFIX_ALLOWLIST,
   parseDuplicatePrefixAllowlist,
+  validateDuplicatePrefixAllowlist,
   validateDuplicatePrefixes,
 } from "../check-worker-migrations.mjs";
 
@@ -44,5 +46,17 @@ describe("validateDuplicatePrefixes", () => {
 
     expect(uniqueDuplicates).toEqual(["0070"]);
     expect(newDuplicates).toEqual(["0070"]);
+  });
+});
+
+describe("validateDuplicatePrefixAllowlist", () => {
+  it("accepts the frozen legacy duplicate-prefix allowlist", () => {
+    expect(() => validateDuplicatePrefixAllowlist(new Set(LEGACY_DUPLICATE_PREFIX_ALLOWLIST))).not.toThrow();
+  });
+
+  it("rejects allowlist expansion beyond the frozen legacy prefixes", () => {
+    expect(() => validateDuplicatePrefixAllowlist(new Set(["0056", "0061", "0070"]))).toThrow(
+      "duplicate-prefix allowlist must stay frozen",
+    );
   });
 });

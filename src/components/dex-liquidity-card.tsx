@@ -1,13 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
-import Image from "next/image";
 import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import {
+  buildBreakdownEntries,
+  BreakdownBar,
+  BreakdownLegend,
+} from "@/components/liquidity-breakdown";
 import { useDexLiquidity, useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
@@ -79,101 +83,78 @@ function formatBalanceDetails(balanceDetails: PoolBalanceDetails | undefined): s
 }
 
 function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
-  const entries = Object.entries(protocolTvl).sort((a, b) => b[1] - a[1]);
-  const total = entries.reduce((sum, [, v]) => sum + v, 0);
+  const { entries, total } = buildBreakdownEntries(protocolTvl, {
+    labelForKey: prettifyProtocol,
+    colorForKey: (protocol, index) => PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[index % EXTRA_COLORS.length],
+    logoForKey: (protocol) => {
+      const path = PROTOCOL_LOGOS[protocol];
+      return path ? { path } : null;
+    },
+  });
   if (total === 0) return null;
-
-  // Pre-compute color for each protocol in display order
-  let extraIdx = 0;
-  const colorFor: Record<string, string> = {};
-  for (const [protocol] of entries) {
-    colorFor[protocol] = PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[extraIdx++ % EXTRA_COLORS.length];
-  }
 
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Protocol Breakdown</p>
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
-        {entries.map(([protocol, tvl]) => {
-          const pct = (tvl / total) * 100;
-          if (pct < 1) return null;
-          return (
-            <div
-              key={protocol}
-              className={colorFor[protocol] ?? "bg-muted-foreground"}
-              style={{ width: `${pct}%` }}
-              title={`${prettifyProtocol(protocol)}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
-            />
-          );
-        })}
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {entries
-          .filter(([, tvl]) => (tvl / total) * 100 >= 1)
-          .map(([protocol, tvl]) => {
-            const logo = PROTOCOL_LOGOS[protocol];
-            return (
-              <span key={protocol} className="flex items-center gap-1.5">
-                <span
-                  className={`inline-block h-2.5 w-2.5 rounded-sm shrink-0 ${colorFor[protocol] ?? "bg-muted-foreground"}`}
-                />
-                {logo && <Image src={logo} alt="" width={14} height={14} className="rounded-full shrink-0" />}
-                {prettifyProtocol(protocol)} {((tvl / total) * 100).toFixed(0)}%
-              </span>
-            );
-          })}
-      </div>
+      <BreakdownBar
+        entries={entries}
+        total={total}
+        minPercent={1}
+        className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
+        titleFormatter={(entry, percent) => `${entry.label}: ${formatCurrency(entry.value)} (${percent.toFixed(0)}%)`}
+      />
+      <BreakdownLegend
+        entries={entries}
+        total={total}
+        minPercent={1}
+        variant="inline"
+        className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"
+        itemClassName="flex items-center gap-1.5"
+        markerClassName="h-2.5 w-2.5"
+        logoSize={14}
+        valueFormatter={(_, percent) => `${percent.toFixed(0)}%`}
+        nameClassName="text-xs text-muted-foreground"
+        valueClassName="text-xs text-muted-foreground"
+      />
     </div>
   );
 }
 
 function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
-  const entries = Object.entries(chainTvl).sort((a, b) => b[1] - a[1]);
-  const total = entries.reduce((sum, [, v]) => sum + v, 0);
+  const { entries, total } = buildBreakdownEntries(chainTvl, {
+    labelForKey: normalizeChain,
+    colorForKey: (chain) => CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground",
+    logoForKey: (chain) => {
+      const meta = CHAIN_META[chain.toLowerCase()];
+      return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
+    },
+  });
   if (total === 0 || entries.length <= 1) return null;
 
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chain Breakdown</p>
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
-        {entries.map(([chain, tvl]) => {
-          const pct = (tvl / total) * 100;
-          if (pct < 1) return null;
-          const displayName = normalizeChain(chain);
-          return (
-            <div
-              key={chain}
-              className={CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}
-              style={{ width: `${pct}%` }}
-              title={`${displayName}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
-            />
-          );
-        })}
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {entries
-          .filter(([, tvl]) => (tvl / total) * 100 >= 1)
-          .map(([chain, tvl]) => {
-            const meta = CHAIN_META[chain.toLowerCase()];
-            return (
-              <span key={chain} className="flex items-center gap-1.5">
-                <span
-                  className={`inline-block h-2.5 w-2.5 rounded-sm shrink-0 ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`}
-                />
-                {meta?.logoPath && (
-                  <Image
-                    src={meta.logoPath}
-                    alt=""
-                    width={14}
-                    height={14}
-                    className={`h-3.5 w-3.5 rounded-full object-contain shrink-0${meta.darkInvert ? " dark:invert" : ""}`}
-                  />
-                )}
-                {normalizeChain(chain)} {formatCurrency(tvl)}
-              </span>
-            );
-          })}
-      </div>
+      <BreakdownBar
+        entries={entries}
+        total={total}
+        minPercent={1}
+        className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
+        titleFormatter={(entry, percent) => `${entry.label}: ${formatCurrency(entry.value)} (${percent.toFixed(0)}%)`}
+      />
+      <BreakdownLegend
+        entries={entries}
+        total={total}
+        minPercent={1}
+        variant="inline"
+        className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"
+        itemClassName="flex items-center gap-1.5"
+        markerClassName="h-2.5 w-2.5"
+        logoClassName="h-3.5 w-3.5 rounded-full object-contain shrink-0"
+        logoSize={14}
+        valueFormatter={(entry) => formatCurrency(entry.value)}
+        nameClassName="text-xs text-muted-foreground"
+        valueClassName="text-xs text-muted-foreground"
+      />
     </div>
   );
 }

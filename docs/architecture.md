@@ -4,6 +4,10 @@
 
 Curated architecture-significant routes. Start with the [Documentation Index](./README.md) for the full docs map, or go straight to the [API Reference](./api-reference.md) for the exhaustive HTTP contract.
 
+## Route Definition Model
+
+Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list now carries path, method, admin/cache/probe/status-action metadata, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` binds worker handlers to those shared endpoint keys, and `worker/src/router.ts` stays focused on generic dispatch plus the dynamic route patterns that cannot be enumerated statically.
+
 | Endpoint                                     | Description                                                                                                                                                                                                                    |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GET /api/stablecoins`                       | Full stablecoin list with supply, price, chains. Returns `X-Data-Age` header                                                                                                                                                   |
@@ -397,7 +401,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 │   ├── mint-burn.ts              # Mint/burn flow, event, and sync contracts
 │   └── chains.ts                 # ChainSummary, ChainsResponse, ChainHealthFactors, HealthBand
 └── lib/
-    ├── api-endpoints.ts          # Authoritative endpoint metadata + status/smoke/strict-contract helpers (incl. STRICT_CONTRACT_PATHS_LIST)
+    ├── api-endpoints.ts          # Authoritative endpoint metadata + static worker dependency hints + status/smoke/strict-contract helpers
     ├── chain-aggregator.ts       # aggregateChains() — builds ChainSummary list from stablecoins cache + report-card snapshot
     ├── chain-health.ts           # Pure Chain Health Score computation (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%)
     ├── chain-provider-registry.ts # Runtime-neutral CoinGecko/DexScreener/GeckoTerminal chain slug registry
@@ -415,7 +419,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
 ├── migrations/                   # D1 SQL migration files (76) plus MANIFEST.md
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
-    ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata
+    ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata + dependency descriptors
     ├── handlers/
     │   ├── http.ts               # HTTP orchestration: preflight, gates, edge cache, route-context build, router dispatch
     │   ├── http/                 # Focused HTTP helper modules
@@ -425,7 +429,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   └── context.ts        # Route dependency hydration from Env
     │   ├── scheduled.ts          # Thin cron entrypoint: init env-aware clients + dispatch to slot runner registry
     │   └── scheduled/            # Slot runners + shared lease/runtime context for scheduled execution
-    ├── router.ts                 # Worker route dispatcher: static registry lookup + dynamic route matching
+    ├── router.ts                 # Thin worker route dispatcher: shared method validation, static registry lookup, dynamic route matching
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/
@@ -436,6 +440,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   ├── shared.ts         # Shared stablecoins-sync cache/write helpers and FX utilities
     │   │   └── supplemental-assets.ts # Extracted supplemental token fetch helpers (gold/silver/CG-only fiat overlays)
     │   ├── enrich-prices.ts      # Dual-primary price validation + 4-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
+    │   ├── enrich-prices-shared.ts # Leaf shared price-enrichment types/helpers used across the enrichment pipeline
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart cache refresh (30-min trigger, 1h write cooldown)
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (runs on */15, writes once daily via dedup guard; primary daily run at 8AM UTC)
@@ -444,6 +449,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-live-reserves.ts # Live reserve composition sync → D1 (hourly, reserve lane)
     │   ├── reserve-adapters/    # Per-protocol live reserve adapters (27 adapters)
     │   │   ├── index.ts         # Adapter registry + dispatch
+    │   │   ├── types.ts         # Leaf adapter context/result types consumed by adapters without importing the registry barrel
     │   │   └── ...              # Individual adapters (accountable, tether, circle-transparency, gho, etc.)
     │   ├── sync-redemption-backstops.ts # Redemption backstop + effective-exit snapshot sync → D1 (hourly, reserve lane)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
@@ -542,6 +548,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, buildInClause, logCronRun with protected catch)
         ├── chain-registry.ts     # Worker RPC registry and provider-map re-exports; runtime-neutral provider slugs now live in shared/lib/chain-provider-registry.ts
+        ├── dex-api-types.ts      # Leaf Dex API pool/token type contracts shared across liquidity modules
         ├── evm-rpc.ts            # EVM JSON-RPC + Etherscan proxy helpers (eth_call, storage, uint256, block headers, timestamp→block search)
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)

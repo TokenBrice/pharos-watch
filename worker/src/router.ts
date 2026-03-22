@@ -11,10 +11,9 @@ import { handleOg } from "./api/og";
 import { handleDismissCandidate } from "./api/discovery";
 import { withAdmin } from "./lib/auth";
 import {
-  STATIC_ROUTE_HANDLERS,
-  ROUTE_DEPENDENCIES_BY_KEY,
   type RouteDependency,
   type FullRouteContext,
+  getStaticRouteDefinition,
 } from "./route-registry";
 
 function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
@@ -99,9 +98,9 @@ function resolveDynamicRoute(
 
 export function getRouteDependencies(url: URL): readonly RouteDependency[] | null {
   const path = url.pathname;
-  const endpoint = getEndpointDefinition(path);
-  if (endpoint) {
-    return ROUTE_DEPENDENCIES_BY_KEY[endpoint.key] ?? [];
+  const staticRoute = getStaticRouteDefinition(path);
+  if (staticRoute) {
+    return staticRoute.endpoint.routeDependencies ?? [];
   }
 
   for (const definition of DYNAMIC_ROUTE_DEFINITIONS) {
@@ -122,10 +121,10 @@ export function route(routeCtx: FullRouteContext): Promise<Response> | null {
     return Promise.resolve(resp);
   }
 
-  const staticHandler = STATIC_ROUTE_HANDLERS.get(path);
-  if (staticHandler) {
-    return staticHandler(routeCtx)
-      .then((response) => addAdminGetNoStoreHeader(path, routeCtx.request, response));
+  const staticRoute = getStaticRouteDefinition(path);
+  if (staticRoute) {
+    return staticRoute.handler(routeCtx)
+      .then((response) => addAdminGetNoStoreHeader(staticRoute.endpoint.path, routeCtx.request, response));
   }
 
   const dynamicRoute = resolveDynamicRoute(routeCtx);

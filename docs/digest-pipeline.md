@@ -297,7 +297,20 @@ Each detail page shows the short summary intro (`text`) followed by every extend
 **Script:** `scripts/sync-digests.ts`
 **Command:** `npm run sync:digests`
 
-Fetches `GET /api/digest-archive` from the live API, transforms to the `data/digests.json` format (`date`, `title`, `text`, `extended`, `generatedAt`), and writes the file. This must run before `next build` so `generateStaticParams()` in `[date]/page.tsx` has fresh data.
+Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `title`, `text`, `extended`, `generatedAt`), and writes the file. The script accepts `--api-url` or `DIGEST_API_URL`, and falls back to `SMOKE_API_BASE` / `API_BASE_URL` when those are already set.
+
+For local/manual use, point it at the intended environment explicitly:
+
+```bash
+npx tsx scripts/sync-digests.ts --api-url https://ops-api.example.com
+```
+
+CI now runs digest sync as a separate artifact-preparation step inside `.github/workflows/pages-release.yml`:
+
+1. `prepare-digests` fetches the archive once from the target API environment and writes a normalized JSON artifact.
+2. `build-pages` downloads that artifact into `data/digests.json` before `next build`.
+
+This keeps the Pages build itself network-independent with respect to digest data and avoids hard-coding `https://api.pharos.watch` into the build path.
 
 ---
 
@@ -329,7 +342,8 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `worker/src/api/digest-archive.ts` | `GET /api/digest-archive` handler |
 | `worker/src/api/digest-snapshot.ts` | `GET /api/digest-snapshot` handler |
 | `worker/src/handlers/scheduled.ts` | Cron scheduling orchestration (daily digest runs after `snapshot-psi`) |
-| `worker/src/router.ts` | API route dispatch for `POST /api/trigger-digest` |
+| `worker/src/route-registry.ts` | Static worker route bindings keyed by shared endpoint descriptors, including `trigger-digest` dependency hints |
+| `worker/src/router.ts` | Worker route dispatcher for static registry lookup plus dynamic route matching |
 | `worker/src/lib/env.ts` | `Env` interface used by fetch/scheduled handlers |
 | `worker/migrations/0018_daily_digest.sql` | Initial `daily_digest` table |
 | `worker/migrations/0021_digest_title.sql` | Added `digest_title` column |
@@ -342,4 +356,5 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useDailyDigest()`, `useDigestArchive()`, and `useDigestSnapshot()` |
 | `scripts/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
+| `.github/workflows/pages-release.yml` | CI release path: prepares digest artifact, builds Pages export, runs browser smoke, deploys |
 | `data/digests.json` | Static digest list for SSG (generated, not hand-edited) |

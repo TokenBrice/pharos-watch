@@ -1,6 +1,6 @@
 import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import type { AdapterContext, AdapterResult } from "./index";
+import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 export interface FirmMarket {

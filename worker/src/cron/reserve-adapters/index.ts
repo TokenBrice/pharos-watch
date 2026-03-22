@@ -25,28 +25,9 @@ import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchTetherReserves } from "./tether";
-import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { AdapterFn } from "./types";
 
-/** Context passed from the cron to adapters that need worker infrastructure. */
-export interface AdapterContext {
-  etherscanApiKey?: string;
-  alchemyApiKey?: string;
-  chainRpcs?: Map<string, ChainRpcConfig>;
-}
-
-export interface AdapterResult {
-  slices: ReserveSlice[];
-  warnings?: LiveReserveWarning[];
-  metadata?: Record<string, unknown>;
-}
-
-type AdapterFn = (
-  coin: StablecoinMeta,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-) => Promise<AdapterResult>;
+export type { AdapterContext, AdapterResult, AdapterFn } from "./types";
 
 const ADAPTERS: Record<string, AdapterFn> = {
   accountable: fetchAccountableReserves,

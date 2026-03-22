@@ -3,11 +3,13 @@ import {
   percentile,
   minMaxNormalize,
   deterministicJitter,
+  clampGraphPosition,
   buildGraphData,
   buildSupernodeState,
   WIDTH,
   HEIGHT,
   MAX_NODES,
+  PAD,
   SUPERNODE_CONFIG,
   type GraphNode,
   type GraphLink,
@@ -136,6 +138,15 @@ describe("minMaxNormalize", () => {
     const result = minMaxNormalize(ids, values);
     expect(result.get("a")).toBe(1);
     expect(result.get("b")).toBe(0);
+  });
+});
+
+describe("clampGraphPosition", () => {
+  it("keeps dragged nodes inside the padded graph bounds", () => {
+    expect(clampGraphPosition(-20, HEIGHT + 20, 12)).toEqual({
+      x: PAD + 12,
+      y: HEIGHT - PAD - 12,
+    });
   });
 });
 

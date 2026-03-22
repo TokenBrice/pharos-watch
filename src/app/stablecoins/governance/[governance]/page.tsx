@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { StablecoinTaxonomyPage } from "@/components/stablecoin-taxonomy-page";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   GOVERNANCE_TAXONOMY_PAGE_BY_SLUG,
   GOVERNANCE_TAXONOMY_PAGES,
 } from "@/lib/stablecoin-taxonomy";
+import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
 
 export function generateStaticParams() {
-  return GOVERNANCE_TAXONOMY_PAGES.map((page) => ({ governance: page.slug }));
+  return buildSlugStaticParams("governance", GOVERNANCE_TAXONOMY_PAGES);
 }
 
 export async function generateMetadata({
@@ -15,20 +15,12 @@ export async function generateMetadata({
 }: {
   params: Promise<{ governance: string }>;
 }) {
-  const { governance } = await params;
-  const page = GOVERNANCE_TAXONOMY_PAGE_BY_SLUG.get(governance);
-  if (!page) {
-    return {
-      title: "Governance Type Not Found | Pharos",
-      robots: { index: false },
-    };
-  }
-
-  return buildPageMetadata({
-    title: page.title,
-    description: page.description,
-    canonical: page.href,
-  });
+  return buildSlugPageMetadata(
+    params,
+    "governance",
+    GOVERNANCE_TAXONOMY_PAGE_BY_SLUG,
+    "Governance Type Not Found | Pharos",
+  );
 }
 
 export default async function GovernanceTaxonomyPage({
@@ -36,8 +28,7 @@ export default async function GovernanceTaxonomyPage({
 }: {
   params: Promise<{ governance: string }>;
 }) {
-  const { governance } = await params;
-  const page = GOVERNANCE_TAXONOMY_PAGE_BY_SLUG.get(governance);
+  const page = await resolveSlugPage(params, "governance", GOVERNANCE_TAXONOMY_PAGE_BY_SLUG);
   if (!page) notFound();
 
   return <StablecoinTaxonomyPage page={page} />;

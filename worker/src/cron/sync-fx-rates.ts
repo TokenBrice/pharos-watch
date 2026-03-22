@@ -569,18 +569,29 @@ export async function syncFxRates(
       if (mode !== "cached-fallback") {
         let oxrSource: "ok" | "partial" | "rate-limited" | "unavailable" = "unavailable";
         if (openExchangeRatesKey) {
-          const OXR_CACHE_KEY = "fx-oxr-last-fetch";
-          const lastFetch = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_CACHE_KEY).first<{ value: string }>();
-          const lastFetchTime = lastFetch ? parseInt(lastFetch.value, 10) : 0;
+          const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
+          const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
+          const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
+          const [lastAttempt, legacyLastFetch] = await Promise.all([
+            db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LAST_ATTEMPT_KEY).first<{ value: string }>(),
+            db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LEGACY_LAST_FETCH_KEY).first<{ value: string }>(),
+          ]);
+          const lastFetchTime = lastAttempt
+            ? parseInt(lastAttempt.value, 10)
+            : legacyLastFetch
+              ? parseInt(legacyLastFetch.value, 10)
+              : 0;
           const elapsedMinutes = (Math.floor(Date.now() / 1000) - lastFetchTime) / 60;
 
           if (elapsedMinutes >= 55) {
             try {
-              const realtimeRates = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
-              if (realtimeRates.size > 0) {
+              const completedAt = Math.floor(Date.now() / 1000);
+              const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
+              const realtimeRates = realtimeFetch.rates;
+              if (realtimeFetch.completed) {
                 await runBestEffort("fx-oxr-last-fetch-write", async () => {
                   await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-                    .bind(OXR_CACHE_KEY, String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000)).run();
+                    .bind(OXR_LAST_ATTEMPT_KEY, String(completedAt), completedAt).run();
                 });
               }
               let realtimeApplied = 0;
@@ -603,10 +614,16 @@ export async function syncFxRates(
                   realtimeApplied++;
                 }
               }
+              if (realtimeRates.size > 0) {
+                await runBestEffort("fx-oxr-last-success-write", async () => {
+                  await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+                    .bind(OXR_LAST_SUCCESS_KEY, String(completedAt), completedAt).run();
+                });
+              }
               console.log(`[sync-fx-rates] Applied ${realtimeApplied}/${realtimeRates.size} real-time FX rates`);
               oxrSource = realtimeRates.size > 0 ? (realtimeApplied === realtimeRates.size ? "ok" : "partial") : "unavailable";
               await runBestEffort("recordOutcome:fx-realtime", async () => {
-                await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeRates.size > 0);
+                await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeFetch.completed);
               });
             } catch (err) {
               if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));

@@ -28,6 +28,11 @@ const OpenExchangeRatesSchema = z.object({
   rates: z.record(z.string(), z.number()),
 });
 
+export interface RealtimeFxFetchResult {
+  rates: Map<string, number>;
+  completed: boolean;
+}
+
 /**
  * Fetch real-time FX rates from Open Exchange Rates.
  * Returns Map<pegKey, usdPerUnit> — same format as sync-fx-rates cache.
@@ -35,9 +40,11 @@ const OpenExchangeRatesSchema = z.object({
 export async function fetchRealtimeFxRates(
   apiKey: string,
   signal?: AbortSignal,
-): Promise<Map<string, number>> {
+): Promise<RealtimeFxFetchResult> {
   const result = new Map<string, number>();
-  if (!apiKey) return result;
+  if (!apiKey) {
+    return { rates: result, completed: false };
+  }
 
   try {
     const symbols = Object.keys(CURRENCY_TO_PEG).join(",");
@@ -47,7 +54,7 @@ export async function fetchRealtimeFxRates(
     );
     if (!res.ok) {
       console.warn(`[fx-realtime] Open Exchange Rates returned ${res.status}`);
-      return result;
+      return { rates: result, completed: true };
     }
     const data = OpenExchangeRatesSchema.parse(await res.json());
 
@@ -62,9 +69,10 @@ export async function fetchRealtimeFxRates(
       }
       result.set(pegKey, rate);
     }
+    return { rates: result, completed: true };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[fx-realtime] Fetch failed:", err);
+    return { rates: result, completed: false };
   }
-  return result;
 }

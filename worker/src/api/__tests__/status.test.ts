@@ -234,6 +234,191 @@ describe("handleStatus", () => {
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
+  it("treats cron history query failure as unknown telemetry instead of stale cron health", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("bluechip-ratings"),
+          {
+            key: "fx-rates",
+            updated_at: now - 300,
+            value: JSON.stringify({ peggedEUR: 1.08 }),
+          },
+          {
+            key: "fx-rates-meta",
+            updated_at: now - 300,
+            value: JSON.stringify({
+              usableSyncAt: now - 300,
+              mode: "live",
+              sourceUpdatedAtByPeg: { peggedEUR: now - 300 },
+              sourceModeByPeg: { peggedEUR: "live" },
+              sourceCadenceByPeg: { peggedEUR: "intraday" },
+              sourceDateByPeg: { peggedEUR: null },
+            }),
+          },
+        ],
+      },
+      { match: "cron_runs", rows: [], throwError: new Error("cron_runs unavailable") },
+      { match: "cron_run_progress", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      summary: { unhealthyCrons: number };
+      crons: Record<string, { healthy: boolean; telemetryUnknown?: boolean }>;
+      causes: { availability: Array<{ code: string }> };
+    };
+
+    expect(body.availabilityStatus).toBe("healthy");
+    expect(body.summary.unhealthyCrons).toBe(0);
+    expect(body.crons["sync-stablecoins"]?.healthy).toBe(true);
+    expect(body.crons["sync-stablecoins"]?.telemetryUnknown).toBe(true);
+    expect(body.causes.availability.some((cause) => cause.code === "cron_history_query_failed")).toBe(true);
+  });
+
+  it("emits cache warnings alongside degraded FX-source warnings", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          {
+            key: "fx-rates",
+            updated_at: now - 300,
+            value: JSON.stringify({ peggedEUR: 1.08 }),
+          },
+          {
+            key: "fx-rates-meta",
+            updated_at: now - 300,
+            value: JSON.stringify({
+              usableSyncAt: now - 300,
+              mode: "live",
+              sourceUpdatedAtByPeg: { peggedEUR: now - (8 * 3600) },
+              sourceModeByPeg: { peggedEUR: "live" },
+              sourceCadenceByPeg: { peggedEUR: "intraday" },
+              sourceDateByPeg: { peggedEUR: null },
+            }),
+          },
+          {
+            key: "stablecoins",
+            updated_at: now - 4_000,
+            value: JSON.stringify({
+              peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 1 } }],
+            }),
+          },
+        ],
+      },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins")] },
+      { match: "cron_run_progress", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      {
+        match: "cache",
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+          }),
+          updated_at: now - 60,
+        },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      causes: { availability: Array<{ code: string }> };
+    };
+    const codes = body.causes.availability.map((cause) => cause.code);
+    expect(codes).toContain("fx_source_degraded");
+    expect(codes).toContain("cache_warning");
+  });
+
+  it("surfaces status persistence failures as a section error", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins")] },
+      { match: "cron_run_progress", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+      {
+        match: "FROM status_state",
+        rows: [],
+        throwError: new Error("no such table: status_state"),
+      },
+      {
+        match: "INSERT INTO status_state",
+        rows: [],
+        throwError: new Error("no such table: status_state"),
+      },
+      {
+        match: "FROM status_probe_runs",
+        rows: [],
+        throwError: new Error("no such table: status_probe_runs"),
+      },
+      {
+        match: "SELECT consecutive_divergent FROM status_discrepancy_state",
+        rows: [],
+        throwError: new Error("no such table: status_discrepancy_state"),
+      },
+      {
+        match: "FROM status_transitions",
+        rows: [],
+        throwError: new Error("no such table: status_transitions"),
+      },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      sectionErrors: Record<string, { code: string; message: string } | undefined>;
+    };
+    expect(body.sectionErrors.statusState?.code).toBe("status_persistence_degraded");
+    expect(body.sectionErrors.statusState?.message).toMatch(/status_state/i);
+  });
+
   it("uses writer timestamps for event-backed freshness rows", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({

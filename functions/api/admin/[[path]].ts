@@ -7,6 +7,7 @@ import {
 } from "../../lib/ops-env";
 
 const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/\d+\/dismiss$/;
+const UPSTREAM_TIMEOUT_MS = 10_000;
 const FORWARDED_REQUEST_HEADERS = [
   "Accept",
   "Content-Type",
@@ -99,6 +100,27 @@ function buildProxyResponse(upstreamResponse: Response, method: string): Respons
   });
 }
 
+function createTimeoutSignal(request: Request): {
+  signal: AbortSignal;
+  isTimedOut: () => boolean;
+  dispose: () => void;
+} {
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(
+    () => timeoutController.abort(new DOMException("Operator API upstream timed out", "TimeoutError")),
+    UPSTREAM_TIMEOUT_MS,
+  );
+  const signal = request.signal && typeof AbortSignal.any === "function"
+    ? AbortSignal.any([request.signal, timeoutController.signal])
+    : (request.signal ?? timeoutController.signal);
+
+  return {
+    signal,
+    isTimedOut: () => timeoutController.signal.aborted,
+    dispose: () => clearTimeout(timeoutId),
+  };
+}
+
 export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => {
   const { request, env, params } = context;
   const requestUrl = new URL(request.url);
@@ -129,15 +151,22 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
   }
 
   let upstreamResponse: Response;
+  const timeout = createTimeoutSignal(request);
   try {
     upstreamResponse = await fetch(upstreamUrl.toString(), {
       method: request.method,
       headers: upstreamHeaders,
       body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
       redirect: "manual",
+      signal: timeout.signal,
     });
   } catch {
+    if (timeout.isTimedOut()) {
+      return jsonError(504, "Operator API upstream timed out");
+    }
     return jsonError(502, "Operator API upstream fetch failed");
+  } finally {
+    timeout.dispose();
   }
 
   const redirectLocation = upstreamResponse.headers.get("Location");

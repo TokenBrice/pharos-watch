@@ -1,26 +1,16 @@
+import { normalizeStringSet } from "../../lib/normalizers";
+
 export interface MintBurnRunStateRow {
   nextConfigIndex: number;
   degradedStreak: number;
 }
 
 export function normalizeDisabledConfigIdSet(values?: Iterable<string>): Set<string> {
-  const set = new Set<string>();
-  if (!values) return set;
-  for (const value of values) {
-    const normalized = value.trim().toLowerCase();
-    if (normalized.length > 0) set.add(normalized);
-  }
-  return set;
+  return normalizeStringSet(values, (value) => value.toLowerCase());
 }
 
 export function normalizeDisabledSymbolSet(values?: Iterable<string>): Set<string> {
-  const set = new Set<string>();
-  if (!values) return set;
-  for (const value of values) {
-    const normalized = value.trim().toUpperCase();
-    if (normalized.length > 0) set.add(normalized);
-  }
-  return set;
+  return normalizeStringSet(values, (value) => value.toUpperCase());
 }
 
 export function rotateArray<T>(values: T[], start: number): T[] {

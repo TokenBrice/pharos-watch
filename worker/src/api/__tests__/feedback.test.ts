@@ -149,7 +149,7 @@ describe("handleFeedback", () => {
   });
 
   it("returns 503 when GITHUB_PAT is not configured", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const db = mockD1([], { requireMatch: true });
     // Explicitly omit GITHUB_PAT (not undefined — ?? would fill the default)
     const env: FeedbackEnv = { FEEDBACK_IP_SALT: "test-salt" };
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), env);
@@ -157,6 +157,7 @@ describe("handleFeedback", () => {
     expect(res.status).toBe(503);
     const body = (await res.json()) as { error: string };
     expect(body.error).toMatch(/unavailable/i);
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("returns 200 and creates GitHub issue for bug report", async () => {

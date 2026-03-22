@@ -1,5 +1,12 @@
 type EndpointMethod = "GET" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
+export type EndpointDependency =
+  | "alchemyApiKey"
+  | "anthropicApiKey"
+  | "feedbackEnv"
+  | "mintBurnFreshnessConfig"
+  | "coingeckoApiKey"
+  | "telegram";
 
 interface EndpointStatusPageActionConfig {
   label: string;
@@ -9,7 +16,7 @@ interface EndpointStatusPageActionConfig {
   path?: string;
 }
 
-interface EndpointDefinition {
+export interface EndpointDefinition {
   key: string;
   path: string;
   methods: readonly EndpointMethod[];
@@ -20,6 +27,8 @@ interface EndpointDefinition {
   probeGroup?: EndpointProbeGroup;
   probePath?: string;
   statusPageAction?: EndpointStatusPageActionConfig;
+  /** Worker-only dependency hydration hints consumed by the route registry/context builder. */
+  routeDependencies?: readonly EndpointDependency[];
 }
 
 export interface StatusPageAction {
@@ -112,6 +121,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
+    routeDependencies: ["coingeckoApiKey"],
     probeGroup: "public",
     // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
     probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
@@ -160,6 +170,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
+    routeDependencies: ["mintBurnFreshnessConfig"],
     probeGroup: "public",
   },
   {
@@ -360,6 +371,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
+    routeDependencies: ["feedbackEnv"],
   },
   {
     key: "telegram-webhook",
@@ -368,6 +380,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
+    routeDependencies: ["telegram"],
   },
 
   // Admin status/probe endpoints.
@@ -397,6 +410,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: false,
+    routeDependencies: ["anthropicApiKey", "telegram"],
     probeGroup: "manual",
     statusPageAction: {
       label: "Trigger Digest",
@@ -468,6 +482,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
+    routeDependencies: ["coingeckoApiKey"],
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill CG Prices",
@@ -510,6 +525,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
+    routeDependencies: ["alchemyApiKey"],
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Mint/Burn",

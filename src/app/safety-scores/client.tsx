@@ -250,6 +250,103 @@ function GradeDistributionHero({
   );
 }
 
+function getActiveGradeButtonClassName(range: GradeFilter): string | undefined {
+  if (range === "all") return undefined;
+  return REPORT_CARD_GRADE_COLORS[range as keyof typeof REPORT_CARD_GRADE_COLORS]
+    ?.replace("bg-", "bg-")
+    .replace("hover:bg-", "");
+}
+
+function GradeFilterButtons({
+  gradeFilter,
+  totalCards,
+  gradeCounts,
+  onChange,
+}: {
+  gradeFilter: GradeFilter;
+  totalCards: number;
+  gradeCounts: Record<string, number>;
+  onChange: (value: GradeFilter) => void;
+}) {
+  return (
+    <>
+      <Button
+        variant={gradeFilter === "all" ? "default" : "outline"}
+        size="sm"
+        onClick={() => onChange("all")}
+        className="pharos-focus-ring rounded-full text-xs"
+      >
+        All ({totalCards})
+      </Button>
+      {GRADE_RANGES.map((range) => {
+        const count = gradeCounts[range] ?? 0;
+        if (count === 0) return null;
+        const isActive = gradeFilter === range;
+        return (
+          <Button
+            key={range}
+            variant={isActive ? "default" : "outline"}
+            size="sm"
+            onClick={() => onChange(isActive ? "all" : range)}
+            className={cn(
+              "pharos-focus-ring rounded-full text-xs",
+              isActive && getActiveGradeButtonClassName(range),
+            )}
+          >
+            {range} ({count})
+          </Button>
+        );
+      })}
+    </>
+  );
+}
+
+function SortButtons({
+  sortKey,
+  onChange,
+}: {
+  sortKey: SortKey;
+  onChange: (value: SortKey) => void;
+}) {
+  return (
+    <>
+      {SORT_OPTIONS.map((opt) => (
+        <Button
+          key={opt.key}
+          variant={sortKey === opt.key ? "default" : "outline"}
+          size="sm"
+          onClick={() => onChange(opt.key)}
+          className="pharos-focus-ring rounded-full text-xs"
+        >
+          {opt.label}
+        </Button>
+      ))}
+    </>
+  );
+}
+
+function ShowDefunctToggle({
+  checked,
+  onChange,
+  label = "Show defunct",
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label?: string;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-4 w-4 rounded border-border bg-background text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      />
+      {label}
+    </label>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -453,33 +550,12 @@ export function ReportCardsClient() {
             <div className="space-y-2">
               <span className="pharos-kicker">Filter by Grade</span>
               <div className="flex flex-wrap gap-1">
-                <Button
-                  variant={gradeFilter === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setGradeFilter("all")}
-                  className="pharos-focus-ring rounded-full text-xs"
-                >
-                  All ({totalCards})
-                </Button>
-                {GRADE_RANGES.map((range) => {
-                  const count = gradeCounts[range] ?? 0;
-                  if (count === 0) return null;
-                  const isActive = gradeFilter === range;
-                  return (
-                    <Button
-                      key={range}
-                      variant={isActive ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setGradeFilter(isActive ? "all" : range)}
-                      className={cn(
-                        "pharos-focus-ring rounded-full text-xs",
-                        isActive && REPORT_CARD_GRADE_COLORS[range as keyof typeof REPORT_CARD_GRADE_COLORS]?.replace("bg-", "bg-").replace("hover:bg-", "")
-                      )}
-                    >
-                      {range} ({count})
-                    </Button>
-                  );
-                })}
+                <GradeFilterButtons
+                  gradeFilter={gradeFilter}
+                  totalCards={totalCards}
+                  gradeCounts={gradeCounts}
+                  onChange={setGradeFilter}
+                />
               </div>
             </div>
 
@@ -487,30 +563,12 @@ export function ReportCardsClient() {
             <div className="space-y-2">
               <span className="pharos-kicker">Sort by</span>
               <div className="flex flex-wrap gap-1">
-                {SORT_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.key}
-                    variant={sortKey === opt.key ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSortKey(opt.key)}
-                    className="pharos-focus-ring rounded-full text-xs"
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
+                <SortButtons sortKey={sortKey} onChange={setSortKey} />
               </div>
             </div>
 
             {/* Show defunct */}
-            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-              <input
-                type="checkbox"
-                checked={showDefunct}
-                onChange={(e) => setShowDefunct(e.target.checked)}
-                className="h-4 w-4 rounded border-border bg-background text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              />
-              Show defunct coins
-            </label>
+            <ShowDefunctToggle checked={showDefunct} onChange={setShowDefunct} label="Show defunct coins" />
           </div>
         </details>
 
@@ -519,33 +577,12 @@ export function ReportCardsClient() {
           {/* Grade filters */}
           <div className="flex items-center gap-1">
             <span className="pharos-kicker mr-2">Filter:</span>
-            <Button
-              variant={gradeFilter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setGradeFilter("all")}
-              className="pharos-focus-ring rounded-full text-xs"
-            >
-              All ({totalCards})
-            </Button>
-            {GRADE_RANGES.map((range) => {
-              const count = gradeCounts[range] ?? 0;
-              if (count === 0) return null;
-              const isActive = gradeFilter === range;
-              return (
-                <Button
-                  key={range}
-                  variant={isActive ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setGradeFilter(isActive ? "all" : range)}
-                  className={cn(
-                    "pharos-focus-ring rounded-full text-xs",
-                    isActive && REPORT_CARD_GRADE_COLORS[range as keyof typeof REPORT_CARD_GRADE_COLORS]?.replace("bg-", "bg-").replace("hover:bg-", "")
-                  )}
-                >
-                  {range} ({count})
-                </Button>
-              );
-            })}
+            <GradeFilterButtons
+              gradeFilter={gradeFilter}
+              totalCards={totalCards}
+              gradeCounts={gradeCounts}
+              onChange={setGradeFilter}
+            />
           </div>
 
           <div className="h-5 w-px bg-border" />
@@ -553,31 +590,13 @@ export function ReportCardsClient() {
           {/* Sort options */}
           <div className="flex items-center gap-1">
             <span className="pharos-kicker mr-2">Sort:</span>
-            {SORT_OPTIONS.map((opt) => (
-              <Button
-                key={opt.key}
-                variant={sortKey === opt.key ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSortKey(opt.key)}
-                className="pharos-focus-ring rounded-full text-xs"
-              >
-                {opt.label}
-              </Button>
-            ))}
+            <SortButtons sortKey={sortKey} onChange={setSortKey} />
           </div>
 
           <div className="h-5 w-px bg-border" />
 
           {/* Show defunct */}
-          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-            <input
-              type="checkbox"
-              checked={showDefunct}
-              onChange={(e) => setShowDefunct(e.target.checked)}
-              className="h-4 w-4 rounded border-border bg-background text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            />
-            Show defunct
-          </label>
+          <ShowDefunctToggle checked={showDefunct} onChange={setShowDefunct} />
         </div>
       </div>
 

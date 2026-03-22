@@ -55,31 +55,30 @@ Hook behavior:
 
 ## What `test:merge-gate` Does
 
-`scripts/test-merge-gate.mjs` compares current `HEAD` to merge-base with `origin/main` and runs a delta-aware command set.
+`scripts/test-merge-gate.mjs` compares current `HEAD` to merge-base with `origin/main` and always runs the shared CI validate core locally.
 
 Default policy:
 
-1. Documentation changes:
+1. Always run the shared validate core:
+   - `npm run audit:deps`
+   - `npm run lint`
+   - `npm run check:worker-boundary`
+   - `npm run check:migrations`
+   - `npm run check:cron-sync`
    - `npm run check:doc-counts`
-2. Redemption-backstop docs or runtime changes additionally run:
+   - `npm run check:doc-sync`
+   - `npm run check:duplicate-exports`
    - `npm run check:redemption-backstops`
-3. Critical API/shared contract changes:
-   - `npm run test:critical-contracts`
-   - `npm run coverage:critical`
-4. Cron/worker-lib changes:
-   - `npm run test:invariants`
-   - `npm run coverage:critical`
-5. Workflow/gate infra changes:
+   - `npm run check:unused-code`
+   - `npm run check:hotspot-ratchet`
    - `npm test`
    - `npm run coverage:critical`
-6. TypeScript/JavaScript changes additionally run:
-   - `npm run lint`
    - `cd worker && npx tsc --noEmit`
-7. Frontend export / SEO-critical changes additionally run:
+2. If Pages export / SEO-critical files changed, additionally run:
    - `npm run build`
    - `npm run seo:check`
 
-The gate stays lighter than CI on purpose: it is still diff-driven and does not run the deploy-time smoke suites locally by default.
+The gate still skips deploy-time smoke suites locally. The only diff-driven part is whether export validation (`build` + `seo:check`) is required.
 
 Useful merge-gate controls:
 
@@ -124,7 +123,8 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs only when `detect-changes` reports `pages_changed=true`
    - waits for `smoke-api` only when worker/API work was also required for the push
    - executes the shared Pages path:
-     - `build-pages` runs `npm run sync:digests`, `npm run build`, and `npm run seo:check`, then uploads `out/`
+     - `prepare-digests` fetches `/api/digest-archive` once from the target API environment and uploads a normalized digest artifact
+     - `build-pages` downloads that artifact into `data/`, then runs `npm run build` and `npm run seo:check`, and uploads `out/`
      - `smoke-ui` downloads the same artifact, serves it locally with `scripts/serve-static-export.mjs`, and proxies `/api/*` to the configured public API base
      - `deploy-pages` publishes that verified artifact through Wrangler with the existing retry loop
 7. `smoke-ui-live`
@@ -148,7 +148,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 
 Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The repo now uses a root npm workspace, so the workflows install the shared toolchain from the root `package-lock.json` and run Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
 
-Deployment stops on the first failed job. Because the shared `pages-release` workflow still requires the local `smoke-ui` gate before `deploy-pages`, a bad static export is blocked before Cloudflare Pages production publish instead of being discovered only after the live site has already switched. On `push`, worker deploy and API smoke are skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files, and Pages build/deploy are skipped entirely when the diff does not touch frontend/Pages/shared build paths. Both production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs on the same ref, while the Pages rebuild workflow waits behind an active production deploy instead of canceling it mid-flight.
+Deployment stops on the first failed job. Because the shared `pages-release` workflow now fetches digests once into an artifact and still requires the local `smoke-ui` gate before `deploy-pages`, a bad static export is blocked before Cloudflare Pages production publish and the build itself no longer depends on the live production digest endpoint. On `push`, worker deploy and API smoke are skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files, and Pages build/deploy are skipped entirely when the diff does not touch frontend/Pages/shared build paths. Both production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs on the same ref, while the Pages rebuild workflow waits behind an active production deploy instead of canceling it mid-flight.
 
 ## Operator Origins
 

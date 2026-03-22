@@ -1,18 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  buildBreakdownEntries,
+  BreakdownBar,
+  BreakdownLegend,
+  type BreakdownEntry,
+} from "@/components/liquidity-breakdown";
 import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency } from "@shared/lib/format";
-import {
-  PROTOCOL_COLORS,
-  PROTOCOL_LOGOS,
-  EXTRA_COLORS,
-  CHAIN_COLORS,
-  prettifyProtocol,
-  normalizeChain,
-} from "@/lib/dex-constants";
+import { PROTOCOL_COLORS, PROTOCOL_LOGOS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@shared/types";
@@ -41,32 +39,34 @@ const MAX_PROTOCOL_LEGEND_ITEMS = 10;
 const MAX_VISIBLE_PROTOCOLS = MAX_PROTOCOL_LEGEND_ITEMS - 1;
 
 export function buildProtocolBreakdown(protocolTvl: Record<string, number>) {
-  const sorted = Object.entries(protocolTvl).sort((a, b) => b[1] - a[1]) as [string, number][];
-  const total = sorted.reduce((sum, [, tvl]) => sum + tvl, 0);
-
-  // Cap the legend at 10 items total: top 9 protocols plus grouped remainder.
-  const visible = sorted.slice(0, MAX_VISIBLE_PROTOCOLS);
-  const otherTvl = sorted.slice(MAX_VISIBLE_PROTOCOLS).reduce((sum, [, tvl]) => sum + tvl, 0);
-  const displayEntries: [string, number][] = otherTvl > 0 ? [...visible, ["_other", otherTvl]] : visible;
-
-  const colorMap: Record<string, string> = { _other: "bg-muted-foreground" };
-  let idx = 0;
-  for (const [protocol] of displayEntries) {
-    if (protocol === "_other") continue;
-    colorMap[protocol] = PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[idx++ % EXTRA_COLORS.length];
-  }
+  const { entries, total } = buildBreakdownEntries(protocolTvl, {
+    maxVisibleItems: MAX_VISIBLE_PROTOCOLS,
+    labelForKey: prettifyProtocol,
+    colorForKey: (protocol, index) => PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[index % EXTRA_COLORS.length],
+    logoForKey: (protocol) => {
+      const path = PROTOCOL_LOGOS[protocol];
+      return path ? { path } : null;
+    },
+  });
+  const displayEntries = entries.map((entry) => [entry.key, entry.value] as [string, number]);
+  const colorMap = Object.fromEntries(entries.map((entry) => [entry.key, entry.colorClass]));
 
   return { displayEntries, colorMap, total };
 }
 
 function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
   const globalData = data[DEX_GLOBAL_KEY];
-  const chainTotals = useMemo(() => {
-    const totals: Record<string, number> = globalData?.chainTvl ? { ...globalData.chainTvl } : {};
-    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  const { entries, total } = useMemo(() => {
+    return buildBreakdownEntries(globalData?.chainTvl ?? {}, {
+      labelForKey: normalizeChain,
+      colorForKey: (chain) => CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground",
+      logoForKey: (chain) => {
+        const meta = CHAIN_META[chain.toLowerCase()];
+        return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
+      },
+    });
   }, [globalData]);
 
-  const total = chainTotals.reduce((sum, [, v]) => sum + v, 0);
   if (total === 0) return null;
 
   return (
@@ -77,45 +77,25 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
-          {chainTotals.map(([chain, tvl]) => {
-            const pct = (tvl / total) * 100;
-            if (pct < 0.5) return null;
-            return (
-              <div
-                key={chain}
-                className={`${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"} transition-all`}
-                style={{ width: `${pct}%` }}
-                title={`${normalizeChain(chain)}: ${formatCurrency(tvl)} (${pct.toFixed(1)}%)`}
-              />
-            );
-          })}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {chainTotals.slice(0, 10).map(([chain, tvl]) => {
-            const meta = CHAIN_META[chain.toLowerCase()];
-            return (
-              <div key={chain} className="flex items-center gap-2">
-                <span
-                  className={`inline-block h-3 w-3 rounded-sm shrink-0 ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`}
-                />
-                {meta?.logoPath && (
-                  <Image
-                    src={meta.logoPath}
-                    alt=""
-                    width={16}
-                    height={16}
-                    className={`h-4 w-4 rounded-full object-contain shrink-0${meta.darkInvert ? " dark:invert" : ""}`}
-                  />
-                )}
-                <div>
-                  <p className="text-sm font-medium">{normalizeChain(chain)}</p>
-                  <p className="text-xs text-muted-foreground font-mono tabular-nums">{formatCurrency(tvl)}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <BreakdownBar
+          entries={entries}
+          total={total}
+          minPercent={0.5}
+          className="flex h-4 w-full overflow-hidden rounded-full bg-muted"
+          titleFormatter={(entry, percent) => `${entry.label}: ${formatCurrency(entry.value)} (${percent.toFixed(1)}%)`}
+        />
+        <BreakdownLegend
+          entries={entries.slice(0, 10)}
+          total={total}
+          minPercent={0}
+          variant="stacked"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+          itemClassName="flex items-center gap-2"
+          markerClassName="h-3 w-3"
+          logoClassName="h-4 w-4 rounded-full object-contain shrink-0"
+          logoSize={16}
+          valueFormatter={(entry) => formatCurrency(entry.value)}
+        />
       </CardContent>
     </Card>
   );
@@ -123,9 +103,17 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
 
 function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
   const globalData = data[DEX_GLOBAL_KEY];
-  const { displayEntries, colorMap, total } = useMemo(() => {
-    return buildProtocolBreakdown(globalData?.protocolTvl ?? {});
+  const entries = useMemo(() => {
+    const { displayEntries, colorMap } = buildProtocolBreakdown(globalData?.protocolTvl ?? {});
+    return displayEntries.map(([protocol, tvl]) => ({
+      key: protocol,
+      label: protocol === "_other" ? "Other" : prettifyProtocol(protocol),
+      value: tvl,
+      colorClass: colorMap[protocol] ?? "bg-muted-foreground",
+      logoPath: protocol === "_other" ? undefined : PROTOCOL_LOGOS[protocol],
+    })) satisfies BreakdownEntry[];
   }, [globalData]);
+  const total = entries.reduce((sum, entry) => sum + entry.value, 0);
 
   if (total === 0) return null;
 
@@ -137,39 +125,24 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
-          {displayEntries.map(([protocol, tvl]) => {
-            const pct = (tvl / total) * 100;
-            if (pct < 0.5) return null;
-            const color = colorMap[protocol] ?? "bg-muted-foreground";
-            const name = protocol === "_other" ? "Other" : prettifyProtocol(protocol);
-            return (
-              <div
-                key={protocol}
-                className={`${color} transition-all`}
-                style={{ width: `${pct}%` }}
-                title={`${name}: ${formatCurrency(tvl)} (${pct.toFixed(1)}%)`}
-              />
-            );
-          })}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {displayEntries.map(([protocol, tvl]) => {
-            const color = colorMap[protocol] ?? "bg-muted-foreground";
-            const name = protocol === "_other" ? "Other" : prettifyProtocol(protocol);
-            const logo = PROTOCOL_LOGOS[protocol];
-            return (
-              <div key={protocol} className="flex items-center gap-2">
-                <span className={`inline-block h-3 w-3 rounded-sm shrink-0 ${color}`} />
-                {logo && <Image src={logo} alt="" width={16} height={16} className="rounded-full shrink-0" />}
-                <div>
-                  <p className="text-sm font-medium">{name}</p>
-                  <p className="text-xs text-muted-foreground font-mono tabular-nums">{formatCurrency(tvl)}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <BreakdownBar
+          entries={entries}
+          total={total}
+          minPercent={0.5}
+          className="flex h-4 w-full overflow-hidden rounded-full bg-muted"
+          titleFormatter={(entry, percent) => `${entry.label}: ${formatCurrency(entry.value)} (${percent.toFixed(1)}%)`}
+        />
+        <BreakdownLegend
+          entries={entries}
+          total={total}
+          minPercent={0}
+          variant="stacked"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+          itemClassName="flex items-center gap-2"
+          markerClassName="h-3 w-3"
+          logoSize={16}
+          valueFormatter={(entry) => formatCurrency(entry.value)}
+        />
       </CardContent>
     </Card>
   );

@@ -1,5 +1,5 @@
 import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
-import type { AdapterContext, AdapterResult } from "./index";
+import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface FalconBreakdownAsset {

@@ -8,12 +8,12 @@ import {
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
 } from "@/lib/compare-pages";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import { PEG_SLUGS } from "@/lib/peg-landing";
+import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 
 export function generateStaticParams() {
-  return STATIC_COMPARISON_PAGES.map((page) => ({ slug: page.slug }));
+  return buildSlugStaticParams("slug", STATIC_COMPARISON_PAGES);
 }
 
 export async function generateMetadata({
@@ -21,20 +21,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
-  const page = STATIC_COMPARISON_PAGE_BY_SLUG.get(slug);
-  if (!page) {
-    return {
-      title: "Comparison Not Found | Pharos",
-      robots: { index: false },
-    };
-  }
-
-  return buildPageMetadata({
-    title: page.title,
-    description: page.description,
-    canonical: page.href,
-  });
+  return buildSlugPageMetadata(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG, "Comparison Not Found | Pharos");
 }
 
 export default async function StaticComparisonPage({
@@ -42,8 +29,7 @@ export default async function StaticComparisonPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
-  const page = STATIC_COMPARISON_PAGE_BY_SLUG.get(slug);
+  const page = await resolveSlugPage(params, "slug", STATIC_COMPARISON_PAGE_BY_SLUG);
   if (!page) notFound();
 
   const comparisonRows = buildComparisonAtAGlanceRows(page);

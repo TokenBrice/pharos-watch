@@ -1,5 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
-import type { AdapterContext, AdapterResult } from "./index";
+import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
 import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
 

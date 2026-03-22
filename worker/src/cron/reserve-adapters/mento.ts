@@ -1,6 +1,6 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import type { AdapterContext, AdapterResult } from "./index";
+import type { AdapterContext, AdapterResult } from "./types";
 import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromValues } from "./helpers";
 
 interface MentoReserveEntry {

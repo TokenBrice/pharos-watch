@@ -6,63 +6,6 @@ export function normalizePath(path) {
   return path.replaceAll("\\", "/");
 }
 
-export function isMarkdown(path) {
-  return path === "README.md" || path.startsWith("docs/") || path.endsWith(".md");
-}
-
-export function hasDocsChange(files) {
-  return files.some((file) => isMarkdown(file));
-}
-
-export function hasTypeScriptOrJsChange(files) {
-  return files.some((file) => /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file));
-}
-
-export function hasCriticalApiContractChange(files) {
-  return files.some(
-    (file) =>
-      file.startsWith("worker/src/api/") ||
-      file === "src/lib/api.ts" ||
-      file === "shared/lib/api-endpoints.ts" ||
-      file === "shared/lib/strict-contract-paths.ts" ||
-      file === "shared/types/index.ts",
-  );
-}
-
-export function hasCronOrWorkerLibChange(files) {
-  return files.some(
-    (file) =>
-      file.startsWith("worker/src/cron/") || file.startsWith("worker/src/lib/") || file.startsWith("shared/lib/"),
-  );
-}
-
-export function hasRedemptionBackstopChange(files) {
-  return files.some(
-    (file) =>
-      file === "docs/redemption-backstops.md" ||
-      file.startsWith("shared/lib/redemption-backstop") ||
-      file === "shared/lib/redemption-backstops.ts" ||
-      file.startsWith("shared/types/redemption.ts") ||
-      file.startsWith("worker/src/api/redemption-backstops") ||
-      file.startsWith("worker/src/cron/sync-redemption-backstops") ||
-      file.startsWith("worker/src/lib/redemption-backstop") ||
-      file.startsWith("src/components/stablecoin-detail/redemption-backstop") ||
-      file === "src/lib/coverage.ts",
-  );
-}
-
-export function hasGateInfraChange(files) {
-  return files.some(
-    (file) =>
-      file.startsWith(".github/workflows/") ||
-      file === "scripts/check-critical-coverage.mjs" ||
-      file === "scripts/test-merge-gate.mjs" ||
-      file === "package.json" ||
-      file === "package-lock.json" ||
-      file.startsWith(".ci/"),
-  );
-}
-
 export function hasBuildOrSeoImpact(files) {
   return files.some(
     (file) =>
@@ -76,6 +19,23 @@ export function hasBuildOrSeoImpact(files) {
   );
 }
 
+export const NON_NEGOTIABLE_VALIDATE_COMMANDS = [
+  "npm run audit:deps",
+  "npm run lint",
+  "npm run check:worker-boundary",
+  "npm run check:migrations",
+  "npm run check:cron-sync",
+  "npm run check:doc-counts",
+  "npm run check:doc-sync",
+  "npm run check:duplicate-exports",
+  "npm run check:redemption-backstops",
+  "npm run check:unused-code",
+  "npm run check:hotspot-ratchet",
+  "npm test",
+  "npm run coverage:critical",
+  "cd worker && npx tsc --noEmit",
+];
+
 function addCommand(plan, cmd, reason) {
   const existing = plan.find((item) => item.cmd === cmd);
   if (existing) {
@@ -87,42 +47,13 @@ function addCommand(plan, cmd, reason) {
 
 export function buildCommandPlan(changedFiles) {
   const plan = [];
-
-  if (hasDocsChange(changedFiles)) {
-    addCommand(plan, "npm run check:doc-counts", "Documentation files changed");
-  }
-
-  if (hasTypeScriptOrJsChange(changedFiles)) {
-    addCommand(plan, "npm run lint", "TypeScript/JavaScript files changed");
-    addCommand(plan, "cd worker && npx tsc --noEmit", "Worker/shared TypeScript compatibility check");
-  }
-
-  if (hasCriticalApiContractChange(changedFiles)) {
-    addCommand(plan, "npm run test:critical-contracts", "Critical API/shared contract files changed");
-    addCommand(plan, "npm run coverage:critical", "Critical API/shared contract files changed");
-  }
-
-  if (hasCronOrWorkerLibChange(changedFiles)) {
-    addCommand(plan, "npm run test:invariants", "Cron or worker library files changed");
-    addCommand(plan, "npm run coverage:critical", "Cron or worker library files changed");
-  }
-
-  if (hasRedemptionBackstopChange(changedFiles)) {
-    addCommand(plan, "npm run check:redemption-backstops", "Redemption backstop registry or docs changed");
-  }
-
-  if (hasGateInfraChange(changedFiles)) {
-    addCommand(plan, "npm test", "Workflow/gating infrastructure changed");
-    addCommand(plan, "npm run coverage:critical", "Workflow/gating infrastructure changed");
+  for (const cmd of NON_NEGOTIABLE_VALIDATE_COMMANDS) {
+    addCommand(plan, cmd, "Local merge gate mirrors the shared CI validate core");
   }
 
   if (hasBuildOrSeoImpact(changedFiles)) {
     addCommand(plan, "npm run build", "Frontend export or SEO-critical files changed");
     addCommand(plan, "npm run seo:check", "Frontend export or SEO-critical files changed");
-  }
-
-  if (plan.length === 0) {
-    addCommand(plan, "npm test", "Fallback for non-doc changes");
   }
 
   return plan;

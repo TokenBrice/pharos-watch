@@ -4,7 +4,28 @@ on:
   workflow_call:
 
 jobs:
+  prepare-digests:
+    runs-on: ubuntu-latest
+    env:
+      DIGEST_API_URL: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Fetch digests from the target API environment
+        run: npx tsx scripts/sync-digests.ts --output .artifacts/digests/digests.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: normalized-digests
+          path: .artifacts/digests/digests.json
+          if-no-files-found: error
+
   build-pages:
+    needs: prepare-digests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -14,7 +35,10 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm run sync:digests
+      - uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: normalized-digests
+          path: data
       - run: npm run build
       - run: npm run seo:check
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

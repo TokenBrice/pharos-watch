@@ -7,6 +7,11 @@ export const TARGET_FILES = [
   "worker/src/api/feedback.ts",
   "worker/src/handlers/http.ts",
   "worker/src/cron/sync-stablecoins.ts",
+  "src/app/methodology/sections/core-sections.tsx",
+  "src/app/coverage/client.tsx",
+  "worker/src/cron/daily-digest/collectors.ts",
+  "worker/src/cron/sync-fx-rates.ts",
+  "worker/src/lib/status-evaluation.ts",
 ];
 
 export const BASELINE_PATH = resolve(process.cwd(), "scripts/lib/hotspot-ratchet-baseline.json");

@@ -52,6 +52,7 @@ export interface CronStatus {
   recentRuns: CronRun[];
   expectedIntervalSec: number;
   healthy: boolean;
+  telemetryUnknown?: boolean;
   inFlight?: CronInFlight | null;
 }
 
@@ -298,6 +299,7 @@ export interface ClassificationWarning {
 }
 
 export type StatusSectionKey =
+  | "statusState"
   | "telegramBot"
   | "reserveComposition"
   | "liquidityHealth"

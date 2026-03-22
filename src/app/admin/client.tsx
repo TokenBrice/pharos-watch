@@ -41,6 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 
 function getCronSeverity(cron: StatusResponse["crons"][string]): number {
+  if (cron.telemetryUnknown) return 1;
   if (!cron.healthy || cron.lastRun?.status === "error" || cron.inFlight?.stale) return 2;
   if (cron.lastRun?.status === "degraded") return 1;
   return 0;
@@ -289,6 +290,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
               probe={data.probe}
               discrepancy={data.discrepancy}
               browserProbe={browserProbeSummary}
+              error={data.sectionErrors.statusState}
               nowSeconds={data.timestamp}
             />
           </div>

@@ -1,6 +1,6 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import type { AdapterResult } from "./index";
+import type { AdapterResult } from "./types";
 import { fetchDefiLlamaPrices, fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, slicesFromValues } from "./helpers";
 
 interface FxPoolInfo {

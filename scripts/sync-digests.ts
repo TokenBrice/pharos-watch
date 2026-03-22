@@ -1,10 +1,8 @@
 /**
- * Fetches all digests from the API and writes them to data/digests.json.
+ * Fetches all digests from an explicit API base/URL and writes them to data/digests.json.
  * Run before builds to ensure static digest pages have fresh data:
- *   tsx scripts/sync-digests.ts
+ *   DIGEST_API_URL=https://ops-api.example.com tsx scripts/sync-digests.ts
  */
-
-const API_URL = "https://api.pharos.watch/api/digest-archive";
 
 interface ApiDigest {
   digestText: string;
@@ -29,9 +27,47 @@ function tsToDate(ts: number): string {
   return new Date(ts * 1000).toISOString().slice(0, 10);
 }
 
+function getArgValue(name: string): string | null {
+  const index = process.argv.indexOf(name);
+  if (index === -1) return null;
+  return process.argv[index + 1] ?? null;
+}
+
+function resolveDigestApiUrl(): string {
+  const explicitUrl =
+    getArgValue("--api-url") ??
+    process.env.DIGEST_API_URL ??
+    process.env.SMOKE_API_BASE ??
+    process.env.API_BASE_URL;
+  if (!explicitUrl) {
+    throw new Error(
+      "Provide --api-url or set DIGEST_API_URL / SMOKE_API_BASE / API_BASE_URL before running sync-digests.",
+    );
+  }
+
+  if (explicitUrl.endsWith("/api/digest-archive")) {
+    return explicitUrl;
+  }
+
+  return `${explicitUrl.replace(/\/+$/, "")}/api/digest-archive`;
+}
+
+function resolveOutputPath(): URL {
+  const explicitOutput = getArgValue("--output");
+  if (!explicitOutput) {
+    return new URL("../data/digests.json", import.meta.url);
+  }
+
+  return new URL(explicitOutput, `file://${process.cwd()}/`);
+}
+
 async function main() {
+  const apiUrl = resolveDigestApiUrl();
+  const outputPath = resolveOutputPath();
+
   console.log("Fetching digest archive...");
-  const res = await fetch(API_URL);
+  console.log(`Digest source: ${apiUrl}`);
+  const res = await fetch(apiUrl);
   if (!res.ok) throw new Error(`API returned ${res.status}`);
   const { digests } = (await res.json()) as { digests: ApiDigest[] };
   console.log(`Fetched ${digests.length} digests`);
@@ -48,11 +84,12 @@ async function main() {
     }))
     .sort((a, b) => b.generatedAt - a.generatedAt);
 
-  const path = new URL("../data/digests.json", import.meta.url);
-  const { writeFileSync } = await import("fs");
+  const { mkdirSync, writeFileSync } = await import("fs");
   const { fileURLToPath } = await import("url");
-  writeFileSync(fileURLToPath(path), JSON.stringify(entries, null, 2) + "\n");
-  console.log(`Wrote ${entries.length} digests to data/digests.json`);
+  const outputFile = fileURLToPath(outputPath);
+  mkdirSync(new URL(".", outputPath), { recursive: true });
+  writeFileSync(outputFile, JSON.stringify(entries, null, 2) + "\n");
+  console.log(`Wrote ${entries.length} digests to ${outputFile}`);
 }
 
 main().catch((err) => {

@@ -46,6 +46,10 @@ interface SystemDiagnosticsProps {
     status?: "healthy" | "degraded" | "stale";
     updatedAt: number | null;
   } | null;
+  error?: {
+    code: string;
+    message: string;
+  };
   nowSeconds: number;
 }
 
@@ -55,6 +59,7 @@ export function SystemDiagnostics({
   probe,
   discrepancy,
   browserProbe,
+  error,
   nowSeconds,
 }: SystemDiagnosticsProps) {
   const evalAge = state.lastEvaluatedAt > 0 ? Math.max(0, nowSeconds - state.lastEvaluatedAt) : null;
@@ -76,6 +81,11 @@ export function SystemDiagnostics({
           <div className="mt-1 text-xs text-muted-foreground">
             raw streak h/d/s {state.consecutiveRaw.healthy}/{state.consecutiveRaw.degraded}/{state.consecutiveRaw.stale}
           </div>
+          {error && (
+            <div className="mt-2 text-xs text-amber-600 dark:text-amber-300">
+              {error.code}: {error.message}
+            </div>
+          )}
         </CardContent>
       </Card>
       <Card>

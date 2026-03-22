@@ -16,7 +16,7 @@ function findCacheWrite(
   key: string,
 ): { sql: string; binds: unknown[] } | undefined {
   return db.getHistory().find(
-    (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === key,
+    (entry) => entry.sql.includes("INTO cache") && entry.binds[0] === key,
   );
 }
 
@@ -676,13 +676,19 @@ describe("syncFxRates", () => {
       },
       {
         match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-attempt"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
         matchBinds: ["fx-oxr-last-fetch"],
         rows: [],
         first: null,
       },
       {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
-        matchBinds: ["fx-oxr-last-fetch", String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000)],
+        matchBinds: ["fx-oxr-last-attempt", String(Math.floor(Date.now() / 1000)), Math.floor(Date.now() / 1000)],
         rows: [],
         throwError: new Error("telemetry write failed"),
       },
@@ -693,5 +699,72 @@ describe("syncFxRates", () => {
     expect(result.itemCount).toBeGreaterThan(0);
     expect(findCacheWrite(db, "fx-rates")).toBeDefined();
     expect(findCacheWrite(db, "fx-rates-meta")).toBeDefined();
+  });
+
+  it("records the OXR cooldown after a completed response with zero usable rates", async () => {
+    mockFetch([
+      {
+        match: "frankfurter.app",
+        body: {
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        },
+      },
+      {
+        match: "openexchangerates.org",
+        body: {
+          rates: { EUR: 0.01, GBP: 0.01 },
+        },
+      },
+      {
+        match: "currency-api",
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { price: 2900 },
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { price: 32 },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-attempt"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    const result = await syncFxRates(db, undefined, "oxr-key");
+    expect(result.itemCount).toBeGreaterThan(0);
+    expect(findCacheWrite(db, "fx-oxr-last-attempt")).toBeDefined();
+    expect(findCacheWrite(db, "fx-oxr-last-success")).toBeUndefined();
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { openExchangeRates?: string } };
+    expect(metadata.sources?.openExchangeRates).toBe("unavailable");
   });
 });

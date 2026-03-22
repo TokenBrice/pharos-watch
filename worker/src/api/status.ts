@@ -9,6 +9,8 @@ import {
   listRecentStatusTransitions,
   reconcileStatusState,
   STATUS_SYSTEM_FRESHNESS_SEC,
+  summarizeStatusPersistenceIssues,
+  type StatusPersistenceIssue,
 } from "../lib/status-reliability";
 import { computeRawStatus } from "../lib/status-evaluation";
 import { loadStatusSupplements } from "./status-supplements";
@@ -22,11 +24,22 @@ export const handleStatus = withErrorHandler(
       async () => {
         const now = Math.floor(Date.now() / 1000);
         const raw = await computeRawStatus(db, now);
+        const persistenceIssues: StatusPersistenceIssue[] = [];
+        const collectPersistenceIssue = (issue: StatusPersistenceIssue) => {
+          persistenceIssues.push(issue);
+        };
 
-        let { state, staleness } = await getStatusStateSnapshot(db, now);
+        let { state, staleness } = await getStatusStateSnapshot(db, now, collectPersistenceIssue);
 
         if (!state || staleness?.isStale) {
-          const seeded = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
+          const seeded = await reconcileStatusState(
+            db,
+            now,
+            raw.rawOverallStatus,
+            raw.confidence,
+            raw.causes.overall,
+            collectPersistenceIssue,
+          );
           state = seeded.state;
           staleness = {
             ageSeconds: 0,
@@ -36,11 +49,12 @@ export const handleStatus = withErrorHandler(
         }
 
         const effectiveOverallStatus = state?.currentStatus ?? raw.rawOverallStatus;
-        const probe = await getLatestStatusProbe(db);
-        const discrepancyStreak = await getDiscrepancyStreak(db);
+        const probe = await getLatestStatusProbe(db, collectPersistenceIssue);
+        const discrepancyStreak = await getDiscrepancyStreak(db, collectPersistenceIssue);
         const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
-        const timeline = await listRecentStatusTransitions(db, 40);
+        const timeline = await listRecentStatusTransitions(db, 40, undefined, collectPersistenceIssue);
         const supplements = await loadStatusSupplements(db, now, raw.crons);
+        const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
 
         const body: StatusResponse = {
           timestamp: now,
@@ -66,6 +80,7 @@ export const handleStatus = withErrorHandler(
           telegramBot: raw.telegramBot,
           sectionErrors: {
             ...raw.sectionErrors,
+            ...(statusStateError ? { statusState: statusStateError } : {}),
             ...supplements.sectionErrors,
           },
           datasetFreshness: raw.datasetFreshness,

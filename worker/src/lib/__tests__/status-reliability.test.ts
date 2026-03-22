@@ -9,6 +9,7 @@ import {
   markDiscrepancyAlertSent,
   markProbeFailureAlertSent,
   reconcileStatusState,
+  summarizeStatusPersistenceIssues,
   STATUS_HYSTERESIS,
   STATUS_SYSTEM_FRESHNESS_SEC,
   updateDiscrepancyObservation,
@@ -329,6 +330,30 @@ describe("status-reliability", () => {
 
     const failed = await getStatusStateSnapshot(makeFailingDb(), 2_100);
     expect(failed).toEqual({ state: null, staleness: null });
+  });
+
+  it("reports persistence diagnostics when status-state tables are unavailable", async () => {
+    const issues: Array<{ code: string; operation: string; message: string }> = [];
+
+    const reconcile = await reconcileStatusState(
+      makeFailingDb(),
+      100,
+      "healthy",
+      0.9,
+      [],
+      (issue) => issues.push(issue),
+    );
+    expect(reconcile.effectiveStatus).toBe("healthy");
+
+    const snapshot = await getStatusStateSnapshot(makeFailingDb(), 200, (issue) => issues.push(issue));
+    expect(snapshot).toEqual({ state: null, staleness: null });
+
+    const summary = summarizeStatusPersistenceIssues(issues);
+    expect(issues.some((issue) => issue.code === "status_state_read_failed")).toBe(true);
+    expect(issues.some((issue) => issue.code === "status_state_seed_write_failed")).toBe(true);
+    expect(issues.some((issue) => issue.code === "status_state_snapshot_failed")).toBe(true);
+    expect(summary?.code).toBe("status_persistence_degraded");
+    expect(summary?.message).toMatch(/load-status-state/);
   });
 
   it("builds fallback state from the canonical hysteresis policy", () => {

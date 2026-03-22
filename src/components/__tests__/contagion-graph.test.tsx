@@ -1,0 +1,144 @@
+// @vitest-environment jsdom
+
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { ReportCard, ReportCardGrade } from "@shared/types";
+
+vi.mock("@/lib/contagion-layout", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/contagion-layout")>("@/lib/contagion-layout");
+
+  return {
+    ...actual,
+    runSimulation: () =>
+      new Map([
+        ["usde-ethena", { x: 220, y: 300 }],
+        ["usdtb-ethena", { x: 320, y: 300 }],
+        ["usdc-circle", { x: 440, y: 300 }],
+      ]),
+  };
+});
+
+const { ContagionGraph } = await import("@/components/contagion-graph");
+
+const DIMENSION_STUB = {
+  grade: "B" as ReportCardGrade,
+  score: 70,
+  detail: "",
+};
+
+const RAW_INPUTS_STUB = {
+  pegScore: 95,
+  activeDepeg: false,
+  depegEventCount: 0,
+  lastEventAt: null,
+  liquidityScore: 60,
+  effectiveExitScore: null,
+  redemptionBackstopScore: null,
+  redemptionRouteFamily: null,
+  redemptionImmediateCapacityUsd: null,
+  redemptionImmediateCapacityRatio: null,
+  concentrationHhi: null,
+  bluechipGrade: null,
+  canBeBlacklisted: false as const,
+  chainTier: "ethereum" as const,
+  deploymentModel: "native-multichain" as const,
+  collateralQuality: "rwa" as const,
+  custodyModel: "institutional-regulated" as const,
+  governanceTier: "centralized" as const,
+  governanceQuality: "regulated-entity" as const,
+  dependencies: [],
+  navToken: false,
+};
+
+function makeCard(id: string, symbol: string, grade: ReportCardGrade = "B"): ReportCard {
+  return {
+    id,
+    name: symbol,
+    symbol,
+    overallGrade: grade,
+    overallScore: 70,
+    baseScore: 70,
+    ratedDimensions: 5,
+    dimensions: {
+      pegStability: DIMENSION_STUB,
+      liquidity: DIMENSION_STUB,
+      resilience: DIMENSION_STUB,
+      decentralization: DIMENSION_STUB,
+      dependencyRisk: DIMENSION_STUB,
+    },
+    rawInputs: RAW_INPUTS_STUB,
+    isDefunct: false,
+  };
+}
+
+const CARDS = [
+  makeCard("usde-ethena", "USDe", "A"),
+  makeCard("usdtb-ethena", "USDTB", "B"),
+  makeCard("usdc-circle", "USDC", "A"),
+];
+
+const MCAP_MAP = new Map([
+  ["usde-ethena", 5_000_000_000],
+  ["usdtb-ethena", 2_000_000_000],
+  ["usdc-circle", 60_000_000_000],
+]);
+
+beforeAll(() => {
+  Object.defineProperty(SVGSVGElement.prototype, "createSVGPoint", {
+    configurable: true,
+    value() {
+      const point = {
+        x: 0,
+        y: 0,
+        matrixTransform() {
+          return { x: point.x, y: point.y };
+        },
+      };
+      return point;
+    },
+  });
+
+  Object.defineProperty(SVGSVGElement.prototype, "getScreenCTM", {
+    configurable: true,
+    value() {
+      return {
+        inverse() {
+          return null;
+        },
+      };
+    },
+  });
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("ContagionGraph", () => {
+  it("supports keyboard neighborhood focus and directional node navigation", () => {
+    render(<ContagionGraph cards={CARDS} mcapMap={MCAP_MAP} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+
+    const nodePicker = screen.getByLabelText("Coin") as HTMLSelectElement;
+    const usdcNode = screen.getByRole("button", { name: /USDC/i });
+    usdcNode.focus();
+
+    fireEvent.keyDown(usdcNode, { key: "Enter" });
+    expect(nodePicker.value).toBe("usdc-circle");
+
+    fireEvent.keyDown(usdcNode, { key: "ArrowLeft" });
+    expect((document.activeElement as HTMLElement | null)?.getAttribute("data-node-id")).toBe("usdtb-ethena");
+  });
+
+  it("lets clicks retarget the selected neighborhood", () => {
+    render(<ContagionGraph cards={CARDS} mcapMap={MCAP_MAP} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+
+    const nodePicker = screen.getByLabelText("Coin") as HTMLSelectElement;
+    fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
+
+    expect(nodePicker.value).toBe("usde-ethena");
+  });
+});

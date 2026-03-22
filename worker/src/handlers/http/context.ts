@@ -1,4 +1,5 @@
-import type { FullRouteContext, RouteDependency } from "../../route-registry";
+import type { EndpointDependency } from "@shared/lib/api-endpoints";
+import type { FullRouteContext } from "../../route-registry";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { resolveMintBurnFreshnessConfig } from "../../lib/mint-burn-health-config";
 import { buildTelegramCreds } from "../../lib/runtime-credentials";
@@ -10,7 +11,7 @@ export function buildRouteContext(config: {
   env: Env;
   execCtx: ExecutionContext;
   trustedAdmin: boolean;
-  routeDependencies: readonly RouteDependency[];
+  routeDependencies: readonly EndpointDependency[];
 }): FullRouteContext {
   const routeCtx: FullRouteContext = {
     url: config.url,

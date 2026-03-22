@@ -2,6 +2,7 @@ import type {
   StatusCause,
   StatusDiscrepancy,
   StatusProbeSummary,
+  StatusSectionError,
   StatusStateInfo,
   StatusStaleness,
   StatusTransition,
@@ -24,6 +25,15 @@ export const STATUS_HYSTERESIS = {
 export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
 export const STATUS_DISCREPANCY_ALERT_STREAK = 2;
 export const STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC = 1800;
+const LOGGED_STATUS_PERSISTENCE_FAILURES = new Set<string>();
+
+export interface StatusPersistenceIssue {
+  code: string;
+  operation: string;
+  message: string;
+}
+
+export type StatusPersistenceIssueReporter = (issue: StatusPersistenceIssue) => void;
 
 interface StatusStateRow {
   scope: string;
@@ -90,6 +100,46 @@ function parseCauses(json: string | null | undefined): StatusCause[] {
 function transitionType(from: StatusLevel | null, to: StatusLevel): "degrade" | "recover" | "init" {
   if (!from) return "init";
   return SEVERITY[to] > SEVERITY[from] ? "degrade" : "recover";
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function reportStatusPersistenceIssue(
+  report: StatusPersistenceIssueReporter | undefined,
+  code: string,
+  operation: string,
+  error: unknown,
+): void {
+  const message = getErrorMessage(error);
+  const logKey = `${code}:${operation}`;
+  if (!LOGGED_STATUS_PERSISTENCE_FAILURES.has(logKey)) {
+    LOGGED_STATUS_PERSISTENCE_FAILURES.add(logKey);
+    console.error(`[status-reliability] ${operation} failed: ${message}`);
+  }
+  report?.({
+    code,
+    operation,
+    message,
+  });
+}
+
+export function summarizeStatusPersistenceIssues(
+  issues: StatusPersistenceIssue[],
+): StatusSectionError | undefined {
+  if (issues.length === 0) return undefined;
+  const distinctOperations = [...new Set(issues.map((issue) => issue.operation))];
+  if (issues.length === 1) {
+    return {
+      code: issues[0]!.code,
+      message: `Status persistence degraded during ${issues[0]!.operation}: ${issues[0]!.message}`,
+    };
+  }
+  return {
+    code: "status_persistence_degraded",
+    message: `Status persistence degraded across ${distinctOperations.join(", ")}. First issue: ${issues[0]!.message}`,
+  };
 }
 
 function toStateInfo(row: StatusStateRow): StatusStateInfo {
@@ -190,6 +240,7 @@ export async function reconcileStatusState(
   rawStatus: StatusLevel,
   confidence: number,
   causes: StatusCause[],
+  onIssue?: StatusPersistenceIssueReporter,
 ): Promise<{
   effectiveStatus: StatusLevel;
   state: StatusStateInfo;
@@ -209,8 +260,8 @@ export async function reconcileStatusState(
       )
       .bind(STATUS_SCOPE)
       .first<StatusStateRow>();
-  } catch {
-    // Migration may not exist yet.
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_state_read_failed", "load-status-state", error);
   }
 
   if (!current) {
@@ -249,8 +300,8 @@ export async function reconcileStatusState(
           now,
         )
         .run();
-    } catch {
-      // Non-blocking for first release against lagging migrations.
+    } catch (error) {
+      reportStatusPersistenceIssue(onIssue, "status_state_seed_write_failed", "seed-status-state", error);
     }
 
     const transition: StatusTransition = {
@@ -285,8 +336,8 @@ export async function reconcileStatusState(
           now,
         )
         .run();
-    } catch {
-      // Non-blocking.
+    } catch (error) {
+      reportStatusPersistenceIssue(onIssue, "status_transition_write_failed", "seed-status-transition", error);
     }
 
     return {
@@ -343,8 +394,8 @@ export async function reconcileStatusState(
         STATUS_SCOPE,
       )
       .run();
-  } catch {
-    // Non-blocking.
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_state_update_failed", "update-status-state", error);
   }
 
   let transition: StatusTransition | null = null;
@@ -381,8 +432,8 @@ export async function reconcileStatusState(
           now,
         )
         .run();
-    } catch {
-      // Non-blocking.
+    } catch (error) {
+      reportStatusPersistenceIssue(onIssue, "status_transition_write_failed", "write-status-transition", error);
     }
   }
 
@@ -396,6 +447,7 @@ export async function reconcileStatusState(
 export async function getStatusStateSnapshot(
   db: D1Database,
   now: number,
+  onIssue?: StatusPersistenceIssueReporter,
 ): Promise<{ state: StatusStateInfo | null; staleness: StatusStaleness | null }> {
   try {
     const row = await db
@@ -417,7 +469,8 @@ export async function getStatusStateSnapshot(
         isStale: ageSeconds > STATUS_SYSTEM_FRESHNESS_SEC,
       },
     };
-  } catch {
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_state_snapshot_failed", "read-status-snapshot", error);
     return { state: null, staleness: null };
   }
 }
@@ -426,6 +479,7 @@ export async function listRecentStatusTransitions(
   db: D1Database,
   limit = 30,
   range?: { from?: number | null; to?: number | null },
+  onIssue?: StatusPersistenceIssueReporter,
 ): Promise<StatusTransition[]> {
   const bounded = Math.max(1, Math.min(200, Math.floor(limit)));
   try {
@@ -460,7 +514,8 @@ export async function listRecentStatusTransitions(
       causes: parseCauses(row.causes_json),
       at: row.created_at,
     }));
-  } catch {
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_transition_list_failed", "list-status-transitions", error);
     return [];
   }
 }
@@ -476,6 +531,7 @@ export async function writeStatusProbeRun(
     p95LatencyMs: number;
     details?: Record<string, unknown>;
   },
+  onIssue?: StatusPersistenceIssueReporter,
 ): Promise<void> {
   try {
     await db
@@ -494,12 +550,15 @@ export async function writeStatusProbeRun(
         now,
       )
       .run();
-  } catch {
-    // Non-blocking if migration missing.
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_probe_write_failed", "write-status-probe", error);
   }
 }
 
-export async function getLatestStatusProbe(db: D1Database): Promise<StatusProbeSummary> {
+export async function getLatestStatusProbe(
+  db: D1Database,
+  onIssue?: StatusPersistenceIssueReporter,
+): Promise<StatusProbeSummary> {
   try {
     const row = await db
       .prepare(
@@ -527,7 +586,8 @@ export async function getLatestStatusProbe(db: D1Database): Promise<StatusProbeS
       failCount: row.fail_count,
       p95LatencyMs: row.p95_latency_ms,
     };
-  } catch {
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_probe_read_failed", "read-status-probe", error);
     return {
       timestamp: null,
       status: "unknown",
@@ -544,6 +604,7 @@ export async function updateDiscrepancyObservation(
   now: number,
   hasDivergence: boolean,
   hasProbeFailure = false,
+  onIssue?: StatusPersistenceIssueReporter,
 ): Promise<{
   consecutiveDivergent: number;
   lastAlertAt: number | null;
@@ -566,8 +627,8 @@ export async function updateDiscrepancyObservation(
       )
       .bind(STATUS_SCOPE)
       .first<StatusDiscrepancyStateRow>();
-  } catch {
-    // migration may be missing
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_discrepancy_read_failed", "load-status-discrepancy", error);
   }
 
   const nextConsecutive = hasDivergence ? (current?.consecutive_divergent ?? 0) + 1 : 0;
@@ -610,8 +671,8 @@ export async function updateDiscrepancyObservation(
         now,
       )
       .run();
-  } catch {
-    // Non-blocking.
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_discrepancy_write_failed", "write-status-discrepancy", error);
   }
 
   return {
@@ -622,7 +683,11 @@ export async function updateDiscrepancyObservation(
   };
 }
 
-export async function markDiscrepancyAlertSent(db: D1Database, now: number): Promise<void> {
+export async function markDiscrepancyAlertSent(
+  db: D1Database,
+  now: number,
+  onIssue?: StatusPersistenceIssueReporter,
+): Promise<void> {
   try {
     await db
       .prepare(
@@ -632,12 +697,16 @@ export async function markDiscrepancyAlertSent(db: D1Database, now: number): Pro
       )
       .bind(now, now, STATUS_SCOPE)
       .run();
-  } catch {
-    // Non-blocking.
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_discrepancy_alert_write_failed", "mark-discrepancy-alert", error);
   }
 }
 
-export async function markProbeFailureAlertSent(db: D1Database, now: number): Promise<void> {
+export async function markProbeFailureAlertSent(
+  db: D1Database,
+  now: number,
+  onIssue?: StatusPersistenceIssueReporter,
+): Promise<void> {
   try {
     await db
       .prepare(
@@ -647,19 +716,23 @@ export async function markProbeFailureAlertSent(db: D1Database, now: number): Pr
       )
       .bind(now, now, STATUS_SCOPE)
       .run();
-  } catch {
-    // Non-blocking.
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_probe_alert_write_failed", "mark-probe-alert", error);
   }
 }
 
-export async function getDiscrepancyStreak(db: D1Database): Promise<number> {
+export async function getDiscrepancyStreak(
+  db: D1Database,
+  onIssue?: StatusPersistenceIssueReporter,
+): Promise<number> {
   try {
     const row = await db
       .prepare("SELECT consecutive_divergent FROM status_discrepancy_state WHERE scope = ?")
       .bind(STATUS_SCOPE)
       .first<{ consecutive_divergent: number }>();
     return row?.consecutive_divergent ?? 0;
-  } catch {
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_discrepancy_streak_failed", "read-discrepancy-streak", error);
     return 0;
   }
 }

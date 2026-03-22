@@ -1,5 +1,5 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
-import type { AdapterContext, AdapterResult } from "./index";
+import type { AdapterContext, AdapterResult } from "./types";
 import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, slicesFromValues } from "./helpers";
 
 const FDUSD_LABEL_MAP: Record<string, string> = {

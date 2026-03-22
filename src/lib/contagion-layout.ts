@@ -135,6 +135,13 @@ export function deterministicJitter(id: string, salt: number, range: number): nu
   return ((hash % 1000) / 999 - 0.5) * 2 * range;
 }
 
+export function clampGraphPosition(x: number, y: number, r: number): LayoutTarget {
+  return {
+    x: Math.max(PAD + r, Math.min(WIDTH - PAD - r, x)),
+    y: Math.max(PAD + r, Math.min(HEIGHT - PAD - r, y)),
+  };
+}
+
 export function placeOnEllipse(
   ids: string[],
   radiusX: number,

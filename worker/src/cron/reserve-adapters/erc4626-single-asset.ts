@@ -5,7 +5,7 @@ import type {
   ReserveSlice,
   StablecoinMeta,
 } from "@shared/types";
-import type { AdapterContext, AdapterResult } from "./index";
+import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchEvmCallHex,
   parseEvmAddressResult,

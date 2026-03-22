@@ -11,7 +11,9 @@ import {
 import {
   HELP_MESSAGE,
   START_MESSAGE,
+  type ParsedSetCommand,
   type PendingAction,
+  type PendingActionType,
   type PendingDisambiguationRow,
   type SubscriptionRow,
   type TelegramWebhookUpdate,
@@ -208,6 +210,105 @@ async function handleList(db: D1Database, chatId: string, botToken: string): Pro
   await replyToChat(chatId, message, botToken);
 }
 
+interface TelegramActionContext {
+  db: D1Database;
+  chatId: string;
+  username: string | null;
+}
+
+type SubscribeActionPayload = { alertTypes: string[] };
+type UnsubscribeActionPayload = Record<string, never>;
+type ActionPayloadMap = {
+  subscribe: SubscribeActionPayload;
+  unsubscribe: UnsubscribeActionPayload;
+  set: ParsedSetCommand;
+};
+
+type CompletionHandlerMap = {
+  [K in PendingActionType]: (
+    context: TelegramActionContext,
+    coins: ResolvedCoin[],
+    payload: ActionPayloadMap[K],
+    options: { clearPending: boolean },
+  ) => Promise<string>;
+};
+
+const completionHandlers: CompletionHandlerMap = {
+  subscribe: async (context, coins, payload, options) => {
+    const alertTypes = new Set(payload.alertTypes);
+    await upsertSubscriberAndSubscriptions(
+      context.db,
+      context.chatId,
+      context.username,
+      alertTypes,
+      coins.map((coin) => coin.id),
+      { clearPending: options.clearPending },
+    );
+    const subscriptions = await loadSubscriptionsByIds(
+      context.db,
+      context.chatId,
+      coins.map((coin) => coin.id),
+    );
+    return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions);
+  },
+  unsubscribe: async (context, coins, _payload, options) => {
+    if (options.clearPending) {
+      await clearPendingDisambiguation(context.db, context.chatId);
+    }
+    await removeSubscriptions(
+      context.db,
+      context.chatId,
+      coins.map((coin) => coin.id),
+    );
+    return buildUnsubscribeSuccessMessage(coins);
+  },
+  set: async (context, coins, payload, options) => {
+    if (options.clearPending) {
+      await clearPendingDisambiguation(context.db, context.chatId);
+    }
+    await applySettingToSubscriptions(context.db, context.chatId, context.username, coins, payload);
+    const subscriptions = await loadSubscriptionsByIds(
+      context.db,
+      context.chatId,
+      coins.map((coin) => coin.id),
+    );
+    return buildSubscriptionSummaryMessage("Updated settings.", subscriptions);
+  },
+};
+
+async function runActionResolutionFlow<TActionType extends PendingActionType>({
+  context,
+  botToken,
+  tickers,
+  actionType,
+  actionPayload,
+  alertTypes,
+  initialCoins,
+  clearPendingOnTerminal,
+}: {
+  context: TelegramActionContext;
+  botToken: string;
+  tickers: string[];
+  actionType: TActionType;
+  actionPayload: ActionPayloadMap[TActionType];
+  alertTypes?: Set<string>;
+  initialCoins?: ResolvedCoin[];
+  clearPendingOnTerminal?: boolean;
+}): Promise<void> {
+  await runCoinResolutionFlow({
+    db: context.db,
+    chatId: context.chatId,
+    tickers,
+    initialCoins,
+    actionType,
+    actionPayload,
+    alertTypes,
+    clearPendingOnTerminal,
+    reply: (message) => replyToChat(context.chatId, message, botToken),
+    onComplete: (coins, options) => completionHandlers[actionType](context, coins, actionPayload, options),
+  });
+}
+
 async function handleSubscribe(
   db: D1Database,
   chatId: string,
@@ -241,30 +342,13 @@ async function handleSubscribe(
     return;
   }
 
-  await runCoinResolutionFlow({
-    db,
-    chatId,
+  await runActionResolutionFlow({
+    context: { db, chatId, username },
+    botToken,
     tickers: parsed.tickers,
     actionType: "subscribe",
     actionPayload: { alertTypes: [...parsed.alertTypes] },
     alertTypes: parsed.alertTypes,
-    reply: (message) => replyToChat(chatId, message, botToken),
-    onComplete: async (coins, options) => {
-      await upsertSubscriberAndSubscriptions(
-        db,
-        chatId,
-        username,
-        parsed.alertTypes,
-        coins.map((coin) => coin.id),
-        { clearPending: options.clearPending },
-      );
-      const subscriptions = await loadSubscriptionsByIds(
-        db,
-        chatId,
-        coins.map((coin) => coin.id),
-      );
-      return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions);
-    },
   });
 }
 
@@ -298,24 +382,12 @@ async function handleUnsubscribe(db: D1Database, chatId: string, args: string, b
     return;
   }
 
-  await runCoinResolutionFlow({
-    db,
-    chatId,
+  await runActionResolutionFlow({
+    context: { db, chatId, username: null },
+    botToken,
     tickers: trimmedArgs.split(/[\s,]+/).filter(Boolean),
     actionType: "unsubscribe",
     actionPayload: {},
-    reply: (message) => replyToChat(chatId, message, botToken),
-    onComplete: async (coins, options) => {
-      if (options.clearPending) {
-        await clearPendingDisambiguation(db, chatId);
-      }
-      await removeSubscriptions(
-        db,
-        chatId,
-        coins.map((coin) => coin.id),
-      );
-      return buildUnsubscribeSuccessMessage(coins);
-    },
   });
 }
 
@@ -345,25 +417,12 @@ async function handleSet(
     return;
   }
 
-  await runCoinResolutionFlow({
-    db,
-    chatId,
+  await runActionResolutionFlow({
+    context: { db, chatId, username },
+    botToken,
     tickers: [parsed.ticker],
     actionType: "set",
     actionPayload: parsed,
-    reply: (message) => replyToChat(chatId, message, botToken),
-    onComplete: async (coins, options) => {
-      if (options.clearPending) {
-        await clearPendingDisambiguation(db, chatId);
-      }
-      await applySettingToSubscriptions(db, chatId, username, coins, parsed);
-      const subscriptions = await loadSubscriptionsByIds(
-        db,
-        chatId,
-        coins.map((coin) => coin.id),
-      );
-      return buildSubscriptionSummaryMessage("Updated settings.", subscriptions);
-    },
   });
 }
 
@@ -458,87 +517,39 @@ async function handleDisambiguationReply(
 
   switch (pending.actionType) {
     case "subscribe": {
-      await runCoinResolutionFlow({
-        db,
-        chatId,
+      await runActionResolutionFlow({
+        context: { db, chatId, username },
+        botToken,
         tickers: pending.remainingTickers,
         initialCoins: dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
         actionType: "subscribe",
         actionPayload: { alertTypes: [...pending.alertTypes] },
         alertTypes: pending.alertTypes,
         clearPendingOnTerminal: true,
-        reply: (message) => replyToChat(chatId, message, botToken),
-        onComplete: async (coins, options) => {
-          await upsertSubscriberAndSubscriptions(
-            db,
-            chatId,
-            username,
-            pending.alertTypes,
-            coins.map((coin) => coin.id),
-            { clearPending: options.clearPending },
-          );
-          const subscriptions = await loadSubscriptionsByIds(
-            db,
-            chatId,
-            coins.map((coin) => coin.id),
-          );
-          return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions);
-        },
       });
       return;
     }
     case "unsubscribe": {
-      await runCoinResolutionFlow({
-        db,
-        chatId,
+      await runActionResolutionFlow({
+        context: { db, chatId, username: null },
+        botToken,
         tickers: pending.remainingTickers,
         initialCoins: dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
         actionType: "unsubscribe",
         actionPayload: {},
         clearPendingOnTerminal: true,
-        reply: (message) => replyToChat(chatId, message, botToken),
-        onComplete: async (coins, options) => {
-          if (options.clearPending) {
-            await clearPendingDisambiguation(db, chatId);
-          }
-          await removeSubscriptions(
-            db,
-            chatId,
-            coins.map((coin) => coin.id),
-          );
-          return buildUnsubscribeSuccessMessage(coins);
-        },
       });
       return;
     }
     case "set": {
-      await runCoinResolutionFlow({
-        db,
-        chatId,
+      await runActionResolutionFlow({
+        context: { db, chatId, username },
+        botToken,
         tickers: pending.remainingTickers,
         initialCoins: dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
         actionType: "set",
         actionPayload: pending.command,
         clearPendingOnTerminal: true,
-        reply: (message) => replyToChat(chatId, message, botToken),
-        onComplete: async (coins, options) => {
-          if (options.clearPending) {
-            await clearPendingDisambiguation(db, chatId);
-          }
-          await applySettingToSubscriptions(
-            db,
-            chatId,
-            username,
-            coins,
-            pending.command,
-          );
-          const subscriptions = await loadSubscriptionsByIds(
-            db,
-            chatId,
-            coins.map((coin) => coin.id),
-          );
-          return buildSubscriptionSummaryMessage("Updated settings.", subscriptions);
-        },
       });
       return;
     }

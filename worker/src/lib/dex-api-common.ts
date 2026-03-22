@@ -13,38 +13,9 @@ import {
   makeChainAddressKey,
   resolveTrackedStablecoinId,
 } from "../cron/dex-liquidity/token-resolution";
+import type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 
-export interface DexApiPoolToken {
-  address: string;
-  symbol: string;
-  decimals: number;
-  /** Per-token USD price when available (Balancer provides this via balanceUSD/balance). */
-  priceUsd?: number | null;
-  /** Optional target pool weight for protocols like Balancer weighted pools. */
-  weight?: number | null;
-}
-
-export interface DexApiPool {
-  source: "fluid" | "balancer" | "raydium" | "orca";
-  chain: string;
-  poolAddress: string;
-  poolType: string;
-  tokens: DexApiPoolToken[];
-  /** Raw pool price ratio (token[0] / token[1]). Used for price inversion logic. */
-  price: number | null;
-  tvlUsd: number;
-  volume24hUsd: number;
-  feeRate: number | null;
-  balances: number[] | null;
-  /** Optional per-token raw 24h volumes in native token units. */
-  tokenVolumes24h?: number[] | null;
-}
-
-export type DexApiFetchResult = DexApiPool[] & {
-  ok: boolean;
-  degraded: boolean;
-  errors: string[];
-};
+export type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 
 export function makeDexApiFetchResult(
   pools: DexApiPool[],

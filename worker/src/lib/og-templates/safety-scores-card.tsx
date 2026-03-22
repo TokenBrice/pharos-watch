@@ -22,6 +22,61 @@ function getTrendIndicator(trend: number | null): { arrow: string; color: string
   return { arrow: "→", color: TEXT_SECONDARY };
 }
 
+function PerformerList({
+  title,
+  accentColor,
+  coins,
+}: {
+  title: string;
+  accentColor: string;
+  coins: SafetyScoresCardData["topPerformers"];
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <span
+        style={{
+          fontSize: 13,
+          color: accentColor,
+          letterSpacing: "0.06em",
+          fontWeight: 600,
+        }}
+      >
+        {title}
+      </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {coins.map((coin) => (
+          <div
+            key={coin.symbol}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              fontFamily: "Geist Mono",
+            }}
+          >
+            <span style={{ fontSize: 15, fontWeight: 600, minWidth: 60 }}>
+              {coin.symbol}
+            </span>
+            <span
+              style={{
+                fontSize: 14,
+                color: GRADE_COLORS[coin.grade] || TEXT_SECONDARY,
+                fontWeight: 700,
+                minWidth: 30,
+              }}
+            >
+              {coin.grade}
+            </span>
+            <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
+              {coin.score.toFixed(1)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
   const trend = getTrendIndicator(data.trend);
   
@@ -137,93 +192,16 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
 
       {/* Bottom section: Top and Bottom performers */}
       <div style={{ display: "flex", gap: 80 }}>
-        {/* Top performers */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span
-            style={{
-              fontSize: 13,
-              color: SEMANTIC_COLORS.positive,
-              letterSpacing: "0.06em",
-              fontWeight: 600,
-            }}
-          >
-            TOP 3 SAFEST
-          </span>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {data.topPerformers.map((coin) => (
-              <div
-                key={coin.symbol}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  fontFamily: "Geist Mono",
-                }}
-              >
-                <span style={{ fontSize: 15, fontWeight: 600, minWidth: 60 }}>
-                  {coin.symbol}
-                </span>
-                <span
-                  style={{
-                    fontSize: 14,
-                    color: GRADE_COLORS[coin.grade] || TEXT_SECONDARY,
-                    fontWeight: 700,
-                    minWidth: 30,
-                  }}
-                >
-                  {coin.grade}
-                </span>
-                <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
-                  {coin.score.toFixed(1)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom performers */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span
-            style={{
-              fontSize: 13,
-              color: SEMANTIC_COLORS.negative,
-              letterSpacing: "0.06em",
-              fontWeight: 600,
-            }}
-          >
-            BOTTOM 3 RISKIEST
-          </span>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {data.bottomPerformers.map((coin) => (
-              <div
-                key={coin.symbol}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  fontFamily: "Geist Mono",
-                }}
-              >
-                <span style={{ fontSize: 15, fontWeight: 600, minWidth: 60 }}>
-                  {coin.symbol}
-                </span>
-                <span
-                  style={{
-                    fontSize: 14,
-                    color: GRADE_COLORS[coin.grade] || TEXT_SECONDARY,
-                    fontWeight: 700,
-                    minWidth: 30,
-                  }}
-                >
-                  {coin.grade}
-                </span>
-                <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
-                  {coin.score.toFixed(1)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <PerformerList
+          title="TOP 3 SAFEST"
+          accentColor={SEMANTIC_COLORS.positive}
+          coins={data.topPerformers}
+        />
+        <PerformerList
+          title="BOTTOM 3 RISKIEST"
+          accentColor={SEMANTIC_COLORS.negative}
+          coins={data.bottomPerformers}
+        />
       </div>
     </CardFrame>
   );

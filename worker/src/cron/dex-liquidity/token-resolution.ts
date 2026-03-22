@@ -1,5 +1,5 @@
 import { normalizeDexSymbol } from "../../lib/dex-constants";
-import type { DexApiPoolToken } from "../../lib/dex-api-common";
+import type { DexApiPoolToken } from "../../lib/dex-api-types";
 import type { SymbolLookups } from "./types";
 
 export interface TokenResolutionResult {

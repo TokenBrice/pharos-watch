@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+export const LEGACY_DUPLICATE_PREFIX_ALLOWLIST = Object.freeze(["0056", "0061"]);
+
 export function getMigrationFiles(migrationsDir) {
   return readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))
@@ -28,6 +30,17 @@ export function parseDuplicatePrefixAllowlist(manifestText) {
     throw new Error("worker/migrations/MANIFEST.md duplicate-prefix allowlist is empty.");
   }
   return new Set(prefixes);
+}
+
+export function validateDuplicatePrefixAllowlist(allowlist) {
+  const normalized = [...allowlist].sort();
+  const expected = [...LEGACY_DUPLICATE_PREFIX_ALLOWLIST].sort();
+
+  if (normalized.length !== expected.length || normalized.some((prefix, index) => prefix !== expected[index])) {
+    throw new Error(
+      `worker/migrations/MANIFEST.md duplicate-prefix allowlist must stay frozen at: ${expected.join(", ")}`,
+    );
+  }
 }
 
 export function validateDuplicatePrefixes(migrationFiles, allowlist) {
@@ -85,6 +98,7 @@ export async function validateWorkerMigrations({
   }
 
   const allowlist = parseDuplicatePrefixAllowlist(readFileSync(manifestPath, "utf8"));
+  validateDuplicatePrefixAllowlist(allowlist);
   const { uniqueDuplicates, newDuplicates } = validateDuplicatePrefixes(migrationFiles, allowlist);
 
   if (newDuplicates.length > 0) {

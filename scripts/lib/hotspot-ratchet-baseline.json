@@ -16,7 +16,32 @@
   },
   "worker/src/cron/sync-stablecoins.ts": {
     "fileLines": 621,
-    "maxFunctionLines": 305,
+    "maxFunctionLines": 303,
     "branchCount": 82
+  },
+  "src/app/methodology/sections/core-sections.tsx": {
+    "fileLines": 1736,
+    "maxFunctionLines": 1720,
+    "branchCount": 0
+  },
+  "src/app/coverage/client.tsx": {
+    "fileLines": 825,
+    "maxFunctionLines": 413,
+    "branchCount": 32
+  },
+  "worker/src/cron/daily-digest/collectors.ts": {
+    "fileLines": 918,
+    "maxFunctionLines": 121,
+    "branchCount": 85
+  },
+  "worker/src/cron/sync-fx-rates.ts": {
+    "fileLines": 841,
+    "maxFunctionLines": 586,
+    "branchCount": 122
+  },
+  "worker/src/lib/status-evaluation.ts": {
+    "fileLines": 740,
+    "maxFunctionLines": 575,
+    "branchCount": 84
   }
 }

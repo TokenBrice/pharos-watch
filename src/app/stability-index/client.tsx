@@ -286,7 +286,15 @@ function useHistoryStats(history: HistoryPoint[]): HistoryStatItem[] {
   }, [history]);
 }
 
-function HistoryStats({ history }: { history: HistoryPoint[] }) {
+function HistoryStats({
+  history,
+  compact = false,
+  className,
+}: {
+  history: HistoryPoint[];
+  compact?: boolean;
+  className?: string;
+}) {
   const items = useHistoryStats(history);
   if (!items.length) {
     return (
@@ -297,39 +305,22 @@ function HistoryStats({ history }: { history: HistoryPoint[] }) {
   }
 
   return (
-    <div className="grid grid-cols-4 gap-x-4 gap-y-2">
+    <div
+      className={cn(
+        compact
+          ? "grid w-full grid-cols-4 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden"
+          : "grid grid-cols-4 gap-x-4 gap-y-2",
+        className,
+      )}
+    >
       {items.map((item) => {
         const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
           <div key={item.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-            <span className="pharos-kicker">{item.label}</span>
-            <span className={`text-lg font-extrabold tabular-nums leading-none ${color}`}>{item.value}</span>
-            {item.sub ? <span className="text-[11px] leading-tight text-muted-foreground">{item.sub}</span> : null}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function HistoryStatsMobile({ history }: { history: HistoryPoint[] }) {
-  const items = useHistoryStats(history);
-  if (!items.length) {
-    return (
-      <div className="text-center py-8 text-muted-foreground text-sm">
-        No data available
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid w-full grid-cols-4 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden">
-      {items.map((item) => {
-        const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
-        return (
-          <div key={item.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
-            <span className={`text-base font-bold tabular-nums leading-none ${color}`}>{item.value}</span>
+            <span className={compact ? "text-xs text-muted-foreground whitespace-nowrap" : "pharos-kicker"}>{item.label}</span>
+            <span className={cn(compact ? "text-base font-bold" : "text-lg font-extrabold", "tabular-nums leading-none", color)}>
+              {item.value}
+            </span>
             {item.sub ? <span className="text-[11px] leading-tight text-muted-foreground">{item.sub}</span> : null}
           </div>
         );
@@ -759,7 +750,7 @@ export function StabilityIndexClient() {
             <HistoryStats history={data.history} />
           </div>
           {/* History stats — mobile only */}
-          <HistoryStatsMobile history={data.history} />
+          <HistoryStats history={data.history} compact />
         </CardContent>
       </Card>
 

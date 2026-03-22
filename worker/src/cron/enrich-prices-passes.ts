@@ -21,7 +21,7 @@ import {
   hasMissingPrice,
   applyResolvedPrice,
   type PeggedAsset,
-} from "./enrich-prices";
+} from "./enrich-prices-shared";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { resolveChainId } from "@shared/lib/chains";
 import { DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";

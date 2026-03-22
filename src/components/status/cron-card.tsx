@@ -19,6 +19,7 @@ interface CronCardProps {
     recentRuns: Array<{ startedAt: number; durationMs: number; status: string; error?: string }>;
     expectedIntervalSec: number;
     healthy: boolean;
+    telemetryUnknown?: boolean;
     inFlight?: {
       startedAt: number;
       updatedAt: number;
@@ -58,7 +59,9 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
   const lastSuccessfulRun = getLastSuccessfulRun(cron.recentRuns);
   const errorStreak = countConsecutiveStatus(cron.recentRuns, "error");
   const skippedStreak = countConsecutiveStatus(cron.recentRuns, "skipped_locked");
-  const borderColor = !cron.healthy
+  const borderColor = cron.telemetryUnknown
+    ? "border-slate-500/30"
+    : !cron.healthy
     ? "border-red-500/30"
     : latestStatus === "degraded"
       ? "border-amber-500/30"
@@ -70,7 +73,9 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
     skipped_locked: "bg-muted text-muted-foreground",
     error: "bg-red-500/15 text-red-700 dark:text-red-400",
   };
-  const metadataSummaryClass = !cron.healthy || latestStatus === "error"
+  const metadataSummaryClass = cron.telemetryUnknown
+    ? "border-slate-500/20 bg-slate-500/5 text-slate-700 dark:text-slate-300"
+    : !cron.healthy || latestStatus === "error"
     ? "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-300"
     : latestStatus === "degraded"
       ? "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-300"
@@ -93,6 +98,11 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {cron.telemetryUnknown && (
+          <div className="rounded border border-slate-500/20 bg-slate-500/5 p-2 text-xs text-slate-700 dark:text-slate-300">
+            Cron history is temporarily unavailable. This lane is being treated as unknown rather than unhealthy.
+          </div>
+        )}
         {cron.lastRun ? (
           <div className="space-y-1">
             {cron.inFlight && (
@@ -177,14 +187,20 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
               {cron.inFlight.message && <div>{cron.inFlight.message}</div>}
             </div>
           ) : (
-            <span className="text-sm text-muted-foreground">No runs recorded</span>
+            <span className="text-sm text-muted-foreground">
+              {cron.telemetryUnknown ? "History temporarily unavailable" : "No runs recorded"}
+            </span>
           )
         )}
 
         <div className="flex items-center gap-1">
           <span className="mr-1 text-xs text-muted-foreground">History:</span>
           <span className="mr-2 text-xs text-muted-foreground">
-            {cron.recentRuns.length > 0 ? `${cron.recentRuns.length} runs` : "none"}
+            {cron.telemetryUnknown
+              ? "telemetry unavailable"
+              : cron.recentRuns.length > 0
+                ? `${cron.recentRuns.length} runs`
+                : "none"}
           </span>
           {cron.recentRuns.map((run, i) => (
             <div

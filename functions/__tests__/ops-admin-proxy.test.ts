@@ -10,6 +10,7 @@ const BASE_ENV = {
 
 describe("ops admin proxy", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -91,5 +92,28 @@ describe("ops admin proxy", () => {
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Operator API upstream fetch failed" });
+  });
+
+  it("returns 504 when the upstream request times out", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+        });
+      })
+    )));
+
+    const responsePromise = onRequest({
+      request: new Request("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
   });
 });

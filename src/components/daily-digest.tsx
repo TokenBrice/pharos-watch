@@ -28,6 +28,43 @@ interface DigestFullDisplayProps {
   ctaLabel?: string;
 }
 
+function parseDigestParagraph(paragraph: string): { headerText: string | null; bodyText: string } {
+  const headerMatch = paragraph.match(/^\*\*(.+?)\*\*\s*/);
+  return {
+    headerText: headerMatch?.[1]?.replace(/\.+$/, "") ?? null,
+    bodyText: headerMatch ? paragraph.slice(headerMatch[0].length) : paragraph,
+  };
+}
+
+interface DigestParagraphListProps {
+  paragraphs: string[];
+  getParagraphClassName: (index: number) => string;
+}
+
+function DigestParagraphList({ paragraphs, getParagraphClassName }: DigestParagraphListProps) {
+  return (
+    <>
+      {paragraphs.map((paragraph, index) => {
+        const { headerText, bodyText } = parseDigestParagraph(paragraph);
+        return (
+          <p
+            key={`${index}-${paragraph.slice(0, 16)}`}
+            className={getParagraphClassName(index)}
+            style={EDITORIAL_BODY_STYLE}
+          >
+            {headerText && (
+              <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
+                {headerText}.{" "}
+              </span>
+            )}
+            {bodyText}
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
 export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHref, ctaLabel }: DigestFullDisplayProps) {
   return (
     <div className="animate-in fade-in duration-300 mx-auto max-w-[68ch]">
@@ -43,28 +80,13 @@ export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHre
           {title}
         </h2>
 
-        {paragraphs.map((para, i) => {
-          const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
-          const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
-          const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
-          return (
-            <p
-              key={i}
-              className={cn(
-                "text-[1.05rem] leading-8 text-foreground/92",
-                i === 0 && "border-l-2 border-border/60 pl-4 italic",
-              )}
-              style={EDITORIAL_BODY_STYLE}
-            >
-              {headerText && (
-                <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
-                  {headerText}.{" "}
-                </span>
-              )}
-              {bodyText}
-            </p>
-          );
-        })}
+        <DigestParagraphList
+          paragraphs={paragraphs}
+          getParagraphClassName={(index) => cn(
+            "text-[1.05rem] leading-8 text-foreground/92",
+            index === 0 && "border-l-2 border-border/60 pl-4 italic",
+          )}
+        />
 
         {ctaHref && ctaLabel && (
           <Link
@@ -172,28 +194,13 @@ export function DailyDigest({ variant = "full", detailHref }: DailyDigestProps) 
       {(() => {
         const bodyBlock = (
           <div className="flex min-w-0 flex-col gap-4">
-            {visibleParagraphs.map((para, i) => {
-              const headerMatch = para.match(/^\*\*(.+?)\*\*\s*/);
-              const headerText = headerMatch?.[1]?.replace(/\.+$/, "");
-              const bodyText = headerMatch ? para.slice(headerMatch[0].length) : para;
-              return (
-                <p
-                  key={i}
-                  className={cn(
-                    "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
-                    i === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
-                  )}
-                  style={EDITORIAL_BODY_STYLE}
-                >
-                  {headerText && (
-                    <span className="font-semibold not-italic tracking-wide" style={{ fontFamily: "inherit" }}>
-                      {headerText}.{" "}
-                    </span>
-                  )}
-                  {bodyText}
-                </p>
-              );
-            })}
+            <DigestParagraphList
+              paragraphs={visibleParagraphs}
+              getParagraphClassName={(index) => cn(
+                "text-[1.08rem] leading-[1.9] text-foreground/88 sm:text-[1.14rem] lg:text-[1.22rem]",
+                index === 0 && "border-l border-border/70 pl-5 italic sm:pl-6",
+              )}
+            />
             {shouldShowCta && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 lg:self-end">
                 <Link

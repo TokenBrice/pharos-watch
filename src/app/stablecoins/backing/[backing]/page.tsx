@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { StablecoinTaxonomyPage } from "@/components/stablecoin-taxonomy-page";
-import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   BACKING_TAXONOMY_PAGE_BY_SLUG,
   BACKING_TAXONOMY_PAGES,
 } from "@/lib/stablecoin-taxonomy";
+import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
 
 export function generateStaticParams() {
-  return BACKING_TAXONOMY_PAGES.map((page) => ({ backing: page.slug }));
+  return buildSlugStaticParams("backing", BACKING_TAXONOMY_PAGES);
 }
 
 export async function generateMetadata({
@@ -15,20 +15,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ backing: string }>;
 }) {
-  const { backing } = await params;
-  const page = BACKING_TAXONOMY_PAGE_BY_SLUG.get(backing);
-  if (!page) {
-    return {
-      title: "Backing Type Not Found | Pharos",
-      robots: { index: false },
-    };
-  }
-
-  return buildPageMetadata({
-    title: page.title,
-    description: page.description,
-    canonical: page.href,
-  });
+  return buildSlugPageMetadata(params, "backing", BACKING_TAXONOMY_PAGE_BY_SLUG, "Backing Type Not Found | Pharos");
 }
 
 export default async function BackingTaxonomyPage({
@@ -36,8 +23,7 @@ export default async function BackingTaxonomyPage({
 }: {
   params: Promise<{ backing: string }>;
 }) {
-  const { backing } = await params;
-  const page = BACKING_TAXONOMY_PAGE_BY_SLUG.get(backing);
+  const page = await resolveSlugPage(params, "backing", BACKING_TAXONOMY_PAGE_BY_SLUG);
   if (!page) notFound();
 
   return <StablecoinTaxonomyPage page={page} />;

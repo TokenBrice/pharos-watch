@@ -2,6 +2,7 @@ import type { CacheStatus } from "@shared/types";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getCache, setCacheIfNewer } from "./db-cache";
 import { decodeJsonString } from "./cache-json";
+import { sanitizeRecordValues } from "./normalizers";
 
 const FX_RATES_KEY = "fx-rates";
 const FX_RATES_META_KEY = "fx-rates-meta";
@@ -74,70 +75,41 @@ interface CacheRow {
 }
 
 function sanitizeFxRates(input: unknown): Record<string, number> {
-  if (!input || typeof input !== "object") return {};
-  const out: Record<string, number> = {};
-  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-      out[key] = value;
-    }
-  }
-  return out;
+  return sanitizeRecordValues(input, (value) => (
+    typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined
+  ));
 }
 
 function sanitizeSourceUpdatedAtByPeg(input: unknown): Record<string, number | null> {
-  if (!input || typeof input !== "object") return {};
-  const out: Record<string, number | null> = {};
-  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-    out[key] =
-      typeof value === "number" && Number.isFinite(value) && value > 0
-        ? Math.floor(value)
-        : null;
-  }
-  return out;
+  return sanitizeRecordValues(input, (value) => (
+    typeof value === "number" && Number.isFinite(value) && value > 0
+      ? Math.floor(value)
+      : null
+  ));
 }
 
 function sanitizeSourceModeByPeg(input: unknown): Record<string, FxRateSourceMode> {
-  if (!input || typeof input !== "object") return {};
-  const out: Record<string, FxRateSourceMode> = {};
-  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-    if (value === "live" || value === "cached" || value === "hardcoded") {
-      out[key] = value;
-    }
-  }
-  return out;
+  return sanitizeRecordValues(input, (value) => (
+    value === "live" || value === "cached" || value === "hardcoded" ? value : undefined
+  ));
 }
 
 function sanitizeSourceCadenceByPeg(input: unknown): Record<string, FxSourceCadence> {
-  if (!input || typeof input !== "object") return {};
-  const out: Record<string, FxSourceCadence> = {};
-  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-    if (value === "intraday" || value === "calendar-daily" || value === "business-daily") {
-      out[key] = value;
-    }
-  }
-  return out;
+  return sanitizeRecordValues(input, (value) => (
+    value === "intraday" || value === "calendar-daily" || value === "business-daily" ? value : undefined
+  ));
 }
 
 function sanitizeSourceDateByPeg(input: unknown): Record<string, string | null> {
-  if (!input || typeof input !== "object") return {};
-  const out: Record<string, string | null> = {};
-  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-    out[key] =
-      typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-        ? value
-        : null;
-  }
-  return out;
+  return sanitizeRecordValues(input, (value) => (
+    typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null
+  ));
 }
 
 function sanitizeSources(input: unknown): Record<string, string> | undefined {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return undefined;
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-    if (typeof value === "string" && value.length > 0) {
-      out[key] = value;
-    }
-  }
+  const out = sanitizeRecordValues(input, (value) => (
+    typeof value === "string" && value.length > 0 ? value : undefined
+  ));
   return Object.keys(out).length > 0 ? out : undefined;
 }
 

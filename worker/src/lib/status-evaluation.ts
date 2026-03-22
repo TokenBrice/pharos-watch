@@ -294,6 +294,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     const runs = cronByJob.get(job) ?? [];
     const lastRun = runs.length > 0 ? runs[0] : null;
     const inFlight = cronProgressByJob.get(job);
+    const telemetryUnknown = cronHistoryQueryFailed;
     const inFlightFresh = inFlight != null && now - inFlight.updatedAt <= Math.max(300, interval);
     const isFresh = lastRun != null && now - lastRun.startedAt <= interval * 2;
     const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
@@ -303,12 +304,12 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       (lastRun.status === "ok" ||
         lastRun.status === "degraded" ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
-    const healthy = inFlightFresh || availabilityHealthyFromLastRun;
-    const availabilityUnhealthy = !healthy;
+    const healthy = telemetryUnknown ? true : inFlightFresh || availabilityHealthyFromLastRun;
+    const availabilityUnhealthy = !telemetryUnknown && !healthy;
 
     if (availabilityUnhealthy) unhealthyCrons++;
-    if (lastRun?.status === "degraded" && isFresh) degradedCronRuns++;
-    if (lastRun?.status === "error" && !inFlightFresh) {
+    if (!telemetryUnknown && lastRun?.status === "degraded" && isFresh) degradedCronRuns++;
+    if (!telemetryUnknown && lastRun?.status === "error" && !inFlightFresh) {
       anyCronError = true;
       cronErrorCount++;
     }
@@ -318,6 +319,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       recentRuns: runs,
       expectedIntervalSec: interval,
       healthy,
+      telemetryUnknown,
       inFlight: (() => {
         if (!inFlight) return null;
         return {
@@ -492,7 +494,8 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       metric: "fxSourceAgeSeconds",
       value: fxCache.sourceAgeSeconds ?? undefined,
     });
-  } else if (cacheWarnings.length > 0) {
+  }
+  if (cacheWarnings.length > 0) {
     for (const warning of cacheWarnings) {
       pushCause(availabilityCauses, {
         code: "cache_warning",
@@ -507,7 +510,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       code: "cron_history_query_failed",
       layer: "availability",
       severity: "warning",
-      message: "Cron history query failed; cron health is being inferred from fallback defaults.",
+      message: "Cron history query failed; cron health is temporarily unknown rather than unhealthy.",
     });
   }
   if (cronProgressQueryFailed) {

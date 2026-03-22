@@ -137,7 +137,7 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints.ts` and 
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - Unknown `POST` paths return `405` with `Allow: GET`; unsupported verbs return `405` with `Allow: GET, POST`.
 
-This keeps endpoint metadata, router behavior, and method guards aligned from one definition source.
+The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/route-registry.ts`, so endpoint metadata, router behavior, method guards, admin status-page actions, and static dependency wiring stay aligned from one definition source.
 
 ## Admin Auth And Idempotency
 

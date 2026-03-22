@@ -1,5 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
-import type { AdapterResult } from "./index";
+import type { AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInput } from "./helpers";
 
 interface BtcfiMarketRow {

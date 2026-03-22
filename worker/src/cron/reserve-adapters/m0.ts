@@ -1,5 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
-import type { AdapterContext, AdapterResult } from "./index";
+import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonPostWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
 
 interface M0GraphQlResponse {

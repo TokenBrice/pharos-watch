@@ -7,7 +7,7 @@ import {
   fetchEvmCallHexAtBlock,
   fetchEtherscanProxyHex,
 } from "../../lib/evm-rpc";
-import type { AdapterContext } from "./index";
+import type { AdapterContext } from "./types";
 
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const BALANCE_OF_SELECTOR = "0x70a08231";

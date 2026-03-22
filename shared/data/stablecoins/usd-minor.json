@@ -7129,7 +7129,8 @@
       {
         "name": "Syrup USDC (yield-bearing USDC wrapper, mint & borrow markets)",
         "pct": 5,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "usdc-circle"
       },
       {
         "name": "USDC (PSM backstop, 5M cap)",

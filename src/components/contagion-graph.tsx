@@ -13,6 +13,7 @@ import {
   MIN_RADIUS,
   RING_WIDTH,
   HUB_LABEL_FONT_SIZE,
+  clampGraphPosition,
   type GraphNode,
   type HubTier,
   type SupernodeState,
@@ -132,46 +133,44 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const dragStart = useRef<{ mx: number; my: number; nx: number; ny: number } | null>(null);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
-    e.preventDefault();
+  const projectClientPoint = useCallback((clientX: number, clientY: number) => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg) return null;
     const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
+    pt.x = clientX;
+    pt.y = clientY;
     const ctm = svg.getScreenCTM();
-    if (!ctm) return;
-    const svgP = pt.matrixTransform(ctm.inverse());
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
+  }, []);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent, nodeId: string) => {
+    if (!e.isPrimary) return;
+    e.preventDefault();
+    const svgP = projectClientPoint(e.clientX, e.clientY);
+    if (!svgP) return;
     const pos = positions.get(nodeId);
     if (!pos) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setDragId(nodeId);
     dragStart.current = { mx: svgP.x, my: svgP.y, nx: pos.x, ny: pos.y };
-  }, [positions]);
+  }, [positions, projectClientPoint]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     if (!dragId || !dragStart.current) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return;
-    const svgP = pt.matrixTransform(ctm.inverse());
+    const svgP = projectClientPoint(e.clientX, e.clientY);
+    if (!svgP) return;
     const dx = svgP.x - dragStart.current.mx;
     const dy = svgP.y - dragStart.current.my;
     setPositions((prev) => {
       const next = new Map(prev);
       const r = nodeMap.get(dragId)?.r ?? MIN_RADIUS;
-      next.set(dragId, {
-        x: Math.max(PAD + r, Math.min(WIDTH - PAD - r, dragStart.current!.nx + dx)),
-        y: Math.max(PAD + r, Math.min(HEIGHT - PAD - r, dragStart.current!.ny + dy)),
-      });
+      next.set(dragId, clampGraphPosition(dragStart.current!.nx + dx, dragStart.current!.ny + dy, r));
       return next;
     });
-  }, [dragId, nodeMap]);
+  }, [dragId, nodeMap, projectClientPoint]);
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     setDragId(null);
     dragStart.current = null;
   }, []);
@@ -482,9 +481,9 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
             viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
             className="w-full"
             style={{ cursor: dragId ? "grabbing" : "default" }}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
           >
             {/* Clip paths for circular logo masking + arrowhead markers */}
             <defs>
@@ -602,7 +601,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   role="button"
                   aria-label={`${node.symbol} — Grade ${node.grade}, market cap ${formatCurrency(node.mcap)}`}
                   style={{ cursor: focusMode === "neighborhood" ? "pointer" : "grab" }}
-                  onMouseDown={(e) => handleMouseDown(e, node.id)}
+                  onPointerDown={(e) => handlePointerDown(e, node.id)}
                   onMouseEnter={() => { setHoveredId(node.id); setHoveredEdge(null); }}
                   onMouseLeave={() => setHoveredId(null)}
                   onFocus={() => { setHoveredId(node.id); setHoveredEdge(null); }}
