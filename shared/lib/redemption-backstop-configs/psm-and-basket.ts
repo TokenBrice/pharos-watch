@@ -32,10 +32,16 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "gho-aave": {
     ...psmSwapBase,
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: fixedFee(10, "GSM exit fee is governance-set; recent Aave docs show roughly 8-10 bps on redemption"),
+    costModel: fixedFee(
+      10,
+      "Reviewed live mainnet GSM modules currently charge 7-10 bps buy fees on redemption; scoring uses the conservative 10 bps bound",
+    ),
     reviewedAt: "2026-03-22",
     docs: [
-      sourceRef("Aave GHO", "https://aave.com/gho", ["route", "capacity", "fees"]),
+      sourceRef("Aave Stability Module", "https://aave.com/help/gho-stablecoin/stability-module", ["route", "fees"]),
+    ],
+    notes: [
+      "Immediate capacity is sourced from live onchain mainnet GSM backing and excludes frozen or seized modules at runtime",
     ],
   },
   "usdd-tron-dao-reserve": {

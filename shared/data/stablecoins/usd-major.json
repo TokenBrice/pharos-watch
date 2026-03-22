@@ -1476,10 +1476,7 @@
         "risk": "very-low",
         "probe": {
           "kind": "json-path",
-          "path": [
-            "data",
-            "price"
-          ]
+          "path": ["data", "price"]
         }
       }
     },
@@ -2602,7 +2599,7 @@
       "navToken": false
     },
     "collateral": "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
-    "pegMechanism": "Overcollateralized minting via Aave V3 facilitator model; GHO Stability Module (GSM) enables 1:1 conversions with USDC and USDT; dynamic borrow rate adjustments by GHO Stewards reinforce the peg",
+    "pegMechanism": "Overcollateralized minting via the Aave V3 facilitator model; live GSM redemption is centered on yield-bearing stability modules such as stataUSDC and stataUSDT, with steward-managed facilitator limits reinforcing the peg",
     "llamaId": "118",
     "detailProvider": "defillama",
     "geckoId": "gho",
@@ -2616,6 +2613,10 @@
       {
         "label": "Website",
         "url": "https://aave.com/gho"
+      },
+      {
+        "label": "Analytics",
+        "url": "https://aave.tokenlogic.xyz/gho"
       },
       {
         "label": "Twitter",
@@ -2693,10 +2694,9 @@
         "risk": "medium"
       },
       {
-        "name": "USDC / USDT (GSM)",
+        "name": "Yield-bearing stablecoin GSMs",
         "pct": 13,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       },
       {
         "name": "Other Aave V3 Collateral",
@@ -2706,7 +2706,7 @@
     ],
     "liveReservesConfig": {
       "adapter": "gho",
-      "version": 1,
+      "version": 2,
       "semantics": "protocol-reserve",
       "display": {
         "url": "https://aave.com/gho",
@@ -2718,6 +2718,22 @@
           "chain": "ethereum",
           "rpcMode": "etherscan-proxy"
         }
+      },
+      "params": {
+        "gsmModules": [
+          {
+            "address": "0x3a3868898305f04bec7fea77becff04c13444112",
+            "label": "stataUSDC GSM",
+            "coinId": "usdc-circle",
+            "risk": "low"
+          },
+          {
+            "address": "0x882285e62656b9623af136ce3078c6bdcc33f5e3",
+            "label": "stataUSDT GSM",
+            "coinId": "usdt-tether",
+            "risk": "low"
+          }
+        ]
       }
     },
     "yieldConfig": {

@@ -192,9 +192,17 @@ const evmBranchBalancesParamsSchema = z.object({
   branches: z.array(evmBranchBalanceBranchSchema).min(1),
 }).strict();
 
+const ghoGsmModuleSchema = z.object({
+  address: z.string(),
+  label: z.string(),
+  coinId: z.string().optional(),
+  risk: LiveReserveRiskSchema.optional(),
+}).strict();
+
 const ghoParamsSchema = z.object({
   rpcUrl: z.string().optional(),
   fallbackRpcUrl: z.string().optional(),
+  gsmModules: z.array(ghoGsmModuleSchema).min(1),
 }).strict();
 
 const sgForgeCoinvertibleParamsSchema = z.object({

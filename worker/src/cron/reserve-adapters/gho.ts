@@ -1,74 +1,428 @@
-import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import type {
+  LiveReserveInput,
+  LiveReserveWarning,
+  LiveReservesConfig,
+  ReserveSlice,
+  StablecoinMeta,
+} from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchOnchainUint256, requireOnchainInput, slicesFromValues } from "./helpers";
+import { parseEvmAddressResult } from "./evm";
+import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput, slicesFromValues } from "./helpers";
 
 const GHO_TOKEN = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f";
-const GSM_USDC = "0xFeeb6FE430B7523fEF2a38327241eE7153779535";
-const GSM_USDT = "0x535b2f7C20B9C83d70e519cf9991578eF9816B7B";
-
-const BALANCE_OF = "0x70a08231";
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
+const GET_FACILITATORS_LIST_SELECTOR = "0x1ec90f2e";
+const GET_FACILITATOR_SELECTOR = "0xd46ec0ed";
+const GET_USED_SELECTOR = "0x9abeb940";
+const GET_CURRENT_BACKING_SELECTOR = "0x476cce03";
+const GET_IS_FROZEN_SELECTOR = "0x236fc8ad";
+const GET_IS_SEIZED_SELECTOR = "0x80bc659a";
+const GET_FEE_STRATEGY_SELECTOR = "0x4101d9f4";
+const GET_BUY_FEE_SELECTOR = "0x45d6494d";
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ONE_GHO = 10n ** 18n;
+const textDecoder = new TextDecoder();
 
-const USDC_TOKEN = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-const USDT_TOKEN = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+interface GhoParams {
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+  gsmModules: GhoTrackedModuleConfig[];
+}
+
+type OnchainGhoInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
+type GhoCallOpts = Pick<OnchainGhoInput, "rpcMode" | "chain"> & {
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+};
+
+export interface GhoTrackedModuleConfig {
+  address: string;
+  label: string;
+  coinId?: string;
+  risk?: ReserveSlice["risk"];
+}
+
+export interface GhoFacilitatorSnapshot {
+  address: string;
+  label: string;
+  bucketLevel: bigint;
+  bucketCapacity: bigint;
+}
+
+export interface GhoTrackedModuleSnapshot {
+  address: string;
+  label: string;
+  coinId?: string;
+  risk: ReserveSlice["risk"];
+  currentBackingGho: bigint;
+  swappable: boolean;
+  isFrozen: boolean;
+  isSeized: boolean;
+  buyFeeBps: number | null;
+}
 
 export interface GhoFacilitatorData {
-  facilitators: Array<{ label: string; bucketLevel: bigint; bucketCapacity: bigint }>;
-  gsmUsdc: bigint;
-  gsmUsdt: bigint;
+  facilitators: GhoFacilitatorSnapshot[];
+  trackedModules: GhoTrackedModuleSnapshot[];
   totalSupply?: bigint;
+}
+
+function normalizeAddress(value: string): string {
+  return value.toLowerCase();
 }
 
 function scale18ToUsd(value: bigint): number {
   return Number(value / 10n ** 12n) / 1_000_000;
 }
 
-export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
-  const values: Array<{ name: string; value: number; risk: "very-low" | "low" | "medium" | "high" | "very-high"; coinId?: string }> = [];
+function encodeAddressArg(address: string): string {
+  return normalizeAddress(address).slice(2).padStart(64, "0");
+}
 
-  for (const f of data.facilitators) {
-    const level = Number(f.bucketLevel);
-    if (level <= 0) continue;
+function encodeUint256Arg(value: bigint): string {
+  return value.toString(16).padStart(64, "0");
+}
+
+function hexWords(raw: string): string[] {
+  const stripped = raw.startsWith("0x") ? raw.slice(2) : raw;
+  if (stripped.length === 0 || stripped.length % 64 !== 0) return [];
+  const words: string[] = [];
+  for (let index = 0; index < stripped.length; index += 64) {
+    words.push(stripped.slice(index, index + 64));
+  }
+  return words;
+}
+
+function parseUintWord(word: string): bigint {
+  return BigInt(`0x${word}`);
+}
+
+function decodeBool(raw: string): boolean | null {
+  const words = hexWords(raw);
+  if (words.length < 1) return null;
+  return parseUintWord(words[0]) !== 0n;
+}
+
+function decodeAddressArray(raw: string): string[] | null {
+  const words = hexWords(raw);
+  if (words.length < 2) return null;
+  const start = Number(parseUintWord(words[0]) / 32n);
+  if (!Number.isInteger(start) || start < 0 || start >= words.length) return null;
+  const length = Number(parseUintWord(words[start]));
+  if (!Number.isInteger(length) || length < 0 || start + 1 + length > words.length) return null;
+  return words.slice(start + 1, start + 1 + length).map((word) => `0x${word.slice(-40).toLowerCase()}`);
+}
+
+function decodeFacilitator(raw: string): { bucketCapacity: bigint; bucketLevel: bigint; label: string } | null {
+  const words = hexWords(raw);
+  if (words.length < 5) return null;
+  const base = Number(parseUintWord(words[0]) / 32n);
+  if (!Number.isInteger(base) || base < 0 || base + 2 >= words.length) return null;
+  const bucketCapacity = parseUintWord(words[base]);
+  const bucketLevel = parseUintWord(words[base + 1]);
+  const labelOffset = Number(parseUintWord(words[base + 2]) / 32n);
+  const labelIndex = base + labelOffset;
+  if (!Number.isInteger(labelIndex) || labelIndex < 0 || labelIndex >= words.length) return null;
+  const labelLength = Number(parseUintWord(words[labelIndex]));
+  if (!Number.isInteger(labelLength) || labelLength < 0) return null;
+  const byteWordLength = Math.ceil(labelLength / 32);
+  if (labelIndex + 1 + byteWordLength > words.length) return null;
+  const labelHex = words
+    .slice(labelIndex + 1, labelIndex + 1 + byteWordLength)
+    .join("")
+    .slice(0, labelLength * 2);
+  const labelBytes = new Uint8Array(labelLength);
+  for (let index = 0; index < labelLength; index += 1) {
+    labelBytes[index] = Number.parseInt(labelHex.slice(index * 2, index * 2 + 2), 16);
+  }
+  return {
+    bucketCapacity,
+    bucketLevel,
+    label: textDecoder.decode(labelBytes),
+  };
+}
+
+function decodeCurrentBacking(raw: string): { excess: bigint; deficit: bigint } | null {
+  const words = hexWords(raw);
+  if (words.length < 2) return null;
+  return {
+    excess: parseUintWord(words[0]),
+    deficit: parseUintWord(words[1]),
+  };
+}
+
+function readParams(config: LiveReservesConfig): GhoParams {
+  const params = (config.params ?? {}) as Partial<GhoParams>;
+  if (!Array.isArray(params.gsmModules) || params.gsmModules.length === 0) {
+    throw new Error("gho adapter requires params.gsmModules");
+  }
+  return {
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    gsmModules: params.gsmModules.map((trackedModule) => ({
+      address: trackedModule.address,
+      label: trackedModule.label,
+      coinId: trackedModule.coinId,
+      risk: trackedModule.risk,
+    })),
+  };
+}
+
+async function loadFacilitators(
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+  callOpts: GhoCallOpts,
+): Promise<{ facilitators: GhoFacilitatorSnapshot[]; warnings: LiveReserveWarning[] }> {
+  const warnings: LiveReserveWarning[] = [];
+  const facilitatorListRaw = await fetchOnchainRawCall({
+    contract: GHO_TOKEN,
+    data: GET_FACILITATORS_LIST_SELECTOR,
+    signal,
+    ctx,
+    rpcMode: callOpts.rpcMode,
+    chain: callOpts.chain,
+    rpcUrl: callOpts.rpcUrl,
+    fallbackRpcUrl: callOpts.fallbackRpcUrl,
+  });
+  if (!facilitatorListRaw) {
+    return {
+      facilitators: [],
+      warnings: [
+        {
+          code: "facilitator-registry-unavailable",
+          message: "GHO facilitator registry could not be read; residual issuance remains unlabeled",
+          severity: "warning",
+        },
+      ],
+    };
+  }
+
+  const facilitatorAddresses = decodeAddressArray(facilitatorListRaw);
+  if (!facilitatorAddresses) {
+    return {
+      facilitators: [],
+      warnings: [
+        {
+          code: "facilitator-registry-unparseable",
+          message: "GHO facilitator registry response could not be decoded; residual issuance remains unlabeled",
+          severity: "warning",
+        },
+      ],
+    };
+  }
+
+  const facilitators: GhoFacilitatorSnapshot[] = [];
+  for (const address of facilitatorAddresses) {
+    const facilitatorRaw = await fetchOnchainRawCall({
+      contract: GHO_TOKEN,
+      data: GET_FACILITATOR_SELECTOR + encodeAddressArg(address),
+      signal,
+      ctx,
+      rpcMode: callOpts.rpcMode,
+      chain: callOpts.chain,
+      rpcUrl: callOpts.rpcUrl,
+      fallbackRpcUrl: callOpts.fallbackRpcUrl,
+    });
+    if (!facilitatorRaw) {
+      warnings.push({
+        code: "facilitator-read-failed",
+        message: `GHO facilitator metadata could not be read for ${address}`,
+        severity: "warning",
+      });
+      continue;
+    }
+    const decoded = decodeFacilitator(facilitatorRaw);
+    if (!decoded) {
+      warnings.push({
+        code: "facilitator-read-unparseable",
+        message: `GHO facilitator metadata could not be decoded for ${address}`,
+        severity: "warning",
+      });
+      continue;
+    }
+    facilitators.push({
+      address,
+      label: decoded.label,
+      bucketLevel: decoded.bucketLevel,
+      bucketCapacity: decoded.bucketCapacity,
+    });
+  }
+
+  return { facilitators, warnings };
+}
+
+async function loadTrackedModule(
+  trackedModule: GhoTrackedModuleConfig,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+  callOpts: GhoCallOpts,
+): Promise<{ module: GhoTrackedModuleSnapshot | null; warnings: LiveReserveWarning[] }> {
+  const warnings: LiveReserveWarning[] = [];
+  const moduleCallOpts = {
+    signal,
+    ctx,
+    rpcMode: callOpts.rpcMode,
+    chain: callOpts.chain,
+    rpcUrl: callOpts.rpcUrl,
+    fallbackRpcUrl: callOpts.fallbackRpcUrl,
+    contract: trackedModule.address,
+  };
+
+  const [used, currentBackingRaw, isFrozenRaw, isSeizedRaw, feeStrategyRaw] = await Promise.all([
+    fetchOnchainUint256({ ...moduleCallOpts, data: GET_USED_SELECTOR }),
+    fetchOnchainRawCall({ ...moduleCallOpts, data: GET_CURRENT_BACKING_SELECTOR }),
+    fetchOnchainRawCall({ ...moduleCallOpts, data: GET_IS_FROZEN_SELECTOR }),
+    fetchOnchainRawCall({ ...moduleCallOpts, data: GET_IS_SEIZED_SELECTOR }),
+    fetchOnchainRawCall({ ...moduleCallOpts, data: GET_FEE_STRATEGY_SELECTOR }),
+  ]);
+
+  if (used == null || !currentBackingRaw) {
+    warnings.push({
+      code: "tracked-gsm-read-failed",
+      message: `GHO tracked GSM module "${trackedModule.label}" could not be read on-chain`,
+      severity: "warning",
+    });
+    return { module: null, warnings };
+  }
+
+  const currentBacking = decodeCurrentBacking(currentBackingRaw);
+  if (!currentBacking) {
+    warnings.push({
+      code: "tracked-gsm-read-unparseable",
+      message: `GHO tracked GSM module "${trackedModule.label}" returned an unparseable backing response`,
+      severity: "warning",
+    });
+    return { module: null, warnings };
+  }
+
+  const isFrozen = decodeBool(isFrozenRaw ?? "");
+  const isSeized = decodeBool(isSeizedRaw ?? "");
+  if (isFrozen == null || isSeized == null) {
+    warnings.push({
+      code: "tracked-gsm-status-unavailable",
+      message: `GHO tracked GSM module "${trackedModule.label}" status could not be fully decoded; immediate redeemability is treated conservatively`,
+      severity: "warning",
+    });
+  }
+
+  const currentBackingGho =
+    currentBacking.deficit > 0n
+      ? used > currentBacking.deficit
+        ? used - currentBacking.deficit
+        : 0n
+      : used + currentBacking.excess;
+  const swappable = isFrozen === false && isSeized === false;
+
+  let buyFeeBps: number | null = null;
+  const feeStrategyAddress =
+    feeStrategyRaw && feeStrategyRaw !== "0x" ? parseEvmAddressResult(feeStrategyRaw as `0x${string}`) : null;
+  if (feeStrategyAddress && feeStrategyAddress !== ZERO_ADDRESS) {
+    const buyFee = await fetchOnchainUint256({
+      contract: feeStrategyAddress,
+      data: GET_BUY_FEE_SELECTOR + encodeUint256Arg(ONE_GHO),
+      signal,
+      ctx,
+      rpcMode: callOpts.rpcMode,
+      chain: callOpts.chain,
+      rpcUrl: callOpts.rpcUrl,
+      fallbackRpcUrl: callOpts.fallbackRpcUrl,
+    });
+    if (buyFee != null) {
+      buyFeeBps = Number((buyFee * 10_000n) / ONE_GHO);
+    }
+  }
+
+  if (isFrozen) {
+    warnings.push({
+      code: "tracked-gsm-frozen",
+      message: `GHO tracked GSM module "${trackedModule.label}" is currently frozen and excluded from immediate redeemable capacity`,
+      severity: "warning",
+    });
+  }
+  if (isSeized) {
+    warnings.push({
+      code: "tracked-gsm-seized",
+      message: `GHO tracked GSM module "${trackedModule.label}" is currently seized and excluded from immediate redeemable capacity`,
+      severity: "warning",
+    });
+  }
+
+  return {
+    module: {
+      address: trackedModule.address,
+      label: trackedModule.label,
+      coinId: trackedModule.coinId,
+      risk: trackedModule.risk ?? "low",
+      currentBackingGho,
+      swappable,
+      isFrozen: isFrozen ?? true,
+      isSeized: isSeized ?? false,
+      buyFeeBps,
+    },
+    warnings,
+  };
+}
+
+export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
+  const trackedBackingRaw = data.trackedModules.reduce(
+    (sum, trackedModule) => sum + trackedModule.currentBackingGho,
+    0n,
+  );
+  const residualRaw =
+    typeof data.totalSupply === "bigint" && data.totalSupply > trackedBackingRaw
+      ? data.totalSupply - trackedBackingRaw
+      : 0n;
+  const immediateRedeemableRaw = data.trackedModules
+    .filter((trackedModule) => trackedModule.swappable)
+    .reduce((sum, trackedModule) => sum + trackedModule.currentBackingGho, 0n);
+
+  const values: Array<{ name: string; value: number; risk: ReserveSlice["risk"]; coinId?: string }> = [];
+  for (const trackedModule of data.trackedModules) {
+    if (trackedModule.currentBackingGho <= 0n) continue;
     values.push({
-      name: f.label,
-      value: level,
+      name: trackedModule.label,
+      value: scale18ToUsd(trackedModule.currentBackingGho),
+      risk: trackedModule.risk,
+      ...(trackedModule.coinId ? { coinId: trackedModule.coinId } : {}),
+    });
+  }
+  if (residualRaw > 0n) {
+    values.push({
+      name: "Residual facilitators / reserve buffer",
+      value: scale18ToUsd(residualRaw),
       risk: "medium",
     });
   }
 
-  const gsmUsdcVal = Number(data.gsmUsdc);
-  if (gsmUsdcVal > 0) {
-    values.push({ name: "GSM USDC", value: gsmUsdcVal, risk: "low", coinId: "usdc-circle" });
-  }
-
-  const gsmUsdtVal = Number(data.gsmUsdt);
-  if (gsmUsdtVal > 0) {
-    values.push({ name: "GSM USDT", value: gsmUsdtVal, risk: "low", coinId: "usdt-tether" });
-  }
-
   if (values.length === 0) return { slices: [] };
 
-  const immediateRedeemableRaw = data.gsmUsdc + data.gsmUsdt;
-  const supplyUsd =
-    typeof data.totalSupply === "bigint" && data.totalSupply > 0n
-      ? scale18ToUsd(data.totalSupply)
-      : null;
-  const immediateRedeemableUsd =
-    immediateRedeemableRaw > 0n ? scale18ToUsd(immediateRedeemableRaw) : 0;
+  const activeFacilitators = data.facilitators.filter((facilitator) => facilitator.bucketLevel > 0n);
+  const buyFeeBpsValues = data.trackedModules
+    .map((trackedModule) => trackedModule.buyFeeBps)
+    .filter((fee): fee is number => typeof fee === "number" && Number.isFinite(fee));
 
   return {
     slices: slicesFromValues(values),
     metadata: {
       facilitatorCount: data.facilitators.length,
-      activeFacilitatorCount: data.facilitators.filter((f) => f.bucketLevel > 0n).length,
-      ...(supplyUsd != null
+      activeFacilitatorCount: activeFacilitators.length,
+      trackedGsmCount: data.trackedModules.length,
+      activeTrackedGsmCount: data.trackedModules.filter((trackedModule) => trackedModule.currentBackingGho > 0n).length,
+      swappableTrackedGsmCount: data.trackedModules.filter(
+        (trackedModule) => trackedModule.swappable && trackedModule.currentBackingGho > 0n,
+      ).length,
+      trackedGsmBackingUsd: scale18ToUsd(trackedBackingRaw),
+      residualSupplyUsd: residualRaw > 0n ? scale18ToUsd(residualRaw) : 0,
+      immediateRedeemableUsd: scale18ToUsd(immediateRedeemableRaw),
+      ...(typeof data.totalSupply === "bigint" ? { onchainSupplyUsd: scale18ToUsd(data.totalSupply) } : {}),
+      ...(buyFeeBpsValues.length > 0
         ? {
-            supplyUsd,
-            immediateRedeemableUsd,
-            immediateRedeemableRatio:
-              supplyUsd > 0 ? immediateRedeemableUsd / supplyUsd : null,
+            buyFeeBpsMin: Math.min(...buyFeeBpsValues),
+            buyFeeBpsMax: Math.max(...buyFeeBpsValues),
           }
         : {}),
+      facilitatorLabels: activeFacilitators.map((facilitator) => facilitator.label),
+      trackedGsmLabels: data.trackedModules.map((trackedModule) => trackedModule.label),
     },
   };
 }
@@ -83,61 +437,57 @@ export async function fetchGhoReserves(
   if (input.chain !== "ethereum") {
     throw new Error(`gho adapter only supports ethereum, got "${input.chain}"`);
   }
-  const params = config.params as Record<string, unknown> | undefined;
+
+  const params = readParams(config);
   const callOpts = {
     rpcMode: input.rpcMode,
     chain: input.chain,
-    signal,
-    ctx,
-    rpcUrl: typeof params?.rpcUrl === "string" ? params.rpcUrl : undefined,
-    fallbackRpcUrl: typeof params?.fallbackRpcUrl === "string" ? params.fallbackRpcUrl : undefined,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
   };
 
-  const [gsmUsdc, gsmUsdt, totalSupply] = await Promise.all([
-    fetchOnchainUint256({
-      contract: USDC_TOKEN,
-      data: BALANCE_OF + GSM_USDC.slice(2).padStart(64, "0"),
-      ...callOpts,
-    }),
-    fetchOnchainUint256({
-      contract: USDT_TOKEN,
-      data: BALANCE_OF + GSM_USDT.slice(2).padStart(64, "0"),
-      ...callOpts,
-    }),
-    fetchOnchainUint256({
-      contract: GHO_TOKEN,
-      data: TOTAL_SUPPLY_SELECTOR,
-      ...callOpts,
-    }),
-  ]);
-
-  if (gsmUsdc == null || gsmUsdt == null || totalSupply == null) {
-    throw new Error("gho: failed to read one or more on-chain values");
+  const totalSupply = await fetchOnchainUint256({
+    contract: GHO_TOKEN,
+    data: TOTAL_SUPPLY_SELECTOR,
+    signal,
+    ctx,
+    ...callOpts,
+  });
+  if (totalSupply == null) {
+    throw new Error("gho: failed to read totalSupply()");
   }
 
-  // GHO has 18 decimals, USDC has 6, USDT has 6
-  const gsmUsdcScaled = gsmUsdc * 10n ** 12n;
-  const gsmUsdtScaled = gsmUsdt * 10n ** 12n;
-  const facilitatorMinted = totalSupply - gsmUsdcScaled - gsmUsdtScaled;
-  const warnings: LiveReserveWarning[] = facilitatorMinted > 0n
-    ? [{
-      code: "aggregated-facilitators",
-      message: "Non-GSM GHO facilitators are aggregated into a single residual bucket",
-      severity: "warning",
-    }]
-    : [];
+  const [{ facilitators, warnings: facilitatorWarnings }, trackedResults] = await Promise.all([
+    loadFacilitators(signal, ctx, callOpts),
+    Promise.all(params.gsmModules.map((trackedModule) => loadTrackedModule(trackedModule, signal, ctx, callOpts))),
+  ]);
+
+  const trackedModules = trackedResults.flatMap((result) => (result.module ? [result.module] : []));
+  const warnings: LiveReserveWarning[] = [
+    ...facilitatorWarnings,
+    ...trackedResults.flatMap((result) => result.warnings),
+  ];
 
   const adapted = adaptGhoFacilitators({
-    facilitators: [
-      {
-        label: "Non-GSM facilitators (aggregated)",
-        bucketLevel: facilitatorMinted > 0n ? facilitatorMinted : 0n,
-        bucketCapacity: 0n,
-      },
-    ],
-    gsmUsdc: gsmUsdcScaled,
-    gsmUsdt: gsmUsdtScaled,
+    facilitators,
+    trackedModules,
     totalSupply,
   });
+
+  const trackedBackingRaw = trackedModules.reduce((sum, trackedModule) => sum + trackedModule.currentBackingGho, 0n);
+  if (trackedBackingRaw < totalSupply) {
+    const activeLabels = facilitators
+      .filter((facilitator) => facilitator.bucketLevel > 0n)
+      .map((facilitator) => facilitator.label);
+    warnings.push({
+      code: "aggregated-residual-issuance",
+      message:
+        activeLabels.length > 0
+          ? `Residual GHO issuance outside tracked GSM backing remains aggregated (${activeLabels.join(", ")})`
+          : "Residual GHO issuance outside tracked GSM backing remains aggregated",
+      severity: "warning",
+    });
+  }
+
   return warnings.length > 0 ? { ...adapted, warnings } : adapted;
 }

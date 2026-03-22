@@ -246,6 +246,9 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `sky-makercore` | `http-json` | `collateral-mix` | 2 |
 | `tether` | `http-json` | `attestation-mix` | 1 |
 
+GHO-specific note:
+the `gho` adapter now values reviewed mainnet GSM backing directly from live onchain GSM state and leaves the remainder of GHO supply in an aggregated residual issuance / reserve-buffer slice. `immediateRedeemableUsd` only counts GSM modules that are not frozen or seized.
+
 Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`:
 
 - HTTP JSON / HTML fetch wrappers (`fetchJsonWithRetry`, `fetchTextWithRetry`)

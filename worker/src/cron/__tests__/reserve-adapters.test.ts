@@ -7,28 +7,16 @@
  * without any network calls.
  */
 import { describe, it, expect } from "vitest";
-import {
-  adaptTetherTransparency,
-  type TetherTransparencyResponse,
-} from "../reserve-adapters/tether";
+import { adaptTetherTransparency, type TetherTransparencyResponse } from "../reserve-adapters/tether";
 import { adaptCircleTransparency } from "../reserve-adapters/circle-transparency";
 import {
   adaptEthenaCollateral,
   listUnexpectedEthenaAssets,
   type EthenaCollateralResponse,
 } from "../reserve-adapters/ethena";
-import {
-  adaptSkyCollateral,
-  listUnexpectedTokens,
-} from "../reserve-adapters/sky-makercore";
-import {
-  adaptFraxCombinedData,
-  type FraxCombinedDataResponse,
-} from "../reserve-adapters/frax";
-import {
-  adaptGhoFacilitators,
-  type GhoFacilitatorData,
-} from "../reserve-adapters/gho";
+import { adaptSkyCollateral, listUnexpectedTokens } from "../reserve-adapters/sky-makercore";
+import { adaptFraxCombinedData, type FraxCombinedDataResponse } from "../reserve-adapters/frax";
+import { adaptGhoFacilitators, type GhoFacilitatorData } from "../reserve-adapters/gho";
 
 // --- Tether adapter tests ---
 
@@ -55,10 +43,7 @@ describe("adaptTetherTransparency", () => {
     expect(result.metadata!.totalAssetsUsd).toBe(118536043000);
     expect(result.metadata!.totalLiabilitiesUsd).toBe(113124739000);
     expect(result.metadata!.shareholderEquityUsd).toBe(5411304000);
-    expect(result.metadata!.collateralizationRatio).toBeCloseTo(
-      118536043000 / 113124739000,
-      4,
-    );
+    expect(result.metadata!.collateralizationRatio).toBeCloseTo(118536043000 / 113124739000, 4);
   });
 
   it("handles numeric values (not just strings)", () => {
@@ -79,9 +64,7 @@ describe("adaptTetherTransparency", () => {
 
   it("throws when usdt data is missing", () => {
     const payload = { data: {} } as unknown as TetherTransparencyResponse;
-    expect(() => adaptTetherTransparency(payload)).toThrow(
-      "missing usdt data",
-    );
+    expect(() => adaptTetherTransparency(payload)).toThrow("missing usdt data");
   });
 
   it("throws when total_assets is zero", () => {
@@ -94,9 +77,7 @@ describe("adaptTetherTransparency", () => {
         },
       },
     };
-    expect(() => adaptTetherTransparency(payload)).toThrow(
-      "total_assets invalid or zero",
-    );
+    expect(() => adaptTetherTransparency(payload)).toThrow("total_assets invalid or zero");
   });
 
   it("throws when total_assets is NaN string", () => {
@@ -109,9 +90,7 @@ describe("adaptTetherTransparency", () => {
         },
       },
     };
-    expect(() => adaptTetherTransparency(payload)).toThrow(
-      "total_assets invalid or zero",
-    );
+    expect(() => adaptTetherTransparency(payload)).toThrow("total_assets invalid or zero");
   });
 
   it("returns null collateralizationRatio when liabilities are zero", () => {
@@ -175,9 +154,7 @@ describe("adaptCircleTransparency", () => {
   });
 
   it("throws when no reserve data is found in HTML", () => {
-    expect(() =>
-      adaptCircleTransparency("<div>empty page</div>", "usdc"),
-    ).toThrow("missing reserve attributes");
+    expect(() => adaptCircleTransparency("<div>empty page</div>", "usdc")).toThrow("missing reserve attributes");
   });
 
   it("throws when attributes have zero or invalid values", () => {
@@ -407,9 +384,7 @@ describe("adaptSkyCollateral", () => {
 
 describe("listUnexpectedTokens (Sky)", () => {
   it("returns empty for known tokens", () => {
-    expect(listUnexpectedTokens({ USDC: 100, WETH: 50, LINK: 25 })).toEqual(
-      [],
-    );
+    expect(listUnexpectedTokens({ USDC: 100, WETH: 50, LINK: 25 })).toEqual([]);
   });
 
   it("identifies tokens not in the known set", () => {
@@ -458,42 +433,62 @@ describe("adaptFraxCombinedData", () => {
 
   it("throws when collateral data is missing", () => {
     const payload: FraxCombinedDataResponse = { protocol: {} };
-    expect(() => adaptFraxCombinedData(payload)).toThrow(
-      "missing collateral data",
-    );
+    expect(() => adaptFraxCombinedData(payload)).toThrow("missing collateral data");
   });
 
   it("throws when protocol is missing entirely", () => {
     const payload = {} as FraxCombinedDataResponse;
-    expect(() => adaptFraxCombinedData(payload)).toThrow(
-      "missing collateral data",
-    );
+    expect(() => adaptFraxCombinedData(payload)).toThrow("missing collateral data");
   });
 });
 
 // --- GHO adapter tests ---
 
 describe("adaptGhoFacilitators", () => {
-  it("computes percentage slices from facilitator bucket levels", () => {
+  it("computes percentage slices from tracked GSM backing plus residual issuance", () => {
     const data: GhoFacilitatorData = {
       facilitators: [
         {
-          label: "Aave V3 Ethereum (overcollateralized)",
-          bucketLevel: 150_000_000n * 10n ** 18n,
-          bucketCapacity: 200_000_000n * 10n ** 18n,
+          address: "0x1111111111111111111111111111111111111111",
+          label: "CoreGhoDirectMinter",
+          bucketLevel: 165_000_000n * 10n ** 18n,
+          bucketCapacity: 250_000_000n * 10n ** 18n,
         },
       ],
-      gsmUsdc: 30_000_000n * 10n ** 18n,
-      gsmUsdt: 20_000_000n * 10n ** 18n,
+      trackedModules: [
+        {
+          address: "0x3333333333333333333333333333333333333333",
+          label: "stataUSDC GSM",
+          currentBackingGho: 30_000_000n * 10n ** 18n,
+          swappable: true,
+          isFrozen: false,
+          isSeized: false,
+          buyFeeBps: 7,
+          risk: "low",
+          coinId: "usdc-circle",
+        },
+        {
+          address: "0x4444444444444444444444444444444444444444",
+          label: "stataUSDT GSM",
+          currentBackingGho: 20_000_000n * 10n ** 18n,
+          swappable: true,
+          isFrozen: false,
+          isSeized: false,
+          buyFeeBps: 10,
+          risk: "low",
+          coinId: "usdt-tether",
+        },
+      ],
+      totalSupply: 250_000_000n * 10n ** 18n,
     };
 
     const result = adaptGhoFacilitators(data);
 
     expect(result.slices.length).toBe(3);
 
-    const aaveSlice = result.slices.find((s) => s.name.includes("Aave"));
-    expect(aaveSlice).toBeDefined();
-    expect(aaveSlice!.risk).toBe("medium");
+    const residualSlice = result.slices.find((s) => s.name.includes("Residual"));
+    expect(residualSlice).toBeDefined();
+    expect(residualSlice!.risk).toBe("medium");
 
     const usdcSlice = result.slices.find((s) => s.name.includes("USDC"));
     expect(usdcSlice).toBeDefined();
@@ -512,27 +507,40 @@ describe("adaptGhoFacilitators", () => {
     expect(result.metadata!.activeFacilitatorCount).toBe(1);
   });
 
-  it("skips facilitators with zero bucket level", () => {
+  it("skips tracked GSM modules with zero current backing", () => {
     const data: GhoFacilitatorData = {
       facilitators: [
         {
+          address: "0x1111111111111111111111111111111111111111",
           label: "Active Facilitator",
           bucketLevel: 100_000n * 10n ** 18n,
           bucketCapacity: 500_000n * 10n ** 18n,
         },
         {
+          address: "0x2222222222222222222222222222222222222222",
           label: "Empty Facilitator",
           bucketLevel: 0n,
           bucketCapacity: 100_000n * 10n ** 18n,
         },
       ],
-      gsmUsdc: 0n,
-      gsmUsdt: 0n,
+      trackedModules: [
+        {
+          address: "0x3333333333333333333333333333333333333333",
+          label: "Empty GSM",
+          currentBackingGho: 0n,
+          swappable: true,
+          isFrozen: false,
+          isSeized: false,
+          buyFeeBps: null,
+          risk: "low",
+        },
+      ],
+      totalSupply: 100_000n * 10n ** 18n,
     };
 
     const result = adaptGhoFacilitators(data);
     expect(result.slices.length).toBe(1);
-    expect(result.slices[0].name).toBe("Active Facilitator");
+    expect(result.slices[0].name).toBe("Residual facilitators / reserve buffer");
     expect(result.slices[0].pct).toBe(100);
 
     expect(result.metadata!.facilitatorCount).toBe(2);
@@ -543,24 +551,48 @@ describe("adaptGhoFacilitators", () => {
     const data: GhoFacilitatorData = {
       facilitators: [
         {
+          address: "0x1111111111111111111111111111111111111111",
           label: "Empty",
           bucketLevel: 0n,
           bucketCapacity: 0n,
         },
       ],
-      gsmUsdc: 0n,
-      gsmUsdt: 0n,
+      trackedModules: [],
+      totalSupply: 0n,
     };
 
     const result = adaptGhoFacilitators(data);
     expect(result.slices).toEqual([]);
   });
 
-  it("handles GSM-only scenario (no facilitator minting)", () => {
+  it("handles tracked-GSM-only scenario", () => {
     const data: GhoFacilitatorData = {
       facilitators: [],
-      gsmUsdc: 50_000_000n * 10n ** 18n,
-      gsmUsdt: 50_000_000n * 10n ** 18n,
+      trackedModules: [
+        {
+          address: "0x3333333333333333333333333333333333333333",
+          label: "stataUSDC GSM",
+          currentBackingGho: 50_000_000n * 10n ** 18n,
+          swappable: true,
+          isFrozen: false,
+          isSeized: false,
+          buyFeeBps: 7,
+          risk: "low",
+          coinId: "usdc-circle",
+        },
+        {
+          address: "0x4444444444444444444444444444444444444444",
+          label: "stataUSDT GSM",
+          currentBackingGho: 50_000_000n * 10n ** 18n,
+          swappable: true,
+          isFrozen: false,
+          isSeized: false,
+          buyFeeBps: 10,
+          risk: "low",
+          coinId: "usdt-tether",
+        },
+      ],
+      totalSupply: 100_000_000n * 10n ** 18n,
     };
 
     const result = adaptGhoFacilitators(data);
