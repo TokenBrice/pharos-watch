@@ -53,6 +53,7 @@ describe("coingecko-onchain", () => {
         }),
       }),
       1,
+      expect.objectContaining({ timeoutMs: undefined }),
     );
 
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
