@@ -27,6 +27,26 @@ const PUBLIC_ENDPOINTS = [
 ];
 
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
+const PUBLIC_PROBE_TIMEOUT_MS = 5_000;
+const ADMIN_PROBE_TIMEOUT_MS = 10_000;
+
+function getProbeTimeoutMs(path: string): number {
+  return ADMIN_PATHS.has(path) ? ADMIN_PROBE_TIMEOUT_MS : PUBLIC_PROBE_TIMEOUT_MS;
+}
+
+function getProbeErrorMessage(err: unknown, signal: AbortSignal): string {
+  if (signal.aborted) {
+    const reason = signal.reason;
+    if (reason instanceof DOMException && reason.name === "TimeoutError") {
+      return reason.message;
+    }
+    if (typeof reason === "string" && reason.length > 0) {
+      return reason;
+    }
+    return "Browser probe timed out";
+  }
+  return err instanceof Error ? err.message : "Unknown error";
+}
 
 function isSemanticStatus(value: unknown): value is NonNullable<EndpointProbeResult["semanticStatus"]> {
   return value === "healthy" || value === "degraded" || value === "stale";
@@ -120,7 +140,11 @@ async function probeEndpoint(
   adminAccess?: AdminAccess,
 ): Promise<EndpointProbeResult> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  const timeoutMs = getProbeTimeoutMs(path);
+  const timeout = setTimeout(
+    () => controller.abort(new DOMException("Browser probe timed out", "TimeoutError")),
+    timeoutMs,
+  );
   const start = performance.now();
 
   try {
@@ -153,7 +177,7 @@ async function probeEndpoint(
       path,
       status: null,
       latencyMs,
-      error: err instanceof Error ? err.message : "Unknown error",
+      error: getProbeErrorMessage(err, controller.signal),
     };
   } finally {
     clearTimeout(timeout);

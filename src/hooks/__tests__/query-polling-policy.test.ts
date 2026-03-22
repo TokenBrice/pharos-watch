@@ -135,4 +135,47 @@ describe("query polling policy", () => {
     expect((adminCall[1] as RequestInit).headers).toBeInstanceOf(Headers);
     expect(((adminCall[1] as RequestInit).headers as Headers).has("X-Admin-Key")).toBe(false);
   });
+
+  it("gives admin probes a longer timeout budget than public probes", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((_input: RequestInfo | URL, init?: RequestInit) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new DOMException("aborted", "AbortError"));
+        });
+      })
+    ));
+    const adminAccess: AdminAccess = { mode: "ops-proxy" };
+
+    useEndpointProbes(adminAccess);
+    const options = useQueryMock.mock.calls[0][0] as {
+      queryFn: () => Promise<Array<{ error?: string; status: number | null }>>;
+    };
+
+    const resultPromise = options.queryFn();
+    const publicSignal = (fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.signal;
+    const adminSignal = (fetchMock.mock.calls[1]?.[1] as RequestInit | undefined)?.signal;
+
+    expect(publicSignal?.aborted).toBe(false);
+    expect(adminSignal?.aborted).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(publicSignal?.aborted).toBe(true);
+    expect(adminSignal?.aborted).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(adminSignal?.aborted).toBe(true);
+
+    const result = await resultPromise;
+    expect(result).toEqual([
+      expect.objectContaining({
+        status: null,
+        error: "Browser probe timed out",
+      }),
+      expect.objectContaining({
+        status: null,
+        error: "Browser probe timed out",
+      }),
+    ]);
+  });
 });
