@@ -13,6 +13,7 @@ Public-facing analytics dashboard tracking 169 stablecoins in repo metadata, inc
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, Fluid, Balancer, Raydium, Orca, and DexScreener pools used to suppress false depeg alerts
 - **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
+- **Upcoming Stablecoins** — pre-launch tracker with phase, peg, and backing filters plus schedule-drift badges
 - **Chains** — per-chain stablecoin leaderboard and profile pages with Chain Health Score breakdowns
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
@@ -131,6 +132,7 @@ src/                              Frontend (Next.js static export)
 │   ├── safety-scores/            Stablecoin safety grade cards with radar charts
 │   ├── start/                    First-time-user orientation route
 │   ├── stability-index/          Pharos Stability Index (ecosystem health)
+│   ├── upcoming/                 Pre-launch stablecoin tracker
 │   ├── stablecoin/[id]/          Detail page per stablecoin
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
 │   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
@@ -170,6 +172,7 @@ Current source-of-truth product docs live in `/docs/` and this README. `/agents/
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
 - [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior
 - [docs/stablecoin-detail-page.md](./docs/stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, section composition, and fallback/staleness rules
+- [docs/upcoming-page.md](./docs/upcoming-page.md) - `/upcoming/` pre-launch tracker contract, filters, and crawlability
 - [docs/chains-page.md](./docs/chains-page.md) - `/chains/` and `/chains/[chain]/` route contracts plus Chain Health Score wiring
 - [docs/live-reserves.md](./docs/live-reserves.md) - live reserve-sync config, adapter registry, API modes, and status/detail consumers
 - [docs/redemption-backstops.md](./docs/redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers

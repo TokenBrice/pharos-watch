@@ -149,6 +149,8 @@ src/                              # Next.js frontend (static export)
 │   ├── stability-index/          # Pharos Stability Index (ecosystem health)
 │   │   ├── page.tsx
 │   │   └── client.tsx
+│   ├── upcoming/                 # Pre-launch stablecoin tracker
+│   │   └── page.tsx
 │   ├── stablecoin/[id]/          # Detail page orchestration: section composition + modal state
 │   │   ├── page.tsx
 │   │   ├── client.tsx
@@ -615,7 +617,7 @@ data/
   - `/stablecoins/backing/[backing]/`
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
-  - major feature pages with standalone static copy (`/start/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/about/`, `/methodology/`)
+  - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/about/`, `/methodology/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`

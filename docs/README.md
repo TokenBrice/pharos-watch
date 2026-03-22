@@ -30,6 +30,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 
 - [homepage.md](./homepage.md) - `/` dashboard composition, filter/query contract, and Start Here callout behavior
 - [start-page.md](./start-page.md) - `/start/` onboarding route, curated route map, and homepage integration contract
+- [upcoming-page.md](./upcoming-page.md) - `/upcoming/` pre-launch tracker, filter model, and crawlability contract
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
@@ -74,7 +75,24 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stablecoins/backing/[backing]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/governance/[governance]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/telegram/` | [telegram-alerts.md](./telegram-alerts.md) |
+| `/upcoming/` | [upcoming-page.md](./upcoming-page.md) |
 | `/yield/` | [yield-intelligence.md](./yield-intelligence.md) |
+
+## Methodology Changelog Routes
+
+These are public sub-pages of `/methodology/`. Use the route map below when you need the authoritative doc for a specific changelog URL.
+
+| Route | Primary doc(s) |
+|-------|-----------------|
+| `/methodology/pricing-pipeline-changelog/` | [methodology-page.md](./methodology-page.md), [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) |
+| `/methodology/scoring-changelog/` | [methodology-page.md](./methodology-page.md), [report-cards-timeline.md](./report-cards-timeline.md) |
+| `/methodology/depeg-changelog/` | [methodology-page.md](./methodology-page.md), [depeg-dews-timeline.md](./depeg-dews-timeline.md) |
+| `/methodology/liquidity-score-changelog/` | [methodology-page.md](./methodology-page.md), [liquidity-score-timeline.md](./liquidity-score-timeline.md) |
+| `/methodology/stability-index-changelog/` | [methodology-page.md](./methodology-page.md), [stability-index-timeline.md](./stability-index-timeline.md) |
+| `/methodology/blacklist-tracker-changelog/` | [methodology-page.md](./methodology-page.md), [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md) |
+| `/methodology/mint-burn-flow-changelog/` | [methodology-page.md](./methodology-page.md), [mint-burn-flows-timeline.md](./mint-burn-flows-timeline.md) |
+| `/methodology/yield-changelog/` | [methodology-page.md](./methodology-page.md), [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) |
+| `/methodology/chain-health-changelog/` | [methodology-page.md](./methodology-page.md), [chain-health-timeline.md](./chain-health-timeline.md) |
 
 ## Feature And Methodology Docs
 
