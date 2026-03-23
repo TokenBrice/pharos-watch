@@ -49,6 +49,17 @@ import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { getPriceCache, type PriceCacheEntry } from "../lib/db-cache";
 
+async function loadReplayPriceCacheForTrustedContinuity(
+  db: D1Database,
+): Promise<Map<string, PriceCacheEntry>> {
+  try {
+    return await getPriceCache(db);
+  } catch (error) {
+    console.warn("[sync-stablecoins] Failed to load replay price cache for trusted-price continuity:", error);
+    return new Map<string, PriceCacheEntry>();
+  }
+}
+
 export async function syncStablecoins(
   db: D1Database,
   cmcApiKey?: string,
@@ -104,12 +115,7 @@ export async function syncStablecoins(
     fxFallbackRates = freshFxFallbackRates;
   }
   const validationContexts = createValidationContextResolver();
-  let replayPriceCache = new Map<string, PriceCacheEntry>();
-  try {
-    replayPriceCache = await getPriceCache(db);
-  } catch (error) {
-    console.warn("[sync-stablecoins] Failed to load replay price cache for trusted-price continuity:", error);
-  }
+  const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(db);
   const previousTrustedPrices = buildPreviousTrustedPriceLookup(previousAssetsById, syncStartSec, replayPriceCache);
   let gtProbe = { updatedCount: 0, stats: createEmptyGtProbeStats() };
   const dlListPrices = buildDlListPrices(assets);
